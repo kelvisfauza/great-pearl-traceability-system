@@ -54,7 +54,7 @@ const BookingDetailsDialog = ({ bookingId, open, onOpenChange }: BookingDetailsD
     
     setSendingCloseSms(true);
     
-    const message = `Great Pearl Coffee - Booking Closed
+    const message = `Great Agro Coffee - Booking Closed
 
 Dear ${booking.supplier_name},
 
@@ -63,7 +63,7 @@ Your booking has been closed:
 ✅ Delivered: ${booking.delivered_quantity_kg.toLocaleString()} kg
 ${booking.remaining_quantity_kg > 0 ? `❌ Remaining written off: ${booking.remaining_quantity_kg.toLocaleString()} kg` : ''}
 
-Thank you for your business with Great Pearl Coffee.`;
+Thank you for your business with Great Agro Coffee.`;
 
     try {
       await supabase.functions.invoke('send-sms', {

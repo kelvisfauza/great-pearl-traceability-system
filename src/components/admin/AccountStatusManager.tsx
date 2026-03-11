@@ -51,7 +51,7 @@ const AccountStatusManager = () => {
     }
 
     try {
-      const message = `Dear ${employee.name}, your account at Great Pearl Coffee has been suspended. Reason: ${reason}. Contact management for details.`;
+      const message = `Dear ${employee.name}, your account at Great Agro Coffee has been suspended. Reason: ${reason}. Contact management for details.`;
       
       const { error } = await supabase.functions.invoke('send-sms', {
         body: {
@@ -85,7 +85,7 @@ const AccountStatusManager = () => {
     }
 
     try {
-      const message = `Dear ${employee.name}, your account at Great Pearl Coffee has been enabled successfully. You can now log in at www.greatpearlcoffeesystem.site`;
+      const message = `Dear ${employee.name}, your account at Great Agro Coffee has been enabled successfully. You can now log in at www.greatagrocoffeesystem.site`;
       
       const { error } = await supabase.functions.invoke('send-sms', {
         body: {

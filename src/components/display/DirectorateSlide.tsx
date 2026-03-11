@@ -31,7 +31,7 @@ const DirectorateSlide = () => {
           <Users className="h-8 w-8 text-green-400" />
           <h2 className="text-4xl font-bold text-white">Our Directorate</h2>
         </div>
-        <p className="text-white/60 text-lg">The People Behind Great Pearl Coffee</p>
+        <p className="text-white/60 text-lg">The People Behind Great Agro Coffee</p>
       </div>
 
       {/* Main featured image */}
@@ -45,7 +45,7 @@ const DirectorateSlide = () => {
           />
           <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-6 py-3">
             <p className="text-2xl font-semibold text-white">{current.caption}</p>
-            <p className="text-white/60 text-sm">Great Pearl Coffee • Kasese, Uganda</p>
+            <p className="text-white/60 text-sm">Great Agro Coffee • Kasese, Uganda</p>
           </div>
         </div>
 

@@ -84,7 +84,7 @@ const CreateBookingDialog = ({ open, onOpenChange }: CreateBookingDialogProps) =
     price: number;
     expiry_date: string;
   }) => {
-    const message = `Great Pearl Coffee: Booking confirmed. ${bookingData.coffee_type} ${bookingData.quantity.toLocaleString()}kg @ UGX ${bookingData.price.toLocaleString()}/kg. Valid until ${bookingData.expiry_date}.`;
+    const message = `Great Agro Coffee: Booking confirmed. ${bookingData.coffee_type} ${bookingData.quantity.toLocaleString()}kg @ UGX ${bookingData.price.toLocaleString()}/kg. Valid until ${bookingData.expiry_date}.`;
 
     try {
       const { error } = await supabase.functions.invoke('send-sms', {

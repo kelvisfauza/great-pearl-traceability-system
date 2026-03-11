@@ -565,11 +565,11 @@ const ComparisonReport = () => {
       <body>
         <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 16px; margin-bottom: 24px;">
           <img src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" alt="Company Logo" class="company-logo" />
-          <h1 class="company-name">GREAT PEARL COFFEE FACTORY</h1>
+          <h1 class="company-name">GREAT AGRO COFFEE</h1>
           <div class="company-details">
             <p>Specialty Coffee Processing & Export</p>
             <p>+256781121639 / +256778536681</p>
-            <p>www.greatpearlcoffee.com | greatpearlcoffee@gmail.com</p>
+            <p>www.greatagrocoffee.com | greatagrocoffee@gmail.com</p>
             <p>Uganda Coffee Development Authority Licensed</p>
           </div>
           <h2 class="document-title">Data Reconciliation - Detailed Issue Breakdown</h2>
@@ -612,8 +612,8 @@ const ComparisonReport = () => {
         </table>
 
         <div class="footer">
-          <p>This is a computer-generated report from Great Pearl Coffee Factory Management System</p>
-          <p>For queries, contact: greatpearlcoffee@gmail.com | +256781121639</p>
+          <p>This is a computer-generated report from Great Agro Coffee Management System</p>
+          <p>For queries, contact: greatagrocoffee@gmail.com | +256781121639</p>
         </div>
       </body>
       </html>

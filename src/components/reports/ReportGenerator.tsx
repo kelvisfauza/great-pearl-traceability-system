@@ -58,7 +58,7 @@ const ReportGenerator = () => {
       // Company Header
       pdf.setFontSize(20);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Great Pearl Coffee', pageWidth / 2, yPosition, { align: 'center' });
+      pdf.text('Great Agro Coffee', pageWidth / 2, yPosition, { align: 'center' });
       
       yPosition += 10;
       pdf.setFontSize(12);

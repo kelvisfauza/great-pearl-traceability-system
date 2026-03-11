@@ -72,7 +72,7 @@ export const PriceUpdateModal = ({ open, onOpenChange }: PriceUpdateModalProps) 
         const suppliersList = suppliers?.filter(s => s.phone) || [];
 
         const date = new Date().toLocaleDateString('en-GB');
-        const message = `Great Pearl Coffee updates\nToday: ${date}\n\nArabica Price Update:\nOutturn:     ${formData.outturn}%\nMoisture:    ${formData.moisture}%\nFM:          ${formData.fm}%\nPrice:  UGX ${parseFloat(formData.price).toLocaleString()}/kg\n\nDeliver now to get served best.`;
+        const message = `Great Agro Coffee updates\nToday: ${date}\n\nArabica Price Update:\nOutturn:     ${formData.outturn}%\nMoisture:    ${formData.moisture}%\nFM:          ${formData.fm}%\nPrice:  UGX ${parseFloat(formData.price).toLocaleString()}/kg\n\nDeliver now to get served best.`;
 
         // Send SMS to each supplier
         console.log(`📱 Sending SMS to ${suppliersList.length} suppliers`);

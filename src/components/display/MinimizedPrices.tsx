@@ -34,8 +34,8 @@ const MinimizedPrices = memo(({ prices, onMaximize }: MinimizedPricesProps) => {
       {/* Header with Logo */}
       <div className="p-4 border-b border-white/10 text-center">
         <img 
-          src="/lovable-uploads/great-pearl-coffee-logo.png" 
-          alt="Great Pearl Coffee" 
+          src="/lovable-uploads/great-agro-coffee-logo.png" 
+          alt="Great Agro Coffee" 
           className="h-16 w-auto mx-auto mb-2"
         />
         <p className="text-white/60 text-sm">Today's Buying Prices</p>

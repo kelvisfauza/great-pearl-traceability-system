@@ -46,7 +46,7 @@ export const sendKibabaSMS = async () => {
     }
     
     // Send SMS
-    const message = `Dear ${employee.name}, your ${request.type} "${request.title}" of UGX ${request.amount.toLocaleString()} has been approved and dispersed successfully. Great Pearl Coffee.`;
+    const message = `Dear ${employee.name}, your ${request.type} "${request.title}" of UGX ${request.amount.toLocaleString()} has been approved and dispersed successfully. Great Agro Coffee.`;
     
     console.log('📤 Sending SMS...');
     const { data: smsData, error: smsError } = await supabase.functions.invoke('send-sms', {

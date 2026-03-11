@@ -305,7 +305,7 @@ const SystemTransactions = () => {
       <style>body{font:12px/1.4 system-ui;margin:0;padding:20px}table{width:100%;border-collapse:collapse}th{text-align:left;padding:6px 8px;border-bottom:2px solid #333;font-size:11px}@media print{.no-print{display:none}}</style>
     </head><body onload="window.print();">
       <div style="max-width:900px;margin:0 auto">
-        <h2 style="margin:0 0 4px">Great Pearl Coffee</h2>
+        <h2 style="margin:0 0 4px">Great Agro Coffee</h2>
         <h3 style="margin:0 0 16px;font-weight:normal;color:#555">System Transactions Report</h3>
         <div style="margin-bottom:12px;font-size:12px">
           <strong>Date:</strong> ${format(new Date(), 'MMMM dd, yyyy')}<br/>

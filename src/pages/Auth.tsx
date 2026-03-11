@@ -225,14 +225,14 @@ const Auth = () => {
             <div className="flex justify-center mb-4">
               <div className="p-4 bg-[#0d3d1f] rounded-2xl shadow-lg">
                 <img 
-                  src="/lovable-uploads/great-pearl-coffee-logo.png" 
-                  alt="Great Pearl Coffee Factory" 
+                  src="/lovable-uploads/great-agro-coffee-logo.png" 
+                  alt="Great Agro Coffee" 
                   className="h-20 w-auto object-contain"
                 />
               </div>
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              Welcome to Great Pearl Coffee Factory
+              Welcome to Great Agro Coffee
             </h1>
             <p className="text-gray-600">
               Please select your system version
@@ -309,8 +309,8 @@ const Auth = () => {
           <div className="flex justify-center mb-4">
             <div className="p-4 bg-[#0d3d1f] rounded-2xl shadow-lg relative">
               <img 
-                src="/lovable-uploads/great-pearl-coffee-logo.png" 
-                alt="Great Pearl Coffee Factory" 
+                src="/lovable-uploads/great-agro-coffee-logo.png" 
+                alt="Great Agro Coffee" 
                 className="h-24 w-auto object-contain"
               />
               {isHoliday && (
@@ -319,7 +319,7 @@ const Auth = () => {
             </div>
           </div>
           <h1 className="text-2xl font-bold text-foreground mb-2">
-            Great Pearl Coffee Factory
+            Great Agro Coffee
           </h1>
           <p className="text-muted-foreground">
             {isHoliday ? `${holiday.emoji} ${holiday.name}` : 'Coffee Management System'}
@@ -445,7 +445,7 @@ const Auth = () => {
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <Mail className="h-4 w-4 text-blue-600" />
-                <span>it.support@greatpearlcoffee.com</span>
+                <span>it.support@greatagrocoffee.com</span>
               </div>
             </div>
             <Alert>

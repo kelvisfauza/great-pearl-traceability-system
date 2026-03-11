@@ -50,7 +50,7 @@ const HolidayBanner = ({ userName }: HolidayBannerProps) => {
             </p>
 
             <p className="mt-2 text-xs text-white/70">
-              From the Great Pearl Coffee Family {holiday.emoji}
+              From the Great Agro Coffee Family {holiday.emoji}
             </p>
           </div>
 

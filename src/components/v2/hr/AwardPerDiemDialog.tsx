@@ -88,7 +88,7 @@ const AwardPerDiemDialog = () => {
           await supabase.functions.invoke("send-sms", {
             body: {
               phone: emp.phone,
-              message: `Dear ${emp.name}, you have been awarded a per diem of UGX ${parseFloat(amount).toLocaleString()}. Reason: ${reason}. The amount has been added to your wallet balance. Great Pearl Coffee.`,
+              message: `Dear ${emp.name}, you have been awarded a per diem of UGX ${parseFloat(amount).toLocaleString()}. Reason: ${reason}. The amount has been added to your wallet balance. Great Agro Coffee.`,
               userName: emp.name,
               messageType: "per_diem_award",
             },

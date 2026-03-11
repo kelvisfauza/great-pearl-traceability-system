@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-const COMPANY_DOMAIN = "@greatpearlcoffee.com";
+const COMPANY_DOMAIN = "@greatagrocoffee.com";
 
 const ForceEmailUpdate: React.FC = () => {
   const { user, employee } = useAuth();
@@ -94,7 +94,7 @@ const ForceEmailUpdate: React.FC = () => {
 
   const suggested = React.useMemo(() => {
     if (!employee?.name) return "";
-    // Simple suggestion: firstlast@greatpearlcoffee.com
+    // Simple suggestion: firstlast@greatagrocoffee.com
     const clean = employee.name.replace(/\s+/g, "").toLowerCase();
     return `${clean}${COMPANY_DOMAIN}`;
   }, [employee?.name]);

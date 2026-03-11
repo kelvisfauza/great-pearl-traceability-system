@@ -459,7 +459,7 @@ const ProcessPayrollDialog = () => {
       if (payment.employee_phone) {
         try {
           const payLabel = payment.payment_label ? ` (${payment.payment_label})` : '';
-          let smsMessage = `Great Pearl Coffee: Your salary${payLabel} for ${payment.payment_month} has been disbursed.\n\nGross: UGX ${Number(payment.gross_salary).toLocaleString()}`;
+          let smsMessage = `Great Agro Coffee: Your salary${payLabel} for ${payment.payment_month} has been disbursed.\n\nGross: UGX ${Number(payment.gross_salary).toLocaleString()}`;
           if (payment.advance_deduction > 0) {
             smsMessage += `\nAdvance Deduction: -UGX ${Number(payment.advance_deduction).toLocaleString()}`;
           }

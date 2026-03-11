@@ -49,7 +49,7 @@ const LiveTicker = () => {
     }
 
     if (tickerItems.length === 0) {
-      tickerItems.push({ id: 'w', text: '☕ Welcome to Great Pearl Coffee – Quality Coffee from the Rwenzori Mountains | Call: +256 393 001 626', type: 'info' });
+      tickerItems.push({ id: 'w', text: '☕ Welcome to Great Agro Coffee – Quality Coffee from the Rwenzori Mountains | Call: +256 393 001 626', type: 'info' });
     }
 
     // Only update state if data actually changed — prevents animation restart

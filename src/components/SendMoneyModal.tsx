@@ -85,7 +85,7 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
         supabase.functions.invoke('send-sms', {
           body: {
             phone: selectedRecipient.phone,
-            message: `Dear ${selectedRecipient.name}, you have received UGX ${parsedAmount.toLocaleString()} from ${employee?.name || senderEmail}. Your wallet balance is now UGX ${Number(receiverBalance).toLocaleString()}. Ref: ${ref}. - Great Pearl Coffee`,
+            message: `Dear ${selectedRecipient.name}, you have received UGX ${parsedAmount.toLocaleString()} from ${employee?.name || senderEmail}. Your wallet balance is now UGX ${Number(receiverBalance).toLocaleString()}. Ref: ${ref}. - Great Agro Coffee`,
             userName: selectedRecipient.name,
             messageType: 'wallet_transfer',
           },
@@ -99,7 +99,7 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
         supabase.functions.invoke('send-sms', {
           body: {
             phone: senderPhone,
-            message: `Dear ${employee?.name || senderEmail}, UGX ${parsedAmount.toLocaleString()} has been sent to ${selectedRecipient.name} from your wallet. Your new balance is UGX ${senderNewBalance.toLocaleString()}. Ref: ${ref}. - Great Pearl Coffee`,
+            message: `Dear ${employee?.name || senderEmail}, UGX ${parsedAmount.toLocaleString()} has been sent to ${selectedRecipient.name} from your wallet. Your new balance is UGX ${senderNewBalance.toLocaleString()}. Ref: ${ref}. - Great Agro Coffee`,
             userName: employee?.name || senderEmail,
             messageType: 'wallet_transfer',
           },

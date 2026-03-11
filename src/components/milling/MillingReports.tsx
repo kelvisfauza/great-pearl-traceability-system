@@ -372,16 +372,16 @@ ${reportData.cashTransactions.map((p: any) =>
           <div class="print-header">
             <img 
               src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" 
-              alt="Great Pearl Coffee Factory Logo" 
+              alt="Great Agro Coffee Logo" 
               class="company-logo" 
             />
             
-            <h1 class="company-name">GREAT PEARL COFFEE FACTORY</h1>
+            <h1 class="company-name">GREAT AGRO COFFEE</h1>
             
             <div class="company-details">
               <p>Specialty Coffee Processing & Export</p>
               <p>+256781121639 / +256778536681</p>
-              <p>www.greatpearlcoffee.com | greatpearlcoffee@gmail.com</p>
+              <p>www.greatagrocoffee.com | greatagrocoffee@gmail.com</p>
               <p>Uganda Coffee Development Authority Licensed</p>
             </div>
             

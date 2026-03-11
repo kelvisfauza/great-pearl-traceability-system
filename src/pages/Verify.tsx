@@ -130,8 +130,8 @@ const Verify = () => {
         <div className="text-center mb-8">
           <div className="inline-block bg-white/10 backdrop-blur rounded-lg p-4 mb-4">
             <img 
-              src="/lovable-uploads/great-pearl-coffee-logo.png" 
-              alt="Great Pearl Coffee Factory Logo" 
+              src="/lovable-uploads/great-agro-coffee-logo.png" 
+              alt="Great Agro Coffee Logo" 
               className="h-16 w-auto mx-auto"
             />
           </div>
@@ -139,7 +139,7 @@ const Verify = () => {
             Document Verification
           </h1>
           <p className="text-green-100">
-            Great Pearl Coffee Factory - Official Document Verification Portal
+            Great Agro Coffee - Official Document Verification Portal
           </p>
         </div>
 
@@ -189,7 +189,7 @@ const Verify = () => {
               <p className="text-red-600">{error}</p>
               <p className="text-sm text-gray-500 mt-4">
                 Please check the verification code and try again. If you believe this is an error, 
-                please contact Great Pearl Coffee Factory.
+                please contact Great Agro Coffee.
               </p>
             </CardContent>
           </Card>
@@ -277,9 +277,9 @@ const Verify = () => {
 
         {/* Footer */}
         <div className="text-center mt-8 text-green-100 text-sm">
-          <p>Great Pearl Coffee Factory</p>
+          <p>Great Agro Coffee</p>
           <p>+256781121639 / +256778536681</p>
-          <p className="mt-2">www.greatpearlcoffee.com</p>
+          <p className="mt-2">www.greatagrocoffee.com</p>
         </div>
       </div>
     </div>

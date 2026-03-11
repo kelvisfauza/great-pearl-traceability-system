@@ -325,7 +325,7 @@ Market Sentiment: ${marketTrend.toUpperCase()}
               <div ref={printRef} className="space-y-6 p-4 bg-background">
                 {/* Report Header */}
                 <div className="text-center border-b pb-4 print:block hidden">
-                  <h1 className="text-2xl font-bold">Great Pearl Coffee</h1>
+                  <h1 className="text-2xl font-bold">Great Agro Coffee</h1>
                   <p className="text-muted-foreground">Daily Market Analysis Report</p>
                   <p className="text-sm">{format(new Date(), 'MMMM dd, yyyy')}</p>
                 </div>

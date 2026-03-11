@@ -141,7 +141,7 @@ export const StaffReportsPrint = ({
 
         <div ref={printRef}>
           <div className="header">
-            <div className="company-name">Great Pearl Coffee</div>
+            <div className="company-name">Great Agro Coffee</div>
             <div className="report-title">Staff Daily Reports</div>
             <div className="period">
               Period: {format(parseISO(startDate), 'MMM d, yyyy')} - {format(parseISO(endDate), 'MMM d, yyyy')}
@@ -170,7 +170,7 @@ export const StaffReportsPrint = ({
           )}
 
           <div className="footer">
-            Generated on {format(new Date(), 'MMMM d, yyyy h:mm a')} • Great Pearl Coffee Management System
+            Generated on {format(new Date(), 'MMMM d, yyyy h:mm a')} • Great Agro Coffee Management System
           </div>
         </div>
       </DialogContent>

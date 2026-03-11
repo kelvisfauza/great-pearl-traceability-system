@@ -21,7 +21,7 @@ import AttendanceReminder from "./attendance/AttendanceReminder";
 import { Menu } from "lucide-react";
 import { Button } from "./ui/button";
 
-const COMPANY_DOMAIN = "@greatpearlcoffee.com";
+const COMPANY_DOMAIN = "@greatagrocoffee.com";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;

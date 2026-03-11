@@ -249,7 +249,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
       @media print { body { padding: 0; } }
     </style></head><body>
       <div class="header">
-        <h1>GREAT PEARL COFFEE</h1>
+        <h1>GREAT AGRO COFFEE</h1>
         <h2>Loan Application Review Report</h2>
         <div class="date">Generated: ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} at ${new Date().toLocaleTimeString()}</div>
       </div>
@@ -342,7 +342,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
 
       <div class="footer">
         This is a system-generated loan review report. Interest is calculated as flat rate on the full principal. Subject to company lending policy.<br/>
-        GREAT PEARL COFFEE &mdash; Loan Management System &mdash; ${new Date().getFullYear()}
+        GREAT AGRO COFFEE &mdash; Loan Management System &mdash; ${new Date().getFullYear()}
       </div>
     </body></html>`);
     win.document.close();

@@ -85,7 +85,7 @@ const MovementsLog = () => {
         @media print { body { margin: 10px; } }
       </style></head><body>
       <div class="header">
-        <h1>GREAT PEARL COFFEE FACTORY</h1>
+        <h1>GREAT AGRO COFFEE</h1>
         <p>Inventory Movement Report</p>
         <p>Generated: ${new Date().toLocaleDateString('en-GB')} ${new Date().toLocaleTimeString()}</p>
       </div>

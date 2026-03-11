@@ -43,15 +43,15 @@ export const PaymentSlipModal: React.FC<PaymentSlipModalProps> = ({
         <!-- Company Header -->
         <div style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 8px; margin-bottom: 12px;">
           <img src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" 
-               alt="Great Pearl Coffee Factory Logo" 
+               alt="Great Agro Coffee Logo" 
                style="height: 40px; width: auto; margin-bottom: 4px;" />
           <h1 style="color: #333; margin: 2px 0; font-size: 14px; font-weight: bold; text-transform: uppercase;">
-            GREAT PEARL COFFEE FACTORY
+            GREAT AGRO COFFEE
           </h1>
           <div style="font-size: 8px; color: #666; line-height: 1.2;">
             <p style="margin: 1px 0;">Specialty Coffee Processing & Export</p>
             <p style="margin: 1px 0;">+256781121639 / +256778536681</p>
-            <p style="margin: 1px 0;">www.greatpearlcoffee.com | greatpearlcoffee@gmail.com</p>
+            <p style="margin: 1px 0;">www.greatagrocoffee.com | greatagrocoffee@gmail.com</p>
           </div>
           <h2 style="color: #333; margin: 6px 0 2px 0; font-size: 16px; font-weight: bold; text-transform: uppercase;">
             PAYMENT SLIP

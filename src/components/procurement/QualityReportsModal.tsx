@@ -172,7 +172,7 @@ const QualityReportsModal: React.FC<QualityReportsModalProps> = ({ open, onClose
       <div style="padding: 20px; font-family: Arial, sans-serif;">
         <div style="text-align: center; margin-bottom: 30px;">
           <h1>QUALITY REPORT</h1>
-          <p><strong>Great Pearl Coffee Factory</strong></p>
+          <p><strong>Great Agro Coffee</strong></p>
           <p>Generated on: ${new Date().toLocaleDateString()}</p>
         </div>
         

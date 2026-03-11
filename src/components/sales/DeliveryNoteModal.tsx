@@ -101,18 +101,18 @@ const DeliveryNoteModal: React.FC<DeliveryNoteModalProps> = ({ open, onClose, sa
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <img 
-                  src="/lovable-uploads/great-pearl-coffee-logo.png" 
-                  alt="Great Pearl Coffee" 
+                  src="/lovable-uploads/great-agro-coffee-logo.png" 
+                  alt="Great Agro Coffee" 
                   style={{ height: '50px', width: 'auto' }}
                 />
                 <div style={{ color: 'white' }}>
-                  <h1 style={{ fontSize: '18px', fontWeight: 'bold', margin: '0' }}>GREAT PEARL COFFEE FACTORY</h1>
-                  <p style={{ fontSize: '11px', margin: '2px 0 0 0', opacity: '0.9' }}>Delivering coffee from the heart of Rwenzori</p>
+                  <h1 style={{ fontSize: '18px', fontWeight: 'bold', margin: '0' }}>GREAT AGRO COFFEE</h1>
+                  <p style={{ fontSize: '11px', margin: '2px 0 0 0', opacity: '0.9' }}>Kasese, Uganda</p>
                 </div>
               </div>
               <div style={{ textAlign: 'right', color: 'white', fontSize: '11px' }}>
                 <p style={{ margin: '0' }}>+256781121639 / +256778536681</p>
-                <p style={{ margin: '2px 0 0 0' }}>info@greatpearlcoffee.com</p>
+                <p style={{ margin: '2px 0 0 0' }}>info@greatagrocoffee.com</p>
               </div>
             </div>
           </div>
@@ -132,7 +132,7 @@ const DeliveryNoteModal: React.FC<DeliveryNoteModalProps> = ({ open, onClose, sa
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0', borderBottom: '1px solid #e5e7eb' }}>
             <div style={{ padding: '14px 16px', borderRight: '1px solid #e5e7eb' }}>
               <h3 style={{ fontSize: '10px', fontWeight: '600', color: '#0d3d1f', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.5px' }}>From (Seller)</h3>
-              <p style={{ fontWeight: '600', margin: '0 0 4px 0', fontSize: '13px' }}>Great Pearl Coffee Factory</p>
+              <p style={{ fontWeight: '600', margin: '0 0 4px 0', fontSize: '13px' }}>Great Agro Coffee</p>
               <p style={{ margin: '0', color: '#666', fontSize: '11px', lineHeight: '1.4' }}>
                 Kasese, Uganda
               </p>
@@ -207,7 +207,7 @@ const DeliveryNoteModal: React.FC<DeliveryNoteModalProps> = ({ open, onClose, sa
               This document confirms the dispatch of goods as described above. Please retain for your records.
             </p>
             <p style={{ fontSize: '8px', color: '#999', margin: '4px 0 0 0' }}>
-              Great Pearl Coffee Factory | www.greatpearlcoffee.com | UCDA Licensed
+              Great Agro Coffee | www.greatagrocoffee.com | UCDA Licensed
             </p>
           </div>
         </div>

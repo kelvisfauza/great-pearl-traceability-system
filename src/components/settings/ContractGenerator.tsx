@@ -88,13 +88,13 @@ const ContractGenerator = ({ isOpen, onClose }: ContractGeneratorProps) => {
       <body>
         <div class="header">
           <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
-            <img src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" alt="Great Pearl Coffee Factory" style="height: 100px; width: 100px; margin-right: 30px;">
+            <img src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" alt="Great Agro Coffee" style="height: 100px; width: 100px; margin-right: 30px;">
             <div>
-              <div class="company-name">GREAT PEARL COFFEE FACTORY</div>
+              <div class="company-name">GREAT AGRO COFFEE</div>
               <div class="company-address">
                 P.O. Box 12345, Kampala, Uganda<br>
                 Registration No: 123456789<br>
-                Tel: +256 123 456 789 | Email: info@greatpearlcoffee.com
+                Tel: +256 123 456 789 | Email: info@greatagrocoffee.com
               </div>
             </div>
           </div>
@@ -104,7 +104,7 @@ const ContractGenerator = ({ isOpen, onClose }: ContractGeneratorProps) => {
 
         <div class="parties">
           <div class="party">
-            <strong>EMPLOYER:</strong> Great Pearl Coffee Factory, a company incorporated under the laws of Uganda with its registered office at P.O. Box 12345, Kampala, Uganda (hereinafter referred to as "the Company").
+            <strong>EMPLOYER:</strong> Great Agro Coffee, a company incorporated under the laws of Uganda with its registered office at P.O. Box 12345, Kampala, Uganda (hereinafter referred to as "the Company").
           </div>
           <div class="party">
             <strong>EMPLOYEE:</strong> ${selectedEmployee.name}, of ${selectedEmployee.address || '[Address]'} (hereinafter referred to as "the Employee").
@@ -269,7 +269,7 @@ const ContractGenerator = ({ isOpen, onClose }: ContractGeneratorProps) => {
             <div style="height: 40px;"></div>
             <div>_________________________</div>
             <div>HR Manager</div>
-            <div>Great Pearl Coffee Factory</div>
+            <div>Great Agro Coffee</div>
           </div>
           <div class="signature">
             <div><strong>EMPLOYEE</strong></div>

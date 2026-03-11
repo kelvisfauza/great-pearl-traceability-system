@@ -248,7 +248,7 @@ export const AttendanceReport = () => {
       <body>
         <div class="header">
           <div class="logo">☕</div>
-          <div class="company-name">Great Pearl Coffee Factory</div>
+          <div class="company-name">Great Agro Coffee</div>
           <div class="subtitle">Coffee Management System</div>
         </div>
 
@@ -317,7 +317,7 @@ export const AttendanceReport = () => {
 
         <div class="footer">
           <div>
-            <strong>Great Pearl Coffee Factory</strong><br>
+            <strong>Great Agro Coffee</strong><br>
             Coffee Management System
           </div>
           <div style="text-align: right;">

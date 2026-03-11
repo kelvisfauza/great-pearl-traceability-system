@@ -41,7 +41,7 @@ const PrintCredentialsDialog = ({ isOpen, onClose, employee }: PrintCredentialsD
     printWindow.document.write(`
       <html>
         <head>
-          <title>Login Credentials - Great Pearl Coffee Company</title>
+          <title>Login Credentials - Great Agro Coffee Company</title>
           <style>
             body { 
               font-family: Arial, sans-serif; 
@@ -130,7 +130,7 @@ const PrintCredentialsDialog = ({ isOpen, onClose, employee }: PrintCredentialsD
         <body>
           <div class="container">
             <div class="header">
-              <h1>Great Pearl Coffee Company</h1>
+              <h1>Great Agro Coffee Company</h1>
               <h2>Employee Login Credentials</h2>
             </div>
             

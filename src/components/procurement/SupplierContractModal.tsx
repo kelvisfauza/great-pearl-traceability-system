@@ -152,9 +152,9 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({ open, onC
       <div style="padding: 20px; font-family: Arial, sans-serif;">
         <div style="text-align: center; margin-bottom: 30px;">
           <h1>SUPPLIER CONTRACT</h1>
-          <p><strong>Great Pearl Coffee Factory</strong></p>
+          <p><strong>Great Agro Coffee</strong></p>
           <p>+256781121639 / +256778536681</p>
-          <p>greatpearlcoffee@gmail.com</p>
+          <p>greatagrocoffee@gmail.com</p>
         </div>
         
         <div style="margin-bottom: 20px;">
@@ -186,7 +186,7 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({ open, onC
             <div style="text-align: center;">
               <p>_________________________</p>
               <p>Company Representative</p>
-              <p>Great Pearl Coffee Factory</p>
+              <p>Great Agro Coffee</p>
             </div>
           </div>
         </div>

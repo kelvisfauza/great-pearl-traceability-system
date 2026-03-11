@@ -247,7 +247,7 @@ export const BuyerContractDetail = ({ contract, onBack, remainingQuantity: initi
       </head>
       <body>
         <div class="header">
-          <h1>GREAT PEARL COFFEE</h1>
+          <h1>GREAT AGRO COFFEE</h1>
           <h2>Supplier Subcontract Agreement</h2>
         </div>
         
@@ -285,12 +285,12 @@ export const BuyerContractDetail = ({ contract, onBack, remainingQuantity: initi
 
         <div class="quality-notice">
           <div class="quality-notice-title">⚠️ Important Notice</div>
-          <p style="margin: 0;">All deliveries under this contract are subjected to quality checks, uprisal adjustments, and cuttings as per Great Pearl Coffee's quality standards and market conditions at the time of delivery.</p>
+          <p style="margin: 0;">All deliveries under this contract are subjected to quality checks, uprisal adjustments, and cuttings as per Great Agro Coffee's quality standards and market conditions at the time of delivery.</p>
         </div>
         
         <div class="signatures">
           <div class="signature-box">
-            <div class="signature-line">Great Pearl Coffee Representative</div>
+            <div class="signature-line">Great Agro Coffee Representative</div>
           </div>
           <div class="signature-box">
             <div class="signature-line">Supplier Representative</div>
@@ -299,7 +299,7 @@ export const BuyerContractDetail = ({ contract, onBack, remainingQuantity: initi
         
         <div class="footer">
           <p>Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
-          <p>Great Pearl Coffee - www.greatpearlcoffeesystem.site</p>
+          <p>Great Agro Coffee - www.greatagrocoffeesystem.site</p>
         </div>
       </body>
       </html>

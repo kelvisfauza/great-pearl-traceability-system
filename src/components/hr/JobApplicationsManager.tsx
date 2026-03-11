@@ -28,19 +28,19 @@ const statusColors: Record<string, string> = {
 
 const STATUS_SMS_MESSAGES: Record<string, (name: string, ref: string, extra?: string) => string> = {
   Pending: (name, ref) =>
-    `Dear ${name}, your job application has been received under Ref: ${ref} and is currently PENDING review. Thank you for your interest in Great Pearl Coffee.`,
+    `Dear ${name}, your job application has been received under Ref: ${ref} and is currently PENDING review. Thank you for your interest in Great Agro Coffee.`,
   Reviewed: (name, ref) =>
-    `Dear ${name}, your job application (Ref: ${ref}) has been REVIEWED. We will contact you with further updates. Great Pearl Coffee.`,
+    `Dear ${name}, your job application (Ref: ${ref}) has been REVIEWED. We will contact you with further updates. Great Agro Coffee.`,
   "Interview Scheduled": (name, ref, extra) =>
-    `Dear ${name}, you have been scheduled for an INTERVIEW for your application (Ref: ${ref}).${extra ? " " + extra : ""} Please confirm your availability. Great Pearl Coffee.`,
+    `Dear ${name}, you have been scheduled for an INTERVIEW for your application (Ref: ${ref}).${extra ? " " + extra : ""} Please confirm your availability. Great Agro Coffee.`,
   Interviewed: (name, ref) =>
-    `Dear ${name}, thank you for attending the interview for your application (Ref: ${ref}). We will communicate the outcome shortly. Great Pearl Coffee.`,
+    `Dear ${name}, thank you for attending the interview for your application (Ref: ${ref}). We will communicate the outcome shortly. Great Agro Coffee.`,
   Shortlisted: (name, ref) =>
-    `Dear ${name}, congratulations! You have been SHORTLISTED for the position you applied for (Ref: ${ref}). Further details will follow. Great Pearl Coffee.`,
+    `Dear ${name}, congratulations! You have been SHORTLISTED for the position you applied for (Ref: ${ref}). Further details will follow. Great Agro Coffee.`,
   Accepted: (name, ref) =>
-    `Dear ${name}, we are pleased to inform you that your application (Ref: ${ref}) has been ACCEPTED. Welcome to Great Pearl Coffee! We will contact you with onboarding details.`,
+    `Dear ${name}, we are pleased to inform you that your application (Ref: ${ref}) has been ACCEPTED. Welcome to Great Agro Coffee! We will contact you with onboarding details.`,
   Rejected: (name, ref) =>
-    `Dear ${name}, we regret to inform you that your application (Ref: ${ref}) was not successful at this time. We appreciate your interest in Great Pearl Coffee.`,
+    `Dear ${name}, we regret to inform you that your application (Ref: ${ref}) was not successful at this time. We appreciate your interest in Great Agro Coffee.`,
 };
 
 const JobApplicationsManager = () => {

@@ -304,14 +304,14 @@ const StorePrintReportGenerator = () => {
             <div class="company-header">
               <div style="text-align: center; margin-bottom: 15px;">
                 <img src="${window.location.origin}/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" 
-                     alt="Great Pearl Coffee Factory Logo" 
+                     alt="Great Agro Coffee Logo" 
                      style="height: 60px; width: auto; margin-bottom: 10px;" />
               </div>
-              <div class="company-name">GREAT PEARL COFFEE FACTORY</div>
+              <div class="company-name">GREAT AGRO COFFEE</div>
               <div class="company-details">
                 Specialty Coffee Processing & Export<br>
-                Tel: +256 781 121 639 | Web: www.greatpearlcoffee.com<br>
-                Email: info@greatpearlcoffee.com<br>
+                Tel: +256 781 121 639 | Web: www.greatagrocoffee.com<br>
+                Email: info@greatagrocoffee.com<br>
                 Uganda Coffee Development Authority Licensed
               </div>
             </div>
@@ -533,7 +533,7 @@ const StorePrintReportGenerator = () => {
 
             <div class="footer">
               <p>Store Report generated on ${format(new Date(), 'MMMM dd, yyyy HH:mm')}</p>
-              <p>This report is confidential and proprietary to Great Pearl Coffee Factory</p>
+              <p>This report is confidential and proprietary to Great Agro Coffee</p>
             </div>
           </body>
         </html>

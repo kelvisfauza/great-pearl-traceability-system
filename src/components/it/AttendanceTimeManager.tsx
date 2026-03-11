@@ -370,7 +370,7 @@ const AttendanceTimeManager = () => {
       <html><head><title>Attendance Records</title><style>${getStandardPrintStyles()}</style></head>
       <body>
         <div class="print-header">
-          <div class="company-name">Great Pearl Coffee Limited</div>
+          <div class="company-name">Great Agro Coffee Limited</div>
           <div class="document-title">Attendance Records Report</div>
           <div class="document-info">Period: ${filterDateFrom} to ${filterDateTo}${filterEmployee ? ' | Employee: ' + filterEmployee : ''}</div>
           <div class="document-info">Generated: ${format(new Date(), 'dd MMM yyyy HH:mm')}</div>

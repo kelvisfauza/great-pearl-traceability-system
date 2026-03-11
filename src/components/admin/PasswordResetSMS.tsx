@@ -91,7 +91,7 @@ export const PasswordResetSMS = () => {
           <Input
             id="reset-email"
             type="email"
-            placeholder="employee@greatpearlcoffee.com"
+            placeholder="employee@greatagrocoffee.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={loading}
@@ -150,7 +150,7 @@ export const PasswordResetSMS = () => {
                     
                     <p className="text-muted-foreground">
                       {result.sms_sent 
-                        ? 'The employee will receive: "Your temporary password is: [password]. Please delete this message for security. - Great Pearl Coffee IT Department"'
+                        ? 'The employee will receive: "Your temporary password is: [password]. Please delete this message for security. - Great Agro Coffee IT Department"'
                         : '🚨 You MUST provide this password to the employee manually since SMS failed to send!'}
                     </p>
                   </div>

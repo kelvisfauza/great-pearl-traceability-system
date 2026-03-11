@@ -23,22 +23,22 @@ const StandardPrintHeader: React.FC<StandardPrintHeaderProps> = ({
       {/* Logo - Centered */}
       <div className="flex justify-center mb-4" style={{ backgroundColor: '#0d3d1f', padding: '12px 24px', borderRadius: '8px', display: 'inline-block' }}>
         <img 
-          src="/lovable-uploads/great-pearl-coffee-logo.png" 
-          alt="Great Pearl Coffee Factory Logo" 
+          src="/lovable-uploads/great-agro-coffee-logo.png" 
+          alt="Great Agro Coffee Logo" 
           className="company-logo h-20 w-auto" 
         />
       </div>
       
       {/* Company Name - Centered */}
       <h1 className="company-name font-bold text-xl uppercase tracking-wide mb-2 text-gray-900 text-center">
-        GREAT PEARL COFFEE FACTORY
+        GREAT AGRO COFFEE
       </h1>
       
       {/* Company Contact Info - Centered */}
       <div className="company-details text-sm text-gray-600 space-y-1 mb-4 text-center">
-        <p>Delivering coffee from the heart of Rwenzori.</p>
+        <p>Kasese, Uganda.</p>
         <p>+256781121639 / +256778536681</p>
-        <p>www.greatpearlcoffee.com | info@greatpearlcoffee.com</p>
+        <p>www.greatagrocoffee.com | info@greatagrocoffee.com</p>
         <p>Uganda Coffee Development Authority Licensed</p>
       </div>
       

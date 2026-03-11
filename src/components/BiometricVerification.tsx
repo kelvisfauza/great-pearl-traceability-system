@@ -180,7 +180,7 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
         publicKey: {
           challenge: challenge,
           rp: {
-            name: 'Great Pearl Coffee Factory',
+            name: 'Great Agro Coffee',
             id: rpId
           },
           user: {

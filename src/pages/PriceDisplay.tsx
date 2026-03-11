@@ -286,12 +286,12 @@ const PriceDisplay = () => {
       <div className="text-center mb-8">
         <div className="flex items-center justify-center gap-4 mb-4">
           <img 
-            src="/lovable-uploads/great-pearl-coffee-logo.png" 
-            alt="Great Pearl Coffee" 
+            src="/lovable-uploads/great-agro-coffee-logo.png" 
+            alt="Great Agro Coffee" 
             className="h-24 w-auto"
           />
         </div>
-        <h1 className="text-5xl font-bold tracking-wide">GREAT PEARL COFFEE</h1>
+        <h1 className="text-5xl font-bold tracking-wide">GREAT AGRO COFFEE</h1>
         <p className="text-2xl text-white/80 mt-2">Today's Buying Prices</p>
       </div>
 
@@ -399,7 +399,7 @@ const PriceDisplay = () => {
             </>
           )}
         </div>
-        <p className="text-white/40 mt-4 text-sm">www.greatpearlcoffeesystem.site</p>
+        <p className="text-white/40 mt-4 text-sm">www.greatagrocoffeesystem.site</p>
       </div>
     </div>
   );

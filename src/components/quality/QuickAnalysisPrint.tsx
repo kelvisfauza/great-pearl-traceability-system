@@ -42,12 +42,12 @@ const QuickAnalysisPrint = forwardRef<HTMLDivElement, QuickAnalysisPrintProps>(
         {/* Company Header */}
         <div className="text-center border-b-2 border-black pb-2 mb-3">
           <img 
-            src="/images/great-pearl-coffee-logo.png" 
-            alt="Great Pearl Coffee Logo" 
+            src="/images/great-agro-coffee-logo.png" 
+            alt="Great Agro Coffee Logo" 
             className="h-14 mx-auto mb-1"
           />
-          <h1 className="text-lg font-bold uppercase tracking-wide">GREAT PEARL COFFEE</h1>
-          <p className="text-xs">Kasese, Uganda | Tel: +256781121639 | www.greatpearlcoffee.com</p>
+          <h1 className="text-lg font-bold uppercase tracking-wide">GREAT AGRO COFFEE</h1>
+          <p className="text-xs">Kasese, Uganda | Tel: +256781121639 | www.greatagrocoffee.com</p>
           <div className="mt-2 bg-gray-100 py-1">
             <h2 className="text-base font-bold">COFFEE QUALITY ANALYSIS REPORT</h2>
           </div>
@@ -200,7 +200,7 @@ const QuickAnalysisPrint = forwardRef<HTMLDivElement, QuickAnalysisPrintProps>(
 
         {/* Footer */}
         <div className="absolute bottom-4 left-4 right-4 text-center text-xs text-gray-500 border-t pt-2">
-          <p>This is an official quality analysis document from Great Pearl Coffee</p>
+          <p>This is an official quality analysis document from Great Agro Coffee</p>
           <p>Generated on {format(new Date(), 'dd MMM yyyy HH:mm')}</p>
         </div>
       </div>

@@ -38,11 +38,11 @@ const EUDRReportPrint: React.FC<EUDRReportPrintProps> = ({
           <div className="flex items-center justify-center gap-6 mb-4">
             <img 
               src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" 
-              alt="Great Pearl Coffee Factory Logo" 
+              alt="Great Agro Coffee Logo" 
               className="h-16 w-auto"
             />
             <div>
-              <h1 className="text-2xl font-bold text-green-700">GREAT PEARL COFFEE FACTORY</h1>
+              <h1 className="text-2xl font-bold text-green-700">GREAT AGRO COFFEE</h1>
               <p className="text-sm text-gray-600">Kampala, Uganda | +256 123 456 789</p>
             </div>
           </div>
@@ -212,7 +212,7 @@ const EUDRReportPrint: React.FC<EUDRReportPrintProps> = ({
 
         {/* Footer */}
         <div className="mt-8 pt-4 border-t border-gray-300 text-xs text-gray-500 text-center">
-          <p><strong>GREAT PEARL COFFEE FACTORY</strong> - EUDR Compliance Report</p>
+          <p><strong>GREAT AGRO COFFEE</strong> - EUDR Compliance Report</p>
           <p>This report contains confidential business information and is intended for authorized personnel only.</p>
           <p className="mt-2">Report Generated: {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString()}</p>
         </div>

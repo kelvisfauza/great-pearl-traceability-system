@@ -48,7 +48,7 @@ const printBonusVoucher = (bonus: any, ref: string, employeeName: string) => {
 </head><body onload="window.print();">
 <div class="voucher">
   <div class="header">
-    <div class="company">Great Pearl Coffee Ltd</div>
+    <div class="company">Great Agro Coffee Ltd</div>
     <h1>🎁 BONUS PAYMENT VOUCHER</h1>
     <h2>Employee Bonus Claim Receipt</h2>
   </div>
@@ -75,7 +75,7 @@ const printBonusVoucher = (bonus: any, ref: string, employeeName: string) => {
   </div>
   <div class="footer">
     <p>This voucher confirms that the above bonus has been claimed and credited to the employee's account balance.</p>
-    <p>Great Pearl Coffee Ltd • Generated on ${now.toLocaleString()}</p>
+    <p>Great Agro Coffee Ltd • Generated on ${now.toLocaleString()}</p>
   </div>
 </div>
 </body></html>`;
