@@ -413,17 +413,25 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
               <Card>
                 <CardHeader className="pb-2 p-4">
                   <CardTitle className="text-sm flex items-center gap-2">
-                    <Banknote className="h-4 w-4" /> Loan Request
+                    <Banknote className="h-4 w-4" /> Loan Request Details
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                     <div>
-                      <p className="text-muted-foreground text-xs">Principal</p>
+                      <p className="text-muted-foreground text-xs">Loan Type</p>
+                      <p className="font-bold">{loan.loan_type === 'long_term' ? 'Long-Term' : 'Quick'} Loan</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Principal Amount</p>
                       <p className="font-bold">UGX {loan.loan_amount?.toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground text-xs">Interest ({isWeekly ? `${(loan.daily_interest_rate || 0).toFixed(2)}%/day` : `${loan.interest_rate}%`})</p>
+                      <p className="text-muted-foreground text-xs">Interest Rate</p>
+                      <p className="font-bold">{isWeekly ? `${(loan.daily_interest_rate || 0).toFixed(2)}%/day` : `${loan.interest_rate}%/month`}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Total Interest</p>
                       <p className="font-bold">UGX {(loan.total_repayable - loan.loan_amount)?.toLocaleString()}</p>
                     </div>
                     <div>
@@ -431,9 +439,27 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
                       <p className="font-bold">UGX {loan.total_repayable?.toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground text-xs">{isWeekly ? 'Weekly' : 'Monthly'} Installment</p>
+                      <p className="text-muted-foreground text-xs">{isWeekly ? 'Weekly' : isBullet ? 'Bullet' : 'Monthly'} Installment</p>
                       <p className="font-bold">UGX {installmentAmount?.toLocaleString()}</p>
                     </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Duration</p>
+                      <p className="font-bold">{loan.duration_months} month(s) / {numInstallments} {isWeekly ? 'weeks' : isBullet ? 'payment' : 'months'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Repayment Frequency</p>
+                      <p className="font-bold capitalize">{loan.repayment_frequency || 'weekly'}</p>
+                    </div>
+                  </div>
+                  {loan.purpose && (
+                    <div className="mt-3 p-2 bg-muted/50 rounded text-sm">
+                      <p className="text-muted-foreground text-xs mb-1">Purpose</p>
+                      <p className="font-medium">{loan.purpose}</p>
+                    </div>
+                  )}
+                  <div className="mt-3 p-2 bg-muted/50 rounded text-sm">
+                    <p className="text-muted-foreground text-xs mb-1">Application Date</p>
+                    <p className="font-medium">{new Date(loan.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                   </div>
                 </CardContent>
               </Card>
