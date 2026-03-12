@@ -343,7 +343,7 @@ const AdminLoanTracker = () => {
                         <div>
                           <p className="font-medium text-sm">{r.loans?.employee_name}</p>
                           <p className="text-xs text-muted-foreground">
-                            Week {r.installment_number} • Due {new Date(r.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                            {r.loans?.repayment_frequency === 'weekly' ? 'Week' : r.loans?.repayment_frequency === 'bullet' ? 'Payment' : 'Month'} {r.installment_number} • Due {new Date(r.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                             <span className="text-destructive font-medium ml-1">• {daysOverdue}d overdue</span>
                           </p>
                         </div>
