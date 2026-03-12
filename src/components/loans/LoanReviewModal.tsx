@@ -42,7 +42,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
       // Fetch borrower employee details
       const { data: borrower } = await supabase
         .from('employees')
-        .select('name, email, phone, salary, department, position, join_date, auth_user_id')
+        .select('name, email, phone, salary, department, position, join_date, auth_user_id, address, emergency_contact, employee_id, status, role')
         .eq('email', loan.employee_email)
         .single();
       setBorrowerDetails(borrower);
