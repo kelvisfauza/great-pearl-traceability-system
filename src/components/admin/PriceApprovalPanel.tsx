@@ -203,7 +203,9 @@ await savePrices({
       
       // Format message with CORRECTION: prefix if it's a correction
       const correctionPrefix = request.is_correction ? 'CORRECTION: ' : '';
-      const message = `${correctionPrefix}Great Agro Coffee Price Update - ${date}\n\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}% outturn)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}% outturn)\nSorted: UGX ${(request.sorted_price || 0).toLocaleString()}/kg\n\n${request.is_correction ? 'Please disregard previous prices. ' : ''}Use these prices for today's purchases.`;
+      
+      // Staff message - plain text, no emojis, keep short for 1 SMS credit
+      const message = `${correctionPrefix}Great Agro Coffee Price Update ${date}\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}%)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}%)\nSorted: UGX ${(request.sorted_price || 0).toLocaleString()}/kg\n${request.is_correction ? 'Disregard previous prices.' : 'Use these prices today.'}`;
 
       // Send to all recipients
       for (let i = 0; i < allPhones.length; i++) {
@@ -218,7 +220,8 @@ await savePrices({
           .not('phone', 'is', null);
 
         const supplierPhones = suppliers?.filter(s => s.phone).map(s => s.phone!) || [];
-        const supplierMessage = `${correctionPrefix}Great Agro Coffee - Price Update\nDate: ${date}\n\n☕ ARABICA:\nOutturn: ${request.arabica_outturn}%\nPrice: UGX ${request.arabica_buying_price.toLocaleString()}/kg\n\n☕ ROBUSTA:\nOutturn: ${request.robusta_outturn}%\nPrice: UGX ${request.robusta_buying_price.toLocaleString()}/kg\n\n☕ SORTED: UGX ${(request.sorted_price || 0).toLocaleString()}/kg\n\n${request.is_correction ? 'Please disregard previous prices. ' : ''}Deliver your coffee now!`;
+        // Supplier message - plain text, no emojis, short for reliable delivery
+        const supplierMessage = `${correctionPrefix}Great Agro Coffee Prices ${date}\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}%)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}%)\nSorted: UGX ${(request.sorted_price || 0).toLocaleString()}/kg\n${request.is_correction ? 'Disregard previous prices.' : 'Deliver your coffee now!'}`;
 
         for (let i = 0; i < supplierPhones.length; i++) {
           await sendSmsWithDelay(supplierPhones[i], supplierMessage, 500);
