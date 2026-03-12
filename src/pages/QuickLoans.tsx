@@ -504,14 +504,15 @@ const QuickLoans = () => {
             });
           }
         } else {
-          for (let i = 1; i <= loan.duration_months; i++) {
+          const isBullet = loan.repayment_frequency === 'bullet';
+          const numInstallments = isBullet ? 1 : loan.duration_months;
+          for (let i = 1; i <= numInstallments; i++) {
             const dueDate = new Date(startDate);
-            dueDate.setMonth(dueDate.getMonth() + i);
-            dueDate.setDate(1);
+            dueDate.setDate(dueDate.getDate() + (isBullet ? loan.duration_months * 30 : i * 30));
             repayments.push({
               loan_id: loanId,
               installment_number: i,
-              amount_due: Math.ceil(loan.total_repayable / loan.duration_months),
+              amount_due: Math.ceil(loan.total_repayable / numInstallments),
               due_date: dueDate.toISOString().split('T')[0],
             });
           }
