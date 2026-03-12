@@ -416,11 +416,12 @@ const QuickLoans = () => {
         interestRate: monthlyRate,
         dailyRate,
         durationMonths: months,
-        totalWeeks,
+        totalWeeks: repaymentFrequency === 'monthly' ? months : repaymentFrequency === 'bullet' ? 1 : totalWeeks,
         weeklyInstallment: weekly,
         totalRepayable: total,
         totalInterest: interest,
         loanType,
+        repaymentFrequency,
       });
       setShowRepaymentSlip(true);
 
