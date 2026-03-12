@@ -21,10 +21,11 @@ import LoanRepaymentSlip from '@/components/loans/LoanRepaymentSlip';
 
 // Loan types with their monthly interest rates
 type LoanType = 'quick' | 'long_term';
+type RepaymentFrequency = 'weekly' | 'monthly' | 'bullet';
 
-const LOAN_TYPE_CONFIG: Record<LoanType, { label: string; monthlyRate: number; description: string }> = {
-  quick: { label: 'Quick Loan', monthlyRate: 10, description: '10%/month – Short-term, weekly repayments' },
-  long_term: { label: 'Long-Term Loan', monthlyRate: 15, description: '15%/month – Pay for actual days used, early repayment saves interest' },
+const LOAN_TYPE_CONFIG: Record<LoanType, { label: string; monthlyRate: number; maxRate: number; description: string; frequencies: RepaymentFrequency[] }> = {
+  quick: { label: 'Quick Loan', monthlyRate: 10, maxRate: 10, description: '10%/month – Short-term, weekly repayments', frequencies: ['weekly'] },
+  long_term: { label: 'Long-Term Loan', monthlyRate: 5, maxRate: 25, description: '5%/month – Flexible repayment, monthly or bullet', frequencies: ['monthly', 'bullet'] },
 };
 
 // Helper: calculate daily interest rate from monthly rate
@@ -38,6 +39,13 @@ const getLoanSchedule = (months: number) => {
   const totalDays = months * 30;
   const totalWeeks = months * 4; // 4 weeks per month
   return { totalDays, totalWeeks };
+};
+
+// Helper: get total interest capped at maxRate
+const getCappedInterest = (principal: number, monthlyRate: number, months: number, maxRate: number) => {
+  const rawInterest = principal * (monthlyRate / 100) * months;
+  const maxInterest = principal * (maxRate / 100);
+  return Math.min(rawInterest, maxInterest);
 };
 
 // Processing fees and insurance removed
