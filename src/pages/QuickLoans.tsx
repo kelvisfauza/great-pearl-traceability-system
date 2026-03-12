@@ -21,10 +21,11 @@ import LoanRepaymentSlip from '@/components/loans/LoanRepaymentSlip';
 
 // Loan types with their monthly interest rates
 type LoanType = 'quick' | 'long_term';
+type RepaymentFrequency = 'weekly' | 'monthly' | 'bullet';
 
-const LOAN_TYPE_CONFIG: Record<LoanType, { label: string; monthlyRate: number; description: string }> = {
-  quick: { label: 'Quick Loan', monthlyRate: 10, description: '10%/month – Short-term, weekly repayments' },
-  long_term: { label: 'Long-Term Loan', monthlyRate: 15, description: '15%/month – Pay for actual days used, early repayment saves interest' },
+const LOAN_TYPE_CONFIG: Record<LoanType, { label: string; monthlyRate: number; maxRate: number; description: string; frequencies: RepaymentFrequency[] }> = {
+  quick: { label: 'Quick Loan', monthlyRate: 10, maxRate: 10, description: '10%/month – Short-term, weekly repayments', frequencies: ['weekly'] },
+  long_term: { label: 'Long-Term Loan', monthlyRate: 5, maxRate: 25, description: '5%/month – Flexible repayment, monthly or bullet', frequencies: ['monthly', 'bullet'] },
 };
 
 // Helper: calculate daily interest rate from monthly rate
@@ -38,6 +39,13 @@ const getLoanSchedule = (months: number) => {
   const totalDays = months * 30;
   const totalWeeks = months * 4; // 4 weeks per month
   return { totalDays, totalWeeks };
+};
+
+// Helper: get total interest capped at maxRate
+const getCappedInterest = (principal: number, monthlyRate: number, months: number, maxRate: number) => {
+  const rawInterest = principal * (monthlyRate / 100) * months;
+  const maxInterest = principal * (maxRate / 100);
+  return Math.min(rawInterest, maxInterest);
 };
 
 // Processing fees and insurance removed
@@ -82,6 +90,7 @@ const QuickLoans = () => {
   // Form state
   const [loanAmount, setLoanAmount] = useState('');
   const [loanType, setLoanType] = useState<LoanType>('quick');
+  const [repaymentFrequency, setRepaymentFrequency] = useState<RepaymentFrequency>('weekly');
   const [durationMonths, setDurationMonths] = useState('');
   const [guarantorId, setGuarantorId] = useState('');
   const [loanPurpose, setLoanPurpose] = useState('');
@@ -289,14 +298,30 @@ const QuickLoans = () => {
     const months = parseInt(durationMonths) || 0;
     const dailyRate = getDailyRate(loanType);
     const monthlyRate = LOAN_TYPE_CONFIG[loanType].monthlyRate;
+    const maxRate = LOAN_TYPE_CONFIG[loanType].maxRate;
     const { totalDays, totalWeeks } = getLoanSchedule(months);
+    const freq = repaymentFrequency;
 
-    // Flat/simple interest: Interest = Principal × monthlyRate% × months
-    const interest = amount * (monthlyRate / 100) * months;
+    // Flat interest capped at maxRate
+    const interest = getCappedInterest(amount, monthlyRate, months, maxRate);
     const total = Math.ceil(amount + interest);
-    const weekly = totalWeeks > 0 ? Math.ceil(total / totalWeeks) : 0;
 
-    return { amount, months, dailyRate, monthlyRate, totalDays, totalWeeks, interest, total, weekly };
+    // Calculate installment based on frequency
+    let installment = 0;
+    let numInstallments = 0;
+    if (freq === 'bullet') {
+      installment = total; // pay everything at once at end
+      numInstallments = 1;
+    } else if (freq === 'monthly') {
+      numInstallments = months;
+      installment = months > 0 ? Math.ceil(total / months) : 0;
+    } else {
+      // weekly
+      numInstallments = totalWeeks;
+      installment = totalWeeks > 0 ? Math.ceil(total / totalWeeks) : 0;
+    }
+
+    return { amount, months, dailyRate, monthlyRate, totalDays, totalWeeks, interest, total, weekly: installment, numInstallments, frequency: freq };
   };
 
   const handleRequestLoan = async () => {
@@ -341,6 +366,7 @@ const QuickLoans = () => {
     try {
       const approvalCode = Math.floor(100000 + Math.random() * 900000).toString();
 
+      const freq = repaymentFrequency;
       const { error } = await supabase.from('loans').insert({
         employee_id: employee.id,
         employee_email: employee.email,
@@ -353,9 +379,9 @@ const QuickLoans = () => {
         duration_months: months,
         monthly_installment: Math.ceil(weekly),
         weekly_installment: Math.ceil(weekly),
-        total_weeks: totalWeeks,
+        total_weeks: freq === 'monthly' ? months : freq === 'bullet' ? 1 : totalWeeks,
         remaining_balance: Math.ceil(total),
-        repayment_frequency: 'weekly',
+        repayment_frequency: freq,
         status: 'pending_guarantor',
         guarantor_id: guarantor.id,
         guarantor_email: guarantor.email,
@@ -390,11 +416,12 @@ const QuickLoans = () => {
         interestRate: monthlyRate,
         dailyRate,
         durationMonths: months,
-        totalWeeks,
+        totalWeeks: repaymentFrequency === 'monthly' ? months : repaymentFrequency === 'bullet' ? 1 : totalWeeks,
         weeklyInstallment: weekly,
         totalRepayable: total,
         totalInterest: interest,
         loanType,
+        repaymentFrequency,
       });
       setShowRepaymentSlip(true);
 
@@ -1144,7 +1171,11 @@ const QuickLoans = () => {
                   </div>
                   <div>
                     <Label>Loan Type</Label>
-                    <Select value={loanType} onValueChange={(v) => setLoanType(v as LoanType)}>
+                    <Select value={loanType} onValueChange={(v) => {
+                      const lt = v as LoanType;
+                      setLoanType(lt);
+                      setRepaymentFrequency(LOAN_TYPE_CONFIG[lt].frequencies[0]);
+                    }}>
                       <SelectTrigger><SelectValue placeholder="Select loan type" /></SelectTrigger>
                       <SelectContent>
                         {Object.entries(LOAN_TYPE_CONFIG).map(([key, cfg]) => (
@@ -1153,17 +1184,30 @@ const QuickLoans = () => {
                       </SelectContent>
                     </Select>
                   </div>
+                  {loanType === 'long_term' && (
+                    <div>
+                      <Label>Repayment Method</Label>
+                      <Select value={repaymentFrequency} onValueChange={(v) => setRepaymentFrequency(v as RepaymentFrequency)}>
+                        <SelectTrigger><SelectValue placeholder="Select repayment method" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="monthly">Monthly – Equal monthly installments</SelectItem>
+                          <SelectItem value="bullet">Bullet – Pay everything at end of term</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <div>
                     <Label>Duration (Months)</Label>
                     <Select value={durationMonths} onValueChange={setDurationMonths}>
                       <SelectTrigger><SelectValue placeholder="Select duration" /></SelectTrigger>
                       <SelectContent>
                         {[1, 2, 3, 4, 5, 6].map(m => {
-                          const { totalWeeks } = getLoanSchedule(m);
-                          const dailyR = getDailyRate(loanType);
+                          const monthlyRate = LOAN_TYPE_CONFIG[loanType].monthlyRate;
+                          const maxRate = LOAN_TYPE_CONFIG[loanType].maxRate;
+                          const effectiveRate = Math.min(monthlyRate * m, maxRate);
                           return (
                             <SelectItem key={m} value={m.toString()}>
-                              {m} month{m > 1 ? 's' : ''} ({totalWeeks} weeks) - {dailyR.toFixed(2)}%/day ({LOAN_TYPE_CONFIG[loanType].monthlyRate}%/mo)
+                              {m} month{m > 1 ? 's' : ''} – {monthlyRate}%/mo (total interest: {effectiveRate}%)
                             </SelectItem>
                           );
                         })}
@@ -1186,11 +1230,15 @@ const QuickLoans = () => {
                     <Card className="bg-muted/50">
                       <CardContent className="p-4 space-y-1 text-sm">
                         <div className="flex justify-between"><span>Principal:</span><span>UGX {parseFloat(loanAmount).toLocaleString()}</span></div>
-                        <div className="flex justify-between"><span>Daily Rate:</span><span>{previewDailyRate.toFixed(3)}% ({previewRate}%/month)</span></div>
-                        <div className="flex justify-between"><span>Duration:</span><span>{previewTotalDays} days ({previewTotalWeeks} weeks)</span></div>
+                        <div className="flex justify-between"><span>Interest Rate:</span><span>{previewRate}%/month (max {LOAN_TYPE_CONFIG[loanType].maxRate}%)</span></div>
+                        <div className="flex justify-between"><span>Duration:</span><span>{parseInt(durationMonths)} month(s)</span></div>
+                        <div className="flex justify-between"><span>Repayment:</span><span>{repaymentFrequency === 'bullet' ? 'Bullet (lump sum at end)' : repaymentFrequency === 'monthly' ? `${parseInt(durationMonths)} monthly installments` : `${previewTotalWeeks} weekly installments`}</span></div>
                         <div className="flex justify-between"><span>Total Interest:</span><span>UGX {Math.ceil(previewInterest).toLocaleString()}</span></div>
                         <div className="flex justify-between font-semibold"><span>Total Repayable:</span><span>UGX {Math.ceil(previewTotal).toLocaleString()}</span></div>
-                        <div className="flex justify-between font-semibold text-primary"><span>Weekly Installment:</span><span>UGX {Math.ceil(previewWeekly).toLocaleString()}</span></div>
+                        <div className="flex justify-between font-semibold text-primary">
+                          <span>{repaymentFrequency === 'bullet' ? 'Lump Sum Payment:' : repaymentFrequency === 'monthly' ? 'Monthly Installment:' : 'Weekly Installment:'}</span>
+                          <span>UGX {Math.ceil(previewWeekly).toLocaleString()}</span>
+                        </div>
                       </CardContent>
                     </Card>
                   )}

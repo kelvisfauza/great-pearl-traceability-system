@@ -20,6 +20,7 @@ interface LoanRepaymentSlipProps {
     totalRepayable: number;
     totalInterest: number;
     loanType?: 'quick' | 'long_term';
+    repaymentFrequency?: 'weekly' | 'monthly' | 'bullet';
   } | null;
 }
 
@@ -28,27 +29,38 @@ const LoanRepaymentSlip = ({ open, onClose, loanData }: LoanRepaymentSlipProps) 
 
   if (!loanData) return null;
 
-  const { employeeName, employeeEmail, guarantorName, loanAmount, interestRate, dailyRate, durationMonths, totalWeeks, weeklyInstallment, totalRepayable, totalInterest, loanType } = loanData;
+  const { employeeName, employeeEmail, guarantorName, loanAmount, interestRate, dailyRate, durationMonths, totalWeeks, weeklyInstallment, totalRepayable, totalInterest, loanType, repaymentFrequency } = loanData;
   const isLongTerm = loanType === 'long_term';
+  const freq = repaymentFrequency || 'weekly';
+  const isBullet = freq === 'bullet';
+  const isMonthly = freq === 'monthly';
 
-  // Generate flat interest schedule (equal installments)
-  const schedule: { week: number; dueDate: string; installment: number; interest: number; principal: number; balance: number }[] = [];
+  // Generate schedule based on frequency
+  const schedule: { period: number; label: string; dueDate: string; installment: number; interest: number; principal: number; balance: number }[] = [];
   const scheduleInterest = totalRepayable - loanAmount;
-  const weeklyInterestPortion = Math.round(scheduleInterest / totalWeeks);
-  const weeklyPrincipalPortion = Math.round(loanAmount / totalWeeks);
+  const numPeriods = isBullet ? 1 : (isMonthly ? durationMonths : totalWeeks);
+  const periodInterest = Math.round(scheduleInterest / numPeriods);
+  const periodPrincipal = Math.round(loanAmount / numPeriods);
   let balance = loanAmount;
   const startDate = new Date();
 
-  for (let i = 1; i <= totalWeeks; i++) {
+  for (let i = 1; i <= numPeriods; i++) {
     const dueDate = new Date(startDate);
-    dueDate.setDate(dueDate.getDate() + i * 7);
-    const isLast = i === totalWeeks;
-    const principalPart = isLast ? balance : weeklyPrincipalPortion;
-    const interestPart = isLast ? (scheduleInterest - weeklyInterestPortion * (totalWeeks - 1)) : weeklyInterestPortion;
+    if (isBullet) {
+      dueDate.setMonth(dueDate.getMonth() + durationMonths);
+    } else if (isMonthly) {
+      dueDate.setMonth(dueDate.getMonth() + i);
+    } else {
+      dueDate.setDate(dueDate.getDate() + i * 7);
+    }
+    const isLast = i === numPeriods;
+    const principalPart = isLast ? balance : periodPrincipal;
+    const interestPart = isLast ? (scheduleInterest - periodInterest * (numPeriods - 1)) : periodInterest;
     const installmentAmt = principalPart + interestPart;
     const newBalance = Math.max(0, Math.round(balance - principalPart));
     schedule.push({
-      week: i,
+      period: i,
+      label: isBullet ? 'End of Term' : (isMonthly ? `Month ${i}` : `Wk ${i}`),
       dueDate: dueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
       installment: Math.ceil(installmentAmt),
       interest: interestPart,
@@ -115,10 +127,10 @@ const LoanRepaymentSlip = ({ open, onClose, loanData }: LoanRepaymentSlipProps) 
             <span className="text-muted-foreground">Email:</span><span>{employeeEmail}</span>
             <span className="text-muted-foreground">Guarantor:</span><span className="font-semibold">{guarantorName}</span>
             <span className="text-muted-foreground">Loan Amount:</span><span className="font-semibold">UGX {loanAmount.toLocaleString()}</span>
-            <span className="text-muted-foreground">Interest Rate:</span><span>{dailyRate.toFixed(3)}%/day ({interestRate}%/month)</span>
-            <span className="text-muted-foreground">Duration:</span><span>{durationMonths} month(s) / {totalWeeks} weeks</span>
+            <span className="text-muted-foreground">Interest Rate:</span><span>{interestRate}%/month{isLongTerm ? ' (max 25%)' : ''}</span>
+            <span className="text-muted-foreground">Duration:</span><span>{durationMonths} month(s)</span>
             <span className="text-muted-foreground">Loan Type:</span><span className="font-semibold">{isLongTerm ? 'Long-Term Loan' : 'Quick Loan'}</span>
-            <span className="text-muted-foreground">Repayment:</span><span>Weekly (Flat Interest)</span>
+            <span className="text-muted-foreground">Repayment:</span><span>{isBullet ? 'Bullet (Lump Sum at End)' : isMonthly ? 'Monthly Installments' : 'Weekly Installments'} (Flat Interest)</span>
             {isLongTerm && (
               <>
                 <span className="text-muted-foreground">Early Repayment:</span><span className="text-green-600 font-medium">Pay only for days used</span>
@@ -129,7 +141,7 @@ const LoanRepaymentSlip = ({ open, onClose, loanData }: LoanRepaymentSlipProps) 
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-xs">Wk</TableHead>
+                <TableHead className="text-xs">#</TableHead>
                 <TableHead className="text-xs">Due Date</TableHead>
                 <TableHead className="text-xs text-right">Interest</TableHead>
                 <TableHead className="text-xs text-right">Principal</TableHead>
@@ -139,8 +151,8 @@ const LoanRepaymentSlip = ({ open, onClose, loanData }: LoanRepaymentSlipProps) 
             </TableHeader>
             <TableBody>
               {schedule.map(row => (
-                <TableRow key={row.week}>
-                  <TableCell className="text-xs py-1">{row.week}</TableCell>
+                <TableRow key={row.period}>
+                  <TableCell className="text-xs py-1">{row.label}</TableCell>
                   <TableCell className="text-xs py-1">{row.dueDate}</TableCell>
                   <TableCell className="text-xs py-1 text-right">{row.interest.toLocaleString()}</TableCell>
                   <TableCell className="text-xs py-1 text-right">{row.principal.toLocaleString()}</TableCell>
@@ -155,7 +167,10 @@ const LoanRepaymentSlip = ({ open, onClose, loanData }: LoanRepaymentSlipProps) 
             <div className="flex justify-between"><span>Total Principal:</span><span>UGX {loanAmount.toLocaleString()}</span></div>
             <div className="flex justify-between"><span>Total Interest:</span><span>UGX {Math.ceil(totalInterest).toLocaleString()}</span></div>
             <div className="flex justify-between font-bold border-t pt-2 mt-2"><span>Total Repayable:</span><span>UGX {Math.ceil(totalRepayable).toLocaleString()}</span></div>
-            <div className="flex justify-between font-semibold text-primary"><span>Weekly Installment:</span><span>UGX {Math.ceil(weeklyInstallment).toLocaleString()}</span></div>
+            <div className="flex justify-between font-semibold text-primary">
+              <span>{isBullet ? 'Lump Sum Payment:' : isMonthly ? 'Monthly Installment:' : 'Weekly Installment:'}</span>
+              <span>UGX {Math.ceil(weeklyInstallment).toLocaleString()}</span>
+            </div>
           </div>
 
           <div className="mt-3 p-2 bg-yellow-50 border border-yellow-300 rounded text-xs text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-700 dark:text-yellow-300">
