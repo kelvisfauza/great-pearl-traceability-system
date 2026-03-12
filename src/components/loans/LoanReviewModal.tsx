@@ -27,6 +27,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
   const [guarantorLoans, setGuarantorLoans] = useState<any[]>([]);
   const [borrowerLedger, setBorrowerLedger] = useState<any[]>([]);
   const [borrowerWalletBalance, setBorrowerWalletBalance] = useState(0);
+  const [guarantorWalletBalance, setGuarantorWalletBalance] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,7 +43,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
       // Fetch borrower employee details
       const { data: borrower } = await supabase
         .from('employees')
-        .select('name, email, phone, salary, department, position, join_date, auth_user_id')
+        .select('name, email, phone, salary, department, position, join_date, auth_user_id, address, emergency_contact, employee_id, status, role')
         .eq('email', loan.employee_email)
         .single();
       setBorrowerDetails(borrower);
@@ -51,10 +52,23 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
       if (loan.guarantor_email) {
         const { data: guarantor } = await supabase
           .from('employees')
-          .select('name, email, phone, salary, department, position, join_date')
+          .select('name, email, phone, salary, department, position, join_date, auth_user_id, employee_id, status, role')
           .eq('email', loan.guarantor_email)
           .single();
         setGuarantorDetails(guarantor);
+
+        // Fetch guarantor wallet balance
+        if (guarantor?.auth_user_id) {
+          const { data: gUserId } = await supabase.rpc('get_unified_user_id', { input_email: loan.guarantor_email });
+          const gUid = gUserId || guarantor.auth_user_id;
+          const { data: gWalletLedger } = await supabase
+            .from('ledger_entries')
+            .select('amount, entry_type')
+            .eq('user_id', gUid)
+            .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT']);
+          const gBal = (gWalletLedger || []).reduce((sum: number, e: any) => sum + Number(e.amount), 0);
+          setGuarantorWalletBalance(gBal);
+        }
       }
 
       // Fetch borrower's loan history
@@ -118,16 +132,23 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
     .reduce((sum, l) => sum + (l.monthly_installment || 0), 0);
 
   const isWeekly = loan.repayment_frequency === 'weekly';
+  const isBullet = loan.repayment_frequency === 'bullet';
   const numInstallments = isWeekly 
     ? (loan.total_weeks || Math.ceil((loan.duration_months * 30) / 7))
-    : loan.duration_months;
+    : (isBullet ? 1 : loan.duration_months);
   const installmentAmount = loan.monthly_installment || Math.ceil(loan.total_repayable / numInstallments);
-  const totalMonthlyAfterApproval = totalMonthlyObligations + (isWeekly ? installmentAmount * 4 : installmentAmount); // convert weekly to monthly equivalent for ratio
+  const totalMonthlyAfterApproval = totalMonthlyObligations + (isWeekly ? installmentAmount * 4 : installmentAmount);
   const salary = borrowerDetails?.salary || 0;
   const debtToIncomeRatio = salary > 0 ? ((totalMonthlyAfterApproval / salary) * 100).toFixed(1) : 'N/A';
+  const loanLimit = salary * 2;
+  const availableLoanLimit = Math.max(0, loanLimit - totalOutstanding);
 
   const tenureMonths = borrowerDetails?.join_date
     ? Math.floor((Date.now() - new Date(borrowerDetails.join_date).getTime()) / (1000 * 60 * 60 * 24 * 30))
+    : 0;
+
+  const guarantorTenureMonths = guarantorDetails?.join_date
+    ? Math.floor((Date.now() - new Date(guarantorDetails.join_date).getTime()) / (1000 * 60 * 60 * 24 * 30))
     : 0;
 
   // Generate repayment schedule preview (flat interest)
@@ -392,17 +413,25 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
               <Card>
                 <CardHeader className="pb-2 p-4">
                   <CardTitle className="text-sm flex items-center gap-2">
-                    <Banknote className="h-4 w-4" /> Loan Request
+                    <Banknote className="h-4 w-4" /> Loan Request Details
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                     <div>
-                      <p className="text-muted-foreground text-xs">Principal</p>
+                      <p className="text-muted-foreground text-xs">Loan Type</p>
+                      <p className="font-bold">{loan.loan_type === 'long_term' ? 'Long-Term' : 'Quick'} Loan</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Principal Amount</p>
                       <p className="font-bold">UGX {loan.loan_amount?.toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground text-xs">Interest ({isWeekly ? `${(loan.daily_interest_rate || 0).toFixed(2)}%/day` : `${loan.interest_rate}%`})</p>
+                      <p className="text-muted-foreground text-xs">Interest Rate</p>
+                      <p className="font-bold">{isWeekly ? `${(loan.daily_interest_rate || 0).toFixed(2)}%/day` : `${loan.interest_rate}%/month`}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Total Interest</p>
                       <p className="font-bold">UGX {(loan.total_repayable - loan.loan_amount)?.toLocaleString()}</p>
                     </div>
                     <div>
@@ -410,9 +439,27 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
                       <p className="font-bold">UGX {loan.total_repayable?.toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground text-xs">{isWeekly ? 'Weekly' : 'Monthly'} Installment</p>
+                      <p className="text-muted-foreground text-xs">{isWeekly ? 'Weekly' : isBullet ? 'Bullet' : 'Monthly'} Installment</p>
                       <p className="font-bold">UGX {installmentAmount?.toLocaleString()}</p>
                     </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Duration</p>
+                      <p className="font-bold">{loan.duration_months} month(s) / {numInstallments} {isWeekly ? 'weeks' : isBullet ? 'payment' : 'months'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Repayment Frequency</p>
+                      <p className="font-bold capitalize">{loan.repayment_frequency || 'weekly'}</p>
+                    </div>
+                  </div>
+                  {loan.purpose && (
+                    <div className="mt-3 p-2 bg-muted/50 rounded text-sm">
+                      <p className="text-muted-foreground text-xs mb-1">Purpose</p>
+                      <p className="font-medium">{loan.purpose}</p>
+                    </div>
+                  )}
+                  <div className="mt-3 p-2 bg-muted/50 rounded text-sm">
+                    <p className="text-muted-foreground text-xs mb-1">Application Date</p>
+                    <p className="font-medium">{new Date(loan.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -427,8 +474,20 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
                 <CardContent className="p-4 pt-0">
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                     <div>
-                      <p className="text-muted-foreground text-xs">Name</p>
+                      <p className="text-muted-foreground text-xs">Full Name</p>
                       <p className="font-medium">{loan.employee_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Employee ID</p>
+                      <p className="font-medium">{borrowerDetails?.employee_id || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Email</p>
+                      <p className="font-medium text-xs">{loan.employee_email}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Phone</p>
+                      <p className="font-medium">{borrowerDetails?.phone || loan.employee_phone || '-'}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs">Position</p>
@@ -437,6 +496,22 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
                     <div>
                       <p className="text-muted-foreground text-xs">Department</p>
                       <p className="font-medium">{borrowerDetails?.department || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Role</p>
+                      <p className="font-medium">{borrowerDetails?.role || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Status</p>
+                      <Badge variant={borrowerDetails?.status === 'Active' ? 'default' : 'destructive'} className="text-xs">{borrowerDetails?.status || '-'}</Badge>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Join Date</p>
+                      <p className="font-medium">{borrowerDetails?.join_date ? new Date(borrowerDetails.join_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Employment Tenure</p>
+                      <p className="font-medium">{tenureMonths} months</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs">Monthly Salary</p>
@@ -449,12 +524,41 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
                       </p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground text-xs">Tenure</p>
-                      <p className="font-medium">{tenureMonths} months</p>
+                      <p className="text-muted-foreground text-xs">Address</p>
+                      <p className="font-medium">{borrowerDetails?.address || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Emergency Contact</p>
+                      <p className="font-medium">{borrowerDetails?.emergency_contact || '-'}</p>
                     </div>
                   </div>
 
                   <Separator className="my-3" />
+
+                  {/* Loan Limit Info */}
+                  <div className="bg-muted/50 rounded-lg p-3 mb-3">
+                    <p className="text-xs font-semibold mb-2">📊 Loan Eligibility</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                      <div>
+                        <p className="text-muted-foreground text-xs">Max Loan Limit (2x Salary)</p>
+                        <p className="font-bold">UGX {loanLimit.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Total Outstanding</p>
+                        <p className="font-bold text-destructive">UGX {totalOutstanding.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Available Limit</p>
+                        <p className={`font-bold ${availableLoanLimit < loan.loan_amount ? 'text-destructive' : ''}`}>UGX {availableLoanLimit.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">This Loan vs Limit</p>
+                        <p className={`font-bold ${loan.loan_amount > availableLoanLimit ? 'text-destructive' : ''}`}>
+                          {loan.loan_amount > availableLoanLimit ? '⚠ EXCEEDS LIMIT' : '✅ Within Limit'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                     <div>
@@ -504,25 +608,63 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
                 </CardContent>
               </Card>
 
-              {/* Guarantor */}
+              {/* Guarantor Full Profile */}
               <Card>
                 <CardHeader className="pb-2 p-4">
                   <CardTitle className="text-sm flex items-center gap-2">
-                    <Shield className="h-4 w-4" /> Guarantor
+                    <Shield className="h-4 w-4" /> Guarantor Profile
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                     <div>
-                      <p className="text-muted-foreground text-xs">Name</p>
+                      <p className="text-muted-foreground text-xs">Full Name</p>
                       <p className="font-medium">{loan.guarantor_name || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Employee ID</p>
+                      <p className="font-medium">{guarantorDetails?.employee_id || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Email</p>
+                      <p className="font-medium text-xs">{loan.guarantor_email || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Phone</p>
+                      <p className="font-medium">{guarantorDetails?.phone || '-'}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs">Position</p>
                       <p className="font-medium">{guarantorDetails?.position || '-'}</p>
                     </div>
                     <div>
+                      <p className="text-muted-foreground text-xs">Department</p>
+                      <p className="font-medium">{guarantorDetails?.department || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Role</p>
+                      <p className="font-medium">{guarantorDetails?.role || '-'}</p>
+                    </div>
+                    <div>
                       <p className="text-muted-foreground text-xs">Status</p>
+                      <Badge variant={guarantorDetails?.status === 'Active' ? 'default' : 'destructive'} className="text-xs">{guarantorDetails?.status || '-'}</Badge>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Tenure</p>
+                      <p className="font-medium">{guarantorTenureMonths} months</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Monthly Salary</p>
+                      <p className="font-bold">UGX {(guarantorDetails?.salary || 0).toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Wallet Balance</p>
+                      <p className={`font-bold ${guarantorWalletBalance < 0 ? 'text-destructive' : ''}`}>
+                        {guarantorWalletBalance < 0 ? '-' : ''}UGX {Math.abs(guarantorWalletBalance).toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Guarantee Status</p>
                       {loan.guarantor_approved ? (
                         <Badge className="text-xs bg-green-600">Approved</Badge>
                       ) : loan.guarantor_declined ? (
@@ -531,24 +673,30 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
                         <Badge variant="outline" className="text-xs">Pending</Badge>
                       )}
                     </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">Salary</p>
-                      <p className="font-medium">UGX {(guarantorDetails?.salary || 0).toLocaleString()}</p>
-                    </div>
+                  </div>
+
+                  <Separator className="my-3" />
+
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                     <div>
                       <p className="text-muted-foreground text-xs">Own Active Loans</p>
-                      <p className="font-medium">{guarantorLoans.filter(l => l.employee_email === loan.guarantor_email).length}</p>
+                      <p className="font-bold">{guarantorLoans.filter(l => l.employee_email === loan.guarantor_email).length}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs">Guaranteeing Others</p>
-                      <p className="font-medium">{guarantorLoans.filter(l => l.guarantor_email === loan.guarantor_email && l.id !== loan.id).length}</p>
+                      <p className="font-bold">{guarantorLoans.filter(l => l.guarantor_email === loan.guarantor_email && l.id !== loan.id).length}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Guarantor Salary Coverage</p>
+                      <p className={`font-bold ${(guarantorDetails?.salary || 0) < loan.loan_amount ? 'text-destructive' : ''}`}>
+                        {(guarantorDetails?.salary || 0) >= loan.loan_amount ? '✅ Covers loan' : '⚠ Below loan amount'}
+                      </p>
                     </div>
                   </div>
 
                   <div className="mt-3 p-2 bg-muted/50 rounded text-xs text-muted-foreground">
-                    <strong>Recovery Plan:</strong> {isWeekly ? 'Weekly' : 'Monthly'} installments of UGX {installmentAmount.toLocaleString()} will be auto-deducted from borrower's account ({numInstallments} {isWeekly ? 'weeks' : 'months'}). 
-                    If borrower defaults, the guarantor ({loan.guarantor_name}) becomes liable for the remaining balance. 
-                    System will flag overdue payments and escalate recovery through deductions from both borrower and guarantor if necessary.
+                    <strong>Recovery Plan:</strong> {isWeekly ? 'Weekly' : isBullet ? 'Bullet' : 'Monthly'} installments of UGX {installmentAmount.toLocaleString()} ({numInstallments} {isWeekly ? 'weeks' : isBullet ? 'payment' : 'months'}). 
+                    Default recovery order: Wallet → Salary → Guarantor ({loan.guarantor_name}).
                   </div>
                 </CardContent>
               </Card>
