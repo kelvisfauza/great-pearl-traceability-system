@@ -132,16 +132,23 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
     .reduce((sum, l) => sum + (l.monthly_installment || 0), 0);
 
   const isWeekly = loan.repayment_frequency === 'weekly';
+  const isBullet = loan.repayment_frequency === 'bullet';
   const numInstallments = isWeekly 
     ? (loan.total_weeks || Math.ceil((loan.duration_months * 30) / 7))
-    : loan.duration_months;
+    : (isBullet ? 1 : loan.duration_months);
   const installmentAmount = loan.monthly_installment || Math.ceil(loan.total_repayable / numInstallments);
-  const totalMonthlyAfterApproval = totalMonthlyObligations + (isWeekly ? installmentAmount * 4 : installmentAmount); // convert weekly to monthly equivalent for ratio
+  const totalMonthlyAfterApproval = totalMonthlyObligations + (isWeekly ? installmentAmount * 4 : installmentAmount);
   const salary = borrowerDetails?.salary || 0;
   const debtToIncomeRatio = salary > 0 ? ((totalMonthlyAfterApproval / salary) * 100).toFixed(1) : 'N/A';
+  const loanLimit = salary * 2;
+  const availableLoanLimit = Math.max(0, loanLimit - totalOutstanding);
 
   const tenureMonths = borrowerDetails?.join_date
     ? Math.floor((Date.now() - new Date(borrowerDetails.join_date).getTime()) / (1000 * 60 * 60 * 24 * 30))
+    : 0;
+
+  const guarantorTenureMonths = guarantorDetails?.join_date
+    ? Math.floor((Date.now() - new Date(guarantorDetails.join_date).getTime()) / (1000 * 60 * 60 * 24 * 30))
     : 0;
 
   // Generate repayment schedule preview (flat interest)
