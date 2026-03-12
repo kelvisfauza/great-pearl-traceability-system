@@ -1152,7 +1152,7 @@ const QuickLoans = () => {
                   <div>
                     <Label>Loan Amount (UGX)</Label>
                     <Input type="number" value={loanAmount} onChange={e => setLoanAmount(e.target.value)} placeholder="e.g. 500000" />
-                    <p className="text-xs text-muted-foreground mt-1">Max: UGX {(myLimit?.availableLimit || (employee?.salary || 0) * 2).toLocaleString()} {myLimit?.isAi ? '(AI assessed)' : '(2x salary)'}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Max: UGX {(myLimit?.availableLimit || (employee?.salary || 0) * 2).toLocaleString()} (2x salary)</p>
                   </div>
                   <div>
                     <Label>Loan Type</Label>
