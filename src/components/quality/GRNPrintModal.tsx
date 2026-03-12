@@ -152,8 +152,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
               <div className="grn-company-block">
                 <h1 className="grn-company-name">GREAT AGRO COFFEE LTD</h1>
                 <p className="grn-motto">Kasese, Uganda.</p>
-                <p className="grn-address">Fort Portal, Kabarole District, Western Uganda</p>
-                <p className="grn-contacts">Tel: +256 781 121 639 / +256 778 536 681 | Email: info@greatagrocoffee.com</p>
+                <p className="grn-contacts">Tel: +256 393 001 626 | Email: info@greatpearlcoffee.com</p>
               </div>
               {verificationCode && (
                 <div className="grn-qr-block">

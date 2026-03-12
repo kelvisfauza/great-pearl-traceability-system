@@ -44,8 +44,8 @@ const GRNGenerator: React.FC<GRNGeneratorProps> = ({ open, onClose }) => {
         <div style="text-align: center; margin-bottom: 30px;">
           <h1>GOODS RECEIVED NOTE (GRN)</h1>
           <p><strong>Great Agro Coffee</strong></p>
-          <p>+256781121639 / +256778536681</p>
-          <p>greatagrocoffee@gmail.com</p>
+          <p>+256 393 001 626</p>
+          <p>info@greatpearlcoffee.com</p>
         </div>
         
         <div style="margin-bottom: 20px;">

@@ -150,7 +150,7 @@ const getSmartTitle = (errorType: string, description: string): string => {
 // IT alert recipients
 const IT_ALERT_PHONES = [
   { name: 'Timothy', phone: '+256773318456' },
-  { name: 'Fauza 2', phone: '+256781121639' },
+  { name: 'Fauza 2', phone: '+256 393 001 626' },
 ];
 
 export const useSupabaseErrorReporting = () => {

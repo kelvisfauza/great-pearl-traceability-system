@@ -47,7 +47,7 @@ const QuickAnalysisPrint = forwardRef<HTMLDivElement, QuickAnalysisPrintProps>(
             className="h-14 mx-auto mb-1"
           />
           <h1 className="text-lg font-bold uppercase tracking-wide">GREAT AGRO COFFEE</h1>
-          <p className="text-xs">Kasese, Uganda | Tel: +256781121639 | www.greatagrocoffee.com</p>
+          <p className="text-xs">Kasese, Uganda | Tel: +256 393 001 626 | www.greatagrocoffee.com</p>
           <div className="mt-2 bg-gray-100 py-1">
             <h2 className="text-base font-bold">COFFEE QUALITY ANALYSIS REPORT</h2>
           </div>

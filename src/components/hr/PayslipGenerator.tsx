@@ -86,9 +86,9 @@ const PayslipGenerator = ({ payslips, onGeneratePayslips, loading }: PayslipGene
       pdf.setFont('helvetica', 'normal');
       pdf.text('Specialty Coffee Processing & Export', pageWidth / 2, currentY, { align: 'center' });
       currentY += 5;
-      pdf.text('+256781121639 / +256778536681', pageWidth / 2, currentY, { align: 'center' });
+      pdf.text('+256 393 001 626', pageWidth / 2, currentY, { align: 'center' });
       currentY += 5;
-      pdf.text('www.greatagrocoffee.com | greatagrocoffee@gmail.com', pageWidth / 2, currentY, { align: 'center' });
+      pdf.text('www.greatagrocoffee.com | info@greatpearlcoffee.com', pageWidth / 2, currentY, { align: 'center' });
       currentY += 5;
       pdf.text('Uganda Coffee Development Authority Licensed', pageWidth / 2, currentY, { align: 'center' });
       currentY += 15;

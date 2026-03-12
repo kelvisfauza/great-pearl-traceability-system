@@ -251,7 +251,7 @@ const SalesDeliveryNoteModal: React.FC<SalesDeliveryNoteModalProps> = ({ open, o
               GREAT AGRO COFFEE
             </h1>
             <p className="company-tagline text-sm text-gray-600 mb-1">Specialty Coffee Processing & Export</p>
-            <p className="text-xs text-gray-500">+256781121639 / +256778536681 | greatagrocoffee@gmail.com</p>
+            <p className="text-xs text-gray-500">+256 393 001 626 | info@greatpearlcoffee.com</p>
             <p className="text-xs text-gray-500">Uganda Coffee Development Authority Licensed</p>
             
             <div className="doc-title inline-block mt-4 px-6 py-2 border-2 border-[#1a365d] font-bold text-[#1a365d] uppercase">

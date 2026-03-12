@@ -70,12 +70,12 @@ export const ComprehensiveSMSManager = () => {
       console.log('📱 Sending test SMS...');
       toast({
         title: "Sending Test SMS",
-        description: "Sending test message to 0781121639...",
+        description: "Sending test message to 0393001626...",
       });
 
       const { data, error } = await supabase.functions.invoke('send-sms', {
         body: {
-          phone: '0781121639',
+          phone: '0393001626',
           message: 'Test message from IT Department - SMS system is working properly!',
           userName: 'Test User',
           messageType: 'test',
@@ -95,7 +95,7 @@ export const ComprehensiveSMSManager = () => {
       } else {
         toast({
           title: "Test SMS Sent Successfully", 
-          description: "Test message sent to 0781121639",
+          description: "Test message sent to 0393001626",
         });
         // Refresh data to show the new SMS log
         setTimeout(() => fetchSMSData(), 2000);

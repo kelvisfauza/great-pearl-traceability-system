@@ -182,7 +182,7 @@ const handleTestSMS = async (phoneNumber: string) => {
     try {
       setTestLoading(true);
       const date = new Date().toLocaleDateString('en-GB');
-      const message = `Great Agro Coffee - Price Update\nDate: ${date}\n\n☕ ARABICA:\nOutturn: ${prices.arabicaOutturn}%\nMoisture: ${prices.arabicaMoisture}%\nFM: ${prices.arabicaFm}%\nPrice: UGX ${prices.arabicaBuyingPrice.toLocaleString()}/kg\n\n☕ ROBUSTA:\nOutturn: ${prices.robustaOutturn}%\nMoisture: ${prices.robustaMoisture}%\nFM: ${prices.robustaFm}%\nPrice: UGX ${prices.robustaBuyingPrice.toLocaleString()}/kg\n\n☕ SORTED: UGX ${prices.sortedPrice.toLocaleString()}/kg\n\nDeliver your coffee now!\n📞 Contact: +256778536681`;
+      const message = `Great Agro Coffee - Price Update\nDate: ${date}\n\n☕ ARABICA:\nOutturn: ${prices.arabicaOutturn}%\nMoisture: ${prices.arabicaMoisture}%\nFM: ${prices.arabicaFm}%\nPrice: UGX ${prices.arabicaBuyingPrice.toLocaleString()}/kg\n\n☕ ROBUSTA:\nOutturn: ${prices.robustaOutturn}%\nMoisture: ${prices.robustaMoisture}%\nFM: ${prices.robustaFm}%\nPrice: UGX ${prices.robustaBuyingPrice.toLocaleString()}/kg\n\n☕ SORTED: UGX ${prices.sortedPrice.toLocaleString()}/kg\n\nDeliver your coffee now!\n📞 Contact: +256 393 001 626`;
 
       console.log(`📱 Sending test SMS to ${phoneNumber}`);
       console.log('Message:', message);
@@ -541,7 +541,7 @@ const handleTestSMS = async (phoneNumber: string) => {
           </Button>
           <Button 
             variant="secondary" 
-            onClick={() => handleTestSMS('0781121639')} 
+            onClick={() => handleTestSMS('0393001626')} 
             disabled={testLoading}
           >
             {testLoading ? (
@@ -549,7 +549,7 @@ const handleTestSMS = async (phoneNumber: string) => {
             ) : (
               <Send className="mr-2 h-4 w-4" />
             )}
-            {testLoading ? 'Sending...' : 'Test SMS (0781121639)'}
+            {testLoading ? 'Sending...' : 'Test SMS (0393001626)'}
           </Button>
           <Button 
             variant="secondary" 
