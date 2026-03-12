@@ -38,7 +38,7 @@ export function getStandardPrintFooter(verificationCode?: string): string {
     <div class="print-footer" style="text-align: center; font-size: 9px; color: #666; border-top: 1px solid #ddd; padding-top: 15px; margin-top: 30px;">
       <p style="margin: 0;">Great Agro Coffee Ltd.</p>
       <p style="margin: 2px 0;">Kasese, Uganda</p>
-      <p style="margin: 2px 0;">+256781121639 / +256778536681 | www.greatagrocoffee.com</p>
+      <p style="margin: 2px 0;">+256 393 001 626 | www.greatagrocoffee.com</p>
       <p style="margin: 5px 0 0; font-size: 8px; color: #999;">© ${currentYear} Great Agro Coffee. All rights reserved.</p>
     </div>
   `;

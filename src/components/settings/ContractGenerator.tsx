@@ -94,7 +94,7 @@ const ContractGenerator = ({ isOpen, onClose }: ContractGeneratorProps) => {
               <div class="company-address">
                 P.O. Box 12345, Kampala, Uganda<br>
                 Registration No: 123456789<br>
-                Tel: +256 123 456 789 | Email: info@greatagrocoffee.com
+                Tel: +256 123 456 789 | Email: info@greatpearlcoffee.com
               </div>
             </div>
           </div>

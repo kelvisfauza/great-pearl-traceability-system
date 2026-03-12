@@ -50,8 +50,8 @@ export const PaymentSlipModal: React.FC<PaymentSlipModalProps> = ({
           </h1>
           <div style="font-size: 8px; color: #666; line-height: 1.2;">
             <p style="margin: 1px 0;">Specialty Coffee Processing & Export</p>
-            <p style="margin: 1px 0;">+256781121639 / +256778536681</p>
-            <p style="margin: 1px 0;">www.greatagrocoffee.com | greatagrocoffee@gmail.com</p>
+            <p style="margin: 1px 0;">+256 393 001 626</p>
+            <p style="margin: 1px 0;">www.greatagrocoffee.com | info@greatpearlcoffee.com</p>
           </div>
           <h2 style="color: #333; margin: 6px 0 2px 0; font-size: 16px; font-weight: bold; text-transform: uppercase;">
             PAYMENT SLIP

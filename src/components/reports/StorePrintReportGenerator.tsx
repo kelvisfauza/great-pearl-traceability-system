@@ -311,7 +311,7 @@ const StorePrintReportGenerator = () => {
               <div class="company-details">
                 Specialty Coffee Processing & Export<br>
                 Tel: +256 781 121 639 | Web: www.greatagrocoffee.com<br>
-                Email: info@greatagrocoffee.com<br>
+                Email: info@greatpearlcoffee.com<br>
                 Uganda Coffee Development Authority Licensed
               </div>
             </div>

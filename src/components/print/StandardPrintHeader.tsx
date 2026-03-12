@@ -37,8 +37,8 @@ const StandardPrintHeader: React.FC<StandardPrintHeaderProps> = ({
       {/* Company Contact Info - Centered */}
       <div className="company-details text-sm text-gray-600 space-y-1 mb-4 text-center">
         <p>Kasese, Uganda.</p>
-        <p>+256781121639 / +256778536681</p>
-        <p>www.greatagrocoffee.com | info@greatagrocoffee.com</p>
+        <p>+256 393 001 626</p>
+        <p>www.greatagrocoffee.com | info@greatpearlcoffee.com</p>
         <p>Uganda Coffee Development Authority Licensed</p>
       </div>
       

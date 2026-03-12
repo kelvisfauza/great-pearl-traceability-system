@@ -98,7 +98,7 @@ const PaymentSlipGenerator = ({ isOpen, onClose }: PaymentSlipGeneratorProps) =>
               <div class="company-name">Great Agro Coffee</div>
               <div class="company-address">
                 P.O. Box 12345, Kampala, Uganda<br>
-                Tel: +256 123 456 789 | Email: info@greatagrocoffee.com
+                Tel: +256 123 456 789 | Email: info@greatpearlcoffee.com
               </div>
             </div>
           </div>

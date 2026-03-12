@@ -297,7 +297,7 @@ const SalaryAdvanceReceipt: React.FC<SalaryAdvanceReceiptProps> = ({
               <div className="company-info">
                 <h1 style={{ fontSize: '22px', fontWeight: 'bold', marginBottom: '4px' }}>Great Agro Coffee</h1>
                 <p style={{ fontSize: '11px', opacity: 0.9 }}>Kasese, Uganda</p>
-                <p style={{ fontSize: '10px', opacity: 0.8 }}>info@greatagrocoffee.com</p>
+                <p style={{ fontSize: '10px', opacity: 0.8 }}>info@greatpearlcoffee.com</p>
               </div>
             </div>
             <div className="doc-badge" style={{ 

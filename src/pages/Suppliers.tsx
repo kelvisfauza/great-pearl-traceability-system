@@ -372,8 +372,8 @@ const Suppliers = () => {
             <img src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" alt="Logo" style="height: 60px; margin-bottom: 10px;" />
             <h1 style="margin: 10px 0; font-size: 22px;">GREAT AGRO COFFEE</h1>
             <p style="margin: 5px 0;">Specialty Coffee Processing & Export</p>
-            <p style="margin: 5px 0;">+256781121639 / +256778536681</p>
-            <p style="margin: 5px 0;">www.greatagrocoffee.com | greatagrocoffee@gmail.com</p>
+            <p style="margin: 5px 0;">+256 393 001 626</p>
+            <p style="margin: 5px 0;">www.greatagrocoffee.com | info@greatpearlcoffee.com</p>
             <h2 style="margin-top: 15px; font-size: 18px;">SUPPLIER STATEMENT</h2>
             <p>Generated: ${new Date().toLocaleDateString('en-GB')} at ${new Date().toLocaleTimeString('en-GB')}</p>
           </div>

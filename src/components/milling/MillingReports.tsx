@@ -380,8 +380,8 @@ ${reportData.cashTransactions.map((p: any) =>
             
             <div class="company-details">
               <p>Specialty Coffee Processing & Export</p>
-              <p>+256781121639 / +256778536681</p>
-              <p>www.greatagrocoffee.com | greatagrocoffee@gmail.com</p>
+              <p>+256 393 001 626</p>
+              <p>www.greatagrocoffee.com | info@greatpearlcoffee.com</p>
               <p>Uganda Coffee Development Authority Licensed</p>
             </div>
             

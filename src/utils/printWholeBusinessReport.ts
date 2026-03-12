@@ -260,7 +260,7 @@ export const printWholeBusinessReport = async (data: WholeBusinessData, periodLa
 
   <div class="footer">
     <p>Great Agro Coffee Ltd.</p>
-    <p>+256781121639 / +256778536681 | www.greatagrocoffee.com</p>
+    <p>+256 393 001 626 | www.greatagrocoffee.com</p>
     <p style="margin-top:4px;font-size:8px;color:#999;">© ${new Date().getFullYear()} Great Agro Coffee. All rights reserved.</p>
   </div>
 

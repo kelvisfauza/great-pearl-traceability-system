@@ -11,7 +11,7 @@ export const createDenisAccount = async () => {
         password: 'Denis123!',
         userData: {
           name: 'bwambale denis',
-          phone: '0781121639',
+          phone: '0393001626',
           position: 'Staff',
           department: 'General',
           role: 'User',

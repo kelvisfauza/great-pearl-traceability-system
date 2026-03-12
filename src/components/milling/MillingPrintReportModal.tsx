@@ -240,9 +240,9 @@ const MillingPrintReportModal: React.FC<MillingPrintReportModalProps> = ({ open,
             </div>
             <h1 className="company-name">GREAT AGRO COFFEE</h1>
             <div className="company-address">
-              <p>+256781121639 / +256778536681</p>
+              <p>+256 393 001 626</p>
               <p>www.greatagrocoffee.com</p>
-              <p>greatagrocoffee@gmail.com</p>
+              <p>info@greatpearlcoffee.com</p>
             </div>
             <div className="separator"></div>
             <h2 className="report-title">MILLING DEPARTMENT REPORT</h2>

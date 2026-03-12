@@ -568,8 +568,8 @@ const ComparisonReport = () => {
           <h1 class="company-name">GREAT AGRO COFFEE</h1>
           <div class="company-details">
             <p>Specialty Coffee Processing & Export</p>
-            <p>+256781121639 / +256778536681</p>
-            <p>www.greatagrocoffee.com | greatagrocoffee@gmail.com</p>
+            <p>+256 393 001 626</p>
+            <p>www.greatagrocoffee.com | info@greatpearlcoffee.com</p>
             <p>Uganda Coffee Development Authority Licensed</p>
           </div>
           <h2 class="document-title">Data Reconciliation - Detailed Issue Breakdown</h2>
@@ -613,7 +613,7 @@ const ComparisonReport = () => {
 
         <div class="footer">
           <p>This is a computer-generated report from Great Agro Coffee Management System</p>
-          <p>For queries, contact: greatagrocoffee@gmail.com | +256781121639</p>
+          <p>For queries, contact: info@greatpearlcoffee.com | +256 393 001 626</p>
         </div>
       </body>
       </html>

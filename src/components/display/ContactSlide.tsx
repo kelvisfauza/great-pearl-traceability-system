@@ -32,7 +32,7 @@ const ContactSlide = () => {
           </div>
           <div>
             <p className="text-white/60 text-sm">Email Us</p>
-            <p className="text-2xl font-bold text-white">info@greatagrocoffee.com</p>
+            <p className="text-2xl font-bold text-white">info@greatpearlcoffee.com</p>
           </div>
         </div>
 
