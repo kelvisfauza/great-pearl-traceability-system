@@ -215,7 +215,7 @@ const AdminLoanTracker = () => {
                           {b.nextDue ? (
                             <div>
                               <p className="text-sm">{new Date(b.nextDue.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
-                              <p className="text-xs text-muted-foreground">Week {b.nextDue.installment_number}</p>
+                              <p className="text-xs text-muted-foreground">{b.repayment_frequency === 'weekly' ? 'Week' : b.repayment_frequency === 'bullet' ? 'Payment' : 'Month'} {b.nextDue.installment_number}</p>
                             </div>
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
