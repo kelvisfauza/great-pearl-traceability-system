@@ -298,14 +298,30 @@ const QuickLoans = () => {
     const months = parseInt(durationMonths) || 0;
     const dailyRate = getDailyRate(loanType);
     const monthlyRate = LOAN_TYPE_CONFIG[loanType].monthlyRate;
+    const maxRate = LOAN_TYPE_CONFIG[loanType].maxRate;
     const { totalDays, totalWeeks } = getLoanSchedule(months);
+    const freq = repaymentFrequency;
 
-    // Flat/simple interest: Interest = Principal × monthlyRate% × months
-    const interest = amount * (monthlyRate / 100) * months;
+    // Flat interest capped at maxRate
+    const interest = getCappedInterest(amount, monthlyRate, months, maxRate);
     const total = Math.ceil(amount + interest);
-    const weekly = totalWeeks > 0 ? Math.ceil(total / totalWeeks) : 0;
 
-    return { amount, months, dailyRate, monthlyRate, totalDays, totalWeeks, interest, total, weekly };
+    // Calculate installment based on frequency
+    let installment = 0;
+    let numInstallments = 0;
+    if (freq === 'bullet') {
+      installment = total; // pay everything at once at end
+      numInstallments = 1;
+    } else if (freq === 'monthly') {
+      numInstallments = months;
+      installment = months > 0 ? Math.ceil(total / months) : 0;
+    } else {
+      // weekly
+      numInstallments = totalWeeks;
+      installment = totalWeeks > 0 ? Math.ceil(total / totalWeeks) : 0;
+    }
+
+    return { amount, months, dailyRate, monthlyRate, totalDays, totalWeeks, interest, total, weekly: installment, numInstallments, frequency: freq };
   };
 
   const handleRequestLoan = async () => {
