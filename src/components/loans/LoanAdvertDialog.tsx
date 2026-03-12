@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Employee {
   id: string;
@@ -19,12 +20,43 @@ interface Employee {
   outstanding: number;
 }
 
+type TemplateKey = "direct" | "urgency" | "friendly" | "benefit" | "simple";
+
+const TEMPLATES: Record<TemplateKey, { label: string; build: (name: string, limit: string) => string }> = {
+  direct: {
+    label: "Direct Offer",
+    build: (name, limit) =>
+      `GREAT PEARL COFFEE: ${name}, you qualify for UGX ${limit} loan. No paperwork, instant to wallet. Apply on your app now.`,
+  },
+  urgency: {
+    label: "Urgency",
+    build: (name, limit) =>
+      `GREAT PEARL COFFEE: ${name}, need cash fast? Get up to UGX ${limit} instantly. Low interest, easy repay. Apply in-app today.`,
+  },
+  friendly: {
+    label: "Friendly Reminder",
+    build: (name, limit) =>
+      `Hi ${name}, did you know you can borrow UGX ${limit} right now? Quick loans on your Great Pearl app. Easy weekly repayments.`,
+  },
+  benefit: {
+    label: "Benefit Focused",
+    build: (name, limit) =>
+      `${name}, access UGX ${limit} loan anytime. No guarantor needed, funds go straight to your wallet. Great Pearl Coffee App.`,
+  },
+  simple: {
+    label: "Short & Simple",
+    build: (name, limit) =>
+      `${name}, your loan limit is UGX ${limit}. Borrow now from your Great Pearl Coffee app. Fast, easy, low interest.`,
+  },
+};
+
 const LoanAdvertDialog = () => {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [selectedEmployees, setSelectedEmployees] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState(false);
   const [progress, setProgress] = useState({ sent: 0, failed: 0, total: 0 });
+  const [template, setTemplate] = useState<TemplateKey>("direct");
 
   const { data: employees, isLoading } = useQuery({
     queryKey: ["employees-for-loan-advert"],
@@ -38,13 +70,11 @@ const LoanAdvertDialog = () => {
 
       if (error) throw error;
 
-      // Fetch outstanding loan balances for all employees
       const { data: activeLoans } = await supabase
         .from("loans")
         .select("employee_email, remaining_balance, loan_amount, status")
         .in("status", ["active", "pending_guarantor", "pending_admin"]);
 
-      // Build a map of email -> total outstanding balance
       const outstandingMap: Record<string, number> = {};
       (activeLoans || []).forEach((loan: any) => {
         const email = loan.employee_email;
@@ -77,6 +107,16 @@ const LoanAdvertDialog = () => {
 
   const getLoanLimit = (salary: number, outstanding: number = 0) => Math.max(0, (salary || 0) * 2 - outstanding);
 
+  const getPreviewMessage = () => {
+    return TEMPLATES[template].build("[Name]", "[Limit]");
+  };
+
+  const getCharCount = () => {
+    // Use a sample realistic message to estimate length
+    const sample = TEMPLATES[template].build("Tumwine Alex", "600,000");
+    return sample.length;
+  };
+
   const handleSend = async () => {
     if (selectedEmployees.size === 0) {
       toast({ title: "No employees selected", description: "Please select at least one employee", variant: "destructive" });
@@ -93,8 +133,8 @@ const LoanAdvertDialog = () => {
       if (!emp.phone) { failCount++; continue; }
 
       const limit = getLoanLimit(emp.salary, emp.outstanding);
-      if (limit <= 0) { successCount++; continue; } // Skip employees with no remaining limit
-      const message = `Hi ${emp.name}, your loan limit is UGX ${limit.toLocaleString()}. Borrow now, no paperwork, instant to wallet. Daily interest from 0.33%, weekly repayments. Log in to Great Agro Coffee App and grab your cash today!`;
+      if (limit <= 0) { successCount++; continue; }
+      const message = TEMPLATES[template].build(emp.name.split(" ")[0], limit.toLocaleString());
 
       try {
         const { error } = await supabase.functions.invoke("send-sms", {
@@ -136,11 +176,30 @@ const LoanAdvertDialog = () => {
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="p-3 rounded-lg bg-muted text-sm">
-            <p className="font-medium mb-1">Message Preview:</p>
-             <p className="text-muted-foreground italic">
-               "Hi [Name], your loan limit is UGX [2x salary]. Borrow now, no paperwork, instant to wallet. Daily interest from 0.33%, weekly repayments. Log in to Great Agro Coffee App and grab your cash today!"
-              </p>
+          {/* Template Selector */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Message Style</label>
+            <Select value={template} onValueChange={(v) => setTemplate(v as TemplateKey)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(TEMPLATES).map(([key, t]) => (
+                  <SelectItem key={key} value={key}>{t.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Preview */}
+          <div className="p-3 rounded-lg bg-muted text-sm space-y-1">
+            <div className="flex items-center justify-between">
+              <p className="font-medium">Preview:</p>
+              <Badge variant={getCharCount() <= 160 ? "secondary" : "destructive"} className="text-xs">
+                {getCharCount()} / 160 chars
+              </Badge>
+            </div>
+            <p className="text-muted-foreground italic">{getPreviewMessage()}</p>
           </div>
 
           <div className="flex items-center justify-between">
@@ -154,7 +213,7 @@ const LoanAdvertDialog = () => {
             </div>
           </div>
 
-          <ScrollArea className="h-64 border rounded-lg p-2">
+          <ScrollArea className="h-56 border rounded-lg p-2">
             {isLoading ? (
               <div className="flex items-center justify-center h-full">
                 <Loader2 className="h-6 w-6 animate-spin" />
