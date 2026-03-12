@@ -58,8 +58,6 @@ const QuickLoans = () => {
   const [employees, setEmployees] = useState<any[]>([]);
   const [walletBalances, setWalletBalances] = useState<Record<string, number>>({});
   const [myWalletBalance, setMyWalletBalance] = useState(0);
-  const [aiLoanLimit, setAiLoanLimit] = useState<any>(null);
-  const [aiLimitLoading, setAiLimitLoading] = useState(false);
   const [allAiLimits, setAllAiLimits] = useState<Record<string, any>>({});
   const [allAiLimitsLoading, setAllAiLimitsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
