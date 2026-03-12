@@ -462,10 +462,6 @@ export const AccountButton = () => {
                 <Smartphone className="h-4 w-4" />
                 Deposit
               </Button>
-              <Button onClick={() => setShowMoneyRequest(true)} className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Request
-              </Button>
               <Button 
                 variant="outline"
                 onClick={() => setShowWithdrawal(true)}
