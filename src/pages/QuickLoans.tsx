@@ -1149,7 +1149,7 @@ const QuickLoans = () => {
                         <SelectTrigger><SelectValue placeholder="Select repayment method" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="monthly">Monthly – Equal monthly installments</SelectItem>
-                          <SelectItem value="bullet">Bullet – Pay everything at end of term</SelectItem>
+                          <SelectItem value="bullet">Bullet – Pay everything at end (30% interest)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
