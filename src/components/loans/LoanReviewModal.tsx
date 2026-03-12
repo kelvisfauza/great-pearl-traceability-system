@@ -27,6 +27,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
   const [guarantorLoans, setGuarantorLoans] = useState<any[]>([]);
   const [borrowerLedger, setBorrowerLedger] = useState<any[]>([]);
   const [borrowerWalletBalance, setBorrowerWalletBalance] = useState(0);
+  const [guarantorWalletBalance, setGuarantorWalletBalance] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
