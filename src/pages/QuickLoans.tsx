@@ -132,11 +132,17 @@ const QuickLoans = () => {
         });
         setWalletBalances(balances);
 
-        // Set current user's wallet balance
-        if (employee.authUserId) {
-          const { data: userId } = await supabase.rpc('get_unified_user_id', { input_email: employee.email });
-          const uid = userId || employee.authUserId;
-          setMyWalletBalance(balances[uid] || 0);
+        // Set current user's wallet balance using the same RPC as the dashboard
+        if (employee.email) {
+          const { data: balanceData } = await supabase.rpc('get_user_balance_safe', { user_email: employee.email });
+          const userData = balanceData?.[0];
+          if (userData) {
+            setMyWalletBalance(Number(userData.wallet_balance) || 0);
+          } else {
+            const { data: userId } = await supabase.rpc('get_unified_user_id', { input_email: employee.email });
+            const uid = userId || employee.authUserId;
+            setMyWalletBalance(balances[uid] || 0);
+          }
         }
       }
     } catch (err) {
