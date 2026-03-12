@@ -58,8 +58,6 @@ const QuickLoans = () => {
   const [employees, setEmployees] = useState<any[]>([]);
   const [walletBalances, setWalletBalances] = useState<Record<string, number>>({});
   const [myWalletBalance, setMyWalletBalance] = useState(0);
-  const [aiLoanLimit, setAiLoanLimit] = useState<any>(null);
-  const [aiLimitLoading, setAiLimitLoading] = useState(false);
   const [allAiLimits, setAllAiLimits] = useState<Record<string, any>>({});
   const [allAiLimitsLoading, setAllAiLimitsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -101,7 +99,6 @@ const QuickLoans = () => {
     checkGuarantorRequests();
     fetchGuaranteedLoans();
     fetchWalletBalances();
-    fetchAiLoanLimit();
   }, [employee]);
 
   const fetchLoans = async () => {
@@ -159,32 +156,6 @@ const QuickLoans = () => {
     }
   };
 
-  const fetchAiLoanLimit = async () => {
-    if (!employee?.email) return;
-    setAiLimitLoading(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const resp = await fetch(
-        `https://pudfybkyfedeggmokhco.supabase.co/functions/v1/ai-loan-limit`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ employee_email: employee.email }),
-        }
-      );
-      if (resp.ok) {
-        const data = await resp.json();
-        setAiLoanLimit(data);
-      }
-    } catch (err) {
-      console.error('Error fetching AI loan limit:', err);
-    } finally {
-      setAiLimitLoading(false);
-    }
-  };
 
   const fetchAllAiLimits = async () => {
     if (!employees.length) {
@@ -334,9 +305,9 @@ const QuickLoans = () => {
     }
 
     // Check against AI-determined limit or fallback to 2x salary
-    const maxLoan = myLimit?.availableLimit || (employee.salary || 0) * 2;
+    const maxLoan = (employee.salary || 0) * 2;
     if (amount > maxLoan) {
-      toast({ title: "Error", description: `Max loan is UGX ${maxLoan.toLocaleString()} based on your credit assessment`, variant: "destructive" });
+      toast({ title: "Error", description: `Max loan is UGX ${maxLoan.toLocaleString()} (2x your salary)`, variant: "destructive" });
       return;
     }
 
@@ -1114,31 +1085,16 @@ const QuickLoans = () => {
     return <Badge variant={s.variant}>{s.label}</Badge>;
   };
 
-  // Calculate loan limit - use AI limit if available, fallback to salary-based
+  // Calculate loan limit - always 2x salary minus outstanding
   const getLoanLimit = (empEmail: string, empSalary: number, empAuthId?: string) => {
     const empLoans = (loans.length > 0 ? loans : myLoans).filter(l => l.employee_email === empEmail && ['active', 'pending_guarantor', 'pending_admin'].includes(l.status));
     const outstanding = empLoans.reduce((s: number, l: any) => s + (l.remaining_balance || l.loan_amount || 0), 0);
     const activeCount = empLoans.length;
     const walletBal = empAuthId ? (walletBalances[empAuthId] || 0) : 0;
 
-    // Use AI-determined limit if available for current user
-    if (aiLoanLimit && empEmail === employee?.email) {
-      return {
-        salary: empSalary,
-        maxFromSalary: aiLoanLimit.loan_limit + outstanding, // AI already subtracted outstanding
-        outstanding,
-        activeCount,
-        walletBal: aiLoanLimit.wallet_balance || walletBal,
-        availableLimit: Math.max(0, aiLoanLimit.loan_limit),
-        riskScore: aiLoanLimit.risk_score,
-        factors: aiLoanLimit.factors,
-        isAi: true,
-      };
-    }
-
     const maxFromSalary = empSalary * 2;
     const availableLimit = Math.max(0, maxFromSalary - outstanding);
-    return { salary: empSalary, maxFromSalary, outstanding, activeCount, walletBal, availableLimit, riskScore: null, factors: null, isAi: false };
+    return { salary: empSalary, maxFromSalary, outstanding, activeCount, walletBal, availableLimit };
   };
 
   const myLimit = employee ? getLoanLimit(employee.email, employee.salary || 0, employee.authUserId) : null;
@@ -1167,7 +1123,7 @@ const QuickLoans = () => {
                   <div>
                     <Label>Loan Amount (UGX)</Label>
                     <Input type="number" value={loanAmount} onChange={e => setLoanAmount(e.target.value)} placeholder="e.g. 500000" />
-                    <p className="text-xs text-muted-foreground mt-1">Max: UGX {(myLimit?.availableLimit || (employee?.salary || 0) * 2).toLocaleString()} {myLimit?.isAi ? '(AI assessed)' : '(2x salary)'}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Max: UGX {(myLimit?.availableLimit || (employee?.salary || 0) * 2).toLocaleString()} (2x salary)</p>
                   </div>
                   <div>
                     <Label>Loan Type</Label>
@@ -1458,12 +1414,10 @@ const QuickLoans = () => {
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Shield className="h-5 w-5" /> My Loan Eligibility
-                  {aiLimitLoading && <span className="text-xs text-muted-foreground ml-2">Analyzing...</span>}
-                  {myLimit.isAi && <Badge variant="outline" className="ml-2 text-xs">AI Scored</Badge>}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <p className="text-xs text-muted-foreground">Monthly Salary</p>
                     <p className="text-lg font-bold">UGX {myLimit.salary.toLocaleString()}</p>
@@ -1472,14 +1426,6 @@ const QuickLoans = () => {
                     <p className="text-xs text-muted-foreground">Wallet Balance</p>
                     <p className="text-lg font-bold text-primary">UGX {Math.max(0, myLimit.walletBal).toLocaleString()}</p>
                   </div>
-                  {myLimit.riskScore !== null && myLimit.riskScore !== undefined && (
-                    <div>
-                      <p className="text-xs text-muted-foreground">Risk Score</p>
-                      <p className={`text-lg font-bold ${myLimit.riskScore >= 70 ? 'text-green-600' : myLimit.riskScore >= 40 ? 'text-yellow-600' : 'text-destructive'}`}>
-                        {myLimit.riskScore}/100
-                      </p>
-                    </div>
-                  )}
                   <div>
                     <p className="text-xs text-muted-foreground">Outstanding Loans</p>
                     <p className="text-lg font-bold text-destructive">UGX {myLimit.outstanding.toLocaleString()}</p>
@@ -1490,8 +1436,7 @@ const QuickLoans = () => {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Active loans: {myLimit.activeCount}/3
-                  {myLimit.isAi && ' • Limit determined by AI risk assessment'}
+                  Active loans: {myLimit.activeCount}/3 • Limit: 2x salary minus outstanding
                 </p>
               </CardContent>
             </Card>
