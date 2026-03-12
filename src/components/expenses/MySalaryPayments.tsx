@@ -455,7 +455,7 @@ const MySalaryPayments = () => {
             </DialogHeader>
             <div className="space-y-4 print:p-8" id="payment-slip">
               <div className="text-center border-b pb-4">
-                <h2 className="text-xl font-bold">Great Agro Coffee Ltd</h2>
+                <h2 className="text-xl font-bold">Great Agro Coffee</h2>
                 <p className="text-sm text-muted-foreground">Salary Payment Slip</p>
               </div>
               <div className="grid grid-cols-2 gap-3 text-sm">
