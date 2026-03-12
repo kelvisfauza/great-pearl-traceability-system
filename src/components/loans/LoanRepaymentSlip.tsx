@@ -141,7 +141,7 @@ const LoanRepaymentSlip = ({ open, onClose, loanData }: LoanRepaymentSlipProps) 
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-xs">Wk</TableHead>
+                <TableHead className="text-xs">#</TableHead>
                 <TableHead className="text-xs">Due Date</TableHead>
                 <TableHead className="text-xs text-right">Interest</TableHead>
                 <TableHead className="text-xs text-right">Principal</TableHead>
@@ -151,8 +151,8 @@ const LoanRepaymentSlip = ({ open, onClose, loanData }: LoanRepaymentSlipProps) 
             </TableHeader>
             <TableBody>
               {schedule.map(row => (
-                <TableRow key={row.week}>
-                  <TableCell className="text-xs py-1">{row.week}</TableCell>
+                <TableRow key={row.period}>
+                  <TableCell className="text-xs py-1">{row.label}</TableCell>
                   <TableCell className="text-xs py-1">{row.dueDate}</TableCell>
                   <TableCell className="text-xs py-1 text-right">{row.interest.toLocaleString()}</TableCell>
                   <TableCell className="text-xs py-1 text-right">{row.principal.toLocaleString()}</TableCell>
@@ -167,7 +167,10 @@ const LoanRepaymentSlip = ({ open, onClose, loanData }: LoanRepaymentSlipProps) 
             <div className="flex justify-between"><span>Total Principal:</span><span>UGX {loanAmount.toLocaleString()}</span></div>
             <div className="flex justify-between"><span>Total Interest:</span><span>UGX {Math.ceil(totalInterest).toLocaleString()}</span></div>
             <div className="flex justify-between font-bold border-t pt-2 mt-2"><span>Total Repayable:</span><span>UGX {Math.ceil(totalRepayable).toLocaleString()}</span></div>
-            <div className="flex justify-between font-semibold text-primary"><span>Weekly Installment:</span><span>UGX {Math.ceil(weeklyInstallment).toLocaleString()}</span></div>
+            <div className="flex justify-between font-semibold text-primary">
+              <span>{isBullet ? 'Lump Sum Payment:' : isMonthly ? 'Monthly Installment:' : 'Weekly Installment:'}</span>
+              <span>UGX {Math.ceil(weeklyInstallment).toLocaleString()}</span>
+            </div>
           </div>
 
           <div className="mt-3 p-2 bg-yellow-50 border border-yellow-300 rounded text-xs text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-700 dark:text-yellow-300">
