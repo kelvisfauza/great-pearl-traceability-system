@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,11 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { 
   Search, AlertTriangle, CalendarDays, Users, History, 
   Send, ChevronDown, ChevronUp, Clock, CheckCircle, XCircle,
-  Banknote, TrendingDown, Calendar
+  Banknote, TrendingDown, Calendar, User, Shield, Phone, Mail, MapPin, Briefcase
 } from 'lucide-react';
 
 const AdminLoanTracker = () => {
@@ -373,62 +375,354 @@ const AdminLoanTracker = () => {
         </Tabs>
 
         {/* Borrower Detail Dialog */}
-        <Dialog open={!!selectedBorrower} onOpenChange={() => setSelectedBorrower(null)}>
-          <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Banknote className="h-5 w-5" />
-                {selectedBorrower?.employee_name} — Loan Detail
-              </DialogTitle>
-            </DialogHeader>
-            {selectedBorrower && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="bg-muted/50 p-3 rounded-lg">
-                    <p className="text-muted-foreground text-xs">Loan Amount</p>
-                    <p className="font-bold">UGX {selectedBorrower.loan_amount?.toLocaleString()}</p>
-                  </div>
-                  <div className="bg-muted/50 p-3 rounded-lg">
-                    <p className="text-muted-foreground text-xs">Remaining</p>
-                    <p className="font-bold text-destructive">UGX {selectedBorrower.remaining_balance?.toLocaleString()}</p>
-                  </div>
-                  <div className="bg-muted/50 p-3 rounded-lg">
-                    <p className="text-muted-foreground text-xs">Total Paid</p>
-                    <p className="font-bold text-green-600">UGX {selectedBorrower.totalPaid?.toLocaleString()}</p>
-                  </div>
-                  <div className="bg-muted/50 p-3 rounded-lg">
-                    <p className="text-muted-foreground text-xs">Guarantor</p>
-                    <p className="font-bold">{selectedBorrower.guarantor_name || 'N/A'}</p>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="font-semibold text-sm mb-2">Installment Schedule</h4>
-                  <div className="space-y-1.5 max-h-60 overflow-y-auto">
-                    {selectedBorrower.repayments?.map((r: any) => {
-                      const remaining = (r.amount_due || 0) - (r.amount_paid || 0);
-                      return (
-                        <div key={r.id} className={`flex items-center justify-between p-2 rounded text-sm border ${r.status === 'paid' ? 'bg-green-50/50 dark:bg-green-950/10 border-green-200 dark:border-green-800' : r.due_date < today && r.status !== 'paid' ? 'bg-red-50/50 dark:bg-red-950/10 border-red-200 dark:border-red-800' : 'border-border'}`}>
-                          <div className="flex items-center gap-2">
-                            {r.status === 'paid' ? <CheckCircle className="h-3.5 w-3.5 text-green-500" /> : r.due_date < today ? <XCircle className="h-3.5 w-3.5 text-destructive" /> : <Clock className="h-3.5 w-3.5 text-muted-foreground" />}
-                            <span>{selectedBorrower.repayment_frequency === 'weekly' ? `Wk` : selectedBorrower.repayment_frequency === 'bullet' ? `Payment` : `Month`} {r.installment_number}</span>
-                            <span className="text-muted-foreground">{new Date(r.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">UGX {(r.status === 'paid' ? r.amount_paid : remaining).toLocaleString()}</span>
-                            {getStatusBadge(r.status, r.due_date)}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+        <BorrowerDetailDialog 
+          selectedBorrower={selectedBorrower} 
+          onClose={() => setSelectedBorrower(null)} 
+          today={today}
+          getStatusBadge={getStatusBadge}
+        />
       </CardContent>
     </Card>
+  );
+};
+
+// Sub-component for borrower detail with full profile
+const BorrowerDetailDialog = ({ selectedBorrower, onClose, today, getStatusBadge }: {
+  selectedBorrower: any;
+  onClose: () => void;
+  today: string;
+  getStatusBadge: (status: string, dueDate: string) => React.ReactNode;
+}) => {
+  const [borrowerDetails, setBorrowerDetails] = useState<any>(null);
+  const [guarantorDetails, setGuarantorDetails] = useState<any>(null);
+  const [borrowerWalletBalance, setBorrowerWalletBalance] = useState(0);
+  const [guarantorWalletBalance, setGuarantorWalletBalance] = useState(0);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!selectedBorrower) return;
+    const fetchDetails = async () => {
+      setDetailsLoading(true);
+      try {
+        const { data: borrower } = await supabase
+          .from('employees')
+          .select('name, email, phone, salary, department, position, join_date, auth_user_id, address, emergency_contact, employee_id, status, role')
+          .eq('email', selectedBorrower.employee_email)
+          .single();
+        setBorrowerDetails(borrower);
+
+        if (borrower?.auth_user_id) {
+          const { data: userId } = await supabase.rpc('get_unified_user_id', { input_email: selectedBorrower.employee_email });
+          const uid = userId || borrower.auth_user_id;
+          const { data: walletLedger } = await supabase
+            .from('ledger_entries')
+            .select('amount, entry_type')
+            .eq('user_id', uid)
+            .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT']);
+          setBorrowerWalletBalance((walletLedger || []).reduce((sum: number, e: any) => sum + Number(e.amount), 0));
+        }
+
+        if (selectedBorrower.guarantor_email) {
+          const { data: guarantor } = await supabase
+            .from('employees')
+            .select('name, email, phone, salary, department, position, join_date, auth_user_id, employee_id, status, role')
+            .eq('email', selectedBorrower.guarantor_email)
+            .single();
+          setGuarantorDetails(guarantor);
+
+          if (guarantor?.auth_user_id) {
+            const { data: gUserId } = await supabase.rpc('get_unified_user_id', { input_email: selectedBorrower.guarantor_email });
+            const gUid = gUserId || guarantor.auth_user_id;
+            const { data: gWalletLedger } = await supabase
+              .from('ledger_entries')
+              .select('amount, entry_type')
+              .eq('user_id', gUid)
+              .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT']);
+            setGuarantorWalletBalance((gWalletLedger || []).reduce((sum: number, e: any) => sum + Number(e.amount), 0));
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching borrower details:', err);
+      } finally {
+        setDetailsLoading(false);
+      }
+    };
+    fetchDetails();
+  }, [selectedBorrower?.id]);
+
+  const salary = borrowerDetails?.salary || 0;
+  const loanLimit = salary * 2;
+  const tenureMonths = borrowerDetails?.join_date
+    ? Math.floor((Date.now() - new Date(borrowerDetails.join_date).getTime()) / (1000 * 60 * 60 * 24 * 30))
+    : 0;
+  const guarantorTenureMonths = guarantorDetails?.join_date
+    ? Math.floor((Date.now() - new Date(guarantorDetails.join_date).getTime()) / (1000 * 60 * 60 * 24 * 30))
+    : 0;
+  const isWeekly = selectedBorrower?.repayment_frequency === 'weekly';
+  const isBullet = selectedBorrower?.repayment_frequency === 'bullet';
+  const periodLabel = isWeekly ? 'Wk' : isBullet ? 'Payment' : 'Month';
+
+  return (
+    <Dialog open={!!selectedBorrower} onOpenChange={onClose}>
+      <DialogContent className="max-w-3xl max-h-[90vh] p-0">
+        <DialogHeader className="p-6 pb-2">
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <Banknote className="h-5 w-5 text-primary" />
+            {selectedBorrower?.employee_name} — Loan Detail
+          </DialogTitle>
+        </DialogHeader>
+        {selectedBorrower && (
+          <ScrollArea className="max-h-[78vh] px-6 pb-6">
+            {detailsLoading ? (
+              <p className="text-center py-8 text-muted-foreground">Loading profile...</p>
+            ) : (
+              <div className="space-y-4">
+                {/* Loan Summary */}
+                <Card>
+                  <CardHeader className="pb-2 p-4">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Banknote className="h-4 w-4" /> Loan Summary
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                      <div>
+                        <p className="text-muted-foreground text-xs">Loan Type</p>
+                        <p className="font-bold">{selectedBorrower.loan_type === 'long_term' ? 'Long-Term' : 'Quick'}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Principal</p>
+                        <p className="font-bold">UGX {selectedBorrower.loan_amount?.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Interest Rate</p>
+                        <p className="font-bold">{selectedBorrower.interest_rate}%/month</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Total Repayable</p>
+                        <p className="font-bold">UGX {selectedBorrower.total_repayable?.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Remaining Balance</p>
+                        <p className="font-bold text-destructive">UGX {selectedBorrower.remaining_balance?.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Total Paid</p>
+                        <p className="font-bold text-green-600">UGX {selectedBorrower.totalPaid?.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Frequency</p>
+                        <p className="font-bold capitalize">{selectedBorrower.repayment_frequency || 'weekly'}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Duration</p>
+                        <p className="font-bold">{selectedBorrower.duration_months} month(s)</p>
+                      </div>
+                    </div>
+                    {selectedBorrower.start_date && (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm mt-3">
+                        <div>
+                          <p className="text-muted-foreground text-xs">Start Date</p>
+                          <p className="font-medium">{new Date(selectedBorrower.start_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">End Date</p>
+                          <p className="font-medium">{selectedBorrower.end_date ? new Date(selectedBorrower.end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Approved By</p>
+                          <p className="font-medium">{selectedBorrower.admin_approved_by || '-'}</p>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Borrower Profile */}
+                <Card>
+                  <CardHeader className="pb-2 p-4">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <User className="h-4 w-4" /> Borrower Profile
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                      <div>
+                        <p className="text-muted-foreground text-xs">Full Name</p>
+                        <p className="font-medium">{selectedBorrower.employee_name}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Employee ID</p>
+                        <p className="font-medium">{borrowerDetails?.employee_id || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Email</p>
+                        <p className="font-medium text-xs">{selectedBorrower.employee_email}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Phone</p>
+                        <p className="font-medium">{borrowerDetails?.phone || selectedBorrower.employee_phone || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Position</p>
+                        <p className="font-medium">{borrowerDetails?.position || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Department</p>
+                        <p className="font-medium">{borrowerDetails?.department || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Role</p>
+                        <p className="font-medium">{borrowerDetails?.role || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Status</p>
+                        <Badge variant={borrowerDetails?.status === 'Active' ? 'default' : 'destructive'} className="text-xs">{borrowerDetails?.status || '-'}</Badge>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Tenure</p>
+                        <p className="font-medium">{tenureMonths} months</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Monthly Salary</p>
+                        <p className="font-bold">UGX {salary.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Wallet Balance</p>
+                        <p className={`font-bold ${borrowerWalletBalance < 0 ? 'text-destructive' : ''}`}>
+                          UGX {Math.abs(borrowerWalletBalance).toLocaleString()}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Loan Limit (2x Salary)</p>
+                        <p className="font-bold">UGX {loanLimit.toLocaleString()}</p>
+                      </div>
+                      {borrowerDetails?.address && (
+                        <div>
+                          <p className="text-muted-foreground text-xs">Address</p>
+                          <p className="font-medium">{borrowerDetails.address}</p>
+                        </div>
+                      )}
+                      {borrowerDetails?.emergency_contact && (
+                        <div>
+                          <p className="text-muted-foreground text-xs">Emergency Contact</p>
+                          <p className="font-medium">{borrowerDetails.emergency_contact}</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Guarantor Profile */}
+                <Card>
+                  <CardHeader className="pb-2 p-4">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Shield className="h-4 w-4" /> Guarantor Profile
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    {guarantorDetails ? (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                        <div>
+                          <p className="text-muted-foreground text-xs">Full Name</p>
+                          <p className="font-medium">{selectedBorrower.guarantor_name || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Employee ID</p>
+                          <p className="font-medium">{guarantorDetails.employee_id || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Email</p>
+                          <p className="font-medium text-xs">{selectedBorrower.guarantor_email}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Phone</p>
+                          <p className="font-medium">{guarantorDetails.phone || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Position</p>
+                          <p className="font-medium">{guarantorDetails.position || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Department</p>
+                          <p className="font-medium">{guarantorDetails.department || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Role</p>
+                          <p className="font-medium">{guarantorDetails.role || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Tenure</p>
+                          <p className="font-medium">{guarantorTenureMonths} months</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Monthly Salary</p>
+                          <p className="font-bold">UGX {(guarantorDetails.salary || 0).toLocaleString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Wallet Balance</p>
+                          <p className={`font-bold ${guarantorWalletBalance < 0 ? 'text-destructive' : ''}`}>
+                            UGX {Math.abs(guarantorWalletBalance).toLocaleString()}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Guarantee Status</p>
+                          {selectedBorrower.guarantor_approved ? (
+                            <Badge className="text-xs bg-green-600">Approved</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs">Pending</Badge>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Salary Covers Loan?</p>
+                          <p className={`font-bold ${(guarantorDetails.salary || 0) < selectedBorrower.loan_amount ? 'text-destructive' : ''}`}>
+                            {(guarantorDetails.salary || 0) >= selectedBorrower.loan_amount ? '✅ Yes' : '⚠ No'}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground text-sm">No guarantor information available</p>
+                    )}
+                    <div className="mt-3 p-2 bg-muted/50 rounded text-xs text-muted-foreground">
+                      <strong>Recovery Plan:</strong> {isWeekly ? 'Weekly' : isBullet ? 'Bullet' : 'Monthly'} deductions. Default recovery: Wallet → Salary → Guarantor ({selectedBorrower.guarantor_name || 'N/A'}).
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Installment Schedule */}
+                <Card>
+                  <CardHeader className="pb-2 p-4">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Calendar className="h-4 w-4" /> Installment Schedule
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                      {selectedBorrower.repayments?.map((r: any) => {
+                        const remaining = (r.amount_due || 0) - (r.amount_paid || 0);
+                        return (
+                          <div key={r.id} className={`flex items-center justify-between p-2 rounded text-sm border ${r.status === 'paid' ? 'bg-green-50/50 dark:bg-green-950/10 border-green-200 dark:border-green-800' : r.due_date < today && r.status !== 'paid' ? 'bg-red-50/50 dark:bg-red-950/10 border-red-200 dark:border-red-800' : 'border-border'}`}>
+                            <div className="flex items-center gap-2">
+                              {r.status === 'paid' ? <CheckCircle className="h-3.5 w-3.5 text-green-500" /> : r.due_date < today ? <XCircle className="h-3.5 w-3.5 text-destructive" /> : <Clock className="h-3.5 w-3.5 text-muted-foreground" />}
+                              <span>{periodLabel} {r.installment_number}</span>
+                              <span className="text-muted-foreground">{new Date(r.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">UGX {(r.status === 'paid' ? r.amount_paid : remaining).toLocaleString()}</span>
+                              {getStatusBadge(r.status, r.due_date)}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </ScrollArea>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 };
 
