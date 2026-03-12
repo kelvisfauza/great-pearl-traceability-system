@@ -156,32 +156,6 @@ const QuickLoans = () => {
     }
   };
 
-  const fetchAiLoanLimit = async () => {
-    if (!employee?.email) return;
-    setAiLimitLoading(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const resp = await fetch(
-        `https://pudfybkyfedeggmokhco.supabase.co/functions/v1/ai-loan-limit`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ employee_email: employee.email }),
-        }
-      );
-      if (resp.ok) {
-        const data = await resp.json();
-        setAiLoanLimit(data);
-      }
-    } catch (err) {
-      console.error('Error fetching AI loan limit:', err);
-    } finally {
-      setAiLimitLoading(false);
-    }
-  };
 
   const fetchAllAiLimits = async () => {
     if (!employees.length) {
