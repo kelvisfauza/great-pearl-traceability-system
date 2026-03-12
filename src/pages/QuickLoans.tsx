@@ -99,7 +99,6 @@ const QuickLoans = () => {
     checkGuarantorRequests();
     fetchGuaranteedLoans();
     fetchWalletBalances();
-    fetchAiLoanLimit();
   }, [employee]);
 
   const fetchLoans = async () => {
