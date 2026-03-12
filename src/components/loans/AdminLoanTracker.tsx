@@ -290,7 +290,7 @@ const AdminLoanTracker = () => {
                               <div key={r.id} className="flex items-center justify-between px-4 py-2.5 bg-background">
                                 <div>
                                   <p className="font-medium text-sm">{r.loans?.employee_name}</p>
-                                  <p className="text-xs text-muted-foreground">Week {r.installment_number} • {r.loans?.loan_type === 'long_term' ? 'Long-Term' : 'Quick'}</p>
+                                  <p className="text-xs text-muted-foreground">{r.loans?.repayment_frequency === 'weekly' ? 'Week' : r.loans?.repayment_frequency === 'bullet' ? 'Payment' : 'Month'} {r.installment_number} • {r.loans?.loan_type === 'long_term' ? 'Long-Term' : 'Quick'}</p>
                                 </div>
                                 <div className="flex items-center gap-3">
                                   <span className="font-semibold text-sm">UGX {remaining.toLocaleString()}</span>
