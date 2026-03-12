@@ -1,0 +1,1 @@
+DELETE FROM ledger_entries WHERE id = '197d21f5-0f89-475b-b34c-7156e7f32b16';
