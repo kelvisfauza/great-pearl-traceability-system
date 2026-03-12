@@ -215,7 +215,7 @@ const AdminLoanTracker = () => {
                           {b.nextDue ? (
                             <div>
                               <p className="text-sm">{new Date(b.nextDue.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
-                              <p className="text-xs text-muted-foreground">Week {b.nextDue.installment_number}</p>
+                              <p className="text-xs text-muted-foreground">{b.repayment_frequency === 'weekly' ? 'Week' : b.repayment_frequency === 'bullet' ? 'Payment' : 'Month'} {b.nextDue.installment_number}</p>
                             </div>
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
@@ -290,7 +290,7 @@ const AdminLoanTracker = () => {
                               <div key={r.id} className="flex items-center justify-between px-4 py-2.5 bg-background">
                                 <div>
                                   <p className="font-medium text-sm">{r.loans?.employee_name}</p>
-                                  <p className="text-xs text-muted-foreground">Week {r.installment_number} • {r.loans?.loan_type === 'long_term' ? 'Long-Term' : 'Quick'}</p>
+                                  <p className="text-xs text-muted-foreground">{r.loans?.repayment_frequency === 'weekly' ? 'Week' : r.loans?.repayment_frequency === 'bullet' ? 'Payment' : 'Month'} {r.installment_number} • {r.loans?.loan_type === 'long_term' ? 'Long-Term' : 'Quick'}</p>
                                 </div>
                                 <div className="flex items-center gap-3">
                                   <span className="font-semibold text-sm">UGX {remaining.toLocaleString()}</span>
@@ -343,7 +343,7 @@ const AdminLoanTracker = () => {
                         <div>
                           <p className="font-medium text-sm">{r.loans?.employee_name}</p>
                           <p className="text-xs text-muted-foreground">
-                            Week {r.installment_number} • Due {new Date(r.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                            {r.loans?.repayment_frequency === 'weekly' ? 'Week' : r.loans?.repayment_frequency === 'bullet' ? 'Payment' : 'Month'} {r.installment_number} • Due {new Date(r.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                             <span className="text-destructive font-medium ml-1">• {daysOverdue}d overdue</span>
                           </p>
                         </div>
