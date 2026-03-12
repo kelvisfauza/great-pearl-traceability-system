@@ -1443,12 +1443,10 @@ const QuickLoans = () => {
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Shield className="h-5 w-5" /> My Loan Eligibility
-                  {aiLimitLoading && <span className="text-xs text-muted-foreground ml-2">Analyzing...</span>}
-                  {myLimit.isAi && <Badge variant="outline" className="ml-2 text-xs">AI Scored</Badge>}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <p className="text-xs text-muted-foreground">Monthly Salary</p>
                     <p className="text-lg font-bold">UGX {myLimit.salary.toLocaleString()}</p>
@@ -1457,14 +1455,6 @@ const QuickLoans = () => {
                     <p className="text-xs text-muted-foreground">Wallet Balance</p>
                     <p className="text-lg font-bold text-primary">UGX {Math.max(0, myLimit.walletBal).toLocaleString()}</p>
                   </div>
-                  {myLimit.riskScore !== null && myLimit.riskScore !== undefined && (
-                    <div>
-                      <p className="text-xs text-muted-foreground">Risk Score</p>
-                      <p className={`text-lg font-bold ${myLimit.riskScore >= 70 ? 'text-green-600' : myLimit.riskScore >= 40 ? 'text-yellow-600' : 'text-destructive'}`}>
-                        {myLimit.riskScore}/100
-                      </p>
-                    </div>
-                  )}
                   <div>
                     <p className="text-xs text-muted-foreground">Outstanding Loans</p>
                     <p className="text-lg font-bold text-destructive">UGX {myLimit.outstanding.toLocaleString()}</p>
@@ -1475,8 +1465,7 @@ const QuickLoans = () => {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Active loans: {myLimit.activeCount}/3
-                  {myLimit.isAi && ' • Limit determined by AI risk assessment'}
+                  Active loans: {myLimit.activeCount}/3 • Limit: 2x salary minus outstanding
                 </p>
               </CardContent>
             </Card>
