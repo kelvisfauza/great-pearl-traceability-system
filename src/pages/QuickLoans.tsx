@@ -90,6 +90,7 @@ const QuickLoans = () => {
   // Form state
   const [loanAmount, setLoanAmount] = useState('');
   const [loanType, setLoanType] = useState<LoanType>('quick');
+  const [repaymentFrequency, setRepaymentFrequency] = useState<RepaymentFrequency>('weekly');
   const [durationMonths, setDurationMonths] = useState('');
   const [guarantorId, setGuarantorId] = useState('');
   const [loanPurpose, setLoanPurpose] = useState('');
