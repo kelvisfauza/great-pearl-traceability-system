@@ -1171,7 +1171,11 @@ const QuickLoans = () => {
                   </div>
                   <div>
                     <Label>Loan Type</Label>
-                    <Select value={loanType} onValueChange={(v) => setLoanType(v as LoanType)}>
+                    <Select value={loanType} onValueChange={(v) => {
+                      const lt = v as LoanType;
+                      setLoanType(lt);
+                      setRepaymentFrequency(LOAN_TYPE_CONFIG[lt].frequencies[0]);
+                    }}>
                       <SelectTrigger><SelectValue placeholder="Select loan type" /></SelectTrigger>
                       <SelectContent>
                         {Object.entries(LOAN_TYPE_CONFIG).map(([key, cfg]) => (
@@ -1180,17 +1184,30 @@ const QuickLoans = () => {
                       </SelectContent>
                     </Select>
                   </div>
+                  {loanType === 'long_term' && (
+                    <div>
+                      <Label>Repayment Method</Label>
+                      <Select value={repaymentFrequency} onValueChange={(v) => setRepaymentFrequency(v as RepaymentFrequency)}>
+                        <SelectTrigger><SelectValue placeholder="Select repayment method" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="monthly">Monthly – Equal monthly installments</SelectItem>
+                          <SelectItem value="bullet">Bullet – Pay everything at end of term</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <div>
                     <Label>Duration (Months)</Label>
                     <Select value={durationMonths} onValueChange={setDurationMonths}>
                       <SelectTrigger><SelectValue placeholder="Select duration" /></SelectTrigger>
                       <SelectContent>
                         {[1, 2, 3, 4, 5, 6].map(m => {
-                          const { totalWeeks } = getLoanSchedule(m);
-                          const dailyR = getDailyRate(loanType);
+                          const monthlyRate = LOAN_TYPE_CONFIG[loanType].monthlyRate;
+                          const maxRate = LOAN_TYPE_CONFIG[loanType].maxRate;
+                          const effectiveRate = Math.min(monthlyRate * m, maxRate);
                           return (
                             <SelectItem key={m} value={m.toString()}>
-                              {m} month{m > 1 ? 's' : ''} ({totalWeeks} weeks) - {dailyR.toFixed(2)}%/day ({LOAN_TYPE_CONFIG[loanType].monthlyRate}%/mo)
+                              {m} month{m > 1 ? 's' : ''} – {monthlyRate}%/mo (total interest: {effectiveRate}%)
                             </SelectItem>
                           );
                         })}
@@ -1213,11 +1230,15 @@ const QuickLoans = () => {
                     <Card className="bg-muted/50">
                       <CardContent className="p-4 space-y-1 text-sm">
                         <div className="flex justify-between"><span>Principal:</span><span>UGX {parseFloat(loanAmount).toLocaleString()}</span></div>
-                        <div className="flex justify-between"><span>Daily Rate:</span><span>{previewDailyRate.toFixed(3)}% ({previewRate}%/month)</span></div>
-                        <div className="flex justify-between"><span>Duration:</span><span>{previewTotalDays} days ({previewTotalWeeks} weeks)</span></div>
+                        <div className="flex justify-between"><span>Interest Rate:</span><span>{previewRate}%/month (max {LOAN_TYPE_CONFIG[loanType].maxRate}%)</span></div>
+                        <div className="flex justify-between"><span>Duration:</span><span>{parseInt(durationMonths)} month(s)</span></div>
+                        <div className="flex justify-between"><span>Repayment:</span><span>{repaymentFrequency === 'bullet' ? 'Bullet (lump sum at end)' : repaymentFrequency === 'monthly' ? `${parseInt(durationMonths)} monthly installments` : `${previewTotalWeeks} weekly installments`}</span></div>
                         <div className="flex justify-between"><span>Total Interest:</span><span>UGX {Math.ceil(previewInterest).toLocaleString()}</span></div>
                         <div className="flex justify-between font-semibold"><span>Total Repayable:</span><span>UGX {Math.ceil(previewTotal).toLocaleString()}</span></div>
-                        <div className="flex justify-between font-semibold text-primary"><span>Weekly Installment:</span><span>UGX {Math.ceil(previewWeekly).toLocaleString()}</span></div>
+                        <div className="flex justify-between font-semibold text-primary">
+                          <span>{repaymentFrequency === 'bullet' ? 'Lump Sum Payment:' : repaymentFrequency === 'monthly' ? 'Monthly Installment:' : 'Weekly Installment:'}</span>
+                          <span>UGX {Math.ceil(previewWeekly).toLocaleString()}</span>
+                        </div>
                       </CardContent>
                     </Card>
                   )}
