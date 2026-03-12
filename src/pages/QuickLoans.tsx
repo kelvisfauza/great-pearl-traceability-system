@@ -366,6 +366,7 @@ const QuickLoans = () => {
     try {
       const approvalCode = Math.floor(100000 + Math.random() * 900000).toString();
 
+      const freq = repaymentFrequency;
       const { error } = await supabase.from('loans').insert({
         employee_id: employee.id,
         employee_email: employee.email,
@@ -378,9 +379,9 @@ const QuickLoans = () => {
         duration_months: months,
         monthly_installment: Math.ceil(weekly),
         weekly_installment: Math.ceil(weekly),
-        total_weeks: totalWeeks,
+        total_weeks: freq === 'monthly' ? months : freq === 'bullet' ? 1 : totalWeeks,
         remaining_balance: Math.ceil(total),
-        repayment_frequency: 'weekly',
+        repayment_frequency: freq,
         status: 'pending_guarantor',
         guarantor_id: guarantor.id,
         guarantor_email: guarantor.email,
