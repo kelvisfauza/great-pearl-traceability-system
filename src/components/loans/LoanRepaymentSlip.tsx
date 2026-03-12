@@ -20,6 +20,7 @@ interface LoanRepaymentSlipProps {
     totalRepayable: number;
     totalInterest: number;
     loanType?: 'quick' | 'long_term';
+    repaymentFrequency?: 'weekly' | 'monthly' | 'bullet';
   } | null;
 }
 
@@ -28,27 +29,38 @@ const LoanRepaymentSlip = ({ open, onClose, loanData }: LoanRepaymentSlipProps) 
 
   if (!loanData) return null;
 
-  const { employeeName, employeeEmail, guarantorName, loanAmount, interestRate, dailyRate, durationMonths, totalWeeks, weeklyInstallment, totalRepayable, totalInterest, loanType } = loanData;
+  const { employeeName, employeeEmail, guarantorName, loanAmount, interestRate, dailyRate, durationMonths, totalWeeks, weeklyInstallment, totalRepayable, totalInterest, loanType, repaymentFrequency } = loanData;
   const isLongTerm = loanType === 'long_term';
+  const freq = repaymentFrequency || 'weekly';
+  const isBullet = freq === 'bullet';
+  const isMonthly = freq === 'monthly';
 
-  // Generate flat interest schedule (equal installments)
-  const schedule: { week: number; dueDate: string; installment: number; interest: number; principal: number; balance: number }[] = [];
+  // Generate schedule based on frequency
+  const schedule: { period: number; label: string; dueDate: string; installment: number; interest: number; principal: number; balance: number }[] = [];
   const scheduleInterest = totalRepayable - loanAmount;
-  const weeklyInterestPortion = Math.round(scheduleInterest / totalWeeks);
-  const weeklyPrincipalPortion = Math.round(loanAmount / totalWeeks);
+  const numPeriods = isBullet ? 1 : (isMonthly ? durationMonths : totalWeeks);
+  const periodInterest = Math.round(scheduleInterest / numPeriods);
+  const periodPrincipal = Math.round(loanAmount / numPeriods);
   let balance = loanAmount;
   const startDate = new Date();
 
-  for (let i = 1; i <= totalWeeks; i++) {
+  for (let i = 1; i <= numPeriods; i++) {
     const dueDate = new Date(startDate);
-    dueDate.setDate(dueDate.getDate() + i * 7);
-    const isLast = i === totalWeeks;
-    const principalPart = isLast ? balance : weeklyPrincipalPortion;
-    const interestPart = isLast ? (scheduleInterest - weeklyInterestPortion * (totalWeeks - 1)) : weeklyInterestPortion;
+    if (isBullet) {
+      dueDate.setMonth(dueDate.getMonth() + durationMonths);
+    } else if (isMonthly) {
+      dueDate.setMonth(dueDate.getMonth() + i);
+    } else {
+      dueDate.setDate(dueDate.getDate() + i * 7);
+    }
+    const isLast = i === numPeriods;
+    const principalPart = isLast ? balance : periodPrincipal;
+    const interestPart = isLast ? (scheduleInterest - periodInterest * (numPeriods - 1)) : periodInterest;
     const installmentAmt = principalPart + interestPart;
     const newBalance = Math.max(0, Math.round(balance - principalPart));
     schedule.push({
-      week: i,
+      period: i,
+      label: isBullet ? 'End of Term' : (isMonthly ? `Month ${i}` : `Wk ${i}`),
       dueDate: dueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
       installment: Math.ceil(installmentAmt),
       interest: interestPart,
