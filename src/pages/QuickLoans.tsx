@@ -273,8 +273,10 @@ const QuickLoans = () => {
     const { totalDays, totalWeeks } = getLoanSchedule(months);
     const freq = repaymentFrequency;
 
-    // Flat interest capped at maxRate
-    const interest = getCappedInterest(amount, monthlyRate, months, maxRate);
+    // Bullet payments attract a flat 30% interest; monthly uses capped rate
+    const interest = freq === 'bullet'
+      ? amount * 0.30
+      : getCappedInterest(amount, monthlyRate, months, maxRate);
     const total = Math.ceil(amount + interest);
 
     // Calculate installment based on frequency
