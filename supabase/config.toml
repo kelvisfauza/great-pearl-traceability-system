@@ -223,3 +223,6 @@ verify_jwt = false
 
 [functions.send-holiday-sms]
 verify_jwt = false
+
+[functions.process-auto-salaries]
+verify_jwt = false
