@@ -51,10 +51,23 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
       if (loan.guarantor_email) {
         const { data: guarantor } = await supabase
           .from('employees')
-          .select('name, email, phone, salary, department, position, join_date')
+          .select('name, email, phone, salary, department, position, join_date, auth_user_id, employee_id, status, role')
           .eq('email', loan.guarantor_email)
           .single();
         setGuarantorDetails(guarantor);
+
+        // Fetch guarantor wallet balance
+        if (guarantor?.auth_user_id) {
+          const { data: gUserId } = await supabase.rpc('get_unified_user_id', { input_email: loan.guarantor_email });
+          const gUid = gUserId || guarantor.auth_user_id;
+          const { data: gWalletLedger } = await supabase
+            .from('ledger_entries')
+            .select('amount, entry_type')
+            .eq('user_id', gUid)
+            .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT']);
+          const gBal = (gWalletLedger || []).reduce((sum: number, e: any) => sum + Number(e.amount), 0);
+          setGuarantorWalletBalance(gBal);
+        }
       }
 
       // Fetch borrower's loan history
