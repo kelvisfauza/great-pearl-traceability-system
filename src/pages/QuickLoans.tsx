@@ -462,6 +462,13 @@ const QuickLoans = () => {
       const loan = loans.find(l => l.id === loanId);
       if (!loan) return;
 
+      // SECURITY: Admin cannot approve a loan they guaranteed
+      if (approve && loan.guarantor_email === employee.email) {
+        toast({ title: "Conflict of Interest", description: "You cannot approve a loan you guaranteed. Another admin must approve this loan.", variant: "destructive" });
+        setSubmitting(false);
+        return;
+      }
+
       if (approve) {
         const isWeekly = loan.repayment_frequency === 'weekly';
         const startDate = new Date();
