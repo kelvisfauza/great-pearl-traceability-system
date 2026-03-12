@@ -327,7 +327,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
           <div className="grn-footer">
             <div className="grn-footer-left">
               <p>This is a system-generated document.</p>
-              <p>Great Agro Coffee Ltd — Management System</p>
+              <p>Great Agro Coffee — Management System</p>
             </div>
             <div className="grn-footer-right">
               {verificationCode && <p>Verify: greatagrocoffee.com/verify/{verificationCode}</p>}
