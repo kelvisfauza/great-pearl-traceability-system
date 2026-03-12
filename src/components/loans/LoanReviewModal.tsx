@@ -474,8 +474,20 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
                 <CardContent className="p-4 pt-0">
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                     <div>
-                      <p className="text-muted-foreground text-xs">Name</p>
+                      <p className="text-muted-foreground text-xs">Full Name</p>
                       <p className="font-medium">{loan.employee_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Employee ID</p>
+                      <p className="font-medium">{borrowerDetails?.employee_id || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Email</p>
+                      <p className="font-medium text-xs">{loan.employee_email}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Phone</p>
+                      <p className="font-medium">{borrowerDetails?.phone || loan.employee_phone || '-'}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs">Position</p>
@@ -484,6 +496,22 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
                     <div>
                       <p className="text-muted-foreground text-xs">Department</p>
                       <p className="font-medium">{borrowerDetails?.department || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Role</p>
+                      <p className="font-medium">{borrowerDetails?.role || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Status</p>
+                      <Badge variant={borrowerDetails?.status === 'Active' ? 'default' : 'destructive'} className="text-xs">{borrowerDetails?.status || '-'}</Badge>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Join Date</p>
+                      <p className="font-medium">{borrowerDetails?.join_date ? new Date(borrowerDetails.join_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Employment Tenure</p>
+                      <p className="font-medium">{tenureMonths} months</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs">Monthly Salary</p>
@@ -496,12 +524,41 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
                       </p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground text-xs">Tenure</p>
-                      <p className="font-medium">{tenureMonths} months</p>
+                      <p className="text-muted-foreground text-xs">Address</p>
+                      <p className="font-medium">{borrowerDetails?.address || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Emergency Contact</p>
+                      <p className="font-medium">{borrowerDetails?.emergency_contact || '-'}</p>
                     </div>
                   </div>
 
                   <Separator className="my-3" />
+
+                  {/* Loan Limit Info */}
+                  <div className="bg-muted/50 rounded-lg p-3 mb-3">
+                    <p className="text-xs font-semibold mb-2">📊 Loan Eligibility</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                      <div>
+                        <p className="text-muted-foreground text-xs">Max Loan Limit (2x Salary)</p>
+                        <p className="font-bold">UGX {loanLimit.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Total Outstanding</p>
+                        <p className="font-bold text-destructive">UGX {totalOutstanding.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Available Limit</p>
+                        <p className={`font-bold ${availableLoanLimit < loan.loan_amount ? 'text-destructive' : ''}`}>UGX {availableLoanLimit.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">This Loan vs Limit</p>
+                        <p className={`font-bold ${loan.loan_amount > availableLoanLimit ? 'text-destructive' : ''}`}>
+                          {loan.loan_amount > availableLoanLimit ? '⚠ EXCEEDS LIMIT' : '✅ Within Limit'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                     <div>
