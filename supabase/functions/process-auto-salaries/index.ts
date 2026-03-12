@@ -177,16 +177,23 @@ Deno.serve(async (req) => {
         }
 
         if (ledgerUserId) {
+          const salaryDescription = `Monthly Salary - ${currentMonth}${totalAdvanceDeduction > 0 ? ` (Advance deduction: UGX ${totalAdvanceDeduction.toLocaleString()})` : ''}`;
           const { error: ledgerError } = await supabase
             .from('ledger_entries')
             .insert({
               user_id: ledgerUserId,
               entry_type: 'DEPOSIT',
               amount: netSalary,
-              description: `Monthly Salary - ${currentMonth}${totalAdvanceDeduction > 0 ? ` (Advance deduction: UGX ${totalAdvanceDeduction.toLocaleString()})` : ''}`,
-              reference_type: 'salary_payment',
-              reference_id: paymentRecord.id,
-              performed_by: 'Auto-Salary System',
+              reference: `SAL-${paymentRecord.id}`,
+              metadata: {
+                description: salaryDescription,
+                reference_type: 'salary_payment',
+                reference_id: paymentRecord.id,
+                performed_by: 'Auto-Salary System',
+                gross_salary: grossSalary,
+                advance_deduction: totalAdvanceDeduction,
+                net_salary: netSalary,
+              },
             });
 
           if (ledgerError) {
