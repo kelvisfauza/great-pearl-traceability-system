@@ -306,13 +306,6 @@ const QuickLoans = () => {
       return;
     }
 
-    // Check against AI-determined limit or fallback to 2x salary
-    const maxLoan = (employee.salary || 0) * 2;
-    if (amount > maxLoan) {
-      toast({ title: "Error", description: `Max loan is UGX ${maxLoan.toLocaleString()} (2x your salary)`, variant: "destructive" });
-      return;
-    }
-
     // Check if borrower has any defaulted loans
     const defaultedLoans = myLoans.filter(l => l.is_defaulted);
     if (defaultedLoans.length > 0) {
@@ -320,10 +313,23 @@ const QuickLoans = () => {
       return;
     }
 
-    // Check active loans count
+    // Block new loans if user has any active or pending loans - must pay first
     const activeLoans = myLoans.filter(l => ['pending_guarantor', 'pending_admin', 'approved', 'disbursed', 'active'].includes(l.status));
-    if (activeLoans.length >= 3) {
-      toast({ title: "Error", description: "You already have 3 active loans", variant: "destructive" });
+    if (activeLoans.length > 0) {
+      toast({ title: "Blocked", description: "You already have an active or pending loan. You must fully repay your current loan before requesting a new one.", variant: "destructive" });
+      return;
+    }
+
+    // Check against 2x salary limit minus outstanding debt
+    const salary = employee.salary || 0;
+    const maxLoan = salary * 2;
+    const outstanding = myLoans
+      .filter(l => ['active', 'pending_guarantor', 'pending_admin'].includes(l.status))
+      .reduce((s: number, l: any) => s + (l.remaining_balance || l.loan_amount || 0), 0);
+    const availableLimit = Math.max(0, maxLoan - outstanding);
+
+    if (amount > availableLimit) {
+      toast({ title: "Error", description: `Your available loan limit is UGX ${availableLimit.toLocaleString()} (2x salary: UGX ${maxLoan.toLocaleString()} minus outstanding: UGX ${outstanding.toLocaleString()})`, variant: "destructive" });
       return;
     }
 
@@ -455,6 +461,13 @@ const QuickLoans = () => {
     try {
       const loan = loans.find(l => l.id === loanId);
       if (!loan) return;
+
+      // SECURITY: Admin cannot approve a loan they guaranteed
+      if (approve && loan.guarantor_email === employee.email) {
+        toast({ title: "Conflict of Interest", description: "You cannot approve a loan you guaranteed. Another admin must approve this loan.", variant: "destructive" });
+        setSubmitting(false);
+        return;
+      }
 
       if (approve) {
         const isWeekly = loan.repayment_frequency === 'weekly';
