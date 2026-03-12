@@ -1114,31 +1114,16 @@ const QuickLoans = () => {
     return <Badge variant={s.variant}>{s.label}</Badge>;
   };
 
-  // Calculate loan limit - use AI limit if available, fallback to salary-based
+  // Calculate loan limit - always 2x salary minus outstanding
   const getLoanLimit = (empEmail: string, empSalary: number, empAuthId?: string) => {
     const empLoans = (loans.length > 0 ? loans : myLoans).filter(l => l.employee_email === empEmail && ['active', 'pending_guarantor', 'pending_admin'].includes(l.status));
     const outstanding = empLoans.reduce((s: number, l: any) => s + (l.remaining_balance || l.loan_amount || 0), 0);
     const activeCount = empLoans.length;
     const walletBal = empAuthId ? (walletBalances[empAuthId] || 0) : 0;
 
-    // Use AI-determined limit if available for current user
-    if (aiLoanLimit && empEmail === employee?.email) {
-      return {
-        salary: empSalary,
-        maxFromSalary: aiLoanLimit.loan_limit + outstanding, // AI already subtracted outstanding
-        outstanding,
-        activeCount,
-        walletBal: aiLoanLimit.wallet_balance || walletBal,
-        availableLimit: Math.max(0, aiLoanLimit.loan_limit),
-        riskScore: aiLoanLimit.risk_score,
-        factors: aiLoanLimit.factors,
-        isAi: true,
-      };
-    }
-
     const maxFromSalary = empSalary * 2;
     const availableLimit = Math.max(0, maxFromSalary - outstanding);
-    return { salary: empSalary, maxFromSalary, outstanding, activeCount, walletBal, availableLimit, riskScore: null, factors: null, isAi: false };
+    return { salary: empSalary, maxFromSalary, outstanding, activeCount, walletBal, availableLimit };
   };
 
   const myLimit = employee ? getLoanLimit(employee.email, employee.salary || 0, employee.authUserId) : null;
