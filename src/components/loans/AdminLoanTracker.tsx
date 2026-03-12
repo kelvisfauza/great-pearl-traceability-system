@@ -411,7 +411,7 @@ const AdminLoanTracker = () => {
                         <div key={r.id} className={`flex items-center justify-between p-2 rounded text-sm border ${r.status === 'paid' ? 'bg-green-50/50 dark:bg-green-950/10 border-green-200 dark:border-green-800' : r.due_date < today && r.status !== 'paid' ? 'bg-red-50/50 dark:bg-red-950/10 border-red-200 dark:border-red-800' : 'border-border'}`}>
                           <div className="flex items-center gap-2">
                             {r.status === 'paid' ? <CheckCircle className="h-3.5 w-3.5 text-green-500" /> : r.due_date < today ? <XCircle className="h-3.5 w-3.5 text-destructive" /> : <Clock className="h-3.5 w-3.5 text-muted-foreground" />}
-                            <span>Wk {r.installment_number}</span>
+                            <span>{selectedBorrower.repayment_frequency === 'weekly' ? `Wk` : selectedBorrower.repayment_frequency === 'bullet' ? `Payment` : `Month`} {r.installment_number}</span>
                             <span className="text-muted-foreground">{new Date(r.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
                           </div>
                           <div className="flex items-center gap-2">
