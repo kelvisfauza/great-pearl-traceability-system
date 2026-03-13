@@ -922,6 +922,140 @@ const QuickLoans = () => {
     }
   };
 
+  // Change guarantor for a loan where guarantor declined
+  const handleChangeGuarantor = async () => {
+    if (!changeGuarantorLoan || !employee || !newGuarantorId) return;
+    const guarantor = employees.find(e => e.id === newGuarantorId);
+    if (!guarantor) return;
+    if (guarantor.email === employee.email) {
+      toast({ title: "Error", description: "You cannot be your own guarantor", variant: "destructive" });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const approvalCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+      const { error } = await supabase.from('loans').update({
+        guarantor_id: guarantor.id,
+        guarantor_email: guarantor.email,
+        guarantor_name: guarantor.name,
+        guarantor_phone: guarantor.phone || '',
+        guarantor_approval_code: approvalCode,
+        guarantor_approved: false,
+        guarantor_declined: false,
+        status: 'pending_guarantor',
+        admin_rejection_reason: null,
+      } as any).eq('id', changeGuarantorLoan.id);
+
+      if (error) throw error;
+
+      // SMS to new guarantor
+      await supabase.functions.invoke('send-sms', {
+        body: {
+          phone: guarantor.phone,
+          message: `Dear ${guarantor.name}, ${employee.name} has requested you to guarantee a loan of UGX ${changeGuarantorLoan.loan_amount.toLocaleString()} for ${changeGuarantorLoan.duration_months} month(s). Your approval code is: ${approvalCode}. Log into the system to approve or decline.`,
+          userName: guarantor.name,
+          messageType: 'loan_guarantor_request'
+        }
+      });
+
+      toast({ title: "New Guarantor Selected", description: `${guarantor.name} has been notified via SMS` });
+      setShowChangeGuarantorDialog(false);
+      setChangeGuarantorLoan(null);
+      setNewGuarantorId('');
+      fetchLoans();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Accept or decline a counter offer from admin
+  const handleCounterOfferResponse = async (loanId: string, accept: boolean) => {
+    if (!employee) return;
+    setSubmitting(true);
+    try {
+      const loan = myLoans.find(l => l.id === loanId);
+      if (!loan || loan.status !== 'counter_offered') return;
+
+      if (accept) {
+        const newAmount = loan.counter_offer_amount;
+        const lType = (loan.loan_type || 'quick') as LoanType;
+        const months = loan.duration_months;
+        const freq = loan.repayment_frequency;
+        const monthlyRate = LOAN_TYPE_CONFIG[lType].monthlyRate;
+        const maxRate = LOAN_TYPE_CONFIG[lType].maxRate;
+
+        // Recalculate loan terms with new amount
+        const interest = freq === 'bullet'
+          ? newAmount * 0.30
+          : getCappedInterest(newAmount, monthlyRate, months, maxRate);
+        const total = Math.ceil(newAmount + interest);
+        const { totalWeeks } = getLoanSchedule(months);
+
+        let installment = 0;
+        if (freq === 'bullet') {
+          installment = total;
+        } else if (freq === 'monthly') {
+          installment = months > 0 ? Math.ceil(total / months) : 0;
+        } else {
+          installment = totalWeeks > 0 ? Math.ceil(total / totalWeeks) : 0;
+        }
+
+        const { error } = await supabase.from('loans').update({
+          loan_amount: newAmount,
+          original_loan_amount: loan.original_loan_amount || loan.loan_amount,
+          total_repayable: total,
+          remaining_balance: total,
+          monthly_installment: freq === 'weekly' ? null : installment,
+          weekly_installment: freq === 'weekly' ? installment : null,
+          status: 'pending_admin',
+        } as any).eq('id', loanId);
+        if (error) throw error;
+
+        // Notify admin via SMS
+        const { data: admins } = await supabase
+          .from('employees')
+          .select('name, phone')
+          .in('role', ['Administrator', 'Super Admin'])
+          .eq('status', 'Active')
+          .not('phone', 'is', null);
+
+        for (const admin of (admins || [])) {
+          if (admin.phone) {
+            await supabase.functions.invoke('send-sms', {
+              body: {
+                phone: admin.phone,
+                message: `Dear ${admin.name}, ${employee.name} has accepted the counter offer of UGX ${newAmount.toLocaleString()} (from UGX ${loan.loan_amount.toLocaleString()}). The loan is now pending your final approval.`,
+                userName: admin.name,
+                messageType: 'loan_counter_accepted'
+              }
+            });
+          }
+        }
+
+        toast({ title: "Counter Offer Accepted", description: `Loan updated to UGX ${newAmount.toLocaleString()} and sent for admin approval` });
+      } else {
+        const { error } = await supabase.from('loans').update({
+          status: 'rejected',
+          admin_rejection_reason: 'Borrower declined counter offer',
+        }).eq('id', loanId);
+        if (error) throw error;
+
+        toast({ title: "Counter Offer Declined", description: "The loan application has been closed" });
+      }
+
+      setShowCounterOfferDialog(false);
+      setCounterOfferLoan(null);
+      fetchLoans();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const printLoanStatement = async (loan: any) => {
     // Fetch repayment installments for this loan
