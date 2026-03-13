@@ -501,11 +501,19 @@ export const useUnifiedApprovalRequests = () => {
         const isFinalApproval = wUpdateData.status === 'approved';
         // channel may be null on money_requests — fallback to payment_channel
         const effectiveChannel = currentWithdrawal.payment_channel || currentWithdrawal.channel || 'MOBILE_MONEY';
-        const isMoMo = effectiveChannel === 'MOBILE_MONEY' || (effectiveChannel !== 'CASH' && effectiveChannel !== 'BANK');
+        const isCash = effectiveChannel === 'CASH';
+        const isBank = effectiveChannel === 'BANK';
+        const isMoMo = !isCash && !isBank;
         
         if (isFinalApproval && isMoMo) {
           wUpdateData.payout_status = 'processing';
           wUpdateData.payout_attempted_at = new Date().toISOString();
+        }
+        
+        // For CASH withdrawals, mark as completed immediately — no disbursement needed
+        if (isFinalApproval && isCash) {
+          wUpdateData.payout_status = 'sent';
+          wUpdateData.payout_ref = 'CASH-COLLECT';
         }
 
         const { error: wError } = await supabase
@@ -641,16 +649,19 @@ export const useUnifiedApprovalRequests = () => {
 
           if (recipientEmp?.phone) {
             let msg = '';
+            const refDisplay = currentWithdrawal.request_ref || `WD-${currentWithdrawal.id.slice(0, 8)}`;
             if (status === 'Approved') {
-              if (isFinalApproval && isMoMo && payoutSuccess) {
+              if (isFinalApproval && isCash) {
+                msg = `Dear ${recipientEmp.name}, your cash withdrawal of UGX ${currentWithdrawal.amount.toLocaleString()} has been APPROVED by ${adminName}. Please collect your cash from the office. Ref: ${refDisplay}. Great Agro Coffee.`;
+              } else if (isFinalApproval && isMoMo && payoutSuccess) {
                 msg = `Dear ${recipientEmp.name}, your withdrawal of UGX ${currentWithdrawal.amount.toLocaleString()} has been APPROVED and sent to your Mobile Money. Ref: ${payoutRef}. Great Agro Coffee.`;
               } else if (isFinalApproval) {
-                msg = `Dear ${recipientEmp.name}, your withdrawal of UGX ${currentWithdrawal.amount.toLocaleString()} has been FULLY APPROVED by ${adminName}. Your funds will be disbursed shortly. Ref: ${currentWithdrawal.request_ref}. Great Agro Coffee.`;
+                msg = `Dear ${recipientEmp.name}, your withdrawal of UGX ${currentWithdrawal.amount.toLocaleString()} has been APPROVED by ${adminName}. Your funds will be disbursed shortly. Ref: ${refDisplay}. Great Agro Coffee.`;
               } else {
-                msg = `Dear ${recipientEmp.name}, your withdrawal request for UGX ${currentWithdrawal.amount.toLocaleString()} has received admin approval from ${adminName}. Awaiting more admin approvals. Ref: ${currentWithdrawal.request_ref}. Great Agro Coffee.`;
+                msg = `Dear ${recipientEmp.name}, your withdrawal of UGX ${currentWithdrawal.amount.toLocaleString()} received approval from ${adminName}. Awaiting final approval. Ref: ${refDisplay}. Great Agro Coffee.`;
               }
             } else {
-              msg = `Dear ${recipientEmp.name}, your withdrawal request for UGX ${currentWithdrawal.amount.toLocaleString()} has been REJECTED by ${adminName}. Reason: ${rejectionReason || 'Not specified'}. Ref: ${currentWithdrawal.request_ref}. Great Agro Coffee.`;
+              msg = `Dear ${recipientEmp.name}, your withdrawal of UGX ${currentWithdrawal.amount.toLocaleString()} has been REJECTED by ${adminName}. Reason: ${rejectionReason || 'Not specified'}. Ref: ${refDisplay}. Great Agro Coffee.`;
             }
 
             await supabase.functions.invoke('send-sms', {
