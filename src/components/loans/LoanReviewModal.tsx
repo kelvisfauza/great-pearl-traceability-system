@@ -17,11 +17,15 @@ interface LoanReviewModalProps {
   onClose: () => void;
   onApprove: (loanId: string) => void;
   onReject: (loanId: string, reason: string) => void;
+  onCounterOffer?: (loanId: string, amount: number, comments: string) => void;
   submitting: boolean;
 }
 
-const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting }: LoanReviewModalProps) => {
+const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOffer, submitting }: LoanReviewModalProps) => {
   const [rejectionReason, setRejectionReason] = useState('');
+  const [counterOfferAmount, setCounterOfferAmount] = useState('');
+  const [counterOfferComments, setCounterOfferComments] = useState('');
+  const [showCounterOffer, setShowCounterOffer] = useState(false);
   const [borrowerDetails, setBorrowerDetails] = useState<any>(null);
   const [guarantorDetails, setGuarantorDetails] = useState<any>(null);
   const [borrowerLoans, setBorrowerLoans] = useState<any[]>([]);
