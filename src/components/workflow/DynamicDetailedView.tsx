@@ -746,7 +746,9 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
               <AlertTriangle className="h-5 w-5" />
-              {isWithdrawalRequest ? 'Confirm Disbursement Approval' : 'Confirm Approval'}
+              {isWithdrawalRequest 
+                ? (withdrawalChannel === 'CASH' ? 'Confirm Cash Approval' : 'Confirm Disbursement Approval')
+                : 'Confirm Approval'}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3 text-sm">
@@ -755,12 +757,19 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
                     <p className="font-medium text-foreground">
                       You are about to approve a withdrawal of <span className="text-amber-600 font-bold">UGX {requestAmount.toLocaleString()}</span> for {request.requestedBy}.
                     </p>
-                    <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 space-y-2">
-                      <p className="font-semibold text-destructive">⚠️ This action will immediately trigger a Mobile Money disbursement.</p>
-                      <p className="text-destructive/80">Once approved, money will be sent to the recipient's phone number instantly. <strong>This cannot be undone or reversed.</strong></p>
-                    </div>
+                    {withdrawalChannel === 'CASH' ? (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
+                        <p className="font-semibold text-green-800">This is a CASH collection request.</p>
+                        <p className="text-green-700">No mobile money disbursement will be triggered. The employee will collect cash from the office.</p>
+                      </div>
+                    ) : (
+                      <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 space-y-2">
+                        <p className="font-semibold text-destructive">This action will immediately trigger a Mobile Money disbursement.</p>
+                        <p className="text-destructive/80">Once approved, money will be sent to the recipient's phone number instantly. <strong>This cannot be undone.</strong></p>
+                      </div>
+                    )}
                     <p className="text-muted-foreground">
-                      Are you absolutely sure you want to proceed with this disbursement?
+                      Are you sure you want to proceed?
                     </p>
                   </>
                 ) : (
@@ -784,11 +793,15 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
                 onApprove();
               }}
               className={isWithdrawalRequest 
-                ? "bg-amber-600 hover:bg-amber-700 text-white" 
+                ? (withdrawalChannel === 'CASH' 
+                    ? "bg-green-600 hover:bg-green-700 text-white"
+                    : "bg-amber-600 hover:bg-amber-700 text-white")
                 : "bg-green-600 hover:bg-green-700 text-white"
               }
             >
-              {isWithdrawalRequest ? '💸 Yes, Disburse Now' : '✅ Yes, Approve'}
+              {isWithdrawalRequest 
+                ? (withdrawalChannel === 'CASH' ? 'Approve Cash Collection' : 'Yes, Disburse Now')
+                : 'Yes, Approve'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
