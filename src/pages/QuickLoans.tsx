@@ -1645,6 +1645,51 @@ const QuickLoans = () => {
             </Card>
           )}
 
+          {/* Counter Offer Banner */}
+          {myLoans.filter(l => l.status === 'counter_offered').map(loan => (
+            <Card key={loan.id} className="border-primary bg-primary/5">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <HandCoins className="h-6 w-6 text-primary mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-foreground">Counter Offer from Management</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      You requested UGX {(loan.original_loan_amount || loan.loan_amount)?.toLocaleString()}, management offers <span className="font-bold text-primary">UGX {loan.counter_offer_amount?.toLocaleString()}</span>.
+                      {loan.counter_offer_comments && <span className="block mt-1 italic">"{loan.counter_offer_comments}"</span>}
+                    </p>
+                    <div className="flex gap-2 mt-3">
+                      <Button size="sm" onClick={() => { setCounterOfferLoan(loan); setShowCounterOfferDialog(true); }}>
+                        <Eye className="mr-1 h-4 w-4" /> Review & Respond
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+          {/* Guarantor Declined Banner */}
+          {myLoans.filter(l => l.status === 'guarantor_declined').map(loan => (
+            <Card key={loan.id} className="border-destructive/50 bg-destructive/5">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-6 w-6 text-destructive mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-foreground">Guarantor Declined</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {loan.guarantor_name} declined to guarantee your loan of UGX {loan.loan_amount?.toLocaleString()}. Please select a new guarantor.
+                    </p>
+                    <div className="flex gap-2 mt-3">
+                      <Button size="sm" onClick={() => { setChangeGuarantorLoan(loan); setNewGuarantorId(''); setShowChangeGuarantorDialog(true); }}>
+                        <Users className="mr-1 h-4 w-4" /> Select New Guarantor
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
           {myLimit && (
             <Card className="border-primary/30 bg-primary/5">
               <CardHeader className="pb-2">
