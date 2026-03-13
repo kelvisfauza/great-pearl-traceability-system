@@ -146,11 +146,9 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
     (request.requestType || '').toLowerCase().includes('withdrawal') ||
     Boolean(request.details?.withdrawal_id);
   // For withdrawals: total balance → minus this request → remaining after approval
-  // The frozen amount already includes this request, so after approval = availableBalance
+  // Show total balance and calculate projected balance after this withdrawal/request is approved
   const displayBalance = isWithdrawalRequest ? walletData.balance : walletData.availableBalance;
-  const projectedBalanceAfterApproval = isWithdrawalRequest
-    ? walletData.availableBalance
-    : walletData.availableBalance - requestAmount;
+  const projectedBalanceAfterApproval = displayBalance - requestAmount;
 
   const renderStoreReportDeletion = () => (
     <>
