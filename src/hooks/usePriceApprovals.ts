@@ -297,6 +297,15 @@ const { error } = await supabase
     }
   };
 
+  // Store the current user email for real-time refresh
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+
+  // Wrap fetchMyRequests to also store the email for real-time use
+  const fetchMyRequestsAndStore = useCallback(async (userEmail: string) => {
+    setCurrentUserEmail(userEmail);
+    return fetchMyRequests(userEmail);
+  }, [fetchMyRequests]);
+
   useEffect(() => {
     const fetchAll = async () => {
       setLoading(true);
@@ -318,6 +327,10 @@ const { error } = await supabase
         },
         () => {
           fetchPendingRequests();
+          // Also refresh the analyst's own requests so rejected/dismissed items update
+          if (currentUserEmail) {
+            fetchMyRequests(currentUserEmail);
+          }
         }
       )
       .subscribe();
@@ -325,7 +338,7 @@ const { error } = await supabase
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchPendingRequests]);
+  }, [fetchPendingRequests, fetchMyRequests, currentUserEmail]);
 
   return {
     pendingRequests,
