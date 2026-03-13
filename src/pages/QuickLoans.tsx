@@ -233,7 +233,7 @@ const QuickLoans = () => {
       const { error } = await supabase.from('loans').update({
         guarantor_approved: false,
         guarantor_declined: true,
-        status: 'rejected',
+        status: 'guarantor_declined',
         admin_rejection_reason: `Guarantor ${employee.name} revoked their guarantee`,
       }).eq('id', loanId);
       if (error) throw error;
