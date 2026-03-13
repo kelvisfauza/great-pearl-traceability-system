@@ -501,11 +501,19 @@ export const useUnifiedApprovalRequests = () => {
         const isFinalApproval = wUpdateData.status === 'approved';
         // channel may be null on money_requests — fallback to payment_channel
         const effectiveChannel = currentWithdrawal.payment_channel || currentWithdrawal.channel || 'MOBILE_MONEY';
-        const isMoMo = effectiveChannel === 'MOBILE_MONEY' || (effectiveChannel !== 'CASH' && effectiveChannel !== 'BANK');
+        const isCash = effectiveChannel === 'CASH';
+        const isBank = effectiveChannel === 'BANK';
+        const isMoMo = !isCash && !isBank;
         
         if (isFinalApproval && isMoMo) {
           wUpdateData.payout_status = 'processing';
           wUpdateData.payout_attempted_at = new Date().toISOString();
+        }
+        
+        // For CASH withdrawals, mark as completed immediately — no disbursement needed
+        if (isFinalApproval && isCash) {
+          wUpdateData.payout_status = 'sent';
+          wUpdateData.payout_ref = 'CASH-COLLECT';
         }
 
         const { error: wError } = await supabase
