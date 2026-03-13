@@ -149,6 +149,7 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
   // Show total balance and calculate projected balance after this withdrawal/request is approved
   const displayBalance = isWithdrawalRequest ? walletData.balance : walletData.availableBalance;
   const projectedBalanceAfterApproval = displayBalance - requestAmount;
+  const withdrawalChannel = request.details?.channel || request.details?.payment_channel || 'MOBILE_MONEY';
 
   const renderStoreReportDeletion = () => (
     <>
