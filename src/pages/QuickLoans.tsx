@@ -84,6 +84,11 @@ const QuickLoans = () => {
   const [walletRepayLoan, setWalletRepayLoan] = useState<any>(null);
   const [walletRepayAmount, setWalletRepayAmount] = useState('');
   const [walletRepayLoading, setWalletRepayLoading] = useState(false);
+  const [showChangeGuarantorDialog, setShowChangeGuarantorDialog] = useState(false);
+  const [changeGuarantorLoan, setChangeGuarantorLoan] = useState<any>(null);
+  const [newGuarantorId, setNewGuarantorId] = useState('');
+  const [showCounterOfferDialog, setShowCounterOfferDialog] = useState(false);
+  const [counterOfferLoan, setCounterOfferLoan] = useState<any>(null);
 
   // Form state
   const [loanAmount, setLoanAmount] = useState('');
