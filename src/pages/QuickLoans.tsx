@@ -242,7 +242,7 @@ const QuickLoans = () => {
       await supabase.functions.invoke('send-sms', {
         body: {
           phone: loan.employee_phone,
-          message: `Dear ${loan.employee_name}, your guarantor ${employee.name} has revoked their guarantee for your loan. The loan has been cancelled. You may request a new loan with a different guarantor. - Great Agro Coffee`,
+          message: `Dear ${loan.employee_name}, your guarantor ${employee.name} has revoked their guarantee for your loan. Log in to select a new guarantor for the same application. - Great Agro Coffee`,
           userName: loan.employee_name,
           messageType: 'loan_guarantor_revoked'
         }
