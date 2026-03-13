@@ -775,33 +775,101 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
 
               {/* Decision Section */}
               {loan.status === 'pending_admin' && (
-                <div className="space-y-3">
-                  <Label className="text-sm font-semibold">Rejection Reason (if declining)</Label>
-                  <Textarea
-                    placeholder="Provide reason for rejection..."
-                    value={rejectionReason}
-                    onChange={(e) => setRejectionReason(e.target.value)}
-                    className="text-sm"
-                  />
-                  <div className="flex gap-3">
-                    <Button
-                      className="flex-1"
-                      onClick={() => onApprove(loan.id)}
-                      disabled={submitting}
-                    >
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Approve & Disburse
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      className="flex-1"
-                      onClick={() => onReject(loan.id, rejectionReason || 'Admin declined')}
-                      disabled={submitting}
-                    >
-                      <XCircle className="mr-2 h-4 w-4" />
-                      Reject
-                    </Button>
-                  </div>
+                <div className="space-y-4">
+                  {!showCounterOffer ? (
+                    <>
+                      <Label className="text-sm font-semibold">Rejection Reason (if declining)</Label>
+                      <Textarea
+                        placeholder="Provide reason for rejection..."
+                        value={rejectionReason}
+                        onChange={(e) => setRejectionReason(e.target.value)}
+                        className="text-sm"
+                      />
+                      <div className="flex gap-2 flex-wrap">
+                        <Button
+                          className="flex-1"
+                          onClick={() => onApprove(loan.id)}
+                          disabled={submitting}
+                        >
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Approve & Disburse
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          className="flex-1"
+                          onClick={() => {
+                            setShowCounterOffer(true);
+                            setCounterOfferAmount('');
+                            setCounterOfferComments('');
+                          }}
+                          disabled={submitting}
+                        >
+                          <HandCoins className="mr-2 h-4 w-4" />
+                          Counter Offer
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          className="flex-1"
+                          onClick={() => onReject(loan.id, rejectionReason || 'Admin declined')}
+                          disabled={submitting}
+                        >
+                          <XCircle className="mr-2 h-4 w-4" />
+                          Reject
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <Card className="border-primary/30">
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-semibold flex items-center gap-2">
+                            <HandCoins className="h-4 w-4 text-primary" /> Make a Counter Offer
+                          </Label>
+                          <Button variant="ghost" size="sm" onClick={() => setShowCounterOffer(false)}>Cancel</Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Original request: UGX {loan.loan_amount?.toLocaleString()}. Suggest a lower amount you can approve.
+                        </p>
+                        <div>
+                          <Label className="text-xs">Offer Amount (UGX)</Label>
+                          <Input
+                            type="number"
+                            value={counterOfferAmount}
+                            onChange={(e) => setCounterOfferAmount(e.target.value)}
+                            placeholder="e.g. 300000"
+                            className="mt-1"
+                          />
+                          {parseFloat(counterOfferAmount) >= loan.loan_amount && (
+                            <p className="text-xs text-destructive mt-1">Offer must be less than the requested amount</p>
+                          )}
+                        </div>
+                        <div>
+                          <Label className="text-xs">Comments / Reason</Label>
+                          <Textarea
+                            value={counterOfferComments}
+                            onChange={(e) => setCounterOfferComments(e.target.value)}
+                            placeholder="Explain why this amount is being offered..."
+                            rows={2}
+                            className="mt-1 text-sm"
+                          />
+                        </div>
+                        <Button
+                          className="w-full"
+                          onClick={() => {
+                            const amt = parseFloat(counterOfferAmount);
+                            if (amt > 0 && amt < loan.loan_amount && onCounterOffer) {
+                              onCounterOffer(loan.id, amt, counterOfferComments);
+                              setShowCounterOffer(false);
+                            }
+                          }}
+                          disabled={submitting || !counterOfferAmount || parseFloat(counterOfferAmount) >= loan.loan_amount || parseFloat(counterOfferAmount) <= 0}
+                        >
+                          <HandCoins className="mr-2 h-4 w-4" />
+                          Send Offer of UGX {(parseFloat(counterOfferAmount) || 0).toLocaleString()}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
               )}
             </div>
