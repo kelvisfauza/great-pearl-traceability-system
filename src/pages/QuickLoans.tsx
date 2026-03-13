@@ -2021,6 +2021,42 @@ const QuickLoans = () => {
           handleAdminApproval(loanId, false, reason);
           setReviewLoan(null);
         }}
+        onCounterOffer={async (loanId, amount, comments) => {
+          if (!employee) return;
+          setSubmitting(true);
+          try {
+            const loan = loans.find(l => l.id === loanId);
+            if (!loan) return;
+
+            const { error } = await supabase.from('loans').update({
+              status: 'counter_offered',
+              counter_offer_amount: amount,
+              counter_offer_by: employee.name,
+              counter_offer_at: new Date().toISOString(),
+              counter_offer_comments: comments,
+              original_loan_amount: loan.original_loan_amount || loan.loan_amount,
+            } as any).eq('id', loanId);
+            if (error) throw error;
+
+            // SMS to borrower
+            await supabase.functions.invoke('send-sms', {
+              body: {
+                phone: loan.employee_phone,
+                message: `Dear ${loan.employee_name}, management has reviewed your loan request of UGX ${loan.loan_amount.toLocaleString()} and can offer UGX ${amount.toLocaleString()}. ${comments ? 'Reason: ' + comments + '. ' : ''}Log in to accept or decline. - Great Agro Coffee`,
+                userName: loan.employee_name,
+                messageType: 'loan_counter_offer'
+              }
+            });
+
+            toast({ title: "Counter Offer Sent", description: `${loan.employee_name} has been notified via SMS` });
+            setReviewLoan(null);
+            fetchLoans();
+          } catch (err: any) {
+            toast({ title: "Error", description: err.message, variant: "destructive" });
+          } finally {
+            setSubmitting(false);
+          }
+        }}
         submitting={submitting}
       />
       <LoanRepaymentSlip
