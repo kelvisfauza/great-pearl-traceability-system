@@ -3785,6 +3785,10 @@ export type Database = {
           admin_approved_at: string | null
           admin_approved_by: string | null
           admin_rejection_reason: string | null
+          counter_offer_amount: number | null
+          counter_offer_at: string | null
+          counter_offer_by: string | null
+          counter_offer_comments: string | null
           created_at: string
           daily_interest_rate: number | null
           disbursed_amount: number | null
@@ -3810,6 +3814,7 @@ export type Database = {
           missed_installments: number | null
           monthly_installment: number
           next_deduction_date: string | null
+          original_loan_amount: number | null
           paid_amount: number | null
           penalty_amount: number | null
           remaining_balance: number
@@ -3826,6 +3831,10 @@ export type Database = {
           admin_approved_at?: string | null
           admin_approved_by?: string | null
           admin_rejection_reason?: string | null
+          counter_offer_amount?: number | null
+          counter_offer_at?: string | null
+          counter_offer_by?: string | null
+          counter_offer_comments?: string | null
           created_at?: string
           daily_interest_rate?: number | null
           disbursed_amount?: number | null
@@ -3851,6 +3860,7 @@ export type Database = {
           missed_installments?: number | null
           monthly_installment: number
           next_deduction_date?: string | null
+          original_loan_amount?: number | null
           paid_amount?: number | null
           penalty_amount?: number | null
           remaining_balance: number
@@ -3867,6 +3877,10 @@ export type Database = {
           admin_approved_at?: string | null
           admin_approved_by?: string | null
           admin_rejection_reason?: string | null
+          counter_offer_amount?: number | null
+          counter_offer_at?: string | null
+          counter_offer_by?: string | null
+          counter_offer_comments?: string | null
           created_at?: string
           daily_interest_rate?: number | null
           disbursed_amount?: number | null
@@ -3892,6 +3906,7 @@ export type Database = {
           missed_installments?: number | null
           monthly_installment?: number
           next_deduction_date?: string | null
+          original_loan_amount?: number | null
           paid_amount?: number | null
           penalty_amount?: number | null
           remaining_balance?: number

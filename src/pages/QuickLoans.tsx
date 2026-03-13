@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Banknote, Clock, Shield, Users, AlertTriangle, CheckCircle, XCircle, CreditCard, Download, Printer, Phone, Loader2, FileText, Eye, ShieldOff, Wallet } from 'lucide-react';
+import { Banknote, Clock, Shield, Users, AlertTriangle, CheckCircle, XCircle, CreditCard, Download, Printer, Phone, Loader2, FileText, Eye, ShieldOff, Wallet, HandCoins } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import AdminLoanTracker from '@/components/loans/AdminLoanTracker';
 import { Textarea } from '@/components/ui/textarea';
@@ -84,6 +84,11 @@ const QuickLoans = () => {
   const [walletRepayLoan, setWalletRepayLoan] = useState<any>(null);
   const [walletRepayAmount, setWalletRepayAmount] = useState('');
   const [walletRepayLoading, setWalletRepayLoading] = useState(false);
+  const [showChangeGuarantorDialog, setShowChangeGuarantorDialog] = useState(false);
+  const [changeGuarantorLoan, setChangeGuarantorLoan] = useState<any>(null);
+  const [newGuarantorId, setNewGuarantorId] = useState('');
+  const [showCounterOfferDialog, setShowCounterOfferDialog] = useState(false);
+  const [counterOfferLoan, setCounterOfferLoan] = useState<any>(null);
 
   // Form state
   const [loanAmount, setLoanAmount] = useState('');
@@ -228,7 +233,7 @@ const QuickLoans = () => {
       const { error } = await supabase.from('loans').update({
         guarantor_approved: false,
         guarantor_declined: true,
-        status: 'rejected',
+        status: 'guarantor_declined',
         admin_rejection_reason: `Guarantor ${employee.name} revoked their guarantee`,
       }).eq('id', loanId);
       if (error) throw error;
@@ -237,7 +242,7 @@ const QuickLoans = () => {
       await supabase.functions.invoke('send-sms', {
         body: {
           phone: loan.employee_phone,
-          message: `Dear ${loan.employee_name}, your guarantor ${employee.name} has revoked their guarantee for your loan. The loan has been cancelled. You may request a new loan with a different guarantor. - Great Agro Coffee`,
+          message: `Dear ${loan.employee_name}, your guarantor ${employee.name} has revoked their guarantee for your loan. Log in to select a new guarantor for the same application. - Great Agro Coffee`,
           userName: loan.employee_name,
           messageType: 'loan_guarantor_revoked'
         }
@@ -314,9 +319,15 @@ const QuickLoans = () => {
     }
 
     // Block new loans if user has any active or pending loans - must pay first
-    const activeLoans = myLoans.filter(l => ['pending_guarantor', 'pending_admin', 'approved', 'disbursed', 'active'].includes(l.status));
+    const activeLoans = myLoans.filter(l => ['pending_guarantor', 'pending_admin', 'approved', 'disbursed', 'active', 'counter_offered'].includes(l.status));
     if (activeLoans.length > 0) {
       toast({ title: "Blocked", description: "You already have an active or pending loan. You must fully repay your current loan before requesting a new one.", variant: "destructive" });
+      return;
+    }
+    // Also block if there's a guarantor_declined loan (they should change guarantor instead)
+    const declinedLoans = myLoans.filter(l => l.status === 'guarantor_declined');
+    if (declinedLoans.length > 0) {
+      toast({ title: "Change Guarantor Instead", description: "You have a loan where the guarantor declined. Please select a new guarantor for that application instead of creating a new one.", variant: "destructive" });
       return;
     }
 
@@ -427,7 +438,7 @@ const QuickLoans = () => {
     try {
       const updateData: any = approve
         ? { guarantor_approved: true, guarantor_approved_at: new Date().toISOString(), status: 'pending_admin' }
-        : { guarantor_declined: true, status: 'rejected', admin_rejection_reason: 'Guarantor declined' };
+        : { guarantor_declined: true, guarantor_approved: false, status: 'guarantor_declined', admin_rejection_reason: 'Guarantor declined' };
 
       const { error } = await supabase.from('loans').update(updateData).eq('id', pendingGuarantorLoan.id);
       if (error) throw error;
@@ -438,7 +449,7 @@ const QuickLoans = () => {
           phone: pendingGuarantorLoan.employee_phone,
           message: approve
             ? `Dear ${pendingGuarantorLoan.employee_name}, your guarantor ${employee?.name} has approved your loan request. It is now pending admin approval.`
-            : `Dear ${pendingGuarantorLoan.employee_name}, your guarantor ${employee?.name} has declined your loan request. Please select a new guarantor.`,
+            : `Dear ${pendingGuarantorLoan.employee_name}, your guarantor ${employee?.name} has declined your loan request. Log in to select a new guarantor for the same application.`,
           userName: pendingGuarantorLoan.employee_name,
           messageType: 'loan_guarantor_response'
         }
@@ -911,6 +922,140 @@ const QuickLoans = () => {
     }
   };
 
+  // Change guarantor for a loan where guarantor declined
+  const handleChangeGuarantor = async () => {
+    if (!changeGuarantorLoan || !employee || !newGuarantorId) return;
+    const guarantor = employees.find(e => e.id === newGuarantorId);
+    if (!guarantor) return;
+    if (guarantor.email === employee.email) {
+      toast({ title: "Error", description: "You cannot be your own guarantor", variant: "destructive" });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const approvalCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+      const { error } = await supabase.from('loans').update({
+        guarantor_id: guarantor.id,
+        guarantor_email: guarantor.email,
+        guarantor_name: guarantor.name,
+        guarantor_phone: guarantor.phone || '',
+        guarantor_approval_code: approvalCode,
+        guarantor_approved: false,
+        guarantor_declined: false,
+        status: 'pending_guarantor',
+        admin_rejection_reason: null,
+      } as any).eq('id', changeGuarantorLoan.id);
+
+      if (error) throw error;
+
+      // SMS to new guarantor
+      await supabase.functions.invoke('send-sms', {
+        body: {
+          phone: guarantor.phone,
+          message: `Dear ${guarantor.name}, ${employee.name} has requested you to guarantee a loan of UGX ${changeGuarantorLoan.loan_amount.toLocaleString()} for ${changeGuarantorLoan.duration_months} month(s). Your approval code is: ${approvalCode}. Log into the system to approve or decline.`,
+          userName: guarantor.name,
+          messageType: 'loan_guarantor_request'
+        }
+      });
+
+      toast({ title: "New Guarantor Selected", description: `${guarantor.name} has been notified via SMS` });
+      setShowChangeGuarantorDialog(false);
+      setChangeGuarantorLoan(null);
+      setNewGuarantorId('');
+      fetchLoans();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Accept or decline a counter offer from admin
+  const handleCounterOfferResponse = async (loanId: string, accept: boolean) => {
+    if (!employee) return;
+    setSubmitting(true);
+    try {
+      const loan = myLoans.find(l => l.id === loanId);
+      if (!loan || loan.status !== 'counter_offered') return;
+
+      if (accept) {
+        const newAmount = loan.counter_offer_amount;
+        const lType = (loan.loan_type || 'quick') as LoanType;
+        const months = loan.duration_months;
+        const freq = loan.repayment_frequency;
+        const monthlyRate = LOAN_TYPE_CONFIG[lType].monthlyRate;
+        const maxRate = LOAN_TYPE_CONFIG[lType].maxRate;
+
+        // Recalculate loan terms with new amount
+        const interest = freq === 'bullet'
+          ? newAmount * 0.30
+          : getCappedInterest(newAmount, monthlyRate, months, maxRate);
+        const total = Math.ceil(newAmount + interest);
+        const { totalWeeks } = getLoanSchedule(months);
+
+        let installment = 0;
+        if (freq === 'bullet') {
+          installment = total;
+        } else if (freq === 'monthly') {
+          installment = months > 0 ? Math.ceil(total / months) : 0;
+        } else {
+          installment = totalWeeks > 0 ? Math.ceil(total / totalWeeks) : 0;
+        }
+
+        const { error } = await supabase.from('loans').update({
+          loan_amount: newAmount,
+          original_loan_amount: loan.original_loan_amount || loan.loan_amount,
+          total_repayable: total,
+          remaining_balance: total,
+          monthly_installment: freq === 'weekly' ? null : installment,
+          weekly_installment: freq === 'weekly' ? installment : null,
+          status: 'pending_admin',
+        } as any).eq('id', loanId);
+        if (error) throw error;
+
+        // Notify admin via SMS
+        const { data: admins } = await supabase
+          .from('employees')
+          .select('name, phone')
+          .in('role', ['Administrator', 'Super Admin'])
+          .eq('status', 'Active')
+          .not('phone', 'is', null);
+
+        for (const admin of (admins || [])) {
+          if (admin.phone) {
+            await supabase.functions.invoke('send-sms', {
+              body: {
+                phone: admin.phone,
+                message: `Dear ${admin.name}, ${employee.name} has accepted the counter offer of UGX ${newAmount.toLocaleString()} (from UGX ${loan.loan_amount.toLocaleString()}). The loan is now pending your final approval.`,
+                userName: admin.name,
+                messageType: 'loan_counter_accepted'
+              }
+            });
+          }
+        }
+
+        toast({ title: "Counter Offer Accepted", description: `Loan updated to UGX ${newAmount.toLocaleString()} and sent for admin approval` });
+      } else {
+        const { error } = await supabase.from('loans').update({
+          status: 'rejected',
+          admin_rejection_reason: 'Borrower declined counter offer',
+        }).eq('id', loanId);
+        if (error) throw error;
+
+        toast({ title: "Counter Offer Declined", description: "The loan application has been closed" });
+      }
+
+      setShowCounterOfferDialog(false);
+      setCounterOfferLoan(null);
+      fetchLoans();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const printLoanStatement = async (loan: any) => {
     // Fetch repayment installments for this loan
@@ -1096,6 +1241,8 @@ const QuickLoans = () => {
       completed: { variant: 'default', label: 'Completed' },
       rejected: { variant: 'destructive', label: 'Rejected' },
       defaulted: { variant: 'destructive', label: 'Defaulted' },
+      guarantor_declined: { variant: 'destructive', label: 'Guarantor Declined' },
+      counter_offered: { variant: 'secondary', label: 'Counter Offer' },
     };
     const s = map[status] || { variant: 'outline' as const, label: status };
     return <Badge variant={s.variant}>{s.label}</Badge>;
@@ -1389,6 +1536,79 @@ const QuickLoans = () => {
                 })()}
               </DialogContent>
             </Dialog>
+
+            {/* Change Guarantor Dialog */}
+            <Dialog open={showChangeGuarantorDialog} onOpenChange={(open) => { setShowChangeGuarantorDialog(open); if (!open) { setChangeGuarantorLoan(null); setNewGuarantorId(''); } }}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2"><Users className="h-5 w-5" /> Select New Guarantor</DialogTitle>
+                </DialogHeader>
+                {changeGuarantorLoan && (
+                  <div className="space-y-4">
+                    <Card className="bg-muted/50">
+                      <CardContent className="p-4 space-y-1 text-sm">
+                        <div className="flex justify-between"><span>Loan Amount:</span><span className="font-semibold">UGX {changeGuarantorLoan.loan_amount?.toLocaleString()}</span></div>
+                        <div className="flex justify-between"><span>Duration:</span><span>{changeGuarantorLoan.duration_months} month(s)</span></div>
+                        <div className="flex justify-between text-destructive"><span>Previous Guarantor:</span><span>{changeGuarantorLoan.guarantor_name} (declined)</span></div>
+                      </CardContent>
+                    </Card>
+                    <div>
+                      <Label>Select New Guarantor</Label>
+                      <Select value={newGuarantorId} onValueChange={setNewGuarantorId}>
+                        <SelectTrigger><SelectValue placeholder="Choose a colleague" /></SelectTrigger>
+                        <SelectContent>
+                          {employees.filter(e => e.email !== employee?.email && e.email !== changeGuarantorLoan.guarantor_email).map(e => (
+                            <SelectItem key={e.id} value={e.id}>{e.name} ({e.email})</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">The previous guarantor who declined is excluded</p>
+                    </div>
+                    <Button onClick={handleChangeGuarantor} disabled={submitting || !newGuarantorId} className="w-full">
+                      {submitting ? 'Sending...' : 'Send Guarantor Request'}
+                    </Button>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+
+            {/* Counter Offer Dialog */}
+            <Dialog open={showCounterOfferDialog} onOpenChange={(open) => { setShowCounterOfferDialog(open); if (!open) setCounterOfferLoan(null); }}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2"><Banknote className="h-5 w-5" /> Management Counter Offer</DialogTitle>
+                </DialogHeader>
+                {counterOfferLoan && (
+                  <div className="space-y-4">
+                    <Card className="bg-muted/50 border-primary/30">
+                      <CardContent className="p-4 space-y-2 text-sm">
+                        <div className="flex justify-between"><span className="text-muted-foreground">Your Request:</span><span className="line-through text-muted-foreground">UGX {(counterOfferLoan.original_loan_amount || counterOfferLoan.loan_amount)?.toLocaleString()}</span></div>
+                        <div className="flex justify-between text-lg font-bold"><span>Offered Amount:</span><span className="text-primary">UGX {counterOfferLoan.counter_offer_amount?.toLocaleString()}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Duration:</span><span>{counterOfferLoan.duration_months} month(s)</span></div>
+                        {counterOfferLoan.counter_offer_comments && (
+                          <div className="mt-2 p-3 bg-accent rounded-lg">
+                            <p className="text-xs font-semibold text-muted-foreground mb-1">Management Comments:</p>
+                            <p className="text-sm">{counterOfferLoan.counter_offer_comments}</p>
+                          </div>
+                        )}
+                        <div className="text-xs text-muted-foreground mt-2">
+                          Offered by {counterOfferLoan.counter_offer_by} on {counterOfferLoan.counter_offer_at ? new Date(counterOfferLoan.counter_offer_at).toLocaleDateString() : ''}
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <div className="flex gap-3">
+                      <Button className="flex-1" onClick={() => handleCounterOfferResponse(counterOfferLoan.id, true)} disabled={submitting}>
+                        <CheckCircle className="mr-2 h-4 w-4" /> Accept Offer
+                      </Button>
+                      <Button variant="destructive" className="flex-1" onClick={() => handleCounterOfferResponse(counterOfferLoan.id, false)} disabled={submitting}>
+                        <XCircle className="mr-2 h-4 w-4" /> Decline
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground text-center">Accepting will update your loan to the offered amount and send it for final approval.</p>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
             </div>
           </div>
 
@@ -1424,6 +1644,51 @@ const QuickLoans = () => {
               </CardContent>
             </Card>
           )}
+
+          {/* Counter Offer Banner */}
+          {myLoans.filter(l => l.status === 'counter_offered').map(loan => (
+            <Card key={loan.id} className="border-primary bg-primary/5">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <HandCoins className="h-6 w-6 text-primary mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-foreground">Counter Offer from Management</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      You requested UGX {(loan.original_loan_amount || loan.loan_amount)?.toLocaleString()}, management offers <span className="font-bold text-primary">UGX {loan.counter_offer_amount?.toLocaleString()}</span>.
+                      {loan.counter_offer_comments && <span className="block mt-1 italic">"{loan.counter_offer_comments}"</span>}
+                    </p>
+                    <div className="flex gap-2 mt-3">
+                      <Button size="sm" onClick={() => { setCounterOfferLoan(loan); setShowCounterOfferDialog(true); }}>
+                        <Eye className="mr-1 h-4 w-4" /> Review & Respond
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+          {/* Guarantor Declined Banner */}
+          {myLoans.filter(l => l.status === 'guarantor_declined').map(loan => (
+            <Card key={loan.id} className="border-destructive/50 bg-destructive/5">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-6 w-6 text-destructive mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-foreground">Guarantor Declined</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {loan.guarantor_name} declined to guarantee your loan of UGX {loan.loan_amount?.toLocaleString()}. Please select a new guarantor.
+                    </p>
+                    <div className="flex gap-2 mt-3">
+                      <Button size="sm" onClick={() => { setChangeGuarantorLoan(loan); setNewGuarantorId(''); setShowChangeGuarantorDialog(true); }}>
+                        <Users className="mr-1 h-4 w-4" /> Select New Guarantor
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
 
           {myLimit && (
             <Card className="border-primary/30 bg-primary/5">
@@ -1601,6 +1866,23 @@ const QuickLoans = () => {
                                     <Wallet className="mr-1 h-3 w-3" /> Pay from Wallet
                                   </Button>
                                 </>
+                              )}
+                              {loan.status === 'guarantor_declined' && (
+                                <Button size="sm" variant="outline" className="border-primary text-primary" onClick={() => {
+                                  setChangeGuarantorLoan(loan);
+                                  setNewGuarantorId('');
+                                  setShowChangeGuarantorDialog(true);
+                                }}>
+                                  <Users className="mr-1 h-3 w-3" /> Change Guarantor
+                                </Button>
+                              )}
+                              {loan.status === 'counter_offered' && (
+                                <Button size="sm" variant="secondary" className="border-primary" onClick={() => {
+                                  setCounterOfferLoan(loan);
+                                  setShowCounterOfferDialog(true);
+                                }}>
+                                  <Eye className="mr-1 h-3 w-3" /> View Offer
+                                </Button>
                               )}
                             </div>
                           </TableCell>
@@ -1783,6 +2065,42 @@ const QuickLoans = () => {
         onReject={(loanId, reason) => {
           handleAdminApproval(loanId, false, reason);
           setReviewLoan(null);
+        }}
+        onCounterOffer={async (loanId, amount, comments) => {
+          if (!employee) return;
+          setSubmitting(true);
+          try {
+            const loan = loans.find(l => l.id === loanId);
+            if (!loan) return;
+
+            const { error } = await supabase.from('loans').update({
+              status: 'counter_offered',
+              counter_offer_amount: amount,
+              counter_offer_by: employee.name,
+              counter_offer_at: new Date().toISOString(),
+              counter_offer_comments: comments,
+              original_loan_amount: loan.original_loan_amount || loan.loan_amount,
+            } as any).eq('id', loanId);
+            if (error) throw error;
+
+            // SMS to borrower
+            await supabase.functions.invoke('send-sms', {
+              body: {
+                phone: loan.employee_phone,
+                message: `Dear ${loan.employee_name}, management has reviewed your loan request of UGX ${loan.loan_amount.toLocaleString()} and can offer UGX ${amount.toLocaleString()}. ${comments ? 'Reason: ' + comments + '. ' : ''}Log in to accept or decline. - Great Agro Coffee`,
+                userName: loan.employee_name,
+                messageType: 'loan_counter_offer'
+              }
+            });
+
+            toast({ title: "Counter Offer Sent", description: `${loan.employee_name} has been notified via SMS` });
+            setReviewLoan(null);
+            fetchLoans();
+          } catch (err: any) {
+            toast({ title: "Error", description: err.message, variant: "destructive" });
+          } finally {
+            setSubmitting(false);
+          }
         }}
         submitting={submitting}
       />
