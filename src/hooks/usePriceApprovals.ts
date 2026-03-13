@@ -280,19 +280,40 @@ const { error } = await supabase
 
   const dismissRejection = async (requestId: string) => {
     try {
-      // We just remove it from the UI by marking it as reviewed by the analyst
-      // In a real app you might delete it or add a "dismissed" flag
-      const { error } = await supabase
+      let dismissQuery = supabase
         .from('price_approval_requests')
-        .delete()
-        .eq('id', requestId);
+        .update({
+          status: 'dismissed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', requestId)
+        .eq('status', 'rejected');
+
+      if (currentUserEmail) {
+        dismissQuery = dismissQuery.eq('submitted_by_email', currentUserEmail);
+      }
+
+      const { data, error } = await dismissQuery.select('id');
 
       if (error) throw error;
-      
+      if (!data || data.length === 0) {
+        throw new Error('Dismissal did not persist.');
+      }
+
       setMyRejectedRequests(prev => prev.filter(r => r.id !== requestId));
+
+      if (currentUserEmail) {
+        await fetchMyRequests(currentUserEmail);
+      }
+
       return true;
     } catch (error) {
       console.error('Error dismissing rejection:', error);
+      toast({
+        title: 'Dismiss Failed',
+        description: 'Could not clear this rejected request permanently.',
+        variant: 'destructive'
+      });
       return false;
     }
   };
