@@ -438,7 +438,7 @@ const QuickLoans = () => {
           phone: pendingGuarantorLoan.employee_phone,
           message: approve
             ? `Dear ${pendingGuarantorLoan.employee_name}, your guarantor ${employee?.name} has approved your loan request. It is now pending admin approval.`
-            : `Dear ${pendingGuarantorLoan.employee_name}, your guarantor ${employee?.name} has declined your loan request. Please select a new guarantor.`,
+            : `Dear ${pendingGuarantorLoan.employee_name}, your guarantor ${employee?.name} has declined your loan request. Log in to select a new guarantor for the same application.`,
           userName: pendingGuarantorLoan.employee_name,
           messageType: 'loan_guarantor_response'
         }
