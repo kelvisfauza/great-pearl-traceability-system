@@ -1536,6 +1536,79 @@ const QuickLoans = () => {
                 })()}
               </DialogContent>
             </Dialog>
+
+            {/* Change Guarantor Dialog */}
+            <Dialog open={showChangeGuarantorDialog} onOpenChange={(open) => { setShowChangeGuarantorDialog(open); if (!open) { setChangeGuarantorLoan(null); setNewGuarantorId(''); } }}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2"><Users className="h-5 w-5" /> Select New Guarantor</DialogTitle>
+                </DialogHeader>
+                {changeGuarantorLoan && (
+                  <div className="space-y-4">
+                    <Card className="bg-muted/50">
+                      <CardContent className="p-4 space-y-1 text-sm">
+                        <div className="flex justify-between"><span>Loan Amount:</span><span className="font-semibold">UGX {changeGuarantorLoan.loan_amount?.toLocaleString()}</span></div>
+                        <div className="flex justify-between"><span>Duration:</span><span>{changeGuarantorLoan.duration_months} month(s)</span></div>
+                        <div className="flex justify-between text-destructive"><span>Previous Guarantor:</span><span>{changeGuarantorLoan.guarantor_name} (declined)</span></div>
+                      </CardContent>
+                    </Card>
+                    <div>
+                      <Label>Select New Guarantor</Label>
+                      <Select value={newGuarantorId} onValueChange={setNewGuarantorId}>
+                        <SelectTrigger><SelectValue placeholder="Choose a colleague" /></SelectTrigger>
+                        <SelectContent>
+                          {employees.filter(e => e.email !== employee?.email && e.email !== changeGuarantorLoan.guarantor_email).map(e => (
+                            <SelectItem key={e.id} value={e.id}>{e.name} ({e.email})</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">The previous guarantor who declined is excluded</p>
+                    </div>
+                    <Button onClick={handleChangeGuarantor} disabled={submitting || !newGuarantorId} className="w-full">
+                      {submitting ? 'Sending...' : 'Send Guarantor Request'}
+                    </Button>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+
+            {/* Counter Offer Dialog */}
+            <Dialog open={showCounterOfferDialog} onOpenChange={(open) => { setShowCounterOfferDialog(open); if (!open) setCounterOfferLoan(null); }}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2"><Banknote className="h-5 w-5" /> Management Counter Offer</DialogTitle>
+                </DialogHeader>
+                {counterOfferLoan && (
+                  <div className="space-y-4">
+                    <Card className="bg-muted/50 border-primary/30">
+                      <CardContent className="p-4 space-y-2 text-sm">
+                        <div className="flex justify-between"><span className="text-muted-foreground">Your Request:</span><span className="line-through text-muted-foreground">UGX {(counterOfferLoan.original_loan_amount || counterOfferLoan.loan_amount)?.toLocaleString()}</span></div>
+                        <div className="flex justify-between text-lg font-bold"><span>Offered Amount:</span><span className="text-primary">UGX {counterOfferLoan.counter_offer_amount?.toLocaleString()}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Duration:</span><span>{counterOfferLoan.duration_months} month(s)</span></div>
+                        {counterOfferLoan.counter_offer_comments && (
+                          <div className="mt-2 p-3 bg-accent rounded-lg">
+                            <p className="text-xs font-semibold text-muted-foreground mb-1">Management Comments:</p>
+                            <p className="text-sm">{counterOfferLoan.counter_offer_comments}</p>
+                          </div>
+                        )}
+                        <div className="text-xs text-muted-foreground mt-2">
+                          Offered by {counterOfferLoan.counter_offer_by} on {counterOfferLoan.counter_offer_at ? new Date(counterOfferLoan.counter_offer_at).toLocaleDateString() : ''}
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <div className="flex gap-3">
+                      <Button className="flex-1" onClick={() => handleCounterOfferResponse(counterOfferLoan.id, true)} disabled={submitting}>
+                        <CheckCircle className="mr-2 h-4 w-4" /> Accept Offer
+                      </Button>
+                      <Button variant="destructive" className="flex-1" onClick={() => handleCounterOfferResponse(counterOfferLoan.id, false)} disabled={submitting}>
+                        <XCircle className="mr-2 h-4 w-4" /> Decline
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground text-center">Accepting will update your loan to the offered amount and send it for final approval.</p>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
             </div>
           </div>
 
