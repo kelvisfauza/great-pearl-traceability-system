@@ -1749,6 +1749,23 @@ const QuickLoans = () => {
                                   </Button>
                                 </>
                               )}
+                              {loan.status === 'guarantor_declined' && (
+                                <Button size="sm" variant="outline" className="border-primary text-primary" onClick={() => {
+                                  setChangeGuarantorLoan(loan);
+                                  setNewGuarantorId('');
+                                  setShowChangeGuarantorDialog(true);
+                                }}>
+                                  <Users className="mr-1 h-3 w-3" /> Change Guarantor
+                                </Button>
+                              )}
+                              {loan.status === 'counter_offered' && (
+                                <Button size="sm" variant="secondary" className="border-primary" onClick={() => {
+                                  setCounterOfferLoan(loan);
+                                  setShowCounterOfferDialog(true);
+                                }}>
+                                  <Eye className="mr-1 h-3 w-3" /> View Offer
+                                </Button>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>
