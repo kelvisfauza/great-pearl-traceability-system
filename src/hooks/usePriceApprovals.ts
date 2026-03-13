@@ -349,7 +349,7 @@ const { error } = await supabase
     approveRequest,
     rejectRequest,
     dismissRejection,
-    fetchMyRequests,
+    fetchMyRequests: fetchMyRequestsAndStore,
     fetchPendingRequests
   };
 };
