@@ -427,7 +427,7 @@ const QuickLoans = () => {
     try {
       const updateData: any = approve
         ? { guarantor_approved: true, guarantor_approved_at: new Date().toISOString(), status: 'pending_admin' }
-        : { guarantor_declined: true, status: 'rejected', admin_rejection_reason: 'Guarantor declined' };
+        : { guarantor_declined: true, guarantor_approved: false, status: 'guarantor_declined', admin_rejection_reason: 'Guarantor declined' };
 
       const { error } = await supabase.from('loans').update(updateData).eq('id', pendingGuarantorLoan.id);
       if (error) throw error;
