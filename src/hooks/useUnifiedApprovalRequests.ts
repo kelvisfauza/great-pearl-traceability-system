@@ -759,40 +759,54 @@ export const useUnifiedApprovalRequests = () => {
           return false;
         }
 
-        // Send SMS notification to the requester about admin approval/rejection
+        // Send SMS notification to the REQUESTER (person who submitted) about admin approval/rejection
+        // For salary advances: notify the HR person who submitted, NOT the employee receiving the advance
+        // The advance recipient gets a separate SMS in the salary advance activation block below
         try {
           const details = request.details || {};
-          const recipientEmail = details.employee_email || request.requestedBy;
+          const isSalaryAdvance = request.requestType === 'Salary Advance' && details?.advance_type === 'salary_advance';
+          // Always notify the person who submitted the request
+          const requesterEmail = request.requestedBy;
+          // For salary advances, also determine the beneficiary name for context
+          const beneficiaryName = isSalaryAdvance ? (details.employee_name || '') : '';
           
-          const { data: recipientEmployee } = await supabase
+          const { data: requesterEmployee } = await supabase
             .from('employees')
             .select('phone, name')
-            .eq('email', recipientEmail)
+            .eq('email', requesterEmail)
             .single();
 
-          if (recipientEmployee?.phone) {
+          if (requesterEmployee?.phone) {
             const adminName = employee?.name || 'Admin';
             let message = '';
             
             if (status === 'Approved') {
-              message = `Dear ${recipientEmployee.name}, your ${request.requestType} request for UGX ${typeof request.amount === 'number' ? request.amount.toLocaleString() : request.amount} has been FULLY APPROVED by ${adminName}. Great Agro Coffee.`;
+              if (isSalaryAdvance && beneficiaryName) {
+                message = `Dear ${requesterEmployee.name}, the Salary Advance of UGX ${typeof request.amount === 'number' ? request.amount.toLocaleString() : request.amount} for ${beneficiaryName} has been FULLY APPROVED by ${adminName} and disbursed to their wallet. Great Agro Coffee.`;
+              } else {
+                message = `Dear ${requesterEmployee.name}, your ${request.requestType} request for UGX ${typeof request.amount === 'number' ? request.amount.toLocaleString() : request.amount} has been FULLY APPROVED by ${adminName}. Great Agro Coffee.`;
+              }
             } else {
-              message = `Dear ${recipientEmployee.name}, your ${request.requestType} request for UGX ${typeof request.amount === 'number' ? request.amount.toLocaleString() : request.amount} has been REJECTED by ${adminName}. Reason: ${rejectionReason || 'Not specified'}. Great Agro Coffee.`;
+              if (isSalaryAdvance && beneficiaryName) {
+                message = `Dear ${requesterEmployee.name}, the Salary Advance of UGX ${typeof request.amount === 'number' ? request.amount.toLocaleString() : request.amount} for ${beneficiaryName} has been REJECTED by ${adminName}. Reason: ${rejectionReason || 'Not specified'}. Great Agro Coffee.`;
+              } else {
+                message = `Dear ${requesterEmployee.name}, your ${request.requestType} request for UGX ${typeof request.amount === 'number' ? request.amount.toLocaleString() : request.amount} has been REJECTED by ${adminName}. Reason: ${rejectionReason || 'Not specified'}. Great Agro Coffee.`;
+              }
             }
 
             await supabase.functions.invoke('send-sms', {
               body: {
-                phone: recipientEmployee.phone,
+                phone: requesterEmployee.phone,
                 message: message,
-                userName: recipientEmployee.name,
+                userName: requesterEmployee.name,
                 messageType: status === 'Approved' ? 'admin_approval' : 'rejection',
                 triggeredBy: 'Admin Approval System',
                 requestId: request.id,
                 department: request.department,
-                recipientEmail: recipientEmail
+                recipientEmail: requesterEmail
               }
             });
-            console.log('✅ SMS notification sent to:', recipientEmployee.name);
+            console.log('✅ SMS notification sent to requester:', requesterEmployee.name);
           }
         } catch (smsError) {
           console.error('SMS notification error (non-blocking):', smsError);
