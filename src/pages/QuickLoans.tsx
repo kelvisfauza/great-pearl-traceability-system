@@ -625,11 +625,15 @@ const QuickLoans = () => {
 
     setSubmitting(true);
     try {
-      const newBalance = Math.max(0, earlyPayoff - amount);
+      // For full early payoff, use daily pro-rata discount; for partial, use simple subtraction
+      const isFullPayoff = amount >= earlyPayoff;
+      const newBalance = isFullPayoff ? 0 : Math.max(0, (selectedLoanForPayment.remaining_balance || selectedLoanForPayment.total_repayable) - amount);
 
-      // Update loan remaining balance
+      // Update loan remaining balance and paid_amount
+      const newPaidAmount = (selectedLoanForPayment.paid_amount || 0) + amount;
       const { error } = await supabase.from('loans').update({
         remaining_balance: newBalance,
+        paid_amount: newPaidAmount,
         status: newBalance <= 0 ? 'completed' : 'active',
       }).eq('id', selectedLoanForPayment.id);
       if (error) throw error;
