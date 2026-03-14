@@ -36,12 +36,12 @@ const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
     {
       title: "Management",
       items: [
+        { name: "Approvals", icon: CheckSquare, path: "/approvals", permission: null, requiresAdmin: true },
+        { name: "Coffee Bookings", icon: BookMarked, path: "/coffee-bookings", permission: null, requiresAdmin: true },
         { name: "Suppliers", icon: UserCheck, path: "/suppliers", permission: null },
         { name: "Sales & Marketing", icon: TrendingUp, path: "/sales-marketing", permission: "Sales Marketing" },
-        // ❌ Finance hidden - will be used in separate Finance portal
-        // { name: "Finance", icon: DollarSign, path: "/finance", permission: "Finance" },
         { name: "My Expenses", icon: DollarSign, path: "/my-expenses", permission: null },
-        { name: "Quick Loans", icon: Receipt, path: "/quick-loans", permission: null },
+        { name: "Quick Loans", icon: Banknote, path: "/quick-loans", permission: null },
         { name: "Human Resources", icon: Users, path: "/human-resources", permission: "Human Resources" },
         { name: "Data Analyst", icon: LineChart, path: "/data-analyst", permission: "Data Analysis" },
         { name: "IT Department", icon: Settings, path: "/it-department", permission: "IT Management" },
@@ -50,8 +50,11 @@ const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
     {
       title: "System",
       items: [
+        { name: "My Deductions", icon: Shield, path: "/my-deductions", permission: null },
+        { name: "My Daily Reports", icon: FileCheck, path: "/user-daily-reports", permission: null },
         { name: "Reports", icon: FileText, path: "/reports", permission: "Reports" },
         { name: "Settings", icon: Settings, path: "/settings", permission: "Reports" },
+        { name: "Logistics", icon: Truck, path: "/logistics", permission: "Logistics" },
       ]
     }
   ];
