@@ -2,7 +2,8 @@ import { Link, useLocation } from "react-router-dom";
 import { 
   Coffee, Users, Package, TrendingUp, Shield, FileText, Settings,
   Truck, BarChart3, DollarSign, ClipboardCheck, MapPin, LineChart,
-  Receipt, UserCheck, Home, X, ArrowRight
+  Receipt, UserCheck, Home, X, ArrowRight, CheckSquare, BookMarked,
+  Banknote, FileCheck
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -35,12 +36,12 @@ const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
     {
       title: "Management",
       items: [
+        { name: "Approvals", icon: CheckSquare, path: "/approvals", permission: null, requiresAdmin: true },
+        { name: "Coffee Bookings", icon: BookMarked, path: "/coffee-bookings", permission: null, requiresAdmin: true },
         { name: "Suppliers", icon: UserCheck, path: "/suppliers", permission: null },
         { name: "Sales & Marketing", icon: TrendingUp, path: "/sales-marketing", permission: "Sales Marketing" },
-        // ❌ Finance hidden - will be used in separate Finance portal
-        // { name: "Finance", icon: DollarSign, path: "/finance", permission: "Finance" },
         { name: "My Expenses", icon: DollarSign, path: "/my-expenses", permission: null },
-        { name: "Quick Loans", icon: Receipt, path: "/quick-loans", permission: null },
+        { name: "Quick Loans", icon: Banknote, path: "/quick-loans", permission: null },
         { name: "Human Resources", icon: Users, path: "/human-resources", permission: "Human Resources" },
         { name: "Data Analyst", icon: LineChart, path: "/data-analyst", permission: "Data Analysis" },
         { name: "IT Department", icon: Settings, path: "/it-department", permission: "IT Management" },
@@ -49,8 +50,11 @@ const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
     {
       title: "System",
       items: [
+        { name: "My Deductions", icon: Shield, path: "/my-deductions", permission: null },
+        { name: "My Daily Reports", icon: FileCheck, path: "/user-daily-reports", permission: null },
         { name: "Reports", icon: FileText, path: "/reports", permission: "Reports" },
         { name: "Settings", icon: Settings, path: "/settings", permission: "Reports" },
+        { name: "Logistics", icon: Truck, path: "/logistics", permission: "Logistics" },
       ]
     }
   ];
@@ -61,9 +65,10 @@ const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
     return navigationItems.map(section => ({
       ...section,
       items: section.items.filter(item => {
+        if ((item as any).requiresAdmin && !isAdmin()) return false;
         if (!item.permission) return true;
         if (section.title === 'Reports') return true;
-        if (isAdmin()) return true; // Fixed: isAdmin is a function, needs to be called
+        if (isAdmin()) return true;
         return hasPermission(item.permission);
       })
     })).filter(section => section.items.length > 0);
