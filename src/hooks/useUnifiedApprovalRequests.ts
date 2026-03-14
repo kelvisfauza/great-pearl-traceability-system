@@ -798,8 +798,80 @@ export const useUnifiedApprovalRequests = () => {
           console.error('SMS notification error (non-blocking):', smsError);
         }
 
+        // Handle salary advance activation after FINAL admin approval
+        if (status === 'Approved' && request.requestType === 'Salary Advance' && updateData.status === 'Approved') {
+          try {
+            const details = typeof request.details === 'string' ? JSON.parse(request.details) : (request.details || {});
+            if (details?.advance_type === 'salary_advance') {
+              // Create the actual salary advance record
+              const { data: advance, error: advanceError } = await supabase
+                .from('employee_salary_advances')
+                .insert({
+                  employee_email: details.employee_email,
+                  employee_name: details.employee_name,
+                  original_amount: details.advance_amount,
+                  remaining_balance: details.advance_amount,
+                  minimum_payment: details.minimum_payment,
+                  reason: details.reason,
+                  created_by: request.requestedBy,
+                  status: 'active'
+                })
+                .select()
+                .single();
+
+              if (advanceError) {
+                console.error('Failed to create salary advance record:', advanceError);
+              } else {
+                console.log('✅ Salary advance activated after admin approval:', advance.id);
+
+                // Credit wallet for the advance
+                try {
+                  const { data: empData } = await supabase
+                    .from('employees')
+                    .select('auth_user_id, phone, name')
+                    .eq('email', details.employee_email)
+                    .single();
+
+                  if (empData?.auth_user_id) {
+                    await supabase.from('user_wallet_transactions').insert({
+                      user_id: empData.auth_user_id,
+                      type: 'DEPOSIT',
+                      amount: details.advance_amount,
+                      description: `Salary Advance Disbursement - Approved`,
+                      reference: `SALARY-ADVANCE-${advance.id}`,
+                      status: 'completed'
+                    });
+                    console.log('✅ Wallet credited for salary advance');
+                  }
+
+                  // Send SMS to the employee receiving the advance
+                  if (empData?.phone) {
+                    const advanceMsg = `Dear ${empData.name}, your salary advance of UGX ${details.advance_amount.toLocaleString()} has been APPROVED and DISBURSED to your wallet. Minimum monthly payment: UGX ${details.minimum_payment.toLocaleString()}. This will be deducted from your future salary. Great Agro Coffee.`;
+                    await supabase.functions.invoke('send-sms', {
+                      body: {
+                        phone: empData.phone,
+                        message: advanceMsg,
+                        userName: empData.name,
+                        messageType: 'approval',
+                        triggeredBy: 'Salary Advance System',
+                        department: 'HR',
+                        recipientEmail: details.employee_email
+                      }
+                    });
+                    console.log('✅ SMS sent to salary advance recipient:', empData.name);
+                  }
+                } catch (walletErr) {
+                  console.error('Wallet/SMS error for salary advance (non-blocking):', walletErr);
+                }
+              }
+            }
+          } catch (advErr) {
+            console.error('Error activating salary advance (non-blocking):', advErr);
+          }
+        }
+
         // Only handle deletions/edits for non-financial requests
-        // Financial requests and salary advances will be handled after Finance approval
+        // Financial requests and salary advances are handled above
         if (status === 'Approved' && !['Money Request', 'Salary Payment', 'Requisition', 'Expense', 'Salary Advance', 'Salary Request'].includes(request.requestType)) {
           // Handle deletion requests
           if (request.type === 'deletion' && request.details?.table_name && request.details?.record_id) {
