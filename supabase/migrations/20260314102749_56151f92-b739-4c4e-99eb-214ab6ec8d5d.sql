@@ -1,0 +1,1 @@
+DELETE FROM money_requests WHERE id = '1aa034b3-8837-45b1-b61f-563b25cf8eb2'
