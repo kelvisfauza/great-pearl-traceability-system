@@ -8235,6 +8235,10 @@ export type Database = {
         Args: { conversation_uuid: string }
         Returns: boolean
       }
+      validate_withdrawal_balance: {
+        Args: { p_amount: number; p_user_id: string }
+        Returns: boolean
+      }
       verify_withdrawal_code: {
         Args: { p_code: string; p_code_id: string }
         Returns: Json
