@@ -65,9 +65,10 @@ const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
     return navigationItems.map(section => ({
       ...section,
       items: section.items.filter(item => {
+        if ((item as any).requiresAdmin && !isAdmin()) return false;
         if (!item.permission) return true;
         if (section.title === 'Reports') return true;
-        if (isAdmin()) return true; // Fixed: isAdmin is a function, needs to be called
+        if (isAdmin()) return true;
         return hasPermission(item.permission);
       })
     })).filter(section => section.items.length > 0);
