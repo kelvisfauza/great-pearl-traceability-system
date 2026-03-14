@@ -847,13 +847,17 @@ export const useUnifiedApprovalRequests = () => {
                     .single();
 
                   if (empData?.auth_user_id) {
-                    await supabase.from('user_wallet_transactions').insert({
+                    await supabase.from('ledger_entries').insert({
                       user_id: empData.auth_user_id,
-                      type: 'DEPOSIT',
+                      entry_type: 'DEPOSIT',
                       amount: details.advance_amount,
-                      description: `Salary Advance Disbursement - Approved`,
                       reference: `SALARY-ADVANCE-${advance.id}`,
-                      status: 'completed'
+                      metadata: {
+                        source: 'salary_advance',
+                        description: `Salary Advance Disbursement - Approved`,
+                        advance_id: advance.id,
+                        employee_name: details.employee_name
+                      }
                     });
                     console.log('✅ Wallet credited for salary advance');
                   }
