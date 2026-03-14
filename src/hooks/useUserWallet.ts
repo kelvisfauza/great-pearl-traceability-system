@@ -153,6 +153,19 @@ export const useUserWallet = () => {
       if (!unifiedUserId) {
         throw new Error('No unified user ID found');
       }
+
+      // Server-side balance validation to prevent overdrawing
+      const { data: isValid, error: validationError } = await supabase
+        .rpc('validate_withdrawal_balance', { p_user_id: unifiedUserId, p_amount: amount });
+
+      if (validationError || !isValid) {
+        toast({
+          title: "Insufficient Balance",
+          description: `Your actual available balance is not enough for this withdrawal. Please check your wallet statement.`,
+          variant: "destructive",
+        });
+        return;
+      }
       
       // Generate request reference
       const requestRef = `WR-${new Date().toISOString().split('T')[0]}-${Date.now().toString().slice(-4)}`;
