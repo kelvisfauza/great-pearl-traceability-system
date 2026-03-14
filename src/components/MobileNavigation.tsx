@@ -2,7 +2,8 @@ import { Link, useLocation } from "react-router-dom";
 import { 
   Coffee, Users, Package, TrendingUp, Shield, FileText, Settings,
   Truck, BarChart3, DollarSign, ClipboardCheck, MapPin, LineChart,
-  Receipt, UserCheck, Home, X, ArrowRight
+  Receipt, UserCheck, Home, X, ArrowRight, CheckSquare, BookMarked,
+  Banknote, FileCheck
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
