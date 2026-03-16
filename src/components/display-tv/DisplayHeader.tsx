@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Maximize, Minimize, RefreshCw, Radio } from "lucide-react";
+import logo from "@/assets/display-tv-logo.png";
 
 interface DisplayHeaderProps {
   title: string;
@@ -42,9 +43,14 @@ const DisplayHeader = ({
             Slide {slideIndex + 1} / {slideCount}
           </Badge>
         </div>
-        <div>
-          <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Great Agro Coffee</p>
-          <h1 className="text-5xl font-black tracking-tight text-foreground">{title}</h1>
+        <div className="flex items-center gap-5">
+          <div className="rounded-[1.4rem] border border-border/50 bg-card/80 p-3 shadow-lg">
+            <img src={logo} alt="Great Agro Coffee logo" className="h-16 w-16 rounded-full object-cover" />
+          </div>
+          <div>
+            <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Great Agro Coffee</p>
+            <h1 className="text-5xl font-black tracking-tight text-foreground">{title}</h1>
+          </div>
         </div>
       </div>
 

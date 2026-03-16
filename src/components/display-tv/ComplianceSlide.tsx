@@ -14,17 +14,17 @@ const ComplianceSlide = ({ data }: ComplianceSlideProps) => {
     { label: "EUDR compliant", value: integerFormat.format(data.eudrCompliant), icon: CheckCircle2 },
     { label: "Support docs", value: integerFormat.format(data.totalDocs), icon: FileCheck2 },
     { label: "Processed", value: `${integerFormat.format(data.totalProcessed)} kg`, icon: Factory },
-    { label: "Dispatched", value: `${integerFormat.format(data.dispatched)} kg`, icon: Factory },
+    { label: "Sales dispatched", value: `${integerFormat.format(data.dispatched)} kg`, icon: Factory },
   ];
 
   return (
     <div className="grid h-full grid-cols-[1fr_0.95fr] gap-8 px-12 py-10">
       <Card className="rounded-[2rem] border-border/60 bg-card/85 shadow-xl backdrop-blur">
         <CardContent className="p-8">
-          <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Compliance + milling</p>
-          <h2 className="mt-4 text-6xl font-black tracking-tight text-foreground">Traceability and factory execution stay visible on the same screen.</h2>
+          <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Compliance + milling + sales</p>
+          <h2 className="mt-4 text-6xl font-black tracking-tight text-foreground">Traceability, factory execution, and sales stay visible on the same screen.</h2>
           <p className="mt-6 max-w-4xl text-2xl leading-relaxed text-muted-foreground">
-            The TV presentation is not only for prices — it also keeps the room aware of traceability coverage, EUDR readiness, milling throughput, and dispatch progress.
+            The TV presentation is not only for prices — it also keeps the room aware of traceability coverage, EUDR readiness, milling throughput, and sales dispatch progress.
           </p>
 
           <div className="mt-8 grid grid-cols-2 gap-5">

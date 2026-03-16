@@ -11,6 +11,7 @@ interface CoffeeHeadline {
   source: string;
   publishedAt: string;
   sentiment: MarketDirection;
+  region: "africa" | "global";
 }
 
 interface MarketSnapshot {
@@ -56,6 +57,11 @@ function inferSentiment(title: string): MarketDirection {
   return "neutral";
 }
 
+function inferRegion(title: string, source: string): "africa" | "global" {
+  const text = `${title} ${source}`.toLowerCase();
+  return /(africa|uganda|ethiopia|kenya|tanzania|rwanda|congo)/.test(text) ? "africa" : "global";
+}
+
 function parseGoogleNewsRss(xml: string): CoffeeHeadline[] {
   const itemBlocks = xml.match(/<item>([\s\S]*?)<\/item>/gi) ?? [];
 
@@ -72,10 +78,11 @@ function parseGoogleNewsRss(xml: string): CoffeeHeadline[] {
         source,
         publishedAt,
         sentiment: inferSentiment(title),
+        region: inferRegion(title, source),
       } satisfies CoffeeHeadline;
     })
     .filter((item) => item.title && item.link)
-    .slice(0, 10);
+    .slice(0, 12);
 }
 
 function compareDirection(current?: number | null, previous?: number | null): MarketDirection {
