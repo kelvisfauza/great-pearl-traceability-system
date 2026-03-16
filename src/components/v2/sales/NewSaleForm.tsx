@@ -39,49 +39,33 @@ const NewSaleForm = () => {
 
   const fetchAvailableInventory = async () => {
     try {
-      // Fetch from coffee_records with statuses that indicate available inventory
-      const { data: coffeeRecords, error: coffeeError } = await supabase
-        .from('coffee_records')
-        .select('id, coffee_type, kilograms, batch_number')
-        .neq('status', 'rejected')
-        .neq('status', 'pending')
-        .gt('kilograms', 0);
+      const { data: batches, error } = await supabase
+        .from('inventory_batches')
+        .select('id, coffee_type, remaining_kilograms')
+        .gt('remaining_kilograms', 0)
+        .neq('status', 'sold_out');
 
-      if (coffeeError) throw coffeeError;
+      if (error) throw error;
 
-      // Get sales tracking to calculate what's been sold
-      const { data: salesTracking } = await supabase
-        .from('sales_inventory_tracking')
-        .select('coffee_record_id, quantity_kg');
-
-      // Calculate sold quantities per record
-      const soldByRecord: Record<string, number> = {};
-      salesTracking?.forEach(sale => {
-        soldByRecord[sale.coffee_record_id] = (soldByRecord[sale.coffee_record_id] || 0) + Number(sale.quantity_kg);
-      });
-
-      // Group by coffee type (case-insensitive) and calculate available quantities
       const inventoryByType: Record<string, { total: number; ids: string[] }> = {};
-      
-      coffeeRecords?.forEach(record => {
-        const coffeeType = (record.coffee_type || '').toLowerCase();
-        const originalKg = Number(record.kilograms) || 0;
-        const soldKg = soldByRecord[record.id] || 0;
-        const availableKg = originalKg - soldKg;
-        
-        if (availableKg > 0) {
-          if (!inventoryByType[coffeeType]) {
-            inventoryByType[coffeeType] = { total: 0, ids: [] };
-          }
-          inventoryByType[coffeeType].total += availableKg;
-          inventoryByType[coffeeType].ids.push(record.id);
+
+      batches?.forEach((batch) => {
+        const coffeeType = (batch.coffee_type || '').trim().toLowerCase();
+        const remainingKg = Number(batch.remaining_kilograms) || 0;
+
+        if (!coffeeType || remainingKg <= 0) return;
+
+        if (!inventoryByType[coffeeType]) {
+          inventoryByType[coffeeType] = { total: 0, ids: [] };
         }
+
+        inventoryByType[coffeeType].total += remainingKg;
+        inventoryByType[coffeeType].ids.push(batch.id);
       });
 
-      // Transform to inventory items format with proper capitalization
       const inventoryItems: InventoryItem[] = Object.entries(inventoryByType).map(([type, data]) => ({
-        id: data.ids[0], // Use first ID as reference
-        coffee_type: type.charAt(0).toUpperCase() + type.slice(1), // Capitalize first letter
+        id: data.ids[0],
+        coffee_type: type.charAt(0).toUpperCase() + type.slice(1),
         total_kilograms: Math.round(data.total),
         location: 'Store 1'
       }));
@@ -178,6 +162,24 @@ const NewSaleForm = () => {
           variant: "destructive"
         });
       } else {
+        const normalizedDeductions = deductions.map((d: any) => ({
+          batch_id: d.batch_id,
+          sale_transaction_id: saleId,
+          kilograms_deducted: Number(d.deducted_kg) || 0,
+          customer_name: formData.customer,
+          sale_date: saleData.date
+        })).filter((d: any) => d.batch_id && d.kilograms_deducted > 0);
+
+        if (normalizedDeductions.length > 0) {
+          const { error: batchSalesError } = await supabase
+            .from('inventory_batch_sales')
+            .insert(normalizedDeductions);
+
+          if (batchSalesError) {
+            console.error('❌ Failed to record batch sales history:', batchSalesError);
+          }
+        }
+
         const totalDeducted = deductions.reduce((sum: number, d: any) => sum + Number(d.deducted_kg), 0);
         console.log(`✅ Deducted ${totalDeducted}kg from ${deductions.length} batches:`, deductions);
       }
