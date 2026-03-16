@@ -138,14 +138,14 @@ const MovementsLog = () => {
     switch (type) {
       case 'PURCHASE':
       case 'RECEIPT':
-        return <ArrowUp className="h-4 w-4 text-green-600" />;
+        return <ArrowUp className="h-4 w-4 text-primary" />;
       case 'SALE':
       case 'DISPATCH':
-        return <ArrowDown className="h-4 w-4 text-red-600" />;
+        return <ArrowDown className="h-4 w-4 text-destructive" />;
       case 'TRANSFER':
-        return <ArrowLeftRight className="h-4 w-4 text-blue-600" />;
+        return <ArrowLeftRight className="h-4 w-4 text-muted-foreground" />;
       case 'ADJUSTMENT':
-        return <AlertCircle className="h-4 w-4 text-orange-600" />;
+        return <AlertCircle className="h-4 w-4 text-accent-foreground" />;
       default:
         return null;
     }
