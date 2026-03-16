@@ -5,6 +5,9 @@ const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 const DISPLAY_REDIRECT_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 const THROTTLE_DELAY = 2000; // Only reset timer once per 2 seconds max
 const DISPLAY_ROUTE = '/display';
+const IDLE_RETURN_PATH_KEY = 'idle-display-return-path';
+
+const getCurrentPath = () => `${window.location.pathname}${window.location.search}${window.location.hash}`;
 
 export const useInactivityTimer = () => {
   const authContext = useContext(AuthContext);
@@ -30,14 +33,29 @@ export const useInactivityTimer = () => {
 
     if (!user || !signOut) {
       clearTimers();
+      sessionStorage.removeItem(IDLE_RETURN_PATH_KEY);
       return;
     }
+
+    const wakeFromDisplay = () => {
+      if (window.location.pathname !== DISPLAY_ROUTE) return false;
+
+      const returnPath = sessionStorage.getItem(IDLE_RETURN_PATH_KEY);
+      if (!returnPath || returnPath === DISPLAY_ROUTE) return false;
+
+      sessionStorage.removeItem(IDLE_RETURN_PATH_KEY);
+      window.location.assign(returnPath);
+      return true;
+    };
 
     const redirectToDisplay = () => {
       if (document.hidden || window.location.pathname === DISPLAY_ROUTE) return;
 
       const elapsed = Date.now() - lastActivityRef.current;
       if (elapsed < DISPLAY_REDIRECT_TIMEOUT - 1000) return;
+
+      const currentPath = getCurrentPath();
+      sessionStorage.setItem(IDLE_RETURN_PATH_KEY, currentPath);
 
       console.log('User idle for 5 minutes, switching to display mode...');
       window.location.assign(DISPLAY_ROUTE);
@@ -47,6 +65,7 @@ export const useInactivityTimer = () => {
       const elapsed = Date.now() - lastActivityRef.current;
       if (elapsed < INACTIVITY_TIMEOUT - 1000) return;
 
+      sessionStorage.removeItem(IDLE_RETURN_PATH_KEY);
       console.log('User inactive for 30 minutes, logging out...');
       signOut('inactivity');
     };
@@ -65,6 +84,11 @@ export const useInactivityTimer = () => {
       if (now - lastActivityRef.current < THROTTLE_DELAY) return;
 
       lastActivityRef.current = now;
+
+      if (wakeFromDisplay()) {
+        return;
+      }
+
       resetTimers();
     };
 
