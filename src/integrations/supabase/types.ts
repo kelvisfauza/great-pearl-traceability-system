@@ -8010,6 +8010,7 @@ export type Database = {
         Args: { activity_name: string; user_uuid: string }
         Returns: Json
       }
+      backfill_missing_inventory_batch_sources: { Args: never; Returns: Json }
       bulk_deduct_unprocessed_sales: {
         Args: { p_coffee_type?: string }
         Returns: {
@@ -8060,6 +8061,10 @@ export type Database = {
           deducted_kg: number
         }[]
       }
+      ensure_inventory_batch_source_for_record: {
+        Args: { p_coffee_record_id: string }
+        Returns: Json
+      }
       expire_old_bookings: { Args: never; Returns: undefined }
       fix_denis_auth_final: { Args: never; Returns: Json }
       generate_verification_code: { Args: never; Returns: string }
@@ -8081,6 +8086,10 @@ export type Database = {
           name: string
           phone: string
         }[]
+      }
+      get_or_create_inventory_batch_for_day: {
+        Args: { p_batch_date: string; p_coffee_type: string }
+        Returns: string
       }
       get_pending_withdrawals: { Args: { user_uuid: string }; Returns: number }
       get_pending_withdrawals_safe: {
@@ -8227,6 +8236,10 @@ export type Database = {
         Returns: Json
       }
       trigger_daily_salary_processing: { Args: never; Returns: Json }
+      update_inventory_batch_source_for_record: {
+        Args: { p_coffee_record_id: string }
+        Returns: Json
+      }
       user_has_permission: {
         Args: { permission_name: string }
         Returns: boolean
