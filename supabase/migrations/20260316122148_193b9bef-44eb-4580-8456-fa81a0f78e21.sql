@@ -1,0 +1,1 @@
+SELECT public.backfill_missing_inventory_batch_sources();
