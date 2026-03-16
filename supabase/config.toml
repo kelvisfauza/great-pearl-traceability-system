@@ -226,3 +226,6 @@ verify_jwt = false
 
 [functions.process-auto-salaries]
 verify_jwt = false
+
+[functions.coffee-market-briefing]
+verify_jwt = false
