@@ -229,3 +229,6 @@ verify_jwt = false
 
 [functions.coffee-market-briefing]
 verify_jwt = false
+
+[functions.daily-loyalty-wallet-summary]
+verify_jwt = false
