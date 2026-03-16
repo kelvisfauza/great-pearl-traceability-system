@@ -31,19 +31,21 @@ const MovementsLog = () => {
         .select('*')
         .order('created_at', { ascending: false })
         .limit(500);
-      
+
       if (error) throw error;
       return data;
     }
   });
 
-  const filteredMovements = movements?.filter((m) => {
-    if (typeFilter !== "all" && m.movement_type !== typeFilter) return false;
-    if (createdByFilter && !m.created_by?.toLowerCase().includes(createdByFilter.toLowerCase())) return false;
-    if (dateFrom && new Date(m.created_at) < new Date(dateFrom)) return false;
-    if (dateTo && new Date(m.created_at) > new Date(dateTo + "T23:59:59")) return false;
+  const filteredMovements = movements?.filter((movement) => {
+    if (typeFilter !== "all" && movement.movement_type !== typeFilter) return false;
+    if (createdByFilter && !movement.created_by?.toLowerCase().includes(createdByFilter.toLowerCase())) return false;
+    if (dateFrom && new Date(movement.created_at) < new Date(dateFrom)) return false;
+    if (dateTo && new Date(movement.created_at) > new Date(dateTo + "T23:59:59")) return false;
     return true;
-  });
+  }) || [];
+
+  const displayedMovements = filteredMovements.slice(0, 5);
 
   const clearFilters = () => {
     setDateFrom("");
@@ -55,7 +57,7 @@ const MovementsLog = () => {
   const hasFilters = dateFrom || dateTo || typeFilter !== "all" || createdByFilter;
 
   const handlePrint = () => {
-    const rows = filteredMovements || [];
+    const rows = filteredMovements;
     const totalQty = rows.reduce((s, m) => s + Number(m.quantity_kg), 0);
 
     const filterDesc = [
@@ -169,48 +171,57 @@ const MovementsLog = () => {
 
   return (
     <div className="space-y-4">
-      {/* Filters & Print */}
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="flex-1 min-w-[140px]">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">From</label>
-          <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="h-9" />
-        </div>
-        <div className="flex-1 min-w-[140px]">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">To</label>
-          <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="h-9" />
-        </div>
-        <div className="flex-1 min-w-[140px]">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Type</label>
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              {movementTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex-1 min-w-[140px]">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Created By</label>
-          <Input placeholder="Search..." value={createdByFilter} onChange={e => setCreatedByFilter(e.target.value)} className="h-9" />
-        </div>
-        <div className="flex gap-2">
-          {hasFilters && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9">
-              <X className="h-4 w-4 mr-1" /> Clear
+      <div className="rounded-lg border bg-card p-4">
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Filter inventory history</h3>
+              <p className="text-xs text-muted-foreground">Showing the 5 most recent matching movements</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {hasFilters && (
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9">
+                <X className="h-4 w-4 mr-1" /> Clear
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={handlePrint} className="h-9">
+              <Printer className="h-4 w-4 mr-1" /> Print Report
             </Button>
-          )}
-          <Button variant="outline" size="sm" onClick={handlePrint} className="h-9">
-            <Printer className="h-4 w-4 mr-1" /> Print Report
-          </Button>
+          </div>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">From</label>
+            <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="h-9" />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">To</label>
+            <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="h-9" />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Type</label>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                {movementTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Created By</label>
+            <Input placeholder="Search user or department..." value={createdByFilter} onChange={e => setCreatedByFilter(e.target.value)} className="h-9" />
+          </div>
         </div>
       </div>
 
-      {/* Summary */}
       <div className="text-xs text-muted-foreground">
-        Showing {filteredMovements?.length || 0} of {movements.length} movements
+        Showing {displayedMovements.length} recent movements out of {filteredMovements.length} matching records
       </div>
 
-      {/* Table */}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -225,8 +236,8 @@ const MovementsLog = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredMovements && filteredMovements.length > 0 ? (
-              filteredMovements.map((movement) => (
+            {displayedMovements.length > 0 ? (
+              displayedMovements.map((movement) => (
                 <TableRow key={movement.id}>
                   <TableCell>{format(new Date(movement.created_at), 'PP p')}</TableCell>
                   <TableCell>
@@ -247,7 +258,7 @@ const MovementsLog = () => {
                     )}
                   </TableCell>
                   <TableCell className="text-sm">{movement.created_by}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
+                  <TableCell className="max-w-xs truncate text-sm text-muted-foreground">
                     {movement.notes || '-'}
                   </TableCell>
                 </TableRow>
