@@ -14,7 +14,7 @@ const ComplianceSlide = ({ data }: ComplianceSlideProps) => {
     { label: "EUDR compliant", value: integerFormat.format(data.eudrCompliant), icon: CheckCircle2 },
     { label: "Support docs", value: integerFormat.format(data.totalDocs), icon: FileCheck2 },
     { label: "Processed", value: `${integerFormat.format(data.totalProcessed)} kg`, icon: Factory },
-    { label: "Dispatched", value: `${integerFormat.format(data.dispatched)} kg`, icon: Factory },
+    { label: "Sales dispatched", value: `${integerFormat.format(data.dispatched)} kg`, icon: Factory },
   ];
 
   return (

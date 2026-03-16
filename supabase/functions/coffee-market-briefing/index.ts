@@ -11,6 +11,7 @@ interface CoffeeHeadline {
   source: string;
   publishedAt: string;
   sentiment: MarketDirection;
+  region: "africa" | "global";
 }
 
 interface MarketSnapshot {
