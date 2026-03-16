@@ -65,64 +65,87 @@ const BatchCard = ({ batch }: BatchCardProps) => {
     }
   }, [isOpen, batch.sources]);
 
-  // Fetch average price from finance_coffee_lots for this batch's coffee records
+  // Fetch average price from finance lots, then fall back to quality assessments
   useEffect(() => {
     const fetchPriceInfo = async () => {
-      // Try via batch sources first
-      if (batch.sources.length > 0) {
-        const recordIds = batch.sources.map(s => s.coffee_record_id);
-        
-        const { data: lots } = await supabase
-          .from('finance_coffee_lots')
-          .select('coffee_record_id, unit_price_ugx, quantity_kg, total_amount_ugx')
-          .in('coffee_record_id', recordIds);
-        
-        if (lots && lots.length > 0) {
-          let totalCost = 0;
-          let totalKg = 0;
-          for (const lot of lots) {
-            const cost = lot.total_amount_ugx || (lot.unit_price_ugx * lot.quantity_kg);
-            totalCost += cost;
-            totalKg += lot.quantity_kg;
-          }
-          const avgPrice = totalKg > 0 ? totalCost / totalKg : 0;
-          setPriceInfo({ avgPrice, totalCost });
+      const sourceWeights = new Map(
+        batch.sources.map((source) => [source.coffee_record_id, Number(source.kilograms) || 0])
+      );
+
+      const sourceRecordIds = batch.sources.map((source) => source.coffee_record_id);
+      let recordIds = sourceRecordIds;
+
+      if (recordIds.length === 0) {
+        const { data: records } = await supabase
+          .from('coffee_records')
+          .select('id, kilograms')
+          .eq('date', batch.batch_date)
+          .ilike('coffee_type', `%${batch.coffee_type}%`)
+          .eq('status', 'inventory');
+
+        if (records && records.length > 0) {
+          recordIds = records.map((record) => record.id);
+          records.forEach((record) => {
+            sourceWeights.set(record.id, Number(record.kilograms) || 0);
+          });
+        }
+      }
+
+      if (recordIds.length === 0) {
+        setPriceInfo(null);
+        return;
+      }
+
+      const { data: lots } = await supabase
+        .from('finance_coffee_lots')
+        .select('coffee_record_id, unit_price_ugx, quantity_kg, total_amount_ugx')
+        .in('coffee_record_id', recordIds);
+
+      if (lots && lots.length > 0) {
+        let totalCost = 0;
+        let totalKg = 0;
+        for (const lot of lots) {
+          const quantityKg = Number(lot.quantity_kg) || sourceWeights.get(lot.coffee_record_id) || 0;
+          const cost = Number(lot.total_amount_ugx) || ((Number(lot.unit_price_ugx) || 0) * quantityKg);
+          totalCost += cost;
+          totalKg += quantityKg;
+        }
+
+        if (totalKg > 0) {
+          setPriceInfo({ avgPrice: totalCost / totalKg, totalCost });
           return;
         }
       }
 
-      // Fallback: find coffee_records for this batch date + type, then look up prices
-      const { data: records } = await supabase
-        .from('coffee_records')
-        .select('id')
-        .eq('date', batch.batch_date)
-        .ilike('coffee_type', `%${batch.coffee_type}%`)
-        .eq('status', 'inventory');
+      const { data: assessments } = await supabase
+        .from('quality_assessments')
+        .select('store_record_id, final_price, suggested_price')
+        .in('store_record_id', recordIds)
+        .not('final_price', 'is', null);
 
-      if (records && records.length > 0) {
-        const recordIds = records.map(r => r.id);
-        const { data: lots } = await supabase
-          .from('finance_coffee_lots')
-          .select('coffee_record_id, unit_price_ugx, quantity_kg, total_amount_ugx')
-          .in('coffee_record_id', recordIds);
+      if (assessments && assessments.length > 0) {
+        let totalCost = 0;
+        let totalKg = 0;
 
-        if (lots && lots.length > 0) {
-          let totalCost = 0;
-          let totalKg = 0;
-          for (const lot of lots) {
-            const cost = lot.total_amount_ugx || (lot.unit_price_ugx * lot.quantity_kg);
-            totalCost += cost;
-            totalKg += lot.quantity_kg;
+        for (const assessment of assessments) {
+          const quantityKg = sourceWeights.get(assessment.store_record_id) || 0;
+          const unitPrice = Number(assessment.final_price) || Number(assessment.suggested_price) || 0;
+
+          if (quantityKg > 0 && unitPrice > 0) {
+            totalCost += quantityKg * unitPrice;
+            totalKg += quantityKg;
           }
-          const avgPrice = totalKg > 0 ? totalCost / totalKg : 0;
-          setPriceInfo({ avgPrice, totalCost });
+        }
+
+        if (totalKg > 0) {
+          setPriceInfo({ avgPrice: totalCost / totalKg, totalCost });
           return;
         }
       }
 
       setPriceInfo(null);
     };
-    
+
     fetchPriceInfo();
   }, [batch.sources, batch.batch_date, batch.coffee_type]);
   
