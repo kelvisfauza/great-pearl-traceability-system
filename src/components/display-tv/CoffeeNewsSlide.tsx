@@ -4,31 +4,46 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Newspaper } from "lucide-react";
-import type { CoffeeMarketBriefing } from "@/components/display-tv/types";
+import type { CoffeeHeadline, CoffeeMarketBriefing } from "@/components/display-tv/types";
 
 interface CoffeeNewsSlideProps {
   briefing: CoffeeMarketBriefing | null;
   loading: boolean;
+  region?: "all" | "africa" | "global";
+  title?: string;
+  description?: string;
 }
 
-const CoffeeNewsSlide = ({ briefing, loading }: CoffeeNewsSlideProps) => {
+const CoffeeNewsSlide = ({
+  briefing,
+  loading,
+  region = "all",
+  title = "Coffee market stories in motion",
+  description = "This slide keeps the buying room aware of export, harvest, weather, logistics, and macro headlines that can push Arabica or Robusta higher or lower.",
+}: CoffeeNewsSlideProps) => {
+  const headlines = (briefing?.headlines ?? []).filter((headline) => {
+    if (region === "all") return true;
+    return headline.region === region;
+  });
+
+  const visibleHeadlines = headlines.slice(0, 8);
+  const audienceLabel = region === "africa" ? "African coffee news" : region === "global" ? "Global coffee news" : "Coffee headlines";
+
   return (
     <div className="grid h-full grid-cols-[0.8fr_1.2fr] gap-8 px-12 py-10">
-      <Card className="rounded-[2rem] border-border/60 bg-card/85 shadow-xl backdrop-blur">
+      <Card className={`${region === "africa" ? "tv-surface-success" : "tv-surface-cool"} rounded-[2rem] border-border/60 shadow-xl backdrop-blur`}>
         <CardContent className="flex h-full flex-col p-8">
           <div className="flex items-center gap-4">
             <div className="rounded-2xl bg-primary/12 p-4 text-primary">
               <Newspaper className="h-8 w-8" />
             </div>
             <div>
-              <p className="text-sm uppercase tracking-[0.25em] text-muted-foreground">Coffee headlines</p>
-              <h2 className="text-5xl font-black text-foreground">Global news feed</h2>
+              <p className="text-sm uppercase tracking-[0.25em] text-muted-foreground">{audienceLabel}</p>
+              <h2 className="text-5xl font-black text-foreground">{region === "africa" ? "Coffee in Africa now" : "Live coffee headlines"}</h2>
             </div>
           </div>
 
-          <p className="mt-8 text-3xl leading-relaxed text-foreground">
-            This slide keeps the buying room aware of export, harvest, weather, logistics, and macro headlines that can push Arabica or Robusta higher or lower.
-          </p>
+          <p className="mt-8 text-3xl leading-relaxed text-foreground">{description}</p>
 
           <div className="mt-auto rounded-[1.5rem] border border-border/50 bg-background/70 p-6">
             <p className="text-sm uppercase tracking-[0.25em] text-muted-foreground">News source</p>
@@ -45,12 +60,12 @@ const CoffeeNewsSlide = ({ briefing, loading }: CoffeeNewsSlideProps) => {
           <div className="mb-6 flex items-center justify-between">
             <div>
               <p className="text-sm uppercase tracking-[0.25em] text-muted-foreground">Latest stories</p>
-              <h3 className="text-4xl font-black text-foreground">Coffee market stories in motion</h3>
+              <h3 className="text-4xl font-black text-foreground">{title}</h3>
             </div>
             <Badge variant="secondary" className="rounded-full px-4 py-1 text-sm">Live refresh</Badge>
           </div>
 
-          {loading && !briefing?.headlines.length ? (
+          {loading && !visibleHeadlines.length ? (
             <div className="grid gap-4">
               {Array.from({ length: 5 }).map((_, index) => (
                 <Skeleton key={index} className="h-24 w-full rounded-[1.5rem]" />
@@ -59,7 +74,7 @@ const CoffeeNewsSlide = ({ briefing, loading }: CoffeeNewsSlideProps) => {
           ) : (
             <ScrollArea className="h-full pr-4">
               <div className="space-y-4">
-                {(briefing?.headlines ?? []).slice(0, 8).map((headline, index) => (
+                {visibleHeadlines.length > 0 ? visibleHeadlines.map((headline: CoffeeHeadline, index) => (
                   <div key={`${headline.title}-${index}`} className="rounded-[1.5rem] border border-border/50 bg-background/70 p-5">
                     <div className="flex items-center justify-between gap-3">
                       <Badge className="rounded-full bg-primary/12 px-3 py-1 text-sm text-primary hover:bg-primary/12">{headline.source}</Badge>
@@ -69,7 +84,11 @@ const CoffeeNewsSlide = ({ briefing, loading }: CoffeeNewsSlideProps) => {
                     </div>
                     <p className="mt-4 text-2xl font-semibold leading-snug text-foreground">{headline.title}</p>
                   </div>
-                ))}
+                )) : (
+                  <div className="rounded-[1.5rem] border border-border/50 bg-background/70 p-8 text-center text-2xl text-muted-foreground">
+                    News for this region is still loading.
+                  </div>
+                )}
               </div>
             </ScrollArea>
           )}
