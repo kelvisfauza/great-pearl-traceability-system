@@ -2,11 +2,14 @@ import { useEffect, useRef, useCallback, useContext } from 'react';
 import { AuthContext } from '@/contexts/AuthContext';
 
 const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+const DISPLAY_REDIRECT_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 const THROTTLE_DELAY = 2000; // Only reset timer once per 2 seconds max
+const DISPLAY_ROUTE = '/display';
 
 export const useInactivityTimer = () => {
   const authContext = useContext(AuthContext);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const logoutTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const displayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
   const isActiveRef = useRef(true);
   
@@ -22,36 +25,54 @@ export const useInactivityTimer = () => {
     signOutRef.current = authContext?.signOut;
   }, [authContext?.user, authContext?.employee, authContext?.signOut]);
 
+  const clearTimers = useCallback(() => {
+    if (logoutTimeoutRef.current) {
+      clearTimeout(logoutTimeoutRef.current);
+      logoutTimeoutRef.current = null;
+    }
+
+    if (displayTimeoutRef.current) {
+      clearTimeout(displayTimeoutRef.current);
+      displayTimeoutRef.current = null;
+    }
+  }, []);
+
   const performLogout = useCallback(async () => {
-    const employee = employeeRef.current;
     const signOut = signOutRef.current;
     
     if (!signOut) return;
     
     console.log('User inactive for 30 minutes, logging out...');
-    
-    // No SMS for inactivity logout - just log out silently
-    
     signOut('inactivity');
+  }, []);
+
+  const redirectToDisplay = useCallback(() => {
+    if (!userRef.current || document.hidden || window.location.pathname === DISPLAY_ROUTE) return;
+
+    console.log('User idle for 5 minutes, switching to display mode...');
+    window.location.assign(DISPLAY_ROUTE);
   }, []);
 
   const resetTimer = useCallback(() => {
     if (!userRef.current) return;
 
-    // Clear existing timeout
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
+    clearTimers();
 
-    // Set new timeout
-    timeoutRef.current = setTimeout(() => {
+    displayTimeoutRef.current = setTimeout(() => {
+      const elapsed = Date.now() - lastActivityRef.current;
+      if (userRef.current && isActiveRef.current && elapsed >= DISPLAY_REDIRECT_TIMEOUT - 5000) {
+        redirectToDisplay();
+      }
+    }, DISPLAY_REDIRECT_TIMEOUT);
+
+    logoutTimeoutRef.current = setTimeout(() => {
       // Double-check: only logout if truly inactive
       const elapsed = Date.now() - lastActivityRef.current;
       if (userRef.current && isActiveRef.current && elapsed >= INACTIVITY_TIMEOUT - 5000) {
         performLogout();
       }
     }, INACTIVITY_TIMEOUT);
-  }, [performLogout]);
+  }, [clearTimers, performLogout, redirectToDisplay]);
 
   const handleActivity = useCallback(() => {
     if (!userRef.current) return;
@@ -69,29 +90,29 @@ export const useInactivityTimer = () => {
   // Pause/resume timer on tab visibility change
   const handleVisibility = useCallback(() => {
     if (!userRef.current) return;
-    if (!document.hidden) {
-      // Tab became visible — reset activity timestamp and restart timer
-      lastActivityRef.current = Date.now();
-      resetTimer();
+
+    if (document.hidden) {
+      clearTimers();
+      return;
     }
-  }, [resetTimer]);
+
+    // Tab became visible — reset activity timestamp and restart timer
+    lastActivityRef.current = Date.now();
+    resetTimer();
+  }, [clearTimers, resetTimer]);
 
   useEffect(() => {
     const user = authContext?.user;
     
     if (!user) {
-      // Clear timer when user logs out
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-      }
+      clearTimers();
       return;
     }
 
     isActiveRef.current = true;
     lastActivityRef.current = Date.now();
     
-    // Start the timer
+    // Start the timers
     resetTimer();
 
     // Activity event listeners — includes mousemove for reliable active detection
@@ -117,11 +138,9 @@ export const useInactivityTimer = () => {
         document.removeEventListener(event, handleActivity, { capture: true });
       });
       document.removeEventListener('visibilitychange', handleVisibility);
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+      clearTimers();
     };
-  }, [authContext?.user?.id, handleActivity, resetTimer]);
+  }, [authContext?.user?.id, clearTimers, handleActivity, resetTimer, handleVisibility]);
 
   return null;
 };
