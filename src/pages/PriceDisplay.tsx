@@ -1,406 +1,200 @@
-import React, { useEffect, useState, useCallback, useRef, memo } from 'react';
-import { useReferencePrices } from '@/hooks/useReferencePrices';
-import { useDisplayData } from '@/hooks/useDisplayData';
-import { Coffee, RefreshCw, Minimize2, Maximize } from 'lucide-react';
-import { format } from 'date-fns';
-import MinimizedPrices from '@/components/display/MinimizedPrices';
-import TopSuppliersSlide from '@/components/display/TopSuppliersSlide';
-import TopBuyersSlide from '@/components/display/TopBuyersSlide';
-import SupplierStatsSlide from '@/components/display/SupplierStatsSlide';
-import TraceabilitySlide from '@/components/display/TraceabilitySlide';
-import MillingSlide from '@/components/display/MillingSlide';
-import CoffeeMapSlide from '@/components/display/CoffeeMapSlide';
-import QualityProcessSlide from '@/components/display/QualityProcessSlide';
-import ContactSlide from '@/components/display/ContactSlide';
-import LiveTicker from '@/components/display/LiveTicker';
-import DirectorateSlide from '@/components/display/DirectorateSlide';
-
-const SLIDES = ['map', 'directorate', 'suppliers', 'buyers', 'stats', 'quality', 'traceability', 'milling', 'contact'] as const;
-type SlideType = typeof SLIDES[number];
-
-const SLIDE_DURATION = 10000;
-const PRICE_DISPLAY_DURATION = 15000; // 15 seconds on full price view
-
-// Memoized clock component to avoid re-rendering the entire page every second
-const DigitalClock = memo(({ className }: { className?: string }) => {
-  const [time, setTime] = useState(new Date());
-  useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-  return <span className={className}>{format(time, 'HH:mm:ss')}</span>;
-});
-DigitalClock.displayName = 'DigitalClock';
-
-const DateDisplay = memo(({ className }: { className?: string }) => {
-  const [date, setDate] = useState(new Date());
-  // Only update date once a minute
-  useEffect(() => {
-    const timer = setInterval(() => setDate(new Date()), 60000);
-    return () => clearInterval(timer);
-  }, []);
-  return <span className={className}>{format(date, 'EEEE, MMMM d, yyyy')}</span>;
-});
-DateDisplay.displayName = 'DateDisplay';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import DisplaySlideFrame from "@/components/display-tv/DisplaySlideFrame";
+import DisplayHeader from "@/components/display-tv/DisplayHeader";
+import DisplayFooter from "@/components/display-tv/DisplayFooter";
+import HeroPricesSlide from "@/components/display-tv/HeroPricesSlide";
+import OperationsSlide from "@/components/display-tv/OperationsSlide";
+import PriceChartsSlide from "@/components/display-tv/PriceChartsSlide";
+import MarketPulseSlide from "@/components/display-tv/MarketPulseSlide";
+import CoffeeNewsSlide from "@/components/display-tv/CoffeeNewsSlide";
+import ComplianceSlide from "@/components/display-tv/ComplianceSlide";
+import { useReferencePrices } from "@/hooks/useReferencePrices";
+import { useDisplayData } from "@/hooks/useDisplayData";
+import { useLiveIcePrices } from "@/hooks/useLiveIcePrices";
+import { usePriceHistory } from "@/hooks/usePriceHistory";
+import { useCoffeeMarketBriefing } from "@/hooks/useCoffeeMarketBriefing";
+import type { DisplaySlide } from "@/components/display-tv/types";
 
 const PriceDisplay = () => {
-  const { prices, loading, fetchPrices } = useReferencePrices();
+  const { prices, loading: pricesLoading, fetchPrices } = useReferencePrices();
   const displayData = useDisplayData();
-  const [wakeLock, setWakeLock] = useState<WakeLockSentinel | null>(null);
-  const [showFullPrices, setShowFullPrices] = useState(true);
-  const [slideIndex, setSlideIndex] = useState(0);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const slideTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const { data: liveIcePrices, refresh: refreshIcePrices } = useLiveIcePrices();
+  const { history, loading: historyLoading, refreshHistory } = usePriceHistory(30);
+
+  const marketSnapshot = useMemo(
+    () => ({
+      iceArabica: liveIcePrices.iceArabica ?? prices.iceArabica,
+      iceRobusta: liveIcePrices.iceRobusta ?? prices.robusta,
+      exchangeRate: prices.exchangeRate,
+      localArabica: prices.arabicaBuyingPrice,
+      localRobusta: prices.robustaBuyingPrice,
+      history: history.map((item) => ({
+        date: item.price_date,
+        iceArabica: item.ice_arabica,
+        iceRobusta: item.robusta_international,
+        localArabica: item.arabica_buying_price,
+        localRobusta: item.robusta_buying_price,
+      })),
+    }),
+    [history, liveIcePrices.iceArabica, liveIcePrices.iceRobusta, prices.arabicaBuyingPrice, prices.exchangeRate, prices.iceArabica, prices.robusta, prices.robustaBuyingPrice]
+  );
+
+  const { briefing, loading: briefingLoading, refresh: refreshBriefing } = useCoffeeMarketBriefing(marketSnapshot);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(Boolean(document.fullscreenElement));
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+
+  const slides = useMemo<DisplaySlide[]>(() => [
+    {
+      id: "hero",
+      label: "Live buying board",
+      duration: 14000,
+      content: <HeroPricesSlide prices={prices} liveIcePrices={liveIcePrices} briefing={briefing} />,
+    },
+    {
+      id: "operations",
+      label: "Factory operations",
+      duration: 12000,
+      content: <OperationsSlide data={displayData} />,
+    },
+    {
+      id: "charts",
+      label: "Price graphs",
+      duration: 14000,
+      content: <PriceChartsSlide history={history} loading={historyLoading} />,
+    },
+    {
+      id: "pulse",
+      label: "Upside & downside drivers",
+      duration: 12000,
+      content: <MarketPulseSlide briefing={briefing} loading={briefingLoading} />,
+    },
+    {
+      id: "news",
+      label: "Coffee news",
+      duration: 14000,
+      content: <CoffeeNewsSlide briefing={briefing} loading={briefingLoading} />,
+    },
+    {
+      id: "compliance",
+      label: "Traceability & milling",
+      duration: 11000,
+      content: <ComplianceSlide data={displayData} />,
+    },
+  ], [briefing, briefingLoading, displayData, history, historyLoading, liveIcePrices, prices]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setActiveIndex((current) => (current + 1) % slides.length);
+    }, slides[activeIndex]?.duration ?? 12000);
+
+    return () => window.clearTimeout(timer);
+  }, [activeIndex, slides]);
+
+  useEffect(() => {
+    const syncFullscreen = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", syncFullscreen);
+    return () => document.removeEventListener("fullscreenchange", syncFullscreen);
+  }, []);
+
+  useEffect(() => {
+    const requestWakeLock = async () => {
+      try {
+        if ("wakeLock" in navigator) {
+          wakeLockRef.current = await navigator.wakeLock.request("screen");
+        }
+      } catch (error) {
+        console.error("Wake lock failed", error);
+      }
+    };
+
+    requestWakeLock();
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        requestWakeLock();
+      }
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      wakeLockRef.current?.release().catch(() => undefined);
+      wakeLockRef.current = null;
+    };
+  }, []);
+
+  const refreshAll = useCallback(() => {
+    fetchPrices();
+    refreshIcePrices();
+    refreshHistory();
+    refreshBriefing();
+  }, [fetchPrices, refreshBriefing, refreshHistory, refreshIcePrices]);
 
   const toggleFullscreen = useCallback(async () => {
     try {
       if (!document.fullscreenElement) {
         await document.documentElement.requestFullscreen();
-        setIsFullscreen(true);
       } else {
         await document.exitFullscreen();
-        setIsFullscreen(false);
       }
-    } catch (err) {
-      console.log('Fullscreen failed:', err);
+    } catch (error) {
+      console.error("Fullscreen failed", error);
     }
   }, []);
 
-  useEffect(() => {
-    const handler = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', handler);
-    return () => document.removeEventListener('fullscreenchange', handler);
-  }, []);
-
-  // Keep screen awake
-  useEffect(() => {
-    const requestWakeLock = async () => {
-      try {
-        if ('wakeLock' in navigator) {
-          const lock = await navigator.wakeLock.request('screen');
-          setWakeLock(lock);
-        }
-      } catch (err) {
-        console.log('Wake Lock failed:', err);
-      }
-    };
-
-    requestWakeLock();
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') requestWakeLock();
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-
-    return () => {
-      wakeLock?.release();
-      document.removeEventListener('visibilitychange', handleVisibility);
-    };
-  }, []);
-
-  // Auto-refresh prices every 60s (not 30s — less aggressive)
-  useEffect(() => {
-    const interval = setInterval(fetchPrices, 60000);
-    return () => clearInterval(interval);
-  }, [fetchPrices]);
-
-  // Slideshow logic — single effect manages both modes
-  useEffect(() => {
-    if (slideTimerRef.current) clearTimeout(slideTimerRef.current);
-
-    if (showFullPrices) {
-      // After showing full prices, transition to slideshow
-      slideTimerRef.current = setTimeout(() => {
-        setIsTransitioning(true);
-        setTimeout(() => {
-          setShowFullPrices(false);
-          setSlideIndex(0);
-          setIsTransitioning(false);
-        }, 400);
-      }, PRICE_DISPLAY_DURATION);
-    } else {
-      // Directorate slide gets extra time to show all staff images
-      const duration = SLIDES[slideIndex] === 'directorate' ? 96000 : SLIDE_DURATION;
-      slideTimerRef.current = setTimeout(() => {
-        setIsTransitioning(true);
-        setTimeout(() => {
-          setSlideIndex(prev => {
-            const next = (prev + 1) % SLIDES.length;
-            // When we loop back to 0, show full prices again
-            if (next === 0) {
-              setShowFullPrices(true);
-              return 0;
-            }
-            return next;
-          });
-          setIsTransitioning(false);
-        }, 300);
-      }, duration);
-    }
-
-    return () => {
-      if (slideTimerRef.current) clearTimeout(slideTimerRef.current);
-    };
-  }, [showFullPrices, slideIndex]);
-
-  const currentSlide = SLIDES[slideIndex];
-
-  const handleMaximize = useCallback(() => {
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setShowFullPrices(true);
-      setSlideIndex(0);
-      setIsTransitioning(false);
-    }, 300);
-  }, []);
-
-  const handleMinimize = useCallback(() => {
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setShowFullPrices(false);
-      setSlideIndex(0);
-      setIsTransitioning(false);
-    }, 300);
-  }, []);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-UG', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value);
-  };
-
-  if (loading && !displayData.loaded) {
-    return (
-      <div className="min-h-screen bg-[#0d3d1f] flex items-center justify-center">
-        <div className="animate-spin">
-          <RefreshCw className="h-16 w-16 text-white" />
-        </div>
-      </div>
+  const tickerItems = useMemo(() => {
+    const purchaseItems = displayData.todayPurchases.slice(0, 6).map(
+      (purchase) => `${purchase.supplier_name} delivered ${purchase.kilograms} kg of ${purchase.coffee_type}`
     );
-  }
+    const headlineItems = (briefing?.headlines ?? []).slice(0, 6).map((headline) => headline.title);
+    return [...purchaseItems, ...headlineItems];
+  }, [briefing?.headlines, displayData.todayPurchases]);
 
-  const renderSlide = () => {
-    const slideClass = `transition-all duration-500 ${isTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`;
-    
-    const SlideWrapper = ({ children }: { children: React.ReactNode }) => (
-      <div className={slideClass}>{children}</div>
-    );
+  const currentSlide = slides[activeIndex];
 
-    switch (currentSlide) {
-      case 'map': return <SlideWrapper><CoffeeMapSlide /></SlideWrapper>;
-      case 'directorate': return <SlideWrapper><DirectorateSlide /></SlideWrapper>;
-      case 'suppliers': return <SlideWrapper><TopSuppliersSlide data={displayData.topSuppliers} /></SlideWrapper>;
-      case 'buyers': return <SlideWrapper><TopBuyersSlide data={displayData.topBuyers} /></SlideWrapper>;
-      case 'stats': return <SlideWrapper><SupplierStatsSlide totalSuppliers={displayData.totalSuppliers} totalKgs={displayData.totalKgs} avgPerSupplier={displayData.avgPerSupplier} topDistricts={displayData.topDistricts} /></SlideWrapper>;
-      case 'quality': return <SlideWrapper><QualityProcessSlide /></SlideWrapper>;
-      case 'traceability': return <SlideWrapper><TraceabilitySlide tracedBatches={displayData.tracedBatches} eudrCompliant={displayData.eudrCompliant} totalDocs={displayData.totalDocs} /></SlideWrapper>;
-      case 'milling': return <SlideWrapper><MillingSlide totalProcessed={displayData.totalProcessed} dispatched={displayData.dispatched} /></SlideWrapper>;
-      case 'contact': return <SlideWrapper><ContactSlide /></SlideWrapper>;
-      default: return null;
-    }
-  };
+  return (
+    <div className="tv-display-shell min-h-screen bg-background p-5 text-foreground">
+      <DisplaySlideFrame>
+        <main className="tv-display-stage flex h-full flex-col overflow-hidden bg-background">
+          <DisplayHeader
+            title="Coffee Market TV Presentation"
+            slideLabel={currentSlide.label}
+            slideIndex={activeIndex}
+            slideCount={slides.length}
+            onRefresh={refreshAll}
+            onToggleFullscreen={toggleFullscreen}
+            isFullscreen={isFullscreen}
+          />
 
-  // Slideshow view with TV-style sidebar
-  if (!showFullPrices) {
-    return (
-      <div className="h-screen bg-gradient-to-br from-[#0d3d1f] via-[#1a5c35] to-[#0d3d1f] text-white overflow-hidden relative">
-        {/* Fullscreen button */}
-        <button
-          onClick={toggleFullscreen}
-          className="absolute top-4 right-4 z-50 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white/80 transition-all hover:scale-110"
-          title={isFullscreen ? 'Exit Fullscreen' : 'View Fullscreen'}
-        >
-          <Maximize className="h-5 w-5" />
-        </button>
-        <MinimizedPrices 
-          prices={prices} 
-          onMaximize={handleMaximize} 
-        />
-
-        <div className="ml-80 h-screen flex flex-col pb-14">
-          <div className="flex-1 flex items-center justify-center p-8">
-            {renderSlide()}
-          </div>
-
-          <div className="pb-20 flex flex-col items-center gap-4">
-            <div className="w-64 h-1 bg-white/20 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-green-400 rounded-full"
-                style={{ 
-                  animation: `progressBar ${SLIDE_DURATION}ms linear`,
-                  width: '100%'
-                }}
-                key={slideIndex}
-              />
+          <div className="relative flex-1 overflow-hidden bg-[radial-gradient(circle_at_top_left,hsl(var(--primary)/0.12),transparent_36%),radial-gradient(circle_at_bottom_right,hsl(var(--chart-2)/0.12),transparent_30%)]">
+            <div key={currentSlide.id} className="animate-fadeIn h-full">
+              {currentSlide.content}
             </div>
-            
-            <div className="flex gap-2">
-              {SLIDES.map((slide, i) => (
+
+            <div className="absolute bottom-8 left-12 right-12 flex items-center gap-3">
+              {slides.map((slide, index) => (
                 <button
-                  key={slide}
-                  onClick={() => {
-                    setIsTransitioning(true);
-                    setTimeout(() => {
-                      setSlideIndex(i);
-                      setIsTransitioning(false);
-                    }, 300);
-                  }}
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    i === slideIndex ? 'bg-green-400 w-8' : 'bg-white/30 w-2 hover:bg-white/50'
-                  }`}
+                  key={slide.id}
+                  aria-label={`Go to ${slide.label}`}
+                  className={`h-3 rounded-full transition-all duration-300 ${index === activeIndex ? "w-16 bg-primary" : "w-3 bg-border"}`}
+                  onClick={() => setActiveIndex(index)}
                 />
               ))}
             </div>
           </div>
+
+          <DisplayFooter tickerItems={tickerItems} />
+        </main>
+      </DisplaySlideFrame>
+
+      {(pricesLoading || !displayData.loaded) && (
+        <div className="pointer-events-none absolute inset-x-0 top-4 mx-auto flex w-fit items-center gap-3 rounded-full border border-border/60 bg-card/90 px-5 py-3 text-sm font-medium text-muted-foreground shadow-xl backdrop-blur">
+          <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-primary" />
+          Loading real-time display data...
         </div>
-
-        <LiveTicker />
-
-        <style>{`
-          @keyframes progressBar {
-            from { width: 0%; }
-            to { width: 100%; }
-          }
-          @keyframes slideInFromLeft {
-            from { transform: translateX(-100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-          }
-        `}</style>
-      </div>
-    );
-  }
-
-  // Full Prices View
-  return (
-    <div className={`h-screen bg-gradient-to-br from-[#0d3d1f] via-[#1a5c35] to-[#0d3d1f] text-white p-8 flex flex-col overflow-hidden relative transition-all duration-500 ${isTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
-      {/* Fullscreen button */}
-      <button
-        onClick={toggleFullscreen}
-        className="absolute top-4 right-4 z-50 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white/80 transition-all hover:scale-110"
-        title={isFullscreen ? 'Exit Fullscreen' : 'View Fullscreen'}
-      >
-        <Maximize className="h-5 w-5" />
-      </button>
-      {/* Header */}
-      <div className="text-center mb-8">
-        <div className="flex items-center justify-center gap-4 mb-4">
-          <img 
-            src="/lovable-uploads/great-agro-coffee-logo.png" 
-            alt="Great Agro Coffee" 
-            className="h-24 w-auto"
-          />
-        </div>
-        <h1 className="text-5xl font-bold tracking-wide">GREAT AGRO COFFEE</h1>
-        <p className="text-2xl text-white/80 mt-2">Today's Buying Prices</p>
-      </div>
-
-      {/* Date and Time */}
-      <div className="text-center mb-12">
-        <DateDisplay className="text-4xl font-light" />
-        <div className="mt-2">
-          <DigitalClock className="text-6xl font-bold font-mono" />
-        </div>
-      </div>
-
-      {/* Price Cards */}
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto w-full">
-        {/* Arabica */}
-        <div className="bg-gradient-to-br from-amber-600/30 to-amber-900/30 backdrop-blur-sm rounded-3xl p-8 border-2 border-amber-500/50 flex flex-col">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-4 bg-amber-500/30 rounded-2xl">
-              <Coffee className="h-12 w-12 text-amber-300" />
-            </div>
-            <div>
-              <h2 className="text-3xl font-bold text-amber-200">ARABICA</h2>
-              <p className="text-amber-300/80 text-lg">Washed Arabica</p>
-            </div>
-          </div>
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <p className="text-7xl font-bold text-amber-100">{formatCurrency(prices.arabicaBuyingPrice)}</p>
-              <p className="text-2xl text-amber-300 mt-2">UGX / KG</p>
-            </div>
-          </div>
-          <div className="mt-6 grid grid-cols-3 gap-4 text-center border-t border-amber-500/30 pt-6">
-            <div><p className="text-amber-400 text-sm">Outturn</p><p className="text-2xl font-semibold">{prices.arabicaOutturn}%</p></div>
-            <div><p className="text-amber-400 text-sm">Moisture</p><p className="text-2xl font-semibold">{prices.arabicaMoisture}%</p></div>
-            <div><p className="text-amber-400 text-sm">FM</p><p className="text-2xl font-semibold">{prices.arabicaFm}%</p></div>
-          </div>
-        </div>
-
-        {/* Robusta */}
-        <div className="bg-gradient-to-br from-emerald-600/30 to-emerald-900/30 backdrop-blur-sm rounded-3xl p-8 border-2 border-emerald-500/50 flex flex-col">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-4 bg-emerald-500/30 rounded-2xl">
-              <Coffee className="h-12 w-12 text-emerald-300" />
-            </div>
-            <div>
-              <h2 className="text-3xl font-bold text-emerald-200">ROBUSTA</h2>
-              <p className="text-emerald-300/80 text-lg">FAQ Robusta</p>
-            </div>
-          </div>
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <p className="text-7xl font-bold text-emerald-100">{formatCurrency(prices.robustaBuyingPrice)}</p>
-              <p className="text-2xl text-emerald-300 mt-2">UGX / KG</p>
-            </div>
-          </div>
-          <div className="mt-6 grid grid-cols-3 gap-4 text-center border-t border-emerald-500/30 pt-6">
-            <div><p className="text-emerald-400 text-sm">Outturn</p><p className="text-2xl font-semibold">{prices.robustaOutturn}%</p></div>
-            <div><p className="text-emerald-400 text-sm">Moisture</p><p className="text-2xl font-semibold">{prices.robustaMoisture}%</p></div>
-            <div><p className="text-emerald-400 text-sm">FM</p><p className="text-2xl font-semibold">{prices.robustaFm}%</p></div>
-          </div>
-        </div>
-
-        {/* Sorted */}
-        <div className="bg-gradient-to-br from-purple-600/30 to-purple-900/30 backdrop-blur-sm rounded-3xl p-8 border-2 border-purple-500/50 flex flex-col">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-4 bg-purple-500/30 rounded-2xl">
-              <Coffee className="h-12 w-12 text-purple-300" />
-            </div>
-            <div>
-              <h2 className="text-3xl font-bold text-purple-200">SORTED</h2>
-              <p className="text-purple-300/80 text-lg">Sorted Coffee</p>
-            </div>
-          </div>
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <p className="text-7xl font-bold text-purple-100">{formatCurrency(prices.sortedPrice || 0)}</p>
-              <p className="text-2xl text-purple-300 mt-2">UGX / KG</p>
-            </div>
-          </div>
-          <div className="mt-6 text-center border-t border-purple-500/30 pt-6">
-            <p className="text-purple-400 text-lg">Premium Grade Sorted</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer with Minimize Button */}
-      <div className="mt-8 text-center">
-        <button
-          onClick={handleMinimize}
-          className="mb-4 px-6 py-3 bg-white/10 hover:bg-white/20 rounded-full text-white/80 transition-all hover:scale-105 flex items-center gap-2 mx-auto"
-        >
-          <Minimize2 className="h-5 w-5" />
-          Start Slideshow
-        </button>
-        <div className="flex items-center justify-center gap-4 text-white/60">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-            <span>Live Prices</span>
-          </div>
-          <span>•</span>
-          <span>Updates every 60 seconds</span>
-          {prices.lastUpdated && (
-            <>
-              <span>•</span>
-              <span>Last updated: {format(new Date(prices.lastUpdated), 'HH:mm')}</span>
-            </>
-          )}
-        </div>
-        <p className="text-white/40 mt-4 text-sm">www.greatagrocoffeesystem.site</p>
-      </div>
+      )}
     </div>
   );
 };
