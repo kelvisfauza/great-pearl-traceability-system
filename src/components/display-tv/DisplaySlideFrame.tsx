@@ -17,7 +17,9 @@ const DisplaySlideFrame = ({ children }: DisplaySlideFrameProps) => {
 
     const resize = () => {
       const { width, height } = element.getBoundingClientRect();
-      setScale(Math.min(width / DISPLAY_WIDTH, height / DISPLAY_HEIGHT));
+      const fallbackHeight = width * (DISPLAY_HEIGHT / DISPLAY_WIDTH);
+      const availableHeight = height > 0 ? height : fallbackHeight;
+      setScale(Math.min(width / DISPLAY_WIDTH, availableHeight / DISPLAY_HEIGHT));
     };
 
     resize();
@@ -34,7 +36,10 @@ const DisplaySlideFrame = ({ children }: DisplaySlideFrameProps) => {
   );
 
   return (
-    <div ref={containerRef} className="relative h-full w-full overflow-hidden rounded-[2rem] border border-border/60 bg-background shadow-2xl">
+    <div
+      ref={containerRef}
+      className="relative aspect-[16/9] w-full overflow-hidden rounded-[2rem] border border-border/60 bg-background shadow-2xl"
+    >
       <div
         className="absolute left-1/2 top-1/2 h-[1080px] w-[1920px] overflow-hidden rounded-[2rem] bg-background"
         style={{ transform, transformOrigin: "center center" }}
