@@ -230,6 +230,7 @@ const AdminQualityPricingReview = () => {
   const [finalPrice, setFinalPrice] = useState<number>(0);
   const [adminComments, setAdminComments] = useState('');
   const [calculatorPrice, setCalculatorPrice] = useState<number | null>(null);
+  const [calculatorInputs, setCalculatorInputs] = useState<AdminCalculatorInputs>(defaultCalculatorInputs);
   const [showGRNModal, setShowGRNModal] = useState(false);
   const [grnData, setGrnData] = useState<any>(null);
   const { toast } = useToast();
