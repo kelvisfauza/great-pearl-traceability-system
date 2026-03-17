@@ -35,6 +35,8 @@ interface PendingAssessment {
     bags: number;
     supplier_id: string | null;
   };
+}
+
 interface AdminCalculatorInputs {
   refPrice: string;
   moisture: string;
