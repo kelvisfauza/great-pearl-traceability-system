@@ -75,8 +75,7 @@ const QualityControl = () => {
   const access = useRoleBasedAccess();
   const { highlightConfig, isHighlighted } = useSearchHighlight();
   const readOnly = !access.canManageQuality;
-  const canAccessAdminPriceCalculator =
-    !!employee && employee.department === "Quality Control" && isAdmin();
+  const canAccessAdminPriceCalculator = isAdmin();
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("pending");
   const [isRefreshing, setIsRefreshing] = useState(false);
