@@ -577,12 +577,11 @@ const AdminQualityPricingReview = () => {
                 </div>
               )}
 
-              {/* Pricing Section */}
-              <div className="border-t pt-4 space-y-3">
+              <div className="border-t pt-4 space-y-4">
                 <h4 className="font-semibold text-sm">Pricing Decision</h4>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 border rounded-lg bg-blue-50 dark:bg-blue-950/30">
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="p-3 border rounded-lg bg-muted/40">
                     <div className="text-xs text-muted-foreground mb-1">Suggested Price (Quality Team)</div>
                     <div className="text-lg font-bold">{formatCurrency(selectedAssessment.suggested_price)}/kg</div>
                     <Button
@@ -594,9 +593,9 @@ const AdminQualityPricingReview = () => {
                       Use Suggested Price
                     </Button>
                   </div>
-                  
-                  <div className="p-3 border rounded-lg bg-green-50 dark:bg-green-950/30">
-                    <div className="text-xs text-muted-foreground mb-1">Calculator Price (Market)</div>
+
+                  <div className="p-3 border rounded-lg bg-muted/40">
+                    <div className="text-xs text-muted-foreground mb-1">Market Reference Price</div>
                     <div className="text-lg font-bold">
                       {calculatorPrice ? `${formatCurrency(calculatorPrice)}/kg` : 'Loading...'}
                     </div>
@@ -604,13 +603,102 @@ const AdminQualityPricingReview = () => {
                       variant="outline"
                       size="sm"
                       className="mt-2 w-full"
-                      onClick={() => calculatorPrice && setFinalPrice(calculatorPrice)}
+                      onClick={() => calculatorPrice && setCalculatorInputs((prev) => ({ ...prev, refPrice: String(calculatorPrice) }))}
                       disabled={!calculatorPrice}
                     >
                       <Calculator className="h-3 w-3 mr-1" />
-                      Use Calculator Price
+                      Use Market Reference
                     </Button>
                   </div>
+                </div>
+
+                <div className="border rounded-lg p-4 space-y-4 bg-muted/20">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className="font-medium">Admin Calculator</h5>
+                      <p className="text-sm text-muted-foreground">Adjust inputs and apply the computed final price.</p>
+                    </div>
+                    <Badge variant={adminCalculation.rejectFinal ? 'destructive' : 'outline'}>
+                      {selectedAssessment.coffee_record?.coffee_type || 'Coffee'}
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="admin_ref_price">Reference Price (UGX/kg)</Label>
+                      <Input id="admin_ref_price" type="number" value={calculatorInputs.refPrice} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, refPrice: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label htmlFor="admin_discretion">Discretion (UGX/kg)</Label>
+                      <Input id="admin_discretion" type="number" value={calculatorInputs.discretion} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, discretion: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label htmlFor="admin_moisture">Moisture (%)</Label>
+                      <Input id="admin_moisture" type="number" step="0.1" value={calculatorInputs.moisture} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, moisture: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label htmlFor="admin_gp1">Group 1 (%)</Label>
+                      <Input id="admin_gp1" type="number" step="0.1" value={calculatorInputs.gp1} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, gp1: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label htmlFor="admin_gp2">Group 2 (%)</Label>
+                      <Input id="admin_gp2" type="number" step="0.1" value={calculatorInputs.gp2} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, gp2: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label htmlFor="admin_less12">Less 12 (%)</Label>
+                      <Input id="admin_less12" type="number" step="0.1" value={calculatorInputs.less12} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, less12: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label htmlFor="admin_pods">Pods (%)</Label>
+                      <Input id="admin_pods" type="number" step="0.1" value={calculatorInputs.pods} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, pods: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label htmlFor="admin_husks">Husks (%)</Label>
+                      <Input id="admin_husks" type="number" step="0.1" value={calculatorInputs.husks} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, husks: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label htmlFor="admin_stones">Stones (%)</Label>
+                      <Input id="admin_stones" type="number" step="0.1" value={calculatorInputs.stones} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, stones: e.target.value }))} />
+                    </div>
+                    {selectedAssessment.coffee_record?.coffee_type?.toLowerCase().includes('arabica') && (
+                      <div>
+                        <Label htmlFor="admin_robusta_in_arabica">Robusta in Arabica (%)</Label>
+                        <Input id="admin_robusta_in_arabica" type="number" step="0.1" value={calculatorInputs.robustaInArabica} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, robustaInArabica: e.target.value }))} />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="p-3 border rounded-lg bg-background">
+                      <div className="text-xs text-muted-foreground mb-1">Calculated Final Price</div>
+                      <div className="text-lg font-bold">
+                        {adminCalculation.finalPrice ? `${formatCurrency(Math.round(adminCalculation.finalPrice))}/kg` : 'No price'}
+                      </div>
+                    </div>
+                    <div className="p-3 border rounded-lg bg-background">
+                      <div className="text-xs text-muted-foreground mb-1">Outturn</div>
+                      <div className="text-lg font-bold">{adminCalculation.outturn !== null ? `${adminCalculation.outturn.toFixed(1)}%` : '—'}</div>
+                    </div>
+                    <div className="p-3 border rounded-lg bg-background">
+                      <div className="text-xs text-muted-foreground mb-1">FM / Note</div>
+                      <div className="text-sm font-medium">FM {adminCalculation.fm.toFixed(1)}%</div>
+                      <div className="text-xs text-muted-foreground mt-1">{adminCalculation.note}</div>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      if (adminCalculation.finalPrice) {
+                        setFinalPrice(Math.round(adminCalculation.finalPrice));
+                      }
+                    }}
+                    disabled={!adminCalculation.finalPrice}
+                  >
+                    <Calculator className="h-4 w-4 mr-2" />
+                    Apply Calculated Price
+                  </Button>
                 </div>
 
                 <div>
