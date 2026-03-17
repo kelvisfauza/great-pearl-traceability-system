@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,192 @@ interface PendingAssessment {
   };
 }
 
+interface AdminCalculatorInputs {
+  refPrice: string;
+  moisture: string;
+  gp1: string;
+  gp2: string;
+  less12: string;
+  pods: string;
+  husks: string;
+  stones: string;
+  robustaInArabica: string;
+  discretion: string;
+}
+
+interface AdminCalculatorResults {
+  finalPrice: number | null;
+  outturnPrice: number | null;
+  outturn: number | null;
+  cleanD14: number | null;
+  fm: number;
+  rejectFinal: boolean;
+  note: string;
+}
+
+const defaultCalculatorInputs: AdminCalculatorInputs = {
+  refPrice: '',
+  moisture: '',
+  gp1: '',
+  gp2: '',
+  less12: '0',
+  pods: '0',
+  husks: '0',
+  stones: '0',
+  robustaInArabica: '0',
+  discretion: '0',
+};
+
+const parseInputNumber = (value: string) => {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const buildCalculatorInputs = (assessment: PendingAssessment, refPrice?: number): AdminCalculatorInputs => {
+  const pods = assessment.pods ?? 0;
+  const husks = assessment.husks ?? 0;
+  const fm = assessment.fm ?? 0;
+  const derivedStones = Math.max(0, fm - pods - husks);
+  const isArabica = assessment.coffee_record?.coffee_type?.toLowerCase().includes('arabica');
+
+  return {
+    refPrice: refPrice ? String(refPrice) : '',
+    moisture: String(assessment.moisture ?? ''),
+    gp1: String(assessment.group1_defects ?? 0),
+    gp2: String(assessment.group2_defects ?? 0),
+    less12: '0',
+    pods: String(pods),
+    husks: String(husks),
+    stones: String(derivedStones),
+    robustaInArabica: '0',
+    discretion: isArabica ? '500' : '0',
+  };
+};
+
+const calculateAdminPrice = (
+  inputs: AdminCalculatorInputs,
+  coffeeType?: string,
+): AdminCalculatorResults => {
+  const refPrice = parseInputNumber(inputs.refPrice);
+  const moisture = parseInputNumber(inputs.moisture);
+  const gp1 = parseInputNumber(inputs.gp1);
+  const gp2 = parseInputNumber(inputs.gp2);
+  const less12 = parseInputNumber(inputs.less12);
+  const pods = parseInputNumber(inputs.pods);
+  const husks = parseInputNumber(inputs.husks);
+  const stones = parseInputNumber(inputs.stones);
+  const robustaInArabica = parseInputNumber(inputs.robustaInArabica);
+  const discretion = parseInputNumber(inputs.discretion);
+  const totalFm = pods + husks + stones;
+  const isArabica = coffeeType?.toLowerCase().includes('arabica');
+
+  if (!refPrice) {
+    return {
+      finalPrice: null,
+      outturnPrice: null,
+      outturn: null,
+      cleanD14: null,
+      fm: totalFm,
+      rejectFinal: false,
+      note: 'Add a reference price to calculate the final price.',
+    };
+  }
+
+  if (!isArabica) {
+    const totalDefects = gp1 + gp2 + less12 + totalFm;
+    const outturn = 100 - totalDefects;
+    const moistureDeductionPercent = Math.max(0, moisture - 15);
+    const totalDeductionPercent = less12 + totalFm + moistureDeductionPercent;
+    const deductionPerKg = (refPrice * totalDeductionPercent) / 100 + discretion;
+    const actualPricePerKg = Math.max(0, refPrice - deductionPerKg);
+    const isRejected = totalFm > 6;
+
+    return {
+      finalPrice: isRejected ? null : actualPricePerKg,
+      outturnPrice: null,
+      outturn,
+      cleanD14: null,
+      fm: totalFm,
+      rejectFinal: isRejected,
+      note: isRejected
+        ? `Rejected: Foreign matter ${totalFm.toFixed(1)}% exceeds 6%.`
+        : `Deduction/kg: UGX ${Math.round(deductionPerKg).toLocaleString('en-UG')}`,
+    };
+  }
+
+  const over = (value: number, limit: number) => Math.max(0, value - limit);
+  const cleanD14 =
+    100 -
+    over(moisture, 14) -
+    over(gp1, 4) -
+    over(gp2, 10) -
+    over(less12, 1) -
+    robustaInArabica;
+
+  const outturnRejected = less12 > 3 || robustaInArabica > 3 || gp1 > 12;
+  const outturn = outturnRejected
+    ? null
+    : 100 -
+      over(moisture, 14) -
+      over(gp1, 4) -
+      over(gp2, 10) -
+      pods -
+      husks -
+      stones -
+      over(less12, 1) -
+      robustaInArabica;
+
+  const moistPenalty = moisture >= 14 ? over(moisture, 14) * refPrice * 0.02 : 0;
+  const gp1Penalty = over(gp1, 4) * 50;
+  const gp2Penalty = over(gp2, 10) * 20;
+  const d14LowPenalty = cleanD14 < 78 ? (78 - cleanD14) * 50 : 0;
+  const d14HighBonus = cleanD14 > 82 ? (cleanD14 - 82) * 50 : 0;
+  const rejectFinal = moisture > 16.5 || gp1 > 12 || gp2 > 25 || less12 > 3 || totalFm > 6 || pods > 6 || husks > 6 || stones > 6 || robustaInArabica > 3;
+
+  const outturnPrice = rejectFinal
+    ? null
+    : refPrice +
+      Math.min(((gp1 <= 1 && gp2 <= 5 && moisture <= 13 && cleanD14 >= 80 && less12 <= 1 && robustaInArabica === 0) ? 2000 : 0) + d14HighBonus, 2000) -
+      moistPenalty -
+      gp1Penalty -
+      gp2Penalty -
+      d14LowPenalty +
+      d14HighBonus -
+      over(less12, 1) * 30 -
+      robustaInArabica * 100 +
+      discretion;
+
+  const finalPrice = rejectFinal
+    ? null
+    : refPrice +
+      Math.min(((gp1 <= 1 && gp2 <= 5 && moisture <= 13 && cleanD14 >= 80 && less12 <= 1 && pods === 0 && husks === 0 && stones === 0 && robustaInArabica === 0) ? 2000 : 0) + d14HighBonus, 2000) -
+      moistPenalty -
+      gp1Penalty -
+      gp2Penalty -
+      d14LowPenalty +
+      d14HighBonus -
+      (pods * 100 + husks * 150 + stones * 150) -
+      over(less12, 1) * 40 -
+      robustaInArabica * 100 +
+      discretion;
+
+  let note = 'Standard/Penalty Price Applied';
+  if (robustaInArabica > 3) note = `Rejected: Robusta in Arabica exceeds 3% (${robustaInArabica.toFixed(1)}%).`;
+  else if (gp1 > 12) note = `Rejected: GP1 defects exceed 12% (${gp1.toFixed(1)}%).`;
+  else if (rejectFinal) note = 'Rejected by quality thresholds.';
+  else if (gp1 <= 1 && gp2 <= 5 && moisture <= 13 && cleanD14 >= 80 && less12 <= 1 && pods === 0 && husks === 0 && stones === 0 && robustaInArabica === 0) note = 'Bonus: Premium Price Applied';
+
+  return {
+    finalPrice,
+    outturnPrice,
+    outturn,
+    cleanD14,
+    fm: totalFm,
+    rejectFinal,
+    note,
+  };
+};
+
 const AdminQualityPricingReview = () => {
   const [assessments, setAssessments] = useState<PendingAssessment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,6 +232,7 @@ const AdminQualityPricingReview = () => {
   const [finalPrice, setFinalPrice] = useState<number>(0);
   const [adminComments, setAdminComments] = useState('');
   const [calculatorPrice, setCalculatorPrice] = useState<number | null>(null);
+  const [calculatorInputs, setCalculatorInputs] = useState<AdminCalculatorInputs>(defaultCalculatorInputs);
   const [showGRNModal, setShowGRNModal] = useState(false);
   const [grnData, setGrnData] = useState<any>(null);
   const { toast } = useToast();
@@ -113,15 +300,31 @@ const AdminQualityPricingReview = () => {
   }, [fetchPendingAssessments]);
 
   const openReview = (assessment: PendingAssessment) => {
+    const startingCalculatorPrice = assessment.coffee_record?.coffee_type
+      ? calculatorPrice ?? undefined
+      : undefined;
+
     setSelectedAssessment(assessment);
     setFinalPrice(assessment.suggested_price);
     setAdminComments('');
     setCalculatorPrice(null);
+    setCalculatorInputs(buildCalculatorInputs(assessment, startingCalculatorPrice));
     setReviewModalOpen(true);
     if (assessment.coffee_record?.coffee_type) {
       fetchCalculatorPrice(assessment.coffee_record.coffee_type);
     }
   };
+
+  const adminCalculation = useMemo(
+    () => calculateAdminPrice(calculatorInputs, selectedAssessment?.coffee_record?.coffee_type),
+    [calculatorInputs, selectedAssessment?.coffee_record?.coffee_type],
+  );
+
+  useEffect(() => {
+    if (selectedAssessment && calculatorPrice) {
+      setCalculatorInputs((prev) => ({ ...prev, refPrice: String(calculatorPrice) }));
+    }
+  }, [calculatorPrice, selectedAssessment]);
 
   const handleApproveWithPrice = async () => {
     if (!selectedAssessment || !finalPrice) return;
@@ -374,12 +577,11 @@ const AdminQualityPricingReview = () => {
                 </div>
               )}
 
-              {/* Pricing Section */}
-              <div className="border-t pt-4 space-y-3">
+              <div className="border-t pt-4 space-y-4">
                 <h4 className="font-semibold text-sm">Pricing Decision</h4>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 border rounded-lg bg-blue-50 dark:bg-blue-950/30">
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="p-3 border rounded-lg bg-muted/40">
                     <div className="text-xs text-muted-foreground mb-1">Suggested Price (Quality Team)</div>
                     <div className="text-lg font-bold">{formatCurrency(selectedAssessment.suggested_price)}/kg</div>
                     <Button
@@ -391,9 +593,9 @@ const AdminQualityPricingReview = () => {
                       Use Suggested Price
                     </Button>
                   </div>
-                  
-                  <div className="p-3 border rounded-lg bg-green-50 dark:bg-green-950/30">
-                    <div className="text-xs text-muted-foreground mb-1">Calculator Price (Market)</div>
+
+                  <div className="p-3 border rounded-lg bg-muted/40">
+                    <div className="text-xs text-muted-foreground mb-1">Market Reference Price</div>
                     <div className="text-lg font-bold">
                       {calculatorPrice ? `${formatCurrency(calculatorPrice)}/kg` : 'Loading...'}
                     </div>
@@ -401,13 +603,102 @@ const AdminQualityPricingReview = () => {
                       variant="outline"
                       size="sm"
                       className="mt-2 w-full"
-                      onClick={() => calculatorPrice && setFinalPrice(calculatorPrice)}
+                      onClick={() => calculatorPrice && setCalculatorInputs((prev) => ({ ...prev, refPrice: String(calculatorPrice) }))}
                       disabled={!calculatorPrice}
                     >
                       <Calculator className="h-3 w-3 mr-1" />
-                      Use Calculator Price
+                      Use Market Reference
                     </Button>
                   </div>
+                </div>
+
+                <div className="border rounded-lg p-4 space-y-4 bg-muted/20">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className="font-medium">Admin Calculator</h5>
+                      <p className="text-sm text-muted-foreground">Adjust inputs and apply the computed final price.</p>
+                    </div>
+                    <Badge variant={adminCalculation.rejectFinal ? 'destructive' : 'outline'}>
+                      {selectedAssessment.coffee_record?.coffee_type || 'Coffee'}
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="admin_ref_price">Reference Price (UGX/kg)</Label>
+                      <Input id="admin_ref_price" type="number" value={calculatorInputs.refPrice} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, refPrice: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label htmlFor="admin_discretion">Discretion (UGX/kg)</Label>
+                      <Input id="admin_discretion" type="number" value={calculatorInputs.discretion} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, discretion: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label htmlFor="admin_moisture">Moisture (%)</Label>
+                      <Input id="admin_moisture" type="number" step="0.1" value={calculatorInputs.moisture} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, moisture: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label htmlFor="admin_gp1">Group 1 (%)</Label>
+                      <Input id="admin_gp1" type="number" step="0.1" value={calculatorInputs.gp1} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, gp1: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label htmlFor="admin_gp2">Group 2 (%)</Label>
+                      <Input id="admin_gp2" type="number" step="0.1" value={calculatorInputs.gp2} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, gp2: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label htmlFor="admin_less12">Less 12 (%)</Label>
+                      <Input id="admin_less12" type="number" step="0.1" value={calculatorInputs.less12} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, less12: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label htmlFor="admin_pods">Pods (%)</Label>
+                      <Input id="admin_pods" type="number" step="0.1" value={calculatorInputs.pods} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, pods: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label htmlFor="admin_husks">Husks (%)</Label>
+                      <Input id="admin_husks" type="number" step="0.1" value={calculatorInputs.husks} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, husks: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label htmlFor="admin_stones">Stones (%)</Label>
+                      <Input id="admin_stones" type="number" step="0.1" value={calculatorInputs.stones} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, stones: e.target.value }))} />
+                    </div>
+                    {selectedAssessment.coffee_record?.coffee_type?.toLowerCase().includes('arabica') && (
+                      <div>
+                        <Label htmlFor="admin_robusta_in_arabica">Robusta in Arabica (%)</Label>
+                        <Input id="admin_robusta_in_arabica" type="number" step="0.1" value={calculatorInputs.robustaInArabica} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, robustaInArabica: e.target.value }))} />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="p-3 border rounded-lg bg-background">
+                      <div className="text-xs text-muted-foreground mb-1">Calculated Final Price</div>
+                      <div className="text-lg font-bold">
+                        {adminCalculation.finalPrice ? `${formatCurrency(Math.round(adminCalculation.finalPrice))}/kg` : 'No price'}
+                      </div>
+                    </div>
+                    <div className="p-3 border rounded-lg bg-background">
+                      <div className="text-xs text-muted-foreground mb-1">Outturn</div>
+                      <div className="text-lg font-bold">{adminCalculation.outturn !== null ? `${adminCalculation.outturn.toFixed(1)}%` : '—'}</div>
+                    </div>
+                    <div className="p-3 border rounded-lg bg-background">
+                      <div className="text-xs text-muted-foreground mb-1">FM / Note</div>
+                      <div className="text-sm font-medium">FM {adminCalculation.fm.toFixed(1)}%</div>
+                      <div className="text-xs text-muted-foreground mt-1">{adminCalculation.note}</div>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      if (adminCalculation.finalPrice) {
+                        setFinalPrice(Math.round(adminCalculation.finalPrice));
+                      }
+                    }}
+                    disabled={!adminCalculation.finalPrice}
+                  >
+                    <Calculator className="h-4 w-4 mr-2" />
+                    Apply Calculated Price
+                  </Button>
                 </div>
 
                 <div>
