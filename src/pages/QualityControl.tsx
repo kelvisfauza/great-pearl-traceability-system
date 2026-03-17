@@ -43,6 +43,7 @@ import ArabicaPriceCalculator from "@/components/milling/ArabicaPriceCalculator"
 import QualityPriceCalculator from "@/components/quality/QualityPriceCalculator";
 import QuickAnalysesList from "@/components/quality/QuickAnalysesList";
 import QualityAssessmentReports from "@/components/quality/QualityAssessmentReports";
+import AdminQualityPricingReview from "@/components/admin/AdminQualityPricingReview";
 import { cn } from "@/lib/utils";
 
 const QualityControl = () => {
@@ -70,10 +71,12 @@ const QualityControl = () => {
 
   const { prices, refreshPrices } = usePrices();
   const { toast } = useToast();
-  const { hasPermission, employee } = useAuth();
+  const { employee, isAdmin } = useAuth();
   const access = useRoleBasedAccess();
   const { highlightConfig, isHighlighted } = useSearchHighlight();
   const readOnly = !access.canManageQuality;
+  const canAccessAdminPriceCalculator =
+    !!employee && employee.department === "Quality Control" && isAdmin();
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("pending");
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -1087,6 +1090,11 @@ const QualityControl = () => {
               <TabsTrigger value="quick-analyses" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                 Quick Analyses
               </TabsTrigger>
+              {canAccessAdminPriceCalculator && (
+                <TabsTrigger value="admin-pricing" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                  Admin Final Pricing
+                </TabsTrigger>
+              )}
               <TabsTrigger value="price-calculator" disabled={!selectedRecord} className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                 {selectedRecord ? 'Price Assess' : 'Select First'}
               </TabsTrigger>
@@ -1392,6 +1400,12 @@ const QualityControl = () => {
           <TabsContent value="quick-analyses">
             <QuickAnalysesList />
           </TabsContent>
+
+          {canAccessAdminPriceCalculator && (
+            <TabsContent value="admin-pricing">
+              <AdminQualityPricingReview />
+            </TabsContent>
+          )}
 
           <TabsContent value="price-calculator">
             {selectedRecord && (
