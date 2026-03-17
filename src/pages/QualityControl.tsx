@@ -1090,6 +1090,11 @@ const QualityControl = () => {
               <TabsTrigger value="quick-analyses" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                 Quick Analyses
               </TabsTrigger>
+              {canAccessAdminPriceCalculator && (
+                <TabsTrigger value="admin-pricing" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                  Admin Final Pricing
+                </TabsTrigger>
+              )}
               <TabsTrigger value="price-calculator" disabled={!selectedRecord} className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                 {selectedRecord ? 'Price Assess' : 'Select First'}
               </TabsTrigger>
