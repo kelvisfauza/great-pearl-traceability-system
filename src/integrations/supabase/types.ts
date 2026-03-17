@@ -710,6 +710,60 @@ export type Database = {
         }
         Relationships: []
       }
+      bills: {
+        Row: {
+          amount_paid: number
+          balance: number
+          bill_date: string
+          bill_number: string
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          notes: string | null
+          status: string
+          subtotal: number
+          supplier_name: string
+          tax: number
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          amount_paid?: number
+          balance?: number
+          bill_date: string
+          bill_number: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          subtotal?: number
+          supplier_name: string
+          tax?: number
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          amount_paid?: number
+          balance?: number
+          bill_date?: string
+          bill_number?: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          subtotal?: number
+          supplier_name?: string
+          tax?: number
+          total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       biometric_credentials: {
         Row: {
           created_at: string | null
@@ -1011,6 +1065,104 @@ export type Database = {
           opening_float_ugx?: number
           session_date?: string
           system_closing_balance_ugx?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      chart_of_accounts: {
+        Row: {
+          account_code: string
+          account_name: string
+          account_type: string
+          category: string | null
+          created_at: string
+          current_balance: number
+          description: string | null
+          id: string
+          is_active: boolean
+          opening_balance: number
+          parent_account_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_code: string
+          account_name: string
+          account_type: string
+          category?: string | null
+          created_at?: string
+          current_balance?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          opening_balance?: number
+          parent_account_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_code?: string
+          account_name?: string
+          account_type?: string
+          category?: string | null
+          created_at?: string
+          current_balance?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          opening_balance?: number
+          parent_account_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chart_of_accounts_parent_account_id_fkey"
+            columns: ["parent_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cheques: {
+        Row: {
+          amount: number
+          bank_account: string | null
+          cheque_number: string
+          cleared_date: string | null
+          created_at: string
+          id: string
+          issue_date: string
+          notes: string | null
+          payee_name: string
+          purpose: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          bank_account?: string | null
+          cheque_number: string
+          cleared_date?: string | null
+          created_at?: string
+          id?: string
+          issue_date: string
+          notes?: string | null
+          payee_name: string
+          purpose?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          bank_account?: string | null
+          cheque_number?: string
+          cleared_date?: string | null
+          created_at?: string
+          id?: string
+          issue_date?: string
+          notes?: string | null
+          payee_name?: string
+          purpose?: string | null
+          status?: string
           updated_at?: string
         }
         Relationships: []
@@ -3642,6 +3794,60 @@ export type Database = {
         }
         Relationships: []
       }
+      invoices: {
+        Row: {
+          amount_paid: number
+          balance: number
+          created_at: string
+          customer_name: string
+          description: string | null
+          due_date: string | null
+          id: string
+          invoice_date: string
+          invoice_number: string
+          notes: string | null
+          status: string
+          subtotal: number
+          tax: number
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          amount_paid?: number
+          balance?: number
+          created_at?: string
+          customer_name: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          invoice_date: string
+          invoice_number: string
+          notes?: string | null
+          status?: string
+          subtotal?: number
+          tax?: number
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          amount_paid?: number
+          balance?: number
+          created_at?: string
+          customer_name?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          notes?: string | null
+          status?: string
+          subtotal?: number
+          tax?: number
+          total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       job_applications: {
         Row: {
           applicant_name: string
@@ -3686,6 +3892,75 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      journal_entries: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          entry_date: string
+          id: string
+          reference: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          entry_date?: string
+          id?: string
+          reference?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          entry_date?: string
+          id?: string
+          reference?: string | null
+        }
+        Relationships: []
+      }
+      journal_entry_lines: {
+        Row: {
+          account_id: string
+          credit: number
+          debit: number
+          id: string
+          journal_entry_id: string
+          line_description: string | null
+        }
+        Insert: {
+          account_id: string
+          credit?: number
+          debit?: number
+          id?: string
+          journal_entry_id: string
+          line_description?: string | null
+        }
+        Update: {
+          account_id?: string
+          credit?: number
+          debit?: number
+          id?: string
+          journal_entry_id?: string
+          line_description?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_entry_lines_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ledger_entries: {
         Row: {
