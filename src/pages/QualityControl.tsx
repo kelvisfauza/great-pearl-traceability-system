@@ -1401,6 +1401,12 @@ const QualityControl = () => {
             <QuickAnalysesList />
           </TabsContent>
 
+          {canAccessAdminPriceCalculator && (
+            <TabsContent value="admin-pricing">
+              <AdminQualityPricingReview />
+            </TabsContent>
+          )}
+
           <TabsContent value="price-calculator">
             {selectedRecord && (
               <Card>
