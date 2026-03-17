@@ -519,226 +519,229 @@ const AdminQualityPricingReview = () => {
 
       {/* Review Modal */}
       <Dialog open={reviewModalOpen} onOpenChange={setReviewModalOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[90vh] w-[calc(100vw-1rem)] max-w-5xl flex-col overflow-hidden p-0 sm:w-[calc(100vw-2rem)]">
+          <DialogHeader className="shrink-0 border-b px-4 py-4 sm:px-6">
             <DialogTitle>Review Quality Assessment - {selectedAssessment?.batch_number}</DialogTitle>
           </DialogHeader>
-          
+
           {selectedAssessment && (
-            <div className="space-y-4">
-              {/* Lot Info */}
-              <div className="grid grid-cols-2 gap-3 p-3 bg-muted rounded-lg text-sm">
-                <div><span className="text-muted-foreground">Supplier:</span> <strong>{selectedAssessment.coffee_record?.supplier_name}</strong></div>
-                <div><span className="text-muted-foreground">Coffee Type:</span> <strong>{selectedAssessment.coffee_record?.coffee_type}</strong></div>
-                <div><span className="text-muted-foreground">Quantity:</span> <strong>{selectedAssessment.coffee_record?.kilograms?.toLocaleString()} kg</strong></div>
-                <div><span className="text-muted-foreground">Bags:</span> <strong>{selectedAssessment.coffee_record?.bags}</strong></div>
-                <div><span className="text-muted-foreground">Assessed By:</span> <strong>{selectedAssessment.assessed_by}</strong></div>
-                <div><span className="text-muted-foreground">Date:</span> <strong>{selectedAssessment.date_assessed}</strong></div>
-              </div>
-
-              {/* Quality Parameters */}
-              <div>
-                <h4 className="font-semibold mb-2 text-sm">Quality Parameters</h4>
-                <div className="grid grid-cols-3 gap-2 text-sm">
-                  <div className="p-2 border rounded text-center">
-                    <div className="text-muted-foreground text-xs">Moisture</div>
-                    <div className="font-bold">{selectedAssessment.moisture}%</div>
-                  </div>
-                  <div className="p-2 border rounded text-center">
-                    <div className="text-muted-foreground text-xs">Outturn</div>
-                    <div className="font-bold">{selectedAssessment.outturn ?? '-'}%</div>
-                  </div>
-                  <div className="p-2 border rounded text-center">
-                    <div className="text-muted-foreground text-xs">Group 1</div>
-                    <div className="font-bold">{selectedAssessment.group1_defects ?? 0}%</div>
-                  </div>
-                  <div className="p-2 border rounded text-center">
-                    <div className="text-muted-foreground text-xs">Group 2</div>
-                    <div className="font-bold">{selectedAssessment.group2_defects ?? 0}%</div>
-                  </div>
-                  <div className="p-2 border rounded text-center">
-                    <div className="text-muted-foreground text-xs">Pods</div>
-                    <div className="font-bold">{selectedAssessment.pods ?? 0}%</div>
-                  </div>
-                  <div className="p-2 border rounded text-center">
-                    <div className="text-muted-foreground text-xs">Husks</div>
-                    <div className="font-bold">{selectedAssessment.husks ?? 0}%</div>
-                  </div>
-                  <div className="p-2 border rounded text-center">
-                    <div className="text-muted-foreground text-xs">Foreign Matter</div>
-                    <div className="font-bold">{selectedAssessment.fm ?? 0}%</div>
-                  </div>
+            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+              <div className="space-y-4">
+                {/* Lot Info */}
+                <div className="grid grid-cols-1 gap-3 rounded-lg bg-muted p-3 text-sm sm:grid-cols-2">
+                  <div><span className="text-muted-foreground">Supplier:</span> <strong>{selectedAssessment.coffee_record?.supplier_name}</strong></div>
+                  <div><span className="text-muted-foreground">Coffee Type:</span> <strong>{selectedAssessment.coffee_record?.coffee_type}</strong></div>
+                  <div><span className="text-muted-foreground">Quantity:</span> <strong>{selectedAssessment.coffee_record?.kilograms?.toLocaleString()} kg</strong></div>
+                  <div><span className="text-muted-foreground">Bags:</span> <strong>{selectedAssessment.coffee_record?.bags}</strong></div>
+                  <div><span className="text-muted-foreground">Assessed By:</span> <strong>{selectedAssessment.assessed_by}</strong></div>
+                  <div><span className="text-muted-foreground">Date:</span> <strong>{selectedAssessment.date_assessed}</strong></div>
                 </div>
-              </div>
 
-              {selectedAssessment.comments && (
-                <div className="p-3 bg-muted rounded-lg text-sm">
-                  <span className="text-muted-foreground">Quality Notes:</span> {selectedAssessment.comments}
-                </div>
-              )}
-
-              <div className="border-t pt-4 space-y-4">
-                <h4 className="font-semibold text-sm">Pricing Decision</h4>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="p-3 border rounded-lg bg-muted/40">
-                    <div className="text-xs text-muted-foreground mb-1">Suggested Price (Quality Team)</div>
-                    <div className="text-lg font-bold">{formatCurrency(selectedAssessment.suggested_price)}/kg</div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-2 w-full"
-                      onClick={() => setFinalPrice(selectedAssessment.suggested_price)}
-                    >
-                      Use Suggested Price
-                    </Button>
-                  </div>
-
-                  <div className="p-3 border rounded-lg bg-muted/40">
-                    <div className="text-xs text-muted-foreground mb-1">Market Reference Price</div>
-                    <div className="text-lg font-bold">
-                      {calculatorPrice ? `${formatCurrency(calculatorPrice)}/kg` : 'Loading...'}
+                {/* Quality Parameters */}
+                <div>
+                  <h4 className="mb-2 text-sm font-semibold">Quality Parameters</h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
+                    <div className="rounded border p-2 text-center">
+                      <div className="text-xs text-muted-foreground">Moisture</div>
+                      <div className="font-bold">{selectedAssessment.moisture}%</div>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-2 w-full"
-                      onClick={() => calculatorPrice && setCalculatorInputs((prev) => ({ ...prev, refPrice: String(calculatorPrice) }))}
-                      disabled={!calculatorPrice}
-                    >
-                      <Calculator className="h-3 w-3 mr-1" />
-                      Use Market Reference
-                    </Button>
+                    <div className="rounded border p-2 text-center">
+                      <div className="text-xs text-muted-foreground">Outturn</div>
+                      <div className="font-bold">{selectedAssessment.outturn ?? '-'}%</div>
+                    </div>
+                    <div className="rounded border p-2 text-center">
+                      <div className="text-xs text-muted-foreground">Group 1</div>
+                      <div className="font-bold">{selectedAssessment.group1_defects ?? 0}%</div>
+                    </div>
+                    <div className="rounded border p-2 text-center">
+                      <div className="text-xs text-muted-foreground">Group 2</div>
+                      <div className="font-bold">{selectedAssessment.group2_defects ?? 0}%</div>
+                    </div>
+                    <div className="rounded border p-2 text-center">
+                      <div className="text-xs text-muted-foreground">Pods</div>
+                      <div className="font-bold">{selectedAssessment.pods ?? 0}%</div>
+                    </div>
+                    <div className="rounded border p-2 text-center">
+                      <div className="text-xs text-muted-foreground">Husks</div>
+                      <div className="font-bold">{selectedAssessment.husks ?? 0}%</div>
+                    </div>
+                    <div className="rounded border p-2 text-center sm:col-span-3 md:col-span-1">
+                      <div className="text-xs text-muted-foreground">Foreign Matter</div>
+                      <div className="font-bold">{selectedAssessment.fm ?? 0}%</div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="border rounded-lg p-4 space-y-4 bg-muted/20">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h5 className="font-medium">Admin Calculator</h5>
-                      <p className="text-sm text-muted-foreground">Adjust inputs and apply the computed final price.</p>
-                    </div>
-                    <Badge variant={adminCalculation.rejectFinal ? 'destructive' : 'outline'}>
-                      {selectedAssessment.coffee_record?.coffee_type || 'Coffee'}
-                    </Badge>
+                {selectedAssessment.comments && (
+                  <div className="rounded-lg bg-muted p-3 text-sm">
+                    <span className="text-muted-foreground">Quality Notes:</span> {selectedAssessment.comments}
                   </div>
+                )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <Label htmlFor="admin_ref_price">Reference Price (UGX/kg)</Label>
-                      <Input id="admin_ref_price" type="number" value={calculatorInputs.refPrice} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, refPrice: e.target.value }))} />
+                <div className="space-y-4 border-t pt-4">
+                  <h4 className="text-sm font-semibold">Pricing Decision</h4>
+
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <div className="rounded-lg border bg-muted/40 p-3">
+                      <div className="mb-1 text-xs text-muted-foreground">Suggested Price (Quality Team)</div>
+                      <div className="text-lg font-bold break-words">{formatCurrency(selectedAssessment.suggested_price)}/kg</div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2 w-full"
+                        onClick={() => setFinalPrice(selectedAssessment.suggested_price)}
+                      >
+                        Use Suggested Price
+                      </Button>
                     </div>
-                    <div>
-                      <Label htmlFor="admin_discretion">Discretion (UGX/kg)</Label>
-                      <Input id="admin_discretion" type="number" value={calculatorInputs.discretion} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, discretion: e.target.value }))} />
-                    </div>
-                    <div>
-                      <Label htmlFor="admin_moisture">Moisture (%)</Label>
-                      <Input id="admin_moisture" type="number" step="0.1" value={calculatorInputs.moisture} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, moisture: e.target.value }))} />
-                    </div>
-                    <div>
-                      <Label htmlFor="admin_gp1">Group 1 (%)</Label>
-                      <Input id="admin_gp1" type="number" step="0.1" value={calculatorInputs.gp1} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, gp1: e.target.value }))} />
-                    </div>
-                    <div>
-                      <Label htmlFor="admin_gp2">Group 2 (%)</Label>
-                      <Input id="admin_gp2" type="number" step="0.1" value={calculatorInputs.gp2} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, gp2: e.target.value }))} />
-                    </div>
-                    <div>
-                      <Label htmlFor="admin_less12">Less 12 (%)</Label>
-                      <Input id="admin_less12" type="number" step="0.1" value={calculatorInputs.less12} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, less12: e.target.value }))} />
-                    </div>
-                    <div>
-                      <Label htmlFor="admin_pods">Pods (%)</Label>
-                      <Input id="admin_pods" type="number" step="0.1" value={calculatorInputs.pods} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, pods: e.target.value }))} />
-                    </div>
-                    <div>
-                      <Label htmlFor="admin_husks">Husks (%)</Label>
-                      <Input id="admin_husks" type="number" step="0.1" value={calculatorInputs.husks} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, husks: e.target.value }))} />
-                    </div>
-                    <div>
-                      <Label htmlFor="admin_stones">Stones (%)</Label>
-                      <Input id="admin_stones" type="number" step="0.1" value={calculatorInputs.stones} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, stones: e.target.value }))} />
-                    </div>
-                    {selectedAssessment.coffee_record?.coffee_type?.toLowerCase().includes('arabica') && (
-                      <div>
-                        <Label htmlFor="admin_robusta_in_arabica">Robusta in Arabica (%)</Label>
-                        <Input id="admin_robusta_in_arabica" type="number" step="0.1" value={calculatorInputs.robustaInArabica} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, robustaInArabica: e.target.value }))} />
+
+                    <div className="rounded-lg border bg-muted/40 p-3">
+                      <div className="mb-1 text-xs text-muted-foreground">Market Reference Price</div>
+                      <div className="text-lg font-bold break-words">
+                        {calculatorPrice ? `${formatCurrency(calculatorPrice)}/kg` : 'Loading...'}
                       </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2 w-full"
+                        onClick={() => calculatorPrice && setCalculatorInputs((prev) => ({ ...prev, refPrice: String(calculatorPrice) }))}
+                        disabled={!calculatorPrice}
+                      >
+                        <Calculator className="mr-1 h-3 w-3" />
+                        Use Market Reference
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 rounded-lg border bg-muted/20 p-4">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h5 className="font-medium">Admin Calculator</h5>
+                        <p className="text-sm text-muted-foreground">Adjust inputs and apply the computed final price.</p>
+                      </div>
+                      <Badge variant={adminCalculation.rejectFinal ? 'destructive' : 'outline'} className="w-fit">
+                        {selectedAssessment.coffee_record?.coffee_type || 'Coffee'}
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <div>
+                        <Label htmlFor="admin_ref_price">Reference Price (UGX/kg)</Label>
+                        <Input id="admin_ref_price" type="number" value={calculatorInputs.refPrice} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, refPrice: e.target.value }))} />
+                      </div>
+                      <div>
+                        <Label htmlFor="admin_discretion">Discretion (UGX/kg)</Label>
+                        <Input id="admin_discretion" type="number" value={calculatorInputs.discretion} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, discretion: e.target.value }))} />
+                      </div>
+                      <div>
+                        <Label htmlFor="admin_moisture">Moisture (%)</Label>
+                        <Input id="admin_moisture" type="number" step="0.1" value={calculatorInputs.moisture} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, moisture: e.target.value }))} />
+                      </div>
+                      <div>
+                        <Label htmlFor="admin_gp1">Group 1 (%)</Label>
+                        <Input id="admin_gp1" type="number" step="0.1" value={calculatorInputs.gp1} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, gp1: e.target.value }))} />
+                      </div>
+                      <div>
+                        <Label htmlFor="admin_gp2">Group 2 (%)</Label>
+                        <Input id="admin_gp2" type="number" step="0.1" value={calculatorInputs.gp2} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, gp2: e.target.value }))} />
+                      </div>
+                      <div>
+                        <Label htmlFor="admin_less12">Less 12 (%)</Label>
+                        <Input id="admin_less12" type="number" step="0.1" value={calculatorInputs.less12} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, less12: e.target.value }))} />
+                      </div>
+                      <div>
+                        <Label htmlFor="admin_pods">Pods (%)</Label>
+                        <Input id="admin_pods" type="number" step="0.1" value={calculatorInputs.pods} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, pods: e.target.value }))} />
+                      </div>
+                      <div>
+                        <Label htmlFor="admin_husks">Husks (%)</Label>
+                        <Input id="admin_husks" type="number" step="0.1" value={calculatorInputs.husks} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, husks: e.target.value }))} />
+                      </div>
+                      <div>
+                        <Label htmlFor="admin_stones">Stones (%)</Label>
+                        <Input id="admin_stones" type="number" step="0.1" value={calculatorInputs.stones} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, stones: e.target.value }))} />
+                      </div>
+                      {selectedAssessment.coffee_record?.coffee_type?.toLowerCase().includes('arabica') && (
+                        <div>
+                          <Label htmlFor="admin_robusta_in_arabica">Robusta in Arabica (%)</Label>
+                          <Input id="admin_robusta_in_arabica" type="number" step="0.1" value={calculatorInputs.robustaInArabica} onChange={(e) => setCalculatorInputs((prev) => ({ ...prev, robustaInArabica: e.target.value }))} />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+                      <div className="rounded-lg border bg-background p-3">
+                        <div className="mb-1 text-xs text-muted-foreground">Calculated Final Price</div>
+                        <div className="text-lg font-bold break-words">
+                          {adminCalculation.finalPrice ? `${formatCurrency(Math.round(adminCalculation.finalPrice))}/kg` : 'No price'}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border bg-background p-3">
+                        <div className="mb-1 text-xs text-muted-foreground">Outturn</div>
+                        <div className="text-lg font-bold">{adminCalculation.outturn !== null ? `${adminCalculation.outturn.toFixed(1)}%` : '—'}</div>
+                      </div>
+                      <div className="rounded-lg border bg-background p-3">
+                        <div className="mb-1 text-xs text-muted-foreground">FM / Note</div>
+                        <div className="text-sm font-medium">FM {adminCalculation.fm.toFixed(1)}%</div>
+                        <div className="mt-1 text-xs text-muted-foreground break-words">{adminCalculation.note}</div>
+                      </div>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full sm:w-auto"
+                      onClick={() => {
+                        if (adminCalculation.finalPrice) {
+                          setFinalPrice(Math.round(adminCalculation.finalPrice));
+                        }
+                      }}
+                      disabled={!adminCalculation.finalPrice}
+                    >
+                      <Calculator className="mr-2 h-4 w-4" />
+                      Apply Calculated Price
+                    </Button>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="final_price">Final Price (UGX/kg) *</Label>
+                    <Input
+                      id="final_price"
+                      type="number"
+                      value={finalPrice}
+                      onChange={(e) => setFinalPrice(Number(e.target.value))}
+                      className="text-lg font-bold"
+                    />
+                    {selectedAssessment.coffee_record && (
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Total Value: <strong>{formatCurrency(finalPrice * selectedAssessment.coffee_record.kilograms)}</strong>
+                      </p>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="p-3 border rounded-lg bg-background">
-                      <div className="text-xs text-muted-foreground mb-1">Calculated Final Price</div>
-                      <div className="text-lg font-bold">
-                        {adminCalculation.finalPrice ? `${formatCurrency(Math.round(adminCalculation.finalPrice))}/kg` : 'No price'}
-                      </div>
-                    </div>
-                    <div className="p-3 border rounded-lg bg-background">
-                      <div className="text-xs text-muted-foreground mb-1">Outturn</div>
-                      <div className="text-lg font-bold">{adminCalculation.outturn !== null ? `${adminCalculation.outturn.toFixed(1)}%` : '—'}</div>
-                    </div>
-                    <div className="p-3 border rounded-lg bg-background">
-                      <div className="text-xs text-muted-foreground mb-1">FM / Note</div>
-                      <div className="text-sm font-medium">FM {adminCalculation.fm.toFixed(1)}%</div>
-                      <div className="text-xs text-muted-foreground mt-1">{adminCalculation.note}</div>
-                    </div>
+                  <div>
+                    <Label htmlFor="admin_comments">Admin Comments</Label>
+                    <Textarea
+                      id="admin_comments"
+                      value={adminComments}
+                      onChange={(e) => setAdminComments(e.target.value)}
+                      placeholder="Optional comments or reason for rejection..."
+                      rows={3}
+                    />
                   </div>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      if (adminCalculation.finalPrice) {
-                        setFinalPrice(Math.round(adminCalculation.finalPrice));
-                      }
-                    }}
-                    disabled={!adminCalculation.finalPrice}
-                  >
-                    <Calculator className="h-4 w-4 mr-2" />
-                    Apply Calculated Price
-                  </Button>
-                </div>
-
-                <div>
-                  <Label htmlFor="final_price">Final Price (UGX/kg) *</Label>
-                  <Input
-                    id="final_price"
-                    type="number"
-                    value={finalPrice}
-                    onChange={(e) => setFinalPrice(Number(e.target.value))}
-                    className="text-lg font-bold"
-                  />
-                  {selectedAssessment.coffee_record && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Total Value: <strong>{formatCurrency(finalPrice * selectedAssessment.coffee_record.kilograms)}</strong>
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="admin_comments">Admin Comments</Label>
-                  <Textarea
-                    id="admin_comments"
-                    value={adminComments}
-                    onChange={(e) => setAdminComments(e.target.value)}
-                    placeholder="Optional comments or reason for rejection..."
-                    rows={3}
-                  />
                 </div>
               </div>
             </div>
           )}
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="shrink-0 gap-2 border-t px-4 py-4 sm:px-6">
             <Button
               variant="destructive"
               onClick={handleReject}
               disabled={!!processingId}
             >
-              {processingId === selectedAssessment?.id && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              <XCircle className="h-4 w-4 mr-2" />
+              {processingId === selectedAssessment?.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <XCircle className="mr-2 h-4 w-4" />
               Reject
             </Button>
             <Button
@@ -746,8 +749,8 @@ const AdminQualityPricingReview = () => {
               disabled={!!processingId || !finalPrice}
               className="bg-green-600 hover:bg-green-700"
             >
-              {processingId === selectedAssessment?.id && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              <CheckCircle className="h-4 w-4 mr-2" />
+              {processingId === selectedAssessment?.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <CheckCircle className="mr-2 h-4 w-4" />
               Approve with Price
             </Button>
           </DialogFooter>
