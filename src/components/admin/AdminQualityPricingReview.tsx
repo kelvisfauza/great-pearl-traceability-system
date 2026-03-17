@@ -35,7 +35,191 @@ interface PendingAssessment {
     bags: number;
     supplier_id: string | null;
   };
+interface AdminCalculatorInputs {
+  refPrice: string;
+  moisture: string;
+  gp1: string;
+  gp2: string;
+  less12: string;
+  pods: string;
+  husks: string;
+  stones: string;
+  robustaInArabica: string;
+  discretion: string;
 }
+
+interface AdminCalculatorResults {
+  finalPrice: number | null;
+  outturnPrice: number | null;
+  outturn: number | null;
+  cleanD14: number | null;
+  fm: number;
+  rejectFinal: boolean;
+  note: string;
+}
+
+const defaultCalculatorInputs: AdminCalculatorInputs = {
+  refPrice: '',
+  moisture: '',
+  gp1: '',
+  gp2: '',
+  less12: '0',
+  pods: '0',
+  husks: '0',
+  stones: '0',
+  robustaInArabica: '0',
+  discretion: '0',
+};
+
+const parseInputNumber = (value: string) => {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const buildCalculatorInputs = (assessment: PendingAssessment, refPrice?: number): AdminCalculatorInputs => {
+  const pods = assessment.pods ?? 0;
+  const husks = assessment.husks ?? 0;
+  const fm = assessment.fm ?? 0;
+  const derivedStones = Math.max(0, fm - pods - husks);
+  const isArabica = assessment.coffee_record?.coffee_type?.toLowerCase().includes('arabica');
+
+  return {
+    refPrice: refPrice ? String(refPrice) : '',
+    moisture: String(assessment.moisture ?? ''),
+    gp1: String(assessment.group1_defects ?? 0),
+    gp2: String(assessment.group2_defects ?? 0),
+    less12: '0',
+    pods: String(pods),
+    husks: String(husks),
+    stones: String(derivedStones),
+    robustaInArabica: '0',
+    discretion: isArabica ? '500' : '0',
+  };
+};
+
+const calculateAdminPrice = (
+  inputs: AdminCalculatorInputs,
+  coffeeType?: string,
+): AdminCalculatorResults => {
+  const refPrice = parseInputNumber(inputs.refPrice);
+  const moisture = parseInputNumber(inputs.moisture);
+  const gp1 = parseInputNumber(inputs.gp1);
+  const gp2 = parseInputNumber(inputs.gp2);
+  const less12 = parseInputNumber(inputs.less12);
+  const pods = parseInputNumber(inputs.pods);
+  const husks = parseInputNumber(inputs.husks);
+  const stones = parseInputNumber(inputs.stones);
+  const robustaInArabica = parseInputNumber(inputs.robustaInArabica);
+  const discretion = parseInputNumber(inputs.discretion);
+  const totalFm = pods + husks + stones;
+  const isArabica = coffeeType?.toLowerCase().includes('arabica');
+
+  if (!refPrice) {
+    return {
+      finalPrice: null,
+      outturnPrice: null,
+      outturn: null,
+      cleanD14: null,
+      fm: totalFm,
+      rejectFinal: false,
+      note: 'Add a reference price to calculate the final price.',
+    };
+  }
+
+  if (!isArabica) {
+    const totalDefects = gp1 + gp2 + less12 + totalFm;
+    const outturn = 100 - totalDefects;
+    const moistureDeductionPercent = Math.max(0, moisture - 15);
+    const totalDeductionPercent = less12 + totalFm + moistureDeductionPercent;
+    const deductionPerKg = (refPrice * totalDeductionPercent) / 100 + discretion;
+    const actualPricePerKg = Math.max(0, refPrice - deductionPerKg);
+    const isRejected = totalFm > 6;
+
+    return {
+      finalPrice: isRejected ? null : actualPricePerKg,
+      outturnPrice: null,
+      outturn,
+      cleanD14: null,
+      fm: totalFm,
+      rejectFinal: isRejected,
+      note: isRejected
+        ? `Rejected: Foreign matter ${totalFm.toFixed(1)}% exceeds 6%.`
+        : `Deduction/kg: UGX ${Math.round(deductionPerKg).toLocaleString('en-UG')}`,
+    };
+  }
+
+  const over = (value: number, limit: number) => Math.max(0, value - limit);
+  const cleanD14 =
+    100 -
+    over(moisture, 14) -
+    over(gp1, 4) -
+    over(gp2, 10) -
+    over(less12, 1) -
+    robustaInArabica;
+
+  const outturnRejected = less12 > 3 || robustaInArabica > 3 || gp1 > 12;
+  const outturn = outturnRejected
+    ? null
+    : 100 -
+      over(moisture, 14) -
+      over(gp1, 4) -
+      over(gp2, 10) -
+      pods -
+      husks -
+      stones -
+      over(less12, 1) -
+      robustaInArabica;
+
+  const moistPenalty = moisture >= 14 ? over(moisture, 14) * refPrice * 0.02 : 0;
+  const gp1Penalty = over(gp1, 4) * 50;
+  const gp2Penalty = over(gp2, 10) * 20;
+  const d14LowPenalty = cleanD14 < 78 ? (78 - cleanD14) * 50 : 0;
+  const d14HighBonus = cleanD14 > 82 ? (cleanD14 - 82) * 50 : 0;
+  const rejectFinal = moisture > 16.5 || gp1 > 12 || gp2 > 25 || less12 > 3 || totalFm > 6 || pods > 6 || husks > 6 || stones > 6 || robustaInArabica > 3;
+
+  const outturnPrice = rejectFinal
+    ? null
+    : refPrice +
+      Math.min(((gp1 <= 1 && gp2 <= 5 && moisture <= 13 && cleanD14 >= 80 && less12 <= 1 && robustaInArabica === 0) ? 2000 : 0) + d14HighBonus, 2000) -
+      moistPenalty -
+      gp1Penalty -
+      gp2Penalty -
+      d14LowPenalty +
+      d14HighBonus -
+      over(less12, 1) * 30 -
+      robustaInArabica * 100 +
+      discretion;
+
+  const finalPrice = rejectFinal
+    ? null
+    : refPrice +
+      Math.min(((gp1 <= 1 && gp2 <= 5 && moisture <= 13 && cleanD14 >= 80 && less12 <= 1 && pods === 0 && husks === 0 && stones === 0 && robustaInArabica === 0) ? 2000 : 0) + d14HighBonus, 2000) -
+      moistPenalty -
+      gp1Penalty -
+      gp2Penalty -
+      d14LowPenalty +
+      d14HighBonus -
+      (pods * 100 + husks * 150 + stones * 150) -
+      over(less12, 1) * 40 -
+      robustaInArabica * 100 +
+      discretion;
+
+  let note = 'Standard/Penalty Price Applied';
+  if (robustaInArabica > 3) note = `Rejected: Robusta in Arabica exceeds 3% (${robustaInArabica.toFixed(1)}%).`;
+  else if (gp1 > 12) note = `Rejected: GP1 defects exceed 12% (${gp1.toFixed(1)}%).`;
+  else if (rejectFinal) note = 'Rejected by quality thresholds.';
+  else if (gp1 <= 1 && gp2 <= 5 && moisture <= 13 && cleanD14 >= 80 && less12 <= 1 && pods === 0 && husks === 0 && stones === 0 && robustaInArabica === 0) note = 'Bonus: Premium Price Applied';
+
+  return {
+    finalPrice,
+    outturnPrice,
+    outturn,
+    cleanD14,
+    fm: totalFm,
+    rejectFinal,
+    note,
+  };
+};
 
 const AdminQualityPricingReview = () => {
   const [assessments, setAssessments] = useState<PendingAssessment[]>([]);
