@@ -300,15 +300,31 @@ const AdminQualityPricingReview = () => {
   }, [fetchPendingAssessments]);
 
   const openReview = (assessment: PendingAssessment) => {
+    const startingCalculatorPrice = assessment.coffee_record?.coffee_type
+      ? calculatorPrice ?? undefined
+      : undefined;
+
     setSelectedAssessment(assessment);
     setFinalPrice(assessment.suggested_price);
     setAdminComments('');
     setCalculatorPrice(null);
+    setCalculatorInputs(buildCalculatorInputs(assessment, startingCalculatorPrice));
     setReviewModalOpen(true);
     if (assessment.coffee_record?.coffee_type) {
       fetchCalculatorPrice(assessment.coffee_record.coffee_type);
     }
   };
+
+  const adminCalculation = useMemo(
+    () => calculateAdminPrice(calculatorInputs, selectedAssessment?.coffee_record?.coffee_type),
+    [calculatorInputs, selectedAssessment?.coffee_record?.coffee_type],
+  );
+
+  useEffect(() => {
+    if (selectedAssessment && calculatorPrice) {
+      setCalculatorInputs((prev) => ({ ...prev, refPrice: String(calculatorPrice) }));
+    }
+  }, [calculatorPrice, selectedAssessment]);
 
   const handleApproveWithPrice = async () => {
     if (!selectedAssessment || !finalPrice) return;
