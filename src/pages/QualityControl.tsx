@@ -71,10 +71,12 @@ const QualityControl = () => {
 
   const { prices, refreshPrices } = usePrices();
   const { toast } = useToast();
-  const { hasPermission, employee } = useAuth();
+  const { employee, isAdmin } = useAuth();
   const access = useRoleBasedAccess();
   const { highlightConfig, isHighlighted } = useSearchHighlight();
   const readOnly = !access.canManageQuality;
+  const canAccessAdminPriceCalculator =
+    !!employee && employee.department === "Quality Control" && isAdmin();
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("pending");
   const [isRefreshing, setIsRefreshing] = useState(false);
