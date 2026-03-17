@@ -43,6 +43,7 @@ import ArabicaPriceCalculator from "@/components/milling/ArabicaPriceCalculator"
 import QualityPriceCalculator from "@/components/quality/QualityPriceCalculator";
 import QuickAnalysesList from "@/components/quality/QuickAnalysesList";
 import QualityAssessmentReports from "@/components/quality/QualityAssessmentReports";
+import AdminQualityPricingReview from "@/components/admin/AdminQualityPricingReview";
 import { cn } from "@/lib/utils";
 
 const QualityControl = () => {
