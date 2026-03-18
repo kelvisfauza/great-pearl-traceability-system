@@ -4173,6 +4173,7 @@ export type Database = {
           id: string
           interest_rate: number
           is_defaulted: boolean | null
+          is_topup: boolean | null
           loan_amount: number
           loan_type: string
           missed_installments: number | null
@@ -4180,6 +4181,7 @@ export type Database = {
           next_deduction_date: string | null
           original_loan_amount: number | null
           paid_amount: number | null
+          parent_loan_id: string | null
           penalty_amount: number | null
           remaining_balance: number
           repayment_frequency: string
@@ -4219,6 +4221,7 @@ export type Database = {
           id?: string
           interest_rate: number
           is_defaulted?: boolean | null
+          is_topup?: boolean | null
           loan_amount: number
           loan_type?: string
           missed_installments?: number | null
@@ -4226,6 +4229,7 @@ export type Database = {
           next_deduction_date?: string | null
           original_loan_amount?: number | null
           paid_amount?: number | null
+          parent_loan_id?: string | null
           penalty_amount?: number | null
           remaining_balance: number
           repayment_frequency?: string
@@ -4265,6 +4269,7 @@ export type Database = {
           id?: string
           interest_rate?: number
           is_defaulted?: boolean | null
+          is_topup?: boolean | null
           loan_amount?: number
           loan_type?: string
           missed_installments?: number | null
@@ -4272,6 +4277,7 @@ export type Database = {
           next_deduction_date?: string | null
           original_loan_amount?: number | null
           paid_amount?: number | null
+          parent_loan_id?: string | null
           penalty_amount?: number | null
           remaining_balance?: number
           repayment_frequency?: string
@@ -4282,7 +4288,15 @@ export type Database = {
           updated_at?: string
           weekly_installment?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "loans_parent_loan_id_fkey"
+            columns: ["parent_loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       login_tokens: {
         Row: {

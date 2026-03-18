@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Banknote, Clock, Shield, Users, AlertTriangle, CheckCircle, XCircle, CreditCard, Download, Printer, Phone, Loader2, FileText, Eye, ShieldOff, Wallet, HandCoins } from 'lucide-react';
+import { Banknote, Clock, Shield, Users, AlertTriangle, CheckCircle, XCircle, CreditCard, Download, Printer, Phone, Loader2, FileText, Eye, ShieldOff, Wallet, HandCoins, ArrowUpCircle } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import AdminLoanTracker from '@/components/loans/AdminLoanTracker';
 import { Textarea } from '@/components/ui/textarea';
@@ -89,6 +89,13 @@ const QuickLoans = () => {
   const [newGuarantorId, setNewGuarantorId] = useState('');
   const [showCounterOfferDialog, setShowCounterOfferDialog] = useState(false);
   const [counterOfferLoan, setCounterOfferLoan] = useState<any>(null);
+  const [showTopUpDialog, setShowTopUpDialog] = useState(false);
+  const [topUpLoan, setTopUpLoan] = useState<any>(null);
+  const [topUpAmount, setTopUpAmount] = useState('');
+  const [topUpGuarantorId, setTopUpGuarantorId] = useState('');
+  const [topUpDuration, setTopUpDuration] = useState('');
+  const [topUpType, setTopUpType] = useState<LoanType>('quick');
+  const [topUpFrequency, setTopUpFrequency] = useState<RepaymentFrequency>('weekly');
 
   // Form state
   const [loanAmount, setLoanAmount] = useState('');
@@ -543,8 +550,26 @@ const QuickLoans = () => {
         }
         await supabase.from('loan_repayments').insert(repayments);
 
-        // Add to borrower's wallet via ledger (full principal amount)
-        const disbursedAmount = loan.loan_amount;
+        // For top-up loans: close parent loan and only disburse the additional amount
+        const isTopUp = !!(loan as any).is_topup;
+        const parentLoanId = (loan as any).parent_loan_id;
+        
+        if (isTopUp && parentLoanId) {
+          // Close the parent loan (mark as topped_up)
+          await supabase.from('loans').update({
+            status: 'topped_up',
+            remaining_balance: 0,
+          } as any).eq('id', parentLoanId);
+          
+          // Delete remaining installments for parent loan
+          await supabase.from('loan_repayments').delete()
+            .eq('loan_id', parentLoanId)
+            .eq('status', 'pending');
+        }
+
+        // Add to borrower's wallet via ledger
+        // For top-ups: only disburse the additional amount (original_loan_amount), not the rolled-over balance
+        const disbursedAmount = isTopUp ? (loan.original_loan_amount || loan.loan_amount) : loan.loan_amount;
         const borrowerEmployee = await supabase.from('employees').select('auth_user_id').eq('email', loan.employee_email).single();
         if (borrowerEmployee.data?.auth_user_id) {
           await supabase.from('ledger_entries').insert({
@@ -552,7 +577,15 @@ const QuickLoans = () => {
             entry_type: 'DEPOSIT',
             amount: disbursedAmount,
             reference: 'LOAN-DISBURSE-' + loanId,
-            metadata: { loan_id: loanId, duration_months: loan.duration_months, interest_rate: loan.interest_rate, principal: loan.loan_amount, source: 'loan_disbursement', repayment_frequency: loan.repayment_frequency || 'monthly' },
+            metadata: { 
+              loan_id: loanId, 
+              duration_months: loan.duration_months, 
+              interest_rate: loan.interest_rate, 
+              principal: loan.loan_amount, 
+              source: isTopUp ? 'loan_topup_disbursement' : 'loan_disbursement',
+              repayment_frequency: loan.repayment_frequency || 'monthly',
+              ...(isTopUp ? { parent_loan_id: parentLoanId, additional_amount: disbursedAmount, rolled_over_balance: loan.loan_amount - disbursedAmount } : {}),
+            },
           });
         }
 
@@ -571,10 +604,14 @@ const QuickLoans = () => {
         const scheduleLabel = isWeekly ? 'week' : 'month';
         const numInstallments = isWeekly ? (loan.total_weeks || Math.ceil((loan.duration_months * 30) / 7)) : loan.duration_months;
 
+        const smsMsg = isTopUp 
+          ? `Dear ${loan.employee_name}, your loan TOP-UP has been approved! Additional UGX ${disbursedAmount.toLocaleString()} disbursed to your wallet. New total loan: UGX ${loan.loan_amount.toLocaleString()}. Repayment: UGX ${installmentAmount.toLocaleString()}/${scheduleLabel} for ${numInstallments} ${scheduleLabel}(s). First deduction: ${repaymentDateStr}. Total repayable: UGX ${loan.total_repayable.toLocaleString()}. - Great Agro Coffee`
+          : `Dear ${loan.employee_name}, your loan of UGX ${loan.loan_amount.toLocaleString()} has been approved and disbursed to your wallet. Repayment: UGX ${installmentAmount.toLocaleString()}/${scheduleLabel} for ${numInstallments} ${scheduleLabel}(s). First deduction: ${repaymentDateStr}. Total repayable: UGX ${loan.total_repayable.toLocaleString()}. - Great Agro Coffee`;
+
         await supabase.functions.invoke('send-sms', {
           body: {
             phone: loan.employee_phone,
-            message: `Dear ${loan.employee_name}, your loan of UGX ${loan.loan_amount.toLocaleString()} has been approved and disbursed to your wallet. Repayment: UGX ${installmentAmount.toLocaleString()}/${scheduleLabel} for ${numInstallments} ${scheduleLabel}(s). First deduction: ${repaymentDateStr}. Total repayable: UGX ${loan.total_repayable.toLocaleString()}. - Great Agro Coffee`,
+            message: smsMsg,
             userName: loan.employee_name,
             messageType: 'loan_approved'
           }
@@ -977,6 +1014,115 @@ const QuickLoans = () => {
     }
   };
 
+  // Handle loan top-up request
+  const handleLoanTopUp = async () => {
+    if (!topUpLoan || !employee || !topUpGuarantorId) return;
+    const additionalAmount = parseFloat(topUpAmount) || 0;
+    const months = parseInt(topUpDuration) || topUpLoan.duration_months;
+    
+    if (additionalAmount <= 0) {
+      toast({ title: "Error", description: "Enter a valid top-up amount", variant: "destructive" });
+      return;
+    }
+
+    const guarantor = employees.find(e => e.id === topUpGuarantorId);
+    if (!guarantor) return;
+    if (guarantor.email === employee.email) {
+      toast({ title: "Error", description: "You cannot be your own guarantor", variant: "destructive" });
+      return;
+    }
+
+    // Check for pending loans
+    const pendingLoans = myLoans.filter(l => ['pending_guarantor', 'pending_admin', 'approved', 'disbursed', 'counter_offered'].includes(l.status));
+    if (pendingLoans.length > 0) {
+      toast({ title: "Blocked", description: "You have a pending loan application. Wait for it to be processed first.", variant: "destructive" });
+      return;
+    }
+
+    // New principal = remaining balance of old loan + additional amount
+    const newPrincipal = (topUpLoan.remaining_balance || 0) + additionalAmount;
+    
+    // Check 2x salary limit
+    const salary = employee.salary || 0;
+    const maxLoan = salary * 2;
+    // Exclude the parent loan's outstanding from the calculation since it's being rolled over
+    const otherOutstanding = myLoans
+      .filter(l => l.id !== topUpLoan.id && ['active', 'pending_guarantor', 'pending_admin'].includes(l.status))
+      .reduce((s: number, l: any) => s + (l.remaining_balance || l.loan_amount || 0), 0);
+    const availableLimit = Math.max(0, maxLoan - otherOutstanding);
+    
+    if (newPrincipal > availableLimit) {
+      toast({ title: "Error", description: `Top-up total UGX ${newPrincipal.toLocaleString()} exceeds your available limit of UGX ${availableLimit.toLocaleString()}`, variant: "destructive" });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const freq = topUpFrequency;
+      const lType = topUpType;
+      const monthlyRate = LOAN_TYPE_CONFIG[lType].monthlyRate;
+      const maxRate = LOAN_TYPE_CONFIG[lType].maxRate;
+      const dailyRate = monthlyRate / 30;
+      const interest = getCappedInterest(newPrincipal, monthlyRate, months, maxRate);
+      const total = newPrincipal + interest;
+      const { totalWeeks } = getLoanSchedule(months);
+      const numInstallments = freq === 'weekly' ? totalWeeks : freq === 'bullet' ? 1 : months;
+      const installment = Math.ceil(total / numInstallments);
+      const approvalCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+      const { error } = await supabase.from('loans').insert({
+        employee_id: employee.id,
+        employee_email: employee.email,
+        employee_name: employee.name,
+        employee_phone: employee.phone || '',
+        loan_amount: newPrincipal,
+        interest_rate: monthlyRate,
+        daily_interest_rate: dailyRate,
+        total_repayable: Math.ceil(total),
+        duration_months: months,
+        monthly_installment: freq === 'weekly' ? null : Math.ceil(installment),
+        weekly_installment: freq === 'weekly' ? Math.ceil(installment) : null,
+        total_weeks: freq === 'weekly' ? totalWeeks : null,
+        remaining_balance: Math.ceil(total),
+        repayment_frequency: freq,
+        status: 'pending_guarantor',
+        guarantor_id: guarantor.id,
+        guarantor_email: guarantor.email,
+        guarantor_name: guarantor.name,
+        guarantor_phone: guarantor.phone || '',
+        guarantor_approval_code: approvalCode,
+        loan_type: lType,
+        is_topup: true,
+        parent_loan_id: topUpLoan.id,
+        original_loan_amount: additionalAmount,
+      } as any);
+
+      if (error) throw error;
+
+      // SMS to guarantor
+      await supabase.functions.invoke('send-sms', {
+        body: {
+          phone: guarantor.phone,
+          message: `Dear ${guarantor.name}, ${employee.name} has requested you to guarantee a LOAN TOP-UP of UGX ${newPrincipal.toLocaleString()} (existing balance UGX ${topUpLoan.remaining_balance?.toLocaleString()} + additional UGX ${additionalAmount.toLocaleString()}) for ${months} month(s). Your approval code is: ${approvalCode}. Log into the system to approve or decline.`,
+          userName: guarantor.name,
+          messageType: 'loan_guarantor_request'
+        }
+      });
+
+      toast({ title: "Top-Up Requested", description: "Guarantor has been notified via SMS" });
+      setShowTopUpDialog(false);
+      setTopUpLoan(null);
+      setTopUpAmount('');
+      setTopUpGuarantorId('');
+      setTopUpDuration('');
+      fetchLoans();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // Accept or decline a counter offer from admin
   const handleCounterOfferResponse = async (loanId: string, accept: boolean) => {
     if (!employee) return;
@@ -1248,6 +1394,7 @@ const QuickLoans = () => {
       defaulted: { variant: 'destructive', label: 'Defaulted' },
       guarantor_declined: { variant: 'destructive', label: 'Guarantor Declined' },
       counter_offered: { variant: 'secondary', label: 'Counter Offer' },
+      topped_up: { variant: 'outline', label: 'Topped Up' },
     };
     const s = map[status] || { variant: 'outline' as const, label: status };
     return <Badge variant={s.variant}>{s.label}</Badge>;
@@ -1577,6 +1724,117 @@ const QuickLoans = () => {
               </DialogContent>
             </Dialog>
 
+            {/* Loan Top-Up Dialog */}
+            <Dialog open={showTopUpDialog} onOpenChange={(open) => { setShowTopUpDialog(open); if (!open) { setTopUpLoan(null); setTopUpAmount(''); setTopUpGuarantorId(''); } }}>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2"><ArrowUpCircle className="h-5 w-5" /> Loan Top-Up</DialogTitle>
+                </DialogHeader>
+                {topUpLoan && (() => {
+                  const additionalAmt = parseFloat(topUpAmount) || 0;
+                  const newPrincipal = (topUpLoan.remaining_balance || 0) + additionalAmt;
+                  const months = parseInt(topUpDuration) || topUpLoan.duration_months;
+                  const monthlyRate = LOAN_TYPE_CONFIG[topUpType].monthlyRate;
+                  const maxRate = LOAN_TYPE_CONFIG[topUpType].maxRate;
+                  const interest = getCappedInterest(newPrincipal, monthlyRate, months, maxRate);
+                  const newTotal = newPrincipal + interest;
+                  const { totalWeeks } = getLoanSchedule(months);
+                  const numInstallments = topUpFrequency === 'weekly' ? totalWeeks : topUpFrequency === 'bullet' ? 1 : months;
+                  const installment = numInstallments > 0 ? Math.ceil(newTotal / numInstallments) : 0;
+
+                  // Calculate available limit excluding the parent loan
+                  const salary = employee?.salary || 0;
+                  const maxLoan = salary * 2;
+                  const otherOutstanding = myLoans
+                    .filter(l => l.id !== topUpLoan.id && ['active', 'pending_guarantor', 'pending_admin'].includes(l.status))
+                    .reduce((s: number, l: any) => s + (l.remaining_balance || l.loan_amount || 0), 0);
+                  const availableLimit = Math.max(0, maxLoan - otherOutstanding);
+
+                  return (
+                    <div className="space-y-4">
+                      <Card className="bg-muted/50">
+                        <CardContent className="p-4 space-y-1 text-sm">
+                          <div className="flex justify-between"><span className="text-muted-foreground">Current Loan Balance:</span><span className="font-semibold text-destructive">UGX {(topUpLoan.remaining_balance || 0).toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Original Amount:</span><span>UGX {topUpLoan.loan_amount?.toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Current Guarantor:</span><span>{topUpLoan.guarantor_name}</span></div>
+                        </CardContent>
+                      </Card>
+
+                      <div>
+                        <Label>Additional Amount (UGX)</Label>
+                        <Input type="number" value={topUpAmount} onChange={e => setTopUpAmount(e.target.value)} placeholder="e.g. 200000" />
+                        <p className="text-xs text-muted-foreground mt-1">Max additional: UGX {Math.max(0, availableLimit - (topUpLoan.remaining_balance || 0)).toLocaleString()}</p>
+                      </div>
+
+                      <div>
+                        <Label>Loan Type</Label>
+                        <Select value={topUpType} onValueChange={(v) => {
+                          const lt = v as LoanType;
+                          setTopUpType(lt);
+                          setTopUpFrequency(LOAN_TYPE_CONFIG[lt].frequencies[0]);
+                        }}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(LOAN_TYPE_CONFIG).map(([key, cfg]) => (
+                              <SelectItem key={key} value={key}>{cfg.label} – {cfg.description}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label>Duration (months)</Label>
+                        <Input type="number" value={topUpDuration} onChange={e => setTopUpDuration(e.target.value)} placeholder="e.g. 2" min="1" max="12" />
+                      </div>
+
+                      {topUpType === 'long_term' && (
+                        <div>
+                          <Label>Repayment Method</Label>
+                          <Select value={topUpFrequency} onValueChange={(v) => setTopUpFrequency(v as RepaymentFrequency)}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                              <SelectItem value="bullet">Bullet (lump sum at end)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      <div>
+                        <Label>Select Guarantor</Label>
+                        <Select value={topUpGuarantorId} onValueChange={setTopUpGuarantorId}>
+                          <SelectTrigger><SelectValue placeholder="Choose a guarantor" /></SelectTrigger>
+                          <SelectContent>
+                            {employees.filter(e => e.email !== employee?.email).map(e => (
+                              <SelectItem key={e.id} value={e.id}>{e.name} ({e.department})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {additionalAmt > 0 && (
+                        <Card className="border-primary/30 bg-primary/5">
+                          <CardContent className="p-4 space-y-1 text-sm">
+                            <div className="text-xs font-semibold text-primary mb-2">Top-Up Summary</div>
+                            <div className="flex justify-between"><span>Existing Balance:</span><span>UGX {(topUpLoan.remaining_balance || 0).toLocaleString()}</span></div>
+                            <div className="flex justify-between"><span>Additional Amount:</span><span>+ UGX {additionalAmt.toLocaleString()}</span></div>
+                            <div className="flex justify-between font-semibold border-t pt-1"><span>New Principal:</span><span>UGX {newPrincipal.toLocaleString()}</span></div>
+                            <div className="flex justify-between"><span>Interest ({monthlyRate}%/mo × {months}mo):</span><span>UGX {Math.ceil(interest).toLocaleString()}</span></div>
+                            <div className="flex justify-between font-bold text-primary border-t pt-1"><span>New Total Repayable:</span><span>UGX {Math.ceil(newTotal).toLocaleString()}</span></div>
+                            <div className="flex justify-between text-muted-foreground"><span>{topUpFrequency === 'weekly' ? 'Weekly' : topUpFrequency === 'bullet' ? 'Bullet' : 'Monthly'} Installment:</span><span>UGX {installment.toLocaleString()}</span></div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      <Button onClick={handleLoanTopUp} disabled={submitting || !topUpAmount || !topUpGuarantorId || !topUpDuration} className="w-full">
+                        {submitting ? 'Submitting...' : 'Submit Top-Up Request'}
+                      </Button>
+                    </div>
+                  );
+                })()}
+              </DialogContent>
+            </Dialog>
+
             {/* Counter Offer Dialog */}
             <Dialog open={showCounterOfferDialog} onOpenChange={(open) => { setShowCounterOfferDialog(open); if (!open) setCounterOfferLoan(null); }}>
               <DialogContent className="max-w-md">
@@ -1833,6 +2091,7 @@ const QuickLoans = () => {
                           <TableCell className="text-sm">
                             {new Date(loan.created_at).toLocaleDateString()}
                             {loan.loan_type === 'long_term' && <Badge variant="secondary" className="ml-1 text-[10px]">Long-term</Badge>}
+                            {loan.is_topup && <Badge variant="outline" className="ml-1 text-[10px] border-primary text-primary">Top-Up</Badge>}
                           </TableCell>
                           <TableCell>UGX {loan.loan_amount?.toLocaleString()}</TableCell>
                           <TableCell>{loan.duration_months}mo {loan.repayment_frequency === 'weekly' ? `(${loan.total_weeks || '?'}wks)` : ''}</TableCell>
@@ -1869,6 +2128,17 @@ const QuickLoans = () => {
                                     setShowWalletRepayDialog(true);
                                   }}>
                                     <Wallet className="mr-1 h-3 w-3" /> Pay from Wallet
+                                  </Button>
+                                  <Button size="sm" variant="outline" className="border-primary text-primary" onClick={() => {
+                                    setTopUpLoan(loan);
+                                    setTopUpAmount('');
+                                    setTopUpGuarantorId('');
+                                    setTopUpDuration(String(loan.duration_months));
+                                    setTopUpType((loan.loan_type || 'quick') as LoanType);
+                                    setTopUpFrequency((loan.repayment_frequency || 'weekly') as RepaymentFrequency);
+                                    setShowTopUpDialog(true);
+                                  }}>
+                                    <ArrowUpCircle className="mr-1 h-3 w-3" /> Top Up
                                   </Button>
                                 </>
                               )}
@@ -1934,7 +2204,10 @@ const QuickLoans = () => {
                             </TableCell>
                             <TableCell className="text-xs">UGX {(emp?.salary || 0).toLocaleString()}</TableCell>
                             <TableCell className="text-xs">UGX {Math.max(0, limit.walletBal).toLocaleString()}</TableCell>
-                            <TableCell>UGX {loan.loan_amount?.toLocaleString()}</TableCell>
+                            <TableCell>
+                              UGX {loan.loan_amount?.toLocaleString()}
+                              {loan.is_topup && <Badge variant="outline" className="ml-1 text-[10px] border-primary text-primary">Top-Up</Badge>}
+                            </TableCell>
                             <TableCell>{loan.duration_months}mo {loan.repayment_frequency === 'weekly' ? `(${loan.total_weeks || '?'}wks, ${(loan.daily_interest_rate || 0).toFixed(2)}%/day)` : `(${loan.interest_rate}%)`}</TableCell>
                             <TableCell>UGX {loan.total_repayable?.toLocaleString()}</TableCell>
                             <TableCell className="text-xs font-medium text-green-600">UGX {limit.availableLimit.toLocaleString()}</TableCell>
