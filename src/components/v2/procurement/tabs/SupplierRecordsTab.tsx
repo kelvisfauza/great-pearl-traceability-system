@@ -115,19 +115,14 @@ const SupplierRecordsTab = () => {
             <TableBody>
               {filtered.map((s: any) => (
                 <TableRow key={s.id}>
-                  <TableCell className="font-mono text-xs">{s.supplier_code || '—'}</TableCell>
+                  <TableCell className="font-mono text-xs">{s.code || '—'}</TableCell>
                   <TableCell className="font-medium">{s.name}</TableCell>
                   <TableCell>
                     {s.phone ? <span className="flex items-center gap-1 text-xs"><Phone className="h-3 w-3" />{s.phone}</span> : <span className="text-muted-foreground">—</span>}
                   </TableCell>
-                  <TableCell>
-                    {s.location ? <span className="flex items-center gap-1 text-xs"><MapPin className="h-3 w-3" />{s.location}</span> : <span className="text-muted-foreground">—</span>}
-                  </TableCell>
+                  <TableCell className="text-xs">{s.origin || '—'}</TableCell>
                   <TableCell className="text-xs">{s.bank_name || <span className="text-red-500">Missing</span>}</TableCell>
                   <TableCell className="text-xs font-mono">{s.account_number || <span className="text-red-500">Missing</span>}</TableCell>
-                  <TableCell>
-                    <Badge variant={s.status === 'active' ? 'default' : 'secondary'}>{s.status || 'active'}</Badge>
-                  </TableCell>
                   <TableCell>
                     <Button variant="ghost" size="sm" onClick={() => handleEditBank(s)}>
                       <Landmark className="h-3.5 w-3.5 mr-1" />Bank
