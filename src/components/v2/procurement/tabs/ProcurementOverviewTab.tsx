@@ -14,7 +14,7 @@ const ProcurementOverviewTab = () => {
       const weekAgo = subDays(new Date(), 7).toISOString();
 
       const [suppliers, buyerContracts, supplierContracts, bookings, todayRecords, weekRecords, sales] = await Promise.all([
-        supabase.from('suppliers').select('id, name, status, bank_name, account_number', { count: 'exact' }),
+        supabase.from('suppliers').select('id, name, bank_name, account_number', { count: 'exact' }),
         supabase.from('buyer_contracts').select('*').order('created_at', { ascending: false }),
         supabase.from('supplier_contracts').select('*', { count: 'exact' }).eq('status', 'Active'),
         supabase.from('coffee_bookings').select('*').in('status', ['active', 'partially_fulfilled']),
