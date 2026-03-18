@@ -42,6 +42,7 @@ import V2DepartmentRouter from "./components/v2/V2DepartmentRouter";
 import V2CoffeeReceipts from "./pages/v2/store/CoffeeReceipts";
 import V2PendingLots from "./pages/v2/quality/PendingLots";
 import V2AssessLot from "./pages/v2/quality/AssessLot";
+import V2QualityDepartment from "./pages/v2/quality/QualityDepartment";
 import V2InventoryIndex from "./pages/v2/inventory/Index";
 import V2SalesIndex from "./pages/v2/sales/Index";
 import V2AdminDashboard from "./pages/v2/admin/Dashboard";
@@ -150,7 +151,7 @@ const App: React.ComponentType = () => {
                 <Route path="/v2" element={<ProtectedRoute><V2DepartmentRouter /></ProtectedRoute>} />
                 <Route path="/v2/admin" element={<ProtectedRoute requiredRoles={["Administrator", "Super Admin"]}><V2AdminDashboard /></ProtectedRoute>} />
                 <Route path="/v2/store" element={<ProtectedRoute requiredPermissions={["Store Management"]}><V2CoffeeReceipts /></ProtectedRoute>} />
-                <Route path="/v2/quality" element={<ProtectedRoute requiredPermissions={["Quality Control"]}><V2PendingLots /></ProtectedRoute>} />
+                <Route path="/v2/quality" element={<ProtectedRoute requiredPermissions={["Quality Control"]}><V2QualityDepartment /></ProtectedRoute>} />
                 <Route path="/v2/quality/assess/:id" element={<ProtectedRoute requiredPermissions={["Quality Control"]}><V2AssessLot /></ProtectedRoute>} />
                 <Route path="/v2/inventory" element={<ProtectedRoute requiredPermissions={["Inventory", "Store Management"]}><V2InventoryIndex /></ProtectedRoute>} />
                 <Route path="/v2/sales" element={<ProtectedRoute requiredPermissions={["Sales Marketing"]}><V2SalesIndex /></ProtectedRoute>} />

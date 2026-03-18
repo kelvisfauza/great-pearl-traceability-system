@@ -941,6 +941,45 @@ export type Database = {
         }
         Relationships: []
       }
+      calibration_logs: {
+        Row: {
+          actual_value: number
+          calibration_date: string
+          created_at: string | null
+          device_name: string
+          done_by: string
+          expected_value: number
+          id: string
+          notes: string | null
+          status: string
+          variance: number | null
+        }
+        Insert: {
+          actual_value: number
+          calibration_date?: string
+          created_at?: string | null
+          device_name: string
+          done_by: string
+          expected_value: number
+          id?: string
+          notes?: string | null
+          status?: string
+          variance?: number | null
+        }
+        Update: {
+          actual_value?: number
+          calibration_date?: string
+          created_at?: string | null
+          device_name?: string
+          done_by?: string
+          expected_value?: number
+          id?: string
+          notes?: string | null
+          status?: string
+          variance?: number | null
+        }
+        Relationships: []
+      }
       calls: {
         Row: {
           caller_id: string
@@ -1693,6 +1732,42 @@ export type Database = {
           description?: string
           id?: string
           task_type?: string
+        }
+        Relationships: []
+      }
+      defect_library: {
+        Row: {
+          added_by: string
+          category: string
+          created_at: string | null
+          defect_name: string
+          description: string | null
+          id: string
+          image_url: string | null
+          severity: string
+          updated_at: string | null
+        }
+        Insert: {
+          added_by: string
+          category: string
+          created_at?: string | null
+          defect_name: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          severity?: string
+          updated_at?: string | null
+        }
+        Update: {
+          added_by?: string
+          category?: string
+          created_at?: string | null
+          defect_name?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          severity?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -5987,6 +6062,238 @@ export type Database = {
         }
         Relationships: []
       }
+      quality_daily_checklists: {
+        Row: {
+          batch_reviews_count: number | null
+          calibration_done: boolean | null
+          checklist_date: string
+          completion_percentage: number | null
+          created_at: string | null
+          daily_report_submitted: boolean | null
+          employee_email: string
+          employee_name: string
+          id: string
+          reevaluations_count: number | null
+          supplier_analysis_updated: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          batch_reviews_count?: number | null
+          calibration_done?: boolean | null
+          checklist_date?: string
+          completion_percentage?: number | null
+          created_at?: string | null
+          daily_report_submitted?: boolean | null
+          employee_email: string
+          employee_name: string
+          id?: string
+          reevaluations_count?: number | null
+          supplier_analysis_updated?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          batch_reviews_count?: number | null
+          calibration_done?: boolean | null
+          checklist_date?: string
+          completion_percentage?: number | null
+          created_at?: string | null
+          daily_report_submitted?: boolean | null
+          employee_email?: string
+          employee_name?: string
+          id?: string
+          reevaluations_count?: number | null
+          supplier_analysis_updated?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      quality_performance_tracking: {
+        Row: {
+          accuracy_score: number | null
+          assessments_count: number | null
+          created_at: string | null
+          employee_email: string
+          employee_name: string
+          id: string
+          issues_flagged: number | null
+          overall_score: number | null
+          period_end: string
+          period_start: string
+          reevaluations_count: number | null
+          reports_submitted: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          accuracy_score?: number | null
+          assessments_count?: number | null
+          created_at?: string | null
+          employee_email: string
+          employee_name: string
+          id?: string
+          issues_flagged?: number | null
+          overall_score?: number | null
+          period_end: string
+          period_start: string
+          reevaluations_count?: number | null
+          reports_submitted?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          accuracy_score?: number | null
+          assessments_count?: number | null
+          created_at?: string | null
+          employee_email?: string
+          employee_name?: string
+          id?: string
+          issues_flagged?: number | null
+          overall_score?: number | null
+          period_end?: string
+          period_start?: string
+          reevaluations_count?: number | null
+          reports_submitted?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      quality_recommendations: {
+        Row: {
+          created_at: string | null
+          expected_impact: string | null
+          id: string
+          issue_identified: string
+          recommendation: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_by: string
+          supplier_id: string | null
+          supplier_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expected_impact?: string | null
+          id?: string
+          issue_identified: string
+          recommendation: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_by: string
+          supplier_id?: string | null
+          supplier_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expected_impact?: string | null
+          id?: string
+          issue_identified?: string
+          recommendation?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_by?: string
+          supplier_id?: string | null
+          supplier_name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quality_recommendations_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quality_reevaluations: {
+        Row: {
+          batch_number: string
+          comment: string | null
+          created_at: string | null
+          evaluated_at: string | null
+          evaluated_by: string
+          id: string
+          moisture_variance: number | null
+          new_fm: number | null
+          new_group1: number | null
+          new_group2: number | null
+          new_husks: number | null
+          new_moisture: number
+          new_outturn: number
+          new_pods: number | null
+          original_assessment_id: string
+          original_fm: number | null
+          original_group1: number | null
+          original_group2: number | null
+          original_husks: number | null
+          original_moisture: number | null
+          original_outturn: number | null
+          original_pods: number | null
+          outturn_variance: number | null
+        }
+        Insert: {
+          batch_number: string
+          comment?: string | null
+          created_at?: string | null
+          evaluated_at?: string | null
+          evaluated_by: string
+          id?: string
+          moisture_variance?: number | null
+          new_fm?: number | null
+          new_group1?: number | null
+          new_group2?: number | null
+          new_husks?: number | null
+          new_moisture: number
+          new_outturn: number
+          new_pods?: number | null
+          original_assessment_id: string
+          original_fm?: number | null
+          original_group1?: number | null
+          original_group2?: number | null
+          original_husks?: number | null
+          original_moisture?: number | null
+          original_outturn?: number | null
+          original_pods?: number | null
+          outturn_variance?: number | null
+        }
+        Update: {
+          batch_number?: string
+          comment?: string | null
+          created_at?: string | null
+          evaluated_at?: string | null
+          evaluated_by?: string
+          id?: string
+          moisture_variance?: number | null
+          new_fm?: number | null
+          new_group1?: number | null
+          new_group2?: number | null
+          new_husks?: number | null
+          new_moisture?: number
+          new_outturn?: number
+          new_pods?: number | null
+          original_assessment_id?: string
+          original_fm?: number | null
+          original_group1?: number | null
+          original_group2?: number | null
+          original_husks?: number | null
+          original_moisture?: number | null
+          original_outturn?: number | null
+          original_pods?: number | null
+          outturn_variance?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quality_reevaluations_original_assessment_id_fkey"
+            columns: ["original_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "quality_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quick_analyses: {
         Row: {
           actual_ott: number | null
@@ -7504,6 +7811,63 @@ export type Database = {
           },
         ]
       }
+      training_simulations: {
+        Row: {
+          batch_number: string
+          coffee_type: string
+          completed_at: string | null
+          correct_decision: string | null
+          correct_price: number | null
+          created_at: string | null
+          id: string
+          is_correct: boolean | null
+          score: number | null
+          simulated_defects: Json | null
+          simulated_moisture: number
+          simulated_outturn: number
+          trainee_decision: string | null
+          trainee_email: string
+          trainee_name: string
+          trainee_price: number | null
+        }
+        Insert: {
+          batch_number: string
+          coffee_type?: string
+          completed_at?: string | null
+          correct_decision?: string | null
+          correct_price?: number | null
+          created_at?: string | null
+          id?: string
+          is_correct?: boolean | null
+          score?: number | null
+          simulated_defects?: Json | null
+          simulated_moisture: number
+          simulated_outturn: number
+          trainee_decision?: string | null
+          trainee_email: string
+          trainee_name: string
+          trainee_price?: number | null
+        }
+        Update: {
+          batch_number?: string
+          coffee_type?: string
+          completed_at?: string | null
+          correct_decision?: string | null
+          correct_price?: number | null
+          created_at?: string | null
+          id?: string
+          is_correct?: boolean | null
+          score?: number | null
+          simulated_defects?: Json | null
+          simulated_moisture?: number
+          simulated_outturn?: number
+          trainee_decision?: string | null
+          trainee_email?: string
+          trainee_name?: string
+          trainee_price?: number | null
+        }
+        Relationships: []
+      }
       transfer_reversal_requests: {
         Row: {
           amount: number
@@ -7969,6 +8333,48 @@ export type Database = {
           updated_at?: string | null
           valid_until?: string | null
           workstation?: string | null
+        }
+        Relationships: []
+      }
+      warehouse_quality_monitoring: {
+        Row: {
+          batch_number: string
+          created_at: string | null
+          current_moisture: number
+          humidity: number | null
+          id: string
+          mold_risk: string
+          monitored_by: string
+          remarks: string | null
+          storage_date: string
+          temperature: number | null
+          weight_loss_estimate: number | null
+        }
+        Insert: {
+          batch_number: string
+          created_at?: string | null
+          current_moisture: number
+          humidity?: number | null
+          id?: string
+          mold_risk?: string
+          monitored_by: string
+          remarks?: string | null
+          storage_date?: string
+          temperature?: number | null
+          weight_loss_estimate?: number | null
+        }
+        Update: {
+          batch_number?: string
+          created_at?: string | null
+          current_moisture?: number
+          humidity?: number | null
+          id?: string
+          mold_risk?: string
+          monitored_by?: string
+          remarks?: string | null
+          storage_date?: string
+          temperature?: number | null
+          weight_loss_estimate?: number | null
         }
         Relationships: []
       }
