@@ -2,7 +2,7 @@ import { useState } from "react";
 import V2Navigation from "@/components/v2/V2Navigation";
 import PriceTicker from "@/components/PriceTicker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShoppingBag, DollarSign, TrendingUp, FileCheck, FileText, Users, ShoppingCart, GitCompare, BookOpen, BarChart3, Landmark } from "lucide-react";
+import { ShoppingBag, DollarSign, TrendingUp, FileCheck, FileText, Users, ShoppingCart, GitCompare, BookOpen, BarChart3, Landmark, Handshake } from "lucide-react";
 import ProcurementOverviewTab from "@/components/v2/procurement/tabs/ProcurementOverviewTab";
 import SupplierRecordsTab from "@/components/v2/procurement/tabs/SupplierRecordsTab";
 import OrderTrackingTab from "@/components/v2/procurement/tabs/OrderTrackingTab";
@@ -12,12 +12,14 @@ import DocumentationTab from "@/components/v2/procurement/tabs/DocumentationTab"
 import CrossDepartmentTab from "@/components/v2/procurement/tabs/CrossDepartmentTab";
 import ProcurementReportsTab from "@/components/v2/procurement/tabs/ProcurementReportsTab";
 import BuyerContractsTab from "@/components/v2/procurement/tabs/BuyerContractsTab";
+import SupplierContractsTab from "@/components/v2/procurement/tabs/SupplierContractsTab";
 import BookingsTab from "@/components/v2/procurement/tabs/BookingsTab";
 import BuyingPriceAnalysisTab from "@/components/v2/procurement/tabs/BuyingPriceAnalysisTab";
 
 const tabs = [
   { id: "overview", label: "Overview", icon: ShoppingBag },
-  { id: "buyer-contracts", label: "Buyer Contracts", icon: FileText },
+  { id: "sales-contracts", label: "Sales Contracts", icon: FileText },
+  { id: "supplier-contracts", label: "Supplier Contracts", icon: Handshake },
   { id: "suppliers", label: "Suppliers", icon: Users },
   { id: "bookings", label: "Bookings", icon: BookOpen },
   { id: "orders", label: "Orders", icon: ShoppingCart },
@@ -54,7 +56,8 @@ const ProcurementDashboard = () => {
                 ))}
               </TabsList>
               <TabsContent value="overview"><ProcurementOverviewTab /></TabsContent>
-              <TabsContent value="buyer-contracts"><BuyerContractsTab /></TabsContent>
+              <TabsContent value="sales-contracts"><BuyerContractsTab /></TabsContent>
+              <TabsContent value="supplier-contracts"><SupplierContractsTab /></TabsContent>
               <TabsContent value="suppliers"><SupplierRecordsTab /></TabsContent>
               <TabsContent value="bookings"><BookingsTab /></TabsContent>
               <TabsContent value="orders"><OrderTrackingTab /></TabsContent>
