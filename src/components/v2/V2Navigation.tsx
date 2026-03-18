@@ -216,18 +216,6 @@ const V2Navigation = () => {
   const location = useLocation();
   const { employee, isAdmin } = useAuth();
 
-  // Get navigation items based on department or admin status
-  const getNavItems = () => {
-    if (isAdmin()) {
-      return ADMIN_NAV;
-    }
-    
-    const department = employee?.department || '';
-    return DEPARTMENT_NAV_CONFIG[department] || [];
-  };
-
-  const navItems = getNavItems();
-
   const hasPermission = (permission?: string) => {
     if (!permission) return true;
     if (isAdmin()) return true;
@@ -235,6 +223,58 @@ const V2Navigation = () => {
     return employee?.permissions?.includes(permission) || 
       employee?.permissions?.some(p => p.startsWith(permission + ':'));
   };
+
+  const mergeNavigationSections = (
+    sections: { section: string; items: { icon: any; label: string; path: string; permission?: string }[] }[]
+  ) => {
+    const sectionMap = new Map<string, { section: string; items: { icon: any; label: string; path: string; permission?: string }[] }>();
+
+    sections.forEach((section) => {
+      const existingSection = sectionMap.get(section.section);
+
+      if (!existingSection) {
+        sectionMap.set(section.section, {
+          section: section.section,
+          items: [...section.items],
+        });
+        return;
+      }
+
+      const existingKeys = new Set(existingSection.items.map((item) => `${item.path}-${item.label}`));
+      section.items.forEach((item) => {
+        const key = `${item.path}-${item.label}`;
+        if (!existingKeys.has(key)) {
+          existingSection.items.push(item);
+          existingKeys.add(key);
+        }
+      });
+    });
+
+    return Array.from(sectionMap.values());
+  };
+
+  // Get navigation items based on department and granted module permissions
+  const getNavItems = () => {
+    if (isAdmin()) {
+      return ADMIN_NAV;
+    }
+    
+    const department = employee?.department || '';
+    const departmentSections = DEPARTMENT_NAV_CONFIG[department] || [];
+
+    const permissionSections = Object.values(DEPARTMENT_NAV_CONFIG).flatMap((sections) =>
+      sections.flatMap((section) => {
+        const permittedItems = section.items.filter((item) => hasPermission(item.permission));
+        return permittedItems.length > 0
+          ? [{ section: section.section, items: permittedItems }]
+          : [];
+      })
+    );
+
+    return mergeNavigationSections([...departmentSections, ...permissionSections]);
+  };
+
+  const navItems = getNavItems();
 
   return (
     <Card>
