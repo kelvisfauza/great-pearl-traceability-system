@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Search, FileText, Package, TrendingUp, Plus, Pencil, Upload } from "lucide-react";
 import { format, isPast, parseISO } from "date-fns";
 import BuyerContractFormDialog from "../dialogs/BuyerContractFormDialog";
-import ContractFileUpload from "@/components/contracts/ContractFileUpload";
+import { ContractFileUpload } from "@/components/contracts/ContractFileUpload";
 import type { BuyerContract } from "@/hooks/useBuyerContracts";
 
 const BuyerContractsTab = () => {
