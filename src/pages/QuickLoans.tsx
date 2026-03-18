@@ -1394,6 +1394,7 @@ const QuickLoans = () => {
       defaulted: { variant: 'destructive', label: 'Defaulted' },
       guarantor_declined: { variant: 'destructive', label: 'Guarantor Declined' },
       counter_offered: { variant: 'secondary', label: 'Counter Offer' },
+      topped_up: { variant: 'outline', label: 'Topped Up' },
     };
     const s = map[status] || { variant: 'outline' as const, label: status };
     return <Badge variant={s.variant}>{s.label}</Badge>;
