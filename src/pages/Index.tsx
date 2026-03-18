@@ -91,6 +91,9 @@ const Index = () => {
           </div>
         </div>
 
+        {/* Work Summary - Auto-assigned tasks by department */}
+        <WorkSummaryPanel />
+
         {/* Buying Prices - Below Greeting for All Users */}
         <BuyingRecommendationsCard />
 
