@@ -1526,7 +1526,9 @@ export type Database = {
       contract_files: {
         Row: {
           buyer: string
+          buyer_contract_id: string | null
           buyer_ref: string
+          contract_type: string | null
           created_at: string | null
           file_name: string
           file_url: string
@@ -1536,7 +1538,9 @@ export type Database = {
         }
         Insert: {
           buyer: string
+          buyer_contract_id?: string | null
           buyer_ref: string
+          contract_type?: string | null
           created_at?: string | null
           file_name: string
           file_url: string
@@ -1546,7 +1550,9 @@ export type Database = {
         }
         Update: {
           buyer?: string
+          buyer_contract_id?: string | null
           buyer_ref?: string
+          contract_type?: string | null
           created_at?: string | null
           file_name?: string
           file_url?: string
@@ -1554,7 +1560,15 @@ export type Database = {
           status?: string
           uploaded_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contract_files_buyer_contract_id_fkey"
+            columns: ["buyer_contract_id"]
+            isOneToOne: false
+            referencedRelation: "buyer_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       conversation_participants: {
         Row: {
