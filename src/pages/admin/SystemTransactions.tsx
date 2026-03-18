@@ -126,10 +126,17 @@ const SystemTransactions = () => {
       if (error) throw error;
       const result = typeof data === 'string' ? JSON.parse(data) : data;
       if (!result?.success) throw new Error(result?.error || 'Approval failed');
-      toast({
-        title: 'Reversal Approved',
-        description: `UGX ${result.amount?.toLocaleString()} reversed. ${result.sender_name} refunded, ${result.receiver_name} debited. Both notified.`,
-      });
+      if (result.is_partial) {
+        toast({
+          title: 'Partial Reversal',
+          description: `UGX ${result.refunded_amount?.toLocaleString()} refunded to ${result.sender_name}. UGX ${result.pending_remainder?.toLocaleString()} remains pending (receiver had insufficient funds).`,
+        });
+      } else {
+        toast({
+          title: 'Reversal Approved',
+          description: `UGX ${result.amount?.toLocaleString()} fully reversed. ${result.sender_name} refunded, ${result.receiver_name} debited.`,
+        });
+      }
       setApproveNotes('');
       fetchReversalRequests();
       fetchEntries(limit);
