@@ -5,6 +5,7 @@ import PriceTicker from "@/components/PriceTicker";
 import StoreRealTimeTracker from "@/components/v2/admin/StoreRealTimeTracker";
 import PriceApprovalPanel from "@/components/admin/PriceApprovalPanel";
 import AttendanceOverviewCard from "@/components/admin/AttendanceOverviewCard";
+import LoanStatsCard from "@/components/admin/LoanStatsCard";
 import { Shield, Users, Settings, BarChart3, Package, FlaskConical, Warehouse, ShoppingCart, TrendingUp, FileText, Activity, Banknote, ArrowRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
