@@ -550,8 +550,26 @@ const QuickLoans = () => {
         }
         await supabase.from('loan_repayments').insert(repayments);
 
-        // Add to borrower's wallet via ledger (full principal amount)
-        const disbursedAmount = loan.loan_amount;
+        // For top-up loans: close parent loan and only disburse the additional amount
+        const isTopUp = !!(loan as any).is_topup;
+        const parentLoanId = (loan as any).parent_loan_id;
+        
+        if (isTopUp && parentLoanId) {
+          // Close the parent loan (mark as topped_up)
+          await supabase.from('loans').update({
+            status: 'topped_up',
+            remaining_balance: 0,
+          } as any).eq('id', parentLoanId);
+          
+          // Delete remaining installments for parent loan
+          await supabase.from('loan_repayments').delete()
+            .eq('loan_id', parentLoanId)
+            .eq('status', 'pending');
+        }
+
+        // Add to borrower's wallet via ledger
+        // For top-ups: only disburse the additional amount (original_loan_amount), not the rolled-over balance
+        const disbursedAmount = isTopUp ? (loan.original_loan_amount || loan.loan_amount) : loan.loan_amount;
         const borrowerEmployee = await supabase.from('employees').select('auth_user_id').eq('email', loan.employee_email).single();
         if (borrowerEmployee.data?.auth_user_id) {
           await supabase.from('ledger_entries').insert({
@@ -559,7 +577,15 @@ const QuickLoans = () => {
             entry_type: 'DEPOSIT',
             amount: disbursedAmount,
             reference: 'LOAN-DISBURSE-' + loanId,
-            metadata: { loan_id: loanId, duration_months: loan.duration_months, interest_rate: loan.interest_rate, principal: loan.loan_amount, source: 'loan_disbursement', repayment_frequency: loan.repayment_frequency || 'monthly' },
+            metadata: { 
+              loan_id: loanId, 
+              duration_months: loan.duration_months, 
+              interest_rate: loan.interest_rate, 
+              principal: loan.loan_amount, 
+              source: isTopUp ? 'loan_topup_disbursement' : 'loan_disbursement',
+              repayment_frequency: loan.repayment_frequency || 'monthly',
+              ...(isTopUp ? { parent_loan_id: parentLoanId, additional_amount: disbursedAmount, rolled_over_balance: loan.loan_amount - disbursedAmount } : {}),
+            },
           });
         }
 
