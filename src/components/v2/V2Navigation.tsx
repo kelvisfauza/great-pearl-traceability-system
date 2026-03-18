@@ -231,7 +231,9 @@ const V2Navigation = () => {
   const hasPermission = (permission?: string) => {
     if (!permission) return true;
     if (isAdmin()) return true;
-    return employee?.permissions?.includes(permission);
+    // Check exact match OR any granular permission (e.g. "Procurement:view" matches "Procurement")
+    return employee?.permissions?.includes(permission) || 
+      employee?.permissions?.some(p => p.startsWith(permission + ':'));
   };
 
   return (
