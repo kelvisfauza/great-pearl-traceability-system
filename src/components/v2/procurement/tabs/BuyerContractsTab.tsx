@@ -143,14 +143,9 @@ const BuyerContractsTab = () => {
                     </TableCell>
                     <TableCell>{statusBadge(c)}</TableCell>
                     <TableCell>
-                      <div className="flex gap-1">
-                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingContract(c); setFormOpen(true); }}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setUploadContractId(c.id)}>
-                          <Upload className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
+                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingContract(c); setFormOpen(true); }}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 );
