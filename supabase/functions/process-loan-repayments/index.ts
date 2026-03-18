@@ -186,7 +186,28 @@ Deno.serve(async (req) => {
           const alreadyPaid = salaryThisMonth && salaryThisMonth.length > 0
 
           if (alreadyPaid) {
-            console.log(`  ⚠️ Salary already paid for ${currentMonth} — cannot create salary advance`)
+            // Salary already paid — force overdraft on wallet (negative balance)
+            console.log(`  🔴 Salary already paid for ${currentMonth} — forcing wallet overdraft for UGX ${remainingAmount}`)
+
+            await supabase.from('ledger_entries').insert({
+              user_id: borrowerUserId,
+              entry_type: 'WITHDRAWAL',
+              amount: -remainingAmount,
+              reference: `LOAN-OVERDRAFT-${loan.id}-${repayment.installment_number}`,
+              metadata: {
+                loan_id: loan.id,
+                installment: repayment.installment_number,
+                source: 'overdraft_recovery',
+                penalty_included: penaltyAmount,
+                description: `Loan recovery (overdraft) – salary already paid. Installment #${repayment.installment_number}. Wallet will remain negative until next deposit.`
+              }
+            })
+
+            const overdraftAmount = remainingAmount
+            deductionSources.push(`Overdraft: UGX ${overdraftAmount.toLocaleString()} (wallet negative)`)
+            deductedFromWallet += overdraftAmount
+            remainingAmount = 0
+            console.log(`  ✅ Forced overdraft of UGX ${overdraftAmount} — wallet now negative`)
           } else {
             // Get employee's gross salary to determine available headroom
             const { data: employeeRecord } = await supabase
