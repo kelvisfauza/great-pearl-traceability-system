@@ -17,6 +17,7 @@ import { useSupplierSubcontracts, SupplierSubcontract } from '@/hooks/useSupplie
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { ContractFileUpload } from '@/components/contracts/ContractFileUpload';
 
 interface BuyerContractDetailProps {
   contract: BuyerContract;
@@ -33,6 +34,20 @@ export const BuyerContractDetail = ({ contract, onBack, remainingQuantity: initi
   const [loading, setLoading] = useState(true);
   const [selectedContract, setSelectedContract] = useState<SupplierSubcontract | null>(null);
   const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false);
+  const [contractFiles, setContractFiles] = useState<any[]>([]);
+
+  const fetchContractFiles = async () => {
+    const { data } = await supabase
+      .from('contract_files')
+      .select('id, file_name, file_url, uploaded_at')
+      .eq('buyer_ref', contract.contract_ref)
+      .eq('contract_type', 'buyer');
+    setContractFiles(data || []);
+  };
+
+  useEffect(() => {
+    fetchContractFiles();
+  }, [contract.id]);
   
   const [formData, setFormData] = useState({
     supplier_id: '',
@@ -383,6 +398,17 @@ export const BuyerContractDetail = ({ contract, onBack, remainingQuantity: initi
                 Remaining: {remainingQuantity.toLocaleString()} kg
               </span>
             </div>
+          </div>
+          {/* Contract Documents */}
+          <div className="mt-4">
+            <ContractFileUpload
+              contractId={contract.id}
+              contractRef={contract.contract_ref}
+              buyerName={contract.buyer_name}
+              contractType="buyer"
+              files={contractFiles}
+              onFilesChange={fetchContractFiles}
+            />
           </div>
         </CardContent>
       </Card>
