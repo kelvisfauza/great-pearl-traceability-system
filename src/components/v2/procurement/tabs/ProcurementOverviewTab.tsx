@@ -20,7 +20,7 @@ const ProcurementOverviewTab = () => {
         supabase.from('coffee_bookings').select('*').in('status', ['active', 'partially_fulfilled']),
         supabase.from('coffee_records').select('id, kilograms, supplier_name, coffee_type').gte('created_at', today),
         supabase.from('coffee_records').select('id, kilograms').gte('created_at', weekAgo),
-        supabase.from('sales_transactions').select('id, quantity_kg, total_amount').gte('created_at', weekAgo),
+        supabase.from('sales_transactions').select('id, weight, total_amount').gte('created_at', weekAgo),
       ]);
 
       const activeBuyerContracts = buyerContracts.data?.filter(c => c.status === 'active') || [];
