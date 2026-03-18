@@ -8162,12 +8162,15 @@ export type Database = {
           amount: number
           created_at: string
           id: string
+          is_partial: boolean | null
           ledger_entry_id: string
+          pending_remainder: number | null
           reason: string
           receiver_email: string | null
           receiver_name: string | null
           receiver_user_id: string
           requested_at: string
+          reversed_amount: number | null
           review_notes: string | null
           reviewed_at: string | null
           reviewed_by: string | null
@@ -8181,12 +8184,15 @@ export type Database = {
           amount: number
           created_at?: string
           id?: string
+          is_partial?: boolean | null
           ledger_entry_id: string
+          pending_remainder?: number | null
           reason: string
           receiver_email?: string | null
           receiver_name?: string | null
           receiver_user_id: string
           requested_at?: string
+          reversed_amount?: number | null
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -8200,12 +8206,15 @@ export type Database = {
           amount?: number
           created_at?: string
           id?: string
+          is_partial?: boolean | null
           ledger_entry_id?: string
+          pending_remainder?: number | null
           reason?: string
           receiver_email?: string | null
           receiver_name?: string | null
           receiver_user_id?: string
           requested_at?: string
+          reversed_amount?: number | null
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -9029,10 +9038,9 @@ export type Database = {
     }
     Functions: {
       admin_delete_all_system_data: { Args: never; Returns: Json }
-      approve_transfer_reversal: {
-        Args: { p_notes?: string; p_request_id: string }
-        Returns: Json
-      }
+      approve_transfer_reversal:
+        | { Args: { p_notes?: string; p_request_id: string }; Returns: Json }
+        | { Args: { p_notes?: string; p_request_id: string }; Returns: Json }
       award_activity_reward: {
         Args: { activity_name: string; user_uuid: string }
         Returns: Json
@@ -9217,10 +9225,15 @@ export type Database = {
           request_type: string
         }[]
       }
-      reverse_wallet_transfer: {
-        Args: { p_admin_reason: string; p_ledger_entry_id: string }
-        Returns: Json
-      }
+      reverse_wallet_transfer:
+        | {
+            Args: { p_admin_reason: string; p_ledger_entry_id: string }
+            Returns: Json
+          }
+        | {
+            Args: { p_admin_reason: string; p_ledger_entry_id: string }
+            Returns: Json
+          }
       sync_unlinked_coffee_to_batches: {
         Args: { p_coffee_type?: string }
         Returns: {
