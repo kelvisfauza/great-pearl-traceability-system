@@ -34,7 +34,7 @@ const DailyChecklistTab = () => {
     mutationFn: async () => {
       const { error } = await supabase.from('quality_daily_checklists').insert({
         employee_email: employee?.email || '',
-        employee_name: employee?.full_name || '',
+        employee_name: employee?.name || '',
         checklist_date: today
       });
       if (error) throw error;

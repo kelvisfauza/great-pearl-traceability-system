@@ -80,7 +80,7 @@ const TrainingTab = () => {
 
       const { error } = await supabase.from('training_simulations').insert({
         trainee_email: employee?.email || '',
-        trainee_name: employee?.full_name || '',
+        trainee_name: employee?.name || '',
         batch_number: simulation.batch_number,
         coffee_type: simulation.coffee_type,
         simulated_moisture: simulation.moisture,

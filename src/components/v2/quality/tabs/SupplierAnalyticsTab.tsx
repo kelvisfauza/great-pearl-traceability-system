@@ -40,7 +40,7 @@ const SupplierAnalyticsTab = () => {
   const isLoading = recordsLoading || assessmentsLoading;
 
   // Compute supplier stats
-  const supplierStats: SupplierStats[] = (() => {
+  const supplierStats = (() => {
     if (!records || !assessments) return [];
     const map: Record<string, any> = {};
     
