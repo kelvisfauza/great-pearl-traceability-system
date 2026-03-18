@@ -241,10 +241,17 @@ const SystemTransactions = () => {
       const result = typeof data === 'string' ? JSON.parse(data) : data;
       if (!result?.success) throw new Error(result?.error || 'Reversal failed');
 
-      toast({
-        title: 'Transfer Reversed',
-        description: `UGX ${result.amount?.toLocaleString()} reversed. ${result.sender_name} refunded, ${result.receiver_name} debited. Both notified via SMS.`,
-      });
+      if (result.is_partial) {
+        toast({
+          title: 'Partial Reversal',
+          description: `UGX ${result.refunded_amount?.toLocaleString()} refunded to ${result.sender_name}. UGX ${result.pending_remainder?.toLocaleString()} remains pending (receiver had insufficient funds).`,
+        });
+      } else {
+        toast({
+          title: 'Transfer Reversed',
+          description: `UGX ${result.amount?.toLocaleString()} fully reversed. ${result.sender_name} refunded, ${result.receiver_name} debited.`,
+        });
+      }
       setReverseModal(null);
       setReverseReason('');
       fetchEntries(limit);
