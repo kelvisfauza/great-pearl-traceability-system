@@ -238,20 +238,8 @@ const BuyerContractsTab = () => {
         onSubmit={editingContract ? handleEdit : handleCreate}
       />
 
-      {/* Upload PDF dialog */}
-      {uploadContractId && (
-        <Dialog open={!!uploadContractId} onOpenChange={() => setUploadContractId(null)}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader><DialogTitle>Upload Contract Document</DialogTitle></DialogHeader>
-            <ContractFileUpload contractId={uploadContractId} buyerRef={contracts.find(c => c.id === uploadContractId)?.contract_ref || ""} buyer={contracts.find(c => c.id === uploadContractId)?.buyer_name || ""} />
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   );
 };
-
-// Need these imports for the upload dialog
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default BuyerContractsTab;
