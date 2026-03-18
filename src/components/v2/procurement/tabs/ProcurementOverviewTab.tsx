@@ -31,7 +31,7 @@ const ProcurementOverviewTab = () => {
       const todayKg = todayRecords.data?.reduce((s, r) => s + (r.kilograms || 0), 0) || 0;
       const weekKg = weekRecords.data?.reduce((s, r) => s + (r.kilograms || 0), 0) || 0;
       const weekSalesKg = sales.data?.reduce((s, t) => s + (t.quantity_kg || 0), 0) || 0;
-      const missingBank = suppliers.data?.filter(s => !s.bank_name || !s.account_number).length || 0;
+      const missingBank = suppliers.data?.filter((s: any) => !s.bank_name || !s.account_number).length || 0;
 
       return {
         totalSuppliers: suppliers.count || 0,
