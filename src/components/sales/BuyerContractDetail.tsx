@@ -17,6 +17,7 @@ import { useSupplierSubcontracts, SupplierSubcontract } from '@/hooks/useSupplie
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { ContractFileUpload } from '@/components/contracts/ContractFileUpload';
 
 interface BuyerContractDetailProps {
   contract: BuyerContract;
