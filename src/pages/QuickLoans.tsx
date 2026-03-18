@@ -604,10 +604,14 @@ const QuickLoans = () => {
         const scheduleLabel = isWeekly ? 'week' : 'month';
         const numInstallments = isWeekly ? (loan.total_weeks || Math.ceil((loan.duration_months * 30) / 7)) : loan.duration_months;
 
+        const smsMsg = isTopUp 
+          ? `Dear ${loan.employee_name}, your loan TOP-UP has been approved! Additional UGX ${disbursedAmount.toLocaleString()} disbursed to your wallet. New total loan: UGX ${loan.loan_amount.toLocaleString()}. Repayment: UGX ${installmentAmount.toLocaleString()}/${scheduleLabel} for ${numInstallments} ${scheduleLabel}(s). First deduction: ${repaymentDateStr}. Total repayable: UGX ${loan.total_repayable.toLocaleString()}. - Great Agro Coffee`
+          : `Dear ${loan.employee_name}, your loan of UGX ${loan.loan_amount.toLocaleString()} has been approved and disbursed to your wallet. Repayment: UGX ${installmentAmount.toLocaleString()}/${scheduleLabel} for ${numInstallments} ${scheduleLabel}(s). First deduction: ${repaymentDateStr}. Total repayable: UGX ${loan.total_repayable.toLocaleString()}. - Great Agro Coffee`;
+
         await supabase.functions.invoke('send-sms', {
           body: {
             phone: loan.employee_phone,
-            message: `Dear ${loan.employee_name}, your loan of UGX ${loan.loan_amount.toLocaleString()} has been approved and disbursed to your wallet. Repayment: UGX ${installmentAmount.toLocaleString()}/${scheduleLabel} for ${numInstallments} ${scheduleLabel}(s). First deduction: ${repaymentDateStr}. Total repayable: UGX ${loan.total_repayable.toLocaleString()}. - Great Agro Coffee`,
+            message: smsMsg,
             userName: loan.employee_name,
             messageType: 'loan_approved'
           }
