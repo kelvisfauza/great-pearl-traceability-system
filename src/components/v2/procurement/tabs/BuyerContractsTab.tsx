@@ -5,10 +5,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, Search, FileText, Package, TrendingUp, Plus, Pencil, Upload } from "lucide-react";
+import { Loader2, Search, FileText, Package, TrendingUp, Plus, Pencil } from "lucide-react";
 import { format, isPast, parseISO } from "date-fns";
 import BuyerContractFormDialog from "../dialogs/BuyerContractFormDialog";
-import { ContractFileUpload } from "@/components/contracts/ContractFileUpload";
 import type { BuyerContract } from "@/hooks/useBuyerContracts";
 
 const BuyerContractsTab = () => {
