@@ -1986,6 +1986,17 @@ const QuickLoans = () => {
                                   }}>
                                     <Wallet className="mr-1 h-3 w-3" /> Pay from Wallet
                                   </Button>
+                                  <Button size="sm" variant="outline" className="border-primary text-primary" onClick={() => {
+                                    setTopUpLoan(loan);
+                                    setTopUpAmount('');
+                                    setTopUpGuarantorId('');
+                                    setTopUpDuration(String(loan.duration_months));
+                                    setTopUpType((loan.loan_type || 'quick') as LoanType);
+                                    setTopUpFrequency((loan.repayment_frequency || 'weekly') as RepaymentFrequency);
+                                    setShowTopUpDialog(true);
+                                  }}>
+                                    <ArrowUpCircle className="mr-1 h-3 w-3" /> Top Up
+                                  </Button>
                                 </>
                               )}
                               {loan.status === 'guarantor_declined' && (
