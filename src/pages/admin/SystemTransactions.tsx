@@ -706,7 +706,7 @@ const SystemTransactions = () => {
                     <span className="font-medium text-sm text-destructive">Admin reversal — no approval needed</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    This will immediately reverse the transfer. The sender will be refunded and the receiver debited. Both parties will be notified via SMS.
+                    This will reverse the transfer. If the receiver has insufficient funds, a partial reversal will be applied — only the available balance will be refunded. Both parties will be notified via SMS.
                   </p>
                 </div>
 
