@@ -64,11 +64,10 @@ const SupplierRecordsTab = () => {
 
   const filtered = suppliers?.filter((s: any) =>
     s.name?.toLowerCase().includes(search.toLowerCase()) ||
-    s.supplier_code?.toLowerCase().includes(search.toLowerCase()) ||
+    s.code?.toLowerCase().includes(search.toLowerCase()) ||
     s.phone?.includes(search)
   ) || [];
 
-  const activeCount = suppliers?.filter((s: any) => s.status === 'active').length || 0;
   const withBankDetails = suppliers?.filter((s: any) => s.bank_name && s.account_number).length || 0;
   const missingBank = (suppliers?.length || 0) - withBankDetails;
 
