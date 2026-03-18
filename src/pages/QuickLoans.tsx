@@ -691,7 +691,7 @@ const QuickLoans = () => {
         await supabase.from('loan_repayments').update({
           amount_paid: newPaid,
           status: isPaid ? 'paid' : 'pending',
-          paid_at: isPaid ? new Date().toISOString() : null,
+          paid_date: isPaid ? new Date().toISOString().split('T')[0] : inst.paid_date,
         }).eq('id', inst.id);
         remaining -= payable;
       }
