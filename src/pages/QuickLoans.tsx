@@ -1693,6 +1693,117 @@ const QuickLoans = () => {
               </DialogContent>
             </Dialog>
 
+            {/* Loan Top-Up Dialog */}
+            <Dialog open={showTopUpDialog} onOpenChange={(open) => { setShowTopUpDialog(open); if (!open) { setTopUpLoan(null); setTopUpAmount(''); setTopUpGuarantorId(''); } }}>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2"><ArrowUpCircle className="h-5 w-5" /> Loan Top-Up</DialogTitle>
+                </DialogHeader>
+                {topUpLoan && (() => {
+                  const additionalAmt = parseFloat(topUpAmount) || 0;
+                  const newPrincipal = (topUpLoan.remaining_balance || 0) + additionalAmt;
+                  const months = parseInt(topUpDuration) || topUpLoan.duration_months;
+                  const monthlyRate = LOAN_TYPE_CONFIG[topUpType].monthlyRate;
+                  const maxRate = LOAN_TYPE_CONFIG[topUpType].maxRate;
+                  const interest = getCappedInterest(newPrincipal, monthlyRate, months, maxRate);
+                  const newTotal = newPrincipal + interest;
+                  const { totalWeeks } = getLoanSchedule(months);
+                  const numInstallments = topUpFrequency === 'weekly' ? totalWeeks : topUpFrequency === 'bullet' ? 1 : months;
+                  const installment = numInstallments > 0 ? Math.ceil(newTotal / numInstallments) : 0;
+
+                  // Calculate available limit excluding the parent loan
+                  const salary = employee?.salary || 0;
+                  const maxLoan = salary * 2;
+                  const otherOutstanding = myLoans
+                    .filter(l => l.id !== topUpLoan.id && ['active', 'pending_guarantor', 'pending_admin'].includes(l.status))
+                    .reduce((s: number, l: any) => s + (l.remaining_balance || l.loan_amount || 0), 0);
+                  const availableLimit = Math.max(0, maxLoan - otherOutstanding);
+
+                  return (
+                    <div className="space-y-4">
+                      <Card className="bg-muted/50">
+                        <CardContent className="p-4 space-y-1 text-sm">
+                          <div className="flex justify-between"><span className="text-muted-foreground">Current Loan Balance:</span><span className="font-semibold text-destructive">UGX {(topUpLoan.remaining_balance || 0).toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Original Amount:</span><span>UGX {topUpLoan.loan_amount?.toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Current Guarantor:</span><span>{topUpLoan.guarantor_name}</span></div>
+                        </CardContent>
+                      </Card>
+
+                      <div>
+                        <Label>Additional Amount (UGX)</Label>
+                        <Input type="number" value={topUpAmount} onChange={e => setTopUpAmount(e.target.value)} placeholder="e.g. 200000" />
+                        <p className="text-xs text-muted-foreground mt-1">Max additional: UGX {Math.max(0, availableLimit - (topUpLoan.remaining_balance || 0)).toLocaleString()}</p>
+                      </div>
+
+                      <div>
+                        <Label>Loan Type</Label>
+                        <Select value={topUpType} onValueChange={(v) => {
+                          const lt = v as LoanType;
+                          setTopUpType(lt);
+                          setTopUpFrequency(LOAN_TYPE_CONFIG[lt].frequencies[0]);
+                        }}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(LOAN_TYPE_CONFIG).map(([key, cfg]) => (
+                              <SelectItem key={key} value={key}>{cfg.label} – {cfg.description}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label>Duration (months)</Label>
+                        <Input type="number" value={topUpDuration} onChange={e => setTopUpDuration(e.target.value)} placeholder="e.g. 2" min="1" max="12" />
+                      </div>
+
+                      {topUpType === 'long_term' && (
+                        <div>
+                          <Label>Repayment Method</Label>
+                          <Select value={topUpFrequency} onValueChange={(v) => setTopUpFrequency(v as RepaymentFrequency)}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                              <SelectItem value="bullet">Bullet (lump sum at end)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      <div>
+                        <Label>Select Guarantor</Label>
+                        <Select value={topUpGuarantorId} onValueChange={setTopUpGuarantorId}>
+                          <SelectTrigger><SelectValue placeholder="Choose a guarantor" /></SelectTrigger>
+                          <SelectContent>
+                            {employees.filter(e => e.email !== employee?.email).map(e => (
+                              <SelectItem key={e.id} value={e.id}>{e.name} ({e.department})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {additionalAmt > 0 && (
+                        <Card className="border-primary/30 bg-primary/5">
+                          <CardContent className="p-4 space-y-1 text-sm">
+                            <div className="text-xs font-semibold text-primary mb-2">Top-Up Summary</div>
+                            <div className="flex justify-between"><span>Existing Balance:</span><span>UGX {(topUpLoan.remaining_balance || 0).toLocaleString()}</span></div>
+                            <div className="flex justify-between"><span>Additional Amount:</span><span>+ UGX {additionalAmt.toLocaleString()}</span></div>
+                            <div className="flex justify-between font-semibold border-t pt-1"><span>New Principal:</span><span>UGX {newPrincipal.toLocaleString()}</span></div>
+                            <div className="flex justify-between"><span>Interest ({monthlyRate}%/mo × {months}mo):</span><span>UGX {Math.ceil(interest).toLocaleString()}</span></div>
+                            <div className="flex justify-between font-bold text-primary border-t pt-1"><span>New Total Repayable:</span><span>UGX {Math.ceil(newTotal).toLocaleString()}</span></div>
+                            <div className="flex justify-between text-muted-foreground"><span>{topUpFrequency === 'weekly' ? 'Weekly' : topUpFrequency === 'bullet' ? 'Bullet' : 'Monthly'} Installment:</span><span>UGX {installment.toLocaleString()}</span></div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      <Button onClick={handleLoanTopUp} disabled={submitting || !topUpAmount || !topUpGuarantorId || !topUpDuration} className="w-full">
+                        {submitting ? 'Submitting...' : 'Submit Top-Up Request'}
+                      </Button>
+                    </div>
+                  );
+                })()}
+              </DialogContent>
+            </Dialog>
+
             {/* Counter Offer Dialog */}
             <Dialog open={showCounterOfferDialog} onOpenChange={(open) => { setShowCounterOfferDialog(open); if (!open) setCounterOfferLoan(null); }}>
               <DialogContent className="max-w-md">
