@@ -131,7 +131,7 @@ const SupplierRecordsTab = () => {
                 </TableRow>
               ))}
               {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">No suppliers found</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">No suppliers found</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
