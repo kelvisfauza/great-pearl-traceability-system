@@ -640,7 +640,7 @@ const SystemTransactions = () => {
                           <div className="text-xs mt-1 p-2 bg-blue-50 dark:bg-blue-950/20 rounded border border-blue-200 dark:border-blue-800">
                             <span className="font-medium">Reversed:</span> UGX {req.reversed_amount?.toLocaleString()} · <span className="font-medium text-amber-600">Pending:</span> UGX {req.pending_remainder?.toLocaleString()}
                           </div>
-                        )
+                        )}
                         <p className="text-sm text-muted-foreground mt-1">
                           <strong>Reason:</strong> {req.reason}
                         </p>
