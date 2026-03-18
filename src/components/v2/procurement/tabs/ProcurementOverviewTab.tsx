@@ -35,7 +35,7 @@ const ProcurementOverviewTab = () => {
 
       return {
         totalSuppliers: suppliers.count || 0,
-        activeSuppliers: suppliers.data?.filter(s => s.status === 'active').length || 0,
+        activeSuppliers: suppliers.data?.length || 0,
         missingBank,
         buyerContracts: buyerContracts.data || [],
         activeBuyerContracts: activeBuyerContracts.length,
