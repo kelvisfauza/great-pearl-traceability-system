@@ -107,10 +107,9 @@ const SupplierRecordsTab = () => {
               <TableHead>Code</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Phone</TableHead>
-              <TableHead>Location</TableHead>
+              <TableHead>Origin</TableHead>
               <TableHead>Bank Name</TableHead>
               <TableHead>Account</TableHead>
-              <TableHead>Status</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow></TableHeader>
             <TableBody>
