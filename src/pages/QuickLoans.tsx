@@ -89,6 +89,13 @@ const QuickLoans = () => {
   const [newGuarantorId, setNewGuarantorId] = useState('');
   const [showCounterOfferDialog, setShowCounterOfferDialog] = useState(false);
   const [counterOfferLoan, setCounterOfferLoan] = useState<any>(null);
+  const [showTopUpDialog, setShowTopUpDialog] = useState(false);
+  const [topUpLoan, setTopUpLoan] = useState<any>(null);
+  const [topUpAmount, setTopUpAmount] = useState('');
+  const [topUpGuarantorId, setTopUpGuarantorId] = useState('');
+  const [topUpDuration, setTopUpDuration] = useState('');
+  const [topUpType, setTopUpType] = useState<LoanType>('quick');
+  const [topUpFrequency, setTopUpFrequency] = useState<RepaymentFrequency>('weekly');
 
   // Form state
   const [loanAmount, setLoanAmount] = useState('');
