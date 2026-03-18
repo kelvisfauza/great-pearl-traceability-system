@@ -275,10 +275,42 @@ Deno.serve(async (req) => {
                   // The amount will be deducted when payroll runs on the 27th.
                 }
               } else {
-                console.log(`  ⚠️ Salary headroom too low (UGX ${Math.max(0, netAvailable)}) — skipping salary recovery`)
+                // Salary headroom too low — force overdraft for the rest
+                console.log(`  ⚠️ Salary headroom too low (UGX ${Math.max(0, netAvailable)}) — forcing overdraft for UGX ${remainingAmount}`)
+                await supabase.from('ledger_entries').insert({
+                  user_id: borrowerUserId,
+                  entry_type: 'WITHDRAWAL',
+                  amount: -remainingAmount,
+                  reference: `LOAN-OVERDRAFT-${loan.id}-${repayment.installment_number}`,
+                  metadata: {
+                    loan_id: loan.id,
+                    installment: repayment.installment_number,
+                    source: 'overdraft_no_headroom',
+                    description: `Loan recovery (overdraft) – salary headroom exhausted. Installment #${repayment.installment_number}.`
+                  }
+                })
+                deductionSources.push(`Overdraft: UGX ${remainingAmount.toLocaleString()} (wallet negative)`)
+                deductedFromWallet += remainingAmount
+                remainingAmount = 0
               }
             } else {
-              console.log(`  ⚠️ No salary record found for ${borrowerEmail} — skipping salary recovery`)
+              // No salary record — force overdraft
+              console.log(`  ⚠️ No salary record for ${borrowerEmail} — forcing overdraft for UGX ${remainingAmount}`)
+              await supabase.from('ledger_entries').insert({
+                user_id: borrowerUserId,
+                entry_type: 'WITHDRAWAL',
+                amount: -remainingAmount,
+                reference: `LOAN-OVERDRAFT-${loan.id}-${repayment.installment_number}`,
+                metadata: {
+                  loan_id: loan.id,
+                  installment: repayment.installment_number,
+                  source: 'overdraft_no_salary',
+                  description: `Loan recovery (overdraft) – no salary on file. Installment #${repayment.installment_number}.`
+                }
+              })
+              deductionSources.push(`Overdraft: UGX ${remainingAmount.toLocaleString()} (wallet negative)`)
+              deductedFromWallet += remainingAmount
+              remainingAmount = 0
             }
           }
         }
