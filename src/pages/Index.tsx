@@ -14,6 +14,7 @@ import BuyingRecommendationsCard from '@/components/admin/BuyingRecommendationsC
 import UpcomingBookingsWidget from '@/components/admin/UpcomingBookingsWidget';
 import StoreRealTimeTracker from '@/components/v2/admin/StoreRealTimeTracker';
 import HolidayBanner from '@/components/HolidayBanner';
+import WorkSummaryPanel from '@/components/dashboard/WorkSummaryPanel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   Coffee, 
@@ -89,6 +90,9 @@ const Index = () => {
             </div>
           </div>
         </div>
+
+        {/* Work Summary - Auto-assigned tasks by department */}
+        <WorkSummaryPanel />
 
         {/* Buying Prices - Below Greeting for All Users */}
         <BuyingRecommendationsCard />
