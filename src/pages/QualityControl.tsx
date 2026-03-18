@@ -338,7 +338,7 @@ const QualityControl = () => {
     setActiveTab("price-calculator");
   };
 
-  const handleEditAssessment = (assessment: any) => {
+  const handleEditAssessment = async (assessment: any) => {
     if (readOnly) {
       toast({
         title: 'View-only mode',
@@ -348,9 +348,37 @@ const QualityControl = () => {
       return;
     }
 
-    // Find the corresponding store record
-    const record = storeRecords.find(r => r.id === assessment.store_record_id);
+    // Find the corresponding store record locally first
+    let record = storeRecords.find(r => r.id === assessment.store_record_id);
     
+    // If not found locally (e.g., status changed after assessment), fetch from database
+    if (!record && assessment.store_record_id) {
+      try {
+        const { data, error } = await supabase
+          .from('coffee_records')
+          .select('*')
+          .eq('id', assessment.store_record_id)
+          .maybeSingle();
+        
+        if (!error && data) {
+          record = {
+            id: data.id,
+            supplier_name: data.supplier_name,
+            coffee_type: data.coffee_type,
+            bags: data.bags,
+            kilograms: data.kilograms,
+            batch_number: data.batch_number,
+            date: data.date,
+            status: data.status,
+            created_at: data.created_at,
+            updated_at: data.updated_at
+          } as any;
+        }
+      } catch (err) {
+        console.error('Failed to fetch coffee record for edit:', err);
+      }
+    }
+
     if (!record) {
       toast({
         title: "Error",
