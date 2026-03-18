@@ -77,14 +77,10 @@ const SupplierRecordsTab = () => {
         <Users className="h-5 w-5" />Supplier Records & Bank Details
       </h3>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <Card><CardContent className="p-4">
           <p className="text-sm text-muted-foreground">Total Suppliers</p>
           <p className="text-2xl font-bold">{suppliers?.length || 0}</p>
-        </CardContent></Card>
-        <Card><CardContent className="p-4">
-          <p className="text-sm text-muted-foreground">Active</p>
-          <p className="text-2xl font-bold text-green-600">{activeCount}</p>
         </CardContent></Card>
         <Card><CardContent className="p-4">
           <p className="text-sm text-muted-foreground">Bank Info Complete</p>
