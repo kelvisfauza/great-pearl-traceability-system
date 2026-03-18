@@ -2091,6 +2091,7 @@ const QuickLoans = () => {
                           <TableCell className="text-sm">
                             {new Date(loan.created_at).toLocaleDateString()}
                             {loan.loan_type === 'long_term' && <Badge variant="secondary" className="ml-1 text-[10px]">Long-term</Badge>}
+                            {loan.is_topup && <Badge variant="outline" className="ml-1 text-[10px] border-primary text-primary">Top-Up</Badge>}
                           </TableCell>
                           <TableCell>UGX {loan.loan_amount?.toLocaleString()}</TableCell>
                           <TableCell>{loan.duration_months}mo {loan.repayment_frequency === 'weekly' ? `(${loan.total_weeks || '?'}wks)` : ''}</TableCell>
