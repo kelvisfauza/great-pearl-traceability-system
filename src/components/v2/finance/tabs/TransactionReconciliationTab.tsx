@@ -9,27 +9,29 @@ const TransactionReconciliationTab = () => {
   const { data: qualityApproved, isLoading: loadingQ } = useQuery({
     queryKey: ['finance-reconcile-quality'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('quality_assessments').select('id, batch_number, status, suggested_price, final_price, created_at')
+      const { data, error } = await supabase.from('quality_assessments')
+        .select('id, batch_number, status, suggested_price, final_price, created_at')
         .in('status', ['approved', 'submitted_to_finance']).order('created_at', { ascending: false }).limit(100);
       if (error) throw error;
       return data;
     }
   });
 
-  const { data: payments, isLoading: loadingP } = useQuery({
-    queryKey: ['finance-reconcile-payments'],
+  const { data: financeLots, isLoading: loadingF } = useQuery({
+    queryKey: ['finance-reconcile-lots'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('supplier_payments').select('batch_number, amount_ugx, payment_date, status');
+      const { data, error } = await supabase.from('finance_coffee_lots').select('quality_assessment_id, finance_status, total_amount_ugx');
       if (error) throw error;
       return data;
     }
   });
 
-  if (loadingQ || loadingP) return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>;
+  if (loadingQ || loadingF) return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>;
 
-  const paidBatches = new Set(payments?.map(p => p.batch_number) || []);
-  const unpaid = qualityApproved?.filter(q => !paidBatches.has(q.batch_number)) || [];
-  const paid = qualityApproved?.filter(q => paidBatches.has(q.batch_number)) || [];
+  const paidIds = new Set(financeLots?.filter(l => l.finance_status === 'PAID').map(l => l.quality_assessment_id) || []);
+  const processedIds = new Set(financeLots?.map(l => l.quality_assessment_id) || []);
+  const unpaid = qualityApproved?.filter(q => !paidIds.has(q.id)) || [];
+  const paid = qualityApproved?.filter(q => paidIds.has(q.id)) || [];
 
   return (
     <div className="space-y-4 mt-4">
@@ -54,7 +56,7 @@ const TransactionReconciliationTab = () => {
                   <TableCell className="font-mono">{q.batch_number}</TableCell>
                   <TableCell><Badge variant="outline">{q.status}</Badge></TableCell>
                   <TableCell>UGX {(q.final_price || q.suggested_price || 0).toLocaleString()}</TableCell>
-                  <TableCell><Badge variant="destructive">Not Paid</Badge></TableCell>
+                  <TableCell><Badge variant="destructive">{processedIds.has(q.id) ? 'Processing' : 'Not Paid'}</Badge></TableCell>
                 </TableRow>
               ))}
               {unpaid.length === 0 && <TableRow><TableCell colSpan={4} className="text-center py-6 text-muted-foreground">All reconciled ✓</TableCell></TableRow>}
