@@ -198,6 +198,9 @@ const ADMIN_NAV = [
       { icon: MapPin, label: "Field Ops", path: "/v2/field-operations" },
       { icon: BarChart3, label: "Analytics", path: "/v2/analytics" },
       { icon: Leaf, label: "EUDR", path: "/v2/eudr" },
+      { icon: ShoppingBag, label: "Procurement", path: "/v2/procurement" },
+      { icon: Truck, label: "Logistics", path: "/v2/logistics" },
+      { icon: Cog, label: "Milling", path: "/v2/milling" },
     ]
   },
   {
