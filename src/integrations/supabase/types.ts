@@ -1473,6 +1473,51 @@ export type Database = {
         }
         Relationships: []
       }
+      contract_allocations: {
+        Row: {
+          allocated_by: string
+          allocated_kg: number
+          contract_id: string
+          created_at: string | null
+          id: string
+          notes: string | null
+          sale_id: string
+        }
+        Insert: {
+          allocated_by: string
+          allocated_kg: number
+          contract_id: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          sale_id: string
+        }
+        Update: {
+          allocated_by?: string
+          allocated_kg?: number
+          contract_id?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          sale_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_allocations_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "buyer_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_allocations_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_approvals: {
         Row: {
           action_type: string

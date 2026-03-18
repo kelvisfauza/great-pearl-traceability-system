@@ -5,20 +5,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, Search, FileText, Package, TrendingUp, Plus, Pencil } from "lucide-react";
+import { Loader2, Search, FileText, Package, TrendingUp, Plus, Pencil, Eye, LinkIcon } from "lucide-react";
 import { format, isPast, parseISO } from "date-fns";
 import BuyerContractFormDialog from "../dialogs/BuyerContractFormDialog";
+import AllocateSaleDialog from "../dialogs/AllocateSaleDialog";
+import ContractDetailDialog from "../dialogs/ContractDetailDialog";
 import type { BuyerContract } from "@/hooks/useBuyerContracts";
 
 const BuyerContractsTab = () => {
-  const { contracts, loading, getRemainingQuantity, createContract, updateContract } = useBuyerContracts();
+  const { contracts, loading, getRemainingQuantity, createContract, updateContract, fetchContracts } = useBuyerContracts();
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editingContract, setEditingContract] = useState<BuyerContract | null>(null);
+  const [allocateContract, setAllocateContract] = useState<BuyerContract | null>(null);
+  const [detailContract, setDetailContract] = useState<BuyerContract | null>(null);
 
   if (loading) return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>;
 
-  // Auto-detect expired contracts
   const getEffectiveStatus = (c: BuyerContract) => {
     if (c.status === 'active' && c.delivery_period_end && isPast(parseISO(c.delivery_period_end))) {
       return 'expired';
@@ -121,6 +124,7 @@ const BuyerContractsTab = () => {
               {filtered.map(c => {
                 const remaining = getRemainingQuantity(c);
                 const fulfillPct = c.total_quantity > 0 ? ((c.allocated_quantity / c.total_quantity) * 100) : 0;
+                const effectiveStatus = getEffectiveStatus(c);
                 return (
                   <TableRow key={c.id}>
                     <TableCell className="font-mono text-xs">{c.contract_ref}</TableCell>
@@ -142,9 +146,31 @@ const BuyerContractsTab = () => {
                     </TableCell>
                     <TableCell>{statusBadge(c)}</TableCell>
                     <TableCell>
-                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingContract(c); setFormOpen(true); }}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        {effectiveStatus === 'active' && remaining > 0 && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7"
+                            title="Allocate sales"
+                            onClick={() => setAllocateContract(c)}
+                          >
+                            <LinkIcon className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          title="View contract details"
+                          onClick={() => setDetailContract(c)}
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingContract(c); setFormOpen(true); }}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -173,9 +199,14 @@ const BuyerContractsTab = () => {
                       Ended {c.delivery_period_end ? format(parseISO(c.delivery_period_end), 'dd MMM yyyy') : '—'}
                     </TableCell>
                     <TableCell>
-                      <Button size="sm" variant="outline" onClick={() => { setEditingContract(c); setFormOpen(true); }}>
-                        <Pencil className="h-3 w-3 mr-1" /> Edit
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="outline" onClick={() => setDetailContract(c)}>
+                          <Eye className="h-3 w-3 mr-1" /> View
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => { setEditingContract(c); setFormOpen(true); }}>
+                          <Pencil className="h-3 w-3 mr-1" /> Edit
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -194,7 +225,7 @@ const BuyerContractsTab = () => {
               <CardContent className="p-0">
                 <Table><TableBody>
                   {completed.slice(0, 5).map(c => (
-                    <TableRow key={c.id}>
+                    <TableRow key={c.id} className="cursor-pointer" onClick={() => setDetailContract(c)}>
                       <TableCell className="font-mono text-xs">{c.contract_ref}</TableCell>
                       <TableCell>{c.buyer_name}</TableCell>
                       <TableCell>{c.total_quantity.toLocaleString()} kg</TableCell>
@@ -231,6 +262,25 @@ const BuyerContractsTab = () => {
         onSubmit={editingContract ? handleEdit : handleCreate}
       />
 
+      {/* Allocate sales dialog */}
+      {allocateContract && (
+        <AllocateSaleDialog
+          open={!!allocateContract}
+          onOpenChange={(v) => !v && setAllocateContract(null)}
+          contract={allocateContract}
+          onAllocated={fetchContracts}
+        />
+      )}
+
+      {/* Contract detail dialog */}
+      {detailContract && (
+        <ContractDetailDialog
+          open={!!detailContract}
+          onOpenChange={(v) => !v && setDetailContract(null)}
+          contract={detailContract}
+          onChanged={fetchContracts}
+        />
+      )}
     </div>
   );
 };
