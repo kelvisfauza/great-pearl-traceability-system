@@ -34,6 +34,20 @@ export const BuyerContractDetail = ({ contract, onBack, remainingQuantity: initi
   const [loading, setLoading] = useState(true);
   const [selectedContract, setSelectedContract] = useState<SupplierSubcontract | null>(null);
   const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false);
+  const [contractFiles, setContractFiles] = useState<any[]>([]);
+
+  const fetchContractFiles = async () => {
+    const { data } = await supabase
+      .from('contract_files')
+      .select('id, file_name, file_url, uploaded_at')
+      .eq('buyer_ref', contract.contract_ref)
+      .eq('contract_type', 'buyer');
+    setContractFiles(data || []);
+  };
+
+  useEffect(() => {
+    fetchContractFiles();
+  }, [contract.id]);
   
   const [formData, setFormData] = useState({
     supplier_id: '',
