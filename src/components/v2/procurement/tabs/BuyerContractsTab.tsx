@@ -4,14 +4,29 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Loader2, Search, FileText, Package, TrendingUp } from "lucide-react";
-import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Loader2, Search, FileText, Package, TrendingUp, Plus, Pencil, Upload } from "lucide-react";
+import { format, isPast, parseISO } from "date-fns";
+import BuyerContractFormDialog from "../dialogs/BuyerContractFormDialog";
+import ContractFileUpload from "@/components/contracts/ContractFileUpload";
+import type { BuyerContract } from "@/hooks/useBuyerContracts";
 
 const BuyerContractsTab = () => {
-  const { contracts, loading, getRemainingQuantity } = useBuyerContracts();
+  const { contracts, loading, getRemainingQuantity, createContract, updateContract } = useBuyerContracts();
   const [search, setSearch] = useState("");
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingContract, setEditingContract] = useState<BuyerContract | null>(null);
+  const [uploadContractId, setUploadContractId] = useState<string | null>(null);
 
   if (loading) return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>;
+
+  // Auto-detect expired contracts
+  const getEffectiveStatus = (c: BuyerContract) => {
+    if (c.status === 'active' && c.delivery_period_end && isPast(parseISO(c.delivery_period_end))) {
+      return 'expired';
+    }
+    return c.status;
+  };
 
   const filtered = contracts.filter(c =>
     c.buyer_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -19,7 +34,8 @@ const BuyerContractsTab = () => {
     c.quality.toLowerCase().includes(search.toLowerCase())
   );
 
-  const active = contracts.filter(c => c.status === 'active');
+  const active = contracts.filter(c => getEffectiveStatus(c) === 'active');
+  const expired = contracts.filter(c => getEffectiveStatus(c) === 'expired');
   const completed = contracts.filter(c => c.status === 'completed');
   const abandoned = contracts.filter(c => c.status === 'abandoned' || c.status === 'cancelled');
   const totalVolume = active.reduce((s, c) => s + c.total_quantity, 0);
@@ -27,11 +43,35 @@ const BuyerContractsTab = () => {
   const remainingVolume = totalVolume - allocatedVolume;
   const totalValue = active.reduce((s, c) => s + (c.total_quantity * c.price_per_kg), 0);
 
+  const handleCreate = async (data: any) => {
+    await createContract(data);
+  };
+
+  const handleEdit = async (data: any) => {
+    if (!editingContract) return;
+    await updateContract(editingContract.id, data);
+    setEditingContract(null);
+  };
+
+  const statusBadge = (c: BuyerContract) => {
+    const status = getEffectiveStatus(c);
+    const variant = status === 'active' ? 'default' :
+      status === 'completed' ? 'secondary' :
+      status === 'expired' ? 'outline' :
+      (status === 'abandoned' || status === 'cancelled') ? 'destructive' : 'outline';
+    return <Badge variant={variant as any} className={status === 'expired' ? 'border-amber-500 text-amber-600' : ''}>{status}</Badge>;
+  };
+
   return (
     <div className="space-y-4 mt-4">
-      <h3 className="text-lg font-semibold flex items-center gap-2">
-        <FileText className="h-5 w-5" /> Sales Contracts (Contracts From Buyers)
-      </h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <FileText className="h-5 w-5" /> Sales Contracts (Contracts From Buyers)
+        </h3>
+        <Button onClick={() => { setEditingContract(null); setFormOpen(true); }} size="sm">
+          <Plus className="h-4 w-4 mr-1" /> New Sales Contract
+        </Button>
+      </div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <Card><CardContent className="p-4">
@@ -41,6 +81,7 @@ const BuyerContractsTab = () => {
         <Card><CardContent className="p-4">
           <p className="text-xs text-muted-foreground">Active</p>
           <p className="text-2xl font-bold text-green-600">{active.length}</p>
+          {expired.length > 0 && <p className="text-xs text-amber-600">{expired.length} expired</p>}
         </CardContent></Card>
         <Card><CardContent className="p-4">
           <p className="text-xs text-muted-foreground">Contracted Volume</p>
@@ -63,7 +104,7 @@ const BuyerContractsTab = () => {
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-sm">All Buyer Contracts ({filtered.length})</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-sm">All Sales Contracts ({filtered.length})</CardTitle></CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader><TableRow>
@@ -76,6 +117,7 @@ const BuyerContractsTab = () => {
               <TableHead>Price/Kg</TableHead>
               <TableHead>Delivery Period</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow></TableHeader>
             <TableBody>
               {filtered.map(c => {
@@ -100,23 +142,55 @@ const BuyerContractsTab = () => {
                         ? `${format(new Date(c.delivery_period_start), 'dd MMM')} - ${format(new Date(c.delivery_period_end), 'dd MMM yy')}`
                         : '—'}
                     </TableCell>
+                    <TableCell>{statusBadge(c)}</TableCell>
                     <TableCell>
-                      <Badge variant={
-                        c.status === 'active' ? 'default' :
-                        c.status === 'completed' ? 'secondary' :
-                        c.status === 'abandoned' || c.status === 'cancelled' ? 'destructive' : 'outline'
-                      }>{c.status}</Badge>
+                      <div className="flex gap-1">
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingContract(c); setFormOpen(true); }}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setUploadContractId(c.id)}>
+                          <Upload className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
               })}
               {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">No buyer contracts found</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center py-6 text-muted-foreground">No sales contracts found</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      {/* Expired contracts warning */}
+      {expired.length > 0 && (
+        <Card className="border-amber-500/30">
+          <CardHeader><CardTitle className="text-sm flex items-center gap-2 text-amber-600">⏰ Expired Contracts ({expired.length})</CardTitle></CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableBody>
+                {expired.map(c => (
+                  <TableRow key={c.id}>
+                    <TableCell className="font-mono text-xs">{c.contract_ref}</TableCell>
+                    <TableCell>{c.buyer_name}</TableCell>
+                    <TableCell>{c.total_quantity.toLocaleString()} kg</TableCell>
+                    <TableCell className="text-xs text-amber-600">
+                      Ended {c.delivery_period_end ? format(parseISO(c.delivery_period_end), 'dd MMM yyyy') : '—'}
+                    </TableCell>
+                    <TableCell>
+                      <Button size="sm" variant="outline" onClick={() => { setEditingContract(c); setFormOpen(true); }}>
+                        <Pencil className="h-3 w-3 mr-1" /> Edit
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Completed & Abandoned summary */}
       {(completed.length > 0 || abandoned.length > 0) && (
@@ -125,17 +199,15 @@ const BuyerContractsTab = () => {
             <Card>
               <CardHeader><CardTitle className="text-sm flex items-center gap-2"><TrendingUp className="h-4 w-4 text-green-500" />Completed ({completed.length})</CardTitle></CardHeader>
               <CardContent className="p-0">
-                <Table>
-                  <TableBody>
-                    {completed.slice(0, 5).map(c => (
-                      <TableRow key={c.id}>
-                        <TableCell className="font-mono text-xs">{c.contract_ref}</TableCell>
-                        <TableCell>{c.buyer_name}</TableCell>
-                        <TableCell>{c.total_quantity.toLocaleString()} kg</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <Table><TableBody>
+                  {completed.slice(0, 5).map(c => (
+                    <TableRow key={c.id}>
+                      <TableCell className="font-mono text-xs">{c.contract_ref}</TableCell>
+                      <TableCell>{c.buyer_name}</TableCell>
+                      <TableCell>{c.total_quantity.toLocaleString()} kg</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody></Table>
               </CardContent>
             </Card>
           )}
@@ -143,24 +215,43 @@ const BuyerContractsTab = () => {
             <Card className="border-destructive/30">
               <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Package className="h-4 w-4 text-red-500" />Abandoned/Cancelled ({abandoned.length})</CardTitle></CardHeader>
               <CardContent className="p-0">
-                <Table>
-                  <TableBody>
-                    {abandoned.slice(0, 5).map(c => (
-                      <TableRow key={c.id}>
-                        <TableCell className="font-mono text-xs">{c.contract_ref}</TableCell>
-                        <TableCell>{c.buyer_name}</TableCell>
-                        <TableCell className="text-xs">{c.notes || '—'}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <Table><TableBody>
+                  {abandoned.slice(0, 5).map(c => (
+                    <TableRow key={c.id}>
+                      <TableCell className="font-mono text-xs">{c.contract_ref}</TableCell>
+                      <TableCell>{c.buyer_name}</TableCell>
+                      <TableCell className="text-xs">{c.notes || '—'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody></Table>
               </CardContent>
             </Card>
           )}
         </div>
       )}
+
+      {/* Create / Edit dialog */}
+      <BuyerContractFormDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        contract={editingContract}
+        onSubmit={editingContract ? handleEdit : handleCreate}
+      />
+
+      {/* Upload PDF dialog */}
+      {uploadContractId && (
+        <Dialog open={!!uploadContractId} onOpenChange={() => setUploadContractId(null)}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader><DialogTitle>Upload Contract Document</DialogTitle></DialogHeader>
+            <ContractFileUpload contractId={uploadContractId} buyerRef={contracts.find(c => c.id === uploadContractId)?.contract_ref || ""} buyer={contracts.find(c => c.id === uploadContractId)?.buyer_name || ""} />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
+
+// Need these imports for the upload dialog
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default BuyerContractsTab;
