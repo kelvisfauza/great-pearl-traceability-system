@@ -984,6 +984,115 @@ const QuickLoans = () => {
     }
   };
 
+  // Handle loan top-up request
+  const handleLoanTopUp = async () => {
+    if (!topUpLoan || !employee || !topUpGuarantorId) return;
+    const additionalAmount = parseFloat(topUpAmount) || 0;
+    const months = parseInt(topUpDuration) || topUpLoan.duration_months;
+    
+    if (additionalAmount <= 0) {
+      toast({ title: "Error", description: "Enter a valid top-up amount", variant: "destructive" });
+      return;
+    }
+
+    const guarantor = employees.find(e => e.id === topUpGuarantorId);
+    if (!guarantor) return;
+    if (guarantor.email === employee.email) {
+      toast({ title: "Error", description: "You cannot be your own guarantor", variant: "destructive" });
+      return;
+    }
+
+    // Check for pending loans
+    const pendingLoans = myLoans.filter(l => ['pending_guarantor', 'pending_admin', 'approved', 'disbursed', 'counter_offered'].includes(l.status));
+    if (pendingLoans.length > 0) {
+      toast({ title: "Blocked", description: "You have a pending loan application. Wait for it to be processed first.", variant: "destructive" });
+      return;
+    }
+
+    // New principal = remaining balance of old loan + additional amount
+    const newPrincipal = (topUpLoan.remaining_balance || 0) + additionalAmount;
+    
+    // Check 2x salary limit
+    const salary = employee.salary || 0;
+    const maxLoan = salary * 2;
+    // Exclude the parent loan's outstanding from the calculation since it's being rolled over
+    const otherOutstanding = myLoans
+      .filter(l => l.id !== topUpLoan.id && ['active', 'pending_guarantor', 'pending_admin'].includes(l.status))
+      .reduce((s: number, l: any) => s + (l.remaining_balance || l.loan_amount || 0), 0);
+    const availableLimit = Math.max(0, maxLoan - otherOutstanding);
+    
+    if (newPrincipal > availableLimit) {
+      toast({ title: "Error", description: `Top-up total UGX ${newPrincipal.toLocaleString()} exceeds your available limit of UGX ${availableLimit.toLocaleString()}`, variant: "destructive" });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const freq = topUpFrequency;
+      const lType = topUpType;
+      const monthlyRate = LOAN_TYPE_CONFIG[lType].monthlyRate;
+      const maxRate = LOAN_TYPE_CONFIG[lType].maxRate;
+      const dailyRate = monthlyRate / 30;
+      const interest = getCappedInterest(newPrincipal, monthlyRate, months, maxRate);
+      const total = newPrincipal + interest;
+      const { totalWeeks } = getLoanSchedule(months);
+      const numInstallments = freq === 'weekly' ? totalWeeks : freq === 'bullet' ? 1 : months;
+      const installment = Math.ceil(total / numInstallments);
+      const approvalCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+      const { error } = await supabase.from('loans').insert({
+        employee_id: employee.id,
+        employee_email: employee.email,
+        employee_name: employee.name,
+        employee_phone: employee.phone || '',
+        loan_amount: newPrincipal,
+        interest_rate: monthlyRate,
+        daily_interest_rate: dailyRate,
+        total_repayable: Math.ceil(total),
+        duration_months: months,
+        monthly_installment: freq === 'weekly' ? null : Math.ceil(installment),
+        weekly_installment: freq === 'weekly' ? Math.ceil(installment) : null,
+        total_weeks: freq === 'weekly' ? totalWeeks : null,
+        remaining_balance: Math.ceil(total),
+        repayment_frequency: freq,
+        status: 'pending_guarantor',
+        guarantor_id: guarantor.id,
+        guarantor_email: guarantor.email,
+        guarantor_name: guarantor.name,
+        guarantor_phone: guarantor.phone || '',
+        guarantor_approval_code: approvalCode,
+        loan_type: lType,
+        is_topup: true,
+        parent_loan_id: topUpLoan.id,
+        original_loan_amount: additionalAmount,
+      } as any);
+
+      if (error) throw error;
+
+      // SMS to guarantor
+      await supabase.functions.invoke('send-sms', {
+        body: {
+          phone: guarantor.phone,
+          message: `Dear ${guarantor.name}, ${employee.name} has requested you to guarantee a LOAN TOP-UP of UGX ${newPrincipal.toLocaleString()} (existing balance UGX ${topUpLoan.remaining_balance?.toLocaleString()} + additional UGX ${additionalAmount.toLocaleString()}) for ${months} month(s). Your approval code is: ${approvalCode}. Log into the system to approve or decline.`,
+          userName: guarantor.name,
+          messageType: 'loan_guarantor_request'
+        }
+      });
+
+      toast({ title: "Top-Up Requested", description: "Guarantor has been notified via SMS" });
+      setShowTopUpDialog(false);
+      setTopUpLoan(null);
+      setTopUpAmount('');
+      setTopUpGuarantorId('');
+      setTopUpDuration('');
+      fetchLoans();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // Accept or decline a counter offer from admin
   const handleCounterOfferResponse = async (loanId: string, accept: boolean) => {
     if (!employee) return;
