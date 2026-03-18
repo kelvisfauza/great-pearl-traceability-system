@@ -604,12 +604,15 @@ const SystemTransactions = () => {
                     <div className="flex items-start gap-4">
                       <div className={`p-2 rounded-full flex-shrink-0 ${
                         req.status === 'pending' ? 'bg-amber-100' :
-                        req.status === 'approved' ? 'bg-green-100' : 'bg-red-100'
+                        req.status === 'approved' ? 'bg-green-100' :
+                        req.status === 'partial' ? 'bg-blue-100' : 'bg-red-100'
                       }`}>
                         {req.status === 'pending' ? (
                           <Clock className="h-4 w-4 text-amber-600" />
                         ) : req.status === 'approved' ? (
                           <CheckCircle className="h-4 w-4 text-green-600" />
+                        ) : req.status === 'partial' ? (
+                          <AlertTriangle className="h-4 w-4 text-blue-600" />
                         ) : (
                           <XCircle className="h-4 w-4 text-red-600" />
                         )}
@@ -627,11 +630,17 @@ const SystemTransactions = () => {
                           <Badge variant="outline" className={`text-xs ${
                             req.status === 'pending' ? 'bg-amber-100 text-amber-800' :
                             req.status === 'approved' ? 'bg-green-100 text-green-800' :
+                            req.status === 'partial' ? 'bg-blue-100 text-blue-800' :
                             'bg-red-100 text-red-800'
                           }`}>
-                            {req.status.charAt(0).toUpperCase() + req.status.slice(1)}
+                            {req.status === 'partial' ? 'Partial' : req.status.charAt(0).toUpperCase() + req.status.slice(1)}
                           </Badge>
                         </div>
+                        {req.is_partial && (
+                          <div className="text-xs mt-1 p-2 bg-blue-50 dark:bg-blue-950/20 rounded border border-blue-200 dark:border-blue-800">
+                            <span className="font-medium">Reversed:</span> UGX {req.reversed_amount?.toLocaleString()} · <span className="font-medium text-amber-600">Pending:</span> UGX {req.pending_remainder?.toLocaleString()}
+                          </div>
+                        )
                         <p className="text-sm text-muted-foreground mt-1">
                           <strong>Reason:</strong> {req.reason}
                         </p>
