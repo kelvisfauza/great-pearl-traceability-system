@@ -147,7 +147,7 @@ const BuyerContractsTab = () => {
                     <TableCell>{statusBadge(c)}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        {effectiveStatus === 'active' && remaining > 0 && (
+                        {(effectiveStatus === 'active' || effectiveStatus === 'expired') && remaining > 0 && (
                           <Button
                             size="icon"
                             variant="ghost"
