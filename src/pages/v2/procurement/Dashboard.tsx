@@ -2,18 +2,24 @@ import { useState } from "react";
 import V2Navigation from "@/components/v2/V2Navigation";
 import PriceTicker from "@/components/PriceTicker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShoppingBag, DollarSign, TrendingUp, FileCheck, FileText } from "lucide-react";
+import { ShoppingBag, DollarSign, TrendingUp, FileCheck, FileText, Users, ShoppingCart, GitCompare } from "lucide-react";
 import ProcurementOverviewTab from "@/components/v2/procurement/tabs/ProcurementOverviewTab";
+import SupplierRecordsTab from "@/components/v2/procurement/tabs/SupplierRecordsTab";
+import OrderTrackingTab from "@/components/v2/procurement/tabs/OrderTrackingTab";
 import PricingVerificationTab from "@/components/v2/procurement/tabs/PricingVerificationTab";
 import SupplierPerformanceTab from "@/components/v2/procurement/tabs/SupplierPerformanceTab";
 import DocumentationTab from "@/components/v2/procurement/tabs/DocumentationTab";
+import CrossDepartmentTab from "@/components/v2/procurement/tabs/CrossDepartmentTab";
 import ProcurementReportsTab from "@/components/v2/procurement/tabs/ProcurementReportsTab";
 
 const tabs = [
   { id: "overview", label: "Overview", icon: ShoppingBag },
+  { id: "suppliers", label: "Suppliers", icon: Users },
+  { id: "orders", label: "Orders", icon: ShoppingCart },
   { id: "pricing", label: "Pricing", icon: DollarSign },
   { id: "performance", label: "Performance", icon: TrendingUp },
-  { id: "docs", label: "Documentation", icon: FileCheck },
+  { id: "docs", label: "Docs", icon: FileCheck },
+  { id: "workflow", label: "Workflow", icon: GitCompare },
   { id: "reports", label: "Reports", icon: FileText },
 ];
 
@@ -26,7 +32,7 @@ const ProcurementDashboard = () => {
         <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Procurement Department</h1>
-            <p className="text-muted-foreground mt-1">Suppliers, pricing & order management</p>
+            <p className="text-muted-foreground mt-1">Suppliers, orders, pricing & cross-department workflow</p>
           </div>
           <PriceTicker />
         </div>
@@ -42,9 +48,12 @@ const ProcurementDashboard = () => {
                 ))}
               </TabsList>
               <TabsContent value="overview"><ProcurementOverviewTab /></TabsContent>
+              <TabsContent value="suppliers"><SupplierRecordsTab /></TabsContent>
+              <TabsContent value="orders"><OrderTrackingTab /></TabsContent>
               <TabsContent value="pricing"><PricingVerificationTab /></TabsContent>
               <TabsContent value="performance"><SupplierPerformanceTab /></TabsContent>
               <TabsContent value="docs"><DocumentationTab /></TabsContent>
+              <TabsContent value="workflow"><CrossDepartmentTab /></TabsContent>
               <TabsContent value="reports"><ProcurementReportsTab /></TabsContent>
             </Tabs>
           </div>
