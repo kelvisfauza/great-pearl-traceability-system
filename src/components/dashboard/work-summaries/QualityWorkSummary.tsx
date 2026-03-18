@@ -22,13 +22,13 @@ const QualityWorkSummary = () => {
         supabase.from("coffee_records").select("*", { count: "exact", head: true }).eq("status", "PENDING"),
         supabase.from("quality_assessments").select("*", { count: "exact", head: true }).gte("assessed_at", `${today}T00:00:00`),
         supabase.from("quality_assessments").select("*", { count: "exact", head: true }).gte("assessed_at", `${yesterdayStr}T00:00:00`).lt("assessed_at", `${today}T00:00:00`),
-        supabase.from("quality_assessments").select("moisture_content").gte("assessed_at", `${today}T00:00:00`),
+        supabase.from("quality_assessments").select("moisture").gte("created_at", `${today}T00:00:00`),
         supabase.from("coffee_records").select("kilograms").not("status", "in", '("sold_out","rejected","QUALITY_REJECTED")').gt("kilograms", 0),
       ]);
 
       const moistureData = avgMoisture.data || [];
       const avgMC = moistureData.length > 0 
-        ? (moistureData.reduce((s, r) => s + (r.moisture_content || 0), 0) / moistureData.length).toFixed(1) 
+        ? (moistureData.reduce((s, r) => s + (r.moisture || 0), 0) / moistureData.length).toFixed(1) 
         : "N/A";
 
       const stock = totalStock.data?.reduce((s, r) => s + (r.kilograms || 0), 0) || 0;
