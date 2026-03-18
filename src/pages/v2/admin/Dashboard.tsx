@@ -134,6 +134,9 @@ const AdminDashboard = () => {
               </Card>
             )}
 
+            {/* Loan Stats */}
+            <LoanStatsCard />
+
             {/* Store Real-Time Tracking */}
             <StoreRealTimeTracker />
 
