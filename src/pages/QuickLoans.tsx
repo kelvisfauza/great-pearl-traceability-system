@@ -318,10 +318,10 @@ const QuickLoans = () => {
       return;
     }
 
-    // Block new loans if user has any active or pending loans - must pay first
-    const activeLoans = myLoans.filter(l => ['pending_guarantor', 'pending_admin', 'approved', 'disbursed', 'active', 'counter_offered'].includes(l.status));
-    if (activeLoans.length > 0) {
-      toast({ title: "Blocked", description: "You already have an active or pending loan. You must fully repay your current loan before requesting a new one.", variant: "destructive" });
+    // Block new loans only if user has a pending (not yet active) application
+    const pendingLoans = myLoans.filter(l => ['pending_guarantor', 'pending_admin', 'approved', 'disbursed', 'counter_offered'].includes(l.status));
+    if (pendingLoans.length > 0) {
+      toast({ title: "Blocked", description: "You have a pending loan application. Wait for it to be processed before requesting a new one.", variant: "destructive" });
       return;
     }
     // Also block if there's a guarantor_declined loan (they should change guarantor instead)
