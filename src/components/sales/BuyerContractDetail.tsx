@@ -399,6 +399,17 @@ export const BuyerContractDetail = ({ contract, onBack, remainingQuantity: initi
               </span>
             </div>
           </div>
+          {/* Contract Documents */}
+          <div className="mt-4">
+            <ContractFileUpload
+              contractId={contract.id}
+              contractRef={contract.contract_ref}
+              buyerName={contract.buyer_name}
+              contractType="buyer"
+              files={contractFiles}
+              onFilesChange={fetchContractFiles}
+            />
+          </div>
         </CardContent>
       </Card>
 
