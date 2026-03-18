@@ -6,8 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, BarChart3, TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
-
-
+const SupplierAnalyticsTab = () => {
   const { data: records, isLoading: recordsLoading } = useQuery({
     queryKey: ['supplier-analytics-records'],
     queryFn: async () => {

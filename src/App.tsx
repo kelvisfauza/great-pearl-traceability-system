@@ -42,6 +42,7 @@ import V2DepartmentRouter from "./components/v2/V2DepartmentRouter";
 import V2CoffeeReceipts from "./pages/v2/store/CoffeeReceipts";
 import V2PendingLots from "./pages/v2/quality/PendingLots";
 import V2AssessLot from "./pages/v2/quality/AssessLot";
+import V2QualityDepartment from "./pages/v2/quality/QualityDepartment";
 import V2InventoryIndex from "./pages/v2/inventory/Index";
 import V2SalesIndex from "./pages/v2/sales/Index";
 import V2AdminDashboard from "./pages/v2/admin/Dashboard";
