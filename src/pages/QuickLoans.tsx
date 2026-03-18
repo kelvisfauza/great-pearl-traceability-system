@@ -2204,7 +2204,10 @@ const QuickLoans = () => {
                             </TableCell>
                             <TableCell className="text-xs">UGX {(emp?.salary || 0).toLocaleString()}</TableCell>
                             <TableCell className="text-xs">UGX {Math.max(0, limit.walletBal).toLocaleString()}</TableCell>
-                            <TableCell>UGX {loan.loan_amount?.toLocaleString()}</TableCell>
+                            <TableCell>
+                              UGX {loan.loan_amount?.toLocaleString()}
+                              {loan.is_topup && <Badge variant="outline" className="ml-1 text-[10px] border-primary text-primary">Top-Up</Badge>}
+                            </TableCell>
                             <TableCell>{loan.duration_months}mo {loan.repayment_frequency === 'weekly' ? `(${loan.total_weeks || '?'}wks, ${(loan.daily_interest_rate || 0).toFixed(2)}%/day)` : `(${loan.interest_rate}%)`}</TableCell>
                             <TableCell>UGX {loan.total_repayable?.toLocaleString()}</TableCell>
                             <TableCell className="text-xs font-medium text-green-600">UGX {limit.availableLimit.toLocaleString()}</TableCell>
