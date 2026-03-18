@@ -4336,6 +4336,66 @@ export type Database = {
         }
         Relationships: []
       }
+      logistics_shipments: {
+        Row: {
+          actual_arrival: string | null
+          buyer_name: string
+          contract_ref: string | null
+          created_at: string
+          destination: string
+          dispatch_date: string | null
+          expected_arrival: string | null
+          id: string
+          notes: string | null
+          origin: string
+          shipment_ref: string
+          status: string
+          total_bags: number
+          total_kg: number
+          transporter: string | null
+          updated_at: string
+          vehicle: string | null
+        }
+        Insert: {
+          actual_arrival?: string | null
+          buyer_name: string
+          contract_ref?: string | null
+          created_at?: string
+          destination: string
+          dispatch_date?: string | null
+          expected_arrival?: string | null
+          id?: string
+          notes?: string | null
+          origin: string
+          shipment_ref: string
+          status?: string
+          total_bags?: number
+          total_kg?: number
+          transporter?: string | null
+          updated_at?: string
+          vehicle?: string | null
+        }
+        Update: {
+          actual_arrival?: string | null
+          buyer_name?: string
+          contract_ref?: string | null
+          created_at?: string
+          destination?: string
+          dispatch_date?: string | null
+          expected_arrival?: string | null
+          id?: string
+          notes?: string | null
+          origin?: string
+          shipment_ref?: string
+          status?: string
+          total_bags?: number
+          total_kg?: number
+          transporter?: string | null
+          updated_at?: string
+          vehicle?: string | null
+        }
+        Relationships: []
+      }
       market_data: {
         Row: {
           change_percentage: number | null
@@ -4833,6 +4893,51 @@ export type Database = {
           },
         ]
       }
+      milling_customer_accounts: {
+        Row: {
+          created_at: string
+          customer_name: string
+          customer_phone: string | null
+          id: string
+          last_visit: string | null
+          notes: string | null
+          outstanding_balance: number
+          total_charged: number
+          total_jobs: number
+          total_milled_kg: number
+          total_paid: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_name: string
+          customer_phone?: string | null
+          id?: string
+          last_visit?: string | null
+          notes?: string | null
+          outstanding_balance?: number
+          total_charged?: number
+          total_jobs?: number
+          total_milled_kg?: number
+          total_paid?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_name?: string
+          customer_phone?: string | null
+          id?: string
+          last_visit?: string | null
+          notes?: string | null
+          outstanding_balance?: number
+          total_charged?: number
+          total_jobs?: number
+          total_milled_kg?: number
+          total_paid?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       milling_customers: {
         Row: {
           address: string | null
@@ -4904,6 +5009,72 @@ export type Database = {
           id?: string
           notes?: string | null
           status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      milling_jobs: {
+        Row: {
+          amount_paid: number
+          balance: number | null
+          coffee_type: string
+          completed_at: string | null
+          created_at: string
+          customer_name: string
+          customer_phone: string | null
+          id: string
+          input_weight_kg: number
+          job_number: string
+          loss_kg: number | null
+          milled_by: string | null
+          notes: string | null
+          output_weight_kg: number | null
+          price_per_kg: number
+          started_at: string | null
+          status: string
+          total_cost: number
+          updated_at: string
+        }
+        Insert: {
+          amount_paid?: number
+          balance?: number | null
+          coffee_type?: string
+          completed_at?: string | null
+          created_at?: string
+          customer_name: string
+          customer_phone?: string | null
+          id?: string
+          input_weight_kg: number
+          job_number: string
+          loss_kg?: number | null
+          milled_by?: string | null
+          notes?: string | null
+          output_weight_kg?: number | null
+          price_per_kg?: number
+          started_at?: string | null
+          status?: string
+          total_cost?: number
+          updated_at?: string
+        }
+        Update: {
+          amount_paid?: number
+          balance?: number | null
+          coffee_type?: string
+          completed_at?: string | null
+          created_at?: string
+          customer_name?: string
+          customer_phone?: string | null
+          id?: string
+          input_weight_kg?: number
+          job_number?: string
+          loss_kg?: number | null
+          milled_by?: string | null
+          notes?: string | null
+          output_weight_kg?: number | null
+          price_per_kg?: number
+          started_at?: string | null
+          status?: string
+          total_cost?: number
           updated_at?: string
         }
         Relationships: []
@@ -7106,6 +7277,51 @@ export type Database = {
         }
         Relationships: []
       }
+      store_damaged_bags: {
+        Row: {
+          action_taken: string | null
+          bags_affected: number
+          batch_number: string
+          coffee_record_id: string | null
+          created_at: string
+          damage_type: string
+          estimated_loss_kg: number
+          id: string
+          notes: string | null
+          reported_by: string
+          reported_date: string
+          status: string
+        }
+        Insert: {
+          action_taken?: string | null
+          bags_affected?: number
+          batch_number: string
+          coffee_record_id?: string | null
+          created_at?: string
+          damage_type: string
+          estimated_loss_kg?: number
+          id?: string
+          notes?: string | null
+          reported_by: string
+          reported_date?: string
+          status?: string
+        }
+        Update: {
+          action_taken?: string | null
+          bags_affected?: number
+          batch_number?: string
+          coffee_record_id?: string | null
+          created_at?: string
+          damage_type?: string
+          estimated_loss_kg?: number
+          id?: string
+          notes?: string | null
+          reported_by?: string
+          reported_date?: string
+          status?: string
+        }
+        Relationships: []
+      }
       store_records: {
         Row: {
           batch_number: string | null
@@ -7255,6 +7471,51 @@ export type Database = {
           scanner_used?: string | null
           sold_to?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      store_stock_verifications: {
+        Row: {
+          created_at: string
+          discrepancy_bags: number | null
+          discrepancy_kg: number | null
+          id: string
+          notes: string | null
+          physical_total_bags: number
+          physical_total_kg: number
+          status: string
+          system_total_bags: number
+          system_total_kg: number
+          verification_date: string
+          verified_by: string
+        }
+        Insert: {
+          created_at?: string
+          discrepancy_bags?: number | null
+          discrepancy_kg?: number | null
+          id?: string
+          notes?: string | null
+          physical_total_bags?: number
+          physical_total_kg?: number
+          status?: string
+          system_total_bags?: number
+          system_total_kg?: number
+          verification_date?: string
+          verified_by: string
+        }
+        Update: {
+          created_at?: string
+          discrepancy_bags?: number | null
+          discrepancy_kg?: number | null
+          id?: string
+          notes?: string | null
+          physical_total_bags?: number
+          physical_total_kg?: number
+          status?: string
+          system_total_bags?: number
+          system_total_kg?: number
+          verification_date?: string
+          verified_by?: string
         }
         Relationships: []
       }
@@ -8153,6 +8414,63 @@ export type Database = {
           session_token?: string
           user_agent?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      vehicle_trips: {
+        Row: {
+          arrival_time: string | null
+          cargo_description: string | null
+          cargo_weight_kg: number | null
+          created_at: string
+          delay_minutes: number | null
+          delay_reason: string | null
+          departure_time: string | null
+          destination: string
+          driver_name: string
+          fuel_cost: number | null
+          id: string
+          notes: string | null
+          origin: string
+          route: string
+          status: string
+          vehicle_name: string
+        }
+        Insert: {
+          arrival_time?: string | null
+          cargo_description?: string | null
+          cargo_weight_kg?: number | null
+          created_at?: string
+          delay_minutes?: number | null
+          delay_reason?: string | null
+          departure_time?: string | null
+          destination: string
+          driver_name: string
+          fuel_cost?: number | null
+          id?: string
+          notes?: string | null
+          origin: string
+          route: string
+          status?: string
+          vehicle_name: string
+        }
+        Update: {
+          arrival_time?: string | null
+          cargo_description?: string | null
+          cargo_weight_kg?: number | null
+          created_at?: string
+          delay_minutes?: number | null
+          delay_reason?: string | null
+          departure_time?: string | null
+          destination?: string
+          driver_name?: string
+          fuel_cost?: number | null
+          id?: string
+          notes?: string | null
+          origin?: string
+          route?: string
+          status?: string
+          vehicle_name?: string
         }
         Relationships: []
       }
