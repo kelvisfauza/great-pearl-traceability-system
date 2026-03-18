@@ -15,7 +15,6 @@ const BuyerContractsTab = () => {
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editingContract, setEditingContract] = useState<BuyerContract | null>(null);
-  const [uploadContractId, setUploadContractId] = useState<string | null>(null);
 
   if (loading) return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>;
 
