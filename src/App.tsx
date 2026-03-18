@@ -151,7 +151,7 @@ const App: React.ComponentType = () => {
                 <Route path="/v2" element={<ProtectedRoute><V2DepartmentRouter /></ProtectedRoute>} />
                 <Route path="/v2/admin" element={<ProtectedRoute requiredRoles={["Administrator", "Super Admin"]}><V2AdminDashboard /></ProtectedRoute>} />
                 <Route path="/v2/store" element={<ProtectedRoute requiredPermissions={["Store Management"]}><V2CoffeeReceipts /></ProtectedRoute>} />
-                <Route path="/v2/quality" element={<ProtectedRoute requiredPermissions={["Quality Control"]}><V2PendingLots /></ProtectedRoute>} />
+                <Route path="/v2/quality" element={<ProtectedRoute requiredPermissions={["Quality Control"]}><V2QualityDepartment /></ProtectedRoute>} />
                 <Route path="/v2/quality/assess/:id" element={<ProtectedRoute requiredPermissions={["Quality Control"]}><V2AssessLot /></ProtectedRoute>} />
                 <Route path="/v2/inventory" element={<ProtectedRoute requiredPermissions={["Inventory", "Store Management"]}><V2InventoryIndex /></ProtectedRoute>} />
                 <Route path="/v2/sales" element={<ProtectedRoute requiredPermissions={["Sales Marketing"]}><V2SalesIndex /></ProtectedRoute>} />
