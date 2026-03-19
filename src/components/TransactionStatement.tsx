@@ -249,6 +249,10 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     }
     // Override label for loan-related wallet/adjustment entries
     if ((entry.entry_type === 'WITHDRAWAL' || entry.entry_type === 'ADJUSTMENT') && meta?.loan_id) {
+      if (meta.source === 'guarantor' && meta.borrower) {
+        const borrowerName = meta.description?.match(/for (.+?)['']s loan/)?.[1] || meta.borrower;
+        return `Loan Recovery (${borrowerName})`;
+      }
       return '🏦 Loan Recovery';
     }
     return config.label;
