@@ -94,6 +94,12 @@ Deno.serve(async (req) => {
         let salaryAdvanceCreated = false
         let deductionSources: string[] = []
 
+        // Include prior partial payments in the deduction trail for full transparency
+        if (priorPaid > 0) {
+          deductionSources.push(`Prior payments: UGX ${priorPaid.toLocaleString()}`)
+          console.log(`  ℹ️ Prior partial payments: UGX ${priorPaid}`)
+        }
+
         // ═══════════════════════════════════════════════════
         // STEP 1: Deduct from borrower's WALLET
         // ═══════════════════════════════════════════════════
