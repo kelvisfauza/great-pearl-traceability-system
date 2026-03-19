@@ -225,7 +225,11 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     }
     // Detect loan-related wallet deductions
     if ((entry.entry_type === 'WITHDRAWAL' || entry.entry_type === 'ADJUSTMENT') && meta?.loan_id) {
-      const source = meta.source === 'wallet' ? 'Wallet Recovery' : meta.source === 'salary' ? 'Salary Recovery' : meta.source === 'guarantor' ? 'Guarantor Recovery' : 'Loan Recovery';
+      if (meta.source === 'guarantor' && meta.borrower) {
+        const borrowerName = meta.description?.match(/for (.+?)['']s loan/)?.[1] || meta.borrower;
+        return `Loan recovery for ${borrowerName}`;
+      }
+      const source = meta.source === 'wallet' ? 'Wallet Recovery' : meta.source === 'salary' ? 'Salary Recovery' : 'Loan Recovery';
       return source;
     }
     return '';
@@ -245,6 +249,10 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     }
     // Override label for loan-related wallet/adjustment entries
     if ((entry.entry_type === 'WITHDRAWAL' || entry.entry_type === 'ADJUSTMENT') && meta?.loan_id) {
+      if (meta.source === 'guarantor' && meta.borrower) {
+        const borrowerName = meta.description?.match(/for (.+?)['']s loan/)?.[1] || meta.borrower;
+        return `Loan Recovery (${borrowerName})`;
+      }
       return '🏦 Loan Recovery';
     }
     return config.label;

@@ -1259,7 +1259,11 @@ const QuickLoans = () => {
       else if (e.entry_type === 'LOAN_REPAYMENT') description = '📱 Repayment via MoMo';
       else if (e.reference?.includes('LOAN-REPAY') && e.entry_type === 'WITHDRAWAL') description = '🏦 Auto Recovery (Wallet)';
       else if (e.reference?.includes('LOAN-REPAY-SALARY')) description = '🏦 Auto Recovery (Salary)';
-      else if (e.reference?.includes('LOAN-GUARANTOR')) description = '🏦 Guarantor Recovery';
+      else if (e.reference?.includes('LOAN-GUARANTOR')) {
+        const meta = e.metadata ? (typeof e.metadata === 'string' ? JSON.parse(e.metadata) : e.metadata) : null;
+        const borrowerName = meta?.description?.match(/for (.+?)['']s loan/)?.[1] || meta?.borrower || 'borrower';
+        description = `Loan Recovery for ${borrowerName}`;
+      }
       return `
         <tr>
           <td style="padding:4px 8px;border:1px solid #eee;font-size:11px">${new Date(e.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
