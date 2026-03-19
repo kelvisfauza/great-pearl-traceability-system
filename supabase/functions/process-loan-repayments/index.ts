@@ -63,9 +63,10 @@ Deno.serve(async (req) => {
       const grossPenalty = Math.round(amountDue * totalPenaltyRate)
       const previouslyAppliedPenalty = repayment.penalty_applied || 0
       const penaltyAmount = Math.max(0, grossPenalty - previouslyAppliedPenalty)
-      const totalOwed = amountDue + grossPenalty - (repayment.amount_paid || 0)
+      const priorPaid = repayment.amount_paid || 0
+      const totalOwed = amountDue + grossPenalty - priorPaid
 
-      console.log(`\n💰 Processing repayment #${repayment.installment_number} for ${borrowerEmail}: UGX ${amountDue} (overdue ${overdueDays} days, penalty UGX ${penaltyAmount})`)
+      console.log(`\n💰 Processing repayment #${repayment.installment_number} for ${borrowerEmail}: UGX ${amountDue} (prior paid: UGX ${priorPaid}, overdue ${overdueDays} days, penalty UGX ${penaltyAmount}, total owed: UGX ${totalOwed})`)
 
       try {
         // Resolve borrower user ID
@@ -92,6 +93,12 @@ Deno.serve(async (req) => {
         let deductedFromSalary = 0
         let salaryAdvanceCreated = false
         let deductionSources: string[] = []
+
+        // Include prior partial payments in the deduction trail for full transparency
+        if (priorPaid > 0) {
+          deductionSources.push(`Prior payments: UGX ${priorPaid.toLocaleString()}`)
+          console.log(`  ℹ️ Prior partial payments: UGX ${priorPaid}`)
+        }
 
         // ═══════════════════════════════════════════════════
         // STEP 1: Deduct from borrower's WALLET
