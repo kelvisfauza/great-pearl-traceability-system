@@ -139,6 +139,8 @@ const NewSaleForm = () => {
         throw new Error('Sale was not created properly - no ID returned');
       }
 
+      console.log(`🔄 Calling deduct_from_inventory_batches: type=${formData.coffee_type}, qty=${formData.weight}, saleId=${saleId}`);
+
       const { data: deductions, error: deductError } = await supabase
         .rpc('deduct_from_inventory_batches', {
           p_coffee_type: formData.coffee_type,
@@ -162,24 +164,6 @@ const NewSaleForm = () => {
           variant: "destructive"
         });
       } else {
-        const normalizedDeductions = deductions.map((d: any) => ({
-          batch_id: d.batch_id,
-          sale_transaction_id: saleId,
-          kilograms_deducted: Number(d.deducted_kg) || 0,
-          customer_name: formData.customer,
-          sale_date: saleData.date
-        })).filter((d: any) => d.batch_id && d.kilograms_deducted > 0);
-
-        if (normalizedDeductions.length > 0) {
-          const { error: batchSalesError } = await supabase
-            .from('inventory_batch_sales')
-            .insert(normalizedDeductions);
-
-          if (batchSalesError) {
-            console.error('❌ Failed to record batch sales history:', batchSalesError);
-          }
-        }
-
         const totalDeducted = deductions.reduce((sum: number, d: any) => sum + Number(d.deducted_kg), 0);
         console.log(`✅ Deducted ${totalDeducted}kg from ${deductions.length} batches:`, deductions);
       }
