@@ -35,6 +35,19 @@ const NewSaleForm = () => {
 
   useEffect(() => {
     fetchAvailableInventory();
+
+    // Subscribe to inventory changes so available stock updates in real-time
+    const channel = supabase
+      .channel('sales-inventory-watch')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory_batches' }, () => {
+        console.log('📦 Inventory batches changed, refreshing available stock');
+        fetchAvailableInventory();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchAvailableInventory = async () => {
