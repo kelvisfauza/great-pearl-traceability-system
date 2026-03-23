@@ -61,7 +61,7 @@ const AttendanceTimeManager = () => {
   const [uploading, setUploading] = useState(false);
 
   // Form state
-  const [entryMode, setEntryMode] = useState<'sign_in' | 'sign_out'>('sign_in');
+  const [entryMode, setEntryMode] = useState<'sign_in' | 'sign_out' | 'quick_entry'>('sign_in');
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [employeeSearchOpen, setEmployeeSearchOpen] = useState(false);
   const [employeeSearchTerm, setEmployeeSearchTerm] = useState('');
