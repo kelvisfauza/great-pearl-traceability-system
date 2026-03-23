@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,13 +7,17 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from 'cmdk';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSupabaseEmployees } from '@/hooks/useSupabaseEmployees';
 import { toast } from 'sonner';
-import { Clock, Upload, Trophy, AlertTriangle, TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Printer, Filter, LogIn, LogOut } from 'lucide-react';
+import { Clock, Upload, Trophy, AlertTriangle, TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Printer, Filter, LogIn, LogOut, Search, Check, ChevronsUpDown } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO } from 'date-fns';
 import { getStandardPrintStyles } from '@/utils/printStyles';
+import { cn } from '@/lib/utils';
 
 interface AttendanceRecord {
   id: string;
@@ -59,6 +63,8 @@ const AttendanceTimeManager = () => {
   // Form state
   const [entryMode, setEntryMode] = useState<'sign_in' | 'sign_out'>('sign_in');
   const [selectedEmployee, setSelectedEmployee] = useState('');
+  const [employeeSearchOpen, setEmployeeSearchOpen] = useState(false);
+  const [employeeSearchTerm, setEmployeeSearchTerm] = useState('');
   const [recordDate, setRecordDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [arrivalTime, setArrivalTime] = useState('');
   const [departureTime, setDepartureTime] = useState('');
@@ -429,27 +435,82 @@ const AttendanceTimeManager = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Employee</Label>
-                  <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select employee" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {allAttendanceList.map(person => {
-                        // In sign-out mode, show indicator if already signed in
-                        const todayRecord = records.find(r => r.employee_id === person.id && r.record_date === recordDate);
-                        const signedIn = todayRecord?.arrival_time;
-                        const signedOut = todayRecord?.departure_time;
-                        return (
-                          <SelectItem key={person.id} value={person.id}>
-                            {person.name} — {person.department} {person.isCompanyWorker ? '(Company)' : ''}
-                            {entryMode === 'sign_in' && signedIn ? ' ✓ Signed in' : ''}
-                            {entryMode === 'sign_out' && signedOut ? ' ✓ Signed out' : ''}
-                            {entryMode === 'sign_out' && !signedIn ? ' ⚠ No sign-in' : ''}
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={employeeSearchOpen} onOpenChange={setEmployeeSearchOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={employeeSearchOpen}
+                        className="w-full justify-between font-normal"
+                      >
+                        {selectedEmployee
+                          ? allAttendanceList.find(p => p.id === selectedEmployee)?.name || 'Select employee'
+                          : 'Search & select employee...'}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0" align="start">
+                      <div className="flex items-center border-b px-3">
+                        <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                        <input
+                          className="flex h-10 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
+                          placeholder="Type to search employee..."
+                          value={employeeSearchTerm}
+                          onChange={(e) => setEmployeeSearchTerm(e.target.value)}
+                        />
+                      </div>
+                      <ScrollArea className="h-[300px]">
+                        <div className="p-1">
+                          {allAttendanceList
+                            .filter(person =>
+                              !employeeSearchTerm ||
+                              person.name.toLowerCase().includes(employeeSearchTerm.toLowerCase()) ||
+                              person.department.toLowerCase().includes(employeeSearchTerm.toLowerCase()) ||
+                              person.email.toLowerCase().includes(employeeSearchTerm.toLowerCase())
+                            )
+                            .map(person => {
+                              const todayRecord = records.find(r => r.employee_id === person.id && r.record_date === recordDate);
+                              const signedIn = todayRecord?.arrival_time;
+                              const signedOut = todayRecord?.departure_time;
+                              const statusLabel = entryMode === 'sign_in' && signedIn ? ' ✓ Signed in'
+                                : entryMode === 'sign_out' && signedOut ? ' ✓ Signed out'
+                                : entryMode === 'sign_out' && !signedIn ? ' ⚠ No sign-in'
+                                : '';
+                              return (
+                                <div
+                                  key={person.id}
+                                  className={cn(
+                                    "flex items-center gap-2 rounded-sm px-2 py-2 text-sm cursor-pointer hover:bg-accent",
+                                    selectedEmployee === person.id && "bg-accent"
+                                  )}
+                                  onClick={() => {
+                                    setSelectedEmployee(person.id);
+                                    setEmployeeSearchOpen(false);
+                                    setEmployeeSearchTerm('');
+                                  }}
+                                >
+                                  <Check className={cn("h-4 w-4", selectedEmployee === person.id ? "opacity-100" : "opacity-0")} />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-medium truncate">{person.name}</p>
+                                    <p className="text-xs text-muted-foreground truncate">
+                                      {person.department} {person.isCompanyWorker ? '(Company)' : ''}{statusLabel}
+                                    </p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          {allAttendanceList.filter(person =>
+                            !employeeSearchTerm ||
+                            person.name.toLowerCase().includes(employeeSearchTerm.toLowerCase()) ||
+                            person.department.toLowerCase().includes(employeeSearchTerm.toLowerCase()) ||
+                            person.email.toLowerCase().includes(employeeSearchTerm.toLowerCase())
+                          ).length === 0 && (
+                            <p className="text-sm text-muted-foreground text-center py-4">No employee found</p>
+                          )}
+                        </div>
+                      </ScrollArea>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <div className="space-y-2">
