@@ -137,7 +137,30 @@ const AttendanceTimeManager = () => {
 
     setSaving(true);
     try {
-      if (entryMode === 'sign_in') {
+      if (entryMode === 'quick_entry') {
+        // Quick entry: record both arrival and departure at once
+        if (!arrivalTime || !departureTime) {
+          toast.error('Please enter both arrival and departure times');
+          setSaving(false);
+          return;
+        }
+        const { error } = await supabase
+          .from('attendance_time_records')
+          .upsert({
+            employee_id: person.id,
+            employee_name: person.name,
+            employee_email: person.email,
+            record_date: recordDate,
+            arrival_time: arrivalTime,
+            departure_time: departureTime,
+            status: 'present',
+            notes: notes || null,
+            recorded_by: employee?.email || 'IT',
+          } as any, { onConflict: 'employee_id,record_date' });
+
+        if (error) throw error;
+        toast.success(`Full day recorded for ${person.name}: ${arrivalTime} — ${departureTime}`);
+      } else if (entryMode === 'sign_in') {
         if (!arrivalTime) {
           toast.error('Please enter arrival time');
           setSaving(false);
