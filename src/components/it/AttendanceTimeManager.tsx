@@ -14,7 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSupabaseEmployees } from '@/hooks/useSupabaseEmployees';
 import { toast } from 'sonner';
-import { Clock, Upload, Trophy, AlertTriangle, TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Printer, Filter, LogIn, LogOut, Search, Check, ChevronsUpDown } from 'lucide-react';
+import { Clock, Upload, Trophy, AlertTriangle, TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Printer, Filter, LogIn, LogOut, Search, Check, ChevronsUpDown, Zap } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO } from 'date-fns';
 import { getStandardPrintStyles } from '@/utils/printStyles';
 import { cn } from '@/lib/utils';
