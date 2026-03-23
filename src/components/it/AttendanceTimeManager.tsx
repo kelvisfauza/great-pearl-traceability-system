@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,11 +7,17 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from 'cmdk';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSupabaseEmployees } from '@/hooks/useSupabaseEmployees';
 import { toast } from 'sonner';
-import { Clock, Upload, Trophy, AlertTriangle, TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Printer, Filter, LogIn, LogOut } from 'lucide-react';
+import { Clock, Upload, Trophy, AlertTriangle, TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Printer, Filter, LogIn, LogOut, Search, Check, ChevronsUpDown } from 'lucide-react';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO } from 'date-fns';
+import { getStandardPrintStyles } from '@/utils/printStyles';
+import { cn } from '@/lib/utils';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO } from 'date-fns';
 import { getStandardPrintStyles } from '@/utils/printStyles';
 
