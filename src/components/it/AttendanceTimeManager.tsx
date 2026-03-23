@@ -548,17 +548,30 @@ const AttendanceTimeManager = () => {
                   <Input type="date" value={recordDate} onChange={e => setRecordDate(e.target.value)} />
                 </div>
 
-                {entryMode === 'sign_in' ? (
+                {entryMode === 'quick_entry' ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Arrival Time</Label>
+                      <Input type="time" value={arrivalTime} onChange={e => setArrivalTime(e.target.value)} step="60" />
+                      <p className="text-xs text-muted-foreground">Standard: 08:00. After 08:00 is marked late.</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Departure Time</Label>
+                      <Input type="time" value={departureTime} onChange={e => setDepartureTime(e.target.value)} step="60" />
+                      <p className="text-xs text-muted-foreground">Standard: 17:30. System calculates overtime.</p>
+                    </div>
+                  </>
+                ) : entryMode === 'sign_in' ? (
                   <div className="space-y-2">
                     <Label>Arrival Time</Label>
-                    <Input type="time" value={arrivalTime} onChange={e => setArrivalTime(e.target.value)} />
-                    <p className="text-xs text-muted-foreground">Standard: 08:00 AM. After 08:00 is marked late.</p>
+                    <Input type="time" value={arrivalTime} onChange={e => setArrivalTime(e.target.value)} step="60" />
+                    <p className="text-xs text-muted-foreground">Standard: 08:00. After 08:00 is marked late.</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     <Label>Departure Time</Label>
-                    <Input type="time" value={departureTime} onChange={e => setDepartureTime(e.target.value)} />
-                    <p className="text-xs text-muted-foreground">Standard: 05:30 PM. System calculates overtime.</p>
+                    <Input type="time" value={departureTime} onChange={e => setDepartureTime(e.target.value)} step="60" />
+                    <p className="text-xs text-muted-foreground">Standard: 17:30. System calculates overtime.</p>
                   </div>
                 )}
 
