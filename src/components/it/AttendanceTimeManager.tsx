@@ -18,8 +18,6 @@ import { Clock, Upload, Trophy, AlertTriangle, TrendingUp, TrendingDown, Calenda
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO } from 'date-fns';
 import { getStandardPrintStyles } from '@/utils/printStyles';
 import { cn } from '@/lib/utils';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO } from 'date-fns';
-import { getStandardPrintStyles } from '@/utils/printStyles';
 
 interface AttendanceRecord {
   id: string;
