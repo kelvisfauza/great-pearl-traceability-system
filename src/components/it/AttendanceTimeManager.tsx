@@ -502,7 +502,8 @@ const AttendanceTimeManager = () => {
                               const todayRecord = records.find(r => r.employee_id === person.id && r.record_date === recordDate);
                               const signedIn = todayRecord?.arrival_time;
                               const signedOut = todayRecord?.departure_time;
-                              const statusLabel = entryMode === 'sign_in' && signedIn ? ' ✓ Signed in'
+                              const statusLabel = signedIn && signedOut ? ' ✓ Full day'
+                                : entryMode === 'sign_in' && signedIn ? ' ✓ Signed in'
                                 : entryMode === 'sign_out' && signedOut ? ' ✓ Signed out'
                                 : entryMode === 'sign_out' && !signedIn ? ' ⚠ No sign-in'
                                 : '';
