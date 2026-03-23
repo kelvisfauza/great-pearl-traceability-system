@@ -437,8 +437,8 @@ const AttendanceTimeManager = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Sign In / Sign Out Mode Toggle */}
-              <div className="flex gap-2">
+              {/* Sign In / Sign Out / Quick Entry Mode Toggle */}
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant={entryMode === 'sign_in' ? 'default' : 'outline'}
                   onClick={() => setEntryMode('sign_in')}
@@ -452,6 +452,13 @@ const AttendanceTimeManager = () => {
                   className="gap-2"
                 >
                   <LogOut className="h-4 w-4" /> Evening Sign-Out
+                </Button>
+                <Button
+                  variant={entryMode === 'quick_entry' ? 'default' : 'outline'}
+                  onClick={() => setEntryMode('quick_entry')}
+                  className="gap-2 border-amber-300 text-amber-700 hover:bg-amber-50"
+                >
+                  <Zap className="h-4 w-4" /> Quick Full-Day Entry
                 </Button>
               </div>
 
