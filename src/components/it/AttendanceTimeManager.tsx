@@ -583,8 +583,8 @@ const AttendanceTimeManager = () => {
 
               <div className="flex flex-wrap gap-3 pt-2">
                 <Button onClick={handleSubmit} disabled={saving} className="gap-2">
-                  {entryMode === 'sign_in' ? <LogIn className="h-4 w-4" /> : <LogOut className="h-4 w-4" />}
-                  {saving ? 'Saving...' : entryMode === 'sign_in' ? 'Record Sign-In' : 'Record Sign-Out'}
+                  {entryMode === 'quick_entry' ? <Zap className="h-4 w-4" /> : entryMode === 'sign_in' ? <LogIn className="h-4 w-4" /> : <LogOut className="h-4 w-4" />}
+                  {saving ? 'Saving...' : entryMode === 'quick_entry' ? 'Record Full Day' : entryMode === 'sign_in' ? 'Record Sign-In' : 'Record Sign-Out'}
                 </Button>
 
                 <div className="relative">
