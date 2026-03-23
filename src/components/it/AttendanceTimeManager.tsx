@@ -14,7 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSupabaseEmployees } from '@/hooks/useSupabaseEmployees';
 import { toast } from 'sonner';
-import { Clock, Upload, Trophy, AlertTriangle, TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Printer, Filter, LogIn, LogOut, Search, Check, ChevronsUpDown } from 'lucide-react';
+import { Clock, Upload, Trophy, AlertTriangle, TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Printer, Filter, LogIn, LogOut, Search, Check, ChevronsUpDown, Zap } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO } from 'date-fns';
 import { getStandardPrintStyles } from '@/utils/printStyles';
 import { cn } from '@/lib/utils';
@@ -61,7 +61,7 @@ const AttendanceTimeManager = () => {
   const [uploading, setUploading] = useState(false);
 
   // Form state
-  const [entryMode, setEntryMode] = useState<'sign_in' | 'sign_out'>('sign_in');
+  const [entryMode, setEntryMode] = useState<'sign_in' | 'sign_out' | 'quick_entry'>('sign_in');
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [employeeSearchOpen, setEmployeeSearchOpen] = useState(false);
   const [employeeSearchTerm, setEmployeeSearchTerm] = useState('');
@@ -137,7 +137,30 @@ const AttendanceTimeManager = () => {
 
     setSaving(true);
     try {
-      if (entryMode === 'sign_in') {
+      if (entryMode === 'quick_entry') {
+        // Quick entry: record both arrival and departure at once
+        if (!arrivalTime || !departureTime) {
+          toast.error('Please enter both arrival and departure times');
+          setSaving(false);
+          return;
+        }
+        const { error } = await supabase
+          .from('attendance_time_records')
+          .upsert({
+            employee_id: person.id,
+            employee_name: person.name,
+            employee_email: person.email,
+            record_date: recordDate,
+            arrival_time: arrivalTime,
+            departure_time: departureTime,
+            status: 'present',
+            notes: notes || null,
+            recorded_by: employee?.email || 'IT',
+          } as any, { onConflict: 'employee_id,record_date' });
+
+        if (error) throw error;
+        toast.success(`Full day recorded for ${person.name}: ${arrivalTime} — ${departureTime}`);
+      } else if (entryMode === 'sign_in') {
         if (!arrivalTime) {
           toast.error('Please enter arrival time');
           setSaving(false);
@@ -414,8 +437,8 @@ const AttendanceTimeManager = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Sign In / Sign Out Mode Toggle */}
-              <div className="flex gap-2">
+              {/* Sign In / Sign Out / Quick Entry Mode Toggle */}
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant={entryMode === 'sign_in' ? 'default' : 'outline'}
                   onClick={() => setEntryMode('sign_in')}
@@ -429,6 +452,13 @@ const AttendanceTimeManager = () => {
                   className="gap-2"
                 >
                   <LogOut className="h-4 w-4" /> Evening Sign-Out
+                </Button>
+                <Button
+                  variant={entryMode === 'quick_entry' ? 'default' : 'outline'}
+                  onClick={() => setEntryMode('quick_entry')}
+                  className="gap-2 border-amber-300 text-amber-700 hover:bg-amber-50"
+                >
+                  <Zap className="h-4 w-4" /> Quick Full-Day Entry
                 </Button>
               </div>
 
@@ -472,7 +502,8 @@ const AttendanceTimeManager = () => {
                               const todayRecord = records.find(r => r.employee_id === person.id && r.record_date === recordDate);
                               const signedIn = todayRecord?.arrival_time;
                               const signedOut = todayRecord?.departure_time;
-                              const statusLabel = entryMode === 'sign_in' && signedIn ? ' ✓ Signed in'
+                              const statusLabel = signedIn && signedOut ? ' ✓ Full day'
+                                : entryMode === 'sign_in' && signedIn ? ' ✓ Signed in'
                                 : entryMode === 'sign_out' && signedOut ? ' ✓ Signed out'
                                 : entryMode === 'sign_out' && !signedIn ? ' ⚠ No sign-in'
                                 : '';
@@ -518,17 +549,30 @@ const AttendanceTimeManager = () => {
                   <Input type="date" value={recordDate} onChange={e => setRecordDate(e.target.value)} />
                 </div>
 
-                {entryMode === 'sign_in' ? (
+                {entryMode === 'quick_entry' ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Arrival Time</Label>
+                      <Input type="time" value={arrivalTime} onChange={e => setArrivalTime(e.target.value)} step="60" />
+                      <p className="text-xs text-muted-foreground">Standard: 08:00. After 08:00 is marked late.</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Departure Time</Label>
+                      <Input type="time" value={departureTime} onChange={e => setDepartureTime(e.target.value)} step="60" />
+                      <p className="text-xs text-muted-foreground">Standard: 17:30. System calculates overtime.</p>
+                    </div>
+                  </>
+                ) : entryMode === 'sign_in' ? (
                   <div className="space-y-2">
                     <Label>Arrival Time</Label>
-                    <Input type="time" value={arrivalTime} onChange={e => setArrivalTime(e.target.value)} />
-                    <p className="text-xs text-muted-foreground">Standard: 08:00 AM. After 08:00 is marked late.</p>
+                    <Input type="time" value={arrivalTime} onChange={e => setArrivalTime(e.target.value)} step="60" />
+                    <p className="text-xs text-muted-foreground">Standard: 08:00. After 08:00 is marked late.</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     <Label>Departure Time</Label>
-                    <Input type="time" value={departureTime} onChange={e => setDepartureTime(e.target.value)} />
-                    <p className="text-xs text-muted-foreground">Standard: 05:30 PM. System calculates overtime.</p>
+                    <Input type="time" value={departureTime} onChange={e => setDepartureTime(e.target.value)} step="60" />
+                    <p className="text-xs text-muted-foreground">Standard: 17:30. System calculates overtime.</p>
                   </div>
                 )}
 
@@ -540,8 +584,8 @@ const AttendanceTimeManager = () => {
 
               <div className="flex flex-wrap gap-3 pt-2">
                 <Button onClick={handleSubmit} disabled={saving} className="gap-2">
-                  {entryMode === 'sign_in' ? <LogIn className="h-4 w-4" /> : <LogOut className="h-4 w-4" />}
-                  {saving ? 'Saving...' : entryMode === 'sign_in' ? 'Record Sign-In' : 'Record Sign-Out'}
+                  {entryMode === 'quick_entry' ? <Zap className="h-4 w-4" /> : entryMode === 'sign_in' ? <LogIn className="h-4 w-4" /> : <LogOut className="h-4 w-4" />}
+                  {saving ? 'Saving...' : entryMode === 'quick_entry' ? 'Record Full Day' : entryMode === 'sign_in' ? 'Record Sign-In' : 'Record Sign-Out'}
                 </Button>
 
                 <div className="relative">
