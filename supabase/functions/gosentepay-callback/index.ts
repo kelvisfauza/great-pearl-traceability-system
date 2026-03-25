@@ -7,31 +7,11 @@ const corsHeaders = {
 };
 
 /**
- * Verify the callback is authentic by checking a shared secret token.
- * GosentePay should include this token in the request headers or body.
+ * Verify the callback is authentic by checking the reference exists
+ * in our mobile_money_transactions table (reference-based verification).
+ * GosentePay does not send a webhook secret header, so we verify
+ * by confirming the customer_reference matches a known transaction.
  */
-function verifyCallbackAuthenticity(req: Request, body: any): boolean {
-  const webhookSecret = Deno.env.get("GOSENTEPAY_WEBHOOK_SECRET");
-  
-  // If no webhook secret is configured, reject all callbacks for safety
-  if (!webhookSecret) {
-    console.error("GOSENTEPAY_WEBHOOK_SECRET not configured - rejecting callback");
-    return false;
-  }
-
-  // Check for secret in header first (preferred)
-  const headerSecret = req.headers.get("X-Webhook-Secret") || req.headers.get("x-webhook-secret");
-  if (headerSecret === webhookSecret) {
-    return true;
-  }
-
-  // Fallback: check for secret in body (some providers send it this way)
-  if (body?.webhook_secret === webhookSecret || body?.secret_key === webhookSecret) {
-    return true;
-  }
-
-  return false;
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
