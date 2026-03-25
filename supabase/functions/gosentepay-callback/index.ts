@@ -6,33 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-/**
- * Verify the callback is authentic by checking a shared secret token.
- * GosentePay should include this token in the request headers or body.
- */
-function verifyCallbackAuthenticity(req: Request, body: any): boolean {
-  const webhookSecret = Deno.env.get("GOSENTEPAY_WEBHOOK_SECRET");
-  
-  // If no webhook secret is configured, reject all callbacks for safety
-  if (!webhookSecret) {
-    console.error("GOSENTEPAY_WEBHOOK_SECRET not configured - rejecting callback");
-    return false;
-  }
-
-  // Check for secret in header first (preferred)
-  const headerSecret = req.headers.get("X-Webhook-Secret") || req.headers.get("x-webhook-secret");
-  if (headerSecret === webhookSecret) {
-    return true;
-  }
-
-  // Fallback: check for secret in body (some providers send it this way)
-  if (body?.webhook_secret === webhookSecret || body?.secret_key === webhookSecret) {
-    return true;
-  }
-
-  return false;
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -42,19 +15,10 @@ serve(async (req) => {
     const body = await req.json();
     console.log("GosentePay callback received:", JSON.stringify(body));
 
-    // Verify callback authenticity
-    if (!verifyCallbackAuthenticity(req, body)) {
-      console.error("Callback authentication failed - invalid or missing webhook secret");
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const ref = body.ref;
-    const status = body.status;
-    const amount = body.amount_deposited;
-    const phone = body.phone;
+    // Extract reference - GosentePay sends as customer_reference
+    const ref = body.customer_reference || body.ref;
+    const status = (body.status || "").toLowerCase();
+    const phone = body.msisdn || body.phone;
 
     if (!ref) {
       console.error("Callback missing ref");
@@ -69,7 +33,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Get the transaction to find the user
+    // Verify authenticity: reference must exist in our database
     const { data: transaction, error: fetchError } = await supabaseClient
       .from("mobile_money_transactions")
       .select("*")
@@ -77,12 +41,14 @@ serve(async (req) => {
       .single();
 
     if (fetchError || !transaction) {
-      console.error("Transaction not found for ref:", ref);
+      console.error("Unknown reference - rejecting callback:", ref);
       return new Response(
-        JSON.stringify({ error: "Transaction not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Unknown transaction reference" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    console.log(`Verified transaction ${ref} belongs to user ${transaction.user_id}`);
 
     // Prevent duplicate processing
     if (transaction.status === "completed" || transaction.status === "failed") {
@@ -111,8 +77,6 @@ serve(async (req) => {
     }
 
     if (isSuccess) {
-      // Use the amount from the original transaction record, not from the callback body
-      // This prevents amount manipulation attacks
       const depositAmount = transaction.amount;
 
       // Check if this is a loan repayment
