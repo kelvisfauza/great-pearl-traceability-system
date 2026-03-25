@@ -9251,6 +9251,14 @@ export type Database = {
         Args: { target_date: string }
         Returns: Json
       }
+      rebuild_inventory_batches: {
+        Args: never
+        Returns: {
+          batches_created: number
+          records_linked: number
+          total_kg: number
+        }[]
+      }
       refresh_current_week_allowances: { Args: never; Returns: Json }
       reject_transfer_reversal: {
         Args: { p_notes?: string; p_request_id: string }
