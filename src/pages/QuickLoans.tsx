@@ -138,29 +138,22 @@ const QuickLoans = () => {
   const fetchWalletBalances = async () => {
     if (!employee) return;
     try {
-      // Fetch only wallet-relevant ledger entries (matching get_user_balance_safe)
-      const { data: ledgerData } = await supabase
-        .from('ledger_entries')
-        .select('user_id, amount')
-        .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT']);
-      if (ledgerData) {
+      // Use server-side aggregation to avoid the 1000-row Supabase limit
+      const { data: allBalances, error: balError } = await supabase.rpc('get_all_wallet_balances');
+      if (!balError && allBalances) {
         const balances: Record<string, number> = {};
-        ledgerData.forEach((entry: any) => {
-          balances[entry.user_id] = (balances[entry.user_id] || 0) + Number(entry.amount);
+        (allBalances as any[]).forEach((entry: any) => {
+          balances[entry.user_id] = Number(entry.wallet_balance) || 0;
         });
         setWalletBalances(balances);
+      }
 
-        // Set current user's wallet balance using the same RPC as the dashboard
-        if (employee.email) {
-          const { data: balanceData } = await supabase.rpc('get_user_balance_safe', { user_email: employee.email });
-          const userData = balanceData?.[0];
-          if (userData) {
-            setMyWalletBalance(Number(userData.wallet_balance) || 0);
-          } else {
-            const { data: userId } = await supabase.rpc('get_unified_user_id', { input_email: employee.email });
-            const uid = userId || employee.authUserId;
-            setMyWalletBalance(balances[uid] || 0);
-          }
+      // Set current user's wallet balance using the same RPC as the dashboard
+      if (employee.email) {
+        const { data: balanceData } = await supabase.rpc('get_user_balance_safe', { user_email: employee.email });
+        const userData = balanceData?.[0];
+        if (userData) {
+          setMyWalletBalance(Number(userData.wallet_balance) || 0);
         }
       }
     } catch (err) {
