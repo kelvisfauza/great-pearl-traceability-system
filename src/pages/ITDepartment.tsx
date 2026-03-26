@@ -25,6 +25,7 @@ import { ITPermissionManager } from '@/components/it/ITPermissionManager';
 import ReportRemindersSettings from '@/components/it/ReportRemindersSettings';
 import AttendanceTimeManager from '@/components/it/AttendanceTimeManager';
 import MaintenanceToggle from '@/components/it/MaintenanceToggle';
+import ActiveUsers from '@/components/it/ActiveUsers';
 
 const ITDepartment = () => {
   const { hasPermission, employee } = useAuth();
@@ -145,8 +146,9 @@ const ITDepartment = () => {
         </div>
 
         <Tabs defaultValue="permissions" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-10">
+          <TabsList className="grid w-full grid-cols-11">
             <TabsTrigger value="permissions">Permissions</TabsTrigger>
+            <TabsTrigger value="online-users">Online</TabsTrigger>
             <TabsTrigger value="user-management">Users</TabsTrigger>
             <TabsTrigger value="attendance">Attendance</TabsTrigger>
             <TabsTrigger value="errors">Errors</TabsTrigger>
@@ -160,6 +162,10 @@ const ITDepartment = () => {
 
           <TabsContent value="permissions" className="space-y-4">
             <ITPermissionManager />
+          </TabsContent>
+
+          <TabsContent value="online-users" className="space-y-4">
+            <ActiveUsers />
           </TabsContent>
 
           <TabsContent value="attendance" className="space-y-4">
