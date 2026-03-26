@@ -1,0 +1,17 @@
+INSERT INTO sms_notification_queue (recipient_phone, recipient_email, message, notification_type, status) VALUES
+('0702302301', 'adinankariim@greatpearlcoffee.com', 'Great Agro: You can now deposit money to your wallet via MTN or Airtel Mobile Money. Visit your account to try it today!', 'general', 'pending'),
+('+256773318456', 'tatwanzire@greatpearlcoffee.com', 'Great Agro: You can now deposit money to your wallet via MTN or Airtel Mobile Money. Visit your account to try it today!', 'general', 'pending'),
+('0767626940', 'bwambalebenson@greatpearlcoffee.com', 'Great Agro: You can now deposit money to your wallet via MTN or Airtel Mobile Money. Visit your account to try it today!', 'general', 'pending'),
+('0779370420', 'bwambaledenis@greatpearlcoffee.com', 'Great Agro: You can now deposit money to your wallet via MTN or Airtel Mobile Money. Visit your account to try it today!', 'general', 'pending'),
+('256781121639', 'fauzakusa@greatpearlcoffee.com', 'Great Agro: You can now deposit money to your wallet via MTN or Airtel Mobile Money. Visit your account to try it today!', 'general', 'pending'),
+('0785208473', 'johnmasereka@greatpearlcoffee.com', 'Great Agro: You can now deposit money to your wallet via MTN or Airtel Mobile Money. Visit your account to try it today!', 'general', 'pending'),
+('0790435150', 'kahindodaphne@greatpearlcoffee.com', 'Great Agro: You can now deposit money to your wallet via MTN or Airtel Mobile Money. Visit your account to try it today!', 'general', 'pending'),
+('+256752724165', 'kelvifauza@gmail.com', 'Great Agro: You can now deposit money to your wallet via MTN or Airtel Mobile Money. Visit your account to try it today!', 'general', 'pending'),
+('0700729340', 'nickscott@greatpearlcoffee.com', 'Great Agro: You can now deposit money to your wallet via MTN or Airtel Mobile Money. Visit your account to try it today!', 'general', 'pending'),
+('+256760698680', 'bwambalemorjalia@greatpearlcoffee.com', 'Great Agro: You can now deposit money to your wallet via MTN or Airtel Mobile Money. Visit your account to try it today!', 'general', 'pending'),
+('0760587186', 'godwinmukobi@greatpearlcoffee.com', 'Great Agro: You can now deposit money to your wallet via MTN or Airtel Mobile Money. Visit your account to try it today!', 'general', 'pending'),
+('0783783187', 'musemawyclif@greatpearlcoffee.com', 'Great Agro: You can now deposit money to your wallet via MTN or Airtel Mobile Money. Visit your account to try it today!', 'general', 'pending'),
+('+256767493698', 'bwambaletony@greatpearlcoffee.com', 'Great Agro: You can now deposit money to your wallet via MTN or Airtel Mobile Money. Visit your account to try it today!', 'general', 'pending'),
+('+256754121793', 'sserunkumataufique@greatpearlcoffee.com', 'Great Agro: You can now deposit money to your wallet via MTN or Airtel Mobile Money. Visit your account to try it today!', 'general', 'pending'),
+('0778536681', 'operations@greatpearlcoffee.com', 'Great Agro: You can now deposit money to your wallet via MTN or Airtel Mobile Money. Visit your account to try it today!', 'general', 'pending'),
+('0771974897', 'tumwinealex@greatpearlcoffee.com', 'Great Agro: You can now deposit money to your wallet via MTN or Airtel Mobile Money. Visit your account to try it today!', 'general', 'pending');
