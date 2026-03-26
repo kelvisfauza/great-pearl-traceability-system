@@ -9148,6 +9148,13 @@ export type Database = {
       expire_old_bookings: { Args: never; Returns: undefined }
       fix_denis_auth_final: { Args: never; Returns: Json }
       generate_verification_code: { Args: never; Returns: string }
+      get_all_wallet_balances: {
+        Args: never
+        Returns: {
+          user_id: string
+          wallet_balance: number
+        }[]
+      }
       get_available_to_request: { Args: { user_uuid: string }; Returns: number }
       get_available_to_request_safe: {
         Args: { user_uuid: string }
