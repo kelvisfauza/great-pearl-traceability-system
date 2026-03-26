@@ -59,6 +59,10 @@ export const usePresenceList = () => {
       })
       .subscribe((status) => {
         console.log('📡 Presence list channel subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          // Set loading to false once subscribed, even if no users are present yet
+          setLoading(false);
+        }
       });
 
     return () => {
