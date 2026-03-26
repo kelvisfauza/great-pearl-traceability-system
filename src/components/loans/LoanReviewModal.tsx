@@ -185,8 +185,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
   } else {
     for (let i = 1; i <= loan.duration_months; i++) {
       const dueDate = new Date(startDate);
-      dueDate.setMonth(dueDate.getMonth() + i);
-      dueDate.setDate(1);
+      dueDate.setDate(dueDate.getDate() + (i * 30));
       repaymentSchedule.push({
         installment: i,
         dueDate: dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),

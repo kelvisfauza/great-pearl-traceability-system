@@ -491,8 +491,7 @@ const QuickLoans = () => {
         if (isWeekly) {
           nextDeduction.setDate(nextDeduction.getDate() + 7);
         } else {
-          nextDeduction.setMonth(nextDeduction.getMonth() + 1);
-          nextDeduction.setDate(1);
+          nextDeduction.setDate(nextDeduction.getDate() + 30);
         }
 
         // Update loan status
