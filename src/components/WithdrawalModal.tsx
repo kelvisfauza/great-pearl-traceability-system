@@ -344,6 +344,8 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     setSentCode('');
     setCompletedRef('');
     setCompletedAmount(0);
+    setUseInstant(false);
+    setInstantEligibility(null);
     onOpenChange(false);
     refreshAccount();
   };
