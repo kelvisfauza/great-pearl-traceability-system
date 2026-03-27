@@ -55,10 +55,7 @@ const BirthdayNotification = () => {
         setIsOpen(true);
         sessionStorage.setItem(sessionKey, 'true');
 
-        // Confetti!
-        try {
-          confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-        } catch {}
+
       }
     };
 
