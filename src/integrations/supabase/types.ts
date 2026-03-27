@@ -3699,6 +3699,42 @@ export type Database = {
         }
         Relationships: []
       }
+      instant_withdrawals: {
+        Row: {
+          amount: number
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          ledger_reference: string | null
+          payout_ref: string | null
+          payout_status: string | null
+          phone_number: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          ledger_reference?: string | null
+          payout_ref?: string | null
+          payout_status?: string | null
+          phone_number: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          ledger_reference?: string | null
+          payout_ref?: string | null
+          payout_status?: string | null
+          phone_number?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       inventory_batch_sales: {
         Row: {
           batch_id: string
@@ -4104,6 +4140,7 @@ export type Database = {
           id: string
           metadata: Json | null
           reference: string
+          source_category: string | null
           updated_at: string
           user_id: string
         }
@@ -4114,6 +4151,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           reference: string
+          source_category?: string | null
           updated_at?: string
           user_id: string
         }
@@ -4124,6 +4162,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           reference?: string
+          source_category?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -9173,6 +9212,10 @@ export type Database = {
           name: string
           phone: string
         }[]
+      }
+      get_instant_withdrawal_eligibility: {
+        Args: { p_user_email: string }
+        Returns: Json
       }
       get_or_create_inventory_batch_for_day: {
         Args: { p_batch_date: string; p_coffee_type: string }
