@@ -209,11 +209,9 @@ Deno.serve(async (req) => {
 
         // 5. Send SMS notification
         if (emp.phone) {
-          let smsMessage = `Dear ${emp.name}, your salary for ${currentMonth} has been credited to your wallet.\nGross: UGX ${grossSalary.toLocaleString()}`;
-          if (totalAdvanceDeduction > 0) {
-            smsMessage += `\nAdvance Deduction: UGX ${totalAdvanceDeduction.toLocaleString()}`;
-          }
-          smsMessage += `\nNet Credited: UGX ${netSalary.toLocaleString()}\n\nGreat Pearl Coffee.`;
+          let smsMessage = totalAdvanceDeduction > 0
+            ? `${emp.name}, salary ${currentMonth} credited. Gross ${grossSalary.toLocaleString()} Deduction ${totalAdvanceDeduction.toLocaleString()} Net ${netSalary.toLocaleString()}. Great Pearl Coffee`
+            : `${emp.name}, salary ${currentMonth} UGX ${netSalary.toLocaleString()} credited to wallet. Great Pearl Coffee`;
 
           try {
             await supabase.functions.invoke('send-sms', {
