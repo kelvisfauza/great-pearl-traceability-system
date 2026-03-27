@@ -313,7 +313,8 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
             const isTransferOut = transferMeta && entry.amount < 0;
             const isTransferIn = transferMeta && entry.amount > 0;
             const meta = entry.metadata ? (typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata) : null;
-            const canReverse = isTransferOut && meta?.reversed !== 'true';
+            const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+            const canReverse = isTransferOut && meta?.reversed !== 'true' && new Date(entry.created_at) > twoHoursAgo;
             const isReversed = meta?.reversed === 'true';
 
             return (
