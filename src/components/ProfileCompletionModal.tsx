@@ -164,7 +164,7 @@ const ProfileCompletionModal = () => {
           avatar_url: formData.avatar_url,
           profile_completed: true,
           updated_at: new Date().toISOString()
-        })
+        } as any)
         .eq('auth_user_id', employee.authUserId);
 
       if (error) throw error;
