@@ -88,7 +88,8 @@ import RoleNotificationHandler from "./components/RoleNotificationHandler";
 import MaintenanceGuard from "./components/MaintenanceGuard";
 import MaintenanceRecovery from "./pages/MaintenanceRecovery";
 import QuickLoans from "./pages/QuickLoans";
-
+import ProfileCompletionModal from "./components/ProfileCompletionModal";
+import BirthdayNotification from "./components/BirthdayNotification";
 import { useInactivityTimer } from './hooks/useInactivityTimer';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import GlobalErrorCaptureInitializer from './components/GlobalErrorCaptureInitializer';
@@ -131,6 +132,8 @@ const App: React.ComponentType = () => {
               <OvertimeNotification />
               <DailyReportReminder />
               <MonthlyReportReminder />
+              <ProfileCompletionModal />
+              <BirthdayNotification />
               
               {/* <RoleNotificationHandler /> - Disabled due to performance issues */}
               
