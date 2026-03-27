@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useUserAccount } from '@/hooks/useUserAccount';
 import { useAuth } from '@/contexts/AuthContext';
-import { Smartphone, AlertTriangle, Printer, ShieldCheck, Loader2, Clock } from 'lucide-react';
+import { Smartphone, AlertTriangle, Printer, ShieldCheck, Loader2, Clock, Zap, CheckCircle2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +20,17 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from '@/components/ui/input-otp';
+
+interface InstantEligibility {
+  eligible: boolean;
+  self_deposit_balance: number;
+  max_instant_amount: number;
+  today_withdrawn: number;
+  daily_limit: number;
+  deposit_phone: string | null;
+  reason: string;
+  next_eligible_at?: string;
+}
 
 interface WithdrawalModalProps {
   open: boolean;
@@ -53,8 +64,70 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const { isWithdrawalDisabled } = useWithdrawalControl();
   const withdrawalStatus = isWithdrawalDisabled();
   const isWalletFrozen = !!(employee as any)?.wallet_frozen;
+  
+  // Instant withdrawal state
+  const [instantEligibility, setInstantEligibility] = useState<InstantEligibility | null>(null);
+  const [instantLoading, setInstantLoading] = useState(false);
+  const [useInstant, setUseInstant] = useState(false);
 
-  // ... keep existing code (numberToWords, printVoucher, formatCurrency, generateAndSendCode, handleAmountSubmit functions)
+  // Fetch instant withdrawal eligibility when modal opens
+  useEffect(() => {
+    if (open && (employee?.email || user?.email)) {
+      const fetchEligibility = async () => {
+        try {
+          const { data, error } = await supabase.rpc('get_instant_withdrawal_eligibility', {
+            p_user_email: employee?.email || user?.email || '',
+          });
+          if (!error && data) {
+            setInstantEligibility(data as unknown as InstantEligibility);
+          }
+        } catch (err) {
+          console.error('Error fetching instant eligibility:', err);
+        }
+      };
+      fetchEligibility();
+    }
+  }, [open, employee?.email, user?.email]);
+
+  const handleInstantWithdraw = async () => {
+    if (!instantEligibility?.eligible || !amount) return;
+    const withdrawalAmount = parseFloat(amount);
+    if (withdrawalAmount < 2000 || withdrawalAmount > (instantEligibility.max_instant_amount || 0)) return;
+
+    setInstantLoading(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase.functions.invoke('instant-withdrawal', {
+        body: { amount: withdrawalAmount },
+      });
+
+      if (error) throw new Error(error.message || 'Instant withdrawal failed');
+      if (data?.error) throw new Error(data.error);
+
+      setCompletedRef(data.ref || 'INSTANT');
+      setCompletedAmount(withdrawalAmount);
+      setStep('done');
+      setUseInstant(true);
+
+      toast({
+        title: "💸 Instant Withdrawal Sent!",
+        description: `UGX ${withdrawalAmount.toLocaleString()} sent to ${data.phone || instantEligibility.deposit_phone}. No approval needed!`,
+        duration: 8000,
+      });
+    } catch (error: any) {
+      console.error('Instant withdrawal error:', error);
+      toast({
+        title: "Instant Withdrawal Failed",
+        description: error.message || "Could not process instant withdrawal. Try regular withdrawal.",
+        variant: "destructive",
+      });
+    } finally {
+      setInstantLoading(false);
+    }
+  };
 
   const numberToWords = (num: number): string => {
     const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
@@ -271,6 +344,8 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     setSentCode('');
     setCompletedRef('');
     setCompletedAmount(0);
+    setUseInstant(false);
+    setInstantEligibility(null);
     onOpenChange(false);
     refreshAccount();
   };
@@ -298,13 +373,40 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
           {/* Step 1: Enter Amount */}
           {step === 'amount' && (
             <>
+              {/* Instant Withdrawal Option */}
+              {instantEligibility?.eligible && (
+                <Alert className="border-green-300 bg-green-50">
+                  <Zap className="h-4 w-4 text-green-600" />
+                  <AlertDescription>
+                    <strong className="text-green-800">⚡ Instant Withdrawal Available!</strong>
+                    <br />
+                    <span className="text-xs text-green-700">
+                      You have <strong>UGX {Number(instantEligibility.self_deposit_balance).toLocaleString()}</strong> from your own deposits.
+                      Withdraw up to <strong>UGX {Number(instantEligibility.max_instant_amount).toLocaleString()}</strong> instantly to your deposit number ({instantEligibility.deposit_phone}) — no approval needed!
+                    </span>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {instantEligibility && !instantEligibility.eligible && instantEligibility.self_deposit_balance > 0 && (
+                <Alert className="border-amber-300 bg-amber-50">
+                  <Clock className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-xs text-amber-700">
+                    <strong>Instant withdrawal cooldown:</strong> {instantEligibility.reason}
+                    {instantEligibility.next_eligible_at && (
+                      <> Next available: {new Date(instantEligibility.next_eligible_at).toLocaleString()}</>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
                   Available to Request: <strong>{formatCurrency(availableAmount)}</strong>
                   <br />
                   <span className="text-xs text-muted-foreground">
-                    Withdrawals require admin & finance approval before disbursement.
+                    Regular withdrawals require admin & finance approval before disbursement.
                   </span>
                 </AlertDescription>
               </Alert>
@@ -422,15 +524,39 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                   )}
                 </div>
 
+                {/* Instant withdrawal hint */}
+                {instantEligibility?.eligible && parsedAmount >= 2000 && parsedAmount <= (instantEligibility.max_instant_amount || 0) && (
+                  <Alert className="border-green-300 bg-green-50 py-2">
+                    <Zap className="h-3 w-3 text-green-600" />
+                    <AlertDescription className="text-xs text-green-700">
+                      This amount qualifies for <strong>instant withdrawal</strong> to {instantEligibility.deposit_phone}!
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={handleClose} disabled={sendingCode}>
+                  <Button type="button" variant="outline" onClick={handleClose} disabled={sendingCode || instantLoading}>
                     Cancel
                   </Button>
+                  {instantEligibility?.eligible && parsedAmount >= 2000 && parsedAmount <= (instantEligibility.max_instant_amount || 0) && (
+                    <Button
+                      type="button"
+                      onClick={handleInstantWithdraw}
+                      disabled={instantLoading || !amount || parsedAmount < 2000}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      {instantLoading ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending...</>
+                      ) : (
+                        <><Zap className="h-4 w-4 mr-1" /> Instant Withdraw</>
+                      )}
+                    </Button>
+                  )}
                   <Button type="submit" disabled={sendingCode || !isAmountValid}>
                     {sendingCode ? (
                       <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending Code...</>
                     ) : (
-                      'Send Verification Code'
+                      'Regular Withdrawal'
                     )}
                   </Button>
                 </div>
@@ -502,24 +628,40 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
           {/* Step 3: Submitted for Approval */}
           {step === 'done' && (
             <div className="space-y-4 text-center">
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <Clock className="h-10 w-10 text-amber-600 mx-auto mb-2" />
-                <h3 className="font-bold text-amber-800">Withdrawal Submitted for Approval</h3>
-                <p className="text-sm text-amber-700 mt-1">
-                  Reference: <strong>{completedRef}</strong>
-                </p>
-                <p className="text-lg font-bold text-amber-800 mt-2">
-                  {formatCurrency(completedAmount)}
-                </p>
-                <p className="text-xs text-amber-600 mt-2">
-                  {completedAmount > 100000 
-                    ? '⚡ This requires 3 admin approvals + finance approval'
-                    : '⚡ This requires admin approval + finance approval'}
-                </p>
-                <p className="text-xs text-amber-600 mt-1">
-                  You will receive an SMS once approved. Money will NOT be deducted until fully approved.
-                </p>
-              </div>
+              {useInstant ? (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <CheckCircle2 className="h-10 w-10 text-green-600 mx-auto mb-2" />
+                  <h3 className="font-bold text-green-800">Instant Withdrawal Sent! 🎉</h3>
+                  <p className="text-sm text-green-700 mt-1">
+                    Reference: <strong>{completedRef}</strong>
+                  </p>
+                  <p className="text-lg font-bold text-green-800 mt-2">
+                    {formatCurrency(completedAmount)}
+                  </p>
+                  <p className="text-xs text-green-600 mt-2">
+                    💸 Money has been sent directly to your mobile money number. No approval was needed!
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <Clock className="h-10 w-10 text-amber-600 mx-auto mb-2" />
+                  <h3 className="font-bold text-amber-800">Withdrawal Submitted for Approval</h3>
+                  <p className="text-sm text-amber-700 mt-1">
+                    Reference: <strong>{completedRef}</strong>
+                  </p>
+                  <p className="text-lg font-bold text-amber-800 mt-2">
+                    {formatCurrency(completedAmount)}
+                  </p>
+                  <p className="text-xs text-amber-600 mt-2">
+                    {completedAmount > 100000 
+                      ? '⚡ This requires 3 admin approvals + finance approval'
+                      : '⚡ This requires admin approval + finance approval'}
+                  </p>
+                  <p className="text-xs text-amber-600 mt-1">
+                    You will receive an SMS once approved. Money will NOT be deducted until fully approved.
+                  </p>
+                </div>
+              )}
 
               <div className="flex justify-center gap-3">
                 <Button variant="outline" onClick={handleClose}>
