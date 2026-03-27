@@ -373,13 +373,40 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
           {/* Step 1: Enter Amount */}
           {step === 'amount' && (
             <>
+              {/* Instant Withdrawal Option */}
+              {instantEligibility?.eligible && (
+                <Alert className="border-green-300 bg-green-50">
+                  <Zap className="h-4 w-4 text-green-600" />
+                  <AlertDescription>
+                    <strong className="text-green-800">⚡ Instant Withdrawal Available!</strong>
+                    <br />
+                    <span className="text-xs text-green-700">
+                      You have <strong>UGX {Number(instantEligibility.self_deposit_balance).toLocaleString()}</strong> from your own deposits.
+                      Withdraw up to <strong>UGX {Number(instantEligibility.max_instant_amount).toLocaleString()}</strong> instantly to your deposit number ({instantEligibility.deposit_phone}) — no approval needed!
+                    </span>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {instantEligibility && !instantEligibility.eligible && instantEligibility.self_deposit_balance > 0 && (
+                <Alert className="border-amber-300 bg-amber-50">
+                  <Clock className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-xs text-amber-700">
+                    <strong>Instant withdrawal cooldown:</strong> {instantEligibility.reason}
+                    {instantEligibility.next_eligible_at && (
+                      <> Next available: {new Date(instantEligibility.next_eligible_at).toLocaleString()}</>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
                   Available to Request: <strong>{formatCurrency(availableAmount)}</strong>
                   <br />
                   <span className="text-xs text-muted-foreground">
-                    Withdrawals require admin & finance approval before disbursement.
+                    Regular withdrawals require admin & finance approval before disbursement.
                   </span>
                 </AlertDescription>
               </Alert>
