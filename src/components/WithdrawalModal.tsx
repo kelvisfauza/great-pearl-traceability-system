@@ -524,15 +524,39 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                   )}
                 </div>
 
+                {/* Instant withdrawal hint */}
+                {instantEligibility?.eligible && parsedAmount >= 2000 && parsedAmount <= (instantEligibility.max_instant_amount || 0) && (
+                  <Alert className="border-green-300 bg-green-50 py-2">
+                    <Zap className="h-3 w-3 text-green-600" />
+                    <AlertDescription className="text-xs text-green-700">
+                      This amount qualifies for <strong>instant withdrawal</strong> to {instantEligibility.deposit_phone}!
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={handleClose} disabled={sendingCode}>
+                  <Button type="button" variant="outline" onClick={handleClose} disabled={sendingCode || instantLoading}>
                     Cancel
                   </Button>
+                  {instantEligibility?.eligible && parsedAmount >= 2000 && parsedAmount <= (instantEligibility.max_instant_amount || 0) && (
+                    <Button
+                      type="button"
+                      onClick={handleInstantWithdraw}
+                      disabled={instantLoading || !amount || parsedAmount < 2000}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      {instantLoading ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending...</>
+                      ) : (
+                        <><Zap className="h-4 w-4 mr-1" /> Instant Withdraw</>
+                      )}
+                    </Button>
+                  )}
                   <Button type="submit" disabled={sendingCode || !isAmountValid}>
                     {sendingCode ? (
                       <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending Code...</>
                     ) : (
-                      'Send Verification Code'
+                      'Regular Withdrawal'
                     )}
                   </Button>
                 </div>
