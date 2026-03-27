@@ -628,24 +628,40 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
           {/* Step 3: Submitted for Approval */}
           {step === 'done' && (
             <div className="space-y-4 text-center">
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <Clock className="h-10 w-10 text-amber-600 mx-auto mb-2" />
-                <h3 className="font-bold text-amber-800">Withdrawal Submitted for Approval</h3>
-                <p className="text-sm text-amber-700 mt-1">
-                  Reference: <strong>{completedRef}</strong>
-                </p>
-                <p className="text-lg font-bold text-amber-800 mt-2">
-                  {formatCurrency(completedAmount)}
-                </p>
-                <p className="text-xs text-amber-600 mt-2">
-                  {completedAmount > 100000 
-                    ? '⚡ This requires 3 admin approvals + finance approval'
-                    : '⚡ This requires admin approval + finance approval'}
-                </p>
-                <p className="text-xs text-amber-600 mt-1">
-                  You will receive an SMS once approved. Money will NOT be deducted until fully approved.
-                </p>
-              </div>
+              {useInstant ? (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <CheckCircle2 className="h-10 w-10 text-green-600 mx-auto mb-2" />
+                  <h3 className="font-bold text-green-800">Instant Withdrawal Sent! 🎉</h3>
+                  <p className="text-sm text-green-700 mt-1">
+                    Reference: <strong>{completedRef}</strong>
+                  </p>
+                  <p className="text-lg font-bold text-green-800 mt-2">
+                    {formatCurrency(completedAmount)}
+                  </p>
+                  <p className="text-xs text-green-600 mt-2">
+                    💸 Money has been sent directly to your mobile money number. No approval was needed!
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <Clock className="h-10 w-10 text-amber-600 mx-auto mb-2" />
+                  <h3 className="font-bold text-amber-800">Withdrawal Submitted for Approval</h3>
+                  <p className="text-sm text-amber-700 mt-1">
+                    Reference: <strong>{completedRef}</strong>
+                  </p>
+                  <p className="text-lg font-bold text-amber-800 mt-2">
+                    {formatCurrency(completedAmount)}
+                  </p>
+                  <p className="text-xs text-amber-600 mt-2">
+                    {completedAmount > 100000 
+                      ? '⚡ This requires 3 admin approvals + finance approval'
+                      : '⚡ This requires admin approval + finance approval'}
+                  </p>
+                  <p className="text-xs text-amber-600 mt-1">
+                    You will receive an SMS once approved. Money will NOT be deducted until fully approved.
+                  </p>
+                </div>
+              )}
 
               <div className="flex justify-center gap-3">
                 <Button variant="outline" onClick={handleClose}>
