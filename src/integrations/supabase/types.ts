@@ -788,6 +788,42 @@ export type Database = {
         }
         Relationships: []
       }
+      birthday_rewards: {
+        Row: {
+          amount: number | null
+          birthday_year: number
+          created_at: string | null
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          id: string
+          ledger_reference: string | null
+          sms_sent: boolean | null
+        }
+        Insert: {
+          amount?: number | null
+          birthday_year: number
+          created_at?: string | null
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          id?: string
+          ledger_reference?: string | null
+          sms_sent?: boolean | null
+        }
+        Update: {
+          amount?: number | null
+          birthday_year?: number
+          created_at?: string | null
+          employee_email?: string
+          employee_id?: string
+          employee_name?: string
+          id?: string
+          ledger_reference?: string | null
+          sms_sent?: boolean | null
+        }
+        Relationships: []
+      }
       bonuses: {
         Row: {
           allocated_at: string
@@ -2206,26 +2242,37 @@ export type Database = {
           bank_phone: string | null
           bypass_sms_verification: boolean | null
           created_at: string
+          date_of_birth: string | null
           department: string
           disabled: boolean | null
           disabled_at: string | null
           disabled_reason: string | null
+          district: string | null
           email: string
           emergency_contact: string | null
           employee_id: string | null
+          gender: string | null
           id: string
           is_training_account: boolean | null
           join_date: string
           last_notified_role: string | null
+          marital_status: string | null
           name: string
+          national_id_name: string | null
+          national_id_number: string | null
+          next_of_kin_name: string | null
+          next_of_kin_phone: string | null
+          next_of_kin_relationship: string | null
           permissions: string[]
           phone: string | null
           position: string
+          profile_completed: boolean | null
           role: string
           role_notification_shown_at: string | null
           salary: number
           status: string
           training_progress: number | null
+          tribe: string | null
           updated_at: string
           wallet_frozen: boolean | null
           wallet_frozen_at: string | null
@@ -2244,26 +2291,37 @@ export type Database = {
           bank_phone?: string | null
           bypass_sms_verification?: boolean | null
           created_at?: string
+          date_of_birth?: string | null
           department: string
           disabled?: boolean | null
           disabled_at?: string | null
           disabled_reason?: string | null
+          district?: string | null
           email: string
           emergency_contact?: string | null
           employee_id?: string | null
+          gender?: string | null
           id?: string
           is_training_account?: boolean | null
           join_date?: string
           last_notified_role?: string | null
+          marital_status?: string | null
           name: string
+          national_id_name?: string | null
+          national_id_number?: string | null
+          next_of_kin_name?: string | null
+          next_of_kin_phone?: string | null
+          next_of_kin_relationship?: string | null
           permissions?: string[]
           phone?: string | null
           position: string
+          profile_completed?: boolean | null
           role?: string
           role_notification_shown_at?: string | null
           salary?: number
           status?: string
           training_progress?: number | null
+          tribe?: string | null
           updated_at?: string
           wallet_frozen?: boolean | null
           wallet_frozen_at?: string | null
@@ -2282,26 +2340,37 @@ export type Database = {
           bank_phone?: string | null
           bypass_sms_verification?: boolean | null
           created_at?: string
+          date_of_birth?: string | null
           department?: string
           disabled?: boolean | null
           disabled_at?: string | null
           disabled_reason?: string | null
+          district?: string | null
           email?: string
           emergency_contact?: string | null
           employee_id?: string | null
+          gender?: string | null
           id?: string
           is_training_account?: boolean | null
           join_date?: string
           last_notified_role?: string | null
+          marital_status?: string | null
           name?: string
+          national_id_name?: string | null
+          national_id_number?: string | null
+          next_of_kin_name?: string | null
+          next_of_kin_phone?: string | null
+          next_of_kin_relationship?: string | null
           permissions?: string[]
           phone?: string | null
           position?: string
+          profile_completed?: boolean | null
           role?: string
           role_notification_shown_at?: string | null
           salary?: number
           status?: string
           training_progress?: number | null
+          tribe?: string | null
           updated_at?: string
           wallet_frozen?: boolean | null
           wallet_frozen_at?: string | null

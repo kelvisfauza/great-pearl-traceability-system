@@ -63,9 +63,9 @@ const ProfileCompletionModal = () => {
       const checkProfile = async () => {
         const { data } = await supabase
           .from('employees')
-          .select('profile_completed, national_id_name, date_of_birth, next_of_kin_name, tribe, district, avatar_url, phone, national_id_number, gender, marital_status, next_of_kin_phone, next_of_kin_relationship, address, emergency_contact, account_number, bank_name, account_name')
+          .select('*')
           .eq('auth_user_id', employee.authUserId)
-          .single();
+          .single() as { data: any };
 
         if (data && !data.profile_completed) {
           setFormData({
@@ -183,7 +183,7 @@ const ProfileCompletionModal = () => {
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] p-0" onInteractOutside={(e) => e.preventDefault()} hideCloseButton>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] p-0" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <DialogHeader className="px-6 pt-6 pb-2">
           <DialogTitle className="flex items-center gap-2 text-lg">
             <Shield className="h-5 w-5 text-primary" />

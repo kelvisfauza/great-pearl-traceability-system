@@ -35,19 +35,18 @@ const BirthdayNotification = () => {
       const { data } = await supabase
         .from('employees')
         .select('name, avatar_url, department, position, email, date_of_birth')
-        .not('date_of_birth', 'is', null)
-        .neq('email', employee.email);
+        .neq('email', employee.email) as { data: any[] | null };
 
       if (!data) return;
 
-      const todayBirthdays = data.filter(emp => {
+      const todayBirthdays = data.filter((emp: any) => {
         if (!emp.date_of_birth) return false;
         const dob = new Date(emp.date_of_birth);
         return dob.getMonth() + 1 === month && dob.getDate() === day;
       });
 
       if (todayBirthdays.length > 0) {
-        setBirthdayPeople(todayBirthdays.map(p => ({
+        setBirthdayPeople(todayBirthdays.map((p: any) => ({
           name: p.name,
           avatar_url: p.avatar_url,
           department: p.department,
