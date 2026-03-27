@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useUserAccount } from '@/hooks/useUserAccount';
 import { useAuth } from '@/contexts/AuthContext';
-import { Smartphone, AlertTriangle, Printer, ShieldCheck, Loader2, Clock } from 'lucide-react';
+import { Smartphone, AlertTriangle, Printer, ShieldCheck, Loader2, Clock, Zap, CheckCircle2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +20,17 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from '@/components/ui/input-otp';
+
+interface InstantEligibility {
+  eligible: boolean;
+  self_deposit_balance: number;
+  max_instant_amount: number;
+  today_withdrawn: number;
+  daily_limit: number;
+  deposit_phone: string | null;
+  reason: string;
+  next_eligible_at?: string;
+}
 
 interface WithdrawalModalProps {
   open: boolean;
