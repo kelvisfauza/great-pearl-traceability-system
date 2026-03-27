@@ -64,10 +64,72 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const { isWithdrawalDisabled } = useWithdrawalControl();
   const withdrawalStatus = isWithdrawalDisabled();
   const isWalletFrozen = !!(employee as any)?.wallet_frozen;
+  
+  // Instant withdrawal state
+  const [instantEligibility, setInstantEligibility] = useState<InstantEligibility | null>(null);
+  const [instantLoading, setInstantLoading] = useState(false);
+  const [useInstant, setUseInstant] = useState(false);
 
-  // ... keep existing code (numberToWords, printVoucher, formatCurrency, generateAndSendCode, handleAmountSubmit functions)
+  // Fetch instant withdrawal eligibility when modal opens
+  useEffect(() => {
+    if (open && (employee?.email || user?.email)) {
+      const fetchEligibility = async () => {
+        try {
+          const { data, error } = await supabase.rpc('get_instant_withdrawal_eligibility', {
+            p_user_email: employee?.email || user?.email || '',
+          });
+          if (!error && data) {
+            setInstantEligibility(data as unknown as InstantEligibility);
+          }
+        } catch (err) {
+          console.error('Error fetching instant eligibility:', err);
+        }
+      };
+      fetchEligibility();
+    }
+  }, [open, employee?.email, user?.email]);
 
-  const numberToWords = (num: number): string => {
+  const handleInstantWithdraw = async () => {
+    if (!instantEligibility?.eligible || !amount) return;
+    const withdrawalAmount = parseFloat(amount);
+    if (withdrawalAmount < 2000 || withdrawalAmount > (instantEligibility.max_instant_amount || 0)) return;
+
+    setInstantLoading(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase.functions.invoke('instant-withdrawal', {
+        body: { amount: withdrawalAmount },
+      });
+
+      if (error) throw new Error(error.message || 'Instant withdrawal failed');
+      if (data?.error) throw new Error(data.error);
+
+      setCompletedRef(data.ref || 'INSTANT');
+      setCompletedAmount(withdrawalAmount);
+      setStep('done');
+      setUseInstant(true);
+
+      toast({
+        title: "💸 Instant Withdrawal Sent!",
+        description: `UGX ${withdrawalAmount.toLocaleString()} sent to ${data.phone || instantEligibility.deposit_phone}. No approval needed!`,
+        duration: 8000,
+      });
+    } catch (error: any) {
+      console.error('Instant withdrawal error:', error);
+      toast({
+        title: "Instant Withdrawal Failed",
+        description: error.message || "Could not process instant withdrawal. Try regular withdrawal.",
+        variant: "destructive",
+      });
+    } finally {
+      setInstantLoading(false);
+    }
+  };
+
+  // ... keep existing code (numberToWords function)
     const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
       'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
     const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
