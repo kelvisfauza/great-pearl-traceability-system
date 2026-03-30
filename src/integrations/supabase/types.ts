@@ -2028,6 +2028,83 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_contracts: {
+        Row: {
+          contract_duration_months: number | null
+          contract_end_date: string | null
+          contract_start_date: string
+          contract_type: string
+          created_at: string | null
+          created_by: string | null
+          department: string
+          document_url: string | null
+          employee_email: string
+          employee_gac_id: string | null
+          employee_id: string
+          employee_name: string
+          id: string
+          notes: string | null
+          position: string
+          renewal_count: number | null
+          renewed_from_id: string | null
+          salary: number | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          contract_duration_months?: number | null
+          contract_end_date?: string | null
+          contract_start_date: string
+          contract_type?: string
+          created_at?: string | null
+          created_by?: string | null
+          department: string
+          document_url?: string | null
+          employee_email: string
+          employee_gac_id?: string | null
+          employee_id: string
+          employee_name: string
+          id?: string
+          notes?: string | null
+          position: string
+          renewal_count?: number | null
+          renewed_from_id?: string | null
+          salary?: number | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          contract_duration_months?: number | null
+          contract_end_date?: string | null
+          contract_start_date?: string
+          contract_type?: string
+          created_at?: string | null
+          created_by?: string | null
+          department?: string
+          document_url?: string | null
+          employee_email?: string
+          employee_gac_id?: string | null
+          employee_id?: string
+          employee_name?: string
+          id?: string
+          notes?: string | null
+          position?: string
+          renewal_count?: number | null
+          renewed_from_id?: string | null
+          salary?: number | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_contracts_renewed_from_id_fkey"
+            columns: ["renewed_from_id"]
+            isOneToOne: false
+            referencedRelation: "employee_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_daily_reports: {
         Row: {
           created_at: string
