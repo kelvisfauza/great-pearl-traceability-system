@@ -27,6 +27,8 @@ interface GRNPrintModalProps {
     stones?: number;
     outturn?: number;
     calculatorComments?: string;
+    isDiscretionBuy?: boolean;
+    rejectionReason?: string;
   } | null;
 }
 
