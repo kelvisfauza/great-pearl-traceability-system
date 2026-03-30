@@ -44,6 +44,7 @@ import PayslipGenerator from '@/components/hr/PayslipGenerator';
 import { OvertimeAwardModal } from '@/components/admin/OvertimeAwardModal';
 import { OvertimeClaimsManager } from '@/components/admin/OvertimeClaimsManager';
 import TimeDeductionManager from '@/components/hr/TimeDeductionManager';
+import EmployeeContractsManager from '@/components/hr/EmployeeContractsManager';
 
 const HumanResources = () => {
   const [searchTerm, setSearchTerm] = useState('');
