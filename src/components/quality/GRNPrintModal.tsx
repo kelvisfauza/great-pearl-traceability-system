@@ -27,6 +27,8 @@ interface GRNPrintModalProps {
     stones?: number;
     outturn?: number;
     calculatorComments?: string;
+    isDiscretionBuy?: boolean;
+    rejectionReason?: string;
   } | null;
 }
 
@@ -66,7 +68,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
     grnNumber, supplierName, coffeeType, numberOfBags,
     totalKgs, unitPrice, assessedBy, createdAt,
     moisture, group1_defects, group2_defects, below12, pods, husks, stones,
-    outturn, calculatorComments
+    outturn, calculatorComments, isDiscretionBuy, rejectionReason
   } = grnData;
 
   const totalAmount = totalKgs * unitPrice;
@@ -167,6 +169,19 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
             </div>
           </div>
 
+          {/* ========== DISCRETION BUY BANNER ========== */}
+          {isDiscretionBuy && (
+            <div className="grn-discretion-banner">
+              <div className="grn-discretion-icon">⚠️</div>
+              <div className="grn-discretion-content">
+                <strong>REJECTED LOT — ADMIN DISCRETION PURCHASE</strong>
+                <p>This coffee was rejected during quality assessment but purchased at admin discretion.</p>
+                {rejectionReason && <p><strong>Rejection Reason:</strong> {rejectionReason}</p>}
+                <p><strong>Discretion Price:</strong> UGX {unitPrice.toLocaleString()}/kg</p>
+              </div>
+            </div>
+          )}
+
           {/* ========== DOCUMENT INFO ========== */}
           <div className="grn-doc-info">
             <table className="grn-info-table">
@@ -218,7 +233,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
               <tbody>
                 <tr>
                   <td className="grn-td-center">1</td>
-                  <td>Raw Coffee Beans</td>
+                  <td>{isDiscretionBuy ? 'Raw Coffee Beans (REJECTED — Discretion Buy)' : 'Raw Coffee Beans'}</td>
                   <td className="grn-td-center">{coffeeType}</td>
                   <td className="grn-td-center">{numberOfBags}</td>
                   <td className="grn-td-right">{totalKgs.toLocaleString()}</td>
@@ -455,6 +470,26 @@ function getGRNPrintStyles(): string {
       white-space: nowrap;
     }
     .grn-info-value { color: #000; width: 32%; font-weight: 600; }
+
+    /* ===== DISCRETION BANNER ===== */
+    .grn-discretion-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin: 8px 0;
+      padding: 8px 12px;
+      border: 2px solid #c00;
+      border-radius: 4px;
+      background: #fff0f0;
+    }
+    .grn-discretion-icon { font-size: 18px; flex-shrink: 0; }
+    .grn-discretion-content {
+      font-size: 9px;
+      color: #900;
+      line-height: 1.5;
+    }
+    .grn-discretion-content strong { color: #600; }
+    .grn-discretion-content p { margin: 1px 0; }
 
     /* ===== SECTIONS ===== */
     .grn-section { margin: 8px 0; }
