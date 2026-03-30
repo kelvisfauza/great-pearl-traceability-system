@@ -349,6 +349,10 @@ const HumanResources = () => {
           <TabsContent value="time-deductions">
             <TimeDeductionManager />
           </TabsContent>
+
+          <TabsContent value="contracts">
+            <EmployeeContractsManager />
+          </TabsContent>
         </Tabs>
 
         <AddEmployeeModal
