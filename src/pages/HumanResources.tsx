@@ -203,6 +203,7 @@ const HumanResources = () => {
               <TabsTrigger value="my-salary" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">My Salary</TabsTrigger>
               <TabsTrigger value="overtime" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Overtime</TabsTrigger>
               <TabsTrigger value="time-deductions" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Time Deductions</TabsTrigger>
+              <TabsTrigger value="contracts" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Contracts</TabsTrigger>
             </TabsList>
           </div>
 
