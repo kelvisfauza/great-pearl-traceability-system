@@ -251,6 +251,25 @@ const DynamicHeader = () => {
               </div>
             ) : null}
           </div>
+          
+          {/* Profile Section */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="text-right hidden sm:block">
+              <p className="text-sm font-semibold text-foreground">{employee?.role || 'User'}</p>
+              <p className="text-xs text-muted-foreground">{employee?.department || 'Department'}</p>
+            </div>
+            <Avatar className="h-10 w-10 sm:h-12 sm:w-12 border-2 border-border shadow-md">
+              <AvatarImage 
+                src={employee?.avatar_url} 
+                alt={employee?.name}
+                key={employee?.avatar_url}
+                className="object-cover"
+              />
+              <AvatarFallback className="text-sm font-semibold bg-muted text-muted-foreground">
+                {employee?.name?.split(' ').map(n => n[0]).join('') || 'U'}
+              </AvatarFallback>
+            </Avatar>
+          </div>
         </div>
 
         {/* Time and Date Section - Hidden on mobile, shown on larger screens */}
