@@ -68,7 +68,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
     grnNumber, supplierName, coffeeType, numberOfBags,
     totalKgs, unitPrice, assessedBy, createdAt,
     moisture, group1_defects, group2_defects, below12, pods, husks, stones,
-    outturn, calculatorComments
+    outturn, calculatorComments, isDiscretionBuy, rejectionReason
   } = grnData;
 
   const totalAmount = totalKgs * unitPrice;
