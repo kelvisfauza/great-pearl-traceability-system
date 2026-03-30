@@ -231,26 +231,10 @@ const DynamicHeader = () => {
 
       <div className="relative z-10 space-y-4 sm:space-y-6">
         {/* Main Greeting */}
-        <div className="flex items-center gap-3 sm:gap-6">
-          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-            <div className={`p-2 sm:p-3 rounded-full bg-gradient-to-r ${greeting.color} shadow-lg animate-fade-in`}>
-              <GreetingIcon className="h-5 w-5 sm:h-8 sm:w-8 text-white" />
-            </div>
-            <Avatar className="h-10 w-10 sm:h-16 sm:w-16 border-2 sm:border-4 border-white shadow-lg">
-              <AvatarImage 
-                src={employee?.avatar_url} 
-                alt={employee?.name}
-                key={employee?.avatar_url}
-                className="object-cover"
-              />
-              <AvatarFallback className="text-sm sm:text-lg font-semibold bg-gradient-to-br from-primary to-primary-foreground text-white">
-                {employee?.name?.split(' ').map(n => n[0]).join('') || 'U'}
-              </AvatarFallback>
-            </Avatar>
-          </div>
+        <div className="flex items-center justify-between gap-3 sm:gap-6">
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl sm:text-4xl font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent truncate">
-              {greeting.text}, {employee?.name?.split(' ')[0] || 'User'}!
+            <h1 className="text-xl sm:text-4xl font-bold text-foreground">
+              {greeting.text}, {employee?.name?.split(' ')[0] || 'User'}
             </h1>
             {showMainGreeting ? (
               <p className="text-sm sm:text-lg text-muted-foreground mt-0.5 sm:mt-1">
