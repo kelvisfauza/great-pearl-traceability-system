@@ -169,6 +169,19 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
             </div>
           </div>
 
+          {/* ========== DISCRETION BUY BANNER ========== */}
+          {isDiscretionBuy && (
+            <div className="grn-discretion-banner">
+              <div className="grn-discretion-icon">⚠️</div>
+              <div className="grn-discretion-content">
+                <strong>REJECTED LOT — ADMIN DISCRETION PURCHASE</strong>
+                <p>This coffee was rejected during quality assessment but purchased at admin discretion.</p>
+                {rejectionReason && <p><strong>Rejection Reason:</strong> {rejectionReason}</p>}
+                <p><strong>Discretion Price:</strong> UGX {unitPrice.toLocaleString()}/kg</p>
+              </div>
+            </div>
+          )}
+
           {/* ========== DOCUMENT INFO ========== */}
           <div className="grn-doc-info">
             <table className="grn-info-table">
