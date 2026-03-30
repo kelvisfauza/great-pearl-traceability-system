@@ -16,15 +16,14 @@ import StoreRealTimeTracker from '@/components/v2/admin/StoreRealTimeTracker';
 import HolidayBanner from '@/components/HolidayBanner';
 import WorkSummaryPanel from '@/components/dashboard/WorkSummaryPanel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { 
   Coffee, 
   TrendingUp, 
-   
   Activity, 
   Settings, 
   BarChart3,
   Calendar,
-  Users,
   Package,
   ArrowUpRight
 } from 'lucide-react';
@@ -85,9 +84,12 @@ const Index = () => {
               <p className="text-sm font-medium text-foreground">{employee?.position}</p>
               <p className="text-xs text-muted-foreground">{employee?.department}</p>
             </div>
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <Users className="w-5 h-5 text-primary" />
-            </div>
+            <Avatar className="h-10 w-10 border-2 border-border shadow-sm">
+              <AvatarImage src={employee?.avatar_url} alt={employee?.name} />
+              <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                {employee?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
           </div>
         </div>
 
