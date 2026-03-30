@@ -44,6 +44,7 @@ import PayslipGenerator from '@/components/hr/PayslipGenerator';
 import { OvertimeAwardModal } from '@/components/admin/OvertimeAwardModal';
 import { OvertimeClaimsManager } from '@/components/admin/OvertimeClaimsManager';
 import TimeDeductionManager from '@/components/hr/TimeDeductionManager';
+import EmployeeContractsManager from '@/components/hr/EmployeeContractsManager';
 
 const HumanResources = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -202,6 +203,7 @@ const HumanResources = () => {
               <TabsTrigger value="my-salary" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">My Salary</TabsTrigger>
               <TabsTrigger value="overtime" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Overtime</TabsTrigger>
               <TabsTrigger value="time-deductions" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Time Deductions</TabsTrigger>
+              <TabsTrigger value="contracts" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Contracts</TabsTrigger>
             </TabsList>
           </div>
 
@@ -346,6 +348,10 @@ const HumanResources = () => {
 
           <TabsContent value="time-deductions">
             <TimeDeductionManager />
+          </TabsContent>
+
+          <TabsContent value="contracts">
+            <EmployeeContractsManager />
           </TabsContent>
         </Tabs>
 
