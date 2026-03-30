@@ -1413,6 +1413,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           date: string
+          discretion_bought: boolean | null
           id: string
           kilograms: number
           status: string
@@ -1427,6 +1428,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           date: string
+          discretion_bought?: boolean | null
           id?: string
           kilograms: number
           status?: string
@@ -1441,6 +1443,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           date?: string
+          discretion_bought?: boolean | null
           id?: string
           kilograms?: number
           status?: string
@@ -6332,6 +6335,11 @@ export type Database = {
       }
       quality_assessments: {
         Row: {
+          admin_discretion_at: string | null
+          admin_discretion_buy: boolean | null
+          admin_discretion_by: string | null
+          admin_discretion_notes: string | null
+          admin_discretion_price: number | null
           assessed_by: string
           batch_number: string
           below12: number | null
@@ -6359,6 +6367,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          admin_discretion_at?: string | null
+          admin_discretion_buy?: boolean | null
+          admin_discretion_by?: string | null
+          admin_discretion_notes?: string | null
+          admin_discretion_price?: number | null
           assessed_by: string
           batch_number: string
           below12?: number | null
@@ -6386,6 +6399,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          admin_discretion_at?: string | null
+          admin_discretion_buy?: boolean | null
+          admin_discretion_by?: string | null
+          admin_discretion_notes?: string | null
+          admin_discretion_price?: number | null
           assessed_by?: string
           batch_number?: string
           below12?: number | null
