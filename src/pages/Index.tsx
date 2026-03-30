@@ -16,15 +16,14 @@ import StoreRealTimeTracker from '@/components/v2/admin/StoreRealTimeTracker';
 import HolidayBanner from '@/components/HolidayBanner';
 import WorkSummaryPanel from '@/components/dashboard/WorkSummaryPanel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { 
   Coffee, 
   TrendingUp, 
-   
   Activity, 
   Settings, 
   BarChart3,
   Calendar,
-  Users,
   Package,
   ArrowUpRight
 } from 'lucide-react';
