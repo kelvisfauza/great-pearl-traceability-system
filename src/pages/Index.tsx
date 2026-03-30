@@ -81,6 +81,7 @@ const Index = () => {
           </div>
           <div className="flex items-center gap-3">
             <div className="text-right hidden md:block">
+              {employee?.employee_id && <p className="text-xs font-semibold text-primary">{employee.employee_id}</p>}
               <p className="text-sm font-medium text-foreground">{employee?.position}</p>
               <p className="text-xs text-muted-foreground">{employee?.department}</p>
             </div>

@@ -1313,6 +1313,7 @@ const QuickLoans = () => {
         <div class="section-title">📋 Loan Details</div>
         <div class="grid grid-3">
           <div><div class="label">Borrower</div><div class="value">${loan.employee_name}</div></div>
+          <div><div class="label">Employee ID</div><div class="value">${employee?.employee_id || '—'}</div></div>
           <div><div class="label">Loan Type</div><div class="value">${loan.loan_type === 'long_term' ? 'Long-Term' : 'Quick'} Loan</div></div>
           <div><div class="label">Status</div><div class="value" style="color:${loan.status === 'active' ? '#16a34a' : loan.status === 'paid_off' ? '#1a365d' : '#dc2626'}">${loan.status.toUpperCase()}</div></div>
           <div><div class="label">Principal Amount</div><div class="value">UGX ${(loan.loan_amount || 0).toLocaleString()}</div></div>
