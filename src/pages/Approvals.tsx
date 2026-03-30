@@ -67,6 +67,9 @@ const Approvals = () => {
         {/* Quality Assessments Pending Pricing */}
         <AdminQualityPricingReview />
 
+        {/* Rejected Lots — Admin Discretion Buying */}
+        <AdminRejectedLotsReview />
+
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Approval Center - Takes 2 columns */}
