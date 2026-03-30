@@ -233,7 +233,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
               <tbody>
                 <tr>
                   <td className="grn-td-center">1</td>
-                  <td>Raw Coffee Beans</td>
+                  <td>{isDiscretionBuy ? 'Raw Coffee Beans (REJECTED — Discretion Buy)' : 'Raw Coffee Beans'}</td>
                   <td className="grn-td-center">{coffeeType}</td>
                   <td className="grn-td-center">{numberOfBags}</td>
                   <td className="grn-td-right">{totalKgs.toLocaleString()}</td>
