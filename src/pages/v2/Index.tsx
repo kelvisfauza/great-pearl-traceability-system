@@ -170,7 +170,8 @@ const V2Index = () => {
               <CardHeader>
                 <CardTitle className="text-2xl">Welcome back, {employee?.name}!</CardTitle>
                 <p className="text-muted-foreground">
-                  {employee?.position} • {employee?.department}
+                  {employee?.employee_id && <span className="font-semibold text-primary">{employee.employee_id}</span>}
+                  {employee?.employee_id && ' • '}{employee?.position} • {employee?.department}
                 </p>
               </CardHeader>
             </Card>
