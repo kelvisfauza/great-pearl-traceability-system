@@ -1,0 +1,1 @@
+UPDATE employees SET phone = '0783783187', bypass_sms_verification = false WHERE id = '38bf0365-c6e7-4d4f-abad-c869a9990ee0';
