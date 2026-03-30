@@ -3,6 +3,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import ApprovalCenter from '@/components/ApprovalCenter';
 import ApprovedRequestsHistory from '@/components/admin/ApprovedRequestsHistory';
 import AdminQualityPricingReview from '@/components/admin/AdminQualityPricingReview';
+import AdminRejectedLotsReview from '@/components/admin/AdminRejectedLotsReview';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRoleBasedData } from '@/hooks/useRoleBasedData';
 import { Shield, ClipboardCheck, DollarSign } from 'lucide-react';
