@@ -206,9 +206,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           address: employeeData.address,
           emergency_contact: employeeData.emergency_contact,
           avatar_url: employeeData.avatar_url,
+          employee_id: employeeData.employee_id,
+          is_training_account: employeeData.is_training_account || false,
+          training_progress: employeeData.training_progress || 0,
           isOneTimePassword: false,
           mustChangePassword: false,
-          authUserId: employeeData.auth_user_id || targetUserId, // Use auth_user_id from database
+          authUserId: employeeData.auth_user_id || targetUserId,
           disabled: employeeData.disabled || false
         };
 
