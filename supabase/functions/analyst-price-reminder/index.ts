@@ -67,7 +67,24 @@ serve(async (req) => {
       );
     }
 
-    console.log('Prices not set for today, sending reminder...');
+    // Check how many price reminders have already been sent today
+    const { count: remindersSentToday } = await supabase
+      .from('sms_notification_queue')
+      .select('*', { count: 'exact', head: true })
+      .eq('notification_type', 'price_reminder')
+      .gte('created_at', `${today}T00:00:00+03:00`)
+      .lte('created_at', `${today}T23:59:59+03:00`);
+
+    const maxRemindersPerDay = 5;
+    if ((remindersSentToday || 0) >= maxRemindersPerDay) {
+      console.log(`Already sent ${remindersSentToday} price reminders today (limit: ${maxRemindersPerDay}), skipping`);
+      return new Response(
+        JSON.stringify({ message: `Daily limit reached (${remindersSentToday}/${maxRemindersPerDay})`, date: today }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Prices not set for today, sending reminder (${remindersSentToday || 0}/${maxRemindersPerDay} sent so far)...`);
 
     // Get data analyst employees (Denis or anyone with Data Analysis permission)
     const { data: analysts, error: employeeError } = await supabase
