@@ -99,6 +99,9 @@ const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
               </Avatar>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm truncate">{employee?.name}</p>
+                {employee?.employee_id && (
+                  <p className="text-xs font-semibold text-primary truncate">{employee.employee_id}</p>
+                )}
                 <p className="text-xs text-muted-foreground truncate">{employee?.position}</p>
               </div>
             </div>

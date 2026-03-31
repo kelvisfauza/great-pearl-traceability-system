@@ -135,6 +135,9 @@ const RoleBasedNavigation = () => {
       <CardContent className="p-4">
         <div className="mb-4 p-3 bg-green-50 rounded-lg">
           <p className="text-sm font-medium text-green-800">{employee.name}</p>
+          {employee.employee_id && (
+            <p className="text-xs font-semibold text-primary">{employee.employee_id}</p>
+          )}
           <p className="text-xs text-green-600">{employee.position}</p>
           <p className="text-xs text-green-600">{employee.department}</p>
           <p className="text-xs text-green-500 mt-1">Role: {employee.role}</p>

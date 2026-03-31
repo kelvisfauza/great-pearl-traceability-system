@@ -270,6 +270,9 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
             {!isCollapsed && (
               <div className="min-w-0">
                 <p className="text-sm font-medium text-sidebar-foreground truncate">{employee.name}</p>
+                {employee.employee_id && (
+                  <p className="text-xs font-semibold text-primary truncate">{employee.employee_id}</p>
+                )}
                 <p className="text-xs text-sidebar-foreground/60 truncate">{employee.role} • {employee.department}</p>
               </div>
             )}
