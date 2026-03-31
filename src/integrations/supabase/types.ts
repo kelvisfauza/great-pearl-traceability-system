@@ -1400,6 +1400,13 @@ export type Database = {
             foreignKeyName: "coffee_bookings_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coffee_bookings_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
@@ -1452,6 +1459,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "coffee_records_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "coffee_records_supplier_id_fkey"
             columns: ["supplier_id"]
@@ -3502,6 +3516,13 @@ export type Database = {
             columns: ["quality_assessment_id"]
             isOneToOne: true
             referencedRelation: "quality_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_coffee_lots_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
             referencedColumns: ["id"]
           },
           {
@@ -6405,6 +6426,13 @@ export type Database = {
             foreignKeyName: "purchase_orders_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
@@ -6646,6 +6674,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "quality_recommendations_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "quality_recommendations_supplier_id_fkey"
             columns: ["supplier_id"]
@@ -7837,6 +7872,13 @@ export type Database = {
             foreignKeyName: "supplier_advances_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_advances_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
@@ -7972,6 +8014,13 @@ export type Database = {
             foreignKeyName: "supplier_payments_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
@@ -8050,6 +8099,13 @@ export type Database = {
             columns: ["buyer_contract_id"]
             isOneToOne: false
             referencedRelation: "buyer_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_subcontracts_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
             referencedColumns: ["id"]
           },
           {
@@ -9229,6 +9285,25 @@ export type Database = {
       }
     }
     Views: {
+      daily_finance_summary: {
+        Row: {
+          date: string | null
+          expenses: number | null
+          income: number | null
+          net_cash: number | null
+        }
+        Relationships: []
+      }
+      supplier_balances: {
+        Row: {
+          balance: number | null
+          id: string | null
+          name: string | null
+          total_paid: number | null
+          total_payable: number | null
+        }
+        Relationships: []
+      }
       withdrawal_requests: {
         Row: {
           admin_approved: boolean | null
