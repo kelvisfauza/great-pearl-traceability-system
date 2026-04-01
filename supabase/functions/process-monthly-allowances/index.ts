@@ -107,7 +107,8 @@ Deno.serve(async (req) => {
                 phone: employee.phone,
                 message: smsMessage,
                 userName: allowance.employee_name,
-                messageType: 'monthly_allowance'
+                messageType: 'monthly_allowance',
+                recipientEmail: allowance.employee_email
               }
             })
 
@@ -120,6 +121,21 @@ Deno.serve(async (req) => {
           } catch (smsError) {
             console.error(`SMS error for ${allowance.employee_name}:`, smsError)
           }
+        }
+
+        // Also create in-app notification directly
+        try {
+          await supabase.from('notifications').insert({
+            type: 'system',
+            title: `${typeLabel} Credited`,
+            message: `Your monthly ${typeLabel} of UGX ${allowance.amount.toLocaleString()} has been credited to your wallet for ${monthYear}.`,
+            priority: 'medium',
+            target_user_id: employee.id,
+            target_department: null,
+            is_read: false
+          })
+        } catch (notifErr) {
+          console.error(`In-app notification failed for ${allowance.employee_name}:`, notifErr)
         }
 
         // Log the processing
