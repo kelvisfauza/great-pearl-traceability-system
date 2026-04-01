@@ -7884,6 +7884,47 @@ export type Database = {
           },
         ]
       }
+      supplier_contract_deliveries: {
+        Row: {
+          coffee_record_id: string | null
+          contract_id: string
+          created_at: string | null
+          created_by: string
+          delivered_kg: number
+          delivery_date: string
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          coffee_record_id?: string | null
+          contract_id: string
+          created_at?: string | null
+          created_by: string
+          delivered_kg: number
+          delivery_date?: string
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          coffee_record_id?: string | null
+          contract_id?: string
+          created_at?: string | null
+          created_by?: string
+          delivered_kg?: number
+          delivery_date?: string
+          id?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_contract_deliveries_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_contracts: {
         Row: {
           advance_given: number | null

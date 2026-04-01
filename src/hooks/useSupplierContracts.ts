@@ -9,6 +9,7 @@ export interface SupplierContract {
   contractType: string;
   date: string;
   kilogramsExpected: number;
+  deliveredQuantity: number;
   pricePerKg: number;
   advanceGiven: number;
   status: string;
@@ -57,6 +58,7 @@ export const useSupplierContracts = () => {
           contractType: contract.contract_type,
           date: contract.date,
           kilogramsExpected: contract.kilograms_expected,
+          deliveredQuantity: Number((contract as any).delivered_quantity) || 0,
           pricePerKg: contract.price_per_kg,
           advanceGiven: contract.advance_given || 0,
           status: contract.status || 'Active',

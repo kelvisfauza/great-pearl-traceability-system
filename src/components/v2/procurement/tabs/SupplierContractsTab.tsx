@@ -6,10 +6,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, Search, FileText, Plus, Pencil } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Loader2, Search, FileText, Plus, Pencil, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import SupplierContractFormDialog from "../dialogs/SupplierContractFormDialog";
+import SupplierContractDetailDialog from "../dialogs/SupplierContractDetailDialog";
 import type { SupplierContract } from "@/hooks/useSupplierContracts";
 
 const SupplierContractsTab = () => {
@@ -17,6 +19,7 @@ const SupplierContractsTab = () => {
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editingContract, setEditingContract] = useState<SupplierContract | null>(null);
+  const [detailContract, setDetailContract] = useState<SupplierContract | null>(null);
   const { toast } = useToast();
 
   if (loading) return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>;
@@ -29,7 +32,9 @@ const SupplierContractsTab = () => {
   const active = contracts.filter(c => c.status === 'Active');
   const voided = contracts.filter(c => c.status === 'Voided' || c.status === 'Terminated');
   const expired = contracts.filter(c => c.status === 'Expired');
+  const completed = contracts.filter(c => c.status === 'Completed');
   const totalExpectedKg = active.reduce((s, c) => s + c.kilogramsExpected, 0);
+  const totalDeliveredKg = active.reduce((s, c) => s + c.deliveredQuantity, 0);
   const totalAdvances = active.reduce((s, c) => s + c.advanceGiven, 0);
 
   const handleCreate = async (data: any) => {
@@ -84,7 +89,7 @@ const SupplierContractsTab = () => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <Card><CardContent className="p-4">
           <p className="text-xs text-muted-foreground">Total Contracts</p>
           <p className="text-2xl font-bold">{contracts.length}</p>
@@ -92,11 +97,18 @@ const SupplierContractsTab = () => {
         <Card><CardContent className="p-4">
           <p className="text-xs text-muted-foreground">Active</p>
           <p className="text-2xl font-bold text-green-600">{active.length}</p>
-          {expired.length > 0 && <p className="text-xs text-amber-600">{expired.length} expired</p>}
+          {completed.length > 0 && <p className="text-xs text-muted-foreground">{completed.length} completed</p>}
         </CardContent></Card>
         <Card><CardContent className="p-4">
           <p className="text-xs text-muted-foreground">Expected Volume</p>
           <p className="text-2xl font-bold">{(totalExpectedKg / 1000).toFixed(1)}t</p>
+        </CardContent></Card>
+        <Card><CardContent className="p-4">
+          <p className="text-xs text-muted-foreground">Delivered</p>
+          <p className="text-2xl font-bold text-green-600">{(totalDeliveredKg / 1000).toFixed(1)}t</p>
+          <p className="text-xs text-muted-foreground">
+            {totalExpectedKg > 0 ? ((totalDeliveredKg / totalExpectedKg) * 100).toFixed(0) : 0}% fulfilled
+          </p>
         </CardContent></Card>
         <Card><CardContent className="p-4">
           <p className="text-xs text-muted-foreground">Total Advances</p>
@@ -117,36 +129,56 @@ const SupplierContractsTab = () => {
               <TableHead>Supplier</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Date</TableHead>
-              <TableHead>Expected Kg</TableHead>
+              <TableHead>Expected</TableHead>
+              <TableHead>Delivered</TableHead>
+              <TableHead>Remaining</TableHead>
               <TableHead>Price/Kg</TableHead>
-              <TableHead>Advance</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Approval</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow></TableHeader>
             <TableBody>
-              {filtered.map(c => (
-                <TableRow key={c.id}>
-                  <TableCell className="font-medium">{c.supplierName}</TableCell>
-                  <TableCell className="text-xs">{c.contractType}</TableCell>
-                  <TableCell className="text-xs">{c.date ? format(new Date(c.date), 'dd MMM yyyy') : '—'}</TableCell>
-                  <TableCell>{c.kilogramsExpected.toLocaleString()} kg</TableCell>
-                  <TableCell>UGX {c.pricePerKg.toLocaleString()}</TableCell>
-                  <TableCell>UGX {c.advanceGiven.toLocaleString()}</TableCell>
-                  <TableCell>
-                    <Badge variant={statusColor(c.status) as any}
-                      className={c.status === 'Expired' ? 'border-amber-500 text-amber-600' : ''}>
-                      {c.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell><Badge variant={c.approval_status === 'approved' ? 'secondary' : 'outline'}>{c.approval_status}</Badge></TableCell>
-                  <TableCell>
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingContract(c); setFormOpen(true); }}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {filtered.map(c => {
+                const remaining = Math.max(0, c.kilogramsExpected - c.deliveredQuantity);
+                const fulfillPct = c.kilogramsExpected > 0 ? (c.deliveredQuantity / c.kilogramsExpected) * 100 : 0;
+                return (
+                  <TableRow key={c.id}>
+                    <TableCell className="font-medium">{c.supplierName}</TableCell>
+                    <TableCell className="text-xs">{c.contractType}</TableCell>
+                    <TableCell className="text-xs">{c.date ? format(new Date(c.date), 'dd MMM yyyy') : '—'}</TableCell>
+                    <TableCell>{c.kilogramsExpected.toLocaleString()} kg</TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <span className="text-sm">{c.deliveredQuantity.toLocaleString()} kg</span>
+                        <Progress value={Math.min(fulfillPct, 100)} className="h-1.5 w-16" />
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium text-amber-600">{remaining.toLocaleString()} kg</TableCell>
+                    <TableCell>UGX {c.pricePerKg.toLocaleString()}</TableCell>
+                    <TableCell>
+                      <Badge variant={statusColor(c.status) as any}
+                        className={c.status === 'Expired' ? 'border-amber-500 text-amber-600' : ''}>
+                        {c.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          title="View details & deliveries"
+                          onClick={() => setDetailContract(c)}
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingContract(c); setFormOpen(true); }}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
               {filtered.length === 0 && (
                 <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">No supplier contracts found</TableCell></TableRow>
               )}
@@ -189,6 +221,15 @@ const SupplierContractsTab = () => {
         contract={editingContract}
         onSubmit={editingContract ? handleEdit : handleCreate}
       />
+
+      {detailContract && (
+        <SupplierContractDetailDialog
+          open={!!detailContract}
+          onOpenChange={(v) => !v && setDetailContract(null)}
+          contract={detailContract}
+          onChanged={() => { fetchContracts(); }}
+        />
+      )}
     </div>
   );
 };
