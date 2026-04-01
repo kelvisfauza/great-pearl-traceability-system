@@ -9,6 +9,7 @@ export interface SupplierContract {
   contractType: string;
   date: string;
   kilogramsExpected: number;
+  deliveredQuantity: number;
   pricePerKg: number;
   advanceGiven: number;
   status: string;
