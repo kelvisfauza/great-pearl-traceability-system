@@ -220,6 +220,18 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     if (entry.entry_type === 'DEPOSIT' && (meta?.source === 'loan_disbursement' || entry.reference?.startsWith('LOAN-DISBURSE'))) {
       return meta?.duration_months ? `${meta.duration_months} month(s)` : '';
     }
+    // Detect allowance deposits - show month
+    if (entry.entry_type === 'DEPOSIT' && meta?.allowance_type) {
+      return meta.month_year ? `for ${meta.month_year}` : (meta.employee_name ? `for ${meta.employee_name}` : '');
+    }
+    // Detect salary - show description
+    if (entry.entry_type === 'DEPOSIT' && (meta?.source === 'salary' || meta?.source === 'payroll' || entry.reference?.startsWith('SALARY') || entry.reference?.startsWith('SAL-'))) {
+      return meta?.month || meta?.description || '';
+    }
+    // Detect expense credit
+    if (entry.entry_type === 'DEPOSIT' && (entry.reference?.startsWith('EXPENSE-APPROVED') || meta?.source === 'expense_approval')) {
+      return meta?.title || meta?.description || '';
+    }
     if (entry.entry_type === 'LOAN_REPAYMENT' && meta) {
       return meta.method === 'mobile_money' ? 'via MoMo' : meta.method || '';
     }
