@@ -62,9 +62,7 @@ export const ExpensesReport = () => {
   // Include money_requests in salary requests
   const approvedMoneyRequests = moneyRequests
     .filter(req => 
-      req.status === 'approved' && 
-      req.finance_approved_at && 
-      req.admin_approved_at &&
+      (req.status === 'approved' || req.approval_stage === 'approved') &&
       (includeArchived || !req.isArchived)
     )
     .map(req => ({
