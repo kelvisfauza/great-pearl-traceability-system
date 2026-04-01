@@ -1,0 +1,1 @@
+UPDATE ledger_entries SET user_id = '010f057a-92e3-479d-89b2-a801ef851949' WHERE id = 'c782e676-edd3-4365-9459-e78a1ad0a87d' AND user_id = '6a1a2e65-4d07-4e0d-a016-34143297caaa';
