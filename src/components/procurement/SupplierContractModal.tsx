@@ -75,6 +75,7 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({ open, onC
         contractType: formData.contractType,
         date: formData.date,
         kilogramsExpected: Number(formData.kilogramsExpected),
+        deliveredQuantity: 0,
         pricePerKg: Number(formData.pricePerKg),
         advanceGiven: Number(formData.advanceGiven) || 0,
         status: 'Active'
