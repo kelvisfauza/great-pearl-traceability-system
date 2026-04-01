@@ -58,6 +58,7 @@ export const useSupplierContracts = () => {
           contractType: contract.contract_type,
           date: contract.date,
           kilogramsExpected: contract.kilograms_expected,
+          deliveredQuantity: Number(contract.delivered_quantity) || 0,
           pricePerKg: contract.price_per_kg,
           advanceGiven: contract.advance_given || 0,
           status: contract.status || 'Active',
