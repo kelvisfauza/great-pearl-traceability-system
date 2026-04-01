@@ -306,6 +306,40 @@ serve(async (req) => {
             console.error('Failed to log SMS to database:', dbError);
           }
 
+          // Create in-app notification for the recipient
+          try {
+            if (recipientEmail) {
+              const { data: targetEmp } = await supabase
+                .from('employees')
+                .select('id, department')
+                .eq('email', recipientEmail)
+                .eq('status', 'Active')
+                .maybeSingle();
+
+              if (targetEmp) {
+                const notifTitle = messageType === 'monthly_allowance' ? 'Allowance Credited'
+                  : messageType === 'salary' ? 'Salary Credited'
+                  : messageType === 'bonus' ? 'Bonus Received'
+                  : messageType === 'withdrawal' ? 'Withdrawal Update'
+                  : messageType === 'loan' ? 'Loan Update'
+                  : 'System Message';
+
+                await supabase.from('notifications').insert({
+                  type: 'system',
+                  title: notifTitle,
+                  message: message,
+                  priority: 'medium',
+                  target_user_id: targetEmp.id,
+                  target_department: targetEmp.department,
+                  is_read: false
+                });
+                console.log('In-app notification created for', recipientEmail);
+              }
+            }
+          } catch (notifErr) {
+            console.error('Failed to create in-app notification:', notifErr);
+          }
+
           // WhatsApp removed - now handled separately via send-whatsapp function
 
           return new Response(

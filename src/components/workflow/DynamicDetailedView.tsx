@@ -690,13 +690,28 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
                       </div>
                       {walletData.recentEntries.map((entry: any, idx: number) => {
                         const isPositive = Number(entry.amount) > 0;
+                        const meta = entry.metadata ? (typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata) : null;
+                        const getDepositLabel = () => {
+                          if (entry.entry_type !== 'DEPOSIT') return null;
+                          if (meta?.allowance_type === 'data_allowance') return '📶 Data Allowance';
+                          if (meta?.allowance_type === 'airtime_allowance') return '📱 Airtime Allowance';
+                          if (meta?.source === 'loan_disbursement' || entry.reference?.startsWith('LOAN-DISBURSE')) return '💰 Loan Disbursement';
+                          if (meta?.source === 'salary' || meta?.source === 'payroll' || entry.reference?.startsWith('SALARY') || entry.reference?.startsWith('SAL-')) return '💵 Salary Credit';
+                          if (entry.reference?.startsWith('EXPENSE-APPROVED') || meta?.source === 'expense_approval') return '📋 Expense Reimbursement';
+                          if (entry.reference?.includes('BIRTHDAY') || meta?.source === 'birthday_reward') return '🎂 Birthday Reward';
+                          if (meta?.type === 'wallet_transfer' && Number(entry.amount) > 0) return '📥 Received Money';
+                          return null;
+                        };
                         const typeLabels: Record<string, string> = {
                           LOYALTY_REWARD: 'Loyalty Reward',
                           BONUS: 'Bonus',
-                          DEPOSIT: 'Deposit',
-                          WITHDRAWAL: 'Withdrawal',
+                          DEPOSIT: getDepositLabel() || 'Deposit',
+                          WITHDRAWAL: (meta?.type === 'wallet_transfer' && Number(entry.amount) < 0) ? '📤 Sent Money' : 'Withdrawal',
                           ADJUSTMENT: 'Adjustment',
                         };
+                        const sourceLabel = meta?.allowance_type ? (meta.month_year || '') 
+                          : meta?.type === 'wallet_transfer' ? (Number(entry.amount) < 0 ? `to ${meta.to_name || ''}` : `from ${meta.from_name || ''}`)
+                          : entry.metadata?.activity_type || entry.reference?.split('-')[0] || '—';
                         return (
                           <div key={idx} className="text-xs p-2 border-t grid grid-cols-4 gap-2 items-center">
                             <span className="text-muted-foreground">
@@ -714,7 +729,7 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
                               {isPositive ? '+' : ''}{Number(entry.amount).toLocaleString()}
                             </span>
                             <span className="text-muted-foreground truncate">
-                              {entry.metadata?.activity_type || entry.reference?.split('-')[0] || '—'}
+                              {sourceLabel}
                             </span>
                           </div>
                         );
