@@ -247,6 +247,32 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     if (entry.entry_type === 'DEPOSIT' && (meta?.source === 'loan_disbursement' || entry.reference?.startsWith('LOAN-DISBURSE'))) {
       return '💰 Loan Disbursement';
     }
+    // Detect allowance deposits (data/airtime)
+    if (entry.entry_type === 'DEPOSIT' && meta?.allowance_type) {
+      if (meta.allowance_type === 'data_allowance') return '📶 Data Allowance';
+      if (meta.allowance_type === 'airtime_allowance') return '📱 Airtime Allowance';
+      return `🎁 ${meta.description || 'Monthly Allowance'}`;
+    }
+    // Detect salary credits
+    if (entry.entry_type === 'DEPOSIT' && (meta?.source === 'salary' || meta?.source === 'payroll' || entry.reference?.startsWith('SALARY') || entry.reference?.startsWith('SAL-'))) {
+      return '💵 Salary Credit';
+    }
+    // Detect expense credits
+    if (entry.entry_type === 'DEPOSIT' && (entry.reference?.startsWith('EXPENSE-APPROVED') || meta?.source === 'expense_approval')) {
+      return '📋 Expense Reimbursement';
+    }
+    // Detect bonus credits
+    if (entry.entry_type === 'DEPOSIT' && (entry.reference?.startsWith('BONUS') || meta?.source === 'bonus')) {
+      return '🏆 Bonus Award';
+    }
+    // Detect birthday rewards
+    if (entry.entry_type === 'DEPOSIT' && (entry.reference?.includes('BIRTHDAY') || meta?.source === 'birthday_reward')) {
+      return '🎂 Birthday Reward';
+    }
+    // Detect mobile money deposits
+    if (entry.entry_type === 'DEPOSIT' && (entry.reference?.startsWith('MOMO') || entry.reference?.startsWith('MM-') || meta?.source === 'mobile_money')) {
+      return '📲 Mobile Money Deposit';
+    }
     // Override label for loan-related wallet/adjustment entries
     if ((entry.entry_type === 'WITHDRAWAL' || entry.entry_type === 'ADJUSTMENT') && meta?.loan_id) {
       if (meta.source === 'guarantor' && meta.borrower) {
