@@ -19,9 +19,10 @@ export const ExpenseManagement = () => {
     const fetchMoneyRequestsCount = async () => {
       try {
         const { count, error } = await supabase
-          .from('money_requests')
+          .from('approval_requests')
           .select('*', { count: 'exact', head: true })
-          .eq('approval_stage', 'pending_finance');
+          .eq('approval_stage', 'pending_finance')
+          .in('type', ['Salary Advance', 'Withdrawal Request', 'Lunch/Refreshment Request', 'Money Request']);
         
         if (error) throw error;
         setMoneyRequestsCount(count || 0);
@@ -36,7 +37,7 @@ export const ExpenseManagement = () => {
     const subscription = supabase
       .channel('money_requests_count')
       .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'money_requests' },
+        { event: '*', schema: 'public', table: 'approval_requests' },
         () => fetchMoneyRequestsCount()
       )
       .subscribe();
