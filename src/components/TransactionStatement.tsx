@@ -26,7 +26,7 @@ interface LedgerEntry {
 
 const ENTRY_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string; badgeClass: string }> = {
   LOYALTY_REWARD: { label: 'Loyalty Reward', icon: Star, color: 'text-amber-600', badgeClass: 'bg-amber-100 text-amber-800' },
-  DEPOSIT: { label: 'Deposit', icon: Smartphone, color: 'text-green-600', badgeClass: 'bg-green-100 text-green-800' },
+  DEPOSIT: { label: 'Credit', icon: Smartphone, color: 'text-green-600', badgeClass: 'bg-green-100 text-green-800' },
   WITHDRAWAL: { label: 'Withdrawal', icon: ArrowUpRight, color: 'text-red-600', badgeClass: 'bg-red-100 text-red-800' },
   BONUS: { label: 'Bonus', icon: Gift, color: 'text-purple-600', badgeClass: 'bg-purple-100 text-purple-800' },
   ADJUSTMENT: { label: 'Adjustment', icon: Minus, color: 'text-gray-600', badgeClass: 'bg-gray-100 text-gray-800' },
@@ -220,9 +220,11 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     if (entry.entry_type === 'DEPOSIT' && (meta?.source === 'loan_disbursement' || entry.reference?.startsWith('LOAN-DISBURSE'))) {
       return meta?.duration_months ? `${meta.duration_months} month(s)` : '';
     }
-    // Detect allowance deposits - show month
+    // Detect allowance deposits - show clear description and month
     if (entry.entry_type === 'DEPOSIT' && meta?.allowance_type) {
-      return meta.month_year ? `for ${meta.month_year}` : (meta.employee_name ? `for ${meta.employee_name}` : '');
+      const desc = meta.description || (meta.allowance_type === 'data_allowance' ? 'Monthly Data Allowance' : 'Monthly Airtime Allowance');
+      const monthLabel = meta.month_year ? ` — ${meta.month_year}` : '';
+      return `${desc}${monthLabel}`;
     }
     // Detect salary - show description
     if (entry.entry_type === 'DEPOSIT' && (meta?.source === 'salary' || meta?.source === 'payroll' || entry.reference?.startsWith('SALARY') || entry.reference?.startsWith('SAL-'))) {
@@ -243,6 +245,10 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       }
       const source = meta.source === 'wallet' ? 'Wallet Recovery' : meta.source === 'salary' ? 'Salary Recovery' : 'Loan Recovery';
       return source;
+    }
+    // Generic deposit - show any available description from metadata
+    if (entry.entry_type === 'DEPOSIT' && meta?.description) {
+      return meta.description;
     }
     return '';
   };

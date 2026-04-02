@@ -709,9 +709,10 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
                           WITHDRAWAL: (meta?.type === 'wallet_transfer' && Number(entry.amount) < 0) ? '📤 Sent Money' : 'Withdrawal',
                           ADJUSTMENT: 'Adjustment',
                         };
-                        const sourceLabel = meta?.allowance_type ? (meta.month_year || '') 
+                        const sourceLabel = meta?.allowance_type 
+                          ? (meta.description || (meta.allowance_type === 'data_allowance' ? 'Monthly Data Allowance' : 'Monthly Airtime Allowance')) + (meta.month_year ? ` — ${meta.month_year}` : '')
                           : meta?.type === 'wallet_transfer' ? (Number(entry.amount) < 0 ? `to ${meta.to_name || ''}` : `from ${meta.from_name || ''}`)
-                          : entry.metadata?.activity_type || entry.reference?.split('-')[0] || '—';
+                          : meta?.description || entry.metadata?.activity_type || entry.reference?.split('-')[0] || '—';
                         return (
                           <div key={idx} className="text-xs p-2 border-t grid grid-cols-4 gap-2 items-center">
                             <span className="text-muted-foreground">
