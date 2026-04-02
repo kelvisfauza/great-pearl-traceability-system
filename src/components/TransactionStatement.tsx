@@ -26,7 +26,7 @@ interface LedgerEntry {
 
 const ENTRY_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string; badgeClass: string }> = {
   LOYALTY_REWARD: { label: 'Loyalty Reward', icon: Star, color: 'text-amber-600', badgeClass: 'bg-amber-100 text-amber-800' },
-  DEPOSIT: { label: 'Deposit', icon: Smartphone, color: 'text-green-600', badgeClass: 'bg-green-100 text-green-800' },
+  DEPOSIT: { label: 'Credit', icon: Smartphone, color: 'text-green-600', badgeClass: 'bg-green-100 text-green-800' },
   WITHDRAWAL: { label: 'Withdrawal', icon: ArrowUpRight, color: 'text-red-600', badgeClass: 'bg-red-100 text-red-800' },
   BONUS: { label: 'Bonus', icon: Gift, color: 'text-purple-600', badgeClass: 'bg-purple-100 text-purple-800' },
   ADJUSTMENT: { label: 'Adjustment', icon: Minus, color: 'text-gray-600', badgeClass: 'bg-gray-100 text-gray-800' },
