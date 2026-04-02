@@ -155,10 +155,11 @@ export const useFinanceReports = (selectedDate: Date = new Date()) => {
       console.log('🔍 Looking for payment records with date:', dateStr);
       
       const { data: paymentRecords, error: paymentError } = await supabase
-        .from('payment_records')
-        .select('*')
-        .eq('date', dateStr)
-        .eq('status', 'Paid');
+        .from('supplier_payments')
+        .select('*, suppliers(name)')
+        .gte('created_at', `${dateStr}T00:00:00`)
+        .lte('created_at', `${dateStr}T23:59:59`)
+        .eq('status', 'POSTED');
 
       console.log('📊 Payment records response:', { 
         count: paymentRecords?.length || 0, 
@@ -171,8 +172,8 @@ export const useFinanceReports = (selectedDate: Date = new Date()) => {
       } else if (paymentRecords) {
         console.log('📊 Payment records found for date:', paymentRecords.length);
         
-        paymentRecords.forEach(payment => {
-          const amountPaid = Number(payment.amount) || 0;
+        (paymentRecords as any[]).forEach(payment => {
+          const amountPaid = Number(payment.amount_paid_ugx) || 0;
           
           report.totalPaid += amountPaid;
           report.totalCashOut += amountPaid;
@@ -180,13 +181,13 @@ export const useFinanceReports = (selectedDate: Date = new Date()) => {
           report.transactions.push({
             id: payment.id,
             type: 'coffee',
-            supplier: payment.supplier,
+            supplier: payment.suppliers?.name || 'Unknown',
             amount: amountPaid,
             amountPaid: amountPaid,
             balance: 0,
             status: payment.status,
             date: new Date(payment.created_at).toLocaleDateString(),
-            batchNumber: payment.batch_number || ''
+            batchNumber: payment.reference || ''
           });
         });
       }

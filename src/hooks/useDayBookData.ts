@@ -200,30 +200,32 @@ export const useDayBookData = (selectedDate: Date = new Date()) => {
         });
       });
 
-      // Fetch payment records from payment_records table for the day - optimized
+      // Fetch payment records from supplier_payments table for the day
       const { data: paymentRecords } = await supabase
-        .from('payment_records')
-        .select('supplier, amount, batch_number')
-        .eq('date', dateStr)
-        .eq('status', 'Paid');
+        .from('supplier_payments')
+        .select('amount_paid_ugx, supplier_id, reference, suppliers(name)')
+        .gte('created_at', startOfDay.toISOString())
+        .lte('created_at', endOfDay.toISOString())
+        .eq('status', 'POSTED');
 
       if (paymentRecords) {
-        paymentRecords.forEach(payment => {
-          const amount = Number(payment.amount) || 0;
+        (paymentRecords as any[]).forEach(payment => {
+          const amount = Number(payment.amount_paid_ugx) || 0;
+          const supplierName = payment.suppliers?.name || 'Unknown';
           
           report.totalCashOut += amount;
           report.cashOutTransactions.push({
             type: 'Coffee Payment',
-            description: `Payment to ${payment.supplier}`,
+            description: `Payment to ${supplierName}`,
             amount: amount,
-            reference: payment.batch_number || '',
+            reference: payment.reference || '',
             inputBy: 'Finance'
           });
 
           report.suppliersPaid.push({
-            supplier: payment.supplier,
+            supplier: supplierName,
             amount: amount,
-            batchNumber: payment.batch_number || '',
+            batchNumber: payment.reference || '',
             inputBy: 'Finance'
           });
         });
@@ -278,18 +280,19 @@ export const useDayBookData = (selectedDate: Date = new Date()) => {
 
       // Fetch overtime/money requests (salary advances) for the day
       const { data: moneyRequests } = await supabase
-        .from('money_requests')
-        .select('*, employees(name)')
+        .from('approval_requests')
+        .select('*')
+        .in('type', ['Salary Advance', 'Withdrawal Request', 'Lunch/Refreshment Request', 'Money Request'])
         .gte('created_at', startOfDay.toISOString())
         .lte('created_at', endOfDay.toISOString())
-        .in('status', ['pending', 'finance_approved', 'approved']);
+        .in('status', ['Pending', 'Finance Approved', 'Approved', 'pending', 'finance_approved', 'approved']);
 
       if (moneyRequests) {
-        moneyRequests.forEach(request => {
+        (moneyRequests as any[]).forEach(request => {
           const amount = Number(request.amount) || 0;
           report.totalOvertimeAdvances += amount;
           report.overtimeAdvances.push({
-            employee: (request.employees as any)?.name || 'Unknown',
+            employee: request.requestedby_name || request.requestedby || 'Unknown',
             amount: amount,
             status: request.status
           });

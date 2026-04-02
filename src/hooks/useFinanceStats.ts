@@ -93,10 +93,11 @@ const fetchStats = async (): Promise<FinanceStats> => {
   
   // Get completed payments
   const { data: todayPayments } = await supabase
-    .from('payment_records')
-    .select('amount')
-    .eq('date', today)
-    .eq('status', 'Paid');
+    .from('supplier_payments')
+    .select('amount_paid_ugx')
+    .gte('created_at', `${today}T00:00:00`)
+    .lte('created_at', `${today}T23:59:59`)
+    .eq('status', 'POSTED');
 
   // Get confirmed cash deposits
   const { data: todayDeposits } = await supabase
@@ -109,7 +110,7 @@ const fetchStats = async (): Promise<FinanceStats> => {
 
   const completedToday = (todayPayments?.length || 0) + (todayDeposits?.length || 0);
   const completedTodayAmount = 
-    (todayPayments?.reduce((sum, payment) => sum + Number(payment.amount), 0) || 0) +
+    (todayPayments?.reduce((sum, payment) => sum + Number((payment as any).amount_paid_ugx), 0) || 0) +
     (todayDeposits?.reduce((sum, deposit) => sum + Number(deposit.amount), 0) || 0);
 
   return {
