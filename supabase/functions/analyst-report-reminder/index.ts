@@ -125,7 +125,7 @@ serve(async (req) => {
 
     // Create a notification record
     for (const analyst of analysts) {
-      await supabase.from('finance_notifications').insert({
+      await supabase.from('notifications').insert({
         title: 'Daily Market Report Reminder',
         message: `Dear ${analyst.name}, please create today's (${today}) market report. The team needs this report for tomorrow's planning.`,
         type: 'report_reminder',

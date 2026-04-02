@@ -293,20 +293,36 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
       
       // Create withdrawal request in money_requests table (withdrawal_requests is a view)
       const { error: insertError } = await supabase
-        .from('money_requests')
+        .from('approval_requests')
         .insert({
-          user_id: user?.id || '',
+          department: employee?.department || 'General',
+          type: 'Withdrawal Request',
+          title: `Withdrawal Request - ${employee?.name || user?.email}`,
+          description: `Withdrawal via ${channel} - Ref: ${ref}`,
           amount: withdrawalAmount,
-          phone_number: channel === 'MOBILE_MONEY' ? mobileNumber : (employee?.phone || ''),
-          payment_channel: channel,
-          status: 'pending_finance',
-          request_type: 'withdrawal',
-          requested_by: user?.email || employee?.email || '',
-          reason: `Withdrawal via ${channel} - Ref: ${ref}`,
-          requires_three_approvals: withdrawalAmount > 100000,
+          requestedby: user?.email || employee?.email || '',
+          daterequested: new Date().toISOString().split('T')[0],
+          priority: withdrawalAmount > 100000 ? 'High' : 'Medium',
+          status: 'Pending Finance',
+          approval_stage: 'pending_finance',
+          finance_approved: false,
+          admin_approved: false,
+          requestedby_name: employee?.name || user?.email || 'Unknown',
+          requestedby_position: employee?.position || 'Staff',
+          disbursement_method: channel === 'MOBILE_MONEY' ? 'mobile_money' : channel === 'BANK' ? 'bank_transfer' : 'cash',
+          disbursement_phone: channel === 'MOBILE_MONEY' ? mobileNumber : (employee?.phone || ''),
           disbursement_bank_name: channel === 'BANK' ? bankName : null,
           disbursement_account_number: channel === 'BANK' ? accountNumber : null,
           disbursement_account_name: channel === 'BANK' ? accountName : null,
+          requires_three_approvals: withdrawalAmount > 100000,
+          details: {
+            request_type: 'withdrawal',
+            payment_channel: channel,
+            user_id: user?.id,
+            employee_id: employee?.id || null,
+            employee_email: employee?.email || user?.email || null,
+            ref: ref
+          }
         });
 
       if (insertError) throw insertError;

@@ -128,7 +128,7 @@ serve(async (req) => {
         }
 
         // Create in-app notification
-        await supabase.from('finance_notifications').insert({
+        await supabase.from('notifications').insert({
           title: 'Missed Daily Report',
           message: `You missed submitting your daily report for ${yesterdayDate}. Please submit it as soon as possible.`,
           type: 'missed_report_reminder',

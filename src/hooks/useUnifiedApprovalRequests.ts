@@ -111,14 +111,14 @@ export const useUnifiedApprovalRequests = () => {
         // Fetch withdrawals pending admin approval OR failed payouts for retry
         // Use two separate queries to avoid complex .or() syntax issues with PostgREST
         const { data: pendingWithdrawals, error: pendingError } = await supabase
-          .from('money_requests')
+          .from('approval_requests' as any)
           .select('*')
           .eq('request_type', 'withdrawal')
           .in('status', ['pending_approval', 'pending_admin_2', 'pending_admin_3', 'Finance Approved'])
           .order('created_at', { ascending: false });
 
         const { data: failedPayouts, error: failedError } = await supabase
-          .from('money_requests')
+          .from('approval_requests' as any)
           .select('*')
           .eq('request_type', 'withdrawal')
           .eq('status', 'approved')
@@ -331,7 +331,7 @@ export const useUnifiedApprovalRequests = () => {
         
         // Fetch current withdrawal state
         const { data: currentWithdrawal, error: wFetchError } = await supabase
-          .from('money_requests')
+          .from('approval_requests' as any)
           .select('*')
           .eq('id', withdrawalId)
           .single();
@@ -358,7 +358,7 @@ export const useUnifiedApprovalRequests = () => {
           }
 
           // Set to processing
-          await supabase.from('money_requests').update({
+          await supabase.from('approval_requests' as any).update({
             payout_status: 'processing',
             payout_attempted_at: new Date().toISOString(),
             payout_error: null,
@@ -381,7 +381,7 @@ export const useUnifiedApprovalRequests = () => {
             });
 
             if (payoutErr) {
-              await supabase.from('money_requests').update({
+              await supabase.from('approval_requests' as any).update({
                 payout_status: 'failed',
                 payout_error: payoutErr.message || 'Retry failed',
                 payout_attempted_at: new Date().toISOString()
@@ -390,7 +390,7 @@ export const useUnifiedApprovalRequests = () => {
             }
 
             if (payoutData?.status === 'success') {
-              await supabase.from('money_requests').update({
+              await supabase.from('approval_requests' as any).update({
                 payout_status: 'sent',
                 payout_ref: payoutData.ref,
                 payout_attempted_at: new Date().toISOString(),
@@ -431,7 +431,7 @@ export const useUnifiedApprovalRequests = () => {
               return true;
             } else {
               const errMsg = payoutData?.message || 'Transfer rejected';
-              await supabase.from('money_requests').update({
+              await supabase.from('approval_requests' as any).update({
                 payout_status: 'failed',
                 payout_error: errMsg,
                 payout_attempted_at: new Date().toISOString()
@@ -439,7 +439,7 @@ export const useUnifiedApprovalRequests = () => {
               return { blocked: true, reason: `Payout retry failed: ${errMsg}. Please check GosentePay dashboard.` };
             }
           } catch (err: any) {
-            await supabase.from('money_requests').update({
+            await supabase.from('approval_requests' as any).update({
               payout_status: 'failed',
               payout_error: err?.message || 'Exception during retry',
               payout_attempted_at: new Date().toISOString()
@@ -517,7 +517,7 @@ export const useUnifiedApprovalRequests = () => {
         }
 
         const { error: wError } = await supabase
-          .from('money_requests')
+          .from('approval_requests' as any)
           .update(wUpdateData)
           .eq('id', withdrawalId);
 
@@ -593,7 +593,7 @@ export const useUnifiedApprovalRequests = () => {
 
             // Update payout status based on result
             if (payoutSuccess) {
-              await supabase.from('money_requests').update({
+              await supabase.from('approval_requests' as any).update({
                 payout_status: 'sent',
                 payout_ref: payoutRef,
                 payout_attempted_at: new Date().toISOString(),
@@ -629,7 +629,7 @@ export const useUnifiedApprovalRequests = () => {
                 });
               }
             } else {
-              await supabase.from('money_requests').update({
+              await supabase.from('approval_requests' as any).update({
                 payout_status: 'failed',
                 payout_error: payoutError,
                 payout_attempted_at: new Date().toISOString()

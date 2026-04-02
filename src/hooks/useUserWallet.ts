@@ -172,7 +172,7 @@ export const useUserWallet = () => {
       
       // Insert into money_requests table (withdrawal_requests is a view)
       const { error } = await supabase
-        .from('money_requests')
+        .from('approval_requests' as any)
         .insert([{
           user_id: unifiedUserId,
           amount,

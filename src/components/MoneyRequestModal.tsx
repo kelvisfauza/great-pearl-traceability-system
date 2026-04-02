@@ -103,19 +103,42 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
 
       // Create money request with phone number and payment channel
       const { error } = await supabase
-        .from('money_requests')
+        .from('approval_requests')
         .insert([{
-          user_id: user?.id,
+          department: employee?.department || 'General',
+          type: requestType === 'advance'
+            ? 'Salary Advance'
+            : requestType === 'withdrawal'
+            ? 'Withdrawal Request'
+            : requestType === 'lunch_refreshment'
+            ? 'Lunch/Refreshment Request'
+            : 'Money Request',
+          title:
+            requestType === 'advance'
+              ? `Salary Advance Request - ${employee?.name || user?.email}`
+              : requestType === 'withdrawal'
+              ? `Withdrawal Request - ${employee?.name || user?.email}`
+              : `Money Request - ${employee?.name || user?.email}`,
+          description: reason,
           amount: requestAmount,
-          reason,
-          request_type: requestType,
-          requested_by: user?.email || 'Unknown',
+          requestedby: user?.email || 'Unknown',
+          daterequested: new Date().toISOString().split('T')[0],
+          priority: requestAmount > 100000 ? 'High' : 'Medium',
+          status: 'Pending Finance',
           approval_stage: 'pending_finance',
-          status: 'pending',
-          admin_approved: false,
           finance_approved: false,
-          phone_number: paymentChannel === 'MOBILE_MONEY' ? phoneNumber : null,
-          payment_channel: paymentChannel
+          admin_approved: false,
+          requestedby_name: employee?.name || user?.email || 'Unknown',
+          requestedby_position: employee?.position || 'Staff',
+          disbursement_method: paymentChannel === 'MOBILE_MONEY' ? 'mobile_money' : 'cash',
+          disbursement_phone: paymentChannel === 'MOBILE_MONEY' ? phoneNumber : null,
+          details: {
+            request_type: requestType,
+            payment_channel: paymentChannel,
+            user_id: user?.id,
+            employee_id: employee?.id || null,
+            employee_email: employee?.email || user?.email || null
+          }
         }]);
 
       if (error) throw error;

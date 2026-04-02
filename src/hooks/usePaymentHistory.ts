@@ -30,7 +30,7 @@ export const usePaymentHistory = () => {
 
       // Fetch only PAID payment records from Supabase
       const { data: paymentsData, error: paymentsError } = await supabase
-        .from('payment_records')
+        .from('supplier_payments' as any)
         .select('*')
         .eq('status', 'Paid')
         .order('created_at', { ascending: false });

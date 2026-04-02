@@ -133,24 +133,25 @@ const FinanceMonthlyReport = () => {
         data.cashIn += amount;
       });
 
-      // Fetch coffee payments
+      // Fetch coffee payments from supplier_payments
       const { data: coffeePayments } = await supabase
-        .from('payment_records')
-        .select('*')
-        .gte('date', startStr)
-        .lte('date', endStr)
-        .eq('status', 'Paid');
+        .from('supplier_payments')
+        .select('*, suppliers(name)')
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString())
+        .eq('status', 'POSTED' as any);
 
       const supplierMap = new Map<string, { amount: number; batches: number }>();
 
-      coffeePayments?.forEach(payment => {
-        const amount = Number(payment.amount) || 0;
+      coffeePayments?.forEach((payment: any) => {
+        const amount = Number(payment.amount_paid_ugx) || 0;
         data.coffeePaid += amount;
         data.totalPaid += amount;
         data.cashOut += amount;
 
-        const existing = supplierMap.get(payment.supplier) || { amount: 0, batches: 0 };
-        supplierMap.set(payment.supplier, {
+        const supplierName = payment.suppliers?.name || 'Unknown Supplier';
+        const existing = supplierMap.get(supplierName) || { amount: 0, batches: 0 };
+        supplierMap.set(supplierName, {
           amount: existing.amount + amount,
           batches: existing.batches + 1,
         });
@@ -163,21 +164,21 @@ const FinanceMonthlyReport = () => {
 
       // Fetch unpaid transactions (pending coffee payments)
       const { data: pendingCoffee } = await supabase
-        .from('payment_records')
-        .select('*')
-        .gte('date', startStr)
-        .lte('date', endStr)
-        .in('status', ['Pending', 'pending']);
+        .from('supplier_payments')
+        .select('*, suppliers(name)')
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString())
+        .eq('status', 'PENDING_ADMIN_APPROVAL' as any);
 
-      pendingCoffee?.forEach(payment => {
-        const amount = Number(payment.amount) || 0;
+      pendingCoffee?.forEach((payment: any) => {
+        const amount = Number(payment.amount_paid_ugx) || 0;
         data.unpaidAmount += amount;
         data.unpaidTransactions += 1;
         data.unpaidDetails.push({
           type: 'Coffee Payment',
-          description: `${payment.supplier} - ${payment.batch_number}`,
+          description: `${payment.suppliers?.name || 'Unknown'} - ${payment.reference || 'N/A'}`,
           amount: amount,
-          date: payment.date,
+          date: format(new Date(payment.created_at), 'yyyy-MM-dd'),
         });
       });
 

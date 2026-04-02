@@ -72,7 +72,7 @@ export const useStoreManagement = () => {
       
       // Get payment records status
       const { data: paymentRecords } = await supabase
-        .from('payment_records')
+        .from('supplier_payments' as any)
         .select('batch_number, status')
         .in('batch_number', transformedRecords.map(r => r.batchNumber).filter(Boolean));
       
@@ -279,7 +279,7 @@ export const useStoreManagement = () => {
       // Check payment status
       console.log('🔍 Checking payment records...');
       const { data: payments } = await supabase
-        .from('payment_records')
+        .from('supplier_payments' as any)
         .select('*')
         .eq('batch_number', coffeeRecord.batchNumber)
         .in('status', ['Paid', 'paid', 'Processing', 'Approved', 'completed', 'Completed']);
@@ -331,7 +331,7 @@ export const useStoreManagement = () => {
       
       // 3. Delete payment records
       await supabase
-        .from('payment_records')
+        .from('supplier_payments' as any)
         .delete()
         .eq('batch_number', coffeeRecord.batchNumber);
       

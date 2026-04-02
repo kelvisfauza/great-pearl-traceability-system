@@ -8,7 +8,7 @@ export async function fixPendingPayments() {
 
   // Get all pending payment records
   const { data: pendingPayments, error: paymentsError } = await supabase
-    .from('payment_records')
+    .from('supplier_payments' as any)
     .select('id, batch_number, supplier, amount')
     .eq('status', 'Pending');
 
@@ -33,7 +33,7 @@ export async function fixPendingPayments() {
       console.log(`💰 Found payment for ${payment.batch_number}, updating status...`);
       
       const { error: updateError } = await supabase
-        .from('payment_records')
+        .from('supplier_payments' as any)
         .update({
           status: 'Paid',
           amount_paid: Math.abs(cashTx.amount),

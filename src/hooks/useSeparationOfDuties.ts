@@ -23,7 +23,7 @@ export const useSeparationOfDuties = () => {
 
     try {
       const { data, error } = await supabase
-        .from('money_requests')
+        .from('approval_requests' as any)
         .select('finance_approved_by, admin_approved_by, requested_by, user_id')
         .eq('id', requestId)
         .single();

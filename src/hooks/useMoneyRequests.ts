@@ -28,7 +28,7 @@ export const useMoneyRequests = () => {
       
       // Fetch current money requests
       const { data: currentData, error: currentError } = await supabase
-        .from('money_requests')
+        .from('approval_requests' as any)
         .select('*')
         .order('created_at', { ascending: false });
 

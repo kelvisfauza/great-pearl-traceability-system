@@ -62,9 +62,10 @@ const ApprovedRequestsHistory = () => {
           .order('updated_at', { ascending: false })
           .limit(15),
         supabase
-          .from('money_requests')
+          .from('approval_requests')
           .select('*')
           .in('status', ['approved', 'Approved'])
+          .in('type', ['Salary Advance', 'Withdrawal Request', 'Lunch/Refreshment Request', 'Money Request'])
           .order('updated_at', { ascending: false })
           .limit(15),
         supabase
@@ -115,9 +116,10 @@ const ApprovedRequestsHistory = () => {
           .lte('updated_at', endDate + 'T23:59:59')
           .order('updated_at', { ascending: false }),
         supabase
-          .from('money_requests')
+          .from('approval_requests')
           .select('*')
           .in('status', ['approved', 'Approved'])
+          .in('type', ['Salary Advance', 'Withdrawal Request', 'Lunch/Refreshment Request', 'Money Request'])
           .gte('updated_at', startDate)
           .lte('updated_at', endDate + 'T23:59:59')
           .order('updated_at', { ascending: false }),

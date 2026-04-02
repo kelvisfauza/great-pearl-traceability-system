@@ -63,7 +63,7 @@ export const useUserAccount = () => {
     try {
       // Fetch money requests using Supabase ID
       const { data: moneyRequestsData } = await supabase
-        .from('money_requests')
+        .from('approval_requests' as any)
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
@@ -111,7 +111,7 @@ export const useUserAccount = () => {
 
     try {
       const { data, error } = await supabase
-        .from('money_requests')
+        .from('approval_requests' as any)
         .insert([{
           user_id: user.id,
           amount,

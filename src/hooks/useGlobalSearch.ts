@@ -171,7 +171,7 @@ export const useGlobalSearch = (searchTerm: string) => {
 
           // Also search money_requests table
           const { data: expenseRequests } = await supabase
-            .from('money_requests')
+            .from('approval_requests' as any)
             .select('*')
             .or(`reason.ilike.%${searchTerm}%,status.ilike.%${searchTerm}%,request_type.ilike.%${searchTerm}%`)
             .limit(10);
@@ -353,7 +353,7 @@ export const useGlobalSearch = (searchTerm: string) => {
         const canAccessFinancePayments = hasPermission && (hasPermission('Finance Management') || employee?.permissions?.includes('*'));
         if (canAccessFinancePayments) {
           const { data: payments } = await supabase
-            .from('payment_records')
+            .from('supplier_payments' as any)
             .select('*')
             .or(`batch_number.ilike.%${searchTerm}%,supplier.ilike.%${searchTerm}%,status.ilike.%${searchTerm}%`)
             .limit(10);

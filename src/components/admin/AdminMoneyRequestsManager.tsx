@@ -40,13 +40,26 @@ const AdminMoneyRequestsManager = () => {
   const fetchRequests = async () => {
     try {
       const { data, error } = await supabase
-        .from('money_requests')
+        .from('approval_requests')
         .select('*')
         .eq('approval_stage', 'pending_admin')
+        .in('type', ['Salary Advance', 'Withdrawal Request', 'Lunch/Refreshment Request', 'Money Request'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setRequests(data || []);
+      setRequests((data || []).map((req: any) => ({
+        id: req.id,
+        user_id: req.details?.user_id || req.requestedby,
+        amount: Number(req.amount) || 0,
+        reason: req.description || req.title,
+        request_type: req.details?.request_type || req.type,
+        status: req.status,
+        approval_stage: req.approval_stage || 'pending_admin',
+        admin_approved_at: req.admin_approved_at,
+        admin_approved_by: req.admin_approved_by,
+        created_at: req.created_at,
+        requested_by: req.requestedby_name || req.requestedby
+      })));
     } catch (error: any) {
       console.error('Error fetching money requests:', error);
       toast({
@@ -66,7 +79,7 @@ const AdminMoneyRequestsManager = () => {
     const channel = supabase
       .channel('admin_money_requests')
       .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'money_requests', filter: 'approval_stage=eq.pending_admin' },
+        { event: '*', schema: 'public', table: 'approval_requests' },
         () => fetchRequests()
       )
       .subscribe();
@@ -103,7 +116,7 @@ const AdminMoneyRequestsManager = () => {
       }
 
       const { error } = await supabase
-        .from('money_requests')
+        .from('approval_requests')
         .update(updateData)
         .eq('id', requestId);
 

@@ -97,7 +97,7 @@ const Expenses = () => {
       
       try {
         const { data } = await supabase
-          .from('money_requests')
+          .from('approval_requests' as any)
           .select('*')
           .eq('user_id', employee.authUserId)
           .in('request_type', ['Salary Advance', 'Mid-Month Salary', 'End-Month Salary', 'Emergency Salary Request'])
@@ -362,7 +362,7 @@ const Expenses = () => {
     try {
       // Submit to Supabase money_requests for proper two-tier approval flow
       const { data, error } = await supabase
-        .from('money_requests')
+        .from('approval_requests' as any)
         .insert({
           user_id: employee.authUserId,
           amount: numericAmount,

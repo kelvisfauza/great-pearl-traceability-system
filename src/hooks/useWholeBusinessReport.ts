@@ -124,14 +124,14 @@ export const useWholeBusinessReport = (dateRange?: { start: string; end: string 
         fieldAgents, fieldCollections, dailyReports, farmers, fieldPurchases,
         moneyRequests
       ] = await Promise.all([
-        withDateRange(supabase.from("payment_records").select("amount, supplier", { count: "exact" })),
+        withDateRange(supabase.from("supplier_payments").select("amount_paid_ugx, supplier_id", { count: "exact" })),
         withDateRange(supabase.from("finance_cash_transactions").select("amount", { count: "exact" })),
         withDateRange(supabase.from("finance_expenses").select("amount, status", { count: "exact" })),
         withDateRange(supabase.from("employee_salary_payments").select("net_salary, status", { count: "exact" })),
         withDateRange(supabase.from("approval_requests").select("status, amount", { count: "exact" })),
         supabase.from("suppliers").select("id, name", { count: "exact" }),
         withDateRange(supabase.from("supplier_contracts").select("id, status", { count: "exact" })),
-        withDateRange(supabase.from("payment_records").select("amount, supplier")),
+        withDateRange(supabase.from("supplier_payments").select("amount_paid_ugx, supplier_id")),
         withDateRange(supabase.from("coffee_bookings").select("id, status", { count: "exact" })),
         withDateRange(supabase.from("sales_transactions").select("total_amount, weight, customer", { count: "exact" })),
         withDateRange(supabase.from("buyer_contracts").select("id, status, total_quantity, price_per_kg", { count: "exact" })),
@@ -153,7 +153,7 @@ export const useWholeBusinessReport = (dateRange?: { start: string; end: string 
         withDateRange(supabase.from("daily_reports").select("id", { count: "exact" })),
         supabase.from("farmer_profiles").select("id", { count: "exact" }),
         withDateRange(supabase.from("field_purchases").select("total_value", { count: "exact" })),
-        withDateRange(supabase.from("money_requests").select("status, amount", { count: "exact" })),
+        withDateRange(supabase.from("approval_requests").select("status, amount", { count: "exact" }).in("type", ["Salary Advance", "Withdrawal Request", "Lunch/Refreshment Request", "Money Request"])),
       ]);
 
       // Process Finance
@@ -163,7 +163,7 @@ export const useWholeBusinessReport = (dateRange?: { start: string; end: string 
       const apprData = approvalRequests.data || [];
       const finance = {
         totalPayments: paymentRecords.count || 0,
-        totalPaymentAmount: payments.reduce((s, p) => s + (Number(p.amount) || 0), 0),
+        totalPaymentAmount: payments.reduce((s: number, p: any) => s + (Number(p.amount_paid_ugx) || 0), 0),
         totalCashTransactions: cashTx.count || 0,
         totalExpenses: expenses.count || 0,
         totalExpenseAmount: expData.reduce((s, e) => s + (Number(e.amount) || 0), 0),
@@ -181,9 +181,9 @@ export const useWholeBusinessReport = (dateRange?: { start: string; end: string 
       const bookData = bookings.data || [];
       const supplierTotals: Record<string, { name: string; total: number; count: number }> = {};
       spData.forEach((p: any) => {
-        const name = p.supplier || "Unknown";
+        const name = p.supplier_id || "Unknown";
         if (!supplierTotals[name]) supplierTotals[name] = { name, total: 0, count: 0 };
-        supplierTotals[name].total += Number(p.amount) || 0;
+        supplierTotals[name].total += Number(p.amount_paid_ugx) || 0;
         supplierTotals[name].count++;
       });
       const sortedSuppliers = Object.values(supplierTotals).sort((a, b) => b.total - a.total);
@@ -194,7 +194,7 @@ export const useWholeBusinessReport = (dateRange?: { start: string; end: string 
         totalContracts: contracts.count || 0,
         activeContracts: contData.filter(c => c.status === "Active").length,
         totalPaymentRecords: spData.length,
-        totalPaidAmount: spData.reduce((s, p) => s + (Number(p.amount) || 0), 0),
+        totalPaidAmount: spData.reduce((s: number, p: any) => s + (Number(p.amount_paid_ugx) || 0), 0),
         topSuppliers: sortedSuppliers.slice(0, 10),
         bottomSuppliers: sortedSuppliers.slice(-5).reverse(),
         totalBookings: bookings.count || 0,

@@ -143,7 +143,7 @@ serve(async (req) => {
 
     // Create in-app notification
     for (const analyst of analysts) {
-      await supabase.from('finance_notifications').insert({
+      await supabase.from('notifications').insert({
         title: 'Morning Price Reminder',
         message: `Good morning! Please update today's (${today}) coffee buying prices. The team needs updated prices for purchasing.`,
         type: 'price_reminder',

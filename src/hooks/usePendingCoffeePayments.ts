@@ -100,7 +100,7 @@ export const usePendingCoffeePayments = () => {
       
       // Fetch paid batch numbers in one query
       const { data: paidPayments } = await supabase
-        .from('payment_records')
+        .from('supplier_payments' as any)
         .select('batch_number')
         .in('batch_number', batchNumbers)
         .eq('status', 'Paid');
@@ -268,7 +268,7 @@ export const usePendingCoffeePayments = () => {
       
       // Check if payment record already exists for this batch
       const { data: existingPayment } = await supabase
-        .from('payment_records')
+        .from('supplier_payments' as any)
         .select('id')
         .eq('batch_number', paymentData.batchNumber)
         .maybeSingle();
@@ -276,7 +276,7 @@ export const usePendingCoffeePayments = () => {
       if (existingPayment) {
         // Update existing payment record
         const { error: paymentUpdateError } = await supabase
-          .from('payment_records')
+          .from('supplier_payments' as any)
           .update({
             status: paymentData.method === 'Cash' ? 'Paid' : 'Processing',
             method: paymentData.method === 'Cash' ? 'Cash' : 'Bank Transfer',
@@ -294,7 +294,7 @@ export const usePendingCoffeePayments = () => {
       } else {
         // Create new payment record
         const { error: paymentInsertError } = await supabase
-          .from('payment_records')
+          .from('supplier_payments' as any)
           .insert({
             supplier: paymentData.supplier,
             amount: paymentData.amount,

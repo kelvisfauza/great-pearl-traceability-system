@@ -46,25 +46,26 @@ const RecentActivity = () => {
         }
       }
 
-      // Fetch payment records (coffee payments)
+      // Fetch supplier payments (coffee payments)
       if (canViewFinancialActivities) {
         const { data: payments } = await supabase
-          .from('payment_records')
-          .select('*')
+          .from('supplier_payments')
+          .select('*, suppliers(name)')
           .order('created_at', { ascending: false })
           .limit(20);
 
         if (payments) {
-          payments.forEach(payment => {
+          payments.forEach((payment: any) => {
+            const supplierName = payment.suppliers?.name || 'Unknown Supplier';
             allActivities.push({
               id: `payment-${payment.id}`,
               type: "payment",
               title: "Coffee Payment Made",
-              description: `${payment.supplier} | ${payment.amount} UGX`,
+              description: `${supplierName} | ${payment.amount_paid_ugx} UGX`,
               timestamp: payment.created_at,
               time: format(new Date(payment.created_at), "MMM dd, HH:mm"),
               icon: DollarSign,
-              status: payment.status.toLowerCase()
+              status: payment.status?.toLowerCase() || 'pending'
             });
           });
         }
