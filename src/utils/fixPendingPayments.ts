@@ -8,9 +8,9 @@ export async function fixPendingPayments() {
 
   // Get all pending payment records
   const { data: pendingPayments, error: paymentsError } = await supabase
-    .from('supplier_payments' as any)
-    .select('id, batch_number, supplier, amount')
-    .eq('status', 'Pending');
+    .from('supplier_payments')
+    .select('id, batch_number, supplier_id, amount_paid_ugx')
+    .eq('status', 'PENDING_ADMIN_APPROVAL');
 
   if (paymentsError) {
     console.error('Error fetching pending payments:', paymentsError);
@@ -21,7 +21,6 @@ export async function fixPendingPayments() {
 
   let fixed = 0;
   for (const payment of (pendingPayments as any[]) || []) {
-    // Check if there's a corresponding cash transaction
     const { data: cashTx } = await supabase
       .from('finance_cash_transactions')
       .select('id, amount')
@@ -40,8 +39,6 @@ export async function fixPendingPayments() {
           updated_at: new Date().toISOString()
         } as any)
         .eq('id', payment.id);
-
-      if (updateError) {
 
       if (updateError) {
         console.error(`❌ Error updating ${payment.batch_number}:`, updateError);
