@@ -92,7 +92,7 @@ const AttendanceTimeManager = () => {
   const fetchCompanyWorkers = async () => {
     try {
       const { data, error } = await supabase
-        .from('company_employees')
+        .from('employees' as any)
         .select('id, full_name, employee_id, department, status, phone')
         .eq('status', 'Active')
         .order('full_name');

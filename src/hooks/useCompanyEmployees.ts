@@ -46,7 +46,7 @@ export const useCompanyEmployees = () => {
   const fetchEmployees = async () => {
     try {
       const { data, error } = await supabase
-        .from('company_employees')
+        .from('employees' as any)
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -84,7 +84,7 @@ export const useCompanyEmployees = () => {
   const addEmployee = async (employeeData: Omit<CompanyEmployee, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       const { data, error } = await supabase
-        .from('company_employees')
+        .from('employees' as any)
         .insert([employeeData])
         .select()
         .single();
@@ -111,7 +111,7 @@ export const useCompanyEmployees = () => {
   const updateEmployee = async (id: string, updates: Partial<CompanyEmployee>) => {
     try {
       const { data, error } = await supabase
-        .from('company_employees')
+        .from('employees' as any)
         .update(updates)
         .eq('id', id)
         .select()
@@ -139,7 +139,7 @@ export const useCompanyEmployees = () => {
   const deleteEmployee = async (id: string) => {
     try {
       const { error } = await supabase
-        .from('company_employees')
+        .from('employees' as any)
         .delete()
         .eq('id', id);
 

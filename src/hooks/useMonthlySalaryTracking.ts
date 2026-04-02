@@ -91,7 +91,7 @@ export const useMonthlySalaryTracking = (
         .gte('created_at', startOfMonth.toISOString());
 
       const { data: moneyAdvances } = await supabase
-        .from('money_requests')
+        .from('approval_requests' as any)
         .select('amount, status, created_at')
         .eq('requested_by', employeeEmail)
         .eq('request_type', 'advance')
@@ -127,7 +127,7 @@ export const useMonthlySalaryTracking = (
 
       // Also check money_requests table for mid-month and end-month salary requests
       const { data: moneySalaryRequests } = await supabase
-        .from('money_requests')
+        .from('approval_requests' as any)
         .select('amount, status, created_at')
         .eq('requested_by', employeeEmail)
         .in('request_type', ['mid-month', 'end-month', 'Mid-Month Salary', 'End-Month Salary'])

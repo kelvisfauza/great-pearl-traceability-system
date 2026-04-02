@@ -531,7 +531,7 @@ export const useQualityControl = () => {
         
         // Create payment record in Supabase
         const { error: paymentError } = await supabase
-          .from('payment_records')
+          .from('supplier_payments' as any)
           .insert([{
             supplier: coffeeRecord.supplier_name,
             amount: totalPaymentAmount,
@@ -630,7 +630,7 @@ export const useQualityControl = () => {
       // Update associated payment record if price changed
       if (updates.suggested_price) {
         const { data: existingPayment, error: paymentFetchError } = await supabase
-          .from('payment_records')
+          .from('supplier_payments' as any)
           .select('*')
           .eq('quality_assessment_id', id)
           .maybeSingle();
@@ -647,7 +647,7 @@ export const useQualityControl = () => {
             const newTotalAmount = coffeeRecord.kilograms * updates.suggested_price;
             
             const { error: paymentUpdateError } = await supabase
-              .from('payment_records')
+              .from('supplier_payments' as any)
               .update({
                 amount: newTotalAmount,
                 updated_at: new Date().toISOString()

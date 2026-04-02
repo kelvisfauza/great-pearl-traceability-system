@@ -179,7 +179,7 @@ const Suppliers = () => {
       
       // Get payment records from Supabase only (Firebase has been migrated)
       const { data: supabasePayments } = await supabase
-        .from('payment_records')
+        .from('supplier_payments' as any)
         .select('*')
         .in('batch_number', batchNumbers);
 

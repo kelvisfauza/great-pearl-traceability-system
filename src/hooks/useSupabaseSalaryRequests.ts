@@ -33,7 +33,7 @@ export const useSupabaseSalaryRequests = () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('money_requests')
+        .from('approval_requests' as any)
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -58,7 +58,7 @@ export const useSupabaseSalaryRequests = () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('money_requests')
+        .from('approval_requests' as any)
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
@@ -85,7 +85,7 @@ export const useSupabaseSalaryRequests = () => {
       console.log('fetchRequestsByEmail called for:', email);
       setLoading(true);
       const { data, error } = await supabase
-        .from('money_requests')  
+        .from('approval_requests' as any)  
         .select('*')
         .eq('requested_by', email)
         .order('created_at', { ascending: false });
@@ -112,7 +112,7 @@ export const useSupabaseSalaryRequests = () => {
   const createRequest = async (amount: number, reason: string, userId: string, requestedBy: string) => {
     try {
       const { data, error } = await supabase
-        .from('money_requests')
+        .from('approval_requests' as any)
         .insert([{
           user_id: userId,
           amount,
