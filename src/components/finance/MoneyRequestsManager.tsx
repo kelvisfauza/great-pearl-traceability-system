@@ -138,13 +138,13 @@ const MoneyRequestsManager = () => {
 
       // Send SMS notification to requester
       if (data && data.length > 0) {
-        const request = data[0];
+        const request = data[0] as any;
         
         // Get requester details from employees table
         const { data: requesterData } = await supabase
           .from('employees')
           .select('name, phone')
-          .eq('auth_user_id', request.user_id)
+          .eq('email', request.requestedby)
           .single();
         
         if (requesterData?.phone) {
