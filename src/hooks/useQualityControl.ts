@@ -647,12 +647,12 @@ export const useQualityControl = () => {
             const newTotalAmount = coffeeRecord.kilograms * updates.suggested_price;
             
             const { error: paymentUpdateError } = await supabase
-              .from('supplier_payments' as any)
+              .from('supplier_payments')
               .update({
-                amount: newTotalAmount,
+                amount_paid_ugx: newTotalAmount,
                 updated_at: new Date().toISOString()
-              })
-              .eq('id', existingPayment.id);
+              } as any)
+              .eq('id', (existingPayment as any).id);
 
             if (paymentUpdateError) {
               console.error('Error updating payment record:', paymentUpdateError);

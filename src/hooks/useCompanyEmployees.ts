@@ -6,6 +6,7 @@ export interface CompanyEmployee {
   id: string;
   employee_id: string;
   full_name: string;
+  email?: string;
   phone?: string;
   address?: string;
   position: string;
@@ -46,12 +47,29 @@ export const useCompanyEmployees = () => {
   const fetchEmployees = async () => {
     try {
       const { data, error } = await supabase
-        .from('employees' as any)
+        .from('employees')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setEmployees(data || []);
+      const mapped: CompanyEmployee[] = (data || []).map((emp: any) => ({
+        id: emp.id,
+        employee_id: emp.employee_id || '',
+        full_name: emp.name || '',
+        email: emp.email || '',
+        phone: emp.phone || '',
+        address: emp.address || '',
+        position: emp.position || '',
+        department: emp.department || '',
+        base_salary: Number(emp.salary || 0),
+        allowances: 0,
+        deductions: 0,
+        hire_date: emp.join_date ? String(emp.join_date).split('T')[0] : new Date().toISOString().split('T')[0],
+        status: emp.status || 'Active',
+        created_at: emp.created_at || '',
+        updated_at: emp.updated_at || '',
+      }));
+      setEmployees(mapped);
     } catch (error) {
       console.error('Error fetching company employees:', error);
       toast({
@@ -84,14 +102,42 @@ export const useCompanyEmployees = () => {
   const addEmployee = async (employeeData: Omit<CompanyEmployee, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       const { data, error } = await supabase
-        .from('employees' as any)
-        .insert([employeeData])
+        .from('employees')
+        .insert([{
+          name: employeeData.full_name,
+          email: employeeData.email || '',
+          position: employeeData.position,
+          department: employeeData.department,
+          salary: employeeData.base_salary,
+          status: employeeData.status,
+          join_date: employeeData.hire_date,
+          employee_id: employeeData.employee_id,
+          phone: employeeData.phone,
+          address: employeeData.address,
+        }])
         .select()
         .single();
 
       if (error) throw error;
 
-      setEmployees(prev => [data, ...prev]);
+      const mapped: CompanyEmployee = {
+        id: (data as any).id,
+        employee_id: (data as any).employee_id || '',
+        full_name: (data as any).name || '',
+        email: (data as any).email || '',
+        phone: (data as any).phone || '',
+        address: (data as any).address || '',
+        position: (data as any).position || '',
+        department: (data as any).department || '',
+        base_salary: Number((data as any).salary || 0),
+        allowances: 0,
+        deductions: 0,
+        hire_date: (data as any).join_date || '',
+        status: (data as any).status || 'Active',
+        created_at: (data as any).created_at || '',
+        updated_at: (data as any).updated_at || '',
+      };
+      setEmployees(prev => [mapped, ...prev]);
       toast({
         title: "Success",
         description: "Employee added successfully",
@@ -110,16 +156,27 @@ export const useCompanyEmployees = () => {
 
   const updateEmployee = async (id: string, updates: Partial<CompanyEmployee>) => {
     try {
+      const dbUpdates: any = {};
+      if (updates.full_name) dbUpdates.name = updates.full_name;
+      if (updates.position) dbUpdates.position = updates.position;
+      if (updates.department) dbUpdates.department = updates.department;
+      if (updates.base_salary !== undefined) dbUpdates.salary = updates.base_salary;
+      if (updates.status) dbUpdates.status = updates.status;
+      if (updates.phone) dbUpdates.phone = updates.phone;
+      if (updates.address) dbUpdates.address = updates.address;
+      if (updates.hire_date) dbUpdates.join_date = updates.hire_date;
+      if (updates.employee_id) dbUpdates.employee_id = updates.employee_id;
+
       const { data, error } = await supabase
-        .from('employees' as any)
-        .update(updates)
+        .from('employees')
+        .update(dbUpdates)
         .eq('id', id)
         .select()
         .single();
 
       if (error) throw error;
 
-      setEmployees(prev => prev.map(emp => emp.id === id ? data : emp));
+      setEmployees(prev => prev.map(emp => emp.id === id ? { ...emp, ...updates } : emp));
       toast({
         title: "Success",
         description: "Employee updated successfully",
@@ -139,7 +196,7 @@ export const useCompanyEmployees = () => {
   const deleteEmployee = async (id: string) => {
     try {
       const { error } = await supabase
-        .from('employees' as any)
+        .from('employees')
         .delete()
         .eq('id', id);
 

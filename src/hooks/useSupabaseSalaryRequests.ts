@@ -33,13 +33,13 @@ export const useSupabaseSalaryRequests = () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('approval_requests' as any)
+        .from('approval_requests')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       
-      setRequests(data || []);
+      setRequests((data as any[]) || []);
       console.log('Fetched salary requests from Supabase:', data?.length || 0);
     } catch (error) {
       console.error('Error fetching salary requests:', error);
@@ -58,14 +58,14 @@ export const useSupabaseSalaryRequests = () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('approval_requests' as any)
+        .from('approval_requests')
         .select('*')
-        .eq('user_id', userId)
+        .eq('requestedby', userId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       
-      setRequests(data || []);
+      setRequests((data as any[]) || []);
       console.log('Fetched user salary requests from Supabase:', data?.length || 0);
     } catch (error) {
       console.error('Error fetching user salary requests:', error);
@@ -85,14 +85,14 @@ export const useSupabaseSalaryRequests = () => {
       console.log('fetchRequestsByEmail called for:', email);
       setLoading(true);
       const { data, error } = await supabase
-        .from('approval_requests' as any)  
+        .from('approval_requests')
         .select('*')
-        .eq('requested_by', email)
+        .eq('requestedby', email)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       
-      setRequests(data || []);
+      setRequests((data as any[]) || []);
       console.log('Fetched email salary requests from Supabase:', data?.length || 0);
       console.log('Setting loading to false');
     } catch (error) {

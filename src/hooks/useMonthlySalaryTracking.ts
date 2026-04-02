@@ -91,11 +91,11 @@ export const useMonthlySalaryTracking = (
         .gte('created_at', startOfMonth.toISOString());
 
       const { data: moneyAdvances } = await supabase
-        .from('approval_requests' as any)
+        .from('approval_requests')
         .select('amount, status, created_at')
-        .eq('requested_by', employeeEmail)
-        .eq('request_type', 'advance')
-        .eq('status', 'approved')
+        .eq('requestedby', employeeEmail)
+        .eq('type', 'Salary Advance')
+        .eq('status', 'Approved')
         .gte('created_at', startOfMonth.toISOString());
 
       // Use the larger of: active advance balances OR monthly advance requests
@@ -127,11 +127,11 @@ export const useMonthlySalaryTracking = (
 
       // Also check money_requests table for mid-month and end-month salary requests
       const { data: moneySalaryRequests } = await supabase
-        .from('approval_requests' as any)
+        .from('approval_requests')
         .select('amount, status, created_at')
-        .eq('requested_by', employeeEmail)
-        .in('request_type', ['mid-month', 'end-month', 'Mid-Month Salary', 'End-Month Salary'])
-        .eq('status', 'approved')
+        .eq('requestedby', employeeEmail)
+        .in('type', ['Mid-Month Salary', 'End-Month Salary', 'Employee Salary Request'])
+        .eq('status', 'Approved')
         .gte('created_at', cutoffDate.toISOString());
 
       if (requestsError) throw requestsError;

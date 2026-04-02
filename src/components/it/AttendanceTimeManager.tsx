@@ -92,14 +92,14 @@ const AttendanceTimeManager = () => {
   const fetchCompanyWorkers = async () => {
     try {
       const { data, error } = await supabase
-        .from('employees' as any)
-        .select('id, full_name, employee_id, department, status, phone')
+        .from('employees')
+        .select('id, name, employee_id, department, status, phone')
         .eq('status', 'Active')
-        .order('full_name');
+        .order('name');
       if (error) throw error;
-      setCompanyWorkers((data || []).map(w => ({
+      setCompanyWorkers((data || []).map((w: any) => ({
         id: `company_${w.id}`,
-        name: w.full_name,
+        name: w.name,
         email: w.employee_id,
         department: w.department,
         status: w.status,

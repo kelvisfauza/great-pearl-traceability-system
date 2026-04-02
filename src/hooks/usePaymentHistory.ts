@@ -30,9 +30,9 @@ export const usePaymentHistory = () => {
 
       // Fetch only PAID payment records from Supabase
       const { data: paymentsData, error: paymentsError } = await supabase
-        .from('supplier_payments' as any)
+        .from('supplier_payments')
         .select('*')
-        .eq('status', 'Paid')
+        .eq('status', 'POSTED')
         .order('created_at', { ascending: false });
 
       if (paymentsError) {
@@ -42,7 +42,7 @@ export const usePaymentHistory = () => {
       }
 
       const batchNumbers = Array.from(
-        new Set((paymentsData || []).map(p => p.batch_number).filter(Boolean))
+        new Set((paymentsData || []).map((p: any) => p.batch_number).filter(Boolean))
       ) as string[];
 
       // Fetch matching coffee_records from Supabase (preferred source)
@@ -99,7 +99,7 @@ export const usePaymentHistory = () => {
 
       // Group payments by batch number
       const batchPayments = new Map<string, any[]>();
-      (paymentsData || []).forEach(payment => {
+      (paymentsData as any[] || []).forEach((payment: any) => {
         const batchNumber = payment.batch_number;
         if (!batchNumber) return;
         

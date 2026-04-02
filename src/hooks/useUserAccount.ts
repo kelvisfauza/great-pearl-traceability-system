@@ -63,12 +63,12 @@ export const useUserAccount = () => {
     try {
       // Fetch money requests using Supabase ID
       const { data: moneyRequestsData } = await supabase
-        .from('approval_requests' as any)
+        .from('approval_requests')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('requestedby', user.email)
         .order('created_at', { ascending: false });
 
-      setMoneyRequests(moneyRequestsData || []);
+      setMoneyRequests((moneyRequestsData as any[]) || []);
       
       // Convert wallet data to account format for compatibility
       if (walletData) {

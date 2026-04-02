@@ -187,7 +187,7 @@ const Suppliers = () => {
 
       // Merge the data
       const transactionsData: SupplierTransaction[] = uniqueRecords.map(record => {
-        const payment = allPayments.find(p => p.batch_number === record.batch_number);
+        const payment = allPayments.find((p: any) => p.batch_number === record.batch_number);
         return {
           id: record.id,
           date: record.date,
@@ -196,8 +196,8 @@ const Suppliers = () => {
           kilograms: record.kilograms,
           bags: record.bags,
           status: record.status,
-          payment_amount: payment?.amount,
-          payment_status: payment?.status
+          payment_amount: (payment as any)?.amount_paid_ugx,
+          payment_status: (payment as any)?.status
         };
       });
 

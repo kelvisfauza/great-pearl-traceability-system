@@ -99,14 +99,14 @@ export const usePendingCoffeePayments = () => {
       const batchNumbers = coffeeRecords.map(r => r.batch_number).filter(Boolean);
       
       // Fetch paid batch numbers in one query
-      const { data: paidPayments } = await supabase
-        .from('supplier_payments' as any)
+      const { data: paidPayments } = await (supabase
+        .from('supplier_payments') as any)
         .select('batch_number')
         .in('batch_number', batchNumbers)
-        .eq('status', 'Paid');
+        .eq('status', 'POSTED');
       
       const paidBatchNumbers = new Set(
-        paidPayments?.map(p => p.batch_number).filter(Boolean) || []
+        (paidPayments as any[])?.map(p => p.batch_number).filter(Boolean) || []
       );
 
       // Fetch quality assessments for these records only
@@ -284,7 +284,7 @@ export const usePendingCoffeePayments = () => {
             balance: 0,
             updated_at: new Date().toISOString()
           })
-          .eq('id', existingPayment.id);
+          .eq('id', (existingPayment as any).id);
 
         if (paymentUpdateError) {
           console.error('❌ Failed to update payment record:', paymentUpdateError);
