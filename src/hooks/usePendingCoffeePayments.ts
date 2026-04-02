@@ -100,13 +100,13 @@ export const usePendingCoffeePayments = () => {
       
       // Fetch paid batch numbers in one query
       const { data: paidPayments } = await supabase
-        .from('supplier_payments' as any)
+        .from('supplier_payments')
         .select('batch_number')
         .in('batch_number', batchNumbers)
-        .eq('status', 'Paid');
+        .eq('status', 'POSTED');
       
       const paidBatchNumbers = new Set(
-        paidPayments?.map(p => p.batch_number).filter(Boolean) || []
+        (paidPayments as any[])?.map(p => p.batch_number).filter(Boolean) || []
       );
 
       // Fetch quality assessments for these records only

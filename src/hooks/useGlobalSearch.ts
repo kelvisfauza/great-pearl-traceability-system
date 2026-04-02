@@ -171,17 +171,17 @@ export const useGlobalSearch = (searchTerm: string) => {
 
           // Also search money_requests table
           const { data: expenseRequests } = await supabase
-            .from('approval_requests' as any)
+            .from('approval_requests')
             .select('*')
-            .or(`reason.ilike.%${searchTerm}%,status.ilike.%${searchTerm}%,request_type.ilike.%${searchTerm}%`)
+            .or(`description.ilike.%${searchTerm}%,status.ilike.%${searchTerm}%,type.ilike.%${searchTerm}%`)
             .limit(10);
 
           if (expenseRequests) {
-            expenseRequests.forEach(request => {
+            expenseRequests.forEach((request: any) => {
               searchResults.push({
                 id: request.id,
                 type: 'expense',
-                title: `${request.request_type}: ${request.reason}`,
+                title: `${request.type}: ${request.description}`,
                 subtitle: `${request.amount} UGX | Status: ${request.status}`,
                 navigateTo: `/expenses`,
                 department: 'Finance',
@@ -353,18 +353,18 @@ export const useGlobalSearch = (searchTerm: string) => {
         const canAccessFinancePayments = hasPermission && (hasPermission('Finance Management') || employee?.permissions?.includes('*'));
         if (canAccessFinancePayments) {
           const { data: payments } = await supabase
-            .from('supplier_payments' as any)
+            .from('supplier_payments')
             .select('*')
-            .or(`batch_number.ilike.%${searchTerm}%,supplier.ilike.%${searchTerm}%,status.ilike.%${searchTerm}%`)
+            .or(`batch_number.ilike.%${searchTerm}%,status.ilike.%${searchTerm}%`)
             .limit(10);
 
           if (payments) {
-            payments.forEach(payment => {
+            payments.forEach((payment: any) => {
               searchResults.push({
                 id: payment.id,
                 type: 'payment',
-                title: `Payment: ${payment.supplier}`,
-                subtitle: `${payment.amount} UGX | ${payment.status} | ${payment.date}`,
+                title: `Payment: ${payment.supplier_id}`,
+                subtitle: `${payment.amount_paid_ugx} UGX | ${payment.status} | ${payment.created_at}`,
                 navigateTo: `/finance?payment=${payment.id}`,
                 department: 'Finance',
                 module: 'Payment Processing',
