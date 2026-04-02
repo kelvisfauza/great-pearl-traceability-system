@@ -46,13 +46,30 @@ const MoneyRequestsManager = () => {
   const fetchRequests = async () => {
     try {
       const { data, error } = await supabase
-        .from('money_requests')
+        .from('approval_requests')
         .select('*')
         .eq('approval_stage', 'pending_finance')
+        .in('type', ['Salary Advance', 'Withdrawal Request', 'Lunch/Refreshment Request', 'Money Request'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setRequests(data || []);
+      setRequests((data || []).map((req: any) => ({
+        id: req.id,
+        user_id: req.details?.user_id || req.requestedby,
+        amount: Number(req.amount) || 0,
+        reason: req.description || req.title,
+        request_type: req.details?.request_type || req.type,
+        status: req.status,
+        approval_stage: req.approval_stage || 'pending_finance',
+        finance_approved_at: req.finance_approved_at,
+        finance_approved_by: req.finance_approved_by,
+        admin_approved_at: req.admin_approved_at,
+        admin_approved_by: req.admin_approved_by,
+        created_at: req.created_at,
+        requested_by: req.requestedby_name || req.requestedby,
+        payment_slip_number: null,
+        payment_slip_generated: false
+      })));
     } catch (error: any) {
       console.error('Error fetching money requests:', error);
       toast({
@@ -99,10 +116,16 @@ const MoneyRequestsManager = () => {
         console.log('❌ Setting rejection data:', updateData);
       }
 
-      console.log('📤 Attempting to update money_requests table...');
+      console.log('📤 Attempting to update approval_requests table...');
       const { data, error } = await supabase
-        .from('money_requests')
-        .update(updateData)
+        .from('approval_requests')
+        .update({
+          ...updateData,
+          finance_reviewed: true,
+          finance_review_at: new Date().toISOString(),
+          finance_review_by: employee?.name || employee?.email || 'Finance Department',
+          status: approve ? 'Finance Approved' : 'Rejected'
+        })
         .eq('id', requestId)
         .select();
 
