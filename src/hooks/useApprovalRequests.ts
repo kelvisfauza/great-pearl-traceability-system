@@ -466,10 +466,10 @@ const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
             const { error: supabaseError } = await supabase
               .from('supplier_payments')
               .update({
-                status: 'Paid',
-                method: 'Bank Transfer',
+                status: 'POSTED' as any,
+                method: 'BANK_TRANSFER' as any,
                 updated_at: new Date().toISOString()
-              })
+              } as any)
               .eq('id', request.details.paymentId);
             
             if (supabaseError) {

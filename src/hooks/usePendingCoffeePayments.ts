@@ -99,8 +99,8 @@ export const usePendingCoffeePayments = () => {
       const batchNumbers = coffeeRecords.map(r => r.batch_number).filter(Boolean);
       
       // Fetch paid batch numbers in one query
-      const { data: paidPayments } = await supabase
-        .from('supplier_payments')
+      const { data: paidPayments } = await (supabase
+        .from('supplier_payments') as any)
         .select('batch_number')
         .in('batch_number', batchNumbers)
         .eq('status', 'POSTED');
