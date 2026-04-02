@@ -246,6 +246,10 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       const source = meta.source === 'wallet' ? 'Wallet Recovery' : meta.source === 'salary' ? 'Salary Recovery' : 'Loan Recovery';
       return source;
     }
+    // Generic deposit - show any available description from metadata
+    if (entry.entry_type === 'DEPOSIT' && meta?.description) {
+      return meta.description;
+    }
     return '';
   };
 
