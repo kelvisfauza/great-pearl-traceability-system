@@ -220,9 +220,11 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     if (entry.entry_type === 'DEPOSIT' && (meta?.source === 'loan_disbursement' || entry.reference?.startsWith('LOAN-DISBURSE'))) {
       return meta?.duration_months ? `${meta.duration_months} month(s)` : '';
     }
-    // Detect allowance deposits - show month
+    // Detect allowance deposits - show clear description and month
     if (entry.entry_type === 'DEPOSIT' && meta?.allowance_type) {
-      return meta.month_year ? `for ${meta.month_year}` : (meta.employee_name ? `for ${meta.employee_name}` : '');
+      const desc = meta.description || (meta.allowance_type === 'data_allowance' ? 'Monthly Data Allowance' : 'Monthly Airtime Allowance');
+      const monthLabel = meta.month_year ? ` — ${meta.month_year}` : '';
+      return `${desc}${monthLabel}`;
     }
     // Detect salary - show description
     if (entry.entry_type === 'DEPOSIT' && (meta?.source === 'salary' || meta?.source === 'payroll' || entry.reference?.startsWith('SALARY') || entry.reference?.startsWith('SAL-'))) {
