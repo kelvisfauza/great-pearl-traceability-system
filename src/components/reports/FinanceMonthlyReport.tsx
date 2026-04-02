@@ -139,7 +139,7 @@ const FinanceMonthlyReport = () => {
         .select('*, suppliers(name)')
         .gte('created_at', startDate.toISOString())
         .lte('created_at', endDate.toISOString())
-        .eq('status', 'approved');
+        .eq('status', 'POSTED' as any);
 
       const supplierMap = new Map<string, { amount: number; batches: number }>();
 
@@ -168,7 +168,7 @@ const FinanceMonthlyReport = () => {
         .select('*, suppliers(name)')
         .gte('created_at', startDate.toISOString())
         .lte('created_at', endDate.toISOString())
-        .eq('status', 'pending');
+        .eq('status', 'PENDING_ADMIN_APPROVAL' as any);
 
       pendingCoffee?.forEach((payment: any) => {
         const amount = Number(payment.amount_paid_ugx) || 0;

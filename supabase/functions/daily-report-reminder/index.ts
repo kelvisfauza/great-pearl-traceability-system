@@ -124,7 +124,7 @@ serve(async (req) => {
         }
 
         // Create in-app notification
-        await supabase.from('finance_notifications').insert({
+        await supabase.from('notifications').insert({
           title: 'Daily Report Reminder',
           message: `Please submit your daily report for ${today} before 7 PM.`,
           type: 'daily_report_reminder',
