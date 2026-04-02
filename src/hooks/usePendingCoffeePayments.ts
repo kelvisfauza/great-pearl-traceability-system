@@ -284,7 +284,7 @@ export const usePendingCoffeePayments = () => {
             balance: 0,
             updated_at: new Date().toISOString()
           })
-          .eq('id', existingPayment.id);
+          .eq('id', (existingPayment as any).id);
 
         if (paymentUpdateError) {
           console.error('❌ Failed to update payment record:', paymentUpdateError);

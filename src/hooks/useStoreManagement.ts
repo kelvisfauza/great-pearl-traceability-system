@@ -72,13 +72,13 @@ export const useStoreManagement = () => {
       
       // Get payment records status
       const { data: paymentRecords } = await supabase
-        .from('supplier_payments' as any)
+        .from('supplier_payments')
         .select('batch_number, status')
         .in('batch_number', transformedRecords.map(r => r.batchNumber).filter(Boolean));
       
       // Create lookup maps
       const qualityStatusMap = new Map(qualityAssessments?.map(qa => [qa.batch_number, qa.status]));
-      const paymentStatusMap = new Map(paymentRecords?.map(pr => [pr.batch_number, pr.status]));
+      const paymentStatusMap = new Map((paymentRecords as any[])?.map(pr => [pr.batch_number, pr.status]));
       
       // Determine the most accurate status for each record
       const finalRecords = transformedRecords.map(record => {

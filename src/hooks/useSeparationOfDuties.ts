@@ -34,7 +34,7 @@ export const useSeparationOfDuties = () => {
       const currentUserEmail = employee.email;
 
       // POLICY: Users cannot approve their own requests
-      if (data?.requested_by === currentUserEmail || data?.requested_by === currentUserName) {
+      if ((data as any)?.requestedby === currentUserEmail || (data as any)?.requestedby === currentUserName) {
         return {
           canApprove: false,
           reason: 'You cannot approve your own request. Policy requires a different person to review and approve your submissions.'
@@ -42,8 +42,8 @@ export const useSeparationOfDuties = () => {
       }
 
       const approvers = [
-        data?.finance_approved_by,
-        data?.admin_approved_by
+        (data as any)?.finance_approved_by,
+        (data as any)?.admin_approved_by
       ].filter(Boolean);
 
       // Check if current user already approved at any stage

@@ -20,7 +20,7 @@ export async function fixPendingPayments() {
   console.log(`📋 Found ${pendingPayments?.length || 0} pending payments`);
 
   let fixed = 0;
-  for (const payment of pendingPayments || []) {
+  for (const payment of (pendingPayments as any[]) || []) {
     // Check if there's a corresponding cash transaction
     const { data: cashTx } = await supabase
       .from('finance_cash_transactions')
@@ -33,15 +33,15 @@ export async function fixPendingPayments() {
       console.log(`💰 Found payment for ${payment.batch_number}, updating status...`);
       
       const { error: updateError } = await supabase
-        .from('supplier_payments' as any)
+        .from('supplier_payments')
         .update({
-          status: 'Paid',
-          amount_paid: Math.abs(cashTx.amount),
-          balance: 0,
-          method: 'Cash',
+          status: 'POSTED' as any,
+          amount_paid_ugx: Math.abs(cashTx.amount),
           updated_at: new Date().toISOString()
-        })
+        } as any)
         .eq('id', payment.id);
+
+      if (updateError) {
 
       if (updateError) {
         console.error(`❌ Error updating ${payment.batch_number}:`, updateError);

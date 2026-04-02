@@ -464,7 +464,7 @@ const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
 
             // Always update the Supabase payment record
             const { error: supabaseError } = await supabase
-              .from('supplier_payments' as any)
+              .from('supplier_payments')
               .update({
                 status: 'Paid',
                 method: 'Bank Transfer',
