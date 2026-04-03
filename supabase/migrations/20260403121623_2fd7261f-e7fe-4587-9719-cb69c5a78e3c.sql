@@ -1,0 +1,1 @@
+UPDATE public.system_maintenance SET is_active = false, reason = NULL, activated_by = NULL, activated_at = NULL, recovery_key = NULL, recovery_pin = NULL;
