@@ -113,21 +113,21 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Archive payment records
+    // Archive supplier payments (replaces payment_records)
     const { data: paymentRecords } = await supabaseClient
-      .from('payment_records')
+      .from('supplier_payments')
       .select('*')
 
     if (paymentRecords && paymentRecords.length > 0) {
-      const archivedPayments = paymentRecords.map(payment => ({
+      const archivedPayments = paymentRecords.map((payment: any) => ({
         original_id: payment.id,
-        supplier_name: payment.supplier_name,
-        amount: payment.amount,
-        payment_date: payment.payment_date,
-        payment_method: payment.payment_method,
-        reference: payment.reference,
+        supplier_name: payment.supplier_id || 'Unknown',
+        amount: payment.amount_paid_ugx || 0,
+        payment_date: payment.requested_at,
+        payment_method: payment.payment_method || 'Cash',
+        reference: payment.batch_number,
         notes: payment.notes,
-        recorded_by: payment.recorded_by,
+        recorded_by: payment.requested_by,
         archived_by: archivedBy,
         archive_period: archivePeriod,
         created_at: payment.created_at
@@ -140,33 +140,26 @@ Deno.serve(async (req) => {
       if (archiveError) throw archiveError
 
       recordsArchived.paymentRecords = archivedPayments.length
-
-      if (clearAfterArchive) {
-        const idsToDelete = paymentRecords.map(p => p.id)
-        await supabaseClient
-          .from('payment_records')
-          .delete()
-          .in('id', idsToDelete)
-      }
     }
 
-    // Archive completed money requests
+    // Archive completed approval requests (replaces money_requests)
     const { data: moneyRequests } = await supabaseClient
-      .from('money_requests')
+      .from('approval_requests')
       .select('*')
-      .eq('status', 'completed')
+      .in('type', ['Salary Advance', 'Withdrawal Request', 'Lunch/Refreshment Request', 'Money Request'])
+      .in('status', ['completed', 'Completed', 'Disbursed'])
 
     if (moneyRequests && moneyRequests.length > 0) {
-      const archivedMoneyRequests = moneyRequests.map(req => ({
+      const archivedMoneyRequests = moneyRequests.map((req: any) => ({
         original_id: req.id,
-        employee_id: req.employee_id,
-        employee_name: req.employee_name,
-        request_type: req.request_type,
+        employee_id: req.details?.employee_id || req.requestedby,
+        employee_name: req.requestedby_name || req.requestedby,
+        request_type: req.type,
         amount: req.amount,
-        reason: req.reason,
+        reason: req.description,
         status: req.status,
-        approved_by: req.approved_by,
-        approved_at: req.approved_at,
+        approved_by: req.admin_approved_by || req.finance_approved_by,
+        approved_at: req.admin_approved_at || req.finance_approved_at,
         archived_by: archivedBy,
         archive_period: archivePeriod,
         created_at: req.created_at
@@ -179,14 +172,6 @@ Deno.serve(async (req) => {
       if (archiveError) throw archiveError
 
       recordsArchived.moneyRequests = archivedMoneyRequests.length
-
-      if (clearAfterArchive) {
-        const idsToDelete = moneyRequests.map(m => m.id)
-        await supabaseClient
-          .from('money_requests')
-          .delete()
-          .in('id', idsToDelete)
-      }
     }
 
     // Record archive history
