@@ -237,14 +237,14 @@ Deno.serve(async (req) => {
                 (sum: number, a: any) => sum + (a.minimum_payment || 0), 0
               )
 
-              // Standard deductions (PAYE, NSSF etc) — use company_employees if available
+              // Standard deductions (PAYE, NSSF etc) — use employees table
               const { data: companyEmp } = await supabase
-                .from('company_employees')
-                .select('base_salary, deductions, allowances')
-                .ilike('full_name', `%${(employeeRecord?.name || '').split(' ').pop()}%`)
+                .from('employees')
+                .select('salary')
+                .ilike('name', `%${(employeeRecord?.name || '').split(' ').pop()}%`)
                 .limit(1)
 
-              const standardDeductions = companyEmp?.[0]?.deductions || 0
+              const standardDeductions = 0
 
               // Net available from salary = gross - standard deductions - existing advance payments
               const netAvailable = grossSalary - standardDeductions - totalExistingAdvanceDeductions
