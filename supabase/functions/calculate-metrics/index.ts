@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
     ] = await Promise.all([
       supabaseClient.from('inventory_items').select('total_bags, total_kilograms'),
       supabaseClient.from('sales_transactions').select('total_amount, date'),
-      supabaseClient.from('payment_records').select('*'),
+      supabaseClient.from('supplier_payments').select('*'),
       supabaseClient.from('suppliers').select('id, status', { count: 'exact' }),
       supabaseClient.from('metrics').select('*').eq('month', 'previous')
     ]);

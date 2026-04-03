@@ -30,14 +30,8 @@ Deno.serve(async (req) => {
 
     if (empError) throw empError
 
-    // Also get company workers
-    const { data: companyWorkers, error: cwError } = await supabase
-      .from('company_employees')
-      .select('id, full_name, phone, employee_id')
-      .eq('status', 'Active')
-      .not('phone', 'is', null)
-
-    if (cwError) throw cwError
+    // company_employees has been unified into employees - no separate query needed
+    const companyWorkers: any[] = [];
 
     // Get today's attendance records
     const { data: todayRecords, error: recError } = await supabase

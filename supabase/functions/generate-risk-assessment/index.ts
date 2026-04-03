@@ -114,7 +114,7 @@ serve(async (req) => {
       { data: archivedRequests }
     ] = await Promise.all([
       supabase.from('employees').select('*'),
-      supabase.from('company_employees').select('*'),
+      supabase.from('employees').select('*'),
       supabase.from('approval_requests').select('*').order('created_at', { ascending: false }).limit(200),
       supabase.from('suppliers').select('*'),
       supabase.from('supplier_contracts').select('*').order('date', { ascending: false }),
@@ -122,8 +122,8 @@ serve(async (req) => {
       supabase.from('supplier_payments').select('*').order('requested_at', { ascending: false }),
       supabase.from('sales_transactions').select('*').order('date', { ascending: false }).limit(200),
       supabase.from('sales_transactions').select('*').gte('date', last30Days.toISOString().split('T')[0]),
-      supabase.from('money_requests').select('*').order('created_at', { ascending: false }).limit(200),
-      supabase.from('payment_records').select('*').order('date', { ascending: false }),
+      supabase.from('approval_requests').select('*').in('type', ['Salary Advance', 'Withdrawal Request', 'Money Request']).order('created_at', { ascending: false }).limit(200),
+      supabase.from('supplier_payments').select('*').order('requested_at', { ascending: false }),
       supabase.from('inventory_items').select('*'),
       supabase.from('inventory_movements').select('*').order('created_at', { ascending: false }).limit(200),
       supabase.from('purchase_orders').select('*').order('order_date', { ascending: false }),

@@ -20,8 +20,8 @@ Deno.serve(async (req) => {
 
     // Get all pending payment records
     const { data: pendingPayments, error: paymentsError } = await supabaseClient
-      .from('payment_records')
-      .select('id, batch_number, supplier, amount')
+      .from('supplier_payments')
+      .select('id, batch_number, supplier_id, amount_paid_ugx')
       .eq('status', 'Pending');
 
     if (paymentsError) {
@@ -46,12 +46,10 @@ Deno.serve(async (req) => {
         console.log(`💰 Found payment for ${payment.batch_number}`);
         
         const { error: updateError } = await supabaseClient
-          .from('payment_records')
+          .from('supplier_payments')
           .update({
             status: 'Paid',
-            amount_paid: Math.abs(Number(cashTx.amount)),
-            balance: 0,
-            method: 'Cash',
+            amount_paid_ugx: Math.abs(Number(cashTx.amount)),
             updated_at: new Date().toISOString()
           })
           .eq('id', payment.id);

@@ -122,11 +122,11 @@ serve(async (req) => {
     if (hasFinance) {
       searchPromises.push(
         supabase
-          .from('payment_records')
-          .select('id, batch_number, supplier, amount, status, date, amount_paid')
-          .or(`batch_number.ilike.%${sanitizedQuery}%,supplier.ilike.%${sanitizedQuery}%,status.ilike.%${sanitizedQuery}%`)
+          .from('supplier_payments')
+          .select('id, batch_number, supplier_id, amount_paid_ugx, status, requested_at')
+          .or(`batch_number.ilike.%${sanitizedQuery}%,status.ilike.%${sanitizedQuery}%`)
           .limit(15)
-          .then(({ data }) => { if (data?.length) searchData.payment_records = data; })
+          .then(({ data }) => { if (data?.length) searchData.supplier_payments = data; })
       );
 
       searchPromises.push(
@@ -136,15 +136,6 @@ serve(async (req) => {
           .or(`title.ilike.%${sanitizedQuery}%,requestedby.ilike.%${sanitizedQuery}%,type.ilike.%${sanitizedQuery}%`)
           .limit(15)
           .then(({ data }) => { if (data?.length) searchData.approval_requests = data; })
-      );
-
-      searchPromises.push(
-        supabase
-          .from('money_requests')
-          .select('id, reason, amount, status, request_type, employee_name, created_at')
-          .or(`reason.ilike.%${sanitizedQuery}%,employee_name.ilike.%${sanitizedQuery}%,request_type.ilike.%${sanitizedQuery}%`)
-          .limit(15)
-          .then(({ data }) => { if (data?.length) searchData.money_requests = data; })
       );
     }
 
