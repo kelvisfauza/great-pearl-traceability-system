@@ -3,7 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Banknote, TrendingUp, TrendingDown, Users, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Banknote, TrendingUp, TrendingDown, Users, AlertTriangle, CheckCircle, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 
 const LoanStatsCard = () => {
   const { data: stats, isLoading } = useQuery({
@@ -92,10 +94,17 @@ const LoanStatsCard = () => {
   return (
     <Card className="border-2">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Banknote className="h-5 w-5 text-primary" />
-          Loan Overview
-          <Badge variant="outline" className="ml-auto text-xs font-normal">{monthName}</Badge>
+        <CardTitle className="flex items-center justify-between">
+          <span className="flex items-center gap-2 text-lg">
+            <Banknote className="h-5 w-5 text-primary" />
+            Loan Overview
+            <Badge variant="outline" className="text-xs font-normal">{monthName}</Badge>
+          </span>
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/quick-loans" className="flex items-center gap-1">
+              Manage Loans <ArrowRight className="h-3 w-3" />
+            </Link>
+          </Button>
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
