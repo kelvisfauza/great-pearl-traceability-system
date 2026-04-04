@@ -2136,6 +2136,18 @@ const QuickLoans = () => {
                       <Button size="sm" onClick={() => { setChangeGuarantorLoan(loan); setNewGuarantorId(''); setShowChangeGuarantorDialog(true); }}>
                         <Users className="mr-1 h-4 w-4" /> Select New Guarantor
                       </Button>
+                      <Button size="sm" variant="secondary" onClick={() => {
+                        setModifyLoan(loan);
+                        setModifyAmount(String(loan.loan_amount || ''));
+                        setModifyDuration(String(loan.duration_months || ''));
+                        setModifyType((loan.loan_type || 'quick') as LoanType);
+                        setModifyFrequency((loan.repayment_frequency || 'weekly') as RepaymentFrequency);
+                        setModifyPurpose(loan.loan_purpose || '');
+                        setModifyGuarantorId('');
+                        setShowModifyDialog(true);
+                      }}>
+                        <Edit className="mr-1 h-4 w-4" /> Modify Loan
+                      </Button>
                     </div>
                   </div>
                 </div>
