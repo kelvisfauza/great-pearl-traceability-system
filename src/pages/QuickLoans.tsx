@@ -1816,6 +1816,104 @@ const QuickLoans = () => {
               </DialogContent>
             </Dialog>
 
+            {/* Loan Modification Dialog */}
+            <Dialog open={showModifyDialog} onOpenChange={(open) => { setShowModifyDialog(open); if (!open) { setModifyLoan(null); } }}>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2"><Edit className="h-5 w-5" /> Modify Loan Application</DialogTitle>
+                </DialogHeader>
+                {modifyLoan && (() => {
+                  const amount = parseFloat(modifyAmount) || 0;
+                  const months = parseInt(modifyDuration) || 1;
+                  const monthlyRate = LOAN_TYPE_CONFIG[modifyType].monthlyRate;
+                  const maxRate = LOAN_TYPE_CONFIG[modifyType].maxRate;
+                  const interest = getCappedInterest(amount, monthlyRate, months, maxRate);
+                  const totalRepayable = amount + interest;
+                  const { totalWeeks } = getLoanSchedule(months);
+                  const numInstallments = modifyFrequency === 'weekly' ? totalWeeks : modifyFrequency === 'bullet' ? 1 : months;
+                  const installment = numInstallments > 0 ? Math.ceil(totalRepayable / numInstallments) : 0;
+
+                  return (
+                    <div className="space-y-4">
+                      <Card className="bg-muted/50">
+                        <CardContent className="p-3 text-xs space-y-1">
+                          <div className="flex justify-between"><span>Original Amount:</span><span>UGX {modifyLoan.loan_amount?.toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span>Previous Guarantor:</span><span>{modifyLoan.guarantor_name}</span></div>
+                          <div className="flex justify-between"><span>Current Status:</span><span className="capitalize">{modifyLoan.status?.replace(/_/g, ' ')}</span></div>
+                        </CardContent>
+                      </Card>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label>Loan Type</Label>
+                          <Select value={modifyType} onValueChange={(v) => { setModifyType(v as LoanType); setModifyFrequency(LOAN_TYPE_CONFIG[v as LoanType].frequencies[0]); }}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(LOAN_TYPE_CONFIG).map(([k, v]) => (
+                                <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label>Repayment Frequency</Label>
+                          <Select value={modifyFrequency} onValueChange={(v) => setModifyFrequency(v as RepaymentFrequency)}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {LOAN_TYPE_CONFIG[modifyType].frequencies.map(f => (
+                                <SelectItem key={f} value={f} className="capitalize">{f}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label>Loan Amount (UGX)</Label>
+                          <Input type="number" value={modifyAmount} onChange={(e) => setModifyAmount(e.target.value)} placeholder="Enter amount" />
+                        </div>
+                        <div>
+                          <Label>Duration (months)</Label>
+                          <Input type="number" value={modifyDuration} onChange={(e) => setModifyDuration(e.target.value)} min="1" max="12" />
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label>Select Guarantor</Label>
+                        <Select value={modifyGuarantorId} onValueChange={setModifyGuarantorId}>
+                          <SelectTrigger><SelectValue placeholder="Choose a colleague" /></SelectTrigger>
+                          <SelectContent>
+                            {employees.filter(e => e.email !== employee?.email).map(e => (
+                              <SelectItem key={e.id} value={e.id}>{e.name} ({e.position})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label>Purpose (optional)</Label>
+                        <Textarea value={modifyPurpose} onChange={(e) => setModifyPurpose(e.target.value)} placeholder="Reason for the loan..." rows={2} />
+                      </div>
+
+                      <Card className="bg-primary/5 border-primary/20">
+                        <CardContent className="p-3 text-sm space-y-1">
+                          <div className="flex justify-between"><span>Principal:</span><span className="font-semibold">UGX {amount.toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span>Interest ({monthlyRate}% × {months}mo, max {maxRate}%):</span><span>UGX {interest.toLocaleString()}</span></div>
+                          <div className="flex justify-between font-bold"><span>Total Repayable:</span><span>UGX {totalRepayable.toLocaleString()}</span></div>
+                          <div className="flex justify-between text-muted-foreground"><span>Installment:</span><span>UGX {installment.toLocaleString()}/{modifyFrequency === 'weekly' ? 'wk' : modifyFrequency === 'bullet' ? 'end' : 'mo'}</span></div>
+                        </CardContent>
+                      </Card>
+
+                      <Button onClick={handleModifyLoan} disabled={submitting || !modifyGuarantorId || !modifyAmount || !modifyDuration} className="w-full">
+                        {submitting ? 'Updating...' : 'Submit Modified Loan'}
+                      </Button>
+                    </div>
+                  );
+                })()}
+              </DialogContent>
+            </Dialog>
+
             {/* Loan Top-Up Dialog */}
             <Dialog open={showTopUpDialog} onOpenChange={(open) => { setShowTopUpDialog(open); if (!open) { setTopUpLoan(null); setTopUpAmount(''); setTopUpGuarantorId(''); } }}>
               <DialogContent className="max-w-lg">
