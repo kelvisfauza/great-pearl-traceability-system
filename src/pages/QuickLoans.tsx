@@ -96,6 +96,14 @@ const QuickLoans = () => {
   const [topUpDuration, setTopUpDuration] = useState('');
   const [topUpType, setTopUpType] = useState<LoanType>('quick');
   const [topUpFrequency, setTopUpFrequency] = useState<RepaymentFrequency>('weekly');
+  const [showModifyDialog, setShowModifyDialog] = useState(false);
+  const [modifyLoan, setModifyLoan] = useState<any>(null);
+  const [modifyAmount, setModifyAmount] = useState('');
+  const [modifyDuration, setModifyDuration] = useState('');
+  const [modifyType, setModifyType] = useState<LoanType>('quick');
+  const [modifyFrequency, setModifyFrequency] = useState<RepaymentFrequency>('weekly');
+  const [modifyPurpose, setModifyPurpose] = useState('');
+  const [modifyGuarantorId, setModifyGuarantorId] = useState('');
 
   // Form state
   const [loanAmount, setLoanAmount] = useState('');
