@@ -1006,7 +1006,94 @@ const QuickLoans = () => {
       setShowChangeGuarantorDialog(false);
       setChangeGuarantorLoan(null);
       setNewGuarantorId('');
-      fetchLoans();
+      await fetchLoans();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Modify a pending/declined loan
+  const handleModifyLoan = async () => {
+    if (!modifyLoan || !employee || !modifyAmount || !modifyDuration || !modifyGuarantorId) return;
+    const guarantor = employees.find(e => e.id === modifyGuarantorId);
+    if (!guarantor) return;
+    if (guarantor.email === employee.email) {
+      toast({ title: "Error", description: "You cannot be your own guarantor", variant: "destructive" });
+      return;
+    }
+
+    const amount = parseFloat(modifyAmount);
+    const months = parseInt(modifyDuration);
+    if (!amount || amount <= 0 || !months || months <= 0) {
+      toast({ title: "Error", description: "Enter valid amount and duration", variant: "destructive" });
+      return;
+    }
+
+    // Check limit
+    const salary = employee.salary || 0;
+    const maxLoan = salary * 2;
+    const otherOutstanding = myLoans
+      .filter(l => l.id !== modifyLoan.id && ['active', 'pending_guarantor', 'pending_admin'].includes(l.status))
+      .reduce((s: number, l: any) => s + (l.remaining_balance || l.loan_amount || 0), 0);
+    const availableLimit = Math.max(0, maxLoan - otherOutstanding);
+    if (amount > availableLimit) {
+      toast({ title: "Exceeds Limit", description: `Max available: UGX ${availableLimit.toLocaleString()}`, variant: "destructive" });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const approvalCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const monthlyRate = LOAN_TYPE_CONFIG[modifyType].monthlyRate;
+      const maxRate = LOAN_TYPE_CONFIG[modifyType].maxRate;
+      const interest = getCappedInterest(amount, monthlyRate, months, maxRate);
+      const totalRepayable = amount + interest;
+      const { totalWeeks } = getLoanSchedule(months);
+      const numInstallments = modifyFrequency === 'weekly' ? totalWeeks : modifyFrequency === 'bullet' ? 1 : months;
+      const installment = numInstallments > 0 ? Math.ceil(totalRepayable / numInstallments) : 0;
+
+      const { error } = await supabase.from('loans').update({
+        loan_amount: amount,
+        duration_months: months,
+        loan_type: modifyType,
+        repayment_frequency: modifyFrequency,
+        interest_rate: monthlyRate,
+        daily_interest_rate: monthlyRate / 30,
+        total_interest: interest,
+        total_repayable: totalRepayable,
+        monthly_installment: installment,
+        total_weeks: totalWeeks,
+        remaining_balance: totalRepayable,
+        loan_purpose: modifyPurpose || modifyLoan.loan_purpose,
+        guarantor_id: guarantor.id,
+        guarantor_email: guarantor.email,
+        guarantor_name: guarantor.name,
+        guarantor_phone: guarantor.phone || '',
+        guarantor_approval_code: approvalCode,
+        guarantor_approved: false,
+        guarantor_declined: false,
+        status: 'pending_guarantor',
+        admin_rejection_reason: null,
+      } as any).eq('id', modifyLoan.id);
+
+      if (error) throw error;
+
+      // SMS to new guarantor
+      await supabase.functions.invoke('send-sms', {
+        body: {
+          phone: guarantor.phone,
+          message: `Dear ${guarantor.name}, ${employee.name} has requested you to guarantee a modified loan of UGX ${amount.toLocaleString()} for ${months} month(s). Your approval code is: ${approvalCode}. Log into the system to approve or decline.`,
+          userName: guarantor.name,
+          messageType: 'loan_guarantor_request'
+        }
+      });
+
+      toast({ title: "Loan Modified ✅", description: `Updated and sent to ${guarantor.name} for guarantee` });
+      setShowModifyDialog(false);
+      setModifyLoan(null);
+      await fetchLoans();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
