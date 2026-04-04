@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Banknote, Clock, Shield, Users, AlertTriangle, CheckCircle, XCircle, CreditCard, Download, Printer, Phone, Loader2, FileText, Eye, ShieldOff, Wallet, HandCoins, ArrowUpCircle } from 'lucide-react';
+import { Banknote, Clock, Shield, Users, AlertTriangle, CheckCircle, XCircle, CreditCard, Download, Printer, Phone, Loader2, FileText, Eye, ShieldOff, Wallet, HandCoins, ArrowUpCircle, Edit } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import AdminLoanTracker from '@/components/loans/AdminLoanTracker';
 import { Textarea } from '@/components/ui/textarea';
@@ -96,6 +96,14 @@ const QuickLoans = () => {
   const [topUpDuration, setTopUpDuration] = useState('');
   const [topUpType, setTopUpType] = useState<LoanType>('quick');
   const [topUpFrequency, setTopUpFrequency] = useState<RepaymentFrequency>('weekly');
+  const [showModifyDialog, setShowModifyDialog] = useState(false);
+  const [modifyLoan, setModifyLoan] = useState<any>(null);
+  const [modifyAmount, setModifyAmount] = useState('');
+  const [modifyDuration, setModifyDuration] = useState('');
+  const [modifyType, setModifyType] = useState<LoanType>('quick');
+  const [modifyFrequency, setModifyFrequency] = useState<RepaymentFrequency>('weekly');
+  const [modifyPurpose, setModifyPurpose] = useState('');
+  const [modifyGuarantorId, setModifyGuarantorId] = useState('');
 
   // Form state
   const [loanAmount, setLoanAmount] = useState('');
@@ -998,7 +1006,94 @@ const QuickLoans = () => {
       setShowChangeGuarantorDialog(false);
       setChangeGuarantorLoan(null);
       setNewGuarantorId('');
-      fetchLoans();
+      await fetchLoans();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Modify a pending/declined loan
+  const handleModifyLoan = async () => {
+    if (!modifyLoan || !employee || !modifyAmount || !modifyDuration || !modifyGuarantorId) return;
+    const guarantor = employees.find(e => e.id === modifyGuarantorId);
+    if (!guarantor) return;
+    if (guarantor.email === employee.email) {
+      toast({ title: "Error", description: "You cannot be your own guarantor", variant: "destructive" });
+      return;
+    }
+
+    const amount = parseFloat(modifyAmount);
+    const months = parseInt(modifyDuration);
+    if (!amount || amount <= 0 || !months || months <= 0) {
+      toast({ title: "Error", description: "Enter valid amount and duration", variant: "destructive" });
+      return;
+    }
+
+    // Check limit
+    const salary = employee.salary || 0;
+    const maxLoan = salary * 2;
+    const otherOutstanding = myLoans
+      .filter(l => l.id !== modifyLoan.id && ['active', 'pending_guarantor', 'pending_admin'].includes(l.status))
+      .reduce((s: number, l: any) => s + (l.remaining_balance || l.loan_amount || 0), 0);
+    const availableLimit = Math.max(0, maxLoan - otherOutstanding);
+    if (amount > availableLimit) {
+      toast({ title: "Exceeds Limit", description: `Max available: UGX ${availableLimit.toLocaleString()}`, variant: "destructive" });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const approvalCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const monthlyRate = LOAN_TYPE_CONFIG[modifyType].monthlyRate;
+      const maxRate = LOAN_TYPE_CONFIG[modifyType].maxRate;
+      const interest = getCappedInterest(amount, monthlyRate, months, maxRate);
+      const totalRepayable = amount + interest;
+      const { totalWeeks } = getLoanSchedule(months);
+      const numInstallments = modifyFrequency === 'weekly' ? totalWeeks : modifyFrequency === 'bullet' ? 1 : months;
+      const installment = numInstallments > 0 ? Math.ceil(totalRepayable / numInstallments) : 0;
+
+      const { error } = await supabase.from('loans').update({
+        loan_amount: amount,
+        duration_months: months,
+        loan_type: modifyType,
+        repayment_frequency: modifyFrequency,
+        interest_rate: monthlyRate,
+        daily_interest_rate: monthlyRate / 30,
+        total_interest: interest,
+        total_repayable: totalRepayable,
+        monthly_installment: installment,
+        total_weeks: totalWeeks,
+        remaining_balance: totalRepayable,
+        loan_purpose: modifyPurpose || modifyLoan.loan_purpose,
+        guarantor_id: guarantor.id,
+        guarantor_email: guarantor.email,
+        guarantor_name: guarantor.name,
+        guarantor_phone: guarantor.phone || '',
+        guarantor_approval_code: approvalCode,
+        guarantor_approved: false,
+        guarantor_declined: false,
+        status: 'pending_guarantor',
+        admin_rejection_reason: null,
+      } as any).eq('id', modifyLoan.id);
+
+      if (error) throw error;
+
+      // SMS to new guarantor
+      await supabase.functions.invoke('send-sms', {
+        body: {
+          phone: guarantor.phone,
+          message: `Dear ${guarantor.name}, ${employee.name} has requested you to guarantee a modified loan of UGX ${amount.toLocaleString()} for ${months} month(s). Your approval code is: ${approvalCode}. Log into the system to approve or decline.`,
+          userName: guarantor.name,
+          messageType: 'loan_guarantor_request'
+        }
+      });
+
+      toast({ title: "Loan Modified ✅", description: `Updated and sent to ${guarantor.name} for guarantee` });
+      setShowModifyDialog(false);
+      setModifyLoan(null);
+      await fetchLoans();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
@@ -1721,6 +1816,104 @@ const QuickLoans = () => {
               </DialogContent>
             </Dialog>
 
+            {/* Loan Modification Dialog */}
+            <Dialog open={showModifyDialog} onOpenChange={(open) => { setShowModifyDialog(open); if (!open) { setModifyLoan(null); } }}>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2"><Edit className="h-5 w-5" /> Modify Loan Application</DialogTitle>
+                </DialogHeader>
+                {modifyLoan && (() => {
+                  const amount = parseFloat(modifyAmount) || 0;
+                  const months = parseInt(modifyDuration) || 1;
+                  const monthlyRate = LOAN_TYPE_CONFIG[modifyType].monthlyRate;
+                  const maxRate = LOAN_TYPE_CONFIG[modifyType].maxRate;
+                  const interest = getCappedInterest(amount, monthlyRate, months, maxRate);
+                  const totalRepayable = amount + interest;
+                  const { totalWeeks } = getLoanSchedule(months);
+                  const numInstallments = modifyFrequency === 'weekly' ? totalWeeks : modifyFrequency === 'bullet' ? 1 : months;
+                  const installment = numInstallments > 0 ? Math.ceil(totalRepayable / numInstallments) : 0;
+
+                  return (
+                    <div className="space-y-4">
+                      <Card className="bg-muted/50">
+                        <CardContent className="p-3 text-xs space-y-1">
+                          <div className="flex justify-between"><span>Original Amount:</span><span>UGX {modifyLoan.loan_amount?.toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span>Previous Guarantor:</span><span>{modifyLoan.guarantor_name}</span></div>
+                          <div className="flex justify-between"><span>Current Status:</span><span className="capitalize">{modifyLoan.status?.replace(/_/g, ' ')}</span></div>
+                        </CardContent>
+                      </Card>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label>Loan Type</Label>
+                          <Select value={modifyType} onValueChange={(v) => { setModifyType(v as LoanType); setModifyFrequency(LOAN_TYPE_CONFIG[v as LoanType].frequencies[0]); }}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(LOAN_TYPE_CONFIG).map(([k, v]) => (
+                                <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label>Repayment Frequency</Label>
+                          <Select value={modifyFrequency} onValueChange={(v) => setModifyFrequency(v as RepaymentFrequency)}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {LOAN_TYPE_CONFIG[modifyType].frequencies.map(f => (
+                                <SelectItem key={f} value={f} className="capitalize">{f}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label>Loan Amount (UGX)</Label>
+                          <Input type="number" value={modifyAmount} onChange={(e) => setModifyAmount(e.target.value)} placeholder="Enter amount" />
+                        </div>
+                        <div>
+                          <Label>Duration (months)</Label>
+                          <Input type="number" value={modifyDuration} onChange={(e) => setModifyDuration(e.target.value)} min="1" max="12" />
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label>Select Guarantor</Label>
+                        <Select value={modifyGuarantorId} onValueChange={setModifyGuarantorId}>
+                          <SelectTrigger><SelectValue placeholder="Choose a colleague" /></SelectTrigger>
+                          <SelectContent>
+                            {employees.filter(e => e.email !== employee?.email).map(e => (
+                              <SelectItem key={e.id} value={e.id}>{e.name} ({e.position})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label>Purpose (optional)</Label>
+                        <Textarea value={modifyPurpose} onChange={(e) => setModifyPurpose(e.target.value)} placeholder="Reason for the loan..." rows={2} />
+                      </div>
+
+                      <Card className="bg-primary/5 border-primary/20">
+                        <CardContent className="p-3 text-sm space-y-1">
+                          <div className="flex justify-between"><span>Principal:</span><span className="font-semibold">UGX {amount.toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span>Interest ({monthlyRate}% × {months}mo, max {maxRate}%):</span><span>UGX {interest.toLocaleString()}</span></div>
+                          <div className="flex justify-between font-bold"><span>Total Repayable:</span><span>UGX {totalRepayable.toLocaleString()}</span></div>
+                          <div className="flex justify-between text-muted-foreground"><span>Installment:</span><span>UGX {installment.toLocaleString()}/{modifyFrequency === 'weekly' ? 'wk' : modifyFrequency === 'bullet' ? 'end' : 'mo'}</span></div>
+                        </CardContent>
+                      </Card>
+
+                      <Button onClick={handleModifyLoan} disabled={submitting || !modifyGuarantorId || !modifyAmount || !modifyDuration} className="w-full">
+                        {submitting ? 'Updating...' : 'Submit Modified Loan'}
+                      </Button>
+                    </div>
+                  );
+                })()}
+              </DialogContent>
+            </Dialog>
+
             {/* Loan Top-Up Dialog */}
             <Dialog open={showTopUpDialog} onOpenChange={(open) => { setShowTopUpDialog(open); if (!open) { setTopUpLoan(null); setTopUpAmount(''); setTopUpGuarantorId(''); } }}>
               <DialogContent className="max-w-lg">
@@ -1943,6 +2136,18 @@ const QuickLoans = () => {
                       <Button size="sm" onClick={() => { setChangeGuarantorLoan(loan); setNewGuarantorId(''); setShowChangeGuarantorDialog(true); }}>
                         <Users className="mr-1 h-4 w-4" /> Select New Guarantor
                       </Button>
+                      <Button size="sm" variant="secondary" onClick={() => {
+                        setModifyLoan(loan);
+                        setModifyAmount(String(loan.loan_amount || ''));
+                        setModifyDuration(String(loan.duration_months || ''));
+                        setModifyType((loan.loan_type || 'quick') as LoanType);
+                        setModifyFrequency((loan.repayment_frequency || 'weekly') as RepaymentFrequency);
+                        setModifyPurpose(loan.loan_purpose || '');
+                        setModifyGuarantorId('');
+                        setShowModifyDialog(true);
+                      }}>
+                        <Edit className="mr-1 h-4 w-4" /> Modify Loan
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -2140,12 +2345,40 @@ const QuickLoans = () => {
                                 </>
                               )}
                               {loan.status === 'guarantor_declined' && (
-                                <Button size="sm" variant="outline" className="border-primary text-primary" onClick={() => {
-                                  setChangeGuarantorLoan(loan);
-                                  setNewGuarantorId('');
-                                  setShowChangeGuarantorDialog(true);
+                                <>
+                                  <Button size="sm" variant="outline" className="border-primary text-primary" onClick={() => {
+                                    setChangeGuarantorLoan(loan);
+                                    setNewGuarantorId('');
+                                    setShowChangeGuarantorDialog(true);
+                                  }}>
+                                    <Users className="mr-1 h-3 w-3" /> Change Guarantor
+                                  </Button>
+                                  <Button size="sm" variant="secondary" onClick={() => {
+                                    setModifyLoan(loan);
+                                    setModifyAmount(String(loan.loan_amount || ''));
+                                    setModifyDuration(String(loan.duration_months || ''));
+                                    setModifyType((loan.loan_type || 'quick') as LoanType);
+                                    setModifyFrequency((loan.repayment_frequency || 'weekly') as RepaymentFrequency);
+                                    setModifyPurpose(loan.loan_purpose || '');
+                                    setModifyGuarantorId('');
+                                    setShowModifyDialog(true);
+                                  }}>
+                                    <Edit className="mr-1 h-3 w-3" /> Modify Loan
+                                  </Button>
+                                </>
+                              )}
+                              {['pending_guarantor', 'pending_admin'].includes(loan.status) && (
+                                <Button size="sm" variant="secondary" onClick={() => {
+                                  setModifyLoan(loan);
+                                  setModifyAmount(String(loan.loan_amount || ''));
+                                  setModifyDuration(String(loan.duration_months || ''));
+                                  setModifyType((loan.loan_type || 'quick') as LoanType);
+                                  setModifyFrequency((loan.repayment_frequency || 'weekly') as RepaymentFrequency);
+                                  setModifyPurpose(loan.loan_purpose || '');
+                                  setModifyGuarantorId('');
+                                  setShowModifyDialog(true);
                                 }}>
-                                  <Users className="mr-1 h-3 w-3" /> Change Guarantor
+                                  <Edit className="mr-1 h-3 w-3" /> Modify Loan
                                 </Button>
                               )}
                               {loan.status === 'counter_offered' && (
