@@ -2210,7 +2210,7 @@ const QuickLoans = () => {
                             <TableCell className="text-xs font-medium text-green-600">UGX {limit.availableLimit.toLocaleString()}</TableCell>
                             <TableCell>
                               <div>{loan.guarantor_name}</div>
-                              <div className="text-xs">{loan.guarantor_approved ? <Badge variant="default" className="text-xs">Approved</Badge> : <Badge variant="outline" className="text-xs">Pending</Badge>}</div>
+                              <div className="text-xs">{loan.guarantor_approved ? <Badge variant="default" className="text-xs">Approved</Badge> : loan.guarantor_declined ? <Badge variant="destructive" className="text-xs">Declined</Badge> : <Badge variant="outline" className="text-xs">Pending</Badge>}</div>
                             </TableCell>
                             <TableCell>{getStatusBadge(loan.status)}</TableCell>
                             <TableCell>
