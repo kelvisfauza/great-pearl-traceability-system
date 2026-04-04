@@ -2235,12 +2235,40 @@ const QuickLoans = () => {
                                 </>
                               )}
                               {loan.status === 'guarantor_declined' && (
-                                <Button size="sm" variant="outline" className="border-primary text-primary" onClick={() => {
-                                  setChangeGuarantorLoan(loan);
-                                  setNewGuarantorId('');
-                                  setShowChangeGuarantorDialog(true);
+                                <>
+                                  <Button size="sm" variant="outline" className="border-primary text-primary" onClick={() => {
+                                    setChangeGuarantorLoan(loan);
+                                    setNewGuarantorId('');
+                                    setShowChangeGuarantorDialog(true);
+                                  }}>
+                                    <Users className="mr-1 h-3 w-3" /> Change Guarantor
+                                  </Button>
+                                  <Button size="sm" variant="secondary" onClick={() => {
+                                    setModifyLoan(loan);
+                                    setModifyAmount(String(loan.loan_amount || ''));
+                                    setModifyDuration(String(loan.duration_months || ''));
+                                    setModifyType((loan.loan_type || 'quick') as LoanType);
+                                    setModifyFrequency((loan.repayment_frequency || 'weekly') as RepaymentFrequency);
+                                    setModifyPurpose(loan.loan_purpose || '');
+                                    setModifyGuarantorId('');
+                                    setShowModifyDialog(true);
+                                  }}>
+                                    <Edit className="mr-1 h-3 w-3" /> Modify Loan
+                                  </Button>
+                                </>
+                              )}
+                              {['pending_guarantor', 'pending_admin'].includes(loan.status) && (
+                                <Button size="sm" variant="secondary" onClick={() => {
+                                  setModifyLoan(loan);
+                                  setModifyAmount(String(loan.loan_amount || ''));
+                                  setModifyDuration(String(loan.duration_months || ''));
+                                  setModifyType((loan.loan_type || 'quick') as LoanType);
+                                  setModifyFrequency((loan.repayment_frequency || 'weekly') as RepaymentFrequency);
+                                  setModifyPurpose(loan.loan_purpose || '');
+                                  setModifyGuarantorId('');
+                                  setShowModifyDialog(true);
                                 }}>
-                                  <Users className="mr-1 h-3 w-3" /> Change Guarantor
+                                  <Edit className="mr-1 h-3 w-3" /> Modify Loan
                                 </Button>
                               )}
                               {loan.status === 'counter_offered' && (
