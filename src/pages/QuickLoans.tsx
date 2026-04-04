@@ -117,7 +117,7 @@ const QuickLoans = () => {
     if (!employee) return;
     setLoading(true);
     try {
-      if (isAdmin()) {
+      if (isAdmin() || employee?.role === 'Manager') {
         const { data } = await supabase.from('loans').select('*').order('created_at', { ascending: false });
         setLoans(data || []);
       }
