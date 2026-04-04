@@ -170,44 +170,44 @@ export const useUserWallet = () => {
       // Generate request reference
       const requestRef = `WR-${new Date().toISOString().split('T')[0]}-${Date.now().toString().slice(-4)}`;
       
-      // Insert into money_requests table (withdrawal_requests is a view)
+      // Insert withdrawal into approval_requests with correct schema columns
       const { error } = await supabase
         .from('approval_requests' as any)
         .insert([{
-          user_id: unifiedUserId,
+          department: employee?.department || 'General',
+          type: 'Withdrawal Request',
+          title: `Withdrawal Request - ${employee?.name || walletOwnerEmail}`,
+          description: `Withdrawal via ${channel} - Ref: ${requestRef}`,
           amount,
-          phone_number: phoneNumber,
-          payment_channel: channel,
-          request_type: 'withdrawal',
-          requested_by: walletOwnerEmail,
-          reason: `Withdrawal via ${channel} - Ref: ${requestRef}`,
-          status: 'completed',
+          requestedby: walletOwnerEmail,
+          daterequested: new Date().toISOString().split('T')[0],
+          priority: amount > 100000 ? 'High' : 'Medium',
+          status: 'Pending Finance',
+          approval_stage: 'pending_finance',
+          finance_approved: false,
+          admin_approved: false,
+          requestedby_name: employee?.name || walletOwnerEmail,
+          requestedby_position: employee?.position || 'Staff',
+          disbursement_method: channel === 'MOBILE_MONEY' ? 'mobile_money' : channel === 'BANK' ? 'bank_transfer' : 'cash',
+          disbursement_phone: channel === 'MOBILE_MONEY' ? phoneNumber : (employee?.phone || ''),
+          requires_three_approvals: amount > 100000,
+          details: {
+            request_type: 'withdrawal',
+            payment_channel: channel,
+            user_id: unifiedUserId,
+            employee_id: employee?.id || null,
+            employee_email: walletOwnerEmail,
+            ref: requestRef,
+            is_withdrawal: true,
+            withdrawal_id: requestRef
+          }
         }]);
 
       if (error) throw error;
-      
-      // Deduct from ledger immediately
-      const { error: ledgerError } = await supabase
-        .from('ledger_entries')
-        .insert([{
-          user_id: unifiedUserId,
-          entry_type: 'WITHDRAWAL',
-          amount: -amount,
-          reference: `WITHDRAWAL-${requestRef}`,
-          metadata: {
-            withdrawal_ref: requestRef,
-            phone_number: phoneNumber,
-            channel: channel
-          }
-        }]);
-      
-      if (ledgerError) {
-        console.error('Ledger deduction error:', ledgerError);
-      }
 
       toast({
-        title: "Withdrawal Completed!",
-        description: `Reference: ${requestRef}. Amount UGX ${amount.toLocaleString()} has been deducted from your loyalty balance.`,
+        title: "Withdrawal Submitted!",
+        description: `Reference: ${requestRef}. Your request for UGX ${amount.toLocaleString()} has been submitted for Finance review.`,
         duration: 8000,
       });
 
