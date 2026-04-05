@@ -9,8 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, AlertCircle, Phone, Mail, MessageCircle, Lock } from 'lucide-react';
 import PasswordChangeModal from '@/components/PasswordChangeModal';
-import BiometricVerification from '@/components/BiometricVerification';
-import { EmailVerification } from '@/components/EmailVerification';
+import { UnifiedVerification } from '@/components/auth/UnifiedVerification';
 import { supabase } from '@/integrations/supabase/client';
 import { smsService } from '@/services/smsService';
 import { useToast } from '@/hooks/use-toast';
@@ -24,7 +23,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPasswordChange, setShowPasswordChange] = useState(false);
-  const [showBiometric, setShowBiometric] = useState(false);
+  
   const [showEmailVerification, setShowEmailVerification] = useState(false);
   const [pendingLoginEmail, setPendingLoginEmail] = useState('');
   
@@ -159,56 +158,25 @@ const Auth = () => {
 
   const handleEmailVerificationComplete = async () => {
     setShowEmailVerification(false);
-    
-    // After email verification, continue with the rest of the login flow
-    console.log('✅ Email verified, continuing login flow...');
-    
-    // Check if user is admin - only admins need biometric verification
-    const { data: employee, error: employeeError } = await supabase
-      .from('employees')
-      .select('role, email')
-      .eq('email', pendingLoginEmail)
-      .maybeSingle();
-
-    if (employeeError) {
-      console.error('❌ Error fetching employee data:', employeeError);
-    }
-
-    // Bypass biometric in preview/development environments
-    const isPreviewOrDev = window.location.hostname.includes('lovable') || 
-                            window.location.hostname === 'localhost';
-
-    if (employee?.role === 'Administrator' && !isPreviewOrDev) {
-      console.log('🔒 Admin detected, requiring biometric verification');
-      setShowBiometric(true);
-    } else {
-      console.log('✅ Login complete, proceeding...');
-      setShowSystemSelection(true);
-    }
+    console.log('✅ Verification complete, proceeding...');
+    setShowSystemSelection(true);
   };
 
   const handleEmailVerificationCancel = async () => {
-    // Sign out since they cancelled verification
     await supabase.auth.signOut();
     setShowEmailVerification(false);
     setPendingLoginEmail('');
     toast({
       title: "Verification Cancelled",
-      description: "You must verify your email to sign in.",
+      description: "You must verify your identity to sign in.",
       variant: "destructive"
     });
   };
 
   const handlePasswordChangeComplete = () => {
     setShowPasswordChange(false);
-    // After password change, also require email verification
     setPendingLoginEmail(email.toLowerCase().trim());
     setShowEmailVerification(true);
-  };
-
-  const handleBiometricComplete = () => {
-    setShowBiometric(false);
-    setShowSystemSelection(true);
   };
 
   const handleSystemSelection = (version: 'v1' | 'v2') => {
@@ -220,32 +188,15 @@ const Auth = () => {
     }
   };
 
-  const handleBiometricCancel = () => {
-    setShowBiometric(false);
-    setLoading(false);
-  };
 
-  // Show email verification screen
+  // Show unified verification screen (email → biometric → DOB fallbacks)
   if (showEmailVerification) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center p-4">
-        <EmailVerification
+        <UnifiedVerification
           email={pendingLoginEmail}
           onVerificationComplete={handleEmailVerificationComplete}
           onCancel={handleEmailVerificationCancel}
-        />
-      </div>
-    );
-  }
-
-  // Show biometric verification screen for admins
-  if (showBiometric) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center p-4">
-        <BiometricVerification
-          email={email}
-          onVerificationComplete={handleBiometricComplete}
-          onCancel={handleBiometricCancel}
         />
       </div>
     );
