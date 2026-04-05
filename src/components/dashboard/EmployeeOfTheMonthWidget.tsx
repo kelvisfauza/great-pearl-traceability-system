@@ -10,6 +10,8 @@ import { useRolePermissions } from '@/hooks/useRolePermissions';
 
 const EmployeeOfTheMonthWidget = () => {
   const seeded = useRef(false);
+  const { isManager, isSuperAdmin } = useRolePermissions();
+  const canSeeBonusAmount = isManager() || isSuperAdmin();
 
   const { data: winners = [], isLoading, refetch } = useQuery({
     queryKey: ['employee-of-the-month'],
