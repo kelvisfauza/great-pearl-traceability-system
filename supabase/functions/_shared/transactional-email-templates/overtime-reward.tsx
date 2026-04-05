@@ -132,8 +132,8 @@ export const template = {
     totalLateMinutes: 823,
     netOvertimeMinutes: 789,
     netOvertimeHours: 14,
-    ratePerHour: 1000,
-    rewardAmount: 14000,
+    ratePerHour: 3000,
+    rewardAmount: 42000,
   },
 } satisfies TemplateEntry
 
