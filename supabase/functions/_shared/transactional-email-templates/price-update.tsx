@@ -109,7 +109,7 @@ const PriceUpdateEmail = (props: PriceUpdateProps) => {
           {/* Sorted Price */}
           {sortedPrice > 0 && (
             <Section style={{ ...priceCard, borderLeft: '4px solid #7c3aed' }}>
-              <Text style={{ ...priceCardLabel, color: '#7c3aed' }}>☕ Sorted Coffee</Text>
+              <Text style={{ ...priceCardLabel, color: '#7c3aed' }}>🫘 Sorted Coffee</Text>
               <Text style={{ ...priceCardValue, color: '#7c3aed' }}>UGX {fmt(sortedPrice)}/kg</Text>
             </Section>
           )}
