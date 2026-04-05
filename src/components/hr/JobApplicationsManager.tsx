@@ -98,6 +98,32 @@ const JobApplicationsManager = () => {
     }
   };
 
+  const sendStatusEmail = async (app: { id: string; applicant_name: string; ref_code: string; job_applied_for: string; email?: string | null }, status: string, notes?: string) => {
+    if (!app.email) return;
+    try {
+      const msgFn = STATUS_SMS_MESSAGES[status];
+      const statusMessage = msgFn ? msgFn(app.applicant_name, app.ref_code, notes) : undefined;
+      await supabase.functions.invoke("send-transactional-email", {
+        body: {
+          templateName: "job-application-status",
+          recipientEmail: app.email,
+          idempotencyKey: `job-status-${app.id}-${status}-${Date.now()}`,
+          templateData: {
+            applicantName: app.applicant_name,
+            refCode: app.ref_code,
+            position: app.job_applied_for,
+            newStatus: status,
+            notes: notes || undefined,
+            statusMessage,
+          },
+        },
+      });
+      console.log(`📧 Status email sent to ${app.email} for ${status}`);
+    } catch (e) {
+      console.error("Status email failed:", e);
+    }
+  };
+
   const addMutation = useMutation({
     mutationFn: async () => {
       const refCode = await generateRefCode();
