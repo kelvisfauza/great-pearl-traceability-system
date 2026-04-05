@@ -79,7 +79,7 @@ const PriceReminderEmail = ({
 export const template = {
   component: PriceReminderEmail,
   subject: (data: Record<string, any>) =>
-    `☕ Price Reminder: Please update buying prices for ${data.date || 'today'}`,
+    `📊 Price Reminder: Please update buying prices for ${data.date || 'today'}`,
   displayName: 'Morning price update reminder',
   previewData: {
     analystName: 'Bwambale Denis',
