@@ -1,8 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { Resend } from "https://esm.sh/resend@2.0.0";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,7 +13,6 @@ interface VerificationRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -78,24 +74,14 @@ const handler = async (req: Request): Promise<Response> => {
         throw new Error("Failed to store verification code");
       }
 
-      // Send email
-      const { error: emailError } = await resend.emails.send({
-        from: "Great Agro Coffee <onboarding@resend.dev>",
-        to: [email],
-        subject: "Email Verification Code",
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #333;">Email Verification</h2>
-            <p>Your verification code is:</p>
-            <div style="background-color: #f4f4f4; padding: 20px; text-align: center; border-radius: 5px; margin: 20px 0;">
-              <h1 style="color: #4CAF50; font-size: 48px; margin: 0; letter-spacing: 10px;">${verificationCode}</h1>
-            </div>
-            <p>This code will expire in 10 minutes.</p>
-            <p>If you didn't request this code, please ignore this email.</p>
-            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-            <p style="color: #888; font-size: 12px;">Great Agro Coffee</p>
-          </div>
-        `,
+      // Send email via transactional email system (Lovable Emails)
+      const { error: emailError } = await supabase.functions.invoke('send-transactional-email', {
+        body: {
+          templateName: 'verification-code',
+          recipientEmail: email,
+          idempotencyKey: `verify-${email}-${verificationCode}`,
+          templateData: { code: verificationCode },
+        }
       });
 
       if (emailError) {
@@ -122,7 +108,6 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
-      // Get the latest code for this email
       const { data: verificationRecord, error: fetchError } = await supabase
         .from("email_verification_codes")
         .select("*")
@@ -139,7 +124,6 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
-      // Check if expired
       if (new Date(verificationRecord.expires_at) < new Date()) {
         return new Response(
           JSON.stringify({ error: "Verification code has expired. Please request a new one." }),
@@ -147,7 +131,6 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
-      // Check if too many attempts
       if (verificationRecord.attempts >= 3) {
         return new Response(
           JSON.stringify({ error: "Too many failed attempts. Please request a new code." }),
@@ -155,9 +138,7 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
-      // Verify the code
       if (verificationRecord.code === code) {
-        // Mark as verified
         await supabase
           .from("email_verification_codes")
           .update({ verified_at: new Date().toISOString() })
@@ -171,7 +152,6 @@ const handler = async (req: Request): Promise<Response> => {
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       } else {
-        // Increment attempts
         await supabase
           .from("email_verification_codes")
           .update({ attempts: verificationRecord.attempts + 1 })
