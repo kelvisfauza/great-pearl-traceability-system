@@ -148,13 +148,14 @@ const ITDepartment = () => {
         </div>
 
         <Tabs defaultValue="permissions" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-11">
+          <TabsList className="grid w-full grid-cols-12">
             <TabsTrigger value="permissions">Permissions</TabsTrigger>
             <TabsTrigger value="online-users">Online</TabsTrigger>
             <TabsTrigger value="user-management">Users</TabsTrigger>
             <TabsTrigger value="attendance">Attendance</TabsTrigger>
             <TabsTrigger value="errors">Errors</TabsTrigger>
             <TabsTrigger value="sms">SMS</TabsTrigger>
+            <TabsTrigger value="emails">Emails</TabsTrigger>
             <TabsTrigger value="reminders">Reminders</TabsTrigger>
             <TabsTrigger value="deletions">Deletions</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
