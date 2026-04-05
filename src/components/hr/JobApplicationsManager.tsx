@@ -168,6 +168,11 @@ const JobApplicationsManager = () => {
         toast.warning("Application saved but SMS notification failed");
       }
 
+      // Send email notification
+      if (data) {
+        await sendStatusEmail(data, "Pending");
+      }
+
       return data;
     },
     onSuccess: () => {
