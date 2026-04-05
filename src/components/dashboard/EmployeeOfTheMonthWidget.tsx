@@ -1,20 +1,24 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Trophy, Star, Crown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { seedEmployeeOfTheMonth } from '@/utils/seedEmployeeOfMonth';
 import { useRolePermissions } from '@/hooks/useRolePermissions';
 
 const EmployeeOfTheMonthWidget = () => {
-  const seeded = useRef(false);
   const { isManager, isSuperAdmin } = useRolePermissions();
   const canSeeBonusAmount = isManager() || isSuperAdmin();
 
-  const { data: winners = [], isLoading, refetch } = useQuery({
+  // Only show widget during the first 10 days of the month
+  const today = new Date();
+  const dayOfMonth = today.getDate();
+  const isVisible = dayOfMonth <= 10;
+
+  const { data: winners = [], isLoading } = useQuery({
     queryKey: ['employee-of-the-month'],
+    enabled: isVisible,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('employee_of_the_month')
@@ -27,16 +31,7 @@ const EmployeeOfTheMonthWidget = () => {
     },
   });
 
-  useEffect(() => {
-    if (!isLoading && winners.length === 0 && !seeded.current) {
-      seeded.current = true;
-      seedEmployeeOfTheMonth()
-        .then(() => { console.log('✅ EOTM seeded & test emails sent'); refetch(); })
-        .catch(e => console.error('EOTM seed error:', e));
-    }
-  }, [isLoading, winners.length, refetch]);
-
-  if (isLoading || winners.length === 0) return null;
+  if (!isVisible || isLoading || winners.length === 0) return null;
 
   const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'];
