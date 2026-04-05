@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useSMSNotifications } from '@/hooks/useSMSNotifications';
+import { sendApprovalActionEmails } from '@/utils/approvalActionEmails';
 
 export const useApprovalSystem = () => {
   const [loading, setLoading] = useState(false);
