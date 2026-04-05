@@ -42,8 +42,9 @@ Deno.serve(async (req) => {
     templateName = body.templateName || body.template_name
     recipientEmail = body.recipientEmail || body.recipient_email
     idempotencyKey = body.idempotencyKey || body.idempotency_key || crypto.randomUUID()
-    if (body.templateData && typeof body.templateData === 'object') {
-      templateData = body.templateData
+    const rawData = body.templateData || body.data
+    if (rawData && typeof rawData === 'object') {
+      templateData = rawData
     }
   } catch {
     return new Response(
