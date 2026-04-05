@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { RejectionModal } from '@/components/workflow/RejectionModal';
 import { DelegateApprovalModal } from '@/components/approval/DelegateApprovalModal';
 import { useSMSNotifications } from '@/hooks/useSMSNotifications';
+import { sendApprovalActionEmails } from '@/utils/approvalActionEmails';
 import { useSeparationOfDuties } from '@/hooks/useSeparationOfDuties';
 
 interface MoneyRequest {
