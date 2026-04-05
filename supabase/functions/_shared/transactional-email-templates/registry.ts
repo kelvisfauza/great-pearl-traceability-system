@@ -19,6 +19,9 @@ import { template as dailyFinanceSummary } from './daily-finance-summary.tsx'
 import { template as dailyEudrSummary } from './daily-eudr-summary.tsx'
 import { template as dailySalesSummary } from './daily-sales-summary.tsx'
 import { template as systemUpdateAnnouncement } from './system-update-announcement.tsx'
+import { template as withdrawalVerification } from './withdrawal-verification.tsx'
+import { template as loanGuarantorCode } from './loan-guarantor-code.tsx'
+import { template as loanApprovalDetails } from './loan-approval-details.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'verification-code': verificationCode,
@@ -31,4 +34,7 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'daily-eudr-summary': dailyEudrSummary,
   'daily-sales-summary': dailySalesSummary,
   'system-update-announcement': systemUpdateAnnouncement,
+  'withdrawal-verification': withdrawalVerification,
+  'loan-guarantor-code': loanGuarantorCode,
+  'loan-approval-details': loanApprovalDetails,
 }
