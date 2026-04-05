@@ -151,9 +151,28 @@ export const useApprovalSystem = () => {
         });
       }
 
+      // Send approval action emails with Approve/Reject buttons
+      try {
+        await sendApprovalActionEmails({
+          requestId: data.id,
+          requestTitle: title,
+          requestType: type,
+          requestedBy: employee?.email || 'Unknown',
+          requestedByName: employee?.name || 'Unknown User',
+          department: details.department || 'Finance',
+          amount,
+          priority: details.priority || 'High',
+          description,
+          dateRequested: new Date().toLocaleDateString(),
+        }, 'finance');
+        console.log('✅ Approval action emails sent to Finance');
+      } catch (emailErr) {
+        console.error('Failed to send approval action emails:', emailErr);
+      }
+
       toast({
         title: "Approval Request Created",
-        description: "Request has been submitted for Finance review"
+        description: "Request has been submitted for Finance review. Approvers have been emailed with action buttons."
       });
 
       return true;
