@@ -1,6 +1,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { useRoleBasedAccess } from "@/hooks/useRoleBasedAccess";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,7 +18,9 @@ import {
   ShoppingCart,
   Receipt,
   Eye,
-  Monitor
+  Monitor,
+  ArrowRight,
+  Zap
 } from "lucide-react";
 import SupplierAdvanceModal from "@/components/finance/SupplierAdvanceModal";
 import IssueReceiptModal from "@/components/finance/IssueReceiptModal";
@@ -38,7 +41,8 @@ const QuickActions = () => {
       title: "Price Display",
       description: "Open price monitor display",
       icon: Monitor,
-      color: "bg-rose-600 hover:bg-rose-700",
+      iconColor: "text-chart-5",
+      iconBg: "bg-chart-5/10",
       action: () => window.open('/display', '_blank'),
       access: access.canManageInventory || access.canViewSales
     },
@@ -46,7 +50,8 @@ const QuickActions = () => {
       title: "Store Preview",
       description: "View recent transactions",
       icon: Eye,
-      color: "bg-teal-600 hover:bg-teal-700",
+      iconColor: "text-chart-2",
+      iconBg: "bg-chart-2/10",
       action: () => setShowStorePreviewModal(true),
       access: access.canManageInventory
     },
@@ -54,7 +59,8 @@ const QuickActions = () => {
       title: "Purchase Coffee",
       description: "Record new coffee delivery",
       icon: ShoppingCart,
-      color: "bg-orange-600 hover:bg-orange-700",
+      iconColor: "text-chart-3",
+      iconBg: "bg-chart-3/10",
       route: "/store?tab=records",
       access: access.canManageInventory
     },
@@ -62,7 +68,8 @@ const QuickActions = () => {
       title: "New Coffee Batch",
       description: "Record incoming coffee delivery",
       icon: Coffee,
-      color: "bg-green-600 hover:bg-green-700",
+      iconColor: "text-success",
+      iconBg: "bg-success/10",
       route: "/procurement",
       access: access.canViewProcurement
     },
@@ -70,7 +77,8 @@ const QuickActions = () => {
       title: "Quality Inspection",
       description: "Start quality control process",
       icon: ClipboardCheck,
-      color: "bg-blue-600 hover:bg-blue-700",
+      iconColor: "text-chart-1",
+      iconBg: "bg-chart-1/10",
       route: "/quality-control",
       access: access.canManageQuality
     },
@@ -78,7 +86,8 @@ const QuickActions = () => {
       title: "Process Payment",
       description: "Pay supplier or farmer",
       icon: DollarSign,
-      color: "bg-amber-600 hover:bg-amber-700",
+      iconColor: "text-chart-3",
+      iconBg: "bg-chart-3/10",
       route: "/finance",
       access: access.canProcessPayments
     },
@@ -86,7 +95,8 @@ const QuickActions = () => {
       title: "Generate Report",
       description: "Create management report",
       icon: FileText,
-      color: "bg-purple-600 hover:bg-purple-700",
+      iconColor: "text-chart-4",
+      iconBg: "bg-chart-4/10",
       route: "/reports",
       access: access.canGenerateReports
     },
@@ -94,7 +104,8 @@ const QuickActions = () => {
       title: "Add Supplier",
       description: "Register new coffee supplier",
       icon: Users,
-      color: "bg-indigo-600 hover:bg-indigo-700",
+      iconColor: "text-chart-1",
+      iconBg: "bg-chart-1/10",
       route: "/store?tab=suppliers",
       access: access.canViewProcurement || access.canManageInventory
     },
@@ -102,7 +113,8 @@ const QuickActions = () => {
       title: "Sales Entry",
       description: "Record new sales transaction",
       icon: TrendingUp,
-      color: "bg-pink-600 hover:bg-pink-700",
+      iconColor: "text-chart-5",
+      iconBg: "bg-chart-5/10",
       route: "/sales-marketing",
       access: access.canViewSales
     },
@@ -110,7 +122,8 @@ const QuickActions = () => {
       title: "Give Advance",
       description: "Provide advance to supplier",
       icon: DollarSign,
-      color: "bg-emerald-600 hover:bg-emerald-700",
+      iconColor: "text-success",
+      iconBg: "bg-success/10",
       action: () => setShowAdvanceModal(true),
       access: access.canProcessPayments
     },
@@ -118,63 +131,68 @@ const QuickActions = () => {
       title: "Issue Receipt",
       description: "Generate payment receipt",
       icon: Receipt,
-      color: "bg-cyan-600 hover:bg-cyan-700",
+      iconColor: "text-chart-2",
+      iconBg: "bg-chart-2/10",
       action: () => setShowReceiptModal(true),
       access: access.canProcessPayments,
       dataAction: "issue-receipt"
     }
   ];
 
-  // Filter actions based on user access
   const availableActions = allActions.filter(action => action.access);
 
   return (
-    <Card className="bg-gradient-to-br from-card to-card/80 backdrop-blur-sm border-border/50">
-      <CardHeader className="pb-3 sm:pb-6 p-4 sm:p-6">
-        <CardTitle className="flex items-center text-base sm:text-xl">
-          <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-primary to-primary/80 text-primary-foreground mr-2 sm:mr-3">
-            <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+    <Card className="border-border/50 shadow-lg shadow-primary/5 overflow-hidden h-full">
+      <div className="h-1 bg-gradient-to-r from-chart-3 to-primary" />
+      <CardHeader className="pb-3 border-b border-border/40 p-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-gradient-to-br from-chart-3/15 to-primary/10 rounded-xl">
+              <Zap className="h-5 w-5 text-chart-3" />
+            </div>
+            <div>
+              <CardTitle className="text-lg font-bold">Quick Actions</CardTitle>
+              <CardDescription className="text-xs mt-0.5">
+                {availableActions.length} actions available for {employee.role}
+              </CardDescription>
+            </div>
           </div>
-          Quick Actions
-        </CardTitle>
-        <CardDescription className="text-sm sm:text-base">
-          Available actions for {employee.role}
-        </CardDescription>
+        </div>
       </CardHeader>
-      <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+      <CardContent className="p-5">
         {availableActions.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-2 gap-2 sm:gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {availableActions.slice(0, 6).map((action, index) => (
-              <Button
+              <button
                 key={index}
-                variant="outline"
-                className="group h-auto p-3 sm:p-5 flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-4 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 text-center sm:text-left border-border/50 hover:border-primary/30 bg-gradient-to-r from-background to-muted/30 hover:scale-[1.02]"
-                onClick={() => action.action ? action.action() : navigate(action.route)}
+                className="group relative flex flex-col items-center gap-3 p-4 rounded-xl border border-border/40 bg-card hover:bg-accent/50 hover:border-primary/20 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 text-center"
+                onClick={() => action.action ? action.action() : navigate(action.route!)}
                 {...(action.dataAction && { 'data-action': action.dataAction })}
               >
-                <div className={`p-2 sm:p-3 rounded-xl ${action.color} text-white flex-shrink-0 group-hover:scale-110 transition-transform duration-300 shadow-md`}>
-                  <action.icon className="h-4 w-4 sm:h-6 sm:w-6" />
+                <div className={`p-3 rounded-xl ${action.iconBg} group-hover:scale-110 transition-transform duration-200`}>
+                  <action.icon className={`h-5 w-5 ${action.iconColor}`} />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-xs sm:text-sm text-foreground group-hover:text-primary transition-colors duration-300 truncate">
+                <div>
+                  <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
                     {action.title}
-                  </div>
-                  <div className="hidden sm:block text-sm text-muted-foreground mt-1 line-clamp-2">
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1 hidden sm:block">
                     {action.description}
-                  </div>
+                  </p>
                 </div>
-              </Button>
+                <ArrowRight className="absolute top-3 right-3 h-3.5 w-3.5 text-muted-foreground/0 group-hover:text-primary group-hover:text-muted-foreground/60 transition-all duration-200 group-hover:translate-x-0.5" />
+              </button>
             ))}
           </div>
         ) : (
-          <div className="text-center py-6 sm:py-12">
-            <div className="p-3 sm:p-4 rounded-full bg-muted/50 w-fit mx-auto mb-3 sm:mb-4">
-              <Package className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground" />
+          <div className="text-center py-10">
+            <div className="p-4 rounded-2xl bg-muted/30 w-fit mx-auto mb-4">
+              <Package className="h-10 w-10 text-muted-foreground/40" />
             </div>
-            <p className="text-sm sm:text-base font-medium text-muted-foreground mb-1 sm:mb-2">
+            <p className="text-sm font-semibold text-muted-foreground mb-1">
               No quick actions available
             </p>
-            <p className="text-xs sm:text-sm text-muted-foreground/80">
+            <p className="text-xs text-muted-foreground/70">
               Contact your administrator for access
             </p>
           </div>

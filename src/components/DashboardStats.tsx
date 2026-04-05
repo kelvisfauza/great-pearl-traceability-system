@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Coffee, TrendingUp, TrendingDown, Minus, Package, DollarSign, Users, Shield, Building, AlertTriangle } from "lucide-react";
+import { Coffee, TrendingUp, TrendingDown, Minus, Package, DollarSign, Users, Shield, Building, AlertTriangle, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUnifiedEmployees } from "@/hooks/useUnifiedEmployees";
 import { useApprovalRequests } from "@/hooks/useApprovalRequests";
@@ -97,10 +97,10 @@ const DashboardStats = () => {
 
     if (hasPermission("Store Management")) {
       return [
-        { title: "Monthly Inventory", value: `${(realTimeData.inventoryData.totalKgs / 1000).toFixed(1)}K kg`, change: `${realTimeData.inventoryData.totalBags} bags`, icon: Coffee, trend: getTrend(realTimeData.inventoryData.totalKgs, realTimeData.prevMonth.coffeeKgs, inventoryPercent), percent: inventoryPercent },
-        { title: "Monthly Batches", value: realTimeData.coffeeData.totalBatches.toString(), change: "processed", icon: Package, trend: getTrend(realTimeData.coffeeData.totalBatches, realTimeData.prevMonth.coffeeBatches, batchesPercent), percent: batchesPercent },
-        { title: "New Suppliers", value: realTimeData.supplierCount.toString(), change: "registered", icon: Building, trend: getTrend(realTimeData.supplierCount, realTimeData.prevMonth.suppliers, suppliersPercent), percent: suppliersPercent },
-        { title: "Your Role", value: employee?.position || "N/A", change: employee?.department || "", icon: Shield, trend: "stable" as const, percent: 0 },
+        { title: "Monthly Inventory", value: `${(realTimeData.inventoryData.totalKgs / 1000).toFixed(1)}K kg`, change: `${realTimeData.inventoryData.totalBags} bags`, icon: Coffee, trend: getTrend(realTimeData.inventoryData.totalKgs, realTimeData.prevMonth.coffeeKgs, inventoryPercent), percent: inventoryPercent, gradient: "from-chart-1/15 to-chart-1/5" },
+        { title: "Monthly Batches", value: realTimeData.coffeeData.totalBatches.toString(), change: "processed", icon: Package, trend: getTrend(realTimeData.coffeeData.totalBatches, realTimeData.prevMonth.coffeeBatches, batchesPercent), percent: batchesPercent, gradient: "from-chart-2/15 to-chart-2/5" },
+        { title: "New Suppliers", value: realTimeData.supplierCount.toString(), change: "registered", icon: Building, trend: getTrend(realTimeData.supplierCount, realTimeData.prevMonth.suppliers, suppliersPercent), percent: suppliersPercent, gradient: "from-chart-3/15 to-chart-3/5" },
+        { title: "Your Role", value: employee?.position || "N/A", change: employee?.department || "", icon: Shield, trend: "stable" as const, percent: 0, gradient: "from-chart-4/15 to-chart-4/5" },
       ];
     }
 
@@ -108,28 +108,22 @@ const DashboardStats = () => {
       const pendingApprovals = requests.filter(req => req.status === 'Pending').length;
       const salaryTotal = requests.filter(req => req.type === 'Salary Payment').reduce((s, r) => s + (r.amount || 0), 0);
       return [
-        { title: "Monthly Revenue", value: `UGX ${(realTimeData.financeData.totalRevenue / 1000000).toFixed(1)}M`, change: `vs last month`, icon: DollarSign, trend: getTrend(realTimeData.financeData.totalRevenue, realTimeData.prevMonth.revenue, revenuePercent), percent: revenuePercent },
-        { title: "Monthly Coffee", value: `${(realTimeData.coffeeData.totalKgs / 1000).toFixed(1)}K kg`, change: `vs last month`, icon: Coffee, trend: getTrend(realTimeData.coffeeData.totalKgs, realTimeData.prevMonth.coffeeKgs, inventoryPercent), percent: inventoryPercent },
-        { title: "Pending Approvals", value: pendingApprovals.toString(), change: "require attention", icon: AlertTriangle, trend: pendingApprovals > 0 ? "negative" as const : "stable" as const, percent: 0, urgent: pendingApprovals > 0 },
-        { title: "Active Staff", value: employees.filter(emp => emp.status === 'Active').length.toString(), change: `UGX ${(salaryTotal / 1000000).toFixed(1)}M pending`, icon: Users, trend: "stable" as const, percent: 0 },
+        { title: "Monthly Revenue", value: `UGX ${(realTimeData.financeData.totalRevenue / 1000000).toFixed(1)}M`, change: `vs last month`, icon: DollarSign, trend: getTrend(realTimeData.financeData.totalRevenue, realTimeData.prevMonth.revenue, revenuePercent), percent: revenuePercent, gradient: "from-success/15 to-success/5" },
+        { title: "Monthly Coffee", value: `${(realTimeData.coffeeData.totalKgs / 1000).toFixed(1)}K kg`, change: `vs last month`, icon: Coffee, trend: getTrend(realTimeData.coffeeData.totalKgs, realTimeData.prevMonth.coffeeKgs, inventoryPercent), percent: inventoryPercent, gradient: "from-chart-3/15 to-chart-3/5" },
+        { title: "Pending Approvals", value: pendingApprovals.toString(), change: "require attention", icon: AlertTriangle, trend: pendingApprovals > 0 ? "negative" as const : "stable" as const, percent: 0, urgent: pendingApprovals > 0, gradient: pendingApprovals > 0 ? "from-destructive/15 to-destructive/5" : "from-chart-1/15 to-chart-1/5" },
+        { title: "Active Staff", value: employees.filter(emp => emp.status === 'Active').length.toString(), change: `UGX ${(salaryTotal / 1000000).toFixed(1)}M pending`, icon: Users, trend: "stable" as const, percent: 0, gradient: "from-chart-4/15 to-chart-4/5" },
       ];
     }
 
     return [
-      { title: "Monthly Batches", value: realTimeData.coffeeData.totalBatches.toString(), change: "vs last month", icon: Coffee, trend: getTrend(realTimeData.coffeeData.totalBatches, realTimeData.prevMonth.coffeeBatches, batchesPercent), percent: batchesPercent },
-      { title: "Monthly Inventory", value: `${realTimeData.coffeeData.totalBags} bags`, change: "vs last month", icon: Package, trend: getTrend(realTimeData.inventoryData.totalKgs, realTimeData.prevMonth.coffeeKgs, inventoryPercent), percent: inventoryPercent },
-      { title: "Department", value: employee?.department || "N/A", change: employee?.position || "", icon: Shield, trend: "stable" as const, percent: 0 },
-      { title: "New Suppliers", value: realTimeData.supplierCount.toString(), change: "vs last month", icon: Building, trend: getTrend(realTimeData.supplierCount, realTimeData.prevMonth.suppliers, suppliersPercent), percent: suppliersPercent },
+      { title: "Monthly Batches", value: realTimeData.coffeeData.totalBatches.toString(), change: "vs last month", icon: Coffee, trend: getTrend(realTimeData.coffeeData.totalBatches, realTimeData.prevMonth.coffeeBatches, batchesPercent), percent: batchesPercent, gradient: "from-chart-1/15 to-chart-1/5" },
+      { title: "Monthly Inventory", value: `${realTimeData.coffeeData.totalBags} bags`, change: "vs last month", icon: Package, trend: getTrend(realTimeData.inventoryData.totalKgs, realTimeData.prevMonth.coffeeKgs, inventoryPercent), percent: inventoryPercent, gradient: "from-chart-2/15 to-chart-2/5" },
+      { title: "Department", value: employee?.department || "N/A", change: employee?.position || "", icon: Shield, trend: "stable" as const, percent: 0, gradient: "from-chart-4/15 to-chart-4/5" },
+      { title: "New Suppliers", value: realTimeData.supplierCount.toString(), change: "vs last month", icon: Building, trend: getTrend(realTimeData.supplierCount, realTimeData.prevMonth.suppliers, suppliersPercent), percent: suppliersPercent, gradient: "from-chart-3/15 to-chart-3/5" },
     ];
   };
 
   const stats = getStatsForRole();
-
-  const TrendIcon = ({ trend }: { trend: string }) => {
-    if (trend === 'positive') return <TrendingUp className="h-3.5 w-3.5" />;
-    if (trend === 'negative') return <TrendingDown className="h-3.5 w-3.5" />;
-    return <Minus className="h-3.5 w-3.5" />;
-  };
 
   const trendColor = (trend: string, urgent?: boolean) => {
     if (urgent) return 'text-destructive';
@@ -142,35 +136,48 @@ const DashboardStats = () => {
     if (urgent) return 'bg-destructive/10';
     if (trend === 'positive') return 'bg-success/10';
     if (trend === 'negative') return 'bg-destructive/10';
-    return 'bg-muted';
+    return 'bg-muted/50';
+  };
+
+  const iconColor = (index: number) => {
+    const colors = ['text-chart-1', 'text-chart-2', 'text-chart-3', 'text-chart-4'];
+    return colors[index % colors.length];
+  };
+
+  const iconBg = (index: number) => {
+    const bgs = ['bg-chart-1/10', 'bg-chart-2/10', 'bg-chart-3/10', 'bg-chart-4/10'];
+    return bgs[index % bgs.length];
   };
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       {stats.map((stat, index) => {
         const Icon = stat.icon;
         return (
-          <Card key={index} className="border-border/60 shadow-sm hover:shadow-md transition-all duration-200 group">
-            <CardContent className="p-4 md:p-5">
-              <div className="flex items-start justify-between mb-3">
-                <div className="p-2 rounded-xl bg-primary/8 group-hover:bg-primary/12 transition-colors">
-                  <Icon className="h-4 w-4 text-primary" />
+          <Card key={index} className={`relative overflow-hidden border-border/40 shadow-lg hover:shadow-xl transition-all duration-300 group hover:-translate-y-0.5`}>
+            {/* Top gradient bar */}
+            <div className={`h-1 bg-gradient-to-r ${stat.gradient}`} />
+            
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between mb-4">
+                <div className={`p-2.5 rounded-xl ${iconBg(index)} group-hover:scale-110 transition-transform duration-300`}>
+                  <Icon className={`h-5 w-5 ${iconColor(index)}`} />
                 </div>
                 {stat.percent !== 0 && (
-                  <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${trendBg(stat.trend, (stat as any).urgent)} ${trendColor(stat.trend, (stat as any).urgent)}`}>
-                    <TrendIcon trend={stat.trend} />
+                  <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${trendBg(stat.trend, (stat as any).urgent)} ${trendColor(stat.trend, (stat as any).urgent)}`}>
+                    {stat.trend === 'positive' ? <ArrowUpRight className="h-3 w-3" /> : stat.trend === 'negative' ? <ArrowDownRight className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
                     <span>{Math.abs(stat.percent)}%</span>
                   </div>
                 )}
               </div>
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-1.5">
                   {stat.title}
                 </p>
-                <p className="text-xl md:text-2xl font-bold text-foreground tracking-tight truncate">
+                <p className="text-2xl md:text-3xl font-black text-foreground tracking-tight truncate leading-none">
                   {stat.value}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1 truncate">
+                <p className="text-xs text-muted-foreground mt-2 truncate font-medium">
                   {stat.change}
                 </p>
               </div>
