@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { RejectionModal } from '@/components/workflow/RejectionModal';
 import { DelegateApprovalModal } from '@/components/approval/DelegateApprovalModal';
 import { useSMSNotifications } from '@/hooks/useSMSNotifications';
+import { sendApprovalActionEmails } from '@/utils/approvalActionEmails';
 import { useSeparationOfDuties } from '@/hooks/useSeparationOfDuties';
 
 interface MoneyRequest {
@@ -169,6 +170,27 @@ const MoneyRequestsManager = () => {
                 messageType: 'money_request_rejection'
               }
             });
+          }
+        }
+
+        // When Finance approves, send approval action emails to Admins
+        if (approve && request) {
+          try {
+            await sendApprovalActionEmails({
+              requestId: request.id,
+              requestTitle: request.title,
+              requestType: request.type,
+              requestedBy: request.requestedby,
+              requestedByName: request.requestedby_name || request.requestedby,
+              department: request.department,
+              amount: request.amount,
+              priority: request.priority,
+              description: request.description,
+              dateRequested: request.daterequested,
+            }, 'admin');
+            console.log('✅ Admin approval action emails sent');
+          } catch (emailErr) {
+            console.error('Failed to send admin action emails:', emailErr);
           }
         }
       }

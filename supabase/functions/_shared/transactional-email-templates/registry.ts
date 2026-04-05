@@ -32,6 +32,7 @@ import { template as loanRejected } from './loan-rejected.tsx'
 import { template as loanGuarantorResponse } from './loan-guarantor-response.tsx'
 import { template as loanCounterOffer } from './loan-counter-offer.tsx'
 import { template as loanGuarantorRevoked } from './loan-guarantor-revoked.tsx'
+import { template as approvalAction } from './approval-action.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'verification-code': verificationCode,
@@ -57,4 +58,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'loan-guarantor-response': loanGuarantorResponse,
   'loan-counter-offer': loanCounterOffer,
   'loan-guarantor-revoked': loanGuarantorRevoked,
+  'approval-action': approvalAction,
 }

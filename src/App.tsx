@@ -37,6 +37,7 @@ import Approvals from "./pages/Approvals";
 import Verify from "./pages/Verify";
 import CoffeeBookings from "./pages/CoffeeBookings";
 import PriceDisplay from "./pages/PriceDisplay";
+import ApproveAction from "./pages/ApproveAction";
 
 // V2 System Pages
 import V2DepartmentRouter from "./components/v2/V2DepartmentRouter";
@@ -147,6 +148,8 @@ const App: React.ComponentType = () => {
                 
                 {/* Public unsubscribe route - no auth required */}
                 <Route path="/unsubscribe" element={<Unsubscribe />} />
+                {/* Public approval action route - no auth required */}
+                <Route path="/approve-action" element={<ApproveAction />} />
                 {/* Public price display for monitors - no auth required */}
                 <Route path="/display" element={<PriceDisplay />} />
                 

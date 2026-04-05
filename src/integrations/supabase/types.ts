@@ -164,6 +164,48 @@ export type Database = {
         }
         Relationships: []
       }
+      approval_action_tokens: {
+        Row: {
+          action_type: string
+          approval_stage: string
+          approver_email: string
+          approver_name: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          request_id: string
+          status: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          action_type: string
+          approval_stage?: string
+          approver_email: string
+          approver_name?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          request_id: string
+          status?: string
+          token?: string
+          used_at?: string | null
+        }
+        Update: {
+          action_type?: string
+          approval_stage?: string
+          approver_email?: string
+          approver_name?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          request_id?: string
+          status?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       approval_requests: {
         Row: {
           admin_approved: boolean | null
@@ -9081,6 +9123,10 @@ export type Database = {
       }
       invalidate_other_sessions: {
         Args: { p_current_session_token: string; p_user_id: string }
+        Returns: undefined
+      }
+      invalidate_request_tokens: {
+        Args: { p_request_id: string }
         Returns: undefined
       }
       is_current_user_admin: { Args: never; Returns: boolean }
