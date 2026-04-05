@@ -219,7 +219,7 @@ const JobApplicationsManager = () => {
       }
 
       // Send email for status update
-      await sendStatusEmail(selectedApp, newStatus, statusNote || undefined);
+      await sendStatusEmail(appWithEmail, newStatus, statusNote || undefined);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["job-applications"] });
