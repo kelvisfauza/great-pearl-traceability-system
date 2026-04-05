@@ -198,7 +198,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       });
       if (feeError) throw feeError;
 
-      // 2. Fetch all entries in the date range (including the fee we just charged)
+      // 2. Fetch all entries in the date range
       const { data: allEntries, error } = await supabase
         .from('ledger_entries')
         .select('*')
@@ -220,22 +220,29 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       const transactions = fetchedEntries.map(e => {
         const affectsWallet = WALLET_TYPES.includes(e.entry_type);
         if (affectsWallet) runBal += e.amount;
+        const meta = e.metadata ? (typeof e.metadata === 'string' ? JSON.parse(e.metadata) : e.metadata) : null;
+        // Label statement fees properly
+        const typeLabel = (e.entry_type === 'WITHDRAWAL' && meta?.source === 'statement_fee') 
+          ? '📄 Transaction Charge' 
+          : getEntryLabel(e);
         return {
           date: format(new Date(e.created_at), 'MMM dd, yyyy h:mm a'),
-          type: getEntryLabel(e),
-          description: getActivityLabel(e) || '-',
+          type: typeLabel,
+          description: (e.entry_type === 'WITHDRAWAL' && meta?.source === 'statement_fee') 
+            ? 'Statement Charge' 
+            : (getActivityLabel(e) || '-'),
           amount: e.amount,
           balance: affectsWallet ? runBal : null,
         };
       });
 
-      // Add the statement fee as a visible line if it falls outside the date range
+      // Add the statement fee if it falls outside the date range
       const feeInRange = fetchedEntries.some(e => e.reference === statementRef);
       if (!feeInRange) {
         transactions.push({
           date: format(new Date(), 'MMM dd, yyyy h:mm a'),
-          type: '📄 Statement Fee',
-          description: 'Transaction Statement Fee',
+          type: '📄 Transaction Charge',
+          description: 'Statement Charge',
           amount: -STATEMENT_FEE,
           balance: updatedBalance,
         });
@@ -243,18 +250,140 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
 
       const periodFrom = format(new Date(dateFrom), 'MMM dd, yyyy');
       const periodTo = format(new Date(dateTo), 'MMM dd, yyyy');
+      const empName = employee?.name || user.email || 'Employee';
 
+      // 3. Generate PDF
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageW = doc.internal.pageSize.getWidth();
+      const margin = 15;
+      let y = 20;
+
+      // Header
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(26, 86, 50); // brand green
+      doc.text('Great Agro Coffee', margin, y);
+      y += 7;
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100);
+      doc.text('Transaction Statement', margin, y);
+      y += 10;
+
+      // Separator line
+      doc.setDrawColor(200);
+      doc.line(margin, y, pageW - margin, y);
+      y += 8;
+
+      // Employee info
+      doc.setFontSize(10);
+      doc.setTextColor(50);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Employee:', margin, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(empName, margin + 25, y);
+      y += 5;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Period:', margin, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${periodFrom} - ${periodTo}`, margin + 25, y);
+      y += 5;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Current Balance:', margin, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`UGX ${updatedBalance.toLocaleString()}`, margin + 35, y);
+      y += 5;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Statement Charge:', margin, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`UGX ${STATEMENT_FEE.toLocaleString()}`, margin + 38, y);
+      y += 8;
+
+      // Table header
+      const cols = [margin, margin + 40, margin + 75, margin + 115, pageW - margin - 25];
+      const colLabels = ['Date', 'Type', 'Description', 'Amount (UGX)', 'Balance (UGX)'];
+      doc.setFillColor(26, 86, 50);
+      doc.rect(margin, y - 4, pageW - 2 * margin, 7, 'F');
+      doc.setTextColor(255);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      colLabels.forEach((label, i) => {
+        const x = i >= 3 ? cols[i] : cols[i];
+        doc.text(label, x, y);
+      });
+      y += 6;
+
+      // Table rows
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      transactions.forEach((tx, idx) => {
+        if (y > 270) {
+          doc.addPage();
+          y = 20;
+        }
+        // Alternate row bg
+        if (idx % 2 === 0) {
+          doc.setFillColor(245, 245, 245);
+          doc.rect(margin, y - 3.5, pageW - 2 * margin, 5.5, 'F');
+        }
+        doc.setTextColor(50);
+        // Strip emojis for PDF
+        const cleanType = tx.type.replace(/[\u{1F000}-\u{1FFFF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|📄|📤|📥|📶|📱|💵|📋|🏆|🎂|📲|💰|🏦|🎁/gu, '').trim();
+        doc.text(tx.date.split(',')[0] || tx.date, cols[0], y);
+        doc.text(cleanType.substring(0, 20), cols[1], y);
+        doc.text((tx.description || '-').substring(0, 22), cols[2], y);
+        
+        // Amount color
+        if (tx.amount >= 0) {
+          doc.setTextColor(21, 128, 61); // green
+        } else {
+          doc.setTextColor(185, 28, 28); // red
+        }
+        const amtStr = `${tx.amount >= 0 ? '+' : ''}${tx.amount.toLocaleString()}`;
+        doc.text(amtStr, cols[3], y);
+        
+        doc.setTextColor(50);
+        doc.text(tx.balance != null ? tx.balance.toLocaleString() : '-', cols[4], y);
+        y += 5.5;
+      });
+
+      // Footer
+      y += 5;
+      doc.setDrawColor(200);
+      doc.line(margin, y, pageW - margin, y);
+      y += 5;
+      doc.setFontSize(7);
+      doc.setTextColor(150);
+      doc.text(`Generated on ${format(new Date(), 'MMM dd, yyyy h:mm a')} | For questions: operations@greatpearlcoffee.com`, margin, y);
+
+      // 4. Upload PDF to Supabase Storage
+      const pdfBlob = doc.output('blob');
+      const fileName = `${unifiedUserId}/${format(new Date(), 'yyyyMMdd-HHmmss')}-statement.pdf`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('statements')
+        .upload(fileName, pdfBlob, { contentType: 'application/pdf' });
+      
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrl } = supabase.storage
+        .from('statements')
+        .getPublicUrl(fileName);
+
+      // 5. Send email with PDF download link
       await supabase.functions.invoke('send-transactional-email', {
         body: {
           templateName: 'transaction-statement',
           recipientEmail: user.email,
           idempotencyKey: `statement-${user.id}-${dateFrom}-${dateTo}-${Date.now()}`,
           templateData: {
-            employeeName: employee?.name || user.email,
+            employeeName: empName,
             periodFrom,
             periodTo,
             currentBalance: updatedBalance,
             transactions,
+            pdfDownloadUrl: publicUrl.publicUrl,
+            statementFee: STATEMENT_FEE,
           },
         },
       });
@@ -262,10 +391,9 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       setEmailSent(true);
       toast({
         title: 'Statement Sent — UGX 500 Charged',
-        description: `Statement sent to ${user.email}. UGX 500 has been deducted from your wallet.`,
+        description: `PDF statement sent to ${user.email}. UGX 500 deducted.`,
       });
 
-      // Refresh entries to show the fee
       fetchEntries();
     } catch (err: any) {
       console.error('Error sending statement:', err);
