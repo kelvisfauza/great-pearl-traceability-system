@@ -18,6 +18,7 @@ import WorkSummaryPanel from '@/components/dashboard/WorkSummaryPanel';
 import DailyComparisonChart from '@/components/dashboard/DailyComparisonChart';
 import RevenueExpenseChart from '@/components/dashboard/RevenueExpenseChart';
 import DepartmentActivityChart from '@/components/dashboard/DepartmentActivityChart';
+import EmployeeOfTheMonthWidget from '@/components/dashboard/EmployeeOfTheMonthWidget';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -92,6 +93,9 @@ const Index = () => {
             </div>
           </div>
         </div>
+
+        {/* Employee of the Month - Pinned for all staff */}
+        <EmployeeOfTheMonthWidget />
 
         {/* KPI Cards with Sparklines */}
         <DashboardStats />
