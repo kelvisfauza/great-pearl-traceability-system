@@ -236,7 +236,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
             name: employee.name,
             code,
             amount: amount ? Number(amount).toLocaleString() : undefined,
-            method: paymentMethod || undefined,
+            method: channel || undefined,
           },
         }
       });
