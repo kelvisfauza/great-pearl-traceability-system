@@ -315,11 +315,11 @@ const LoanAdvertDialog = () => {
             </div>
           )}
 
-          <Button onClick={handleSend} disabled={sending || selectedEmployees.size === 0} className="w-full">
+          <Button onClick={handleSend} disabled={sending || selectedEmployees.size === 0 || (!sendSms && !sendEmail)} className="w-full">
             {sending ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...</>
             ) : (
-              <><Megaphone className="mr-2 h-4 w-4" /> Send to {selectedEmployees.size} Employees</>
+              <><Megaphone className="mr-2 h-4 w-4" /> Send {sendSms && sendEmail ? 'SMS + Email' : sendEmail ? 'Email' : 'SMS'} to {selectedEmployees.size} Employees</>
             )}
           </Button>
         </div>
