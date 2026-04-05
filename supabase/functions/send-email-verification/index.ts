@@ -12,6 +12,36 @@ interface VerificationRequest {
   code?: string;
 }
 
+const SITE_NAME = "Great Agro Coffee";
+const SENDER_DOMAIN = "notify.greatpearlcoffeesystem.site";
+const FROM_DOMAIN = "greatpearlcoffeesystem.site";
+
+function buildVerificationEmailHtml(code: string): string {
+  return `<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head><meta charset="UTF-8"></head>
+<body style="background-color:#ffffff;font-family:'Segoe UI',Arial,sans-serif;">
+<div style="padding:20px 25px;max-width:560px;margin:0 auto;">
+  <h1 style="font-size:22px;font-weight:bold;color:hsl(220,13%,18%);margin:0 0 20px;">Email Verification</h1>
+  <p style="font-size:14px;color:hsl(220,9%,46%);line-height:1.6;margin:0 0 25px;">
+    Use the code below to verify your email and complete your sign-in to the Great Agro Coffee system:
+  </p>
+  <p style="font-family:Courier,monospace;font-size:36px;font-weight:bold;color:hsl(217,91%,60%);letter-spacing:10px;text-align:center;background-color:#f4f4f4;padding:20px;border-radius:8px;margin:0 0 25px;">
+    ${code}
+  </p>
+  <p style="font-size:14px;color:hsl(220,9%,46%);line-height:1.6;margin:0 0 25px;">
+    This code will expire in 10 minutes. If you didn't request this code, please ignore this email.
+  </p>
+  <p style="font-size:12px;color:#999999;margin:30px 0 0;">Great Agro Coffee — Kasese, Uganda</p>
+</div>
+</body>
+</html>`;
+}
+
+function buildVerificationEmailText(code: string): string {
+  return `Email Verification\n\nUse the code below to verify your email and complete your sign-in to the Great Agro Coffee system:\n\n${code}\n\nThis code will expire in 10 minutes. If you didn't request this code, please ignore this email.\n\nGreat Agro Coffee — Kasese, Uganda`;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -46,11 +76,45 @@ const handler = async (req: Request): Promise<Response> => {
         .single();
 
       if (existingCode) {
-        console.log("Reusing existing verification code for:", email);
+        // Resend the existing code via direct enqueue
+        const messageId = crypto.randomUUID();
+        const html = buildVerificationEmailHtml(existingCode.code);
+        const text = buildVerificationEmailText(existingCode.code);
+
+        await supabase.from('email_send_log').insert({
+          message_id: messageId,
+          template_name: 'verification-code',
+          recipient_email: email,
+          status: 'pending',
+        });
+
+        const { error: enqueueError } = await supabase.rpc('enqueue_email', {
+          queue_name: 'transactional_emails',
+          payload: {
+            message_id: messageId,
+            to: email,
+            from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+            sender_domain: SENDER_DOMAIN,
+            subject: 'Your Great Agro Coffee Verification Code',
+            html,
+            text,
+            purpose: 'transactional',
+            label: 'verification-code',
+            idempotency_key: `verify-${email}-${existingCode.code}`,
+            queued_at: new Date().toISOString(),
+          },
+        });
+
+        if (enqueueError) {
+          console.error("Enqueue error:", enqueueError);
+          throw new Error("Failed to send verification email");
+        }
+
+        console.log("Resent existing verification code for:", email);
         return new Response(
           JSON.stringify({ 
             success: true, 
-            message: "Verification code already sent to your email" 
+            message: "Verification code sent to your email" 
           }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
@@ -74,18 +138,37 @@ const handler = async (req: Request): Promise<Response> => {
         throw new Error("Failed to store verification code");
       }
 
-      // Send email via transactional email system (Lovable Emails)
-      const { error: emailError } = await supabase.functions.invoke('send-transactional-email', {
-        body: {
-          templateName: 'verification-code',
-          recipientEmail: email,
-          idempotencyKey: `verify-${email}-${verificationCode}`,
-          templateData: { code: verificationCode },
-        }
+      // Send email via direct enqueue
+      const messageId = crypto.randomUUID();
+      const html = buildVerificationEmailHtml(verificationCode);
+      const text = buildVerificationEmailText(verificationCode);
+
+      await supabase.from('email_send_log').insert({
+        message_id: messageId,
+        template_name: 'verification-code',
+        recipient_email: email,
+        status: 'pending',
       });
 
-      if (emailError) {
-        console.error("Email error:", emailError);
+      const { error: enqueueError } = await supabase.rpc('enqueue_email', {
+        queue_name: 'transactional_emails',
+        payload: {
+          message_id: messageId,
+          to: email,
+          from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+          sender_domain: SENDER_DOMAIN,
+          subject: 'Your Great Agro Coffee Verification Code',
+          html,
+          text,
+          purpose: 'transactional',
+          label: 'verification-code',
+          idempotency_key: `verify-${email}-${verificationCode}`,
+          queued_at: new Date().toISOString(),
+        },
+      });
+
+      if (enqueueError) {
+        console.error("Enqueue error:", enqueueError);
         throw new Error("Failed to send verification email");
       }
 
