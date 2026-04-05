@@ -8855,6 +8855,68 @@ export type Database = {
         }
         Relationships: []
       }
+      weighbridge_scan_sessions: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          report_context: Json | null
+          session_code: string
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          report_context?: Json | null
+          session_code?: string
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          report_context?: Json | null
+          session_code?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      weighbridge_scanned_tickets: {
+        Row: {
+          id: string
+          photo_url: string | null
+          qr_data: string
+          scanned_at: string | null
+          session_id: string
+        }
+        Insert: {
+          id?: string
+          photo_url?: string | null
+          qr_data: string
+          scanned_at?: string | null
+          session_id: string
+        }
+        Update: {
+          id?: string
+          photo_url?: string | null
+          qr_data?: string
+          scanned_at?: string | null
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weighbridge_scanned_tickets_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "weighbridge_scan_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       withdrawal_approval_logs: {
         Row: {
           action: string
