@@ -451,7 +451,7 @@ const JobApplicationsManager = () => {
                 onClick={() => updateStatusMutation.mutate()}
                 disabled={updateStatusMutation.isPending || newStatus === selectedApp.status}
               >
-                {updateStatusMutation.isPending ? "Updating..." : "Update & Send SMS"}
+                {updateStatusMutation.isPending ? "Updating..." : `Update & Send SMS${statusEmail ? ' + Email' : ''}`}
               </Button>
             </div>
           )}
