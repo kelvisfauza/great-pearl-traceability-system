@@ -90,6 +90,8 @@ Deno.serve(async (req) => {
         ? template.subject(templateData)
         : template.subject
 
+    const unsubToken = generateToken()
+
     // Send directly using Lovable Email API
     await sendLovableEmail(
       {
@@ -102,6 +104,7 @@ Deno.serve(async (req) => {
         purpose: 'transactional',
         label: templateName,
         idempotency_key: idempotencyKey,
+        unsubscribe_token: unsubToken,
       },
       {
         apiKey: lovableApiKey,
