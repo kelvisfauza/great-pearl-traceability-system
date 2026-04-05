@@ -376,6 +376,42 @@ const DispatchReportDetail = ({ report }: { report: DispatchReport }) => {
         </Card>
       )}
 
+      {/* Weigh Bridge Tickets */}
+      {report.weighbridge_tickets && (report.weighbridge_tickets as any[]).length > 0 && (
+        <Card>
+          <CardHeader className="py-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <QrCode className="h-4 w-4" />
+              Weigh Bridge Tickets ({(report.weighbridge_tickets as any[]).length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(report.weighbridge_tickets as any[]).map((ticket: any, index: number) => (
+                <div key={ticket.id || index} className="border rounded-lg p-3 flex gap-3">
+                  {ticket.photo_url && (
+                    <a href={ticket.photo_url} target="_blank" rel="noopener noreferrer">
+                      <img
+                        src={ticket.photo_url}
+                        alt={`Ticket ${index + 1}`}
+                        className="w-20 h-20 rounded object-cover border hover:opacity-80 transition-opacity"
+                      />
+                    </a>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <Badge variant="secondary" className="text-xs mb-1">Ticket #{index + 1}</Badge>
+                    <p className="text-xs font-mono truncate">{ticket.qr_data}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Scanned: {new Date(ticket.scanned_at).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Metadata */}
       <div className="text-xs text-muted-foreground">
         Submitted by {report.created_by_name} on {format(new Date(report.created_at), 'dd MMM yyyy HH:mm')}
