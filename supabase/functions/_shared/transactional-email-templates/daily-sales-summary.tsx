@@ -4,8 +4,7 @@ import {
   Body, Container, Head, Heading, Html, Preview, Text, Section, Row, Column, Hr,
 } from 'npm:@react-email/components@0.0.22'
 import type { TemplateEntry } from './registry.ts'
-
-const SITE_NAME = 'Great Agro Coffee'
+import { SITE_NAME, LOGO_URL } from './brand.ts'
 
 interface SalesSummaryProps {
   recipientName?: string
