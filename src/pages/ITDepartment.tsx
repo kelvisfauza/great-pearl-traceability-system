@@ -187,6 +187,10 @@ const ITDepartment = () => {
             <ComprehensiveSMSManager />
           </TabsContent>
 
+          <TabsContent value="emails" className="space-y-4">
+            <EmailTracker />
+          </TabsContent>
+
           <TabsContent value="reminders" className="space-y-4">
             <ReportRemindersSettings />
           </TabsContent>
