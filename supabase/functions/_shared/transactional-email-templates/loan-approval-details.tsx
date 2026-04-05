@@ -108,9 +108,18 @@ const LoanApprovalEmail = ({
             <Text style={termsItem}>• This loan agreement is binding upon approval.</Text>
           </Section>
 
+          {pdfDownloadUrl && (
+            <Section style={pdfSection}>
+              <Text style={pdfText}>📄 Download your official Loan Agreement PDF:</Text>
+              <Button style={pdfButton} href={pdfDownloadUrl}>
+                Download Loan Agreement PDF
+              </Button>
+            </Section>
+          )}
+
           <Hr style={divider} />
           <Text style={closingText}>
-            Please keep this email for your records as your loan agreement document.
+            Please keep this email and the attached PDF for your records as your loan agreement document.
             If you have any questions, contact the Finance or Administration department.
           </Text>
           <Text style={closing}>
