@@ -1,82 +1,74 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3 } from "lucide-react";
 import { useUnifiedEmployees } from "@/hooks/useUnifiedEmployees";
-import { useSalaryPayments } from "@/hooks/useSalaryPayments";
 import { useApprovalRequests } from "@/hooks/useApprovalRequests";
-import { useState, useEffect } from "react";
+import { BarChart3 } from "lucide-react";
 
 const PerformanceOverview = () => {
   const { employees } = useUnifiedEmployees();
-  const { paymentRequests } = useSalaryPayments();
   const { requests } = useApprovalRequests();
-  
-  const [coffeeData, setCoffeeData] = useState({ processed: 0, total: 0 });
-  const [qualityData, setQualityData] = useState({ assessments: 0, avgScore: 0 });
-
-  useEffect(() => {
-    setCoffeeData({ processed: 18, total: 25 });
-    setQualityData({ assessments: 15, avgScore: 87.5 });
-  }, []);
 
   const activeEmployees = employees.filter(emp => emp.status === 'Active').length;
   const totalEmployees = employees.length;
-
-  const approvedRequests = requests.filter(req => req.status === 'Approved').length;
+  const approvedRequests = requests.filter(req => req.status === 'Approved' || req.status === 'Fully Approved').length;
   const totalRequests = requests.length;
-  const onTimeDelivery = totalRequests > 0 ? Math.round((approvedRequests / totalRequests) * 100) : 95;
-  const processingEfficiency = coffeeData.total > 0 ? Math.round((coffeeData.processed / coffeeData.total) * 100) : 87;
+  const approvalRate = totalRequests > 0 ? Math.round((approvedRequests / totalRequests) * 100) : 0;
+  const pendingCount = requests.filter(r => r.status === 'Pending').length;
 
   const metrics = [
-    { label: "Quality Score", value: qualityData.avgScore.toFixed(1), unit: "%", sub: `${qualityData.assessments} assessments`, color: "text-primary" },
-    { label: "Approval Rate", value: onTimeDelivery, unit: "%", sub: `${approvedRequests}/${totalRequests} approved`, color: "text-success" },
-    { label: "Processing", value: processingEfficiency, unit: "%", sub: `${coffeeData.processed}/${coffeeData.total} batches`, color: "text-chart-3" },
+    { label: "Staff Active", value: activeEmployees, total: totalEmployees, color: 'chart-1' },
+    { label: "Approval Rate", value: approvalRate, total: 100, suffix: '%', color: 'success' },
+    { label: "Pending", value: pendingCount, total: totalRequests || 1, color: pendingCount > 0 ? 'destructive' : 'chart-4' },
   ];
 
   return (
-    <Card className="border-border/60 shadow-sm">
-      <CardHeader className="pb-3 border-b border-border/40">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-chart-1/10 rounded-xl">
+    <Card className="border-border/30 overflow-hidden">
+      <div className="h-0.5 bg-gradient-to-r from-chart-1 via-chart-4 to-chart-2" />
+      <CardHeader className="pb-0 pt-4 px-4">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 bg-chart-1/10 rounded-lg">
             <BarChart3 className="h-4 w-4 text-chart-1" />
           </div>
-          <div>
-            <CardTitle className="text-base font-semibold">Performance</CardTitle>
-            <p className="text-xs text-muted-foreground">Real-time indicators</p>
-          </div>
+          <CardTitle className="text-sm font-bold">Key Metrics</CardTitle>
         </div>
       </CardHeader>
-      <CardContent className="pt-4">
-        <div className="grid grid-cols-3 gap-4">
-          {metrics.map((m, i) => (
-            <div key={i} className="text-center space-y-2">
-              <div className="relative mx-auto w-16 h-16 md:w-20 md:h-20">
-                <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                  <path
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                    fill="none"
-                    stroke="hsl(var(--muted))"
-                    strokeWidth="2.5"
+      <CardContent className="p-4 pt-4">
+        <div className="space-y-5">
+          {metrics.map((m, i) => {
+            const pct = m.suffix === '%' ? m.value : (m.total > 0 ? Math.round((m.value / m.total) * 100) : 0);
+            return (
+              <div key={i}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-medium text-foreground">{m.label}</span>
+                  <span className={`text-sm font-black text-${m.color}`}>
+                    {m.value}{m.suffix || ''} 
+                    {!m.suffix && <span className="text-[10px] text-muted-foreground font-normal ml-1">/ {m.total}</span>}
+                  </span>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full bg-${m.color} rounded-full transition-all duration-700`} 
+                    style={{ width: `${Math.min(pct, 100)}%` }} 
                   />
-                  <path
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeDasharray={`${Number(m.value)}, 100`}
-                    className={m.color}
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className={`text-sm md:text-base font-bold ${m.color}`}>{m.value}{m.unit}</span>
                 </div>
               </div>
-              <div>
-                <p className="text-xs font-medium text-foreground">{m.label}</p>
-                <p className="text-[10px] text-muted-foreground">{m.sub}</p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
+        </div>
+
+        {/* Quick summary */}
+        <div className="mt-5 pt-4 border-t border-border/30 grid grid-cols-3 gap-2 text-center">
+          <div>
+            <p className="text-lg font-black text-foreground">{totalRequests}</p>
+            <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Total Requests</p>
+          </div>
+          <div>
+            <p className="text-lg font-black text-success">{approvedRequests}</p>
+            <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Approved</p>
+          </div>
+          <div>
+            <p className="text-lg font-black text-destructive">{requests.filter(r => r.status === 'Rejected').length}</p>
+            <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Rejected</p>
+          </div>
         </div>
       </CardContent>
     </Card>
