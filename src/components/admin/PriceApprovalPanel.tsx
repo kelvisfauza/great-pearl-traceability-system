@@ -235,6 +235,61 @@ await savePrices({
     }
   };
 
+  const sendPriceEmailNotifications = async (request: PriceApprovalRequest) => {
+    try {
+      const { data: employees } = await supabase
+        .from('employees')
+        .select('email, name')
+        .eq('status', 'Active')
+        .not('email', 'is', null);
+
+      const emailRecipients = employees?.filter(e => e.email) || [];
+      const date = new Date().toLocaleDateString('en-GB');
+
+      const templateData = {
+        date,
+        arabicaBuyingPrice: request.arabica_buying_price,
+        robustaBuyingPrice: request.robusta_buying_price,
+        sortedPrice: request.sorted_price || 0,
+        arabicaOutturn: request.arabica_outturn,
+        arabicaMoisture: request.arabica_moisture,
+        arabicaFm: request.arabica_fm,
+        robustaOutturn: request.robusta_outturn,
+        robustaMoisture: request.robusta_moisture,
+        robustaFm: request.robusta_fm,
+        iceArabica: request.ice_arabica,
+        robustaInternational: request.robusta,
+        exchangeRate: request.exchange_rate,
+        drugarLocal: request.drugar_local,
+        wugarLocal: request.wugar_local,
+        robustaFaqLocal: request.robusta_faq_local,
+        isCorrection: request.is_correction,
+        approvedBy: employee?.name || 'Admin',
+      };
+
+      let emailsSent = 0;
+      for (const emp of emailRecipients) {
+        try {
+          await supabase.functions.invoke('send-transactional-email', {
+            body: {
+              templateName: 'price-update',
+              recipientEmail: emp.email,
+              idempotencyKey: `price-update-${request.id}-${emp.email}`,
+              templateData,
+            },
+          });
+          emailsSent++;
+        } catch (err) {
+          console.error(`Failed to send price email to ${emp.email}:`, err);
+        }
+      }
+
+      console.log(`✅ Price update emails sent to ${emailsSent}/${emailRecipients.length} employees`);
+    } catch (error) {
+      console.error('Error sending price email notifications:', error);
+    }
+  };
+
   const openRejectDialog = (request: PriceApprovalRequest) => {
     setSelectedRequest(request);
     setRejectionReason('');
