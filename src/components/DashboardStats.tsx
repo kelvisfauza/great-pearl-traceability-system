@@ -1,7 +1,5 @@
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Coffee, TrendingUp, Package, DollarSign, Users, Shield, Building, AlertTriangle } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Coffee, TrendingUp, TrendingDown, Minus, Package, DollarSign, Users, Shield, Building, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUnifiedEmployees } from "@/hooks/useUnifiedEmployees";
 import { useApprovalRequests } from "@/hooks/useApprovalRequests";
@@ -18,7 +16,6 @@ const DashboardStats = () => {
     financeData: { totalRevenue: 0, totalExpenses: 0 },
     supplierCount: 0,
     inventoryData: { totalBags: 0, totalKgs: 0 },
-    // Previous month data for percentage calculations
     prevMonth: {
       coffeeKgs: 0,
       coffeeBatches: 0,
@@ -27,24 +24,12 @@ const DashboardStats = () => {
     }
   });
 
-  // Calculate month-over-month percentage change (used in the subtitle text)
   const calcPercentChange = (current: number, previous: number): number => {
     if (previous === 0) return current > 0 ? 100 : 0;
     return Math.round(((current - previous) / previous) * 100);
   };
 
-  // Visual progress vs last month (0-100). Prevents showing a full ring when the current value is 0.
-  const calcProgressFromPrevious = (current: number, previous: number): number => {
-    if (previous === 0) return current > 0 ? 100 : 0;
-    return Math.max(0, Math.min(Math.round((current / previous) * 100), 100));
-  };
-
-  // Determine trend based on actual values - when both are 0, show stable/neutral
-  const getTrend = (
-    current: number,
-    previous: number,
-    percentChange: number
-  ): "positive" | "negative" | "stable" => {
+  const getTrend = (current: number, previous: number, percentChange: number): "positive" | "negative" | "stable" => {
     if (current === 0 && previous === 0) return "stable";
     if (percentChange > 0) return "positive";
     if (percentChange < 0) return "negative";
@@ -54,370 +39,145 @@ const DashboardStats = () => {
   useEffect(() => {
     const fetchRealData = async () => {
       try {
-        console.log('Fetching monthly dashboard data from Supabase...');
-        
-        // Get current month date range
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
-        
-        // Get previous month date range
         const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
         const endOfPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59).toISOString();
-        
-        // Fetch coffee records for current month
-        const { data: coffeeRecords } = await supabase
-          .from('coffee_records')
-          .select('*')
-          .gte('created_at', startOfMonth)
-          .lte('created_at', endOfMonth);
 
-        // Fetch coffee records for previous month
-        const { data: prevCoffeeRecords } = await supabase
-          .from('coffee_records')
-          .select('*')
-          .gte('created_at', startOfPrevMonth)
-          .lte('created_at', endOfPrevMonth);
+        const [
+          { data: coffeeRecords },
+          { data: prevCoffeeRecords },
+          { data: transactions },
+          { data: prevTransactions },
+          { data: expenses },
+          { data: suppliers },
+          { data: prevSuppliers }
+        ] = await Promise.all([
+          supabase.from('coffee_records').select('*').gte('created_at', startOfMonth).lte('created_at', endOfMonth),
+          supabase.from('coffee_records').select('*').gte('created_at', startOfPrevMonth).lte('created_at', endOfPrevMonth),
+          supabase.from('finance_cash_transactions').select('*').gte('created_at', startOfMonth).lte('created_at', endOfMonth),
+          supabase.from('finance_cash_transactions').select('*').gte('created_at', startOfPrevMonth).lte('created_at', endOfPrevMonth),
+          supabase.from('finance_expenses').select('*').gte('created_at', startOfMonth).lte('created_at', endOfMonth),
+          supabase.from('suppliers').select('id').gte('created_at', startOfMonth).lte('created_at', endOfMonth),
+          supabase.from('suppliers').select('id').gte('created_at', startOfPrevMonth).lte('created_at', endOfPrevMonth),
+        ]);
 
         let totalKgs = 0, totalBags = 0, prevKgs = 0;
         const batches = new Set();
         const prevBatches = new Set();
         
-        if (coffeeRecords) {
-          coffeeRecords.forEach((record) => {
-            totalKgs += Number(record.kilograms) || 0;
-            totalBags += Number(record.bags) || 0;
-            if (record.batch_number) batches.add(record.batch_number);
-          });
-        }
-        
-        if (prevCoffeeRecords) {
-          prevCoffeeRecords.forEach((record) => {
-            prevKgs += Number(record.kilograms) || 0;
-            if (record.batch_number) prevBatches.add(record.batch_number);
-          });
-        }
+        coffeeRecords?.forEach(r => { totalKgs += Number(r.kilograms) || 0; totalBags += Number(r.bags) || 0; if (r.batch_number) batches.add(r.batch_number); });
+        prevCoffeeRecords?.forEach(r => { prevKgs += Number(r.kilograms) || 0; if (r.batch_number) prevBatches.add(r.batch_number); });
 
-        // Fetch finance transactions for current month
-        const { data: transactions } = await supabase
-          .from('finance_cash_transactions')
-          .select('*')
-          .gte('created_at', startOfMonth)
-          .lte('created_at', endOfMonth);
-        
-        // Fetch finance transactions for previous month
-        const { data: prevTransactions } = await supabase
-          .from('finance_cash_transactions')
-          .select('*')
-          .gte('created_at', startOfPrevMonth)
-          .lte('created_at', endOfPrevMonth);
-        
-        let totalRevenue = 0, prevRevenue = 0;
-        if (transactions) {
-          transactions.forEach((txn) => {
-            if (txn.transaction_type === 'cash_in' || txn.transaction_type === 'revenue') {
-              totalRevenue += Number(txn.amount) || 0;
-            }
-          });
-        }
-        if (prevTransactions) {
-          prevTransactions.forEach((txn) => {
-            if (txn.transaction_type === 'cash_in' || txn.transaction_type === 'revenue') {
-              prevRevenue += Number(txn.amount) || 0;
-            }
-          });
-        }
-
-        // Fetch expenses for current month
-        const { data: expenses } = await supabase
-          .from('finance_expenses')
-          .select('*')
-          .gte('created_at', startOfMonth)
-          .lte('created_at', endOfMonth);
-        
-        let totalExpenses = 0;
-        if (expenses) {
-          expenses.forEach((expense) => {
-            totalExpenses += Number(expense.amount) || 0;
-          });
-        }
-
-        // Fetch new suppliers for current month
-        const { data: suppliers } = await supabase
-          .from('suppliers')
-          .select('id')
-          .gte('created_at', startOfMonth)
-          .lte('created_at', endOfMonth);
-        
-        // Fetch new suppliers for previous month
-        const { data: prevSuppliers } = await supabase
-          .from('suppliers')
-          .select('id')
-          .gte('created_at', startOfPrevMonth)
-          .lte('created_at', endOfPrevMonth);
-        
-        const supplierCount = suppliers?.length || 0;
-        const prevSupplierCount = prevSuppliers?.length || 0;
+        let totalRevenue = 0, prevRevenue = 0, totalExpenses = 0;
+        transactions?.forEach(t => { if (t.transaction_type === 'cash_in' || t.transaction_type === 'revenue') totalRevenue += Number(t.amount) || 0; });
+        prevTransactions?.forEach(t => { if (t.transaction_type === 'cash_in' || t.transaction_type === 'revenue') prevRevenue += Number(t.amount) || 0; });
+        expenses?.forEach(e => { totalExpenses += Number(e.amount) || 0; });
 
         setRealTimeData({
           coffeeData: { totalKgs, totalBags, totalBatches: batches.size },
           financeData: { totalRevenue, totalExpenses },
-          supplierCount,
+          supplierCount: suppliers?.length || 0,
           inventoryData: { totalBags, totalKgs },
-          prevMonth: {
-            coffeeKgs: prevKgs,
-            coffeeBatches: prevBatches.size,
-            revenue: prevRevenue,
-            suppliers: prevSupplierCount
-          }
-        });
-
-        console.log('Monthly dashboard data with comparisons:', {
-          month: now.toLocaleString('default', { month: 'long' }),
-          current: { totalKgs, totalBatches: batches.size, totalRevenue, supplierCount },
-          previous: { prevKgs, prevBatches: prevBatches.size, prevRevenue, prevSupplierCount }
+          prevMonth: { coffeeKgs: prevKgs, coffeeBatches: prevBatches.size, revenue: prevRevenue, suppliers: prevSuppliers?.length || 0 }
         });
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       }
     };
-
     fetchRealData();
   }, []);
 
-  // Different stats based on role
   const getStatsForRole = () => {
-    // % change (for the subtitle text)
     const inventoryPercent = calcPercentChange(realTimeData.inventoryData.totalKgs, realTimeData.prevMonth.coffeeKgs);
     const batchesPercent = calcPercentChange(realTimeData.coffeeData.totalBatches, realTimeData.prevMonth.coffeeBatches);
     const revenuePercent = calcPercentChange(realTimeData.financeData.totalRevenue, realTimeData.prevMonth.revenue);
     const suppliersPercent = calcPercentChange(realTimeData.supplierCount, realTimeData.prevMonth.suppliers);
 
-    // Visual progress ring (0-100)
-    const inventoryProgress = calcProgressFromPrevious(realTimeData.inventoryData.totalKgs, realTimeData.prevMonth.coffeeKgs);
-    const batchesProgress = calcProgressFromPrevious(realTimeData.coffeeData.totalBatches, realTimeData.prevMonth.coffeeBatches);
-    const revenueProgress = calcProgressFromPrevious(realTimeData.financeData.totalRevenue, realTimeData.prevMonth.revenue);
-    const suppliersProgress = calcProgressFromPrevious(realTimeData.supplierCount, realTimeData.prevMonth.suppliers);
-    
-    // Store Manager sees inventory-focused stats
     if (hasPermission("Store Management")) {
       return [
-        {
-          title: "Monthly Inventory",
-          value: `${(realTimeData.inventoryData.totalKgs / 1000).toFixed(1)}K kg`,
-          change: `${realTimeData.inventoryData.totalBags} bags this month`,
-          icon: Coffee,
-          color: "text-green-600",
-          bgColor: "bg-green-50",
-          borderColor: "border-green-200",
-          trend: getTrend(realTimeData.inventoryData.totalKgs, realTimeData.prevMonth.coffeeKgs, inventoryPercent),
-          percent: inventoryProgress
-        },
-        {
-          title: "Monthly Batches",
-          value: realTimeData.coffeeData.totalBatches.toString(),
-          change: "processed this month",
-          icon: Package,
-          color: "text-blue-600",
-          bgColor: "bg-blue-50",
-          borderColor: "border-blue-200",
-          trend: getTrend(realTimeData.coffeeData.totalBatches, realTimeData.prevMonth.coffeeBatches, batchesPercent),
-          percent: batchesProgress
-        },
-        {
-          title: "New Suppliers",
-          value: realTimeData.supplierCount.toString(),
-          change: "registered this month",
-          icon: Building,
-          color: "text-purple-600",
-          bgColor: "bg-purple-50",
-          borderColor: "border-purple-200",
-          trend: getTrend(realTimeData.supplierCount, realTimeData.prevMonth.suppliers, suppliersPercent),
-          percent: suppliersProgress
-        },
-        {
-          title: "Your Role",
-          value: employee?.position?.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || "N/A",
-          change: employee?.department || "Department",
-          icon: Shield,
-          color: "text-amber-600",
-          bgColor: "bg-amber-50",
-          borderColor: "border-amber-200",
-          trend: "stable",
-          percent: 100
-        }
+        { title: "Monthly Inventory", value: `${(realTimeData.inventoryData.totalKgs / 1000).toFixed(1)}K kg`, change: `${realTimeData.inventoryData.totalBags} bags`, icon: Coffee, trend: getTrend(realTimeData.inventoryData.totalKgs, realTimeData.prevMonth.coffeeKgs, inventoryPercent), percent: inventoryPercent },
+        { title: "Monthly Batches", value: realTimeData.coffeeData.totalBatches.toString(), change: "processed", icon: Package, trend: getTrend(realTimeData.coffeeData.totalBatches, realTimeData.prevMonth.coffeeBatches, batchesPercent), percent: batchesPercent },
+        { title: "New Suppliers", value: realTimeData.supplierCount.toString(), change: "registered", icon: Building, trend: getTrend(realTimeData.supplierCount, realTimeData.prevMonth.suppliers, suppliersPercent), percent: suppliersPercent },
+        { title: "Your Role", value: employee?.position || "N/A", change: employee?.department || "", icon: Shield, trend: "stable" as const, percent: 0 },
       ];
     }
 
-    // Management roles see financial and operational stats
     if (hasRole("Administrator") || hasRole("Manager") || hasRole("Operations Manager")) {
       const pendingApprovals = requests.filter(req => req.status === 'Pending').length;
-      const salaryRequests = requests.filter(req => req.type === 'Salary Payment');
-      const totalSalaryRequests = salaryRequests.reduce((sum, req) => {
-        return sum + (req.amount || 0);
-      }, 0);
-      
+      const salaryTotal = requests.filter(req => req.type === 'Salary Payment').reduce((s, r) => s + (r.amount || 0), 0);
       return [
-        {
-          title: "Monthly Revenue",
-          value: `UGX ${(realTimeData.financeData.totalRevenue / 1000000).toFixed(1)}M`,
-          change: `${revenuePercent >= 0 ? '+' : ''}${revenuePercent}% vs last month`,
-          icon: DollarSign,
-          color: "text-green-600",
-          bgColor: "bg-green-50",
-          borderColor: "border-green-200",
-          trend: getTrend(realTimeData.financeData.totalRevenue, realTimeData.prevMonth.revenue, revenuePercent),
-          percent: revenueProgress
-        },
-        {
-          title: "Monthly Coffee",
-          value: `${(realTimeData.coffeeData.totalKgs / 1000).toFixed(1)}K kg`,
-          change: `${inventoryPercent >= 0 ? '+' : ''}${inventoryPercent}% vs last month`,
-          icon: Coffee,
-          color: "text-blue-600",
-          bgColor: "bg-blue-50",
-          borderColor: "border-blue-200",
-          trend: getTrend(realTimeData.coffeeData.totalKgs, realTimeData.prevMonth.coffeeKgs, inventoryPercent),
-          percent: inventoryProgress
-        },
-        {
-          title: "Pending Approvals",
-          value: pendingApprovals.toString(),
-          change: "require attention",
-          icon: AlertTriangle,
-          color: pendingApprovals > 0 ? "text-red-600" : "text-green-600",
-          bgColor: pendingApprovals > 0 ? "bg-red-50" : "bg-green-50",
-          borderColor: pendingApprovals > 0 ? "border-red-200" : "border-green-200",
-          trend: pendingApprovals > 0 ? "attention" : "stable",
-          percent: pendingApprovals > 0 ? Math.min(pendingApprovals * 10, 100) : 0
-        },
-        {
-          title: "Active Staff",
-          value: employees.filter(emp => emp.status === 'Active').length.toString(),
-          change: `UGX ${(totalSalaryRequests / 1000000).toFixed(1)}M pending`,
-          icon: Users,
-          color: "text-purple-600",
-          bgColor: "bg-purple-50",
-          borderColor: "border-purple-200",
-          trend: "stable",
-          percent: 85
-        }
+        { title: "Monthly Revenue", value: `UGX ${(realTimeData.financeData.totalRevenue / 1000000).toFixed(1)}M`, change: `vs last month`, icon: DollarSign, trend: getTrend(realTimeData.financeData.totalRevenue, realTimeData.prevMonth.revenue, revenuePercent), percent: revenuePercent },
+        { title: "Monthly Coffee", value: `${(realTimeData.coffeeData.totalKgs / 1000).toFixed(1)}K kg`, change: `vs last month`, icon: Coffee, trend: getTrend(realTimeData.coffeeData.totalKgs, realTimeData.prevMonth.coffeeKgs, inventoryPercent), percent: inventoryPercent },
+        { title: "Pending Approvals", value: pendingApprovals.toString(), change: "require attention", icon: AlertTriangle, trend: pendingApprovals > 0 ? "negative" as const : "stable" as const, percent: 0, urgent: pendingApprovals > 0 },
+        { title: "Active Staff", value: employees.filter(emp => emp.status === 'Active').length.toString(), change: `UGX ${(salaryTotal / 1000000).toFixed(1)}M pending`, icon: Users, trend: "stable" as const, percent: 0 },
       ];
     }
 
-    // Default stats for other roles
     return [
-      {
-        title: "Monthly Batches",
-        value: realTimeData.coffeeData.totalBatches.toString(),
-        change: `${batchesPercent >= 0 ? '+' : ''}${batchesPercent}% vs last month`,
-        icon: Coffee,
-        color: "text-green-600",
-        bgColor: "bg-green-50",
-        borderColor: "border-green-200",
-        trend: getTrend(realTimeData.coffeeData.totalBatches, realTimeData.prevMonth.coffeeBatches, batchesPercent),
-        percent: batchesProgress
-      },
-      {
-        title: "Monthly Inventory",
-        value: `${realTimeData.coffeeData.totalBags} bags`,
-        change: `${inventoryPercent >= 0 ? '+' : ''}${inventoryPercent}% vs last month`,
-        icon: Package,
-        color: "text-blue-600",
-        bgColor: "bg-blue-50",
-        borderColor: "border-blue-200",
-        trend: getTrend(realTimeData.inventoryData.totalKgs, realTimeData.prevMonth.coffeeKgs, inventoryPercent),
-        percent: inventoryProgress
-      },
-      {
-        title: "Department",
-        value: employee?.department || "N/A",
-        change: employee?.position || "Position",
-        icon: Shield,
-        color: "text-purple-600",
-        bgColor: "bg-purple-50",
-        borderColor: "border-purple-200",
-        trend: "stable",
-        percent: 100
-      },
-      {
-        title: "New Suppliers",
-        value: realTimeData.supplierCount.toString(),
-        change: `${suppliersPercent >= 0 ? '+' : ''}${suppliersPercent}% vs last month`,
-        icon: Building,
-        color: "text-amber-600",
-        bgColor: "bg-amber-50",
-        borderColor: "border-amber-200",
-        trend: getTrend(realTimeData.supplierCount, realTimeData.prevMonth.suppliers, suppliersPercent),
-        percent: suppliersProgress
-      }
+      { title: "Monthly Batches", value: realTimeData.coffeeData.totalBatches.toString(), change: "vs last month", icon: Coffee, trend: getTrend(realTimeData.coffeeData.totalBatches, realTimeData.prevMonth.coffeeBatches, batchesPercent), percent: batchesPercent },
+      { title: "Monthly Inventory", value: `${realTimeData.coffeeData.totalBags} bags`, change: "vs last month", icon: Package, trend: getTrend(realTimeData.inventoryData.totalKgs, realTimeData.prevMonth.coffeeKgs, inventoryPercent), percent: inventoryPercent },
+      { title: "Department", value: employee?.department || "N/A", change: employee?.position || "", icon: Shield, trend: "stable" as const, percent: 0 },
+      { title: "New Suppliers", value: realTimeData.supplierCount.toString(), change: "vs last month", icon: Building, trend: getTrend(realTimeData.supplierCount, realTimeData.prevMonth.suppliers, suppliersPercent), percent: suppliersPercent },
     ];
   };
 
   const stats = getStatsForRole();
 
+  const TrendIcon = ({ trend }: { trend: string }) => {
+    if (trend === 'positive') return <TrendingUp className="h-3.5 w-3.5" />;
+    if (trend === 'negative') return <TrendingDown className="h-3.5 w-3.5" />;
+    return <Minus className="h-3.5 w-3.5" />;
+  };
+
+  const trendColor = (trend: string, urgent?: boolean) => {
+    if (urgent) return 'text-destructive';
+    if (trend === 'positive') return 'text-success';
+    if (trend === 'negative') return 'text-destructive';
+    return 'text-muted-foreground';
+  };
+
+  const trendBg = (trend: string, urgent?: boolean) => {
+    if (urgent) return 'bg-destructive/10';
+    if (trend === 'positive') return 'bg-success/10';
+    if (trend === 'negative') return 'bg-destructive/10';
+    return 'bg-muted';
+  };
+
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-      {stats.map((stat, index) => (
-        <Card key={index} className="bg-card hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 p-3 sm:p-6">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wide truncate">
-              {stat.title}
-            </CardTitle>
-            <div className={`h-8 w-8 sm:h-10 sm:w-10 rounded-full flex items-center justify-center flex-shrink-0 ${stat.bgColor}`}>
-              <stat.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${stat.color}`} />
-            </div>
-          </CardHeader>
-          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
-            <div className="space-y-1">
-              <div className="text-lg sm:text-3xl font-bold text-foreground truncate">
-                {stat.value}
-              </div>
-              <p className="text-xs text-muted-foreground truncate">
-                {stat.change}
-              </p>
-              {/* Simplified progress bar for mobile - hidden circular on mobile */}
-              <div className="hidden sm:block">
-                <div className="relative h-16 w-16 mx-auto mt-2">
-                  <svg className="transform -rotate-90 h-16 w-16">
-                    <circle
-                      cx="32"
-                      cy="32"
-                      r="28"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                      className="text-muted"
-                    />
-                    <circle
-                      cx="32"
-                      cy="32"
-                      r="28"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                      strokeDasharray={`${(stat.percent / 100) * 175.93} 175.93`}
-                      className={stat.color}
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className={`text-xs font-semibold ${stat.color}`}>{stat.percent}%</span>
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+      {stats.map((stat, index) => {
+        const Icon = stat.icon;
+        return (
+          <Card key={index} className="border-border/60 shadow-sm hover:shadow-md transition-all duration-200 group">
+            <CardContent className="p-4 md:p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="p-2 rounded-xl bg-primary/8 group-hover:bg-primary/12 transition-colors">
+                  <Icon className="h-4 w-4 text-primary" />
+                </div>
+                {stat.percent !== 0 && (
+                  <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${trendBg(stat.trend, (stat as any).urgent)} ${trendColor(stat.trend, (stat as any).urgent)}`}>
+                    <TrendIcon trend={stat.trend} />
+                    <span>{Math.abs(stat.percent)}%</span>
                   </div>
-                </div>
+                )}
               </div>
-              {/* Simple progress bar for mobile */}
-              <div className="sm:hidden mt-2">
-                <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full ${stat.color.replace('text-', 'bg-')}`}
-                    style={{ width: `${stat.percent}%` }}
-                  />
-                </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+                  {stat.title}
+                </p>
+                <p className="text-xl md:text-2xl font-bold text-foreground tracking-tight truncate">
+                  {stat.value}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 truncate">
+                  {stat.change}
+                </p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 };
