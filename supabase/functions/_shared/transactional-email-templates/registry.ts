@@ -40,6 +40,7 @@ import { template as transactionStatement } from './transaction-statement.tsx'
 import { template as salaryAdvanceConfirmation } from './salary-advance-confirmation.tsx'
 import { template as cashWithdrawalConfirmation } from './cash-withdrawal-confirmation.tsx'
 import { template as overtimeReward } from './overtime-reward.tsx'
+import { template as priceReminder } from './price-reminder.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'verification-code': verificationCode,
