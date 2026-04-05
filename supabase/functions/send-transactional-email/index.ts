@@ -1,6 +1,7 @@
 import * as React from 'npm:react@18.3.1'
 import { renderAsync } from 'npm:@react-email/components@0.0.22'
 import { sendLovableEmail } from 'npm:@lovable.dev/email-js@0.0.4'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.5'
 import { TEMPLATES } from '../_shared/transactional-email-templates/registry.ts'
 
 const SITE_NAME = "Great Agro Coffee"
@@ -116,12 +117,50 @@ Deno.serve(async (req) => {
 
     console.log('✅ Transactional email sent', { templateName, effectiveRecipient })
 
+    // Log to sent_emails_log
+    try {
+      const supabaseAdmin = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      )
+      await supabaseAdmin.from('sent_emails_log').insert({
+        template_name: templateName,
+        recipient_email: effectiveRecipient,
+        subject: resolvedSubject,
+        status: 'sent',
+        idempotency_key: idempotencyKey,
+        metadata: templateData,
+      })
+    } catch (logErr) {
+      console.warn('⚠️ Failed to log email send:', logErr.message)
+    }
+
     return new Response(
       JSON.stringify({ success: true }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
     console.error('❌ Failed to send transactional email', { error: error.message, templateName, effectiveRecipient })
+
+    // Log failure
+    try {
+      const supabaseAdmin = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      )
+      await supabaseAdmin.from('sent_emails_log').insert({
+        template_name: templateName,
+        recipient_email: effectiveRecipient,
+        subject: typeof template.subject === 'function' ? template.subject(templateData) : template.subject,
+        status: 'failed',
+        error_message: error.message,
+        idempotency_key: idempotencyKey,
+        metadata: templateData,
+      })
+    } catch (logErr) {
+      console.warn('⚠️ Failed to log email failure:', logErr.message)
+    }
+
     return new Response(
       JSON.stringify({ error: error.message || 'Failed to send email' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

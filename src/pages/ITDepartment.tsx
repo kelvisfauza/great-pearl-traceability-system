@@ -8,7 +8,8 @@ import {
   Monitor, 
   Shield, 
   Users, 
-  Server
+  Server,
+  Mail
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePresenceList } from '@/hooks/usePresenceList';
@@ -25,6 +26,7 @@ import { ITPermissionManager } from '@/components/it/ITPermissionManager';
 import ReportRemindersSettings from '@/components/it/ReportRemindersSettings';
 import AttendanceTimeManager from '@/components/it/AttendanceTimeManager';
 import MaintenanceToggle from '@/components/it/MaintenanceToggle';
+import EmailTracker from '@/components/it/EmailTracker';
 import ActiveUsers from '@/components/it/ActiveUsers';
 
 const ITDepartment = () => {
@@ -146,13 +148,14 @@ const ITDepartment = () => {
         </div>
 
         <Tabs defaultValue="permissions" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-11">
+          <TabsList className="grid w-full grid-cols-12">
             <TabsTrigger value="permissions">Permissions</TabsTrigger>
             <TabsTrigger value="online-users">Online</TabsTrigger>
             <TabsTrigger value="user-management">Users</TabsTrigger>
             <TabsTrigger value="attendance">Attendance</TabsTrigger>
             <TabsTrigger value="errors">Errors</TabsTrigger>
             <TabsTrigger value="sms">SMS</TabsTrigger>
+            <TabsTrigger value="emails">Emails</TabsTrigger>
             <TabsTrigger value="reminders">Reminders</TabsTrigger>
             <TabsTrigger value="deletions">Deletions</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
@@ -182,6 +185,10 @@ const ITDepartment = () => {
 
           <TabsContent value="sms" className="space-y-4">
             <ComprehensiveSMSManager />
+          </TabsContent>
+
+          <TabsContent value="emails" className="space-y-4">
+            <EmailTracker />
           </TabsContent>
 
           <TabsContent value="reminders" className="space-y-4">

@@ -6993,6 +6993,42 @@ export type Database = {
         }
         Relationships: []
       }
+      sent_emails_log: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          id: string
+          idempotency_key: string | null
+          metadata: Json | null
+          recipient_email: string
+          status: string | null
+          subject: string | null
+          template_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string | null
+          metadata?: Json | null
+          recipient_email: string
+          status?: string | null
+          subject?: string | null
+          template_name: string
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string | null
+          metadata?: Json | null
+          recipient_email?: string
+          status?: string | null
+          subject?: string | null
+          template_name?: string
+        }
+        Relationships: []
+      }
       shipments: {
         Row: {
           bags: number
