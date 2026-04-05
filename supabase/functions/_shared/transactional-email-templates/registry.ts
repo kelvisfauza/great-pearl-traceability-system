@@ -64,4 +64,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'approval-action': approvalAction,
   'new-device-alert': newDeviceAlert,
   'price-approval-request': priceApprovalRequest,
+  'wallet-transfer': walletTransfer,
 }
