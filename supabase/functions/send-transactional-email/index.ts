@@ -7,6 +7,12 @@ const SITE_NAME = "Great Agro Coffee"
 const SENDER_DOMAIN = "notify.greatpearlcoffeesystem.site"
 const FROM_DOMAIN = "greatpearlcoffeesystem.site"
 
+function generateToken(): string {
+  const bytes = new Uint8Array(32)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
