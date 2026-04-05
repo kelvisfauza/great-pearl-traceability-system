@@ -37,6 +37,7 @@ import { template as newDeviceAlert } from './new-device-alert.tsx'
 import { template as priceApprovalRequest } from './price-approval-request.tsx'
 import { template as walletTransfer } from './wallet-transfer.tsx'
 import { template as transactionStatement } from './transaction-statement.tsx'
+import { template as salaryAdvanceConfirmation } from './salary-advance-confirmation.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'verification-code': verificationCode,
