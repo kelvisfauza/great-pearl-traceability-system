@@ -35,6 +35,7 @@ import { template as loanGuarantorRevoked } from './loan-guarantor-revoked.tsx'
 import { template as approvalAction } from './approval-action.tsx'
 import { template as newDeviceAlert } from './new-device-alert.tsx'
 import { template as priceApprovalRequest } from './price-approval-request.tsx'
+import { template as walletTransfer } from './wallet-transfer.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'verification-code': verificationCode,
@@ -63,4 +64,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'approval-action': approvalAction,
   'new-device-alert': newDeviceAlert,
   'price-approval-request': priceApprovalRequest,
+  'wallet-transfer': walletTransfer,
 }
