@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { securityService } from '@/services/securityService';
+import { checkDeviceTrust, sendNewDeviceAlertEmail, trustFirstDevice } from '@/utils/deviceDetection';
 
 interface Employee {
   id: string;
