@@ -263,10 +263,10 @@ const LoanAdvertDialog = () => {
           )}
 
           {sendEmail && (
-            <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 text-sm">
+            <div className="p-3 rounded-lg bg-muted/50 border text-sm">
               <div className="flex items-center gap-2 mb-1">
-                <Mail className="h-4 w-4 text-green-600" />
-                <p className="font-medium text-green-700 dark:text-green-400">Email Preview</p>
+                <Mail className="h-4 w-4 text-primary" />
+                <p className="font-medium">Email Preview</p>
               </div>
               <p className="text-muted-foreground">Each employee will receive a branded email with their <strong>personalized loan limit</strong>, tenure details, terms & conditions, and a direct login link.</p>
             </div>
