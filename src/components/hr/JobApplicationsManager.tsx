@@ -374,6 +374,7 @@ const JobApplicationsManager = () => {
                           const nextStatus = currentIdx < STATUSES.length - 1 ? STATUSES[currentIdx + 1] : app.status;
                           setNewStatus(nextStatus);
                           setStatusNote(app.notes || "");
+                          setStatusEmail(app.email || "");
                           setShowUpdateDialog(true);
                         }}
                       >
