@@ -124,8 +124,11 @@ await savePrices({
           sortedPrice: request.sorted_price || currentPrices.sortedPrice
         });
 
-        // Send SMS notifications (same logic as before)
+        // Send SMS notifications to suppliers & registered recipients
         await sendPriceNotifications(request);
+
+        // Send detailed email notifications to employees/users
+        await sendPriceEmailNotifications(request);
 
         toast({
           title: request.is_correction ? "Price Correction Approved" : "Prices Updated & Notifications Sent",
