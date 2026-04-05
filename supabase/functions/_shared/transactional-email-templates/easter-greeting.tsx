@@ -104,7 +104,7 @@ const EasterGreetingEmail = ({ name, year = 2026 }: EasterGreetingProps) => (
             The Great Agro Coffee Management
           </Text>
           <Text style={signLocation}>
-            ☕ Kasese, Uganda
+            🌿 Kasese, Uganda
           </Text>
         </Section>
 

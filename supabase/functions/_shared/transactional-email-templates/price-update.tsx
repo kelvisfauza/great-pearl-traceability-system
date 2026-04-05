@@ -66,7 +66,8 @@ const PriceUpdateEmail = (props: PriceUpdateProps) => {
         <Container style={container}>
           {/* Header */}
           <Section style={header}>
-            <Text style={headerBrand}>☕ {SITE_NAME}</Text>
+            <Img src={LOGO_URL} alt={SITE_NAME} width="40" height="40" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '8px' }} />
+            <Text style={headerBrand}>{SITE_NAME}</Text>
             <Heading style={h1}>
               {isCorrection ? '⚠️ PRICE CORRECTION' : 'Daily Price Update'}
             </Heading>
