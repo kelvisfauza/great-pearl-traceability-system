@@ -413,6 +413,28 @@ Deno.serve(async (req) => {
           }
         })
 
+        // Detailed email to borrower
+        await supabase.functions.invoke('send-transactional-email', {
+          body: {
+            templateName: 'loan-repayment',
+            recipientEmail: loan.employee_email || borrowerEmail,
+            idempotencyKey: `loan-repayment-${loan.id}-${repayment.installment_number}`,
+            templateData: {
+              employeeName: loan.employee_name,
+              installmentNumber: String(repayment.installment_number),
+              amountDue: amountDue.toLocaleString(),
+              amountCollected: totalCollected.toLocaleString(),
+              sources: deductionSources.join(', '),
+              remainingBalance: Math.max(0, newRemainingBalance).toLocaleString(),
+              penaltyNote: penaltyNote ? penaltyNote.trim() : '',
+              salaryNote: salaryNote ? salaryNote.trim() : '',
+              isFullyPaid,
+              isOverdue: overdueWeeks > 0,
+              overdueWeeks: String(overdueWeeks),
+            },
+          },
+        })
+
         processedCount++
         results.push({
           loan_id: loan.id,
