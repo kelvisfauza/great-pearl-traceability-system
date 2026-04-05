@@ -146,7 +146,7 @@ const JobApplicationsManager = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["job-applications"] });
       setShowAddDialog(false);
-      setForm({ applicant_name: "", phone: "", job_applied_for: "", notes: "" });
+      setForm({ applicant_name: "", phone: "", email: "", job_applied_for: "", notes: "" });
       setCvFile(null);
       toast.success("Job application added successfully");
     },
