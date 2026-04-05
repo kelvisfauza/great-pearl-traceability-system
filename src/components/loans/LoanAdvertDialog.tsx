@@ -19,6 +19,7 @@ interface Employee {
   email: string;
   department: string;
   salary: number;
+  join_date: string | null;
   outstanding: number;
 }
 
