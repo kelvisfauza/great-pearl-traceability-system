@@ -18,6 +18,7 @@ import WorkSummaryPanel from '@/components/dashboard/WorkSummaryPanel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { 
   Coffee, 
   Settings, 
@@ -25,7 +26,10 @@ import {
   Calendar,
   Package,
   Zap,
-  LayoutGrid
+  LayoutGrid,
+  Sparkles,
+  ArrowRight,
+  Clock
 } from 'lucide-react';
 
 const Index = () => {
@@ -36,10 +40,13 @@ const Index = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center animate-fadeIn">
-          <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Coffee className="w-7 h-7 text-primary animate-pulse" />
+          <div className="relative">
+            <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
+              <Coffee className="w-8 h-8 text-primary" />
+            </div>
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full animate-ping" />
           </div>
-          <p className="text-sm text-muted-foreground">Loading dashboard...</p>
+          <p className="text-sm font-medium text-muted-foreground">Loading your workspace...</p>
         </div>
       </div>
     );
@@ -59,48 +66,84 @@ const Index = () => {
     day: 'numeric' 
   });
 
+  const currentTime = new Date().toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
   const isAdmin = employee.role === 'Administrator' || employee.role === 'Super Admin';
 
   return (
     <DashboardLayout title="Dashboard" subtitle="Overview of your workspace" showMessageButton={false}>
-      <div className="space-y-5 pb-8">
+      <div className="space-y-6 pb-10">
         {/* Holiday Banner */}
         <HolidayBanner userName={employee?.name?.split(' ')[0]} />
         <AssignedRoleNotification />
 
-        {/* Welcome Header - Executive style */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/8 via-primary/4 to-transparent border border-border/60 p-5 md:p-6">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl" />
-          <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-12 w-12 md:h-14 md:w-14 border-2 border-background shadow-md ring-2 ring-primary/10">
-                <AvatarImage src={employee?.avatar_url} alt={employee?.name} />
-                <AvatarFallback className="bg-primary text-primary-foreground font-bold text-lg">
-                  {employee?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h1 className="text-xl md:text-2xl font-bold text-foreground tracking-tight">
-                  {getGreeting()}, {employee?.name?.split(' ')[0]}
-                </h1>
-                <div className="flex items-center gap-2 mt-1">
-                  <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">{currentDate}</span>
+        {/* Hero Welcome Banner */}
+        <div className="relative overflow-hidden rounded-2xl border border-primary/20">
+          {/* Gradient background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/90 to-chart-4" />
+          {/* Pattern overlay */}
+          <div className="absolute inset-0 opacity-10" style={{
+            backgroundImage: `radial-gradient(circle at 20% 50%, hsl(var(--primary-foreground)) 1px, transparent 1px), radial-gradient(circle at 80% 20%, hsl(var(--primary-foreground)) 1px, transparent 1px)`,
+            backgroundSize: '40px 40px'
+          }} />
+          {/* Glow orbs */}
+          <div className="absolute top-0 right-0 w-72 h-72 bg-primary-foreground/10 rounded-full -translate-y-1/2 translate-x-1/4 blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-chart-4/20 rounded-full translate-y-1/3 -translate-x-1/4 blur-2xl" />
+          
+          <div className="relative p-6 md:p-8">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+              <div className="flex items-center gap-5">
+                <div className="relative">
+                  <Avatar className="h-16 w-16 md:h-20 md:w-20 border-[3px] border-primary-foreground/30 shadow-2xl">
+                    <AvatarImage src={employee?.avatar_url} alt={employee?.name} />
+                    <AvatarFallback className="bg-primary-foreground/20 text-primary-foreground font-black text-xl md:text-2xl backdrop-blur-sm">
+                      {employee?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-success rounded-full border-2 border-primary ring-2 ring-success/30" />
+                </div>
+                <div>
+                  <p className="text-primary-foreground/70 text-sm font-medium mb-0.5">{getGreeting()}</p>
+                  <h1 className="text-2xl md:text-3xl font-black text-primary-foreground tracking-tight">
+                    {employee?.name}
+                  </h1>
+                  <div className="flex items-center gap-3 mt-2">
+                    <div className="flex items-center gap-1.5 text-primary-foreground/60">
+                      <Calendar className="h-3.5 w-3.5" />
+                      <span className="text-xs font-medium">{currentDate}</span>
+                    </div>
+                    <div className="w-1 h-1 rounded-full bg-primary-foreground/30" />
+                    <div className="flex items-center gap-1.5 text-primary-foreground/60">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span className="text-xs font-medium">{currentTime}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              {employee?.employee_id && (
-                <Badge variant="outline" className="text-xs font-mono bg-background/80 backdrop-blur-sm">
-                  {employee.employee_id}
-                </Badge>
-              )}
-              <Badge variant="secondary" className="text-xs bg-background/80 backdrop-blur-sm">
-                {employee?.department}
-              </Badge>
-              <Badge className="text-xs bg-primary/10 text-primary border-primary/20 hover:bg-primary/15">
-                {employee?.position}
-              </Badge>
+
+              <div className="flex flex-col items-start md:items-end gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {employee?.employee_id && (
+                    <Badge className="bg-primary-foreground/15 text-primary-foreground border-primary-foreground/20 backdrop-blur-sm text-xs font-mono px-3 py-1">
+                      {employee.employee_id}
+                    </Badge>
+                  )}
+                  <Badge className="bg-primary-foreground/15 text-primary-foreground border-primary-foreground/20 backdrop-blur-sm text-xs px-3 py-1">
+                    {employee?.role}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="bg-primary-foreground/10 text-primary-foreground/80 border-primary-foreground/15 text-xs">
+                    {employee?.department}
+                  </Badge>
+                  <Badge variant="outline" className="bg-primary-foreground/10 text-primary-foreground/80 border-primary-foreground/15 text-xs">
+                    {employee?.position}
+                  </Badge>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -119,21 +162,22 @@ const Index = () => {
 
         {/* Admin Section */}
         {isAdmin && (
-          <div className="space-y-5">
+          <div className="space-y-6">
             <UpcomingBookingsWidget />
-            <Card className="border-border/60 shadow-sm">
+            <Card className="border-border/50 shadow-lg shadow-primary/5 overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-primary via-chart-4 to-chart-2" />
               <CardHeader className="pb-3 border-b border-border/40">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/8 rounded-xl">
-                    <Settings className="h-4 w-4 text-primary" />
+                  <div className="p-2.5 bg-gradient-to-br from-primary/15 to-chart-4/10 rounded-xl">
+                    <Settings className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <CardTitle className="text-base font-semibold">Administration</CardTitle>
-                    <p className="text-xs text-muted-foreground">System oversight & management</p>
+                    <CardTitle className="text-lg font-bold">Administration Panel</CardTitle>
+                    <p className="text-xs text-muted-foreground">System oversight & management controls</p>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="pt-4">
+              <CardContent className="pt-5">
                 <AdminDashboard />
               </CardContent>
             </Card>
@@ -141,30 +185,27 @@ const Index = () => {
         )}
 
         {/* Two-column grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-          {/* Quick Actions - wider */}
-          <Card className="lg:col-span-3 border-border/60 shadow-sm">
-            <CardHeader className="pb-3 border-b border-border/40">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-chart-3/10 rounded-xl">
-                  <Zap className="h-4 w-4 text-chart-3" />
-                </div>
-                <CardTitle className="text-base font-semibold">Quick Actions</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <QuickActions />
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          {/* Quick Actions */}
+          <div className="lg:col-span-3">
+            <QuickActions />
+          </div>
 
-          {/* Activity - narrower */}
-          <Card className="lg:col-span-2 border-border/60 shadow-sm hidden lg:flex lg:flex-col">
+          {/* Activity */}
+          <Card className="lg:col-span-2 border-border/50 shadow-lg shadow-primary/5 hidden lg:flex lg:flex-col overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-chart-4 to-chart-2" />
             <CardHeader className="pb-3 border-b border-border/40">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-chart-4/10 rounded-xl">
-                  <Activity className="h-4 w-4 text-chart-4" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-gradient-to-br from-chart-4/15 to-chart-2/10 rounded-xl">
+                    <Activity className="h-5 w-5 text-chart-4" />
+                  </div>
+                  <CardTitle className="text-lg font-bold">Recent Activity</CardTitle>
                 </div>
-                <CardTitle className="text-base font-semibold">Recent Activity</CardTitle>
+                <Badge variant="outline" className="text-xs animate-pulse border-chart-4/30 text-chart-4">
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  Live
+                </Badge>
               </div>
             </CardHeader>
             <CardContent className="pt-4 flex-1">
@@ -173,18 +214,22 @@ const Index = () => {
           </Card>
         </div>
 
-        {/* Performance & Compliance row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* Performance & Compliance */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <PerformanceOverview />
 
           {(employee.department === 'Store' || isAdmin) && (
-            <Card className="border-border/60 shadow-sm">
+            <Card className="border-border/50 shadow-lg shadow-success/5 overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-success to-chart-2" />
               <CardHeader className="pb-3 border-b border-border/40">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-success/10 rounded-xl">
-                    <Package className="h-4 w-4 text-success" />
+                  <div className="p-2.5 bg-gradient-to-br from-success/15 to-chart-2/10 rounded-xl">
+                    <Package className="h-5 w-5 text-success" />
                   </div>
-                  <CardTitle className="text-base font-semibold">EUDR Compliance</CardTitle>
+                  <div>
+                    <CardTitle className="text-lg font-bold">EUDR Compliance</CardTitle>
+                    <p className="text-xs text-muted-foreground">Deforestation regulation tracking</p>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="pt-4">
