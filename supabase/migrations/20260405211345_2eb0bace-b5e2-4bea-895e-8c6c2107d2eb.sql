@@ -1,0 +1,1 @@
+UPDATE job_applications SET email = 'themboexevia@gmail.com', notes = 'Rescheduled: Thursday 10th April, 9:00 AM at main office' WHERE id = '0e0de768-5699-4f2d-b26d-f88cb645a9cd';
