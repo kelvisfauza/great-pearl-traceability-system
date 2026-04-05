@@ -151,7 +151,7 @@ const LoanAdvertDialog = () => {
 
     for (const emp of selectedList) {
       const limit = getLoanLimit(emp.salary, emp.outstanding);
-      if (limit <= 0) { successCount++; setProgress({ sent: ++successCount, failed: failCount, total: selectedList.length }); continue; }
+      if (limit <= 0) { successCount++; setProgress({ sent: successCount, failed: failCount, total: selectedList.length }); continue; }
 
       let empSuccess = false;
 
