@@ -96,6 +96,7 @@ import BirthdayNotification from "./components/BirthdayNotification";
 import { useInactivityTimer } from './hooks/useInactivityTimer';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import GlobalErrorCaptureInitializer from './components/GlobalErrorCaptureInitializer';
+import ScanWeighBridge from './pages/ScanWeighBridge';
 
 // Disabled: Error Handler was causing infinite loops and performance issues
 // const ErrorHandlerInitializer = () => {
@@ -386,6 +387,7 @@ const App: React.ComponentType = () => {
                     <SystemTransactions />
                   </ProtectedRoute>
                 } />
+                <Route path="/scan-weighbridge" element={<ScanWeighBridge />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               </MaintenanceGuard>
