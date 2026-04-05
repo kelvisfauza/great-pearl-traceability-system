@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import LoanAdvertDialog from '@/components/loans/LoanAdvertDialog';
 import LoanReviewModal from '@/components/loans/LoanReviewModal';
 import LoanRepaymentSlip from '@/components/loans/LoanRepaymentSlip';
+import { generateLoanAgreementPdf } from '@/utils/loanAgreementPdf';
 
 // Loan types with their monthly interest rates
 type LoanType = 'quick' | 'long_term';
@@ -623,34 +624,91 @@ const QuickLoans = () => {
           }
         });
 
-        // Send detailed loan approval email
+        // Generate loan agreement PDF
+        const borrowerEmp = await supabase.from('employees').select('phone, position, department, salary').eq('email', loan.employee_email).single();
+        const guarantorEmp = await supabase.from('employees').select('phone, email').eq('name', loan.guarantor_name).single();
+        
+        const pdfBlob = generateLoanAgreementPdf({
+          loanId: loanId,
+          loanType: loan.loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan',
+          principal: loan.loan_amount,
+          interestRate: loan.interest_rate,
+          dailyRate: loan.daily_interest_rate || Number((loan.interest_rate / 30).toFixed(2)),
+          durationMonths: loan.duration_months,
+          totalRepayable: loan.total_repayable,
+          remainingBalance: loan.total_repayable,
+          installmentAmount,
+          installmentFrequency: scheduleLabel,
+          numInstallments,
+          startDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+          endDate: new Date(new Date().setMonth(new Date().getMonth() + loan.duration_months)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+          firstDeductionDate: repaymentDateStr,
+          approvedBy: employee?.name || 'Administration',
+          approvalDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+          disbursedAmount,
+          isTopUp,
+          employeeName: loan.employee_name,
+          employeeEmail: loan.employee_email,
+          employeeId: '',
+          employeePhone: borrowerEmp.data?.phone || loan.employee_phone || '',
+          employeePosition: borrowerEmp.data?.position || '',
+          employeeDepartment: borrowerEmp.data?.department || '',
+          employeeSalary: borrowerEmp.data?.salary || 0,
+          guarantorName: loan.guarantor_name || '',
+          guarantorEmail: guarantorEmp.data?.email || loan.guarantor_email || '',
+          guarantorPhone: guarantorEmp.data?.phone || '',
+        });
+
+        // Upload PDF to storage
+        const pdfPath = `loan-agreements/LOAN-${loanId.substring(0, 8)}-${Date.now()}.pdf`;
+        const pdfFile = new File([pdfBlob], pdfPath.split('/').pop()!, { type: 'application/pdf' });
+        await supabase.storage.from('loan-documents').upload(pdfPath, pdfFile, { upsert: true });
+        const { data: signedUrl } = await supabase.storage.from('loan-documents').createSignedUrl(pdfPath, 60 * 60 * 24 * 30); // 30 days
+
+        const templateData = {
+          employeeName: loan.employee_name,
+          loanAmount: loan.loan_amount.toLocaleString(),
+          interestRate: String(loan.interest_rate),
+          dailyRate: String(loan.daily_interest_rate || (loan.interest_rate / 30).toFixed(2)),
+          durationMonths: String(loan.duration_months),
+          totalRepayable: loan.total_repayable.toLocaleString(),
+          installmentAmount: installmentAmount.toLocaleString(),
+          installmentFrequency: scheduleLabel,
+          numInstallments: String(numInstallments),
+          firstDeductionDate: repaymentDateStr,
+          guarantorName: loan.guarantor_name || '',
+          loanType: loan.loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan',
+          approvedBy: employee?.name || 'Administration',
+          approvalDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+          disbursedAmount: disbursedAmount.toLocaleString(),
+          isTopUp,
+          pdfDownloadUrl: signedUrl?.signedUrl || '',
+        };
+
+        // Send to borrower
         await supabase.functions.invoke('send-transactional-email', {
           body: {
             templateName: 'loan-approval-details',
             recipientEmail: loan.employee_email,
             idempotencyKey: `loan-approval-${loanId}`,
-            templateData: {
-              employeeName: loan.employee_name,
-              loanAmount: loan.loan_amount.toLocaleString(),
-              interestRate: String(loan.interest_rate),
-              dailyRate: String(loan.daily_interest_rate || (loan.interest_rate / 30).toFixed(2)),
-              durationMonths: String(loan.duration_months),
-              totalRepayable: loan.total_repayable.toLocaleString(),
-              installmentAmount: installmentAmount.toLocaleString(),
-              installmentFrequency: scheduleLabel,
-              numInstallments: String(numInstallments),
-              firstDeductionDate: repaymentDateStr,
-              guarantorName: loan.guarantor_name || '',
-              loanType: loan.loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan',
-              approvedBy: employee?.name || 'Administration',
-              approvalDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
-              disbursedAmount: disbursedAmount.toLocaleString(),
-              isTopUp,
-            },
+            templateData,
           }
         });
 
-        toast({ title: "Loan Approved", description: "Loan disbursed to employee wallet & details emailed" });
+        // Send guarantor copy
+        const gEmail = guarantorEmp.data?.email || loan.guarantor_email;
+        if (gEmail) {
+          await supabase.functions.invoke('send-transactional-email', {
+            body: {
+              templateName: 'loan-approval-details',
+              recipientEmail: gEmail,
+              idempotencyKey: `loan-approval-guarantor-${loanId}`,
+              templateData: { ...templateData, isGuarantorCopy: true },
+            }
+          });
+        }
+
+        toast({ title: "Loan Approved", description: "Loan disbursed, PDF generated & emailed to borrower and guarantor" });
       } else {
         await supabase.from('loans').update({
           status: 'rejected',
