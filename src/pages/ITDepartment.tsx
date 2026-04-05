@@ -26,6 +26,7 @@ import { ITPermissionManager } from '@/components/it/ITPermissionManager';
 import ReportRemindersSettings from '@/components/it/ReportRemindersSettings';
 import AttendanceTimeManager from '@/components/it/AttendanceTimeManager';
 import MaintenanceToggle from '@/components/it/MaintenanceToggle';
+import EmailTracker from '@/components/it/EmailTracker';
 import ActiveUsers from '@/components/it/ActiveUsers';
 
 const ITDepartment = () => {
