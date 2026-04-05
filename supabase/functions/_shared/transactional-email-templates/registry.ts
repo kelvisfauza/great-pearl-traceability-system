@@ -18,6 +18,7 @@ import { template as dailyOpsSummary } from './daily-ops-summary.tsx'
 import { template as dailyFinanceSummary } from './daily-finance-summary.tsx'
 import { template as dailyEudrSummary } from './daily-eudr-summary.tsx'
 import { template as dailySalesSummary } from './daily-sales-summary.tsx'
+import { template as systemUpdateAnnouncement } from './system-update-announcement.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'verification-code': verificationCode,
