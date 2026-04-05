@@ -224,31 +224,53 @@ const LoanAdvertDialog = () => {
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Template Selector */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Message Style</label>
-            <Select value={template} onValueChange={(v) => setTemplate(v as TemplateKey)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(TEMPLATES).map(([key, t]) => (
-                  <SelectItem key={key} value={key}>{t.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Channel Toggles */}
+          <div className="flex items-center gap-6 p-3 rounded-lg border bg-muted/30">
+            <div className="flex items-center gap-2">
+              <Switch id="send-sms" checked={sendSms} onCheckedChange={setSendSms} />
+              <Label htmlFor="send-sms" className="text-sm cursor-pointer">📱 SMS</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch id="send-email" checked={sendEmail} onCheckedChange={setSendEmail} />
+              <Label htmlFor="send-email" className="text-sm cursor-pointer">📧 Email</Label>
+            </div>
           </div>
 
-          {/* Preview */}
-          <div className="p-3 rounded-lg bg-muted text-sm space-y-1">
-            <div className="flex items-center justify-between">
-              <p className="font-medium">Preview:</p>
-              <Badge variant={getCharCount() <= 160 ? "secondary" : "destructive"} className="text-xs">
-                {getCharCount()} / 160 chars
-              </Badge>
+          {/* SMS Template Selector (only when SMS enabled) */}
+          {sendSms && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">SMS Message Style</label>
+              <Select value={template} onValueChange={(v) => setTemplate(v as TemplateKey)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(TEMPLATES).map(([key, t]) => (
+                    <SelectItem key={key} value={key}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="p-3 rounded-lg bg-muted text-sm space-y-1">
+                <div className="flex items-center justify-between">
+                  <p className="font-medium">SMS Preview:</p>
+                  <Badge variant={getCharCount() <= 160 ? "secondary" : "destructive"} className="text-xs">
+                    {getCharCount()} / 160 chars
+                  </Badge>
+                </div>
+                <p className="text-muted-foreground italic">{getPreviewMessage()}</p>
+              </div>
             </div>
-            <p className="text-muted-foreground italic">{getPreviewMessage()}</p>
-          </div>
+          )}
+
+          {sendEmail && (
+            <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 text-sm">
+              <div className="flex items-center gap-2 mb-1">
+                <Mail className="h-4 w-4 text-green-600" />
+                <p className="font-medium text-green-700 dark:text-green-400">Email Preview</p>
+              </div>
+              <p className="text-muted-foreground">Each employee will receive a branded email with their <strong>personalized loan limit</strong>, tenure details, terms & conditions, and a direct login link.</p>
+            </div>
+          )}
 
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium flex items-center gap-2">
