@@ -124,6 +124,7 @@ const EmployeeOfTheMonthWidget = () => {
                     <Badge className="mt-2 bg-emerald-500/10 text-emerald-600 border-emerald-200 text-[10px]">
                       💰 UGX {Number(winner.bonus_amount).toLocaleString()} bonus
                     </Badge>
+                  )}
                 </div>
               </div>
             </div>
