@@ -103,15 +103,11 @@ export const useInactivityTimer = () => {
         return;
       }
       lastActivityRef.current = Date.now();
-      if (!isOnDisplayRef.current) {
-        resetTimers();
-      }
+      resetTimers();
     };
 
     lastActivityRef.current = Date.now();
-    if (!isOnDisplayRef.current) {
-      resetTimers();
-    }
+    resetTimers();
 
     const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
     events.forEach((event) => {
