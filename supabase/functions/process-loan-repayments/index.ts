@@ -169,6 +169,23 @@ Deno.serve(async (req) => {
                   messageType: 'guarantor_recovery'
                 }
               })
+
+              // Email to guarantor
+              if (loan.guarantor_email) {
+                await supabase.functions.invoke('send-transactional-email', {
+                  body: {
+                    templateName: 'guarantor-recovery',
+                    recipientEmail: loan.guarantor_email,
+                    idempotencyKey: `guarantor-recovery-${loan.id}-${repayment.installment_number}`,
+                    templateData: {
+                      guarantorName: loan.guarantor_name,
+                      borrowerName: loan.employee_name,
+                      amountDeducted: deductedFromGuarantor.toLocaleString(),
+                      installmentNumber: String(repayment.installment_number),
+                    },
+                  },
+                })
+              }
             }
           }
         }
