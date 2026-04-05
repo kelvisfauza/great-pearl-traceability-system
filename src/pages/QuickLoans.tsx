@@ -233,7 +233,7 @@ const QuickLoans = () => {
     setSubmitting(true);
     try {
       // Double-check loan is still in pending_admin status
-      const { data: loan } = await supabase.from('loans').select('status, employee_name, employee_phone').eq('id', loanId).single();
+      const { data: loan } = await supabase.from('loans').select('status, employee_name, employee_phone, employee_email, loan_amount').eq('id', loanId).single();
       if (!loan || loan.status !== 'pending_admin') {
         toast({ title: "Cannot Revoke", description: "This loan has already been processed by admin.", variant: "destructive" });
         return;
