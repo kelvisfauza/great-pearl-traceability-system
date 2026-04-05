@@ -97,7 +97,7 @@ const PriceUpdateEmail = (props: PriceUpdateProps) => {
 
           {/* Robusta Card */}
           <Section style={{ ...priceCard, borderLeft: '4px solid #059669' }}>
-            <Text style={{ ...priceCardLabel, color: '#059669' }}>☕ Robusta</Text>
+            <Text style={{ ...priceCardLabel, color: '#059669' }}>🫘 Robusta</Text>
             <Text style={{ ...priceCardValue, color: '#059669' }}>UGX {fmt(robustaBuyingPrice)}/kg</Text>
             <Section style={metricsRow}>
               <Text style={metricItem}>Outturn: {robustaOutturn}%</Text>
