@@ -60,6 +60,8 @@ const LoanAdvertDialog = () => {
   const [sending, setSending] = useState(false);
   const [progress, setProgress] = useState({ sent: 0, failed: 0, total: 0 });
   const [template, setTemplate] = useState<TemplateKey>("direct");
+  const [sendEmail, setSendEmail] = useState(true);
+  const [sendSms, setSendSms] = useState(true);
 
   const { data: employees, isLoading } = useQuery({
     queryKey: ["employees-for-loan-advert"],
