@@ -172,6 +172,27 @@ const MoneyRequestsManager = () => {
             });
           }
         }
+
+        // When Finance approves, send approval action emails to Admins
+        if (approve && request) {
+          try {
+            await sendApprovalActionEmails({
+              requestId: request.id,
+              requestTitle: request.title,
+              requestType: request.type,
+              requestedBy: request.requestedby,
+              requestedByName: request.requestedby_name || request.requestedby,
+              department: request.department,
+              amount: request.amount,
+              priority: request.priority,
+              description: request.description,
+              dateRequested: request.daterequested,
+            }, 'admin');
+            console.log('✅ Admin approval action emails sent');
+          } catch (emailErr) {
+            console.error('Failed to send admin action emails:', emailErr);
+          }
+        }
       }
 
       toast({
