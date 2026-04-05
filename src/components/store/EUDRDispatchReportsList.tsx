@@ -47,6 +47,7 @@ interface DispatchReport {
   remarks: string;
   attachment_url: string | null;
   attachment_name: string | null;
+  weighbridge_tickets: any[] | null;
   status: string;
 }
 
