@@ -180,7 +180,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   </div>
   <div class="title">PAYMENT VOUCHER</div>
   <div class="body">
-    <div class="verified-badge">✅ SMS Verified — This withdrawal was authenticated via SMS verification code</div>
+    <div class="verified-badge">✅ Email Verified — This withdrawal was authenticated via email verification code</div>
     <div class="row"><span class="label">Voucher Reference:</span><span class="value">${ref}</span></div>
     <div class="row"><span class="label">Date:</span><span class="value">${now.toLocaleDateString('en-UG', {day:'2-digit',month:'long',year:'numeric'})}</span></div>
     <div class="row"><span class="label">Time:</span><span class="value">${now.toLocaleTimeString('en-UG', {hour:'2-digit',minute:'2-digit'})}</span></div>

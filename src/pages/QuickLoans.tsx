@@ -391,17 +391,23 @@ const QuickLoans = () => {
 
       if (error) throw error;
 
-      // Send SMS to guarantor
-      await supabase.functions.invoke('send-sms', {
+      // Send email to guarantor with approval code
+      await supabase.functions.invoke('send-transactional-email', {
         body: {
-          phone: guarantor.phone,
-          message: `Dear ${guarantor.name}, ${employee.name} has requested you to guarantee a loan of UGX ${amount.toLocaleString()} for ${months} month(s). Your approval code is: ${approvalCode}. Log into the system to approve or decline.`,
-          userName: guarantor.name,
-          messageType: 'loan_guarantor_request'
+          templateName: 'loan-guarantor-code',
+          recipientEmail: guarantor.email,
+          idempotencyKey: `loan-guarantor-${guarantor.email}-${Date.now()}`,
+          templateData: {
+            guarantorName: guarantor.name,
+            borrowerName: employee.name,
+            loanAmount: amount.toLocaleString(),
+            duration: String(months),
+            approvalCode,
+          },
         }
       });
 
-      toast({ title: "Loan Requested", description: "Guarantor has been notified via SMS" });
+      toast({ title: "Loan Requested", description: "Guarantor has been notified via email" });
       setShowRequestDialog(false);
 
       // Trigger repayment statement slip
