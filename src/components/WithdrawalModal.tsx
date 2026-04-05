@@ -213,10 +213,10 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   };
 
   const generateAndSendCode = async () => {
-    if (!employee?.phone) {
+    if (!employee?.email) {
       toast({
-        title: "No Phone Number",
-        description: "Your employee profile does not have a phone number. Please contact HR.",
+        title: "No Email",
+        description: "Your employee profile does not have an email. Please contact HR.",
         variant: "destructive",
       });
       return;
@@ -227,12 +227,17 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
       const code = String(Math.floor(10000 + Math.random() * 90000));
       setSentCode(code);
 
-      const { error } = await supabase.functions.invoke('send-sms', {
+      const { error } = await supabase.functions.invoke('send-transactional-email', {
         body: {
-          phone: employee.phone,
-          message: `Your Great Agro withdrawal verification code is: ${code}. Do NOT share this code. It expires in 5 minutes.`,
-          userName: employee.name,
-          messageType: 'withdrawal_verification'
+          templateName: 'withdrawal-verification',
+          recipientEmail: employee.email,
+          idempotencyKey: `withdrawal-verify-${employee.email}-${Date.now()}`,
+          templateData: {
+            name: employee.name,
+            code,
+            amount: amount ? Number(amount).toLocaleString() : undefined,
+            method: paymentMethod || undefined,
+          },
         }
       });
 
@@ -240,7 +245,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
 
       toast({
         title: "Verification Code Sent",
-        description: `A 5-digit code has been sent to your phone (${employee.phone?.slice(-4) ? '****' + employee.phone.slice(-4) : ''}).`,
+        description: `A 5-digit code has been sent to your email (${employee.email}).`,
       });
 
       setStep('verify');
@@ -248,7 +253,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
       console.error('Error sending verification code:', error);
       toast({
         title: "Failed to Send Code",
-        description: "Could not send the verification SMS. Please try again.",
+        description: "Could not send the verification email. Please try again.",
         variant: "destructive",
       });
     } finally {
