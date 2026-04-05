@@ -345,6 +345,7 @@ const HumanResources = () => {
               </Card>
             )}
             <OvertimeClaimsManager />
+            {isAdmin() && <MonthlyOvertimeReview />}
           </TabsContent>
 
           <TabsContent value="time-deductions">
