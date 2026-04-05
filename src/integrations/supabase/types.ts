@@ -1961,6 +1961,57 @@ export type Database = {
         }
         Relationships: []
       }
+      device_sessions: {
+        Row: {
+          auth_user_id: string | null
+          browser: string | null
+          created_at: string | null
+          device_fingerprint: string
+          first_seen_at: string | null
+          id: string
+          is_trusted: boolean | null
+          last_seen_at: string | null
+          os: string | null
+          token_expires_at: string | null
+          token_used_at: string | null
+          user_agent: string | null
+          user_email: string
+          verification_token: string | null
+        }
+        Insert: {
+          auth_user_id?: string | null
+          browser?: string | null
+          created_at?: string | null
+          device_fingerprint: string
+          first_seen_at?: string | null
+          id?: string
+          is_trusted?: boolean | null
+          last_seen_at?: string | null
+          os?: string | null
+          token_expires_at?: string | null
+          token_used_at?: string | null
+          user_agent?: string | null
+          user_email: string
+          verification_token?: string | null
+        }
+        Update: {
+          auth_user_id?: string | null
+          browser?: string | null
+          created_at?: string | null
+          device_fingerprint?: string
+          first_seen_at?: string | null
+          id?: string
+          is_trusted?: boolean | null
+          last_seen_at?: string | null
+          os?: string | null
+          token_expires_at?: string | null
+          token_used_at?: string | null
+          user_agent?: string | null
+          user_email?: string
+          verification_token?: string | null
+        }
+        Relationships: []
+      }
       edit_requests: {
         Row: {
           created_at: string
