@@ -275,6 +275,10 @@ const JobApplicationsManager = () => {
                     <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="0781234567" />
                   </div>
                   <div>
+                    <Label>Email (optional)</Label>
+                    <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="applicant@email.com" />
+                  </div>
+                  <div>
                     <Label>Job Applied For *</Label>
                     <Input value={form.job_applied_for} onChange={(e) => setForm({ ...form, job_applied_for: e.target.value })} placeholder="e.g. Store Manager" />
                   </div>
