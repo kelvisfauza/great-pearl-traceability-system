@@ -38,6 +38,7 @@ import { template as priceApprovalRequest } from './price-approval-request.tsx'
 import { template as walletTransfer } from './wallet-transfer.tsx'
 import { template as transactionStatement } from './transaction-statement.tsx'
 import { template as salaryAdvanceConfirmation } from './salary-advance-confirmation.tsx'
+import { template as cashWithdrawalConfirmation } from './cash-withdrawal-confirmation.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'verification-code': verificationCode,
@@ -69,4 +70,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'wallet-transfer': walletTransfer,
   'transaction-statement': transactionStatement,
   'salary-advance-confirmation': salaryAdvanceConfirmation,
+  'cash-withdrawal-confirmation': cashWithdrawalConfirmation,
 }
