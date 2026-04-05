@@ -292,8 +292,79 @@ Deno.serve(async (req) => {
           allocatedKg: c.allocated_quantity, remaining: c.total_quantity - c.allocated_quantity, status: c.status,
         })),
         highlights: [`${salesList.length} sales made today (${salesKgToday.toLocaleString()} kg)`, `${contracts.length} active buyer contracts`],
-        actionItems: contracts.filter((c:any) => (c.total_quantity - c.allocated_quantity) < c.total_quantity * 0.1 && c.total_quantity - c.allocated_quantity > 0).length > 0
+          actionItems: contracts.filter((c:any) => (c.total_quantity - c.allocated_quantity) < c.total_quantity * 0.1 && c.total_quantity - c.allocated_quantity > 0).length > 0
           ? ['Some contracts are nearly fulfilled — review allocation'] : [],
+      }, today)
+    }
+
+    // ─── INVENTORY (to all admins) ───
+    if (departments.includes('inventory')) {
+      // Get today's purchases with payment info for avg price
+      const { data: todayRecords } = await supabase
+        .from('coffee_records')
+        .select('batch_number, coffee_type, kilograms, supplier_name, supplier_id, date')
+        .gte('created_at', `${today}T00:00:00`)
+        .lte('created_at', `${today}T23:59:59`)
+
+      const records = todayRecords || []
+      const totalKg = records.reduce((s: number, r: any) => s + (r.kilograms || 0), 0)
+
+      // Get payments for price calculation
+      const supplierIds = [...new Set(records.filter((r: any) => r.supplier_id).map((r: any) => r.supplier_id))]
+      let paymentMap: Record<string, number> = {}
+      if (supplierIds.length > 0) {
+        const { data: payments } = await supabase
+          .from('supplier_payments')
+          .select('supplier_id, gross_payable_ugx, amount_paid_ugx')
+          .in('supplier_id', supplierIds)
+          .gte('created_at', `${today}T00:00:00`)
+        for (const p of payments || []) {
+          if (!paymentMap[p.supplier_id]) paymentMap[p.supplier_id] = 0
+          paymentMap[p.supplier_id] += Number(p.amount_paid_ugx || p.gross_payable_ugx || 0)
+        }
+      }
+
+      // Group by batch
+      const batchMap: Record<string, { coffee_type: string; kg: number; suppliers: Set<string>; totalPaid: number }> = {}
+      for (const r of records) {
+        const key = r.batch_number
+        if (!batchMap[key]) batchMap[key] = { coffee_type: r.coffee_type, kg: 0, suppliers: new Set(), totalPaid: 0 }
+        batchMap[key].kg += r.kilograms || 0
+        batchMap[key].suppliers.add(r.supplier_name)
+        if (r.supplier_id && paymentMap[r.supplier_id]) {
+          batchMap[key].totalPaid += paymentMap[r.supplier_id]
+        }
+      }
+
+      const entries = Object.entries(batchMap).map(([batch, data]) => ({
+        batch_number: batch,
+        coffee_type: data.coffee_type,
+        kilograms: data.kg,
+        avg_price: data.kg > 0 && data.totalPaid > 0 ? Math.round(data.totalPaid / data.kg) : 0,
+        suppliers: [...data.suppliers].join(', '),
+      }))
+
+      const totalPaid = Object.values(batchMap).reduce((s, b) => s + b.totalPaid, 0)
+      const avgPrice = totalKg > 0 && totalPaid > 0 ? Math.round(totalPaid / totalKg) : 0
+
+      // Send to all admins
+      const adminRecipients = targetEmail
+        ? [{ name: 'Admin', email: targetEmail }]
+        : (allEmployees || []).filter((e: any) =>
+            ['Administrator', 'Super Admin', 'Manager'].some(r => e.department?.toLowerCase().includes('admin') || e.department?.toLowerCase().includes('management'))
+          )
+      
+      // Fallback: if no admin-department employees found, send to known admins
+      const finalRecipients = adminRecipients.length > 0 ? adminRecipients : [
+        { name: 'Fauza Kusa', email: 'fauzakusa@greatpearlcoffee.com' },
+        { name: 'Bwambale Denis', email: 'bwambaledenis@greatpearlcoffee.com' },
+        { name: 'Musema Wyclif', email: 'musemawyclif@greatpearlcoffee.com' },
+        { name: 'Operations', email: 'operations@greatpearlcoffee.com' },
+      ]
+
+      results['inventory'] = await sendToRecipients(lovableApiKey, 'daily-inventory-summary', finalRecipients, {
+        reportDate, totalKg, totalBatches: Object.keys(batchMap).length, avgPricePerKg: avgPrice,
+        entries: entries.slice(0, 20),
       }, today)
     }
 
