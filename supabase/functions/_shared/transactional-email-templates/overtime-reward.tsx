@@ -28,7 +28,7 @@ const OvertimeRewardEmail = ({
   totalLateMinutes = 0,
   netOvertimeMinutes = 0,
   netOvertimeHours = 0,
-  ratePerHour = 1000,
+  ratePerHour = 3000,
   rewardAmount = 0,
 }: OvertimeRewardProps) => (
   <Html lang="en" dir="ltr">
@@ -132,8 +132,8 @@ export const template = {
     totalLateMinutes: 823,
     netOvertimeMinutes: 789,
     netOvertimeHours: 14,
-    ratePerHour: 1000,
-    rewardAmount: 14000,
+    ratePerHour: 3000,
+    rewardAmount: 42000,
   },
 } satisfies TemplateEntry
 

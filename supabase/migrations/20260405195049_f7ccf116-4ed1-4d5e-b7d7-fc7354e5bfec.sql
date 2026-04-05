@@ -1,0 +1,1 @@
+UPDATE bonuses SET amount = amount * 3, reason = REPLACE(reason, '1,000 UGX/hr', '3,000 UGX/hr') WHERE reason ILIKE '%overtime%' AND reason ILIKE '%1,000 UGX/hr%';
