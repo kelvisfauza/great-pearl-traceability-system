@@ -59,6 +59,7 @@ const JobApplicationsManager = () => {
   const [form, setForm] = useState({
     applicant_name: "",
     phone: "",
+    email: "",
     job_applied_for: "",
     notes: "",
   });
