@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 
-const APP_URL = 'https://great-pearl-traceability-system.lovable.app';
+const APP_URL = 'https://greatpearlfinance.com';
 
 interface ApprovalEmailParams {
   requestId: string;
