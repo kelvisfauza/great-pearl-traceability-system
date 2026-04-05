@@ -78,6 +78,13 @@ const SalaryAdvanceConfirmationEmail = ({
           </Text>
         </Section>
 
+        {remainingBalance !== undefined && (
+          <Section style={balanceBox}>
+            <Text style={balanceLabel}>Wallet Balance After Transaction</Text>
+            <Text style={balanceAmount}>UGX {(remainingBalance || 0).toLocaleString()}</Text>
+          </Section>
+        )}
+
         <Text style={footer}>
           This is an automated notification from {SITE_NAME}. For questions, contact Finance or reply to this email.
         </Text>
