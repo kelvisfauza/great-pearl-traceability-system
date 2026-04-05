@@ -109,9 +109,15 @@ serve(async (req) => {
 
     console.log(`Found ${analysts.length} data analyst(s) to notify about prices`);
 
-    // Send SMS reminders to each analyst
+    // Format today's date for display
+    const displayDate = new Date(today + 'T00:00:00+03:00').toLocaleDateString('en-GB', {
+      weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
+    });
+
+    // Send SMS + Email reminders to each analyst
     const smsResults = [];
     for (const analyst of analysts) {
+      // Send SMS
       if (analyst.phone) {
         const message = `Good morning ${analyst.name}! Please update today's coffee buying prices on the system. Login at www.greatagrocoffeesystem.site, go to "Data Analyst" → "Set Prices" to update Arabica and Robusta prices. - Great Agro Coffee`;
         
@@ -127,17 +133,44 @@ serve(async (req) => {
 
           if (smsError) {
             console.error(`SMS error for ${analyst.name}:`, smsError);
-            smsResults.push({ analyst: analyst.name, success: false, error: smsError.message });
+            smsResults.push({ analyst: analyst.name, channel: 'sms', success: false, error: smsError.message });
           } else {
             console.log(`Price reminder SMS sent to ${analyst.name}`);
-            smsResults.push({ analyst: analyst.name, success: true });
+            smsResults.push({ analyst: analyst.name, channel: 'sms', success: true });
           }
         } catch (smsErr) {
           console.error(`SMS exception for ${analyst.name}:`, smsErr);
-          smsResults.push({ analyst: analyst.name, success: false, error: String(smsErr) });
+          smsResults.push({ analyst: analyst.name, channel: 'sms', success: false, error: String(smsErr) });
         }
-      } else {
-        console.log(`No phone number for ${analyst.name}, skipping SMS`);
+      }
+
+      // Send Email
+      if (analyst.email) {
+        try {
+          const { error: emailError } = await supabase.functions.invoke('send-transactional-email', {
+            body: {
+              templateName: 'price-reminder',
+              recipientEmail: analyst.email,
+              idempotencyKey: `price-reminder-${today}-${analyst.email}-${remindersSentToday || 0}`,
+              templateData: {
+                analystName: analyst.name,
+                date: displayDate,
+                loginUrl: 'https://www.greatagrocoffeesystem.site',
+              },
+            },
+          });
+
+          if (emailError) {
+            console.error(`Email error for ${analyst.name}:`, emailError);
+            smsResults.push({ analyst: analyst.name, channel: 'email', success: false, error: emailError.message });
+          } else {
+            console.log(`Price reminder email sent to ${analyst.name}`);
+            smsResults.push({ analyst: analyst.name, channel: 'email', success: true });
+          }
+        } catch (emailErr) {
+          console.error(`Email exception for ${analyst.name}:`, emailErr);
+          smsResults.push({ analyst: analyst.name, channel: 'email', success: false, error: String(emailErr) });
+        }
       }
     }
 
