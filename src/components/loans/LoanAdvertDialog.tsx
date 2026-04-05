@@ -3,12 +3,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Megaphone, Loader2, Users } from "lucide-react";
+import { Megaphone, Loader2, Users, Mail } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface Employee {
   id: string;
@@ -17,6 +19,7 @@ interface Employee {
   email: string;
   department: string;
   salary: number;
+  join_date: string | null;
   outstanding: number;
 }
 
@@ -57,15 +60,16 @@ const LoanAdvertDialog = () => {
   const [sending, setSending] = useState(false);
   const [progress, setProgress] = useState({ sent: 0, failed: 0, total: 0 });
   const [template, setTemplate] = useState<TemplateKey>("direct");
+  const [sendEmail, setSendEmail] = useState(true);
+  const [sendSms, setSendSms] = useState(true);
 
   const { data: employees, isLoading } = useQuery({
     queryKey: ["employees-for-loan-advert"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("employees")
-        .select("id, name, phone, email, department, salary")
+        .select("id, name, phone, email, department, salary, join_date")
         .eq("status", "Active")
-        .not("phone", "is", null)
         .order("name");
 
       if (error) throw error;
@@ -107,6 +111,18 @@ const LoanAdvertDialog = () => {
 
   const getLoanLimit = (salary: number, outstanding: number = 0) => Math.max(0, (salary || 0) * 2 - outstanding);
 
+  const getTenureMonths = (joinDate: string | null) => {
+    if (!joinDate) return 0;
+    const now = new Date();
+    const join = new Date(joinDate);
+    return Math.max(0, Math.floor((now.getTime() - join.getTime()) / (1000 * 60 * 60 * 24 * 30)));
+  };
+
+  const getMultiplier = (joinDate: string | null) => {
+    const tenure = getTenureMonths(joinDate);
+    return tenure >= 3 ? '2x' : '1x';
+  };
+
   const getPreviewMessage = () => {
     return TEMPLATES[template].build("[Name]", "[Limit]");
   };
@@ -122,6 +138,10 @@ const LoanAdvertDialog = () => {
       toast({ title: "No employees selected", description: "Please select at least one employee", variant: "destructive" });
       return;
     }
+    if (!sendSms && !sendEmail) {
+      toast({ title: "No channel selected", description: "Please enable SMS or Email", variant: "destructive" });
+      return;
+    }
 
     setSending(true);
     const selectedList = employees?.filter((e) => selectedEmployees.has(e.id)) || [];
@@ -130,29 +150,57 @@ const LoanAdvertDialog = () => {
     let failCount = 0;
 
     for (const emp of selectedList) {
-      if (!emp.phone) { failCount++; continue; }
-
       const limit = getLoanLimit(emp.salary, emp.outstanding);
-      if (limit <= 0) { successCount++; continue; }
-      const message = TEMPLATES[template].build(emp.name.split(" ")[0], limit.toLocaleString());
+      if (limit <= 0) { successCount++; setProgress({ sent: successCount, failed: failCount, total: selectedList.length }); continue; }
 
-      try {
-        const { error } = await supabase.functions.invoke("send-sms", {
-          body: {
-            phone: emp.phone,
-            message,
-            userName: emp.name,
-            messageType: "loan_advert",
-            department: emp.department,
-            recipientEmail: emp.email,
-          },
-        });
+      let empSuccess = false;
 
-        if (error) failCount++;
-        else successCount++;
-      } catch {
-        failCount++;
+      // Send SMS
+      if (sendSms && emp.phone) {
+        const message = TEMPLATES[template].build(emp.name.split(" ")[0], limit.toLocaleString());
+        try {
+          const { error } = await supabase.functions.invoke("send-sms", {
+            body: {
+              phone: emp.phone,
+              message,
+              userName: emp.name,
+              messageType: "loan_advert",
+              department: emp.department,
+              recipientEmail: emp.email,
+            },
+          });
+          if (!error) empSuccess = true;
+        } catch { /* ignore */ }
       }
+
+      // Send Email
+      if (sendEmail && emp.email) {
+        const tenure = getTenureMonths(emp.join_date);
+        const multiplier = getMultiplier(emp.join_date);
+        try {
+          const { error } = await supabase.functions.invoke("send-transactional-email", {
+            body: {
+              templateName: "loan-promotion",
+              recipientEmail: emp.email,
+              idempotencyKey: `loan-promo-${emp.id}-${Date.now()}`,
+              templateData: {
+                employeeName: emp.name,
+                maxLoanAmount: limit,
+                tenureMonths: tenure,
+                salary: emp.salary,
+                multiplier,
+                interestRate: 10,
+                maxRepaymentMonths: 6,
+                loginUrl: "https://www.greatagrocoffeesystem.site",
+              },
+            },
+          });
+          if (!error) empSuccess = true;
+        } catch { /* ignore */ }
+      }
+
+      if (empSuccess) successCount++;
+      else failCount++;
       setProgress({ sent: successCount, failed: failCount, total: selectedList.length });
     }
 
@@ -176,31 +224,53 @@ const LoanAdvertDialog = () => {
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Template Selector */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Message Style</label>
-            <Select value={template} onValueChange={(v) => setTemplate(v as TemplateKey)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(TEMPLATES).map(([key, t]) => (
-                  <SelectItem key={key} value={key}>{t.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Channel Toggles */}
+          <div className="flex items-center gap-6 p-3 rounded-lg border bg-muted/30">
+            <div className="flex items-center gap-2">
+              <Switch id="send-sms" checked={sendSms} onCheckedChange={setSendSms} />
+              <Label htmlFor="send-sms" className="text-sm cursor-pointer">📱 SMS</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch id="send-email" checked={sendEmail} onCheckedChange={setSendEmail} />
+              <Label htmlFor="send-email" className="text-sm cursor-pointer">📧 Email</Label>
+            </div>
           </div>
 
-          {/* Preview */}
-          <div className="p-3 rounded-lg bg-muted text-sm space-y-1">
-            <div className="flex items-center justify-between">
-              <p className="font-medium">Preview:</p>
-              <Badge variant={getCharCount() <= 160 ? "secondary" : "destructive"} className="text-xs">
-                {getCharCount()} / 160 chars
-              </Badge>
+          {/* SMS Template Selector (only when SMS enabled) */}
+          {sendSms && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">SMS Message Style</label>
+              <Select value={template} onValueChange={(v) => setTemplate(v as TemplateKey)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(TEMPLATES).map(([key, t]) => (
+                    <SelectItem key={key} value={key}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="p-3 rounded-lg bg-muted text-sm space-y-1">
+                <div className="flex items-center justify-between">
+                  <p className="font-medium">SMS Preview:</p>
+                  <Badge variant={getCharCount() <= 160 ? "secondary" : "destructive"} className="text-xs">
+                    {getCharCount()} / 160 chars
+                  </Badge>
+                </div>
+                <p className="text-muted-foreground italic">{getPreviewMessage()}</p>
+              </div>
             </div>
-            <p className="text-muted-foreground italic">{getPreviewMessage()}</p>
-          </div>
+          )}
+
+          {sendEmail && (
+            <div className="p-3 rounded-lg bg-muted/50 border text-sm">
+              <div className="flex items-center gap-2 mb-1">
+                <Mail className="h-4 w-4 text-primary" />
+                <p className="font-medium">Email Preview</p>
+              </div>
+              <p className="text-muted-foreground">Each employee will receive a branded email with their <strong>personalized loan limit</strong>, tenure details, terms & conditions, and a direct login link.</p>
+            </div>
+          )}
 
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium flex items-center gap-2">
@@ -245,11 +315,11 @@ const LoanAdvertDialog = () => {
             </div>
           )}
 
-          <Button onClick={handleSend} disabled={sending || selectedEmployees.size === 0} className="w-full">
+          <Button onClick={handleSend} disabled={sending || selectedEmployees.size === 0 || (!sendSms && !sendEmail)} className="w-full">
             {sending ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...</>
             ) : (
-              <><Megaphone className="mr-2 h-4 w-4" /> Send to {selectedEmployees.size} Employees</>
+              <><Megaphone className="mr-2 h-4 w-4" /> Send {sendSms && sendEmail ? 'SMS + Email' : sendEmail ? 'Email' : 'SMS'} to {selectedEmployees.size} Employees</>
             )}
           </Button>
         </div>
