@@ -27,6 +27,7 @@ const SalaryAdvanceConfirmationEmail = ({
   department = '',
   position = '',
   reason = '',
+  remainingBalance,
   isCopy = false,
   copyRecipient = '',
 }: SalaryAdvanceConfirmationProps) => (

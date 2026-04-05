@@ -24,6 +24,7 @@ const CashWithdrawalConfirmationEmail = ({
   approvedBy = 'Finance',
   department = '',
   position = '',
+  remainingBalance,
   isCopy = false,
 }: CashWithdrawalConfirmationProps) => (
   <Html lang="en" dir="ltr">
