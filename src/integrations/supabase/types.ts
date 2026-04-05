@@ -2586,6 +2586,7 @@ export type Database = {
           trucks: Json
           updated_at: string
           vehicle_registrations: string | null
+          weighbridge_tickets: Json | null
         }
         Insert: {
           attachment_name?: string | null
@@ -2610,6 +2611,7 @@ export type Database = {
           trucks?: Json
           updated_at?: string
           vehicle_registrations?: string | null
+          weighbridge_tickets?: Json | null
         }
         Update: {
           attachment_name?: string | null
@@ -2634,6 +2636,7 @@ export type Database = {
           trucks?: Json
           updated_at?: string
           vehicle_registrations?: string | null
+          weighbridge_tickets?: Json | null
         }
         Relationships: []
       }

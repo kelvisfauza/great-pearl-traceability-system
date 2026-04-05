@@ -7,11 +7,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Trash2, Upload, FileText, Truck } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Trash2, Upload, FileText, Truck, QrCode, ImagePlus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
+import WeighBridgeScanner, { type WeighBridgeTicket } from './WeighBridgeScanner';
 
 interface TruckData {
   truck_number: string;
@@ -79,6 +81,8 @@ const EUDRDispatchComparisonForm = ({ onSuccess }: { onSuccess?: () => void }) =
   const { trackFormSubmission, trackDocumentUpload } = useActivityTracker();
   const [submitting, setSubmitting] = useState(false);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [weighBridgeTickets, setWeighBridgeTickets] = useState<WeighBridgeTicket[]>([]);
+  const [scannerOpen, setScannerOpen] = useState(false);
   const [formData, setFormData] = useState<DispatchFormData>({
     dispatch_date: new Date().toISOString().split('T')[0],
     dispatch_location: '',
@@ -228,8 +232,9 @@ const EUDRDispatchComparisonForm = ({ onSuccess }: { onSuccess?: () => void }) =
         remarks: formData.remarks,
         attachment_url: attachmentUrl,
         attachment_name: attachmentName,
+        weighbridge_tickets: weighBridgeTickets as unknown as any,
         status: 'submitted'
-      }]);
+      }] as any);
 
       if (error) throw error;
 
@@ -255,6 +260,7 @@ const EUDRDispatchComparisonForm = ({ onSuccess }: { onSuccess?: () => void }) =
         remarks: ''
       });
       setAttachmentFile(null);
+      setWeighBridgeTickets([]);
       trackFormSubmission('eudr_dispatch_report');
       trackDocumentUpload();
       onSuccess?.();
@@ -610,6 +616,70 @@ const EUDRDispatchComparisonForm = ({ onSuccess }: { onSuccess?: () => void }) =
         </CardContent>
       </Card>
 
+      {/* Weigh Bridge Tickets */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <QrCode className="h-5 w-5" />
+            Scan Weigh Bridge Ticket(s)
+          </CardTitle>
+          <CardDescription>Scan QR codes on weigh bridge tickets and capture photos</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-16 border-dashed text-lg"
+            onClick={() => setScannerOpen(true)}
+          >
+            <QrCode className="h-6 w-6 mr-3" />
+            {weighBridgeTickets.length === 0
+              ? 'Tap to Scan Weigh Bridge Ticket'
+              : `${weighBridgeTickets.length} Ticket${weighBridgeTickets.length !== 1 ? 's' : ''} Scanned — Tap to Add More`}
+          </Button>
+
+          {weighBridgeTickets.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {weighBridgeTickets.map((ticket, index) => (
+                <Card key={ticket.id} className="border-dashed">
+                  <CardContent className="p-3">
+                    <div className="flex items-start gap-3">
+                      {ticket.photo_url && (
+                        <img
+                          src={ticket.photo_url}
+                          alt={`Ticket ${index + 1}`}
+                          className="w-16 h-16 rounded object-cover border"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="text-xs">Ticket #{index + 1}</Badge>
+                          {ticket.photo_url ? (
+                            <Badge variant="outline" className="text-xs"><ImagePlus className="h-3 w-3 mr-1" /> Photo</Badge>
+                          ) : null}
+                        </div>
+                        <p className="text-xs font-mono truncate mt-1">{ticket.qr_data}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {new Date(ticket.scanned_at).toLocaleTimeString()}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0"
+                        onClick={() => setWeighBridgeTickets(weighBridgeTickets.filter(t => t.id !== ticket.id))}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* File Attachment */}
       <Card>
         <CardHeader>
@@ -639,6 +709,13 @@ const EUDRDispatchComparisonForm = ({ onSuccess }: { onSuccess?: () => void }) =
           </div>
         </CardContent>
       </Card>
+
+      <WeighBridgeScanner
+        open={scannerOpen}
+        onOpenChange={setScannerOpen}
+        tickets={weighBridgeTickets}
+        onTicketsChange={setWeighBridgeTickets}
+      />
 
       {/* Submit Button */}
       <div className="flex justify-end gap-4">
