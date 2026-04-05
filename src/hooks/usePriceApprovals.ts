@@ -168,7 +168,7 @@ const { error } = await supabase
         await supabase.functions.invoke('send-transactional-email', {
           body: {
             templateName: 'price-approval-request',
-            to: 'fauzakusa@greatpearlcoffee.com',
+            recipientEmail: 'fauzakusa@greatpearlcoffee.com',
             data: {
               submittedBy,
               submittedByEmail,
