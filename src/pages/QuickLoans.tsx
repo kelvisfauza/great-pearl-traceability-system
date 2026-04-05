@@ -683,7 +683,7 @@ const QuickLoans = () => {
           approvalDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
           disbursedAmount: disbursedAmount.toLocaleString(),
           isTopUp,
-          pdfDownloadUrl: signedUrl?.signedUrl || '',
+          pdfDownloadUrl: pdfUrl,
         };
 
         // Send to borrower
