@@ -86,7 +86,7 @@ const AdminSummaryEmail = (props: AdminSummaryProps) => {
         <Container style={container}>
           {/* Header */}
           <Section style={header}>
-            <Text style={{ fontSize: '32px', margin: '0 0 6px' }}>☕</Text>
+            <Img src={LOGO_URL} alt={SITE_NAME} width="48" height="48" style={{ margin: '0 auto 6px' }} />
             <Heading style={headerTitle}>{SITE_NAME}</Heading>
             <Text style={headerSub}>Executive Daily Report</Text>
           </Section>
