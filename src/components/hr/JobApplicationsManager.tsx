@@ -209,6 +209,9 @@ const JobApplicationsManager = () => {
           toast.warning("Status updated but SMS failed");
         }
       }
+
+      // Send email for status update
+      await sendStatusEmail(selectedApp, newStatus, statusNote || undefined);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["job-applications"] });
