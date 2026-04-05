@@ -7,11 +7,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Trash2, Upload, FileText, Truck } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Trash2, Upload, FileText, Truck, QrCode, ImagePlus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
+import WeighBridgeScanner, { type WeighBridgeTicket } from './WeighBridgeScanner';
 
 interface TruckData {
   truck_number: string;
