@@ -138,6 +138,10 @@ const LoanAdvertDialog = () => {
       toast({ title: "No employees selected", description: "Please select at least one employee", variant: "destructive" });
       return;
     }
+    if (!sendSms && !sendEmail) {
+      toast({ title: "No channel selected", description: "Please enable SMS or Email", variant: "destructive" });
+      return;
+    }
 
     setSending(true);
     const selectedList = employees?.filter((e) => selectedEmployees.has(e.id)) || [];
