@@ -77,22 +77,27 @@ Deno.serve(async (req) => {
 
       if (!message) continue
 
-      // Send SMS via send-sms function
+      // Send SMS
       const { error: smsErr } = await supabase.functions.invoke('send-sms', {
-        body: {
-          phone: loan.employee_phone,
-          message,
-          userName: loan.employee_name,
-          messageType: 'loan_reminder'
-        }
+        body: { phone: loan.employee_phone, message, userName: loan.employee_name, messageType: 'loan_reminder' }
       })
+      if (smsErr) { console.error(`SMS failed for ${loan.employee_name}:`, smsErr) } else { sentCount++; console.log(`Reminder sent to ${loan.employee_name}`) }
 
-      if (smsErr) {
-        console.error(`SMS failed for ${loan.employee_name}:`, smsErr)
-      } else {
-        sentCount++
-        console.log(`Reminder sent to ${loan.employee_name} (${diffDays} days before due)`)
-      }
+      // Send email reminder
+      await supabase.functions.invoke('send-transactional-email', {
+        body: {
+          templateName: 'loan-reminder',
+          recipientEmail: loan.employee_email,
+          idempotencyKey: `loan-reminder-${loan.id}-${inst.installment_number}-${todayStr}`,
+          templateData: {
+            employeeName: loan.employee_name,
+            installmentAmount: remaining.toLocaleString(),
+            dueDate: dueDateFormatted,
+            installmentNumber: String(inst.installment_number),
+            remainingBalance: (loan.remaining_balance || 0).toLocaleString(),
+          },
+        },
+      })
 
       messages.push({
         employee: loan.employee_name,
