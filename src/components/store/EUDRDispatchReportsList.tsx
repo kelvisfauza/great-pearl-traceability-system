@@ -160,6 +160,12 @@ const EUDRDispatchReportsList = ({ reports, showAll = false, onRefresh }: EUDRDi
                            </a>
                          </Button>
                        )}
+                       {report.weighbridge_tickets && (report.weighbridge_tickets as any[]).length > 0 && (
+                         <Badge variant="outline" className="text-xs gap-1">
+                           <QrCode className="h-3 w-3" />
+                           {(report.weighbridge_tickets as any[]).length}
+                         </Badge>
+                       )}
                      </div>
                    </TableCell>
                  </TableRow>
