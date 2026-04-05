@@ -143,6 +143,23 @@ Deno.serve(async (req) => {
           },
         });
 
+        // Also send detailed email
+        await supabase.functions.invoke('send-transactional-email', {
+          body: {
+            templateName: 'daily-wallet-summary',
+            recipientEmail: employee.email,
+            idempotencyKey: `wallet-summary-${employee.email}-${end.toISOString().split('T')[0]}`,
+            templateData: {
+              employeeName: employee.name,
+              loyaltyEarned: Math.round(loyalty).toLocaleString(),
+              bonusEarned: Math.round(bonus).toLocaleString(),
+              deductions: Math.round(deductions).toLocaleString(),
+              walletBalance: Math.round(walletBalance).toLocaleString(),
+              summaryDate: 'Yesterday',
+            },
+          },
+        });
+
         processed += 1;
 
         if (smsError) {
