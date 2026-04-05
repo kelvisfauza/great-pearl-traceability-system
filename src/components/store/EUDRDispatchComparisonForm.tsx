@@ -81,6 +81,8 @@ const EUDRDispatchComparisonForm = ({ onSuccess }: { onSuccess?: () => void }) =
   const { trackFormSubmission, trackDocumentUpload } = useActivityTracker();
   const [submitting, setSubmitting] = useState(false);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [weighBridgeTickets, setWeighBridgeTickets] = useState<WeighBridgeTicket[]>([]);
+  const [scannerOpen, setScannerOpen] = useState(false);
   const [formData, setFormData] = useState<DispatchFormData>({
     dispatch_date: new Date().toISOString().split('T')[0],
     dispatch_location: '',
