@@ -82,4 +82,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'loan-promotion': loanPromotion,
   'task-assignment': taskAssignment,
   'job-application-status': jobApplicationStatus,
+  'employee-of-the-month': employeeOfTheMonth,
 }
