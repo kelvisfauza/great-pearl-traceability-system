@@ -260,6 +260,7 @@ const EUDRDispatchComparisonForm = ({ onSuccess }: { onSuccess?: () => void }) =
         remarks: ''
       });
       setAttachmentFile(null);
+      setWeighBridgeTickets([]);
       trackFormSubmission('eudr_dispatch_report');
       trackDocumentUpload();
       onSuccess?.();
