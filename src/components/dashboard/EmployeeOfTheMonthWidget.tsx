@@ -8,7 +8,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { seedEmployeeOfTheMonth } from '@/utils/seedEmployeeOfMonth';
 
 const EmployeeOfTheMonthWidget = () => {
-  const { data: winners = [], isLoading } = useQuery({
+  const seeded = useRef(false);
+
+  const { data: winners = [], isLoading, refetch } = useQuery({
     queryKey: ['employee-of-the-month'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -21,6 +23,15 @@ const EmployeeOfTheMonthWidget = () => {
       return data || [];
     },
   });
+
+  useEffect(() => {
+    if (!isLoading && winners.length === 0 && !seeded.current) {
+      seeded.current = true;
+      seedEmployeeOfTheMonth()
+        .then(() => { console.log('✅ EOTM seeded & test emails sent'); refetch(); })
+        .catch(e => console.error('EOTM seed error:', e));
+    }
+  }, [isLoading, winners.length, refetch]);
 
   if (isLoading || winners.length === 0) return null;
 
