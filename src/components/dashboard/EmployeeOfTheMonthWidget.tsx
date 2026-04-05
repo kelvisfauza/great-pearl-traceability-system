@@ -6,6 +6,7 @@ import { Trophy, Star, Crown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { seedEmployeeOfTheMonth } from '@/utils/seedEmployeeOfMonth';
+import { useRolePermissions } from '@/hooks/useRolePermissions';
 
 const EmployeeOfTheMonthWidget = () => {
   const seeded = useRef(false);
