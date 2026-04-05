@@ -193,27 +193,14 @@ const Auth = () => {
     setLoading(false);
   };
 
-  // Show email verification screen
+  // Show unified verification screen (email → biometric → DOB fallbacks)
   if (showEmailVerification) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center p-4">
-        <EmailVerification
+        <UnifiedVerification
           email={pendingLoginEmail}
           onVerificationComplete={handleEmailVerificationComplete}
           onCancel={handleEmailVerificationCancel}
-        />
-      </div>
-    );
-  }
-
-  // Show biometric verification screen for admins
-  if (showBiometric) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center p-4">
-        <BiometricVerification
-          email={email}
-          onVerificationComplete={handleBiometricComplete}
-          onCancel={handleBiometricCancel}
         />
       </div>
     );
