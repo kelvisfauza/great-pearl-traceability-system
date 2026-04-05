@@ -45,6 +45,7 @@ import { OvertimeAwardModal } from '@/components/admin/OvertimeAwardModal';
 import { OvertimeClaimsManager } from '@/components/admin/OvertimeClaimsManager';
 import TimeDeductionManager from '@/components/hr/TimeDeductionManager';
 import EmployeeContractsManager from '@/components/hr/EmployeeContractsManager';
+import MonthlyOvertimeReview from '@/components/hr/MonthlyOvertimeReview';
 
 const HumanResources = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -344,6 +345,7 @@ const HumanResources = () => {
               </Card>
             )}
             <OvertimeClaimsManager />
+            {isAdmin() && <MonthlyOvertimeReview />}
           </TabsContent>
 
           <TabsContent value="time-deductions">

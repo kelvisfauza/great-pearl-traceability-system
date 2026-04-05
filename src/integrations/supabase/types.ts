@@ -5549,6 +5549,72 @@ export type Database = {
         }
         Relationships: []
       }
+      monthly_overtime_reviews: {
+        Row: {
+          adjusted_overtime_minutes: number | null
+          adjusted_pay: number | null
+          admin_notes: string | null
+          calculated_pay: number
+          created_at: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          id: string
+          month: number
+          net_overtime_minutes: number
+          overtime_rate_per_hour: number
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          total_late_minutes: number
+          total_overtime_minutes: number
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          adjusted_overtime_minutes?: number | null
+          adjusted_pay?: number | null
+          admin_notes?: string | null
+          calculated_pay?: number
+          created_at?: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          id?: string
+          month: number
+          net_overtime_minutes?: number
+          overtime_rate_per_hour?: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          total_late_minutes?: number
+          total_overtime_minutes?: number
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          adjusted_overtime_minutes?: number | null
+          adjusted_pay?: number | null
+          admin_notes?: string | null
+          calculated_pay?: number
+          created_at?: string
+          employee_email?: string
+          employee_id?: string
+          employee_name?: string
+          id?: string
+          month?: number
+          net_overtime_minutes?: number
+          overtime_rate_per_hour?: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          total_late_minutes?: number
+          total_overtime_minutes?: number
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
       network_whitelist: {
         Row: {
           created_at: string
