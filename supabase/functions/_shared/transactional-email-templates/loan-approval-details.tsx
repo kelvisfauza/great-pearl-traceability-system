@@ -32,7 +32,7 @@ const LoanApprovalEmail = ({
   durationMonths = '1', totalRepayable = '0', installmentAmount = '0',
   installmentFrequency = 'month', numInstallments = '1', firstDeductionDate = '',
   guarantorName = '', loanType = 'Quick Loan', approvedBy = '', approvalDate = '',
-  disbursedAmount, isTopUp = false,
+  disbursedAmount, isTopUp = false, pdfDownloadUrl, isGuarantorCopy = false,
 }: LoanApprovalProps) => (
   <Html lang="en" dir="ltr">
     <Head />
