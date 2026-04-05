@@ -53,6 +53,7 @@ const JobApplicationsManager = () => {
   const [selectedApp, setSelectedApp] = useState<any>(null);
   const [newStatus, setNewStatus] = useState("");
   const [statusNote, setStatusNote] = useState("");
+  const [statusEmail, setStatusEmail] = useState("");
   const [uploading, setUploading] = useState(false);
 
   // Form state
