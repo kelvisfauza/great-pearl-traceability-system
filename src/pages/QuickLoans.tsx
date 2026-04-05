@@ -456,16 +456,12 @@ const QuickLoans = () => {
       const { error } = await supabase.from('loans').update(updateData).eq('id', pendingGuarantorLoan.id);
       if (error) throw error;
 
-      // Notify borrower
+      // Notify borrower via SMS + email
       await supabase.functions.invoke('send-sms', {
-        body: {
-          phone: pendingGuarantorLoan.employee_phone,
-          message: approve
-            ? `Dear ${pendingGuarantorLoan.employee_name}, your guarantor ${employee?.name} has approved your loan request. It is now pending admin approval.`
-            : `Dear ${pendingGuarantorLoan.employee_name}, your guarantor ${employee?.name} has declined your loan request. Log in to select a new guarantor for the same application.`,
-          userName: pendingGuarantorLoan.employee_name,
-          messageType: 'loan_guarantor_response'
-        }
+        body: { phone: pendingGuarantorLoan.employee_phone, message: approve ? `Dear ${pendingGuarantorLoan.employee_name}, your guarantor ${employee?.name} has approved your loan request. It is now pending admin approval.` : `Dear ${pendingGuarantorLoan.employee_name}, your guarantor ${employee?.name} has declined your loan request. Log in to select a new guarantor for the same application.`, userName: pendingGuarantorLoan.employee_name, messageType: 'loan_guarantor_response' }
+      });
+      await supabase.functions.invoke('send-transactional-email', {
+        body: { templateName: 'loan-guarantor-response', recipientEmail: pendingGuarantorLoan.employee_email, idempotencyKey: `guarantor-response-${pendingGuarantorLoan.id}-${approve}`, templateData: { borrowerName: pendingGuarantorLoan.employee_name, guarantorName: employee?.name || '', loanAmount: pendingGuarantorLoan.loan_amount.toLocaleString(), durationMonths: String(pendingGuarantorLoan.duration_months), isApproved: approve } }
       });
 
       toast({ title: approve ? "Loan Guaranteed" : "Loan Declined", description: approve ? "The loan is now pending admin approval" : "The borrower will be notified" });
