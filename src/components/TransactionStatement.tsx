@@ -213,15 +213,14 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       const fetchedEntries = (allEntries || []) as LedgerEntry[];
       const updatedBalance = currentBalance - STATEMENT_FEE;
       
-      // Build running balances
+      // Build running balances (ascending for correct calculation)
       const walletSum = fetchedEntries.filter(e => WALLET_TYPES.includes(e.entry_type)).reduce((s, e) => s + e.amount, 0);
       let runBal = updatedBalance - walletSum;
       
-      const transactions = fetchedEntries.map(e => {
+      const transactionsAsc = fetchedEntries.map(e => {
         const affectsWallet = WALLET_TYPES.includes(e.entry_type);
         if (affectsWallet) runBal += e.amount;
         const meta = e.metadata ? (typeof e.metadata === 'string' ? JSON.parse(e.metadata) : e.metadata) : null;
-        // Label statement fees properly
         const typeLabel = (e.entry_type === 'WITHDRAWAL' && meta?.source === 'statement_fee') 
           ? '📄 Transaction Charge' 
           : getEntryLabel(e);
@@ -239,7 +238,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       // Add the statement fee if it falls outside the date range
       const feeInRange = fetchedEntries.some(e => e.reference === statementRef);
       if (!feeInRange) {
-        transactions.push({
+        transactionsAsc.push({
           date: format(new Date(), 'MMM dd, yyyy h:mm a'),
           type: '📄 Transaction Charge',
           description: 'Statement Charge',
@@ -247,6 +246,9 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
           balance: updatedBalance,
         });
       }
+
+      // Reverse so most recent transactions appear on top
+      const transactions = [...transactionsAsc].reverse();
 
       const periodFrom = format(new Date(dateFrom), 'MMM dd, yyyy');
       const periodTo = format(new Date(dateTo), 'MMM dd, yyyy');
