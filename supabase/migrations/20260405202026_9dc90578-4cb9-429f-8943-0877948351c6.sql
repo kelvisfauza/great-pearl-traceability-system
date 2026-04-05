@@ -1,0 +1,1 @@
+UPDATE bonuses SET reason = 'March 2026 Overtime Reward: 15 hrs net overtime × UGX 3,000/hr' WHERE id = 'be397b26-b58c-4960-beba-b7a1bec30364';
