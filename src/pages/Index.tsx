@@ -94,6 +94,9 @@ const Index = () => {
           </div>
         </div>
 
+        {/* Employee of the Month - Pinned for all staff */}
+        <EmployeeOfTheMonthWidget />
+
         {/* KPI Cards with Sparklines */}
         <DashboardStats />
 
