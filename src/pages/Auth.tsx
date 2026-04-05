@@ -23,7 +23,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPasswordChange, setShowPasswordChange] = useState(false);
-  const [showBiometric] = useState(false); // kept for compatibility
+  
   const [showEmailVerification, setShowEmailVerification] = useState(false);
   const [pendingLoginEmail, setPendingLoginEmail] = useState('');
   
