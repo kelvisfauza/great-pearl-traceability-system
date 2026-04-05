@@ -759,6 +759,16 @@ export const useUnifiedApprovalRequests = () => {
           return false;
         }
 
+        // Invalidate email action tokens when request is fully resolved
+        if (updateData.status === 'Approved' || updateData.status === 'Rejected') {
+          try {
+            await supabase.rpc('invalidate_request_tokens', { p_request_id: request.id });
+            console.log('✅ Email action tokens invalidated for request:', request.id);
+          } catch (tokenErr) {
+            console.error('Token invalidation error (non-blocking):', tokenErr);
+          }
+        }
+
         // Send SMS notification to the REQUESTER (person who submitted) about admin approval/rejection
         // For salary advances: notify the HR person who submitted, NOT the employee receiving the advance
         // The advance recipient gets a separate SMS in the salary advance activation block below
