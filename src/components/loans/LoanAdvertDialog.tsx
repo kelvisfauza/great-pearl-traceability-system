@@ -68,9 +68,8 @@ const LoanAdvertDialog = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("employees")
-        .select("id, name, phone, email, department, salary")
+        .select("id, name, phone, email, department, salary, join_date")
         .eq("status", "Active")
-        .not("phone", "is", null)
         .order("name");
 
       if (error) throw error;
