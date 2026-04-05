@@ -44,12 +44,20 @@ function buildVerificationEmailText(code: string): string {
   return `Email Verification\n\nUse the code below to verify your email and complete your sign-in to the Great Agro Coffee system:\n\n${code}\n\nThis code will expire in 10 minutes. If you didn't request this code, please ignore this email.\n\nGreat Agro Coffee — Kasese, Uganda`;
 }
 
+function generateToken(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 async function sendVerificationEmail(email: string, verificationCode: string) {
   const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
 
   if (!lovableApiKey) {
     throw new Error("Email service is not configured");
   }
+
+  const unsubToken = generateToken();
 
   await sendLovableEmail(
     {
@@ -62,6 +70,7 @@ async function sendVerificationEmail(email: string, verificationCode: string) {
       purpose: "transactional",
       label: "verification-code",
       idempotency_key: `verify-${email}-${verificationCode}`,
+      unsubscribe_token: unsubToken,
     },
     {
       apiKey: lovableApiKey,
