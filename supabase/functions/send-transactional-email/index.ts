@@ -97,6 +97,7 @@ Deno.serve(async (req) => {
       {
         to: effectiveRecipient,
         from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+        reply_to: 'operations@greatpearlcoffee.com',
         sender_domain: SENDER_DOMAIN,
         subject: resolvedSubject,
         html,
