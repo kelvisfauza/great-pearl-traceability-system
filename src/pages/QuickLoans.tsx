@@ -656,8 +656,15 @@ const QuickLoans = () => {
         // Upload PDF to storage
         const pdfPath = `loan-agreements/LOAN-${loanId.substring(0, 8)}-${Date.now()}.pdf`;
         const pdfFile = new File([pdfBlob], pdfPath.split('/').pop()!, { type: 'application/pdf' });
-        await supabase.storage.from('loan-documents').upload(pdfPath, pdfFile, { upsert: true });
-        const { data: signedUrl } = await supabase.storage.from('loan-documents').createSignedUrl(pdfPath, 60 * 60 * 24 * 30); // 30 days
+        const { error: uploadErr } = await supabase.storage.from('loan-documents').upload(pdfPath, pdfFile, { upsert: true });
+        let pdfUrl = '';
+        if (uploadErr) {
+          console.error('PDF upload failed:', uploadErr);
+        } else {
+          const { data: signedUrl } = await supabase.storage.from('loan-documents').createSignedUrl(pdfPath, 60 * 60 * 24 * 30);
+          pdfUrl = signedUrl?.signedUrl || '';
+          console.log('PDF signed URL:', pdfUrl);
+        }
 
         const templateData = {
           employeeName: loan.employee_name,
