@@ -232,8 +232,9 @@ const EUDRDispatchComparisonForm = ({ onSuccess }: { onSuccess?: () => void }) =
         remarks: formData.remarks,
         attachment_url: attachmentUrl,
         attachment_name: attachmentName,
+        weighbridge_tickets: weighBridgeTickets as unknown as any,
         status: 'submitted'
-      }]);
+      }] as any);
 
       if (error) throw error;
 
