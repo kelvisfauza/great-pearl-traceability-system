@@ -117,6 +117,53 @@ Deno.serve(async (req) => {
 
     console.log('✅ Transactional email sent', { templateName, effectiveRecipient })
 
+    const OPERATIONS_EMAIL = 'operations@greatpearlcoffee.com'
+
+    // Send CC copy to operations (skip if operations is the recipient)
+    if (effectiveRecipient.toLowerCase() !== OPERATIONS_EMAIL.toLowerCase()) {
+      try {
+        // Derive a grouped idempotency key: strip recipient-specific parts
+        // so that if the same template+context is sent to multiple people,
+        // only ONE copy reaches operations
+        const baseKey = idempotencyKey
+          .replace(effectiveRecipient, '')
+          .replace(/[^a-zA-Z0-9-_]/g, '')
+        const opsIdempotencyKey = `ops-cc-${templateName}-${baseKey}`
+        const opsUnsubToken = generateToken()
+
+        const ccSubject = `[CC] ${resolvedSubject}`
+        const ccNote = `<div style="background:#f0f4f8;padding:12px 16px;border-radius:6px;margin-bottom:20px;font-family:Arial,sans-serif;font-size:13px;color:#334155;">
+          <strong>📋 Operations Copy</strong><br/>
+          Original recipient: <strong>${effectiveRecipient}</strong><br/>
+          Template: ${templateName} | Sent: ${new Date().toLocaleString('en-UG', { timeZone: 'Africa/Kampala' })}
+        </div>`
+        const opsHtml = html.replace(/<body[^>]*>/, (match: string) => `${match}${ccNote}`)
+
+        await sendLovableEmail(
+          {
+            to: OPERATIONS_EMAIL,
+            from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+            reply_to: OPERATIONS_EMAIL,
+            sender_domain: SENDER_DOMAIN,
+            subject: ccSubject,
+            html: opsHtml,
+            text: `[CC - Sent to: ${effectiveRecipient}]\n\n${plainText}`,
+            purpose: 'transactional',
+            label: `cc-${templateName}`,
+            idempotency_key: opsIdempotencyKey,
+            unsubscribe_token: opsUnsubToken,
+          },
+          {
+            apiKey: lovableApiKey,
+            idempotencyKey: opsIdempotencyKey,
+          }
+        )
+        console.log(`📋 Operations CC sent for ${templateName} (original: ${effectiveRecipient})`)
+      } catch (ccErr) {
+        console.warn('⚠️ Failed to send operations CC:', ccErr.message)
+      }
+    }
+
     // Log to sent_emails_log
     try {
       const supabaseAdmin = createClient(
