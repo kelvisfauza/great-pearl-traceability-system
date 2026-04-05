@@ -122,6 +122,7 @@ const JobApplicationsManager = () => {
         ref_code: refCode,
         applicant_name: form.applicant_name.trim(),
         phone: form.phone.trim(),
+        email: form.email.trim() || null,
         job_applied_for: form.job_applied_for.trim(),
         notes: form.notes.trim() || null,
         cv_url: cvUrl,
