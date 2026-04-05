@@ -14,6 +14,7 @@ interface SalaryAdvanceConfirmationProps {
   department?: string
   position?: string
   reason?: string
+  remainingBalance?: number
   isCopy?: boolean
   copyRecipient?: string
 }

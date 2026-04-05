@@ -13,6 +13,7 @@ interface CashWithdrawalConfirmationProps {
   approvedBy?: string
   department?: string
   position?: string
+  remainingBalance?: number
   isCopy?: boolean
 }
 
