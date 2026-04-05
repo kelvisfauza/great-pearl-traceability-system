@@ -188,10 +188,6 @@ const Auth = () => {
     }
   };
 
-  const handleBiometricCancel = () => {
-    setShowBiometric(false);
-    setLoading(false);
-  };
 
   // Show unified verification screen (email → biometric → DOB fallbacks)
   if (showEmailVerification) {
