@@ -191,7 +191,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         reference: statementRef,
         metadata: {
           source: 'statement_fee',
-          description: 'Transaction Statement Fee',
+          description: 'Transaction Statement Charge',
           period: `${dateFrom} to ${dateTo}`,
         },
       });
