@@ -345,6 +345,7 @@ const JobApplicationsManager = () => {
                       </p>
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{app.phone}</span>
+                        {app.email && <span className="text-primary">{app.email}</span>}
                         <span>{format(new Date(app.created_at), "MMM dd, yyyy")}</span>
                         {app.cv_url && (
                           <a href={app.cv_url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-primary hover:underline">
