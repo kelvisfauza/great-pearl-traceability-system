@@ -140,14 +140,16 @@ const LoanApprovalEmail = ({
 export const template = {
   component: LoanApprovalEmail,
   subject: (data: Record<string, any>) =>
-    `✅ Loan ${data.isTopUp ? 'Top-Up ' : ''}Approved — UGX ${data.loanAmount || '0'}`,
+    data.isGuarantorCopy
+      ? `📋 Guarantor Copy — Loan ${data.isTopUp ? 'Top-Up ' : ''}Approved for ${data.employeeName || 'Employee'}`
+      : `✅ Loan ${data.isTopUp ? 'Top-Up ' : ''}Approved — UGX ${data.loanAmount || '0'}`,
   displayName: 'Loan approval details',
   previewData: {
     employeeName: 'Jane Doe', loanAmount: '500,000', interestRate: '10', dailyRate: '0.33',
     durationMonths: '3', totalRepayable: '650,000', installmentAmount: '54,167',
     installmentFrequency: 'month', numInstallments: '12', firstDeductionDate: '1 May 2026',
     guarantorName: 'John Smith', loanType: 'Quick Loan', approvedBy: 'Admin User',
-    approvalDate: '5 Apr 2026',
+    approvalDate: '5 Apr 2026', pdfDownloadUrl: 'https://example.com/loan.pdf',
   },
 } satisfies TemplateEntry
 
