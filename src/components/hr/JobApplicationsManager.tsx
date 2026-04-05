@@ -53,6 +53,7 @@ const JobApplicationsManager = () => {
   const [selectedApp, setSelectedApp] = useState<any>(null);
   const [newStatus, setNewStatus] = useState("");
   const [statusNote, setStatusNote] = useState("");
+  const [statusEmail, setStatusEmail] = useState("");
   const [uploading, setUploading] = useState(false);
 
   // Form state
@@ -192,11 +193,18 @@ const JobApplicationsManager = () => {
     mutationFn: async () => {
       if (!selectedApp || !newStatus) return;
 
+      const updateData: any = { status: newStatus, notes: statusNote || selectedApp.notes };
+      if (statusEmail && statusEmail !== (selectedApp.email || '')) {
+        updateData.email = statusEmail;
+      }
       const { error } = await supabase
         .from("job_applications")
-        .update({ status: newStatus, notes: statusNote || selectedApp.notes })
+        .update(updateData)
         .eq("id", selectedApp.id);
       if (error) throw error;
+
+      // Use updated email for sending
+      const appWithEmail = { ...selectedApp, email: statusEmail || selectedApp.email };
 
       // Send SMS for status update
       const msgFn = STATUS_SMS_MESSAGES[newStatus];
@@ -211,7 +219,7 @@ const JobApplicationsManager = () => {
       }
 
       // Send email for status update
-      await sendStatusEmail(selectedApp, newStatus, statusNote || undefined);
+      await sendStatusEmail(appWithEmail, newStatus, statusNote || undefined);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["job-applications"] });
@@ -219,6 +227,7 @@ const JobApplicationsManager = () => {
       setSelectedApp(null);
       setNewStatus("");
       setStatusNote("");
+      setStatusEmail("");
       toast.success("Application status updated");
     },
     onError: (e: any) => toast.error("Failed to update: " + e.message),
@@ -365,6 +374,7 @@ const JobApplicationsManager = () => {
                           const nextStatus = currentIdx < STATUSES.length - 1 ? STATUSES[currentIdx + 1] : app.status;
                           setNewStatus(nextStatus);
                           setStatusNote(app.notes || "");
+                          setStatusEmail(app.email || "");
                           setShowUpdateDialog(true);
                         }}
                       >
@@ -419,10 +429,17 @@ const JobApplicationsManager = () => {
                 </Select>
               </div>
               <div>
+                <Label>Applicant Email</Label>
+                <Input type="email" value={statusEmail} onChange={(e) => setStatusEmail(e.target.value)} placeholder="applicant@email.com" />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Status update email will be sent if provided.
+                </p>
+              </div>
+              <div>
                 <Label>Notes / Interview Details</Label>
                 <Textarea value={statusNote} onChange={(e) => setStatusNote(e.target.value)} placeholder="e.g. Interview on Monday 10am at office..." rows={3} />
                 <p className="text-xs text-muted-foreground mt-1">
-                  For interview scheduling, include date/time here - it will be included in the SMS.
+                  For interview scheduling, include date/time here - it will be included in the SMS & email.
                 </p>
               </div>
               <div className="bg-muted/50 rounded-md p-3 text-xs">
@@ -434,7 +451,7 @@ const JobApplicationsManager = () => {
                 onClick={() => updateStatusMutation.mutate()}
                 disabled={updateStatusMutation.isPending || newStatus === selectedApp.status}
               >
-                {updateStatusMutation.isPending ? "Updating..." : "Update & Send SMS"}
+                {updateStatusMutation.isPending ? "Updating..." : `Update & Send SMS${statusEmail ? ' + Email' : ''}`}
               </Button>
             </div>
           )}
