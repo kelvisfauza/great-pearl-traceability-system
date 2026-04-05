@@ -116,3 +116,6 @@ const successText = { fontSize: '13px', color: '#2e7d32', margin: '0' }
 const copyBanner = { backgroundColor: '#e3f2fd', borderRadius: '6px', padding: '8px 14px', margin: '0 0 16px', textAlign: 'center' as const }
 const copyBannerText = { fontSize: '12px', color: '#1565c0', margin: '0', fontWeight: 'bold' as const }
 const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0', lineHeight: '1.4' }
+const balanceBox = { backgroundColor: '#1a5c1a', borderRadius: '8px', padding: '16px 20px', margin: '0 0 20px', textAlign: 'center' as const }
+const balanceLabel = { fontSize: '12px', color: '#c8e6c9', margin: '0 0 4px', textTransform: 'uppercase' as const, letterSpacing: '1px' }
+const balanceAmount = { fontSize: '28px', fontWeight: 'bold' as const, color: '#ffffff', margin: '0' }
