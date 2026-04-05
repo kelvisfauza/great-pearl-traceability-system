@@ -58,4 +58,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'loan-guarantor-response': loanGuarantorResponse,
   'loan-counter-offer': loanCounterOffer,
   'loan-guarantor-revoked': loanGuarantorRevoked,
+  'approval-action': approvalAction,
 }
