@@ -1,0 +1,2 @@
+INSERT INTO public_holidays (name, holiday_date, greeting_title, greeting_message, emoji, gradient_from, gradient_to, bg_gradient_from, bg_gradient_to, is_active, is_recurring)
+VALUES ('Easter Sunday', '2026-04-05', '🐣 Happy Easter Sunday! 🌷', 'He is Risen! Wishing you a blessed and joyful Easter celebration with family and loved ones!', '🐣', 'pink-400', 'purple-400', 'pink-50', 'purple-50', true, false);
