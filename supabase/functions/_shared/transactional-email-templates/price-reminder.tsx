@@ -1,10 +1,9 @@
 import * as React from 'npm:react@18.3.1'
 import {
-  Body, Container, Head, Heading, Html, Preview, Text, Section, Hr, Button,
+  Body, Container, Head, Heading, Html, Preview, Text, Section, Hr, Button, Img,
 } from 'npm:@react-email/components@0.0.22'
 import type { TemplateEntry } from './registry.ts'
-
-const SITE_NAME = "Great Agro Coffee"
+import { SITE_NAME, LOGO_URL } from './brand.ts'
 
 interface PriceReminderProps {
   analystName?: string
@@ -20,12 +19,13 @@ const PriceReminderEmail = ({
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>
-      ☕ Good morning {analystName}! Please update today's coffee buying prices.
+      Good morning {analystName}! Please update today's coffee buying prices.
     </Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={header}>
-          <Text style={brandText}>☕ {SITE_NAME}</Text>
+          <Img src={LOGO_URL} alt={SITE_NAME} width="48" height="48" style={{ margin: '0 auto 8px' }} />
+          <Text style={brandText}>{SITE_NAME}</Text>
         </Section>
 
         <Section style={heroBanner}>
@@ -79,7 +79,7 @@ const PriceReminderEmail = ({
 export const template = {
   component: PriceReminderEmail,
   subject: (data: Record<string, any>) =>
-    `☕ Price Reminder: Please update buying prices for ${data.date || 'today'}`,
+    `📊 Price Reminder: Please update buying prices for ${data.date || 'today'}`,
   displayName: 'Morning price update reminder',
   previewData: {
     analystName: 'Bwambale Denis',

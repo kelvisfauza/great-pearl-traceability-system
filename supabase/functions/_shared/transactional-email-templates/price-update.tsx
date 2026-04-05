@@ -3,21 +3,10 @@
 import * as React from 'npm:react@18.3.1'
 
 import {
-  Body,
-  Container,
-  Head,
-  Heading,
-  Html,
-  Preview,
-  Text,
-  Section,
-  Row,
-  Column,
-  Hr,
+  Body, Container, Head, Heading, Html, Preview, Text, Section, Row, Column, Hr, Img,
 } from 'npm:@react-email/components@0.0.22'
 import type { TemplateEntry } from './registry.ts'
-
-const SITE_NAME = 'Great Agro Coffee'
+import { SITE_NAME, LOGO_URL } from './brand.ts'
 
 interface PriceUpdateProps {
   date?: string
@@ -77,7 +66,8 @@ const PriceUpdateEmail = (props: PriceUpdateProps) => {
         <Container style={container}>
           {/* Header */}
           <Section style={header}>
-            <Text style={headerBrand}>☕ {SITE_NAME}</Text>
+            <Img src={LOGO_URL} alt={SITE_NAME} width="40" height="40" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '8px' }} />
+            <Text style={headerBrand}>{SITE_NAME}</Text>
             <Heading style={h1}>
               {isCorrection ? '⚠️ PRICE CORRECTION' : 'Daily Price Update'}
             </Heading>
@@ -96,7 +86,7 @@ const PriceUpdateEmail = (props: PriceUpdateProps) => {
 
           {/* Arabica Card */}
           <Section style={priceCard}>
-            <Text style={priceCardLabel}>☕ Arabica</Text>
+            <Text style={priceCardLabel}>🫘 Arabica</Text>
             <Text style={priceCardValue}>UGX {fmt(arabicaBuyingPrice)}/kg</Text>
             <Section style={metricsRow}>
               <Text style={metricItem}>Outturn: {arabicaOutturn}%</Text>
@@ -107,7 +97,7 @@ const PriceUpdateEmail = (props: PriceUpdateProps) => {
 
           {/* Robusta Card */}
           <Section style={{ ...priceCard, borderLeft: '4px solid #059669' }}>
-            <Text style={{ ...priceCardLabel, color: '#059669' }}>☕ Robusta</Text>
+            <Text style={{ ...priceCardLabel, color: '#059669' }}>🫘 Robusta</Text>
             <Text style={{ ...priceCardValue, color: '#059669' }}>UGX {fmt(robustaBuyingPrice)}/kg</Text>
             <Section style={metricsRow}>
               <Text style={metricItem}>Outturn: {robustaOutturn}%</Text>
@@ -119,7 +109,7 @@ const PriceUpdateEmail = (props: PriceUpdateProps) => {
           {/* Sorted Price */}
           {sortedPrice > 0 && (
             <Section style={{ ...priceCard, borderLeft: '4px solid #7c3aed' }}>
-              <Text style={{ ...priceCardLabel, color: '#7c3aed' }}>☕ Sorted Coffee</Text>
+              <Text style={{ ...priceCardLabel, color: '#7c3aed' }}>🫘 Sorted Coffee</Text>
               <Text style={{ ...priceCardValue, color: '#7c3aed' }}>UGX {fmt(sortedPrice)}/kg</Text>
             </Section>
           )}

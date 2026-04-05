@@ -15,8 +15,7 @@ import {
   Hr,
 } from 'npm:@react-email/components@0.0.22'
 import type { TemplateEntry } from './registry.ts'
-
-const SITE_NAME = 'Great Agro Coffee'
+import { SITE_NAME, LOGO_URL } from './brand.ts'
 
 interface EasterGreetingProps {
   name?: string
@@ -80,7 +79,7 @@ const EasterGreetingEmail = ({ name, year = 2026 }: EasterGreetingProps) => (
         </Section>
 
         <Section style={card3}>
-          <Text style={cardEmoji}>☕</Text>
+          <Img src={LOGO_URL} alt={SITE_NAME} width="40" height="40" style={{ margin: '0 auto 6px' }} />
           <Text style={cardTitle}>Our Coffee Family</Text>
           <Text style={cardText}>
             From the lush hills of the Rwenzori Mountains to every cup we
@@ -105,7 +104,7 @@ const EasterGreetingEmail = ({ name, year = 2026 }: EasterGreetingProps) => (
             The Great Agro Coffee Management
           </Text>
           <Text style={signLocation}>
-            ☕ Kasese, Uganda
+            🌿 Kasese, Uganda
           </Text>
         </Section>
 

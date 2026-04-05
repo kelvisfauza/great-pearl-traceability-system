@@ -3,21 +3,10 @@
 import * as React from 'npm:react@18.3.1'
 
 import {
-  Body,
-  Container,
-  Head,
-  Heading,
-  Html,
-  Preview,
-  Text,
-  Section,
-  Row,
-  Column,
-  Hr,
+  Body, Container, Head, Heading, Html, Preview, Text, Section, Row, Column, Hr, Img,
 } from 'npm:@react-email/components@0.0.22'
 import type { TemplateEntry } from './registry.ts'
-
-const SITE_NAME = 'Great Agro Coffee'
+import { SITE_NAME, LOGO_URL } from './brand.ts'
 
 interface PendingBatch {
   batch_number: string
@@ -63,7 +52,7 @@ const DailyQualitySummaryEmail = ({
       <Container style={container}>
         {/* Header */}
         <Section style={headerSection}>
-          <Text style={headerLogo}>☕</Text>
+          <Img src={LOGO_URL} alt={SITE_NAME} width="48" height="48" style={{ margin: '0 auto 6px' }} />
           <Heading style={headerTitle}>{SITE_NAME}</Heading>
           <Text style={headerSubtitle}>Quality Department — Daily Summary</Text>
         </Section>
