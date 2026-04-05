@@ -1,6 +1,6 @@
 import * as React from 'npm:react@18.3.1'
 import {
-  Body, Container, Head, Heading, Html, Preview, Text, Section, Hr,
+  Body, Container, Head, Heading, Html, Preview, Text, Section, Hr, Button,
 } from 'npm:@react-email/components@0.0.22'
 import type { TemplateEntry } from './registry.ts'
 
@@ -11,6 +11,8 @@ interface TransactionStatementProps {
   periodFrom?: string
   periodTo?: string
   currentBalance?: number
+  statementFee?: number
+  pdfDownloadUrl?: string
   transactions?: Array<{
     date: string
     type: string
@@ -25,6 +27,8 @@ const TransactionStatementEmail = ({
   periodFrom = '',
   periodTo = '',
   currentBalance = 0,
+  statementFee = 500,
+  pdfDownloadUrl = '',
   transactions = [],
 }: TransactionStatementProps) => (
   <Html lang="en" dir="ltr">
@@ -39,7 +43,23 @@ const TransactionStatementEmail = ({
         <Text style={text}>
           <strong>Employee:</strong> {employeeName}<br />
           <strong>Period:</strong> {periodFrom} — {periodTo}<br />
-          <strong>Current Balance:</strong> UGX {(currentBalance || 0).toLocaleString()}
+          <strong>Current Balance:</strong> UGX {(currentBalance || 0).toLocaleString()}<br />
+          <strong>Statement Charge:</strong> UGX {(statementFee || 500).toLocaleString()}
+        </Text>
+
+        {pdfDownloadUrl ? (
+          <Section style={{ margin: '16px 0', textAlign: 'center' as const }}>
+            <Button style={downloadBtn} href={pdfDownloadUrl}>
+              📄 Download PDF Statement
+            </Button>
+            <Text style={{ fontSize: '11px', color: '#888', margin: '8px 0 0' }}>
+              Your detailed statement is attached as a PDF for your records.
+            </Text>
+          </Section>
+        ) : null}
+
+        <Text style={{ fontSize: '12px', color: '#555', fontWeight: 'bold' as const, margin: '16px 0 8px' }}>
+          Transaction Summary ({transactions.length} records)
         </Text>
 
         <Section style={tableContainer}>
@@ -89,9 +109,12 @@ export const template = {
     periodFrom: 'Jan 01, 2026',
     periodTo: 'Jan 31, 2026',
     currentBalance: 150000,
+    statementFee: 500,
+    pdfDownloadUrl: 'https://example.com/statement.pdf',
     transactions: [
-      { date: 'Jan 05', type: 'Credit', description: 'Salary', amount: 500000, balance: 650000 },
-      { date: 'Jan 10', type: 'Withdrawal', description: 'Cash out', amount: -100000, balance: 550000 },
+      { date: 'Jan 05', type: '💵 Salary Credit', description: 'Salary', amount: 500000, balance: 650000 },
+      { date: 'Jan 10', type: '📤 Sent Money', description: 'to John Doe', amount: -100000, balance: 550000 },
+      { date: 'Jan 31', type: '📄 Transaction Charge', description: 'Statement Charge', amount: -500, balance: 549500 },
     ],
   },
 } satisfies TemplateEntry
@@ -107,3 +130,13 @@ const tableContainer = { margin: '16px 0' }
 const table = { width: '100%', borderCollapse: 'collapse' as const, fontSize: '12px' }
 const th = { textAlign: 'left' as const, padding: '8px 6px', borderBottom: '2px solid #333', fontSize: '11px', color: '#333' }
 const td = { padding: '6px', borderBottom: '1px solid #eee', fontSize: '12px', color: '#333' }
+const downloadBtn = {
+  backgroundColor: '#1a5632',
+  color: '#ffffff',
+  padding: '12px 24px',
+  borderRadius: '6px',
+  fontSize: '14px',
+  fontWeight: 'bold' as const,
+  textDecoration: 'none',
+  display: 'inline-block',
+}
