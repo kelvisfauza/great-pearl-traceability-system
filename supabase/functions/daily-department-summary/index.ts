@@ -69,13 +69,34 @@ Deno.serve(async (req) => {
 
   let departments = ['quality', 'admin', 'operations', 'field', 'it', 'finance', 'eudr', 'sales']
   let targetEmail: string | null = null
+  let broadcastTemplate: string | null = null
 
   try {
     const body = await req.json()
     if (body.department) departments = [body.department]
     if (body.departments) departments = body.departments
     if (body.targetEmail) targetEmail = body.targetEmail
+    if (body.broadcastTemplate) broadcastTemplate = body.broadcastTemplate
   } catch {}
+
+  // ─── BROADCAST MODE: send a template to ALL employees ───
+  if (broadcastTemplate) {
+    try {
+      const { data: allEmps } = await supabase
+        .from('employees').select('name, email, department')
+        .eq('status', 'Active')
+      const recipients = (allEmps || []).map((e: any) => ({ name: e.name, email: e.email }))
+      const today = new Date().toISOString().split('T')[0]
+      const broadcastResults = await sendToRecipients(lovableApiKey, broadcastTemplate, recipients, {}, today)
+      console.log(`✅ Broadcast ${broadcastTemplate} sent to ${recipients.length} users`)
+      return new Response(JSON.stringify({ success: true, template: broadcastTemplate, sent: broadcastResults.length, results: broadcastResults }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    } catch (error) {
+      console.error('❌ Broadcast failed:', error.message)
+      return new Response(JSON.stringify({ error: error.message }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+  }
 
   const today = new Date().toISOString().split('T')[0]
   const reportDate = new Date().toLocaleDateString('en-UG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
