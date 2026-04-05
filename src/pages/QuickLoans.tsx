@@ -623,7 +623,34 @@ const QuickLoans = () => {
           }
         });
 
-        toast({ title: "Loan Approved", description: "Loan disbursed to employee wallet" });
+        // Send detailed loan approval email
+        await supabase.functions.invoke('send-transactional-email', {
+          body: {
+            templateName: 'loan-approval-details',
+            recipientEmail: loan.employee_email,
+            idempotencyKey: `loan-approval-${loanId}`,
+            templateData: {
+              employeeName: loan.employee_name,
+              loanAmount: loan.loan_amount.toLocaleString(),
+              interestRate: String(loan.interest_rate),
+              dailyRate: String(loan.daily_interest_rate || (loan.interest_rate / 30).toFixed(2)),
+              durationMonths: String(loan.duration_months),
+              totalRepayable: loan.total_repayable.toLocaleString(),
+              installmentAmount: installmentAmount.toLocaleString(),
+              installmentFrequency: scheduleLabel,
+              numInstallments: String(numInstallments),
+              firstDeductionDate: repaymentDateStr,
+              guarantorName: loan.guarantor_name || '',
+              loanType: loan.loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan',
+              approvedBy: employee?.name || 'Administration',
+              approvalDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+              disbursedAmount: disbursedAmount.toLocaleString(),
+              isTopUp,
+            },
+          }
+        });
+
+        toast({ title: "Loan Approved", description: "Loan disbursed to employee wallet & details emailed" });
       } else {
         await supabase.from('loans').update({
           status: 'rejected',
