@@ -6,9 +6,12 @@ import { Trophy, Star, Crown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { seedEmployeeOfTheMonth } from '@/utils/seedEmployeeOfMonth';
+import { useRolePermissions } from '@/hooks/useRolePermissions';
 
 const EmployeeOfTheMonthWidget = () => {
   const seeded = useRef(false);
+  const { isManager, isSuperAdmin } = useRolePermissions();
+  const canSeeBonusAmount = isManager() || isSuperAdmin();
 
   const { data: winners = [], isLoading, refetch } = useQuery({
     queryKey: ['employee-of-the-month'],
@@ -117,7 +120,7 @@ const EmployeeOfTheMonthWidget = () => {
                       "{winner.reason}"
                     </p>
                   )}
-                  {winner.bonus_amount > 0 && (
+                  {canSeeBonusAmount && winner.bonus_amount > 0 && (
                     <Badge className="mt-2 bg-emerald-500/10 text-emerald-600 border-emerald-200 text-[10px]">
                       💰 UGX {Number(winner.bonus_amount).toLocaleString()} bonus
                     </Badge>
