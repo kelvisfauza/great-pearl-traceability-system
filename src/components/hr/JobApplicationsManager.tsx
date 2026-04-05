@@ -193,11 +193,18 @@ const JobApplicationsManager = () => {
     mutationFn: async () => {
       if (!selectedApp || !newStatus) return;
 
+      const updateData: any = { status: newStatus, notes: statusNote || selectedApp.notes };
+      if (statusEmail && statusEmail !== (selectedApp.email || '')) {
+        updateData.email = statusEmail;
+      }
       const { error } = await supabase
         .from("job_applications")
-        .update({ status: newStatus, notes: statusNote || selectedApp.notes })
+        .update(updateData)
         .eq("id", selectedApp.id);
       if (error) throw error;
+
+      // Use updated email for sending
+      const appWithEmail = { ...selectedApp, email: statusEmail || selectedApp.email };
 
       // Send SMS for status update
       const msgFn = STATUS_SMS_MESSAGES[newStatus];
