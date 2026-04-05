@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { securityService } from '@/services/securityService';
+import { checkDeviceTrust, sendNewDeviceAlertEmail, trustFirstDevice } from '@/utils/deviceDetection';
 
 interface Employee {
   id: string;
@@ -350,8 +351,51 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Successful login - could log this as well for audit trail
       console.log('✅ Successful login for:', normalizedEmail);
 
+      // --- New Device Detection ---
+      try {
+        // Check if user has ANY devices registered
+        const { data: existingDevices } = await supabase
+          .from('device_sessions')
+          .select('id')
+          .eq('user_email', normalizedEmail)
+          .limit(1);
+
+        if (!existingDevices || existingDevices.length === 0) {
+          // First ever login — auto-trust this device
+          await trustFirstDevice(normalizedEmail, data.user.id);
+          console.log('🔐 First device auto-trusted for:', normalizedEmail);
+        } else {
+          // Check if current device is trusted
+          const deviceCheck = await checkDeviceTrust(normalizedEmail, data.user.id);
+          if (!deviceCheck.trusted && deviceCheck.token) {
+            // New device detected — send alert email and sign out
+            await sendNewDeviceAlertEmail(
+              normalizedEmail,
+              employeeData?.name || normalizedEmail.split('@')[0],
+              deviceCheck.token
+            );
+
+            // Sign out immediately — user must verify device first
+            await supabase.auth.signOut();
+            
+            toast({
+              title: "🔒 New Device Detected",
+              description: "A verification email has been sent. Please check your inbox and verify this device before logging in.",
+              variant: "destructive"
+            });
+
+            throw new Error('NEW_DEVICE_VERIFICATION_REQUIRED');
+          }
+        }
+      } catch (deviceError: any) {
+        if (deviceError?.message === 'NEW_DEVICE_VERIFICATION_REQUIRED') {
+          throw deviceError;
+        }
+        console.error('Device detection error (non-blocking):', deviceError);
+        // Don't block login on device detection failure
+      }
+
       // Write an explicit auth event to system_console_logs so IT can always see logins
-      // (console/error capture alone won't show a login if the user doesn't trigger any console output).
       try {
         await supabase.from('system_console_logs').insert({
           level: 'info',
