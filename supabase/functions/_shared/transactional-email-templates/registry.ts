@@ -74,4 +74,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'salary-advance-confirmation': salaryAdvanceConfirmation,
   'cash-withdrawal-confirmation': cashWithdrawalConfirmation,
   'overtime-reward': overtimeReward,
+  'price-reminder': priceReminder,
 }
