@@ -172,6 +172,8 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     }
   };
 
+  const STATEMENT_FEE = 500;
+
   const handleSendStatement = async () => {
     if (!user?.email || !dateFrom || !dateTo) return;
     setSendingEmail(true);
@@ -180,7 +182,22 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         .rpc('get_unified_user_id', { input_email: user.email });
       const unifiedUserId = userIdData || user.id;
 
-      // Fetch all entries in the date range
+      // 1. Charge 500 UGX statement fee (overdraft allowed)
+      const statementRef = `STMT-FEE-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+      const { error: feeError } = await supabase.from('ledger_entries').insert({
+        user_id: unifiedUserId,
+        entry_type: 'WITHDRAWAL',
+        amount: -STATEMENT_FEE,
+        reference: statementRef,
+        metadata: {
+          source: 'statement_fee',
+          description: 'Transaction Statement Fee',
+          period: `${dateFrom} to ${dateTo}`,
+        },
+      });
+      if (feeError) throw feeError;
+
+      // 2. Fetch all entries in the date range (including the fee we just charged)
       const { data: allEntries, error } = await supabase
         .from('ledger_entries')
         .select('*')
@@ -192,13 +209,14 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
 
       if (error) throw error;
 
-      const entries = (allEntries || []) as LedgerEntry[];
+      const fetchedEntries = (allEntries || []) as LedgerEntry[];
+      const updatedBalance = currentBalance - STATEMENT_FEE;
       
       // Build running balances
-      const walletSum = entries.filter(e => WALLET_TYPES.includes(e.entry_type)).reduce((s, e) => s + e.amount, 0);
-      let runBal = currentBalance - walletSum;
+      const walletSum = fetchedEntries.filter(e => WALLET_TYPES.includes(e.entry_type)).reduce((s, e) => s + e.amount, 0);
+      let runBal = updatedBalance - walletSum;
       
-      const transactions = entries.map(e => {
+      const transactions = fetchedEntries.map(e => {
         const affectsWallet = WALLET_TYPES.includes(e.entry_type);
         if (affectsWallet) runBal += e.amount;
         return {
@@ -210,6 +228,18 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         };
       });
 
+      // Add the statement fee as a visible line if it falls outside the date range
+      const feeInRange = fetchedEntries.some(e => e.reference === statementRef);
+      if (!feeInRange) {
+        transactions.push({
+          date: format(new Date(), 'MMM dd, yyyy h:mm a'),
+          type: '📄 Statement Fee',
+          description: 'Transaction Statement Fee',
+          amount: -STATEMENT_FEE,
+          balance: updatedBalance,
+        });
+      }
+
       const periodFrom = format(new Date(dateFrom), 'MMM dd, yyyy');
       const periodTo = format(new Date(dateTo), 'MMM dd, yyyy');
 
@@ -217,12 +247,12 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         body: {
           templateName: 'transaction-statement',
           recipientEmail: user.email,
-          idempotencyKey: `statement-${user.id}-${dateFrom}-${dateTo}`,
+          idempotencyKey: `statement-${user.id}-${dateFrom}-${dateTo}-${Date.now()}`,
           templateData: {
             employeeName: employee?.name || user.email,
             periodFrom,
             periodTo,
-            currentBalance,
+            currentBalance: updatedBalance,
             transactions,
           },
         },
@@ -230,9 +260,12 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
 
       setEmailSent(true);
       toast({
-        title: 'Statement Sent',
-        description: `Your transaction statement has been sent to ${user.email}`,
+        title: 'Statement Sent — UGX 500 Charged',
+        description: `Statement sent to ${user.email}. UGX 500 has been deducted from your wallet.`,
       });
+
+      // Refresh entries to show the fee
+      fetchEntries();
     } catch (err: any) {
       console.error('Error sending statement:', err);
       toast({ title: 'Failed to send', description: err.message, variant: 'destructive' });
