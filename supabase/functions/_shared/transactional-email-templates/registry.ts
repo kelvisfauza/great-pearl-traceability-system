@@ -66,4 +66,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'new-device-alert': newDeviceAlert,
   'price-approval-request': priceApprovalRequest,
   'wallet-transfer': walletTransfer,
+  'transaction-statement': transactionStatement,
 }
