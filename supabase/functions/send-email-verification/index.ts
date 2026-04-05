@@ -15,7 +15,7 @@ interface VerificationRequest {
 
 const SITE_NAME = "Great Agro Coffee";
 const SENDER_DOMAIN = "notify.greatpearlcoffeesystem.site";
-const FROM_DOMAIN = "greatpearlcoffeesystem.site";
+const FROM_DOMAIN = "notify.greatpearlcoffeesystem.site";
 const VERIFICATION_SUBJECT = "Your Great Agro Coffee Verification Code";
 
 function buildVerificationEmailHtml(code: string): string {
