@@ -387,6 +387,7 @@ const App: React.ComponentType = () => {
                     <SystemTransactions />
                   </ProtectedRoute>
                 } />
+                <Route path="/scan-weighbridge" element={<ScanWeighBridge />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               </MaintenanceGuard>
