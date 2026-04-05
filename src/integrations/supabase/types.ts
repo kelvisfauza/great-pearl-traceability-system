@@ -2239,6 +2239,69 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_of_the_month: {
+        Row: {
+          bonus_amount: number | null
+          bonus_awarded: boolean | null
+          created_at: string
+          created_by: string | null
+          department: string | null
+          email_scheduled_at: string | null
+          email_sent: boolean | null
+          employee_avatar_url: string | null
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          id: string
+          is_active: boolean | null
+          month: number
+          position: string | null
+          rank: number
+          reason: string | null
+          year: number
+        }
+        Insert: {
+          bonus_amount?: number | null
+          bonus_awarded?: boolean | null
+          created_at?: string
+          created_by?: string | null
+          department?: string | null
+          email_scheduled_at?: string | null
+          email_sent?: boolean | null
+          employee_avatar_url?: string | null
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          id?: string
+          is_active?: boolean | null
+          month: number
+          position?: string | null
+          rank?: number
+          reason?: string | null
+          year: number
+        }
+        Update: {
+          bonus_amount?: number | null
+          bonus_awarded?: boolean | null
+          created_at?: string
+          created_by?: string | null
+          department?: string | null
+          email_scheduled_at?: string | null
+          email_sent?: boolean | null
+          employee_avatar_url?: string | null
+          employee_email?: string
+          employee_id?: string
+          employee_name?: string
+          id?: string
+          is_active?: boolean | null
+          month?: number
+          position?: string | null
+          rank?: number
+          reason?: string | null
+          year?: number
+        }
+        Relationships: []
+      }
       employee_salary_advances: {
         Row: {
           created_at: string
