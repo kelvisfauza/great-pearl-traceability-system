@@ -106,6 +106,41 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
         });
       }
 
+      // Send email to receiver
+      const transferDate = new Date().toLocaleDateString('en-UG', { dateStyle: 'full' });
+      supabase.functions.invoke('send-transactional-email', {
+        body: {
+          templateName: 'wallet-transfer',
+          recipientEmail: selectedRecipient.email,
+          data: {
+            direction: 'received',
+            userName: selectedRecipient.name,
+            counterpartyName: employee?.name || senderEmail,
+            amount: String(parsedAmount),
+            newBalance: String(result.receiver_balance || 0),
+            reference: ref,
+            transferDate,
+          }
+        }
+      });
+
+      // Send email to sender
+      supabase.functions.invoke('send-transactional-email', {
+        body: {
+          templateName: 'wallet-transfer',
+          recipientEmail: senderEmail,
+          data: {
+            direction: 'sent',
+            userName: employee?.name || senderEmail,
+            counterpartyName: selectedRecipient.name,
+            amount: String(parsedAmount),
+            newBalance: String(Math.max(0, availableBalance - parsedAmount)),
+            reference: ref,
+            transferDate,
+          }
+        }
+      });
+
       setTxRef(ref);
       setSuccess(true);
       toast({
