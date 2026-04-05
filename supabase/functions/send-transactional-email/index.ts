@@ -6,7 +6,7 @@ import { TEMPLATES } from '../_shared/transactional-email-templates/registry.ts'
 
 const SITE_NAME = "Great Agro Coffee"
 const SENDER_DOMAIN = "notify.greatpearlcoffeesystem.site"
-const FROM_DOMAIN = "greatpearlcoffeesystem.site"
+const FROM_DOMAIN = "notify.greatpearlcoffeesystem.site"
 
 function generateToken(): string {
   const bytes = new Uint8Array(32)
