@@ -227,6 +227,7 @@ const JobApplicationsManager = () => {
       setSelectedApp(null);
       setNewStatus("");
       setStatusNote("");
+      setStatusEmail("");
       toast.success("Application status updated");
     },
     onError: (e: any) => toast.error("Failed to update: " + e.message),
