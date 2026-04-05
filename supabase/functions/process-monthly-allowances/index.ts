@@ -123,6 +123,25 @@ Deno.serve(async (req) => {
           }
         }
 
+        // Send detailed email notification
+        try {
+          await supabase.functions.invoke('send-transactional-email', {
+            body: {
+              templateName: 'allowance-credited',
+              recipientEmail: allowance.employee_email,
+              idempotencyKey: `allowance-${allowance.id}-${monthYear}`,
+              templateData: {
+                employeeName: allowance.employee_name,
+                allowanceType: typeLabel,
+                amount: allowance.amount.toLocaleString(),
+                month: monthYear,
+              },
+            },
+          })
+        } catch (emailErr) {
+          console.error(`Email failed for ${allowance.employee_name}:`, emailErr)
+        }
+
         // Also create in-app notification directly
         try {
           await supabase.from('notifications').insert({

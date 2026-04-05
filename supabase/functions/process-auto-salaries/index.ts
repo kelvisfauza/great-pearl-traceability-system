@@ -225,7 +225,25 @@ Deno.serve(async (req) => {
                 recipientEmail: emp.email,
               },
             });
-            console.log(`📱 SMS sent to ${emp.name}`);
+
+            // Also send detailed salary email
+            await supabase.functions.invoke('send-transactional-email', {
+              body: {
+                templateName: 'salary-credited',
+                recipientEmail: emp.email,
+                idempotencyKey: `salary-${emp.email}-${currentMonth}`,
+                templateData: {
+                  employeeName: emp.name,
+                  month: currentMonth,
+                  grossSalary: grossSalary.toLocaleString(),
+                  advanceDeduction: totalAdvanceDeduction.toLocaleString(),
+                  netSalary: netSalary.toLocaleString(),
+                  hasDeductions: totalAdvanceDeduction > 0,
+                },
+              },
+            });
+
+            console.log(`📱 SMS + Email sent to ${emp.name}`);
           } catch (smsErr) {
             console.warn(`⚠️ SMS failed for ${emp.name} (non-blocking):`, smsErr);
           }

@@ -233,7 +233,7 @@ const QuickLoans = () => {
     setSubmitting(true);
     try {
       // Double-check loan is still in pending_admin status
-      const { data: loan } = await supabase.from('loans').select('status, employee_name, employee_phone').eq('id', loanId).single();
+      const { data: loan } = await supabase.from('loans').select('status, employee_name, employee_phone, employee_email, loan_amount').eq('id', loanId).single();
       if (!loan || loan.status !== 'pending_admin') {
         toast({ title: "Cannot Revoke", description: "This loan has already been processed by admin.", variant: "destructive" });
         return;
@@ -247,14 +247,12 @@ const QuickLoans = () => {
       }).eq('id', loanId);
       if (error) throw error;
 
-      // Notify borrower
+      // Notify borrower via SMS + email
       await supabase.functions.invoke('send-sms', {
-        body: {
-          phone: loan.employee_phone,
-          message: `Dear ${loan.employee_name}, your guarantor ${employee.name} has revoked their guarantee for your loan. Log in to select a new guarantor for the same application. - Great Agro Coffee`,
-          userName: loan.employee_name,
-          messageType: 'loan_guarantor_revoked'
-        }
+        body: { phone: loan.employee_phone, message: `Dear ${loan.employee_name}, your guarantor ${employee.name} has revoked their guarantee for your loan. Log in to select a new guarantor for the same application. - Great Agro Coffee`, userName: loan.employee_name, messageType: 'loan_guarantor_revoked' }
+      });
+      await supabase.functions.invoke('send-transactional-email', {
+        body: { templateName: 'loan-guarantor-revoked', recipientEmail: loan.employee_email, idempotencyKey: `guarantor-revoked-${loanId}`, templateData: { employeeName: loan.employee_name, guarantorName: employee.name, loanAmount: loan.loan_amount.toLocaleString() } }
       });
 
       toast({ title: "Guarantee Revoked", description: "The borrower has been notified. The loan has been cancelled." });
@@ -458,16 +456,12 @@ const QuickLoans = () => {
       const { error } = await supabase.from('loans').update(updateData).eq('id', pendingGuarantorLoan.id);
       if (error) throw error;
 
-      // Notify borrower
+      // Notify borrower via SMS + email
       await supabase.functions.invoke('send-sms', {
-        body: {
-          phone: pendingGuarantorLoan.employee_phone,
-          message: approve
-            ? `Dear ${pendingGuarantorLoan.employee_name}, your guarantor ${employee?.name} has approved your loan request. It is now pending admin approval.`
-            : `Dear ${pendingGuarantorLoan.employee_name}, your guarantor ${employee?.name} has declined your loan request. Log in to select a new guarantor for the same application.`,
-          userName: pendingGuarantorLoan.employee_name,
-          messageType: 'loan_guarantor_response'
-        }
+        body: { phone: pendingGuarantorLoan.employee_phone, message: approve ? `Dear ${pendingGuarantorLoan.employee_name}, your guarantor ${employee?.name} has approved your loan request. It is now pending admin approval.` : `Dear ${pendingGuarantorLoan.employee_name}, your guarantor ${employee?.name} has declined your loan request. Log in to select a new guarantor for the same application.`, userName: pendingGuarantorLoan.employee_name, messageType: 'loan_guarantor_response' }
+      });
+      await supabase.functions.invoke('send-transactional-email', {
+        body: { templateName: 'loan-guarantor-response', recipientEmail: pendingGuarantorLoan.employee_email, idempotencyKey: `guarantor-response-${pendingGuarantorLoan.id}-${approve}`, templateData: { borrowerName: pendingGuarantorLoan.employee_name, guarantorName: employee?.name || '', loanAmount: pendingGuarantorLoan.loan_amount.toLocaleString(), durationMonths: String(pendingGuarantorLoan.duration_months), isApproved: approve } }
       });
 
       toast({ title: approve ? "Loan Guaranteed" : "Loan Declined", description: approve ? "The loan is now pending admin approval" : "The borrower will be notified" });
@@ -716,12 +710,10 @@ const QuickLoans = () => {
         }).eq('id', loanId);
 
         await supabase.functions.invoke('send-sms', {
-          body: {
-            phone: loan.employee_phone,
-            message: `Dear ${loan.employee_name}, your loan request of UGX ${loan.loan_amount.toLocaleString()} has been declined. Reason: ${rejectionReason || 'Not specified'}.`,
-            userName: loan.employee_name,
-            messageType: 'loan_rejected'
-          }
+          body: { phone: loan.employee_phone, message: `Dear ${loan.employee_name}, your loan request of UGX ${loan.loan_amount.toLocaleString()} has been declined. Reason: ${rejectionReason || 'Not specified'}.`, userName: loan.employee_name, messageType: 'loan_rejected' }
+        });
+        await supabase.functions.invoke('send-transactional-email', {
+          body: { templateName: 'loan-rejected', recipientEmail: loan.employee_email, idempotencyKey: `loan-rejected-${loanId}`, templateData: { employeeName: loan.employee_name, loanAmount: loan.loan_amount.toLocaleString(), rejectionReason: rejectionReason || 'Not specified', loanType: loan.loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan' } }
         });
 
         toast({ title: "Loan Rejected" });

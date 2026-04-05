@@ -22,6 +22,16 @@ import { template as systemUpdateAnnouncement } from './system-update-announceme
 import { template as withdrawalVerification } from './withdrawal-verification.tsx'
 import { template as loanGuarantorCode } from './loan-guarantor-code.tsx'
 import { template as loanApprovalDetails } from './loan-approval-details.tsx'
+import { template as dailyWalletSummary } from './daily-wallet-summary.tsx'
+import { template as salaryCredited } from './salary-credited.tsx'
+import { template as allowanceCredited } from './allowance-credited.tsx'
+import { template as loanRepayment } from './loan-repayment.tsx'
+import { template as guarantorRecovery } from './guarantor-recovery.tsx'
+import { template as loanReminder } from './loan-reminder.tsx'
+import { template as loanRejected } from './loan-rejected.tsx'
+import { template as loanGuarantorResponse } from './loan-guarantor-response.tsx'
+import { template as loanCounterOffer } from './loan-counter-offer.tsx'
+import { template as loanGuarantorRevoked } from './loan-guarantor-revoked.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'verification-code': verificationCode,
@@ -37,4 +47,14 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'withdrawal-verification': withdrawalVerification,
   'loan-guarantor-code': loanGuarantorCode,
   'loan-approval-details': loanApprovalDetails,
+  'daily-wallet-summary': dailyWalletSummary,
+  'salary-credited': salaryCredited,
+  'allowance-credited': allowanceCredited,
+  'loan-repayment': loanRepayment,
+  'guarantor-recovery': guarantorRecovery,
+  'loan-reminder': loanReminder,
+  'loan-rejected': loanRejected,
+  'loan-guarantor-response': loanGuarantorResponse,
+  'loan-counter-offer': loanCounterOffer,
+  'loan-guarantor-revoked': loanGuarantorRevoked,
 }
