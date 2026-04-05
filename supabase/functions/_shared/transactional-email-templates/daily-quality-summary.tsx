@@ -52,7 +52,7 @@ const DailyQualitySummaryEmail = ({
       <Container style={container}>
         {/* Header */}
         <Section style={headerSection}>
-          <Text style={headerLogo}>☕</Text>
+          <Img src={LOGO_URL} alt={SITE_NAME} width="48" height="48" style={{ margin: '0 auto 6px' }} />
           <Heading style={headerTitle}>{SITE_NAME}</Heading>
           <Text style={headerSubtitle}>Quality Department — Daily Summary</Text>
         </Section>
