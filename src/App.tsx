@@ -38,6 +38,7 @@ import Verify from "./pages/Verify";
 import CoffeeBookings from "./pages/CoffeeBookings";
 import PriceDisplay from "./pages/PriceDisplay";
 import ApproveAction from "./pages/ApproveAction";
+import VerifyDevice from "./pages/VerifyDevice";
 
 // V2 System Pages
 import V2DepartmentRouter from "./components/v2/V2DepartmentRouter";
