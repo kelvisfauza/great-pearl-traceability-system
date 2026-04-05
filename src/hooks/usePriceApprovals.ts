@@ -162,6 +162,41 @@ const { error } = await supabase
 
       if (error) throw error;
       
+      // Send email notification to admin for approval
+      try {
+        const APP_URL = 'https://greatpearlfinance.com';
+        await supabase.functions.invoke('send-transactional-email', {
+          body: {
+            templateName: 'price-approval-request',
+            recipientEmail: 'fauzakusa@greatpearlcoffee.com',
+            data: {
+              submittedBy,
+              submittedByEmail,
+              isCorrection,
+              iceArabica: String(prices.iceArabica),
+              robusta: String(prices.robusta),
+              exchangeRate: String(prices.exchangeRate),
+              drugarLocal: String(prices.drugarLocal),
+              wugarLocal: String(prices.wugarLocal),
+              robustaFaqLocal: String(prices.robustaFaqLocal),
+              arabicaOutturn: String(prices.arabicaOutturn),
+              arabicaMoisture: String(prices.arabicaMoisture),
+              arabicaFm: String(prices.arabicaFm),
+              arabicaBuyingPrice: String(prices.arabicaBuyingPrice),
+              robustaOutturn: String(prices.robustaOutturn),
+              robustaMoisture: String(prices.robustaMoisture),
+              robustaFm: String(prices.robustaFm),
+              robustaBuyingPrice: String(prices.robustaBuyingPrice),
+              sortedPrice: String(prices.sortedPrice),
+              approveUrl: `${APP_URL}/v2/admin`,
+              submittedAt: new Date().toLocaleDateString('en-UG', { dateStyle: 'full' }),
+            }
+          }
+        });
+      } catch (emailErr) {
+        console.error('Failed to send price approval email:', emailErr);
+      }
+
       toast({
         title: isCorrection ? "Price Correction Submitted" : "Price Update Submitted",
         description: isCorrection 
