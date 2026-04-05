@@ -40,7 +40,8 @@ const SalaryAdvanceConfirmationEmail = ({
     <Body style={main}>
       <Container style={container}>
         <Section style={header}>
-          <Text style={brandText}>☕ {SITE_NAME}</Text>
+          <Img src={LOGO_URL} alt={SITE_NAME} width="48" height="48" style={{ margin: '0 auto 8px' }} />
+          <Text style={brandText}>{SITE_NAME}</Text>
         </Section>
 
         {isCopy && (
