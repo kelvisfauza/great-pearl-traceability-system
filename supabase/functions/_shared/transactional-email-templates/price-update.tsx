@@ -86,7 +86,7 @@ const PriceUpdateEmail = (props: PriceUpdateProps) => {
 
           {/* Arabica Card */}
           <Section style={priceCard}>
-            <Text style={priceCardLabel}>☕ Arabica</Text>
+            <Text style={priceCardLabel}>🫘 Arabica</Text>
             <Text style={priceCardValue}>UGX {fmt(arabicaBuyingPrice)}/kg</Text>
             <Section style={metricsRow}>
               <Text style={metricItem}>Outturn: {arabicaOutturn}%</Text>
