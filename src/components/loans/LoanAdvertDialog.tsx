@@ -111,6 +111,18 @@ const LoanAdvertDialog = () => {
 
   const getLoanLimit = (salary: number, outstanding: number = 0) => Math.max(0, (salary || 0) * 2 - outstanding);
 
+  const getTenureMonths = (joinDate: string | null) => {
+    if (!joinDate) return 0;
+    const now = new Date();
+    const join = new Date(joinDate);
+    return Math.max(0, Math.floor((now.getTime() - join.getTime()) / (1000 * 60 * 60 * 24 * 30)));
+  };
+
+  const getMultiplier = (joinDate: string | null) => {
+    const tenure = getTenureMonths(joinDate);
+    return tenure >= 3 ? '2x' : '1x';
+  };
+
   const getPreviewMessage = () => {
     return TEMPLATES[template].build("[Name]", "[Limit]");
   };
