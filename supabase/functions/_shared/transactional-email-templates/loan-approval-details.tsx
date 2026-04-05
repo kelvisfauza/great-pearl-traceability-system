@@ -23,6 +23,8 @@ interface LoanApprovalProps {
   approvalDate?: string
   disbursedAmount?: string
   isTopUp?: boolean
+  pdfDownloadUrl?: string
+  isGuarantorCopy?: boolean
 }
 
 const LoanApprovalEmail = ({
