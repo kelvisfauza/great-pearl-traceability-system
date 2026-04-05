@@ -30,4 +30,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'daily-finance-summary': dailyFinanceSummary,
   'daily-eudr-summary': dailyEudrSummary,
   'daily-sales-summary': dailySalesSummary,
+  'system-update-announcement': systemUpdateAnnouncement,
 }
