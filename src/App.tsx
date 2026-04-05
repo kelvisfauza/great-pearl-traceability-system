@@ -148,6 +148,8 @@ const App: React.ComponentType = () => {
                 
                 {/* Public unsubscribe route - no auth required */}
                 <Route path="/unsubscribe" element={<Unsubscribe />} />
+                {/* Public approval action route - no auth required */}
+                <Route path="/approve-action" element={<ApproveAction />} />
                 {/* Public price display for monitors - no auth required */}
                 <Route path="/display" element={<PriceDisplay />} />
                 
