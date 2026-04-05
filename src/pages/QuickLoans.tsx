@@ -714,12 +714,10 @@ const QuickLoans = () => {
         }).eq('id', loanId);
 
         await supabase.functions.invoke('send-sms', {
-          body: {
-            phone: loan.employee_phone,
-            message: `Dear ${loan.employee_name}, your loan request of UGX ${loan.loan_amount.toLocaleString()} has been declined. Reason: ${rejectionReason || 'Not specified'}.`,
-            userName: loan.employee_name,
-            messageType: 'loan_rejected'
-          }
+          body: { phone: loan.employee_phone, message: `Dear ${loan.employee_name}, your loan request of UGX ${loan.loan_amount.toLocaleString()} has been declined. Reason: ${rejectionReason || 'Not specified'}.`, userName: loan.employee_name, messageType: 'loan_rejected' }
+        });
+        await supabase.functions.invoke('send-transactional-email', {
+          body: { templateName: 'loan-rejected', recipientEmail: loan.employee_email, idempotencyKey: `loan-rejected-${loanId}`, templateData: { employeeName: loan.employee_name, loanAmount: loan.loan_amount.toLocaleString(), rejectionReason: rejectionReason || 'Not specified', loanType: loan.loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan' } }
         });
 
         toast({ title: "Loan Rejected" });
