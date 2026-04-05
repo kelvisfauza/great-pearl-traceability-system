@@ -1,0 +1,14 @@
+
+-- March 2026 Overtime Bonus Awards (claimable, not auto-credited)
+INSERT INTO bonuses (id, employee_id, employee_email, employee_name, amount, reason, status, allocated_by, allocated_at) VALUES
+  (gen_random_uuid(), '3bfd4285-343d-4991-aa06-78ace1479afb', 'bwambaledenis@greatpearlcoffee.com', 'Bwambale Denis', 29000, 'March 2026 Overtime Reward: 29 hrs net overtime × 1,000 UGX/hr', 'pending', 'fauzakusa@greatpearlcoffee.com', now()),
+  (gen_random_uuid(), 'c31bde5d-9890-4e4e-803d-ce73218968af', 'kelvifauza@gmail.com', 'Kelvis Fauza', 31000, 'March 2026 Overtime Reward: 31 hrs net overtime × 1,000 UGX/hr', 'pending', 'fauzakusa@greatpearlcoffee.com', now()),
+  (gen_random_uuid(), '38bf0365-c6e7-4d4f-abad-c869a9990ee0', 'musemawyclif@greatpearlcoffee.com', 'Musema Wyclif', 27000, 'March 2026 Overtime Reward: 27 hrs net overtime × 1,000 UGX/hr', 'pending', 'fauzakusa@greatpearlcoffee.com', now()),
+  (gen_random_uuid(), '6a1a2e65-4d07-4e0d-a016-34143297caaa', 'tatwanzire@greatpearlcoffee.com', 'Artwanzire Timothy', 26000, 'March 2026 Overtime Reward: 26 hrs net overtime × 1,000 UGX/hr', 'pending', 'fauzakusa@greatpearlcoffee.com', now()),
+  (gen_random_uuid(), '4ccf60bd-d4df-4f9e-befe-a145a7f99b62', 'tumwinealex@greatpearlcoffee.com', 'Tumwine Alex', 14000, 'March 2026 Overtime Reward: 14 hrs net overtime × 1,000 UGX/hr', 'pending', 'fauzakusa@greatpearlcoffee.com', now()),
+  (gen_random_uuid(), '22ffe09c-8f70-43c0-9fbb-f36a58a2127e', 'godwinmukobi@greatpearlcoffee.com', 'Mukobi Godwin', 13000, 'March 2026 Overtime Reward: 13 hrs net overtime × 1,000 UGX/hr', 'pending', 'fauzakusa@greatpearlcoffee.com', now()),
+  (gen_random_uuid(), 'bdb0cc7f-6636-42e6-a8fb-a925e51d1c03', 'sserunkumataufique@greatpearlcoffee.com', 'Sserunkuma Taufiq', 12000, 'March 2026 Overtime Reward: 12 hrs net overtime × 1,000 UGX/hr', 'pending', 'fauzakusa@greatpearlcoffee.com', now()),
+  (gen_random_uuid(), '0cc106f6-6004-4c15-aab3-4efe4bc00ca7', 'bwambalebenson@greatpearlcoffee.com', 'Bwambale Benson', 11000, 'March 2026 Overtime Reward: 11 hrs net overtime × 1,000 UGX/hr', 'pending', 'fauzakusa@greatpearlcoffee.com', now()),
+  (gen_random_uuid(), '4fc18dc3-7823-474e-8c0a-b2a085b78b65', 'kahindodaphne@greatpearlcoffee.com', 'Kahindo Daphine', 10000, 'March 2026 Overtime Reward: 10 hrs net overtime × 1,000 UGX/hr', 'pending', 'fauzakusa@greatpearlcoffee.com', now()),
+  (gen_random_uuid(), 'b2fa0987-241a-486e-83ed-564aca47f354', 'johnmasereka@greatpearlcoffee.com', 'John Masereka', 9000, 'March 2026 Overtime Reward: 9 hrs net overtime × 1,000 UGX/hr', 'pending', 'fauzakusa@greatpearlcoffee.com', now()),
+  (gen_random_uuid(), 'de39d5d6-2b0f-4d7b-9833-7fee52b09ae1', 'bwambalemorjalia@greatpearlcoffee.com', 'Morjalia Jadens', 3000, 'March 2026 Overtime Reward: 3 hrs net overtime × 1,000 UGX/hr', 'pending', 'fauzakusa@greatpearlcoffee.com', now());
