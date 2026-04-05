@@ -150,29 +150,57 @@ const LoanAdvertDialog = () => {
     let failCount = 0;
 
     for (const emp of selectedList) {
-      if (!emp.phone) { failCount++; continue; }
-
       const limit = getLoanLimit(emp.salary, emp.outstanding);
-      if (limit <= 0) { successCount++; continue; }
-      const message = TEMPLATES[template].build(emp.name.split(" ")[0], limit.toLocaleString());
+      if (limit <= 0) { successCount++; setProgress({ sent: ++successCount, failed: failCount, total: selectedList.length }); continue; }
 
-      try {
-        const { error } = await supabase.functions.invoke("send-sms", {
-          body: {
-            phone: emp.phone,
-            message,
-            userName: emp.name,
-            messageType: "loan_advert",
-            department: emp.department,
-            recipientEmail: emp.email,
-          },
-        });
+      let empSuccess = false;
 
-        if (error) failCount++;
-        else successCount++;
-      } catch {
-        failCount++;
+      // Send SMS
+      if (sendSms && emp.phone) {
+        const message = TEMPLATES[template].build(emp.name.split(" ")[0], limit.toLocaleString());
+        try {
+          const { error } = await supabase.functions.invoke("send-sms", {
+            body: {
+              phone: emp.phone,
+              message,
+              userName: emp.name,
+              messageType: "loan_advert",
+              department: emp.department,
+              recipientEmail: emp.email,
+            },
+          });
+          if (!error) empSuccess = true;
+        } catch { /* ignore */ }
       }
+
+      // Send Email
+      if (sendEmail && emp.email) {
+        const tenure = getTenureMonths(emp.join_date);
+        const multiplier = getMultiplier(emp.join_date);
+        try {
+          const { error } = await supabase.functions.invoke("send-transactional-email", {
+            body: {
+              templateName: "loan-promotion",
+              recipientEmail: emp.email,
+              idempotencyKey: `loan-promo-${emp.id}-${Date.now()}`,
+              templateData: {
+                employeeName: emp.name,
+                maxLoanAmount: limit,
+                tenureMonths: tenure,
+                salary: emp.salary,
+                multiplier,
+                interestRate: 10,
+                maxRepaymentMonths: 6,
+                loginUrl: "https://www.greatagrocoffeesystem.site",
+              },
+            },
+          });
+          if (!error) empSuccess = true;
+        } catch { /* ignore */ }
+      }
+
+      if (empSuccess) successCount++;
+      else failCount++;
       setProgress({ sent: successCount, failed: failCount, total: selectedList.length });
     }
 
