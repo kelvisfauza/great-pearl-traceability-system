@@ -144,6 +144,8 @@ const App: React.ComponentType = () => {
                 <Route path="/verify" element={<Verify />} />
                 <Route path="/verify/:code" element={<Verify />} />
                 
+                {/* Public unsubscribe route - no auth required */}
+                <Route path="/unsubscribe" element={<Unsubscribe />} />
                 {/* Public price display for monitors - no auth required */}
                 <Route path="/display" element={<PriceDisplay />} />
                 
