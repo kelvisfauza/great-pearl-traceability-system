@@ -45,10 +45,17 @@ const LoanApprovalEmail = ({
           <Text style={subtitle}>{SITE_NAME} — Loan Agreement</Text>
         </Section>
         <Section style={content}>
-          <Text style={greeting}>{employeeName ? `Dear ${employeeName},` : 'Dear Employee,'}</Text>
+          {isGuarantorCopy && (
+            <Section style={guarantorNotice}>
+              <Text style={guarantorNoticeText}>📋 GUARANTOR COPY — You are receiving this as the guarantor for this loan.</Text>
+            </Section>
+          )}
+          <Text style={greeting}>{employeeName ? `Dear ${isGuarantorCopy ? guarantorName || 'Guarantor' : employeeName},` : 'Dear Employee,'}</Text>
           <Text style={bodyText}>
-            Your {loanType.toLowerCase()} {isTopUp ? 'top-up ' : ''}has been <strong style={{color:'#1a5632'}}>approved and disbursed</strong> to your wallet.
-            Below are the full details of your loan agreement:
+            {isGuarantorCopy
+              ? `This is to confirm that ${employeeName}'s ${loanType.toLowerCase()} ${isTopUp ? 'top-up ' : ''}has been approved and disbursed. As the guarantor, please review the loan details below:`
+              : `Your ${loanType.toLowerCase()} ${isTopUp ? 'top-up ' : ''}has been approved and disbursed to your wallet. Below are the full details of your loan agreement:`
+            }
           </Text>
 
           {/* Loan Summary Card */}
