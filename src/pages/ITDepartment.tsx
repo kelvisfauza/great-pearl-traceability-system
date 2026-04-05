@@ -8,7 +8,8 @@ import {
   Monitor, 
   Shield, 
   Users, 
-  Server
+  Server,
+  Mail
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePresenceList } from '@/hooks/usePresenceList';
