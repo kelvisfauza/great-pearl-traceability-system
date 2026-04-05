@@ -15,6 +15,9 @@ import { template as easterGreeting } from './easter-greeting.tsx'
 import { template as dailyQualitySummary } from './daily-quality-summary.tsx'
 import { template as dailyAdminSummary } from './daily-admin-summary.tsx'
 import { template as dailyOpsSummary } from './daily-ops-summary.tsx'
+import { template as dailyFinanceSummary } from './daily-finance-summary.tsx'
+import { template as dailyEudrSummary } from './daily-eudr-summary.tsx'
+import { template as dailySalesSummary } from './daily-sales-summary.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'verification-code': verificationCode,
@@ -23,4 +26,7 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'daily-quality-summary': dailyQualitySummary,
   'daily-admin-summary': dailyAdminSummary,
   'daily-ops-summary': dailyOpsSummary,
+  'daily-finance-summary': dailyFinanceSummary,
+  'daily-eudr-summary': dailyEudrSummary,
+  'daily-sales-summary': dailySalesSummary,
 }
