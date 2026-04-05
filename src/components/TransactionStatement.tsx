@@ -8,10 +8,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { 
   FileText, ArrowUpRight, ArrowDownLeft, Star, Briefcase, 
-  Gift, Smartphone, Loader2, ChevronDown, TrendingUp, Minus, Printer, Send, RotateCcw, AlertTriangle
+  Gift, Smartphone, Loader2, ChevronDown, TrendingUp, Minus, Printer, Send, RotateCcw, AlertTriangle, Mail, Calendar, CheckCircle2
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -51,24 +53,29 @@ interface TransactionStatementProps {
   thisMonthEarnings?: number;
 }
 
+const DISPLAY_LIMIT = 10;
+const WALLET_TYPES = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT'];
+
 export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open, onOpenChange, currentBalance, balanceBroughtForward = 0, thisMonthEarnings = 0 }) => {
   const { user, employee } = useAuth();
   const { toast } = useToast();
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(false);
-  const [limit, setLimit] = useState(30);
-  const [hasMore, setHasMore] = useState(true);
   const [reverseEntry, setReverseEntry] = useState<LedgerEntry | null>(null);
   const [reverseReason, setReverseReason] = useState('');
   const [reversing, setReversing] = useState(false);
+  
+  // Email statement state
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
 
-  const WALLET_TYPES = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT'];
-
-  // Calculate running balances (oldest to newest, then reverse for display)
   const entriesWithBalance = React.useMemo(() => {
     if (entries.length === 0) return [];
     const chronological = [...entries].reverse();
-    // Only wallet-affecting entries contribute to running balance
     const walletSum = chronological.filter(e => WALLET_TYPES.includes(e.entry_type)).reduce((s, e) => s + e.amount, 0);
     let runningBalance = currentBalance - walletSum;
     
@@ -77,7 +84,6 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       if (affectsWallet) runningBalance += e.amount;
       return { ...e, runningBalance: affectsWallet ? runningBalance : null };
     });
-    // Reverse back to newest-first for display
     return withBalance.reverse();
   }, [entries, currentBalance]);
 
@@ -86,13 +92,11 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     if (!printWindow) return;
 
     const rows = entriesWithBalance.map(e => {
-      const config = ENTRY_CONFIG[e.entry_type] || DEFAULT_CONFIG;
-      const isCredit = e.amount > 0;
       const activityLabel = getActivityLabel(e);
       const transferMeta = getTransferMeta(e);
+      const isCredit = e.amount > 0;
       
       let typeCol = `${getEntryLabel(e)}${activityLabel ? ' - ' + activityLabel : ''}`;
-      // Add transfer details for print
       if (transferMeta) {
         if (e.amount < 0 && transferMeta.to_email) {
           typeCol += `<br/><span style="font-size:10px;color:#666">To: ${transferMeta.to_name} (${transferMeta.to_email})</span>`;
@@ -134,7 +138,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     printWindow.document.close();
   };
 
-  const fetchEntries = async (count: number) => {
+  const fetchEntries = async () => {
     if (!user?.email) return;
     setLoading(true);
     try {
@@ -142,22 +146,98 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         .rpc('get_unified_user_id', { input_email: user.email });
       const unifiedUserId = userIdData || user.id;
 
+      // Get total count first
+      const { count } = await supabase
+        .from('ledger_entries')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', unifiedUserId)
+        .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY']);
+      
+      setTotalCount(count || 0);
+
       const { data, error } = await supabase
         .from('ledger_entries')
         .select('*')
         .eq('user_id', unifiedUserId)
         .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY'])
         .order('created_at', { ascending: false })
-        .limit(count);
+        .limit(DISPLAY_LIMIT);
 
       if (error) throw error;
-      const items = (data || []) as LedgerEntry[];
-      setEntries(items);
-      setHasMore(items.length === count);
+      setEntries((data || []) as LedgerEntry[]);
     } catch (err) {
       console.error('Error fetching ledger:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSendStatement = async () => {
+    if (!user?.email || !dateFrom || !dateTo) return;
+    setSendingEmail(true);
+    try {
+      const { data: userIdData } = await supabase
+        .rpc('get_unified_user_id', { input_email: user.email });
+      const unifiedUserId = userIdData || user.id;
+
+      // Fetch all entries in the date range
+      const { data: allEntries, error } = await supabase
+        .from('ledger_entries')
+        .select('*')
+        .eq('user_id', unifiedUserId)
+        .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY'])
+        .gte('created_at', `${dateFrom}T00:00:00`)
+        .lte('created_at', `${dateTo}T23:59:59`)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      const entries = (allEntries || []) as LedgerEntry[];
+      
+      // Build running balances
+      const walletSum = entries.filter(e => WALLET_TYPES.includes(e.entry_type)).reduce((s, e) => s + e.amount, 0);
+      let runBal = currentBalance - walletSum;
+      
+      const transactions = entries.map(e => {
+        const affectsWallet = WALLET_TYPES.includes(e.entry_type);
+        if (affectsWallet) runBal += e.amount;
+        return {
+          date: format(new Date(e.created_at), 'MMM dd, yyyy h:mm a'),
+          type: getEntryLabel(e),
+          description: getActivityLabel(e) || '-',
+          amount: e.amount,
+          balance: affectsWallet ? runBal : null,
+        };
+      });
+
+      const periodFrom = format(new Date(dateFrom), 'MMM dd, yyyy');
+      const periodTo = format(new Date(dateTo), 'MMM dd, yyyy');
+
+      await supabase.functions.invoke('send-transactional-email', {
+        body: {
+          templateName: 'transaction-statement',
+          recipientEmail: user.email,
+          idempotencyKey: `statement-${user.id}-${dateFrom}-${dateTo}`,
+          templateData: {
+            employeeName: employee?.name || user.email,
+            periodFrom,
+            periodTo,
+            currentBalance,
+            transactions,
+          },
+        },
+      });
+
+      setEmailSent(true);
+      toast({
+        title: 'Statement Sent',
+        description: `Your transaction statement has been sent to ${user.email}`,
+      });
+    } catch (err: any) {
+      console.error('Error sending statement:', err);
+      toast({ title: 'Failed to send', description: err.message, variant: 'destructive' });
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -186,58 +266,45 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
   };
 
   useEffect(() => {
-    if (open) fetchEntries(limit);
-  }, [open, user?.id, limit]);
+    if (open) fetchEntries();
+  }, [open, user?.id]);
 
   const getActivityLabel = (entry: LedgerEntry) => {
     const meta = entry.metadata ? (typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata) : null;
     
-    // Wallet transfers - show recipient/sender details
     if (meta?.type === 'wallet_transfer') {
-      if (entry.amount < 0) {
-        return `to ${meta.to_name || meta.to_email || 'Unknown'}`;
-      }
+      if (entry.amount < 0) return `to ${meta.to_name || meta.to_email || 'Unknown'}`;
       return `from ${meta.from_name || meta.from_email || 'Unknown'}`;
     }
     
     if (entry.entry_type === 'LOYALTY_REWARD' && meta) {
       const activityMap: Record<string, string> = {
-        form_submission: 'Form Submission',
-        data_entry: 'Data Entry',
-        report_generation: 'Report Generation',
-        task_completion: 'Task Completion',
-        page_visit: 'Page Visit',
-        interaction: 'Interaction',
-        document_upload: 'Document Upload',
-        transaction: 'Transaction',
+        form_submission: 'Form Submission', data_entry: 'Data Entry', report_generation: 'Report Generation',
+        task_completion: 'Task Completion', page_visit: 'Page Visit', interaction: 'Interaction',
+        document_upload: 'Document Upload', transaction: 'Transaction',
       };
       return activityMap[meta.activity_type] || meta.activity_type || '';
     }
     if (entry.entry_type === 'LOAN_DISBURSEMENT' && meta) {
       return meta.loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan';
     }
-    // Detect loan disbursement stored as DEPOSIT
     if (entry.entry_type === 'DEPOSIT' && (meta?.source === 'loan_disbursement' || entry.reference?.startsWith('LOAN-DISBURSE'))) {
       return meta?.duration_months ? `${meta.duration_months} month(s)` : '';
     }
-    // Detect allowance deposits - show clear description and month
     if (entry.entry_type === 'DEPOSIT' && meta?.allowance_type) {
       const desc = meta.description || (meta.allowance_type === 'data_allowance' ? 'Monthly Data Allowance' : 'Monthly Airtime Allowance');
       const monthLabel = meta.month_year ? ` — ${meta.month_year}` : '';
       return `${desc}${monthLabel}`;
     }
-    // Detect salary - show description
     if (entry.entry_type === 'DEPOSIT' && (meta?.source === 'salary' || meta?.source === 'payroll' || entry.reference?.startsWith('SALARY') || entry.reference?.startsWith('SAL-'))) {
       return meta?.month || meta?.description || '';
     }
-    // Detect expense credit
     if (entry.entry_type === 'DEPOSIT' && (entry.reference?.startsWith('EXPENSE-APPROVED') || meta?.source === 'expense_approval')) {
       return meta?.title || meta?.description || '';
     }
     if (entry.entry_type === 'LOAN_REPAYMENT' && meta) {
       return meta.method === 'mobile_money' ? 'via MoMo' : meta.method || '';
     }
-    // Detect loan-related wallet deductions
     if ((entry.entry_type === 'WITHDRAWAL' || entry.entry_type === 'ADJUSTMENT') && meta?.loan_id) {
       if (meta.source === 'guarantor' && meta.borrower) {
         const borrowerName = meta.description?.match(/for (.+?)['']s loan/)?.[1] || meta.borrower;
@@ -246,52 +313,28 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       const source = meta.source === 'wallet' ? 'Wallet Recovery' : meta.source === 'salary' ? 'Salary Recovery' : 'Loan Recovery';
       return source;
     }
-    // Generic deposit - show any available description from metadata
-    if (entry.entry_type === 'DEPOSIT' && meta?.description) {
-      return meta.description;
-    }
+    if (entry.entry_type === 'DEPOSIT' && meta?.description) return meta.description;
     return '';
   };
 
   const getEntryLabel = (entry: LedgerEntry) => {
     const meta = entry.metadata ? (typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata) : null;
     const config = ENTRY_CONFIG[entry.entry_type] || DEFAULT_CONFIG;
-    // Detect wallet transfers
     if (meta?.type === 'wallet_transfer') {
       if (entry.amount < 0) return '📤 Sent Money';
       return '📥 Received Money';
     }
-    // Detect loan disbursement (stored as DEPOSIT with loan metadata)
-    if (entry.entry_type === 'DEPOSIT' && (meta?.source === 'loan_disbursement' || entry.reference?.startsWith('LOAN-DISBURSE'))) {
-      return '💰 Loan Disbursement';
-    }
-    // Detect allowance deposits (data/airtime)
+    if (entry.entry_type === 'DEPOSIT' && (meta?.source === 'loan_disbursement' || entry.reference?.startsWith('LOAN-DISBURSE'))) return '💰 Loan Disbursement';
     if (entry.entry_type === 'DEPOSIT' && meta?.allowance_type) {
       if (meta.allowance_type === 'data_allowance') return '📶 Data Allowance';
       if (meta.allowance_type === 'airtime_allowance') return '📱 Airtime Allowance';
       return `🎁 ${meta.description || 'Monthly Allowance'}`;
     }
-    // Detect salary credits
-    if (entry.entry_type === 'DEPOSIT' && (meta?.source === 'salary' || meta?.source === 'payroll' || entry.reference?.startsWith('SALARY') || entry.reference?.startsWith('SAL-'))) {
-      return '💵 Salary Credit';
-    }
-    // Detect expense credits
-    if (entry.entry_type === 'DEPOSIT' && (entry.reference?.startsWith('EXPENSE-APPROVED') || meta?.source === 'expense_approval')) {
-      return '📋 Expense Reimbursement';
-    }
-    // Detect bonus credits
-    if (entry.entry_type === 'DEPOSIT' && (entry.reference?.startsWith('BONUS') || meta?.source === 'bonus')) {
-      return '🏆 Bonus Award';
-    }
-    // Detect birthday rewards
-    if (entry.entry_type === 'DEPOSIT' && (entry.reference?.includes('BIRTHDAY') || meta?.source === 'birthday_reward')) {
-      return '🎂 Birthday Reward';
-    }
-    // Detect mobile money deposits
-    if (entry.entry_type === 'DEPOSIT' && (entry.reference?.startsWith('MOMO') || entry.reference?.startsWith('MM-') || meta?.source === 'mobile_money')) {
-      return '📲 Mobile Money Deposit';
-    }
-    // Override label for loan-related wallet/adjustment entries
+    if (entry.entry_type === 'DEPOSIT' && (meta?.source === 'salary' || meta?.source === 'payroll' || entry.reference?.startsWith('SALARY') || entry.reference?.startsWith('SAL-'))) return '💵 Salary Credit';
+    if (entry.entry_type === 'DEPOSIT' && (entry.reference?.startsWith('EXPENSE-APPROVED') || meta?.source === 'expense_approval')) return '📋 Expense Reimbursement';
+    if (entry.entry_type === 'DEPOSIT' && (entry.reference?.startsWith('BONUS') || meta?.source === 'bonus')) return '🏆 Bonus Award';
+    if (entry.entry_type === 'DEPOSIT' && (entry.reference?.includes('BIRTHDAY') || meta?.source === 'birthday_reward')) return '🎂 Birthday Reward';
+    if (entry.entry_type === 'DEPOSIT' && (entry.reference?.startsWith('MOMO') || entry.reference?.startsWith('MM-') || meta?.source === 'mobile_money')) return '📲 Mobile Money Deposit';
     if ((entry.entry_type === 'WITHDRAWAL' || entry.entry_type === 'ADJUSTMENT') && meta?.loan_id) {
       if (meta.source === 'guarantor' && meta.borrower) {
         const borrowerName = meta.description?.match(/for (.+?)['']s loan/)?.[1] || meta.borrower;
@@ -349,6 +392,10 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         </div>
       ) : (
         <div className="space-y-1.5">
+          <div className="text-xs text-muted-foreground mb-1">
+            Showing {Math.min(DISPLAY_LIMIT, entries.length)} most recent of {totalCount} transactions
+          </div>
+
           {entriesWithBalance.map((entry) => {
             const config = ENTRY_CONFIG[entry.entry_type] || DEFAULT_CONFIG;
             const isCredit = entry.amount > 0;
@@ -412,20 +459,93 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
             );
           })}
 
-          {hasMore && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full text-xs"
-              onClick={() => setLimit(prev => prev + 30)}
-              disabled={loading}
-            >
-              {loading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <ChevronDown className="h-3 w-3 mr-1" />}
-              Load More
-            </Button>
+          {/* Full Statement via Email */}
+          {totalCount > DISPLAY_LIMIT && (
+            <div className="border border-dashed rounded-lg p-4 text-center space-y-2 bg-muted/30">
+              <Mail className="h-5 w-5 mx-auto text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                You have <span className="font-semibold text-foreground">{totalCount - DISPLAY_LIMIT}</span> more transactions.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Select a date range and we'll email your full statement.
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => { setShowEmailDialog(true); setEmailSent(false); }}
+                className="gap-1.5"
+              >
+                <Mail className="h-3.5 w-3.5" />
+                Get Full Statement via Email
+              </Button>
+            </div>
           )}
         </div>
       )}
+
+      {/* Email Statement Dialog */}
+      <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Email Full Statement
+            </DialogTitle>
+          </DialogHeader>
+          
+          {emailSent ? (
+            <div className="text-center py-6 space-y-3">
+              <CheckCircle2 className="h-12 w-12 mx-auto text-green-600" />
+              <h3 className="font-semibold text-lg">Statement Sent!</h3>
+              <p className="text-sm text-muted-foreground">
+                Your detailed transaction statement has been sent to <span className="font-medium text-foreground">{user?.email}</span>
+              </p>
+              <p className="text-xs text-muted-foreground">Check your inbox (and spam folder) for the email.</p>
+              <Button onClick={() => setShowEmailDialog(false)} className="mt-2">Done</Button>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Select the period for your statement. It will be sent to <span className="font-medium text-foreground">{user?.email}</span>
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="dateFrom" className="text-xs">From</Label>
+                    <Input
+                      id="dateFrom"
+                      type="date"
+                      value={dateFrom}
+                      onChange={e => setDateFrom(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="dateTo" className="text-xs">To</Label>
+                    <Input
+                      id="dateTo"
+                      type="date"
+                      value={dateTo}
+                      onChange={e => setDateTo(e.target.value)}
+                      max={format(new Date(), 'yyyy-MM-dd')}
+                    />
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowEmailDialog(false)}>Cancel</Button>
+                <Button
+                  onClick={handleSendStatement}
+                  disabled={!dateFrom || !dateTo || sendingEmail}
+                  className="gap-1.5"
+                >
+                  {sendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {sendingEmail ? 'Sending...' : 'Send Statement'}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Reversal Confirmation Dialog */}
       <Dialog open={!!reverseEntry} onOpenChange={open => !open && setReverseEntry(null)}>
