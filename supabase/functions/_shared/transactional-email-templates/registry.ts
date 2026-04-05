@@ -43,6 +43,7 @@ import { template as overtimeReward } from './overtime-reward.tsx'
 import { template as priceReminder } from './price-reminder.tsx'
 import { template as loanPromotion } from './loan-promotion.tsx'
 import { template as taskAssignment } from './task-assignment.tsx'
+import { template as jobApplicationStatus } from './job-application-status.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'verification-code': verificationCode,
@@ -79,4 +80,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'price-reminder': priceReminder,
   'loan-promotion': loanPromotion,
   'task-assignment': taskAssignment,
+  'job-application-status': jobApplicationStatus,
 }

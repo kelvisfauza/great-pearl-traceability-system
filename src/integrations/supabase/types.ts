@@ -4087,6 +4087,7 @@ export type Database = {
           created_by: string
           cv_filename: string | null
           cv_url: string | null
+          email: string | null
           id: string
           job_applied_for: string
           notes: string | null
@@ -4101,6 +4102,7 @@ export type Database = {
           created_by: string
           cv_filename?: string | null
           cv_url?: string | null
+          email?: string | null
           id?: string
           job_applied_for: string
           notes?: string | null
@@ -4115,6 +4117,7 @@ export type Database = {
           created_by?: string
           cv_filename?: string | null
           cv_url?: string | null
+          email?: string | null
           id?: string
           job_applied_for?: string
           notes?: string | null

@@ -59,6 +59,7 @@ const JobApplicationsManager = () => {
   const [form, setForm] = useState({
     applicant_name: "",
     phone: "",
+    email: "",
     job_applied_for: "",
     notes: "",
   });
@@ -97,6 +98,32 @@ const JobApplicationsManager = () => {
     }
   };
 
+  const sendStatusEmail = async (app: { id: string; applicant_name: string; ref_code: string; job_applied_for: string; email?: string | null }, status: string, notes?: string) => {
+    if (!app.email) return;
+    try {
+      const msgFn = STATUS_SMS_MESSAGES[status];
+      const statusMessage = msgFn ? msgFn(app.applicant_name, app.ref_code, notes) : undefined;
+      await supabase.functions.invoke("send-transactional-email", {
+        body: {
+          templateName: "job-application-status",
+          recipientEmail: app.email,
+          idempotencyKey: `job-status-${app.id}-${status}-${Date.now()}`,
+          templateData: {
+            applicantName: app.applicant_name,
+            refCode: app.ref_code,
+            position: app.job_applied_for,
+            newStatus: status,
+            notes: notes || undefined,
+            statusMessage,
+          },
+        },
+      });
+      console.log(`📧 Status email sent to ${app.email} for ${status}`);
+    } catch (e) {
+      console.error("Status email failed:", e);
+    }
+  };
+
   const addMutation = useMutation({
     mutationFn: async () => {
       const refCode = await generateRefCode();
@@ -121,6 +148,7 @@ const JobApplicationsManager = () => {
         ref_code: refCode,
         applicant_name: form.applicant_name.trim(),
         phone: form.phone.trim(),
+        email: form.email.trim() || null,
         job_applied_for: form.job_applied_for.trim(),
         notes: form.notes.trim() || null,
         cv_url: cvUrl,
@@ -140,12 +168,17 @@ const JobApplicationsManager = () => {
         toast.warning("Application saved but SMS notification failed");
       }
 
+      // Send email notification
+      if (data) {
+        await sendStatusEmail(data, "Pending");
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["job-applications"] });
       setShowAddDialog(false);
-      setForm({ applicant_name: "", phone: "", job_applied_for: "", notes: "" });
+      setForm({ applicant_name: "", phone: "", email: "", job_applied_for: "", notes: "" });
       setCvFile(null);
       toast.success("Job application added successfully");
     },
@@ -176,6 +209,9 @@ const JobApplicationsManager = () => {
           toast.warning("Status updated but SMS failed");
         }
       }
+
+      // Send email for status update
+      await sendStatusEmail(selectedApp, newStatus, statusNote || undefined);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["job-applications"] });
@@ -237,6 +273,10 @@ const JobApplicationsManager = () => {
                   <div>
                     <Label>Phone Number *</Label>
                     <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="0781234567" />
+                  </div>
+                  <div>
+                    <Label>Email (optional)</Label>
+                    <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="applicant@email.com" />
                   </div>
                   <div>
                     <Label>Job Applied For *</Label>
@@ -305,6 +345,7 @@ const JobApplicationsManager = () => {
                       </p>
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{app.phone}</span>
+                        {app.email && <span className="text-primary">{app.email}</span>}
                         <span>{format(new Date(app.created_at), "MMM dd, yyyy")}</span>
                         {app.cv_url && (
                           <a href={app.cv_url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-primary hover:underline">
