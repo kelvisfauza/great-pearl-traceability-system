@@ -19,7 +19,7 @@ const PriceReminderEmail = ({
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>
-      ☕ Good morning {analystName}! Please update today's coffee buying prices.
+      Good morning {analystName}! Please update today's coffee buying prices.
     </Preview>
     <Body style={main}>
       <Container style={container}>
