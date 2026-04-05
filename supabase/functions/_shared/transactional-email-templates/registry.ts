@@ -62,4 +62,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'loan-guarantor-revoked': loanGuarantorRevoked,
   'approval-action': approvalAction,
   'new-device-alert': newDeviceAlert,
+  'price-approval-request': priceApprovalRequest,
 }
