@@ -649,7 +649,7 @@ const QuickLoans = () => {
           isTopUp,
           employeeName: loan.employee_name,
           employeeEmail: loan.employee_email,
-          employeeId: borrowerEmp.data?.gac_id || '',
+          employeeId: '',
           employeePhone: borrowerEmp.data?.phone || loan.employee_phone || '',
           employeePosition: borrowerEmp.data?.position || '',
           employeeDepartment: borrowerEmp.data?.department || '',
