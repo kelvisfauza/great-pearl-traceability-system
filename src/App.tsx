@@ -12,6 +12,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import Unsubscribe from "./pages/Unsubscribe";
 import Procurement from "./pages/Procurement";
 import QualityControl from "./pages/QualityControl";
 import Inventory from "./pages/Inventory";
@@ -144,6 +145,8 @@ const App: React.ComponentType = () => {
                 <Route path="/verify" element={<Verify />} />
                 <Route path="/verify/:code" element={<Verify />} />
                 
+                {/* Public unsubscribe route - no auth required */}
+                <Route path="/unsubscribe" element={<Unsubscribe />} />
                 {/* Public price display for monitors - no auth required */}
                 <Route path="/display" element={<PriceDisplay />} />
                 

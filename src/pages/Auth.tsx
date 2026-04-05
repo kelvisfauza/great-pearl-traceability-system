@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, AlertCircle, Phone, Mail, MessageCircle, Lock } from 'lucide-react';
 import PasswordChangeModal from '@/components/PasswordChangeModal';
 import BiometricVerification from '@/components/BiometricVerification';
+import { EmailVerification } from '@/components/EmailVerification';
 import { supabase } from '@/integrations/supabase/client';
 import { smsService } from '@/services/smsService';
 import { useToast } from '@/hooks/use-toast';
@@ -24,6 +25,8 @@ const Auth = () => {
   const [error, setError] = useState('');
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [showBiometric, setShowBiometric] = useState(false);
+  const [showEmailVerification, setShowEmailVerification] = useState(false);
+  const [pendingLoginEmail, setPendingLoginEmail] = useState('');
   
   const [showSystemSelection, setShowSystemSelection] = useState(false);
   
@@ -128,35 +131,12 @@ const Auth = () => {
         return;
       }
 
-      // Check if user is admin - only admins need biometric verification
-      console.log('🔍 Checking employee role...');
-      const { data: employee, error: employeeError } = await supabase
-        .from('employees')
-        .select('role, email')
-        .eq('email', email)
-        .maybeSingle();
+      // After successful password auth, require email verification
+      console.log('📧 Requiring email verification for:', email);
+      setPendingLoginEmail(email.toLowerCase().trim());
+      setShowEmailVerification(true);
+      setLoading(false);
 
-      if (employeeError) {
-        console.error('❌ Error fetching employee data:', employeeError);
-      }
-      console.log('👔 Employee data:', employee);
-
-      // Bypass biometric in preview/development environments
-      const isPreviewOrDev = window.location.hostname.includes('lovable') || 
-                              window.location.hostname === 'localhost';
-
-      if (employee?.role === 'Administrator' && !isPreviewOrDev) {
-        // Admin user in production - require biometric verification
-        console.log('🔒 Admin detected, requiring biometric verification');
-        setShowBiometric(true);
-        setLoading(false);
-      } else {
-        // Regular user or preview environment - proceed to system selection
-        // Fraud lock is handled by GlobalActivityTracker after login, not here
-        console.log('✅ Login complete, proceeding...');
-        setShowSystemSelection(true);
-        setLoading(false);
-      }
     } catch (error: any) {
       console.error('Login error:', error);
       
@@ -177,9 +157,53 @@ const Auth = () => {
     }
   };
 
+  const handleEmailVerificationComplete = async () => {
+    setShowEmailVerification(false);
+    
+    // After email verification, continue with the rest of the login flow
+    console.log('✅ Email verified, continuing login flow...');
+    
+    // Check if user is admin - only admins need biometric verification
+    const { data: employee, error: employeeError } = await supabase
+      .from('employees')
+      .select('role, email')
+      .eq('email', pendingLoginEmail)
+      .maybeSingle();
+
+    if (employeeError) {
+      console.error('❌ Error fetching employee data:', employeeError);
+    }
+
+    // Bypass biometric in preview/development environments
+    const isPreviewOrDev = window.location.hostname.includes('lovable') || 
+                            window.location.hostname === 'localhost';
+
+    if (employee?.role === 'Administrator' && !isPreviewOrDev) {
+      console.log('🔒 Admin detected, requiring biometric verification');
+      setShowBiometric(true);
+    } else {
+      console.log('✅ Login complete, proceeding...');
+      setShowSystemSelection(true);
+    }
+  };
+
+  const handleEmailVerificationCancel = async () => {
+    // Sign out since they cancelled verification
+    await supabase.auth.signOut();
+    setShowEmailVerification(false);
+    setPendingLoginEmail('');
+    toast({
+      title: "Verification Cancelled",
+      description: "You must verify your email to sign in.",
+      variant: "destructive"
+    });
+  };
+
   const handlePasswordChangeComplete = () => {
     setShowPasswordChange(false);
-    setShowSystemSelection(true);
+    // After password change, also require email verification
+    setPendingLoginEmail(email.toLowerCase().trim());
+    setShowEmailVerification(true);
   };
 
   const handleBiometricComplete = () => {
@@ -201,7 +225,18 @@ const Auth = () => {
     setLoading(false);
   };
 
-  
+  // Show email verification screen
+  if (showEmailVerification) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center p-4">
+        <EmailVerification
+          email={pendingLoginEmail}
+          onVerificationComplete={handleEmailVerificationComplete}
+          onCancel={handleEmailVerificationCancel}
+        />
+      </div>
+    );
+  }
 
   // Show biometric verification screen for admins
   if (showBiometric) {
