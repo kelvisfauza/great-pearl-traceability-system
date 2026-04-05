@@ -1,0 +1,1 @@
+UPDATE employees SET department = 'Field Operations' WHERE name = 'John Masereka' AND department = 'Operations';
