@@ -1,128 +1,72 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { RealtimeChannel } from '@supabase/supabase-js';
 
 export const usePresence = (userId?: string) => {
   const { user, employee } = useAuth();
-  const channelRef = useRef<RealtimeChannel | null>(null);
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const updatePresence = useCallback(async (status: 'online' | 'away' | 'offline' = 'online') => {
-    // Use authUserId if available, otherwise fall back to user.id
-    // Handle both camelCase and snake_case for auth_user_id
+  const updatePresenceDB = useCallback(async (status: 'online' | 'away' | 'offline') => {
     const authUserId = employee?.authUserId || (employee as any)?.auth_user_id;
     const id = userId || authUserId || user?.id;
     
-    if (!id || !employee) {
-      console.log('❌ Cannot update presence - missing data:', { 
-        id, 
-        hasEmployee: !!employee, 
-        authUserId,
-        employeeEmail: employee?.email,
-        userName: employee?.name
-      });
-      return;
-    }
+    if (!id) return;
 
     try {
-      console.log('✅ Updating presence:', status, 'for user:', employee.email, 'with ID:', id);
-      
-      if (!channelRef.current) {
-        // Initialize presence channel
-        console.log('📡 Initializing presence channel');
-        channelRef.current = supabase.channel('online-users');
-      }
-
-      // Track presence with user details
-      const presenceData = {
-        user_id: id,
-        email: employee.email,
-        name: employee.name,
-        department: employee.department,
-        role: employee.role,
-        status: status,
-        online_at: new Date().toISOString(),
-      };
-      
-      console.log('📤 Tracking presence with data:', presenceData);
-      await channelRef.current.track(presenceData);
-      console.log('✅ Presence tracked successfully');
-
+      await supabase
+        .from('user_presence')
+        .upsert({
+          user_id: id,
+          status,
+          last_seen: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id' });
     } catch (error) {
-      console.error('❌ Error updating presence:', error);
+      console.error('Error updating presence:', error);
     }
   }, [userId, user?.id, employee]);
 
-  const setOffline = useCallback(async () => {
-    if (channelRef.current) {
-      await channelRef.current.untrack();
-    }
-  }, []);
-
   useEffect(() => {
-    // Use authUserId if available, otherwise fall back to user.id
-    // Handle both camelCase and snake_case for auth_user_id
     const authUserId = employee?.authUserId || (employee as any)?.auth_user_id;
     const id = userId || authUserId || user?.id;
     
-    if (!id || !employee) {
-      console.log('⏭️ Skipping presence initialization - missing data:', { 
-        hasId: !!id, 
-        hasEmployee: !!employee,
-        userId: user?.id,
-        authUserId,
-        employeeAuthUserId: employee?.authUserId,
-        employeeAuthUserIdSnake: (employee as any)?.auth_user_id,
-        employeeEmail: employee?.email,
-        employeeName: employee?.name
-      });
-      return;
-    }
+    if (!id || !employee) return;
 
-    console.log('🚀 Initializing presence tracking for:', employee.email, 'with ID:', id, '(authUserId:', employee.authUserId, ')');
+    // Set online immediately
+    updatePresenceDB('online');
 
-    // Create and subscribe to presence channel
-    const channel = supabase.channel('online-users');
-    channelRef.current = channel;
-
-    channel.subscribe(async (status) => {
-      console.log('📡 Presence channel status:', status);
-      if (status === 'SUBSCRIBED') {
-        console.log('✅ Presence channel subscribed, tracking user as online');
-        await updatePresence('online');
-      } else if (status === 'CHANNEL_ERROR') {
-        console.error('❌ Presence channel error');
-      }
-    });
+    // Heartbeat every 60 seconds to keep presence fresh
+    heartbeatRef.current = setInterval(() => {
+      updatePresenceDB(document.hidden ? 'away' : 'online');
+    }, 60000);
 
     // Handle visibility change
     const handleVisibilityChange = () => {
-      if (document.hidden) {
-        updatePresence('away');
-      } else {
-        updatePresence('online');
-      }
+      updatePresenceDB(document.hidden ? 'away' : 'online');
     };
 
     // Handle page unload
     const handleBeforeUnload = () => {
-      setOffline();
+      // Use sendBeacon for reliable unload
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_presence?user_id=eq.${id}`;
+      const body = JSON.stringify({ status: 'offline', last_seen: new Date().toISOString(), updated_at: new Date().toISOString() });
+      navigator.sendBeacon?.(url, new Blob([body], { type: 'application/json' }));
+      updatePresenceDB('offline');
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
-      console.log('Cleaning up presence tracking');
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      setOffline();
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+        heartbeatRef.current = null;
       }
+      updatePresenceDB('offline');
     };
-  }, [userId, user?.id, employee, updatePresence, setOffline]);
+  }, [userId, user?.id, employee, updatePresenceDB]);
 
-  return { updatePresence };
+  return { updatePresence: updatePresenceDB };
 };
