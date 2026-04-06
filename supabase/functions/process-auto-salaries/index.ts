@@ -226,7 +226,33 @@ Deno.serve(async (req) => {
               },
             });
 
-            // Also send detailed salary email
+            // Generate payslip
+            let payslipUrl = '';
+            try {
+              const transactionId = `AUTO-SAL-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-${emp.name.replace(/\s/g, '').substring(0, 6).toUpperCase()}`;
+              const { data: payslipResult } = await supabase.functions.invoke('generate-payslip', {
+                body: {
+                  employeeName: emp.name,
+                  employeeEmail: emp.email,
+                  employeeId: emp.employee_id || emp.id,
+                  department: emp.department || '',
+                  month: currentMonth,
+                  grossSalary: grossSalary,
+                  advanceDeduction: totalAdvanceDeduction,
+                  netSalary: netSalary,
+                  paymentMethod: 'Wallet',
+                  transactionId: transactionId,
+                  processedDate: now.toLocaleDateString('en-UG', { year: 'numeric', month: 'long', day: 'numeric' }),
+                  advanceDetails: advanceDetails,
+                },
+              });
+              payslipUrl = payslipResult?.url || '';
+              console.log(`📄 Payslip generated for ${emp.name}: ${payslipUrl}`);
+            } catch (payslipErr) {
+              console.warn(`⚠️ Payslip generation failed for ${emp.name} (non-blocking):`, payslipErr);
+            }
+
+            // Send detailed salary email with payslip link
             await supabase.functions.invoke('send-transactional-email', {
               body: {
                 templateName: 'salary-credited',
@@ -239,6 +265,9 @@ Deno.serve(async (req) => {
                   advanceDeduction: totalAdvanceDeduction.toLocaleString(),
                   netSalary: netSalary.toLocaleString(),
                   hasDeductions: totalAdvanceDeduction > 0,
+                  department: emp.department || '',
+                  transactionId: `AUTO-SAL-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-${emp.name.replace(/\s/g, '').substring(0, 6).toUpperCase()}`,
+                  payslipUrl: payslipUrl,
                 },
               },
             });
