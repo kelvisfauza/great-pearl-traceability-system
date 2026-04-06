@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import LeaveApplication from './LeaveApplication';
+import ContractTenureCard from './ContractTenureCard';
 
 interface UserProfileProps {
   employee: any;
@@ -437,6 +438,9 @@ const UserProfile = ({ employee }: UserProfileProps) => {
           )}
         </CardContent>
       </Card>
+
+      {/* Contract & Tenure */}
+      <ContractTenureCard employee={employee} />
 
       {/* Leave Application */}
       <LeaveApplication />
