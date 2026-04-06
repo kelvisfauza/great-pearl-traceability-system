@@ -1,28 +1,19 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Users, TrendingUp, Clock } from 'lucide-react';
+import { Users, TrendingUp, Clock, Wifi, WifiOff } from 'lucide-react';
 import { usePresenceList } from '@/hooks/usePresenceList';
-import { useEffect, useState, useMemo } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
+import { useAuth } from '@/contexts/AuthContext';
 
-interface LoginStats {
-  auth_user_id: string;
-  employee_name: string;
-  employee_email: string;
-  last_login_date: string;
-  last_login_time: string;
-  total_logins: number;
-  active_days: number;
-}
-
-const formatLastSeen = (dateStr: string, timeStr: string) => {
+const formatLastSeen = (dateStr?: string) => {
   try {
-    const lastLogin = new Date(timeStr || dateStr);
+    if (!dateStr) return 'Never';
+    const lastSeen = new Date(dateStr);
     const now = new Date();
-    const diffMs = now.getTime() - lastLogin.getTime();
+    const diffMs = now.getTime() - lastSeen.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
@@ -31,14 +22,13 @@ const formatLastSeen = (dateStr: string, timeStr: string) => {
     const diffDays = Math.floor(diffHours / 24);
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays}d ago`;
-    return lastLogin.toLocaleDateString();
+    return lastSeen.toLocaleDateString();
   } catch {
     return 'Never';
   }
 };
 
 const getUsageLevel = (activeDays: number) => {
-  // Based on ~26 working days in March
   const rate = (activeDays / 26) * 100;
   if (rate >= 75) return { label: 'High', color: 'bg-green-100 text-green-800', percent: rate };
   if (rate >= 40) return { label: 'Medium', color: 'bg-yellow-100 text-yellow-800', percent: rate };
@@ -46,75 +36,19 @@ const getUsageLevel = (activeDays: number) => {
 };
 
 const ActiveUsers = () => {
-  const { users: presenceUsers, loading: presenceLoading } = usePresenceList();
-  const [loginStats, setLoginStats] = useState<LoginStats[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { users, loading, onlineCount } = usePresenceList();
+  const { user } = useAuth();
   const [q, setQ] = useState('');
-
-  useEffect(() => {
-    const fetchLoginStats = async () => {
-      const { data, error } = await supabase
-        .from('employee_login_tracker')
-        .select('auth_user_id, employee_name, employee_email, login_date, login_time');
-
-      if (data && !error) {
-        // Aggregate in JS
-        const grouped: Record<string, LoginStats> = {};
-        data.forEach((row) => {
-          const key = row.auth_user_id;
-          if (!grouped[key]) {
-            grouped[key] = {
-              auth_user_id: row.auth_user_id,
-              employee_name: row.employee_name || '',
-              employee_email: row.employee_email || '',
-              last_login_date: row.login_date,
-              last_login_time: row.login_time || row.login_date,
-              total_logins: 0,
-              active_days: 0,
-            };
-          }
-          grouped[key].total_logins++;
-          // Track unique days
-          if (row.login_date > grouped[key].last_login_date) {
-            grouped[key].last_login_date = row.login_date;
-            grouped[key].last_login_time = row.login_time || row.login_date;
-          }
-        });
-
-        // Count unique active days per user
-        const dayMap: Record<string, Set<string>> = {};
-        data.forEach((row) => {
-          if (!dayMap[row.auth_user_id]) dayMap[row.auth_user_id] = new Set();
-          dayMap[row.auth_user_id].add(row.login_date);
-        });
-        Object.keys(grouped).forEach((key) => {
-          grouped[key].active_days = dayMap[key]?.size || 0;
-        });
-
-        const sorted = Object.values(grouped).sort((a, b) =>
-          b.last_login_date.localeCompare(a.last_login_date)
-        );
-        setLoginStats(sorted);
-      }
-      setLoading(false);
-    };
-    fetchLoginStats();
-  }, []);
-
-  const onlineUserIds = useMemo(() => {
-    return new Set(presenceUsers.map((u) => u.id));
-  }, [presenceUsers]);
 
   const filtered = useMemo(() => {
     const qq = q.toLowerCase();
-    return loginStats.filter(
+    return users.filter(
       (u) =>
-        u.employee_name.toLowerCase().includes(qq) ||
-        u.employee_email.toLowerCase().includes(qq)
+        (u.name || '').toLowerCase().includes(qq) ||
+        (u.email || '').toLowerCase().includes(qq) ||
+        (u.department || '').toLowerCase().includes(qq)
     );
-  }, [loginStats, q]);
-
-  const onlineCount = filtered.filter((u) => onlineUserIds.has(u.auth_user_id)).length;
+  }, [users, q]);
 
   return (
     <Card>
@@ -123,17 +57,22 @@ const ActiveUsers = () => {
           <Users className="h-5 w-5" />
           Active Users & Usage
         </CardTitle>
-        <CardDescription>
-          {onlineCount} online now • {loginStats.length} total users tracked
+        <CardDescription className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+            {onlineCount} online now
+          </span>
+          <span>•</span>
+          <span>{users.length} total users tracked</span>
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         <Input
-          placeholder="Search by name or email..."
+          placeholder="Search by name, email, or department..."
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        {(loading || presenceLoading) && (
+        {loading && (
           <div className="text-sm text-muted-foreground">Loading user data...</div>
         )}
         {!loading && filtered.length === 0 && (
@@ -141,18 +80,23 @@ const ActiveUsers = () => {
         )}
         {!loading &&
           filtered.map((u) => {
-            const isOnline = onlineUserIds.has(u.auth_user_id);
-            const usage = getUsageLevel(u.active_days);
+            const isOnline = u.status === 'online';
+            const isAway = u.status === 'away';
+            const isCurrentUser = u.id === user?.id;
+            const usage = getUsageLevel(u.active_days || 0);
+            
             return (
               <div
-                key={u.auth_user_id}
-                className="flex items-center justify-between p-3 border rounded-lg gap-3"
+                key={u.id}
+                className={`flex items-center justify-between p-3 border rounded-lg gap-3 transition-colors ${
+                  isCurrentUser ? 'border-primary/30 bg-primary/5' : ''
+                }`}
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div className="relative">
                     <Avatar className="h-9 w-9">
                       <AvatarFallback className="text-xs">
-                        {(u.employee_name || 'U')
+                        {(u.name || 'U')
                           .split(' ')
                           .map((s) => s[0])
                           .join('')
@@ -160,34 +104,71 @@ const ActiveUsers = () => {
                           .toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    {isOnline && (
-                      <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-background" />
-                    )}
+                    <span
+                      className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-background ${
+                        isOnline
+                          ? 'bg-green-500 animate-pulse'
+                          : isAway
+                          ? 'bg-yellow-500'
+                          : 'bg-muted-foreground/30'
+                      }`}
+                    />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-sm truncate">{u.employee_name || 'User'}</p>
-                    <p className="text-xs text-muted-foreground truncate">{u.employee_email}</p>
+                    <p className="font-medium text-sm truncate">
+                      {u.name || 'User'}
+                      {isCurrentUser && (
+                        <span className="ml-1.5 text-xs text-primary font-normal">(You)</span>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {u.email}
+                      {u.department && <span> • {u.department}</span>}
+                    </p>
                     <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        Last seen: {isOnline ? 'Now' : formatLastSeen(u.last_login_date, u.last_login_time)}
+                        {isOnline ? 'Active now' : `Last seen: ${formatLastSeen(u.online_at || u.last_login)}`}
                       </span>
-                      <span className="flex items-center gap-1">
-                        <TrendingUp className="h-3 w-3" />
-                        {u.active_days} days • {u.total_logins} logins
-                      </span>
+                      {(u.total_logins || 0) > 0 && (
+                        <span className="flex items-center gap-1">
+                          <TrendingUp className="h-3 w-3" />
+                          {u.active_days}d • {u.total_logins} logins
+                        </span>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Progress value={Math.min(usage.percent, 100)} className="h-1.5 flex-1 max-w-[120px]" />
-                      <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${usage.color}`}>
-                        {usage.label}
-                      </Badge>
-                    </div>
+                    {(u.active_days || 0) > 0 && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <Progress value={Math.min(usage.percent, 100)} className="h-1.5 flex-1 max-w-[120px]" />
+                        <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${usage.color}`}>
+                          {usage.label}
+                        </Badge>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <Badge className={isOnline ? 'bg-green-100 text-green-800' : 'bg-muted text-muted-foreground'}>
-                  {isOnline ? 'Online' : 'Offline'}
-                </Badge>
+                <div className="flex flex-col items-end gap-1">
+                  <Badge
+                    className={
+                      isOnline
+                        ? 'bg-green-100 text-green-800'
+                        : isAway
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-muted text-muted-foreground'
+                    }
+                  >
+                    {isOnline ? (
+                      <><Wifi className="h-3 w-3 mr-1" /> Online</>
+                    ) : isAway ? (
+                      'Away'
+                    ) : (
+                      <><WifiOff className="h-3 w-3 mr-1" /> Offline</>
+                    )}
+                  </Badge>
+                  {u.role && (
+                    <span className="text-[10px] text-muted-foreground">{u.role}</span>
+                  )}
+                </div>
               </div>
             );
           })}
