@@ -147,6 +147,42 @@ const BonusClaimPopup = () => {
 
       if (ledgerError) throw ledgerError;
 
+      // Get updated wallet balance for the email
+      let balanceAfter = '0';
+      try {
+        const { data: ledgerSum } = await supabase
+          .from('ledger_entries')
+          .select('amount, entry_type')
+          .eq('user_id', user.id);
+        if (ledgerSum) {
+          const total = ledgerSum.reduce((sum: number, e: any) => {
+            const amt = Number(e.amount) || 0;
+            return e.entry_type === 'WITHDRAWAL' || e.entry_type === 'DEBIT' ? sum - amt : sum + amt;
+          }, 0);
+          balanceAfter = total.toLocaleString();
+        }
+      } catch {
+        // fallback - don't block the claim
+      }
+
+      // Send bonus claimed email to employee
+      const claimedAt = new Date().toLocaleString('en-UG', { dateStyle: 'medium', timeStyle: 'short' });
+      supabase.functions.invoke('send-transactional-email', {
+        body: {
+          templateName: 'bonus-claimed',
+          recipientEmail: user.email,
+          idempotencyKey: `bonus-claimed-${bonus.id}-${ref}`,
+          templateData: {
+            employeeName: employee?.name || user.email,
+            amount: Number(bonus.amount).toLocaleString(),
+            reason: bonus.reason,
+            reference: ref,
+            balanceAfter,
+            claimedAt,
+          },
+        },
+      });
+
       toast({
         title: "🎉 Bonus Claimed!",
         description: `Ref: ${ref}. UGX ${Number(bonus.amount).toLocaleString()} added to your balance.`,
