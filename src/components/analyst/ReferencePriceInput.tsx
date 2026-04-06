@@ -9,7 +9,8 @@ import { useReferencePrices } from '@/hooks/useReferencePrices';
 import { usePriceApprovals, PriceApprovalRequest } from '@/hooks/usePriceApprovals';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Coffee, Send, Globe, RefreshCw, Clock } from 'lucide-react';
+import { Loader2, Coffee, Send, Globe, RefreshCw, Clock, CalendarDays, Sun, Moon } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import PendingPriceApproval from './PendingPriceApproval';
 
 interface ReferencePrices {
