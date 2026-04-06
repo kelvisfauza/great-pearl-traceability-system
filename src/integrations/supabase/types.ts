@@ -9328,6 +9328,13 @@ export type Database = {
           wallet_balance: number
         }[]
       }
+      get_auth_users_by_emails: {
+        Args: { emails: string[] }
+        Returns: {
+          email: string
+          id: string
+        }[]
+      }
       get_available_to_request: { Args: { user_uuid: string }; Returns: number }
       get_available_to_request_safe: {
         Args: { user_uuid: string }
