@@ -46,6 +46,7 @@ import { template as taskAssignment } from './task-assignment.tsx'
 import { template as jobApplicationStatus } from './job-application-status.tsx'
 import { template as employeeOfTheMonth } from './employee-of-the-month.tsx'
 import { template as dailyInventorySummary } from './daily-inventory-summary.tsx'
+import { template as bonusClaimed } from './bonus-claimed.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'verification-code': verificationCode,
