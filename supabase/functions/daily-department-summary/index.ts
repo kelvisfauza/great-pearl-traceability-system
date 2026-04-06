@@ -446,8 +446,8 @@ Deno.serve(async (req) => {
         outstanding: a.outstanding_ugx || 0,
       }))
 
-      // Inactive Suppliers (no delivery in 30+ days)
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
+      // Inactive Suppliers (no delivery in 21 days / 3 weeks)
+      const threeWeeksAgo = new Date(Date.now() - 21 * 86400000).toISOString().split('T')[0]
       const { data: allSuppliers } = await supabase
         .from('suppliers')
         .select('id, name')
@@ -456,7 +456,7 @@ Deno.serve(async (req) => {
       const { data: recentDeliveries } = await supabase
         .from('coffee_records')
         .select('supplier_name, date')
-        .gte('date', thirtyDaysAgo)
+        .gte('date', threeWeeksAgo)
 
       const recentSupplierSet = new Set((recentDeliveries||[]).map((r:any) => r.supplier_name?.toLowerCase()))
       
@@ -486,9 +486,9 @@ Deno.serve(async (req) => {
 
       // Build action items
       const procActionItems: string[] = []
+      if (inactive.length > 0) procActionItems.push(`${inactive.length} suppliers inactive for 3+ weeks — investigate reasons`)
       if (overdueBookingsList.length > 0) procActionItems.push(`${overdueBookingsList.length} overdue coffee booking${overdueBookingsList.length > 1 ? 's' : ''} — follow up with suppliers`)
       if (contractAlerts.length > 0) procActionItems.push(`${contractAlerts.length} buyer contract${contractAlerts.length > 1 ? 's' : ''} need attention (expiry/low fulfillment)`)
-      if (inactive.length > 10) procActionItems.push(`${inactive.length} suppliers inactive for 30+ days — investigate reasons`)
       if (totalOutstanding > 0) procActionItems.push(`UGX ${totalOutstanding.toLocaleString()} in outstanding supplier advances`)
 
       const procHighlights: string[] = []
