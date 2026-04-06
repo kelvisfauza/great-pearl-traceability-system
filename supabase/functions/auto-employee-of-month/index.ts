@@ -256,7 +256,22 @@ Deno.serve(async (req) => {
         },
       });
 
-      // Also send copy to operations
+      // Send wallet credit confirmation email
+      await supabase.functions.invoke("send-transactional-email", {
+        body: {
+          templateName: "allowance-credited",
+          recipientEmail: emp.employee_email,
+          idempotencyKey: `eotm-wallet-credit-${emp.employee_id}-${targetMonth}-${targetYear}`,
+          templateData: {
+            employeeName: emp.employee_name,
+            allowanceType: "Employee of the Month Reward",
+            amount: Number(bonusAmount).toLocaleString(),
+            month: `${monthNames[targetMonth]} ${targetYear}`,
+          },
+        },
+      });
+
+      // Send copies to operations
       await supabase.functions.invoke("send-transactional-email", {
         body: {
           templateName: "employee-of-the-month",
@@ -271,6 +286,20 @@ Deno.serve(async (req) => {
             bonusAmount: Number(bonusAmount).toLocaleString(),
             department: empInfo.department || "General",
             avatarUrl: empInfo.avatar_url || "",
+          },
+        },
+      });
+
+      await supabase.functions.invoke("send-transactional-email", {
+        body: {
+          templateName: "allowance-credited",
+          recipientEmail: "operations@greatpearlcoffee.com",
+          idempotencyKey: `eotm-wallet-ops-${rank}-${targetMonth}-${targetYear}`,
+          templateData: {
+            employeeName: emp.employee_name,
+            allowanceType: "Employee of the Month Reward",
+            amount: Number(bonusAmount).toLocaleString(),
+            month: `${monthNames[targetMonth]} ${targetYear}`,
           },
         },
       });
