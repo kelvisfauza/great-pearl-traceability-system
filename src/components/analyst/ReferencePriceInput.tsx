@@ -317,7 +317,26 @@ const handleTestSMS = async (phoneNumber: string) => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Reference Price Management</CardTitle>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle>Reference Price Management</CardTitle>
+            <Badge variant={targetInfo.isNextDay ? "secondary" : "default"} className="text-sm px-3 py-1">
+              {targetInfo.isNextDay ? (
+                <><Moon className="h-4 w-4 mr-1.5" /> Setting prices for tomorrow</>
+              ) : (
+                <><Sun className="h-4 w-4 mr-1.5" /> Setting prices for today</>
+              )}
+              {' — '}
+              {new Date(targetInfo.date + 'T00:00:00').toLocaleDateString('en-UG', { weekday: 'short', day: 'numeric', month: 'short' })}
+            </Badge>
+          </div>
+          {targetInfo.isNextDay && (
+            <div className="bg-accent/50 border border-border rounded-lg p-3 mt-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CalendarDays className="h-4 w-4" />
+                <span>It's past 7 PM — prices you set now will apply <strong>tomorrow</strong>. This ensures the team has prices ready at the start of business.</span>
+              </div>
+            </div>
+          )}
           {currentPrices.lastUpdated && (
             <p className="text-sm text-muted-foreground">
               Last updated: {new Date(currentPrices.lastUpdated).toLocaleString()}
