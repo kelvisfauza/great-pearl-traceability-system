@@ -19,6 +19,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const OPERATIONS_EMAIL = 'operations@greatpearlcoffee.com'
+
 async function sendTemplateEmail(
   lovableApiKey: string, templateName: string, recipientEmail: string,
   recipientName: string, templateData: Record<string, any>, today: string
@@ -36,6 +38,30 @@ async function sendTemplateEmail(
       idempotency_key: idempotencyKey, unsubscribe_token: generateToken() },
     { apiKey: lovableApiKey, idempotencyKey }
   )
+
+  // CC operations if they're not the direct recipient
+  if (recipientEmail.toLowerCase() !== OPERATIONS_EMAIL.toLowerCase()) {
+    try {
+      const baseKey = idempotencyKey.replace(recipientEmail, '').replace(/[^a-zA-Z0-9-_]/g, '')
+      const opsIdempotencyKey = `ops-cc-${templateName}-${baseKey}`
+      const ccNote = `<div style="background:#f0f4f8;padding:12px 16px;border-radius:6px;margin-bottom:20px;font-family:Arial,sans-serif;font-size:13px;color:#334155;">
+        <strong>📋 Operations Copy</strong><br/>
+        Original recipient: <strong>${recipientEmail}</strong> (${recipientName})<br/>
+        Template: ${templateName} | Sent: ${new Date().toLocaleString('en-UG', { timeZone: 'Africa/Kampala' })}
+      </div>`
+      const opsHtml = html.replace(/<body[^>]*>/, (match: string) => `${match}${ccNote}`)
+      await sendLovableEmail(
+        { to: OPERATIONS_EMAIL, from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`, sender_domain: SENDER_DOMAIN,
+          subject: `[CC] ${resolvedSubject}`, html: opsHtml, text: `[CC - Sent to: ${recipientEmail}]\n\n${plainText}`,
+          purpose: 'transactional', label: `cc-${templateName}`,
+          idempotency_key: opsIdempotencyKey, unsubscribe_token: generateToken() },
+        { apiKey: lovableApiKey, idempotencyKey: opsIdempotencyKey }
+      )
+      console.log(`📋 Operations CC sent for ${templateName} (original: ${recipientEmail})`)
+    } catch (ccErr) {
+      console.warn(`⚠️ Failed to send operations CC for ${templateName}:`, ccErr.message)
+    }
+  }
 }
 
 async function sendToRecipients(
