@@ -5857,6 +5857,7 @@ export type Database = {
           submitted_by_email: string
           suggested_arabica_price: number | null
           suggested_robusta_price: number | null
+          target_date: string | null
           updated_at: string
           wugar_local: number | null
         }
@@ -5889,6 +5890,7 @@ export type Database = {
           submitted_by_email: string
           suggested_arabica_price?: number | null
           suggested_robusta_price?: number | null
+          target_date?: string | null
           updated_at?: string
           wugar_local?: number | null
         }
@@ -5921,6 +5923,7 @@ export type Database = {
           submitted_by_email?: string
           suggested_arabica_price?: number | null
           suggested_robusta_price?: number | null
+          target_date?: string | null
           updated_at?: string
           wugar_local?: number | null
         }

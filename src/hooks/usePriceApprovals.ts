@@ -129,13 +129,14 @@ const submitForApproval = async (
     },
     submittedBy: string,
     submittedByEmail: string,
-    notifySuppliers: boolean
+    notifySuppliers: boolean,
+    targetDate?: string
   ) => {
     try {
       // Auto-detect if this is a correction
       const isCorrection = await checkIfCorrectionNeeded();
       
-const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('price_approval_requests')
         .insert({
           submitted_by: submittedBy,
@@ -157,7 +158,8 @@ const { error } = await supabase
           sorted_price: prices.sortedPrice,
           notify_suppliers: notifySuppliers,
           is_correction: isCorrection,
-          status: 'pending'
+          status: 'pending',
+          target_date: targetDate || new Date().toISOString().split('T')[0]
         });
 
       if (error) throw error;

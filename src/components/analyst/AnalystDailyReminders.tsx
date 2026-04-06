@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Bell, TrendingUp, FileText, Clock } from 'lucide-react';
+import { Bell, TrendingUp, FileText, Clock, Moon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface AnalystDailyRemindersProps {
@@ -19,48 +19,57 @@ const AnalystDailyReminders: React.FC<AnalystDailyRemindersProps> = ({
   const { toast } = useToast();
   const [showPriceReminder, setShowPriceReminder] = useState(false);
   const [showReportReminder, setShowReportReminder] = useState(false);
+  const [showEveningReminder, setShowEveningReminder] = useState(false);
   const [pricesSetToday, setPricesSetToday] = useState(false);
   const [reportCreatedToday, setReportCreatedToday] = useState(false);
+  const [tomorrowPricesSet, setTomorrowPricesSet] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Check if user is data analyst (Denis or has Data Analysis permission)
   const isDataAnalyst = employee?.department === 'Data Analysis' || 
                         employee?.permissions?.includes('Data Analysis') ||
                         employee?.position?.toLowerCase().includes('analyst');
 
-  // Get today's date in YYYY-MM-DD format
-  const getTodayDate = () => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-  };
-
-  // Check if current time is after 7pm (19:00)
-  const isAfter7PM = () => {
+  const getEATDate = () => {
     const now = new Date();
-    return now.getHours() >= 19;
+    return new Date(now.getTime() + (3 * 60 * 60 * 1000));
   };
 
-  // Check if prices were set today
-  const checkPricesSetToday = async (): Promise<boolean> => {
+  const getTodayDate = () => getEATDate().toISOString().split('T')[0];
+  
+  const getTomorrowDate = () => {
+    const eat = getEATDate();
+    eat.setUTCDate(eat.getUTCDate() + 1);
+    return eat.toISOString().split('T')[0];
+  };
+
+  const getEATHour = () => getEATDate().getUTCHours();
+
+  const checkPricesSetForDate = async (targetDate: string): Promise<boolean> => {
     try {
-      const today = getTodayDate();
-      // Use any to avoid type instantiation issues with price_history
-      const client = supabase as any;
-      const { data, error } = await client
-        .from('price_history')
+      // Check price_approval_requests for pending or approved
+      const { data } = await (supabase as any)
+        .from('price_approval_requests')
         .select('id')
-        .eq('date', today)
+        .eq('target_date', targetDate)
+        .in('status', ['pending', 'approved'])
         .limit(1);
 
-      if (error) throw error;
-      return Array.isArray(data) && data.length > 0;
+      if (data && data.length > 0) return true;
+
+      // Fallback: check price_history
+      const { data: ph } = await (supabase as any)
+        .from('price_history')
+        .select('id')
+        .eq('price_date', targetDate)
+        .limit(1);
+
+      return ph && ph.length > 0;
     } catch (error) {
       console.error('Error checking prices:', error);
       return false;
     }
   };
 
-  // Check if market report was created today
   const checkReportCreatedToday = async (): Promise<boolean> => {
     try {
       const today = getTodayDate();
@@ -78,7 +87,6 @@ const AnalystDailyReminders: React.FC<AnalystDailyRemindersProps> = ({
     }
   };
 
-  // Initial check on component mount
   useEffect(() => {
     if (!isDataAnalyst) {
       setLoading(false);
@@ -87,28 +95,41 @@ const AnalystDailyReminders: React.FC<AnalystDailyRemindersProps> = ({
 
     const checkStatus = async () => {
       setLoading(true);
+      const today = getTodayDate();
+      const eatHour = getEATHour();
       
-      const pricesSet = await checkPricesSetToday();
+      const pricesSet = await checkPricesSetForDate(today);
       const reportCreated = await checkReportCreatedToday();
       
       setPricesSetToday(pricesSet);
       setReportCreatedToday(reportCreated);
       
-      // Show price reminder if prices not set (morning reminder)
-      if (!pricesSet) {
-        // Check if we already showed this today (use localStorage)
-        const dismissedKey = `price_reminder_dismissed_${getTodayDate()}`;
-        const dismissed = localStorage.getItem(dismissedKey);
-        if (!dismissed) {
+      // Morning: show price reminder if not set
+      if (!pricesSet && eatHour < 19) {
+        const dismissedKey = `price_reminder_dismissed_${today}`;
+        if (!localStorage.getItem(dismissedKey)) {
           setShowPriceReminder(true);
         }
       }
       
-      // Show report reminder if after 7pm and report not created
-      if (isAfter7PM() && !reportCreated) {
-        const dismissedKey = `report_reminder_dismissed_${getTodayDate()}`;
-        const dismissed = localStorage.getItem(dismissedKey);
-        if (!dismissed) {
+      // Evening (after 7 PM): check if tomorrow's prices are set
+      if (eatHour >= 19) {
+        const tomorrow = getTomorrowDate();
+        const tomorrowSet = await checkPricesSetForDate(tomorrow);
+        setTomorrowPricesSet(tomorrowSet);
+        
+        if (!tomorrowSet) {
+          const dismissedKey = `evening_price_reminder_dismissed_${today}`;
+          if (!localStorage.getItem(dismissedKey)) {
+            setShowEveningReminder(true);
+          }
+        }
+      }
+      
+      // Report reminder after 7pm
+      if (eatHour >= 19 && !reportCreated) {
+        const dismissedKey = `report_reminder_dismissed_${today}`;
+        if (!localStorage.getItem(dismissedKey)) {
           setShowReportReminder(true);
         }
       }
@@ -118,28 +139,40 @@ const AnalystDailyReminders: React.FC<AnalystDailyRemindersProps> = ({
 
     checkStatus();
 
-    // Set up interval to check for 7pm report reminder
-    const intervalId = setInterval(() => {
-      if (isAfter7PM() && !reportCreatedToday) {
-        checkReportCreatedToday().then(created => {
-          if (!created) {
-            const dismissedKey = `report_reminder_dismissed_${getTodayDate()}`;
-            const dismissed = localStorage.getItem(dismissedKey);
-            if (!dismissed) {
-              setShowReportReminder(true);
-              // Also show toast notification
-              toast({
-                title: "Daily Report Reminder",
-                description: "Please create today's market report before end of day.",
-                duration: 10000,
-              });
-            }
-          } else {
-            setReportCreatedToday(true);
+    // Re-check every 10 minutes
+    const intervalId = setInterval(async () => {
+      const eatHour = getEATHour();
+      
+      if (eatHour >= 19) {
+        const tomorrow = getTomorrowDate();
+        const tomorrowSet = await checkPricesSetForDate(tomorrow);
+        setTomorrowPricesSet(tomorrowSet);
+        
+        if (!tomorrowSet) {
+          const dismissedKey = `evening_price_reminder_dismissed_${getTodayDate()}`;
+          if (!localStorage.getItem(dismissedKey)) {
+            setShowEveningReminder(true);
+            toast({
+              title: "Set Tomorrow's Prices",
+              description: "Please set tomorrow's buying prices before end of day.",
+              duration: 10000,
+            });
           }
-        });
+        }
       }
-    }, 10 * 60 * 1000); // Check every 10 minutes
+      
+      if (eatHour >= 19 && !reportCreatedToday) {
+        const created = await checkReportCreatedToday();
+        if (!created) {
+          const dismissedKey = `report_reminder_dismissed_${getTodayDate()}`;
+          if (!localStorage.getItem(dismissedKey)) {
+            setShowReportReminder(true);
+          }
+        } else {
+          setReportCreatedToday(true);
+        }
+      }
+    }, 10 * 60 * 1000);
 
     return () => clearInterval(intervalId);
   }, [isDataAnalyst]);
@@ -148,37 +181,21 @@ const AnalystDailyReminders: React.FC<AnalystDailyRemindersProps> = ({
   useEffect(() => {
     if (!isDataAnalyst) return;
 
-    const today = getTodayDate();
-
-    // Subscribe to price_history changes
-    const priceChannel = supabase
-      .channel('price-updates')
+    const channel = supabase
+      .channel('price-updates-reminder')
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'price_history',
-          filter: `date=eq.${today}`
-        },
+        { event: 'INSERT', schema: 'public', table: 'price_approval_requests' },
         () => {
           setPricesSetToday(true);
+          setTomorrowPricesSet(true);
           setShowPriceReminder(false);
+          setShowEveningReminder(false);
         }
       )
-      .subscribe();
-
-    // Subscribe to market_reports changes
-    const reportChannel = supabase
-      .channel('report-updates')
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'market_reports',
-          filter: `report_date=eq.${today}`
-        },
+        { event: 'INSERT', schema: 'public', table: 'market_reports' },
         () => {
           setReportCreatedToday(true);
           setShowReportReminder(false);
@@ -186,26 +203,27 @@ const AnalystDailyReminders: React.FC<AnalystDailyRemindersProps> = ({
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(priceChannel);
-      supabase.removeChannel(reportChannel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [isDataAnalyst]);
 
   const handleDismissPriceReminder = () => {
-    const dismissedKey = `price_reminder_dismissed_${getTodayDate()}`;
-    localStorage.setItem(dismissedKey, 'true');
+    localStorage.setItem(`price_reminder_dismissed_${getTodayDate()}`, 'true');
     setShowPriceReminder(false);
   };
 
+  const handleDismissEveningReminder = () => {
+    localStorage.setItem(`evening_price_reminder_dismissed_${getTodayDate()}`, 'true');
+    setShowEveningReminder(false);
+  };
+
   const handleDismissReportReminder = () => {
-    const dismissedKey = `report_reminder_dismissed_${getTodayDate()}`;
-    localStorage.setItem(dismissedKey, 'true');
+    localStorage.setItem(`report_reminder_dismissed_${getTodayDate()}`, 'true');
     setShowReportReminder(false);
   };
 
   const handleSetPrices = () => {
     setShowPriceReminder(false);
+    setShowEveningReminder(false);
     onNavigateToSetPrices?.();
   };
 
@@ -218,7 +236,7 @@ const AnalystDailyReminders: React.FC<AnalystDailyRemindersProps> = ({
 
   return (
     <>
-      {/* Morning Price Reminder Dialog */}
+      {/* Morning Price Reminder */}
       <Dialog open={showPriceReminder} onOpenChange={setShowPriceReminder}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -228,11 +246,8 @@ const AnalystDailyReminders: React.FC<AnalystDailyRemindersProps> = ({
             </DialogTitle>
             <DialogDescription>
               Please set the buying prices for today ({new Date().toLocaleDateString('en-UG', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}). This helps the team make informed procurement decisions.
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+              })}). The procurement team needs updated prices.
             </DialogDescription>
           </DialogHeader>
           <div className="bg-muted/50 p-4 rounded-lg">
@@ -252,30 +267,54 @@ const AnalystDailyReminders: React.FC<AnalystDailyRemindersProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Evening Report Reminder Dialog */}
+      {/* Evening - Set Tomorrow's Prices */}
+      <Dialog open={showEveningReminder} onOpenChange={setShowEveningReminder}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Moon className="h-5 w-5 text-primary" />
+              Set Tomorrow's Prices
+            </DialogTitle>
+            <DialogDescription>
+              It's evening — please set tomorrow's buying prices before you leave. 
+              This ensures the team has prices ready at the start of business tomorrow.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-accent/50 border border-border p-4 rounded-lg">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Bell className="h-4 w-4" />
+              <span>If you don't set prices tonight, you'll be required to set them first thing tomorrow morning before accessing other features.</span>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={handleDismissEveningReminder}>
+              I'll Do It Later
+            </Button>
+            <Button onClick={handleSetPrices}>
+              Set Tomorrow's Prices
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Evening Report Reminder */}
       <Dialog open={showReportReminder} onOpenChange={setShowReportReminder}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-orange-500" />
+              <FileText className="h-5 w-5 text-destructive" />
               Daily Market Report Needed
             </DialogTitle>
             <DialogDescription>
-              Dear {employee?.name || 'Analyst'}, please create today's market report. 
-              This report helps the team understand market movements and plan for tomorrow.
+              Dear {employee?.name || 'Analyst'}, please create today's market report 
+              before end of day.
             </DialogDescription>
           </DialogHeader>
-          <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 p-4 rounded-lg">
-            <div className="flex items-center gap-2 text-sm text-orange-700 dark:text-orange-300">
-              <Bell className="h-4 w-4" />
-              <span>Reminders will continue every 10 minutes until the report is created</span>
-            </div>
-          </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={handleDismissReportReminder}>
               Dismiss for Now
             </Button>
-            <Button onClick={handleCreateReport} className="bg-orange-600 hover:bg-orange-700">
+            <Button onClick={handleCreateReport} variant="destructive">
               Create Report Now
             </Button>
           </DialogFooter>

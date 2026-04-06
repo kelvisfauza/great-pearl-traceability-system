@@ -9,7 +9,8 @@ import { useReferencePrices } from '@/hooks/useReferencePrices';
 import { usePriceApprovals, PriceApprovalRequest } from '@/hooks/usePriceApprovals';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Coffee, Send, Globe, RefreshCw, Clock } from 'lucide-react';
+import { Loader2, Coffee, Send, Globe, RefreshCw, Clock, CalendarDays, Sun, Moon } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import PendingPriceApproval from './PendingPriceApproval';
 
 interface ReferencePrices {
@@ -41,6 +42,24 @@ const ReferencePriceInput: React.FC = () => {
     dismissRejection,
     fetchMyRequests 
   } = usePriceApprovals();
+
+  // Determine target date based on EAT time
+  const getTargetDate = () => {
+    const now = new Date();
+    const eatHour = (now.getUTCHours() + 3) % 24;
+    const eatDate = new Date(now.getTime() + (3 * 60 * 60 * 1000));
+    
+    if (eatHour >= 19) {
+      // After 7 PM EAT — set prices for tomorrow
+      const tomorrow = new Date(eatDate);
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+      return { date: tomorrow.toISOString().split('T')[0], isNextDay: true };
+    }
+    // Before 7 PM — set prices for today
+    return { date: eatDate.toISOString().split('T')[0], isNextDay: false };
+  };
+
+  const [targetInfo, setTargetInfo] = useState(getTargetDate);
   
 const [prices, setPrices] = useState<ReferencePrices>({
     iceArabica: 185.50,
@@ -63,6 +82,14 @@ const [prices, setPrices] = useState<ReferencePrices>({
   const [testLoading, setTestLoading] = useState(false);
   const [fetchingICE, setFetchingICE] = useState(false);
   const [sendNotification, setSendNotification] = useState(false);
+
+  // Update target date every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTargetInfo(getTargetDate());
+    }, 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (employee?.email) {
@@ -123,7 +150,8 @@ setPrices({
         prices,
         employee.name,
         employee.email,
-        sendNotification
+        sendNotification,
+        targetInfo.date
       );
 
       if (success) {
@@ -289,7 +317,26 @@ const handleTestSMS = async (phoneNumber: string) => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Reference Price Management</CardTitle>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle>Reference Price Management</CardTitle>
+            <Badge variant={targetInfo.isNextDay ? "secondary" : "default"} className="text-sm px-3 py-1">
+              {targetInfo.isNextDay ? (
+                <><Moon className="h-4 w-4 mr-1.5" /> Setting prices for tomorrow</>
+              ) : (
+                <><Sun className="h-4 w-4 mr-1.5" /> Setting prices for today</>
+              )}
+              {' — '}
+              {new Date(targetInfo.date + 'T00:00:00').toLocaleDateString('en-UG', { weekday: 'short', day: 'numeric', month: 'short' })}
+            </Badge>
+          </div>
+          {targetInfo.isNextDay && (
+            <div className="bg-accent/50 border border-border rounded-lg p-3 mt-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CalendarDays className="h-4 w-4" />
+                <span>It's past 7 PM — prices you set now will apply <strong>tomorrow</strong>. This ensures the team has prices ready at the start of business.</span>
+              </div>
+            </div>
+          )}
           {currentPrices.lastUpdated && (
             <p className="text-sm text-muted-foreground">
               Last updated: {new Date(currentPrices.lastUpdated).toLocaleString()}

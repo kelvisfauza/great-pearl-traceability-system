@@ -16,77 +16,95 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get today's date (East Africa Time, UTC+3)
+    // Get EAT time (UTC+3)
     const now = new Date();
     const eatTime = new Date(now.getTime() + (3 * 60 * 60 * 1000));
     const today = eatTime.toISOString().split('T')[0];
     const eatHour = eatTime.getUTCHours();
-    const eatDay = eatTime.getUTCDay(); // 0=Sun ... 6=Sat (in EAT)
+    const eatDay = eatTime.getUTCDay();
 
-    console.log(`Morning price reminder check - EAT hour: ${eatHour}, EAT day: ${eatDay}, date: ${today}`);
+    // Tomorrow's date
+    const tomorrowDate = new Date(eatTime);
+    tomorrowDate.setUTCDate(tomorrowDate.getUTCDate() + 1);
+    const tomorrow = tomorrowDate.toISOString().split('T')[0];
 
-    // Only run Monday-Friday (skip Saturday/Sunday)
+    console.log(`Price reminder check - EAT hour: ${eatHour}, day: ${eatDay}, date: ${today}`);
+
+    // Skip weekends
     if (eatDay === 0 || eatDay === 6) {
-      console.log('Weekend (Sat/Sun) - skipping analyst price reminder');
       return new Response(
-        JSON.stringify({ message: 'Weekend - skipping', eatHour, eatDay, date: today }),
+        JSON.stringify({ message: 'Weekend - skipping' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Only run between 7 AM and 10 AM EAT (morning window)
-    if (eatHour < 7 || eatHour >= 10) {
-      console.log('Outside morning reminder window (7-10 AM EAT), skipping');
+    // TWO windows: Morning 7-10 AM (set today's prices) and Evening 7-10 PM (set tomorrow's prices)
+    const isMorningWindow = eatHour >= 7 && eatHour < 10;
+    const isEveningWindow = eatHour >= 19 && eatHour < 22;
+
+    if (!isMorningWindow && !isEveningWindow) {
       return new Response(
-        JSON.stringify({ message: 'Outside morning reminder window', eatHour, eatDay, date: today }),
+        JSON.stringify({ message: 'Outside reminder windows', eatHour }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Check if prices have been set for today in price_history
-    const { data: todayPrices, error: priceError } = await supabase
-      .from('price_history')
-      .select('id, arabica_buying_price, robusta_buying_price')
-      .eq('price_date', today)
+    // Determine which date to check prices for
+    const targetDate = isEveningWindow ? tomorrow : today;
+    const reminderType = isEveningWindow ? 'evening_price_reminder' : 'price_reminder';
+    const periodLabel = isEveningWindow ? "tomorrow's" : "today's";
+
+    // Check if prices have been submitted for target date
+    const { data: priceRequests } = await supabase
+      .from('price_approval_requests')
+      .select('id, status, target_date')
+      .eq('target_date', targetDate)
+      .in('status', ['pending', 'approved'])
       .limit(1);
 
-    if (priceError) {
-      console.error('Error checking prices:', priceError);
-      throw priceError;
-    }
-
-    // Check if buying prices are set (not just ICE prices from auto-fetch)
-    const pricesSet = todayPrices && todayPrices.length > 0 && 
-      (todayPrices[0].arabica_buying_price > 0 || todayPrices[0].robusta_buying_price > 0);
-
-    if (pricesSet) {
-      console.log('Prices already set for today, no reminder needed');
+    if (priceRequests && priceRequests.length > 0) {
+      console.log(`Prices already submitted for ${targetDate}`);
       return new Response(
-        JSON.stringify({ message: "Prices already set for today", prices: todayPrices[0] }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ message: `Prices already set for ${targetDate}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Check how many price reminders have already been sent today
+    // Also check price_history as fallback
+    const { data: priceHistory } = await supabase
+      .from('price_history')
+      .select('id, arabica_buying_price, robusta_buying_price')
+      .eq('price_date', targetDate)
+      .limit(1);
+
+    const pricesSet = priceHistory && priceHistory.length > 0 && 
+      ((priceHistory[0] as any).arabica_buying_price > 0 || (priceHistory[0] as any).robusta_buying_price > 0);
+
+    if (pricesSet) {
+      console.log(`Prices already in price_history for ${targetDate}`);
+      return new Response(
+        JSON.stringify({ message: `Prices already set for ${targetDate}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check daily reminder limit
     const { count: remindersSentToday } = await supabase
       .from('sms_notification_queue')
       .select('*', { count: 'exact', head: true })
-      .eq('notification_type', 'price_reminder')
+      .eq('notification_type', reminderType)
       .gte('created_at', `${today}T00:00:00+03:00`)
       .lte('created_at', `${today}T23:59:59+03:00`);
 
-    const maxRemindersPerDay = 5;
-    if ((remindersSentToday || 0) >= maxRemindersPerDay) {
-      console.log(`Already sent ${remindersSentToday} price reminders today (limit: ${maxRemindersPerDay}), skipping`);
+    const maxReminders = 5;
+    if ((remindersSentToday || 0) >= maxReminders) {
       return new Response(
-        JSON.stringify({ message: `Daily limit reached (${remindersSentToday}/${maxRemindersPerDay})`, date: today }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ message: `Daily limit reached (${remindersSentToday}/${maxReminders})` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Prices not set for today, sending reminder (${remindersSentToday || 0}/${maxRemindersPerDay} sent so far)...`);
-
-    // Get data analyst employees (Denis or anyone with Data Analysis permission)
+    // Get data analysts
     const { data: analysts, error: employeeError } = await supabase
       .from('employees')
       .select('id, name, email, phone')
@@ -94,119 +112,98 @@ serve(async (req) => {
       .eq('status', 'Active')
       .not('disabled', 'eq', true);
 
-    if (employeeError) {
-      console.error('Error fetching analysts:', employeeError);
-      throw employeeError;
-    }
-
-    if (!analysts || analysts.length === 0) {
-      console.log('No data analysts found');
+    if (employeeError || !analysts || analysts.length === 0) {
       return new Response(
         JSON.stringify({ message: "No data analysts found" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Found ${analysts.length} data analyst(s) to notify about prices`);
-
-    // Format today's date for display
-    const displayDate = new Date(today + 'T00:00:00+03:00').toLocaleDateString('en-GB', {
+    const displayDate = new Date(targetDate + 'T00:00:00+03:00').toLocaleDateString('en-GB', {
       weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
     });
 
-    // Send SMS + Email reminders to each analyst
     const smsResults = [];
+
     for (const analyst of analysts) {
-      // Send SMS
+      // SMS
       if (analyst.phone) {
-        const message = `Good morning ${analyst.name}! Please update today's coffee buying prices on the system. Login at www.greatagrocoffeesystem.site, go to "Data Analyst" → "Set Prices" to update Arabica and Robusta prices. - Great Agro Coffee`;
-        
+        const message = isEveningWindow
+          ? `Good evening ${analyst.name}! Please set tomorrow's (${displayDate}) coffee buying prices before you leave. Login at www.greatagrocoffeesystem.site → Set Prices. If not set, you'll be blocked from other tasks tomorrow morning. - Great Agro Coffee`
+          : `Good morning ${analyst.name}! Please update ${periodLabel} coffee buying prices. Login at www.greatagrocoffeesystem.site → Set Prices. You cannot access other features until prices are set. - Great Agro Coffee`;
+
         try {
-          const { data: smsResponse, error: smsError } = await supabase.functions.invoke('send-sms', {
+          const { error: smsError } = await supabase.functions.invoke('send-sms', {
             body: {
               phone: analyst.phone,
-              message: message,
+              message,
               employee_name: analyst.name,
-              notification_type: 'price_reminder'
+              notification_type: reminderType
             }
           });
-
-          if (smsError) {
-            console.error(`SMS error for ${analyst.name}:`, smsError);
-            smsResults.push({ analyst: analyst.name, channel: 'sms', success: false, error: smsError.message });
-          } else {
-            console.log(`Price reminder SMS sent to ${analyst.name}`);
-            smsResults.push({ analyst: analyst.name, channel: 'sms', success: true });
-          }
-        } catch (smsErr) {
-          console.error(`SMS exception for ${analyst.name}:`, smsErr);
-          smsResults.push({ analyst: analyst.name, channel: 'sms', success: false, error: String(smsErr) });
+          smsResults.push({ analyst: analyst.name, channel: 'sms', success: !smsError });
+        } catch (e) {
+          smsResults.push({ analyst: analyst.name, channel: 'sms', success: false, error: String(e) });
         }
       }
 
-      // Send Email
+      // Email
       if (analyst.email) {
         try {
           const { error: emailError } = await supabase.functions.invoke('send-transactional-email', {
             body: {
               templateName: 'price-reminder',
               recipientEmail: analyst.email,
-              idempotencyKey: `price-reminder-${today}-${analyst.email}-${remindersSentToday || 0}`,
+              idempotencyKey: `${reminderType}-${targetDate}-${analyst.email}-${remindersSentToday || 0}`,
               templateData: {
                 analystName: analyst.name,
                 date: displayDate,
+                targetDate,
+                isEvening: isEveningWindow,
                 loginUrl: 'https://www.greatagrocoffeesystem.site',
               },
             },
           });
-
-          if (emailError) {
-            console.error(`Email error for ${analyst.name}:`, emailError);
-            smsResults.push({ analyst: analyst.name, channel: 'email', success: false, error: emailError.message });
-          } else {
-            console.log(`Price reminder email sent to ${analyst.name}`);
-            smsResults.push({ analyst: analyst.name, channel: 'email', success: true });
-          }
-        } catch (emailErr) {
-          console.error(`Email exception for ${analyst.name}:`, emailErr);
-          smsResults.push({ analyst: analyst.name, channel: 'email', success: false, error: String(emailErr) });
+          smsResults.push({ analyst: analyst.name, channel: 'email', success: !emailError });
+        } catch (e) {
+          smsResults.push({ analyst: analyst.name, channel: 'email', success: false, error: String(e) });
         }
       }
-    }
 
-    // Create in-app notification
-    for (const analyst of analysts) {
+      // In-app notification
       await supabase.from('notifications').insert({
-        title: 'Morning Price Reminder',
-        message: `Good morning! Please update today's (${today}) coffee buying prices. The team needs updated prices for purchasing.`,
-        type: 'price_reminder',
+        title: isEveningWindow ? "Set Tomorrow's Prices" : 'Morning Price Reminder',
+        message: isEveningWindow
+          ? `Please set tomorrow's (${displayDate}) coffee buying prices before you leave today. If not set, you'll be blocked from other tasks tomorrow morning.`
+          : `Please update ${periodLabel} (${displayDate}) coffee buying prices. You cannot access other features until prices are set.`,
+        type: reminderType,
         priority: 'high',
         target_user_email: analyst.email,
         sender_name: 'System',
-        metadata: { reminder_date: today, reminder_type: 'morning_price' }
+        metadata: { reminder_date: targetDate, reminder_type: isEveningWindow ? 'evening_price' : 'morning_price' }
       });
     }
 
     const result = {
       success: true,
       date: today,
-      eatHour,
+      targetDate,
+      window: isEveningWindow ? 'evening' : 'morning',
       analystsNotified: analysts.length,
       smsResults
     };
 
-    console.log('Morning price reminder completed:', result);
-
+    console.log('Price reminder completed:', result);
     return new Response(
       JSON.stringify(result),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error("Error in analyst-price-reminder:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: (error as Error).message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
