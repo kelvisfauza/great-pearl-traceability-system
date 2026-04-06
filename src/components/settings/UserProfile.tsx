@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import LeaveApplication from './LeaveApplication';
+import ContractTenureCard from './ContractTenureCard';
 
 interface UserProfileProps {
   employee: any;
