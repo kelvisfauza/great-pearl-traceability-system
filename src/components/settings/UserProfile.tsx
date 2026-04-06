@@ -439,6 +439,9 @@ const UserProfile = ({ employee }: UserProfileProps) => {
         </CardContent>
       </Card>
 
+      {/* Contract & Tenure */}
+      <ContractTenureCard employee={employee} />
+
       {/* Leave Application */}
       <LeaveApplication />
     </div>
