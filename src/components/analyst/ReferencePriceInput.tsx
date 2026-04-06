@@ -150,7 +150,8 @@ setPrices({
         prices,
         employee.name,
         employee.email,
-        sendNotification
+        sendNotification,
+        targetInfo.date
       );
 
       if (success) {
