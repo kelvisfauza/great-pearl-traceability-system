@@ -1,0 +1,1 @@
+ALTER TABLE price_approval_requests ADD COLUMN IF NOT EXISTS target_date DATE DEFAULT CURRENT_DATE;
