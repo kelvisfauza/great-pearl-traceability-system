@@ -47,6 +47,7 @@ import { template as jobApplicationStatus } from './job-application-status.tsx'
 import { template as employeeOfTheMonth } from './employee-of-the-month.tsx'
 import { template as dailyInventorySummary } from './daily-inventory-summary.tsx'
 import { template as bonusClaimed } from './bonus-claimed.tsx'
+import { template as dailyProcurementSummary } from './daily-procurement-summary.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'verification-code': verificationCode,
@@ -87,4 +88,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'employee-of-the-month': employeeOfTheMonth,
   'daily-inventory-summary': dailyInventorySummary,
   'bonus-claimed': bonusClaimed,
+  'daily-procurement-summary': dailyProcurementSummary,
 }
