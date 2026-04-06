@@ -150,16 +150,12 @@ const BonusClaimPopup = () => {
       // Get updated wallet balance for the email
       let balanceAfter = '0';
       try {
-        const { data: ledgerSum } = await supabase
-          .from('ledger_entries')
-          .select('amount, entry_type')
-          .eq('user_id', user.id);
-        if (ledgerSum) {
-          const total = ledgerSum.reduce((sum: number, e: any) => {
-            const amt = Number(e.amount) || 0;
-            return e.entry_type === 'WITHDRAWAL' || e.entry_type === 'DEBIT' ? sum - amt : sum + amt;
-          }, 0);
-          balanceAfter = total.toLocaleString();
+        const walletEmail = employee?.email || user.email;
+        if (walletEmail) {
+          const { data: balData } = await supabase.rpc('get_user_balance_safe', { user_email: walletEmail });
+          if (balData?.[0]) {
+            balanceAfter = Number(balData[0].wallet_balance).toLocaleString();
+          }
         }
       } catch {
         // fallback - don't block the claim
