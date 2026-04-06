@@ -158,6 +158,19 @@ Deno.serve(async (req) => {
     const bonusAmount = 50000;
     const winners = [];
 
+    // Get auth user IDs for wallet crediting
+    const { data: authUsers } = await supabase.rpc("get_auth_users_by_emails", {
+      emails: ranked.map((r) => r.employee_email),
+    }).catch(() => ({ data: null }));
+
+    // Fallback: query profiles or use employee_id mapping
+    const authUserMap: Record<string, string> = {};
+    if (authUsers) {
+      for (const u of authUsers) {
+        authUserMap[u.email] = u.id;
+      }
+    }
+
     for (let i = 0; i < ranked.length; i++) {
       const emp = ranked[i];
       const empInfo = empMap[emp.employee_id] || {};
@@ -193,7 +206,27 @@ Deno.serve(async (req) => {
 
       if (eotmErr) console.error("EOTM insert error:", eotmErr);
 
-      // Award bonus
+      // Credit wallet directly via ledger entry
+      const authUserId = authUserMap[emp.employee_email];
+      if (authUserId) {
+        const ledgerRef = `EOTM-${monthNames[targetMonth].toUpperCase().slice(0, 3)}${targetYear}-RANK${rank}-${emp.employee_name.split(" ")[0].toUpperCase()}`;
+        await supabase.from("ledger_entries").insert({
+          user_id: authUserId,
+          entry_type: "DEPOSIT",
+          amount: bonusAmount,
+          reference: ledgerRef,
+          source_category: "SYSTEM_AWARD",
+          metadata: {
+            reason: `Employee of the Month Reward - ${monthNames[targetMonth]} ${targetYear} (#${rank} Rank)`,
+            employee_name: emp.employee_name,
+          },
+        });
+        console.log(`Wallet credited for ${emp.employee_name}: UGX ${bonusAmount}`);
+      } else {
+        console.warn(`No auth user found for ${emp.employee_email}, wallet not credited`);
+      }
+
+      // Award bonus record
       await supabase.from("bonuses").insert({
         employee_id: emp.employee_id,
         employee_email: emp.employee_email,
