@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const supabase = createClient(supabaseUrl, supabaseKey)
 
-  let departments = ['quality', 'admin', 'operations', 'field', 'it', 'finance', 'eudr', 'sales', 'inventory']
+  let departments = ['quality', 'admin', 'operations', 'field', 'it', 'finance', 'eudr', 'sales', 'inventory', 'procurement']
   let targetEmail: string | null = null
   let broadcastTemplate: string | null = null
 
