@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const supabase = createClient(supabaseUrl, supabaseKey)
 
-  let departments = ['quality', 'admin', 'operations', 'field', 'it', 'finance', 'eudr', 'sales', 'inventory']
+  let departments = ['quality', 'admin', 'operations', 'field', 'it', 'finance', 'eudr', 'sales', 'inventory', 'procurement']
   let targetEmail: string | null = null
   let broadcastTemplate: string | null = null
 
@@ -365,6 +365,157 @@ Deno.serve(async (req) => {
       results['inventory'] = await sendToRecipients(lovableApiKey, 'daily-inventory-summary', finalRecipients, {
         reportDate, totalKg, totalBatches: Object.keys(batchMap).length, avgPricePerKg: avgPrice,
         entries: entries.slice(0, 20),
+      }, today)
+    }
+
+    // ─── PROCUREMENT ───
+    if (departments.includes('procurement')) {
+      // Buyer contracts
+      const { data: buyerContracts } = await supabase
+        .from('buyer_contracts')
+        .select('buyer_name, contract_ref, total_quantity, allocated_quantity, status, delivery_period_end')
+        .eq('status', 'active')
+
+      const bc = buyerContracts || []
+      const bcTotalKg = bc.reduce((s:number, c:any) => s + (c.total_quantity||0), 0)
+      const bcFulfilledKg = bc.reduce((s:number, c:any) => s + (c.allocated_quantity||0), 0)
+      const bcRemainingKg = bcTotalKg - bcFulfilledKg
+
+      const nearExpiry = bc.filter((c:any) => {
+        if (!c.delivery_period_end) return false
+        const end = new Date(c.delivery_period_end)
+        return end.getTime() - Date.now() < 30 * 86400000 && end.getTime() > Date.now()
+      }).map((c:any) => ({
+        buyer: c.buyer_name, ref: c.contract_ref,
+        endDate: new Date(c.delivery_period_end).toLocaleDateString('en-UG', { day: 'numeric', month: 'short', year: 'numeric' }),
+        remaining: (c.total_quantity||0) - (c.allocated_quantity||0),
+      }))
+
+      // Low fulfillment contracts
+      const lowFulfillment = bc.filter((c:any) => {
+        const rem = (c.total_quantity||0) - (c.allocated_quantity||0)
+        return rem > 0 && rem < (c.total_quantity||0) * 0.2
+      }).map((c:any) => ({
+        buyer: c.buyer_name, ref: c.contract_ref,
+        endDate: c.delivery_period_end ? new Date(c.delivery_period_end).toLocaleDateString('en-UG', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A',
+        remaining: (c.total_quantity||0) - (c.allocated_quantity||0),
+      }))
+
+      const contractAlerts = [...nearExpiry, ...lowFulfillment.filter(lf => !nearExpiry.some(ne => ne.ref === lf.ref))]
+
+      // Coffee Bookings
+      const { data: bookingsActive } = await supabase
+        .from('coffee_bookings')
+        .select('supplier_name, booked_quantity_kg, delivered_quantity_kg, expiry_date, status')
+        .in('status', ['active', 'partial'])
+
+      const { data: bookingsOverdueData } = await supabase
+        .from('coffee_bookings')
+        .select('supplier_name, booked_quantity_kg, delivered_quantity_kg, expiry_date')
+        .in('status', ['expired', 'active'])
+        .lt('expiry_date', today)
+
+      const activeBookingsCount = (bookingsActive || []).length
+      const overdueBookingsList = (bookingsOverdueData || []).filter((b:any) => new Date(b.expiry_date) < new Date())
+        .map((b:any) => ({
+          supplier: b.supplier_name,
+          bookedKg: b.booked_quantity_kg || 0,
+          deliveredKg: b.delivered_quantity_kg || 0,
+          expiryDate: new Date(b.expiry_date).toLocaleDateString('en-UG', { day: 'numeric', month: 'short', year: 'numeric' }),
+        }))
+
+      // Supplier Advances
+      const { data: advances } = await supabase
+        .from('supplier_advances')
+        .select('supplier_id, amount_ugx, outstanding_ugx, is_closed')
+        .eq('is_closed', false)
+
+      const openAdv = advances || []
+      const totalOutstanding = openAdv.reduce((s:number, a:any) => s + (a.outstanding_ugx||0), 0)
+
+      // Get supplier names for advances
+      const advSupplierIds = [...new Set(openAdv.map((a:any) => a.supplier_id).filter(Boolean))]
+      let advSupplierNames: Record<string, string> = {}
+      if (advSupplierIds.length > 0) {
+        const { data: sups } = await supabase.from('suppliers').select('id, name').in('id', advSupplierIds)
+        for (const s of sups || []) advSupplierNames[s.id] = s.name
+      }
+      const advancesDetail = openAdv.slice(0, 10).map((a:any) => ({
+        supplier: advSupplierNames[a.supplier_id] || 'Unknown',
+        amount: a.amount_ugx || 0,
+        outstanding: a.outstanding_ugx || 0,
+      }))
+
+      // Inactive Suppliers (no delivery in 30+ days)
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
+      const { data: allSuppliers } = await supabase
+        .from('suppliers')
+        .select('id, name')
+        .eq('status', 'active')
+
+      const { data: recentDeliveries } = await supabase
+        .from('coffee_records')
+        .select('supplier_name, date')
+        .gte('date', thirtyDaysAgo)
+
+      const recentSupplierSet = new Set((recentDeliveries||[]).map((r:any) => r.supplier_name?.toLowerCase()))
+      
+      // Get last delivery dates for inactive
+      const { data: lastDeliveries } = await supabase
+        .from('coffee_records')
+        .select('supplier_name, date')
+        .order('date', { ascending: false })
+
+      const lastDeliveryMap: Record<string, string> = {}
+      for (const r of lastDeliveries || []) {
+        const name = r.supplier_name?.toLowerCase()
+        if (name && !lastDeliveryMap[name]) lastDeliveryMap[name] = r.date
+      }
+
+      const inactive = (allSuppliers || [])
+        .filter((s:any) => !recentSupplierSet.has(s.name?.toLowerCase()) && lastDeliveryMap[s.name?.toLowerCase()])
+        .map((s:any) => {
+          const lastDate = lastDeliveryMap[s.name?.toLowerCase()]
+          return {
+            name: s.name,
+            lastDelivery: lastDate ? new Date(lastDate).toLocaleDateString('en-UG', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Never',
+            daysSince: lastDate ? Math.floor((Date.now() - new Date(lastDate).getTime()) / 86400000) : 999,
+          }
+        })
+        .sort((a:any, b:any) => b.daysSince - a.daysSince)
+
+      // Build action items
+      const procActionItems: string[] = []
+      if (overdueBookingsList.length > 0) procActionItems.push(`${overdueBookingsList.length} overdue coffee booking${overdueBookingsList.length > 1 ? 's' : ''} — follow up with suppliers`)
+      if (contractAlerts.length > 0) procActionItems.push(`${contractAlerts.length} buyer contract${contractAlerts.length > 1 ? 's' : ''} need attention (expiry/low fulfillment)`)
+      if (inactive.length > 10) procActionItems.push(`${inactive.length} suppliers inactive for 30+ days — investigate reasons`)
+      if (totalOutstanding > 0) procActionItems.push(`UGX ${totalOutstanding.toLocaleString()} in outstanding supplier advances`)
+
+      const procHighlights: string[] = []
+      procHighlights.push(`${bc.length} active buyer contracts (${bcRemainingKg.toLocaleString()} kg remaining)`)
+      if (activeBookingsCount > 0) procHighlights.push(`${activeBookingsCount} active coffee bookings`)
+
+      // Send to Procurement staff + Timothy specifically
+      const procRecipients = targetEmail
+        ? [{ name: 'Team', email: targetEmail }]
+        : [
+            ...(allEmployees||[]).filter((e:any) => e.department?.toLowerCase().includes('procurement')),
+            // Always include Timothy
+            ...((allEmployees||[]).filter((e:any) => e.email === 'tatwanzire@greatpearlcoffee.com' && !e.department?.toLowerCase().includes('procurement'))),
+            // CC operations
+            { name: 'Operations', email: 'operations@greatpearlcoffee.com' },
+          ]
+
+      results['procurement'] = await sendToRecipients(lovableApiKey, 'daily-procurement-summary', procRecipients, {
+        reportDate,
+        activeBuyerContracts: bc.length, totalContractedKg: bcTotalKg, fulfilledKg: bcFulfilledKg, remainingKg: bcRemainingKg,
+        nearExpiryContracts: contractAlerts.slice(0, 5),
+        activeBookings: activeBookingsCount, bookingsOverdue: overdueBookingsList.length,
+        overdueBookings: overdueBookingsList.slice(0, 5),
+        openAdvances: openAdv.length, totalOutstandingAdvances: totalOutstanding,
+        advancesDetail,
+        inactiveSuppliers: inactive.slice(0, 15), inactiveCount: inactive.length,
+        highlights: procHighlights, actionItems: procActionItems,
       }, today)
     }
 
