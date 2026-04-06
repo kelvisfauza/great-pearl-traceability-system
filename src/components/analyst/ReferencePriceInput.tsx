@@ -42,6 +42,24 @@ const ReferencePriceInput: React.FC = () => {
     dismissRejection,
     fetchMyRequests 
   } = usePriceApprovals();
+
+  // Determine target date based on EAT time
+  const getTargetDate = () => {
+    const now = new Date();
+    const eatHour = (now.getUTCHours() + 3) % 24;
+    const eatDate = new Date(now.getTime() + (3 * 60 * 60 * 1000));
+    
+    if (eatHour >= 19) {
+      // After 7 PM EAT — set prices for tomorrow
+      const tomorrow = new Date(eatDate);
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+      return { date: tomorrow.toISOString().split('T')[0], isNextDay: true };
+    }
+    // Before 7 PM — set prices for today
+    return { date: eatDate.toISOString().split('T')[0], isNextDay: false };
+  };
+
+  const [targetInfo, setTargetInfo] = useState(getTargetDate);
   
 const [prices, setPrices] = useState<ReferencePrices>({
     iceArabica: 185.50,
@@ -64,6 +82,14 @@ const [prices, setPrices] = useState<ReferencePrices>({
   const [testLoading, setTestLoading] = useState(false);
   const [fetchingICE, setFetchingICE] = useState(false);
   const [sendNotification, setSendNotification] = useState(false);
+
+  // Update target date every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTargetInfo(getTargetDate());
+    }, 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (employee?.email) {
