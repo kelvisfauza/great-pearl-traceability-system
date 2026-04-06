@@ -1,9 +1,9 @@
 import * as React from 'npm:react@18.3.1'
 import {
-  Body, Container, Head, Heading, Html, Preview, Text, Section, Hr,
+  Body, Container, Head, Heading, Html, Preview, Text, Section, Hr, Button,
 } from 'npm:@react-email/components@0.0.22'
 import type { TemplateEntry } from './registry.ts'
-import { SITE_NAME, LOGO_URL } from './brand.ts'
+import { SITE_NAME } from './brand.ts'
 
 interface Props {
   employeeName?: string
@@ -12,11 +12,16 @@ interface Props {
   advanceDeduction?: string
   netSalary?: string
   hasDeductions?: boolean
+  department?: string
+  position?: string
+  transactionId?: string
+  payslipUrl?: string
 }
 
 const SalaryCreditedEmail = ({
   employeeName, month = '', grossSalary = '0', advanceDeduction = '0',
-  netSalary = '0', hasDeductions = false,
+  netSalary = '0', hasDeductions = false, department = '', position = '',
+  transactionId = '', payslipUrl = '',
 }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
@@ -33,6 +38,15 @@ const SalaryCreditedEmail = ({
           <Text style={bodyText}>
             Your salary for <strong>{month}</strong> has been processed and credited to your wallet.
           </Text>
+
+          <Section style={employeeInfoCard}>
+            <table style={detailTable}>
+              <tr><td style={labelCell}>Employee:</td><td style={valueCell}>{employeeName}</td></tr>
+              {department && <tr><td style={labelCell}>Department:</td><td style={valueCell}>{department}</td></tr>}
+              {position && <tr><td style={labelCell}>Position:</td><td style={valueCell}>{position}</td></tr>}
+              {transactionId && <tr><td style={labelCell}>Transaction Ref:</td><td style={valueCell}>{transactionId}</td></tr>}
+            </table>
+          </Section>
 
           <Section style={summaryCard}>
             <Text style={cardTitle}>💰 SALARY BREAKDOWN</Text>
@@ -52,6 +66,18 @@ const SalaryCreditedEmail = ({
             </Section>
           )}
 
+          {payslipUrl && (
+            <Section style={payslipSection}>
+              <Text style={payslipTitle}>📄 Your Payment Slip</Text>
+              <Text style={payslipDesc}>
+                A detailed payment slip has been generated for your records. You can download and print it.
+              </Text>
+              <Button style={downloadButton} href={payslipUrl}>
+                📥 Download Payment Slip
+              </Button>
+            </Section>
+          )}
+
           <Hr style={divider} />
           <Text style={closingText}>Log in to your dashboard to view your updated wallet balance and transaction history.</Text>
           <Text style={closing}>Best regards,<br /><strong>{SITE_NAME} Finance Department</strong></Text>
@@ -67,10 +93,12 @@ const SalaryCreditedEmail = ({
 export const template = {
   component: SalaryCreditedEmail,
   subject: (data: Record<string, any>) => `💵 Salary Credited — UGX ${data.netSalary || '0'} for ${data.month || 'this month'}`,
-  displayName: 'Salary credited',
+  displayName: 'Salary credited with payslip',
   previewData: {
     employeeName: 'Jane Doe', month: 'April 2026', grossSalary: '500,000',
     advanceDeduction: '50,000', netSalary: '450,000', hasDeductions: true,
+    department: 'Operations', position: 'Manager', transactionId: 'AUTO-SAL-202604-JANEDO',
+    payslipUrl: 'https://example.com/payslip.html',
   },
 } satisfies TemplateEntry
 
@@ -83,6 +111,7 @@ const subtitle = { fontSize: '13px', color: '#a8d5ba', margin: '0' }
 const content = { padding: '25px' }
 const greeting = { fontSize: '15px', color: '#333', margin: '0 0 15px' }
 const bodyText = { fontSize: '14px', color: '#555', lineHeight: '1.6', margin: '0 0 20px' }
+const employeeInfoCard = { backgroundColor: '#f5f5f5', borderRadius: '8px', padding: '12px 16px', margin: '0 0 16px', border: '1px solid #e0e0e0' }
 const summaryCard = { backgroundColor: '#f0f7f3', borderRadius: '8px', padding: '16px', margin: '0 0 16px', border: '1px solid #c8e6c9' }
 const cardTitle = { fontSize: '14px', fontWeight: 'bold', color: '#1a5632', margin: '0 0 8px', letterSpacing: '0.5px' }
 const cardDivider = { borderColor: '#ddd', margin: '8px 0 12px' }
@@ -92,6 +121,10 @@ const valueCell = { fontSize: '14px', color: '#333', padding: '6px 0', fontWeigh
 const valueBold = { fontSize: '16px', color: '#1a5632', padding: '6px 0', fontWeight: 'bold' as const }
 const noteBox = { backgroundColor: '#fff8e1', borderRadius: '8px', padding: '12px 16px', margin: '0 0 16px', borderLeft: '4px solid #ff9800' }
 const noteText = { fontSize: '12px', color: '#555', margin: '0', lineHeight: '1.5' }
+const payslipSection = { backgroundColor: '#e8f5e9', borderRadius: '8px', padding: '16px', margin: '0 0 16px', textAlign: 'center' as const, border: '1px solid #a5d6a7' }
+const payslipTitle = { fontSize: '15px', fontWeight: 'bold', color: '#1a5632', margin: '0 0 6px' }
+const payslipDesc = { fontSize: '12px', color: '#555', margin: '0 0 12px' }
+const downloadButton = { backgroundColor: '#1a5632', color: '#ffffff', padding: '12px 28px', borderRadius: '6px', fontWeight: 'bold', fontSize: '14px', textDecoration: 'none', display: 'inline-block' }
 const divider = { borderColor: '#e0e0e0', margin: '20px 0' }
 const closingText = { fontSize: '13px', color: '#555', lineHeight: '1.5', margin: '0 0 15px' }
 const closing = { fontSize: '14px', color: '#333', lineHeight: '1.6', margin: '0' }
