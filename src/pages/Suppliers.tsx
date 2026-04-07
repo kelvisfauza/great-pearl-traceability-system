@@ -253,7 +253,7 @@ const Suppliers = () => {
       filtered = filtered.filter(t => t.status === statusFilter);
     }
 
-    return filtered;
+    return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [transactions, dateFrom, dateTo, coffeeTypeFilter, statusFilter]);
 
   // Calculate statistics for selected supplier
