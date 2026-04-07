@@ -285,6 +285,38 @@ await savePrices({
       }
 
       console.log(`✅ Price update emails sent to ${emailsSent}/${emailRecipients.length} employees`);
+
+      // Also notify suppliers who have email addresses
+      const { data: suppliersWithEmail } = await supabase
+        .from('suppliers')
+        .select('id, name, email')
+        .not('email', 'is', null);
+
+      const supplierRecipients = suppliersWithEmail?.filter(s => s.email) || [];
+      let supplierEmailsSent = 0;
+      for (const supplier of supplierRecipients) {
+        try {
+          await supabase.functions.invoke('send-transactional-email', {
+            body: {
+              templateName: 'supplier-price-notice',
+              recipientEmail: supplier.email,
+              idempotencyKey: `supplier-price-${request.id}-${supplier.id}`,
+              templateData: {
+                supplierName: supplier.name,
+                date,
+                arabicaBuyingPrice: request.arabica_buying_price,
+                robustaBuyingPrice: request.robusta_buying_price,
+                sortedPrice: request.sorted_price || 0,
+                isCorrection: request.is_correction,
+              },
+            },
+          });
+          supplierEmailsSent++;
+        } catch (err) {
+          console.error(`Failed to send price email to supplier ${supplier.name}:`, err);
+        }
+      }
+      console.log(`✅ Price update emails sent to ${supplierEmailsSent}/${supplierRecipients.length} suppliers`);
     } catch (error) {
       console.error('Error sending price email notifications:', error);
     }
