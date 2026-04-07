@@ -1,0 +1,1 @@
+ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS email text, ADD COLUMN IF NOT EXISTS alternative_phone text;

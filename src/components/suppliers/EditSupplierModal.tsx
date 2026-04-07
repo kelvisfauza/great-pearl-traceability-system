@@ -10,13 +10,15 @@ interface EditSupplierModalProps {
   supplier: Supplier | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (supplierId: string, updates: { name: string; phone: string; origin: string; bank_name?: string; account_name?: string; account_number?: string }) => Promise<void>;
+  onSave: (supplierId: string, updates: { name: string; phone: string; origin: string; bank_name?: string; account_name?: string; account_number?: string; email?: string; alternative_phone?: string }) => Promise<void>;
 }
 
 export const EditSupplierModal = ({ supplier, open, onOpenChange, onSave }: EditSupplierModalProps) => {
   const [name, setName] = useState(supplier?.name || "");
   const [phone, setPhone] = useState(supplier?.phone || "");
   const [origin, setOrigin] = useState(supplier?.origin || "");
+  const [email, setEmail] = useState(supplier?.email || "");
+  const [alternativePhone, setAlternativePhone] = useState(supplier?.alternative_phone || "");
   const [bankName, setBankName] = useState(supplier?.bank_name || "");
   const [accountName, setAccountName] = useState(supplier?.account_name || "");
   const [accountNumber, setAccountNumber] = useState(supplier?.account_number || "");
@@ -27,6 +29,8 @@ export const EditSupplierModal = ({ supplier, open, onOpenChange, onSave }: Edit
       setName(supplier.name);
       setPhone(supplier.phone || "");
       setOrigin(supplier.origin);
+      setEmail(supplier.email || "");
+      setAlternativePhone(supplier.alternative_phone || "");
       setBankName(supplier.bank_name || "");
       setAccountName(supplier.account_name || "");
       setAccountNumber(supplier.account_number || "");
@@ -42,7 +46,9 @@ export const EditSupplierModal = ({ supplier, open, onOpenChange, onSave }: Edit
         name, phone, origin,
         bank_name: bankName,
         account_name: accountName,
-        account_number: accountNumber
+        account_number: accountNumber,
+        email,
+        alternative_phone: alternativePhone
       });
       onOpenChange(false);
     } catch (error) {
@@ -54,7 +60,7 @@ export const EditSupplierModal = ({ supplier, open, onOpenChange, onSave }: Edit
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Supplier Information</DialogTitle>
           <DialogDescription>
@@ -68,9 +74,20 @@ export const EditSupplierModal = ({ supplier, open, onOpenChange, onSave }: Edit
             <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter supplier name" />
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Primary phone" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="altPhone">Alternative Phone</Label>
+              <Input id="altPhone" value={alternativePhone} onChange={(e) => setAlternativePhone(e.target.value)} placeholder="Alternative phone" />
+            </div>
+          </div>
+
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number</Label>
-            <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Enter phone number" />
+            <Label htmlFor="email">Email Address</Label>
+            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="supplier@example.com" />
           </div>
 
           <div className="space-y-2">

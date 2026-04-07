@@ -107,6 +107,7 @@ const SupplierRecordsTab = () => {
               <TableHead>Code</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Phone</TableHead>
+              <TableHead>Email</TableHead>
               <TableHead>Origin</TableHead>
               <TableHead>Bank Name</TableHead>
               <TableHead>Account</TableHead>
@@ -120,6 +121,7 @@ const SupplierRecordsTab = () => {
                   <TableCell>
                     {s.phone ? <span className="flex items-center gap-1 text-xs"><Phone className="h-3 w-3" />{s.phone}</span> : <span className="text-muted-foreground">—</span>}
                   </TableCell>
+                  <TableCell className="text-xs">{s.email || <span className="text-muted-foreground">—</span>}</TableCell>
                   <TableCell className="text-xs">{s.origin || '—'}</TableCell>
                   <TableCell className="text-xs">{s.bank_name || <span className="text-red-500">Missing</span>}</TableCell>
                   <TableCell className="text-xs font-mono">{s.account_number || <span className="text-red-500">Missing</span>}</TableCell>
@@ -131,7 +133,7 @@ const SupplierRecordsTab = () => {
                 </TableRow>
               ))}
               {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">No suppliers found</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">No suppliers found</TableCell></TableRow>
               )}
             </TableBody>
           </Table>

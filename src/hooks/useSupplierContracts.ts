@@ -98,6 +98,39 @@ export const useSupplierContracts = () => {
         .single();
 
       if (error) throw error;
+
+      // Send email notification to supplier if they have an email
+      if (contractData.supplierId) {
+        try {
+          const { data: supplier } = await supabase
+            .from('suppliers')
+            .select('email, name')
+            .eq('id', contractData.supplierId)
+            .single();
+
+          if (supplier?.email) {
+            await supabase.functions.invoke('send-transactional-email', {
+              body: {
+                templateName: 'supplier-contract-notice',
+                recipientEmail: supplier.email,
+                idempotencyKey: `supplier-contract-new-${data.id}`,
+                templateData: {
+                  supplierName: supplier.name,
+                  contractRef: data.id?.substring(0, 8)?.toUpperCase() || 'N/A',
+                  coffeeType: contractData.contractType,
+                  quantityKg: contractData.kilogramsExpected,
+                  pricePerKg: contractData.pricePerKg,
+                  startDate: contractData.date,
+                  actionType: 'new',
+                },
+              },
+            });
+            console.log(`✅ Contract email sent to supplier ${supplier.name}`);
+          }
+        } catch (emailErr) {
+          console.error('Failed to send contract email to supplier:', emailErr);
+        }
+      }
       
       await fetchContracts();
       return data;

@@ -65,7 +65,7 @@ const Suppliers = () => {
   const [coffeeTypeFilter, setCoffeeTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const handleEditSupplier = async (supplierId: string, updates: { name: string; phone: string; origin: string; bank_name?: string; account_name?: string; account_number?: string }) => {
+  const handleEditSupplier = async (supplierId: string, updates: { name: string; phone: string; origin: string; bank_name?: string; account_name?: string; account_number?: string; email?: string; alternative_phone?: string }) => {
     console.log('🔧 Editing supplier and reloading transactions...', { 
       supplierId, 
       oldName: selectedSupplier?.name,
@@ -677,7 +677,7 @@ const Suppliers = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="flex items-center gap-3">
                     <MapPin className="h-5 w-5 text-muted-foreground" />
                     <div>
@@ -693,6 +693,13 @@ const Suppliers = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
+                    <Phone className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Alt. Phone</p>
+                      <p className="font-medium">{selectedSupplier.alternative_phone || '—'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
                     <Calendar className="h-5 w-5 text-muted-foreground" />
                     <div>
                       <p className="text-sm text-muted-foreground">Registered</p>
@@ -700,25 +707,32 @@ const Suppliers = () => {
                     </div>
                   </div>
                 </div>
-                {(selectedSupplier.bank_name || selectedSupplier.account_number) && (
-                  <div className="mt-4 pt-4 border-t">
-                    <h4 className="text-sm font-semibold text-muted-foreground mb-3">Bank Details</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Bank Name</p>
-                        <p className="font-medium">{selectedSupplier.bank_name || '—'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Account Name</p>
-                        <p className="font-medium">{selectedSupplier.account_name || '—'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Account Number</p>
-                        <p className="font-medium">{selectedSupplier.account_number || '—'}</p>
-                      </div>
+                {selectedSupplier.email && (
+                  <div className="mt-3 flex items-center gap-3">
+                    <FileText className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Email</p>
+                      <p className="font-medium">{selectedSupplier.email}</p>
                     </div>
                   </div>
                 )}
+                <div className="mt-4 pt-4 border-t">
+                  <h4 className="text-sm font-semibold text-muted-foreground mb-3">Bank Details</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Bank Name</p>
+                      <p className="font-medium">{selectedSupplier.bank_name || <span className="text-destructive text-sm">Not set</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Account Name</p>
+                      <p className="font-medium">{selectedSupplier.account_name || <span className="text-destructive text-sm">Not set</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Account Number</p>
+                      <p className="font-medium">{selectedSupplier.account_number || <span className="text-destructive text-sm">Not set</span>}</p>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
