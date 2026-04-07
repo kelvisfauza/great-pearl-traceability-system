@@ -7784,17 +7784,24 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           created_at: string
+          external_reference: string | null
           gross_payable_ugx: number
           id: string
           is_duplicate: boolean | null
           lot_id: string | null
           method: Database["public"]["Enums"]["payment_method"]
           notes: string | null
+          processed_at: string | null
+          provider_message: string | null
+          provider_name: string | null
+          provider_response: Json | null
+          provider_status: string | null
           reference: string | null
           requested_at: string
           requested_by: string
           status: Database["public"]["Enums"]["payment_status"]
           supplier_id: string | null
+          transaction_id: string | null
           updated_at: string
         }
         Insert: {
@@ -7803,17 +7810,24 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
+          external_reference?: string | null
           gross_payable_ugx: number
           id?: string
           is_duplicate?: boolean | null
           lot_id?: string | null
           method: Database["public"]["Enums"]["payment_method"]
           notes?: string | null
+          processed_at?: string | null
+          provider_message?: string | null
+          provider_name?: string | null
+          provider_response?: Json | null
+          provider_status?: string | null
           reference?: string | null
           requested_at?: string
           requested_by: string
           status?: Database["public"]["Enums"]["payment_status"]
           supplier_id?: string | null
+          transaction_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -7822,17 +7836,24 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
+          external_reference?: string | null
           gross_payable_ugx?: number
           id?: string
           is_duplicate?: boolean | null
           lot_id?: string | null
           method?: Database["public"]["Enums"]["payment_method"]
           notes?: string | null
+          processed_at?: string | null
+          provider_message?: string | null
+          provider_name?: string | null
+          provider_response?: Json | null
+          provider_status?: string | null
           reference?: string | null
           requested_at?: string
           requested_by?: string
           status?: Database["public"]["Enums"]["payment_status"]
           supplier_id?: string | null
+          transaction_id?: string | null
           updated_at?: string
         }
         Relationships: [
