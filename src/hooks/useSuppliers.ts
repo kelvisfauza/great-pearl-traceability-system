@@ -210,12 +210,14 @@ export const useSuppliers = () => {
     bank_name?: string;
     account_name?: string;
     account_number?: string;
+    email?: string;
+    alternative_phone?: string;
   }) => {
     try {
       console.log('🔄 Updating supplier info only (not affecting transactions):', supplierId, updates);
       
       // Only update the main supplier record - transactions stay linked via supplier_id
-      const { error: supplierError } = await supabase
+      const { error: supplierError, data: updatedData } = await supabase
         .from('suppliers')
         .update({
           name: updates.name,
@@ -224,9 +226,12 @@ export const useSuppliers = () => {
           bank_name: updates.bank_name || null,
           account_name: updates.account_name || null,
           account_number: updates.account_number || null,
+          email: updates.email || null,
+          alternative_phone: updates.alternative_phone || null,
           updated_at: new Date().toISOString()
         })
-        .eq('id', supplierId);
+        .eq('id', supplierId)
+        .select();
 
       if (supplierError) throw supplierError;
       
