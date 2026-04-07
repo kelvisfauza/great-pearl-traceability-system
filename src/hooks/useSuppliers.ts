@@ -15,6 +15,8 @@ export interface Supplier {
   bank_name: string | null;
   account_name: string | null;
   account_number: string | null;
+  email: string | null;
+  alternative_phone: string | null;
 }
 
 // Normalize name for comparison (lowercase, remove extra spaces, common variations)
