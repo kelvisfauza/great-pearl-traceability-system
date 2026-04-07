@@ -579,7 +579,7 @@ const Suppliers = () => {
             </p>
           </div>
           <div className="flex gap-2">
-            {!selectedSupplier && isAdmin() && suppliers.length > 0 && (
+            {!selectedSupplier && canManageSuppliers && suppliers.length > 0 && (
               <>
                 <MigrateSupplierCodesButton onComplete={refetchSuppliers} />
                 <FixPendingPaymentsButton />
