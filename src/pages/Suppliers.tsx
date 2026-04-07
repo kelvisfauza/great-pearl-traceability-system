@@ -591,7 +591,7 @@ const Suppliers = () => {
             )}
             {selectedSupplier && (
               <>
-                {isAdmin() && (
+                {canManageSuppliers && (
                   <Button 
                     variant="outline" 
                     onClick={handlePrintSupplierStatement}
