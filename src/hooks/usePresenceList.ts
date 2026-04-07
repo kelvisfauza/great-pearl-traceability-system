@@ -43,7 +43,7 @@ export const usePresenceList = () => {
         supabase
           .from('employees')
           .select('auth_user_id, name, email, department, role')
-          .eq('status', 'active'),
+          .eq('status', 'Active'),
       ]);
 
       const presenceMap = new Map<string, { status: string; last_seen: string }>();
