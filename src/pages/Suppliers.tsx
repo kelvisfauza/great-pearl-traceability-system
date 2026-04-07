@@ -50,7 +50,8 @@ interface SupplierTransaction {
 const Suppliers = () => {
   const { suppliers, loading: suppliersLoading, updateSupplier, refetchSuppliers } = useSuppliers();
   const { toast } = useToast();
-  const { isAdmin } = useAuth();
+  const { isAdmin, hasPermission } = useAuth();
+  const canManageSuppliers = isAdmin() || hasPermission('Procurement');
   const printRef = useRef<HTMLDivElement>(null);
   
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
