@@ -50,7 +50,8 @@ interface SupplierTransaction {
 const Suppliers = () => {
   const { suppliers, loading: suppliersLoading, updateSupplier, refetchSuppliers } = useSuppliers();
   const { toast } = useToast();
-  const { isAdmin } = useAuth();
+  const { isAdmin, hasPermission } = useAuth();
+  const canManageSuppliers = isAdmin() || hasPermission('Procurement');
   const printRef = useRef<HTMLDivElement>(null);
   
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
@@ -578,7 +579,7 @@ const Suppliers = () => {
             </p>
           </div>
           <div className="flex gap-2">
-            {!selectedSupplier && isAdmin() && suppliers.length > 0 && (
+            {!selectedSupplier && canManageSuppliers && suppliers.length > 0 && (
               <>
                 <MigrateSupplierCodesButton onComplete={refetchSuppliers} />
                 <FixPendingPaymentsButton />
@@ -590,7 +591,7 @@ const Suppliers = () => {
             )}
             {selectedSupplier && (
               <>
-                {isAdmin() && (
+                {canManageSuppliers && (
                   <Button 
                     variant="outline" 
                     onClick={handlePrintSupplierStatement}
