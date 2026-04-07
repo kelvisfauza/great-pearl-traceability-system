@@ -346,9 +346,12 @@ const AttendanceTimeManager = () => {
   };
 
   const activeEmployees = employees.filter(e => e.status === 'Active' && !e.is_training_account);
+  // Deduplicate: use Supabase employees as primary, only add company workers not already present
+  const supabaseEmails = new Set(activeEmployees.map(e => e.email?.toLowerCase()));
+  const uniqueCompanyWorkers = companyWorkers.filter(w => !supabaseEmails.has(w.email?.toLowerCase()));
   const allAttendanceList = [
     ...activeEmployees.map(e => ({ id: e.id, name: e.name, email: e.email, department: e.department, isCompanyWorker: false })),
-    ...companyWorkers.map(w => ({ id: w.id, name: w.name, email: w.email, department: w.department, isCompanyWorker: true })),
+    ...uniqueCompanyWorkers.map(w => ({ id: w.id, name: w.name, email: w.email, department: w.department, isCompanyWorker: true })),
   ].sort((a, b) => a.name.localeCompare(b.name));
 
   const getGroupedFilteredRecords = (): Record<string, AttendanceRecord[]> => {
