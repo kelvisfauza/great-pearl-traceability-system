@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -29,16 +29,22 @@ const WeighBridgeScanner: React.FC<WeighBridgeScannerProps> = ({
   onTicketsChange,
 }) => {
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [sessionCode, setSessionCode] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [scanUrl, setScanUrl] = useState('');
+  const [showQr, setShowQr] = useState(true);
+  
+  // Use ref to avoid stale closure in realtime callback
+  const ticketsRef = useRef(tickets);
+  ticketsRef.current = tickets;
+  const onTicketsChangeRef = useRef(onTicketsChange);
+  onTicketsChangeRef.current = onTicketsChange;
 
   // Create a scan session when dialog opens
   useEffect(() => {
     if (!open) {
       setSessionId(null);
-      setSessionCode(null);
       setScanUrl('');
+      setShowQr(true);
       return;
     }
 
@@ -54,9 +60,7 @@ const WeighBridgeScanner: React.FC<WeighBridgeScannerProps> = ({
         if (error) throw error;
         const d = data as any;
         setSessionId(d.id);
-        setSessionCode(d.session_code);
 
-        // Build the scan URL using the current origin
         const origin = window.location.origin;
         setScanUrl(`${origin}/scan-weighbridge?session=${d.session_code}`);
       } catch (err) {
@@ -69,7 +73,7 @@ const WeighBridgeScanner: React.FC<WeighBridgeScannerProps> = ({
     createSession();
   }, [open]);
 
-  // Subscribe to realtime inserts on the scanned tickets table for this session
+  // Subscribe to realtime inserts — use refs to avoid stale closures
   useEffect(() => {
     if (!sessionId || !open) return;
 
@@ -89,9 +93,12 @@ const WeighBridgeScanner: React.FC<WeighBridgeScannerProps> = ({
             id: newTicket.id,
             qr_data: newTicket.qr_data,
             photo_url: newTicket.photo_url,
-            scanned_at: newTicket.scanned_at,
+            scanned_at: newTicket.scanned_at || new Date().toISOString(),
           };
-          onTicketsChange([...tickets, ticket]);
+          // Use ref to get current tickets array
+          onTicketsChangeRef.current([...ticketsRef.current, ticket]);
+          // Hide QR code once first ticket arrives
+          setShowQr(false);
         }
       )
       .subscribe();
@@ -99,10 +106,18 @@ const WeighBridgeScanner: React.FC<WeighBridgeScannerProps> = ({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [sessionId, open, tickets, onTicketsChange]);
+  }, [sessionId, open]);
 
   const removeTicket = (id: string) => {
     onTicketsChange(tickets.filter(t => t.id !== id));
+    // Show QR again if all tickets removed
+    if (tickets.filter(t => t.id !== id).length === 0) {
+      setShowQr(true);
+    }
+  };
+
+  const scanMore = () => {
+    setShowQr(true);
   };
 
   return (
@@ -114,7 +129,9 @@ const WeighBridgeScanner: React.FC<WeighBridgeScannerProps> = ({
             Scan Weigh Bridge Tickets
           </DialogTitle>
           <DialogDescription>
-            Scan this QR code with your phone to start scanning weigh bridge tickets.
+            {showQr
+              ? 'Scan this QR code with your phone to start scanning weigh bridge tickets.'
+              : `${tickets.length} ticket${tickets.length !== 1 ? 's' : ''} received. Scan more or close when done.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -125,7 +142,7 @@ const WeighBridgeScanner: React.FC<WeighBridgeScannerProps> = ({
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <p className="text-sm text-muted-foreground">Generating QR code...</p>
             </div>
-          ) : scanUrl ? (
+          ) : scanUrl && showQr ? (
             <div className="space-y-3">
               <div className="flex flex-col items-center p-4 rounded-lg border-2 border-dashed border-primary/30 bg-muted/30">
                 <QRCodeSVG
@@ -148,8 +165,8 @@ const WeighBridgeScanner: React.FC<WeighBridgeScannerProps> = ({
                 </p>
                 <ol className="list-decimal list-inside text-muted-foreground space-y-1 ml-1">
                   <li>Open your phone camera and scan this QR code</li>
-                  <li>On your phone, scan each weigh bridge ticket's QR code</li>
-                  <li>Take a photo of each ticket</li>
+                  <li>Point your phone at the weighbridge ticket</li>
+                  <li>It auto-detects and captures the ticket photo</li>
                   <li>Tickets appear here automatically in real-time</li>
                 </ol>
               </div>
@@ -162,6 +179,19 @@ const WeighBridgeScanner: React.FC<WeighBridgeScannerProps> = ({
                 </span>
                 <span className="text-muted-foreground">Waiting for scanned tickets...</span>
               </div>
+            </div>
+          ) : scanUrl && !showQr ? (
+            /* Success state - QR replaced with confirmation */
+            <div className="flex flex-col items-center py-6 gap-3">
+              <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <Check className="h-8 w-8 text-green-600 dark:text-green-400" />
+              </div>
+              <p className="text-sm font-medium text-green-700 dark:text-green-400">
+                Tickets received from phone!
+              </p>
+              <Button variant="outline" size="sm" onClick={scanMore}>
+                <QrCode className="h-4 w-4 mr-2" /> Show QR to scan more
+              </Button>
             </div>
           ) : null}
 
@@ -183,7 +213,9 @@ const WeighBridgeScanner: React.FC<WeighBridgeScannerProps> = ({
                         )}
                         <Badge variant="secondary" className="shrink-0">#{index + 1}</Badge>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-mono truncate">{ticket.qr_data}</p>
+                          <p className="text-xs font-mono truncate">
+                            {ticket.qr_data?.startsWith('auto-captured') ? 'Auto-captured ticket' : ticket.qr_data}
+                          </p>
                           <div className="flex items-center gap-2 mt-1">
                             {ticket.photo_url ? (
                               <Badge variant="outline" className="text-xs">
