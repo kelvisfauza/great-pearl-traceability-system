@@ -9473,6 +9473,15 @@ export type Database = {
         Args: { target_date: string }
         Returns: Json
       }
+      promote_assessed_to_inventory: {
+        Args: never
+        Returns: {
+          batches_created: number
+          records_linked: number
+          records_updated: number
+          total_kg: number
+        }[]
+      }
       rebuild_inventory_batches: {
         Args: never
         Returns: {
