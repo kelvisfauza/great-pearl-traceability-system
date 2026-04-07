@@ -96,4 +96,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'salary-reduction-notice': salaryReductionNotice,
   'supplier-price-notice': supplierPriceNotice,
   'supplier-contract-notice': supplierContractNotice,
+  'supplier-update-notice': supplierUpdateNotice,
 }
