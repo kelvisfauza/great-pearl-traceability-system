@@ -51,6 +51,7 @@ import { template as dailyProcurementSummary } from './daily-procurement-summary
 import { template as salaryReductionNotice } from './salary-reduction-notice.tsx'
 import { template as supplierPriceNotice } from './supplier-price-notice.tsx'
 import { template as supplierContractNotice } from './supplier-contract-notice.tsx'
+import { template as supplierUpdateNotice } from './supplier-update-notice.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'verification-code': verificationCode,
