@@ -88,6 +88,53 @@ const Suppliers = () => {
         console.log('🔄 Reloading transactions for updated supplier...');
         await loadSupplierTransactions(supplierId);
         console.log('✅ Supplier updated and transactions reloaded');
+
+        // Send email notification if supplier has email
+        if (updates.email) {
+          try {
+            await supabase.functions.invoke('send-transactional-email', {
+              body: {
+                templateName: 'supplier-update-notice',
+                recipientEmail: updates.email,
+                idempotencyKey: `supplier-update-${supplierId}-${Date.now()}`,
+                templateData: {
+                  supplierName: updates.name,
+                  supplierCode: selectedSupplier?.code || '',
+                  phone: updates.phone || '',
+                  alternativePhone: updates.alternative_phone || '',
+                  email: updates.email || '',
+                  origin: updates.origin || '',
+                  bankName: updates.bank_name || '',
+                  accountName: updates.account_name || '',
+                  accountNumber: updates.account_number || '',
+                  updatedBy: 'Procurement',
+                  updatedAt: new Date().toLocaleDateString('en-UG', { day: '2-digit', month: 'short', year: 'numeric' }),
+                },
+              },
+            });
+            console.log('📧 Supplier update email sent');
+          } catch (emailErr) {
+            console.error('Failed to send supplier update email:', emailErr);
+          }
+        }
+
+        // Send SMS confirmation if supplier has phone
+        const phoneToSMS = updates.phone || updates.alternative_phone;
+        if (phoneToSMS) {
+          try {
+            await supabase.functions.invoke('send-sms', {
+              body: {
+                phone: phoneToSMS,
+                message: `Dear ${updates.name}, your profile at Great Pearl Coffee has been updated. Check your email for details or contact procurement.`,
+                userName: updates.name,
+                messageType: 'supplier_update',
+              },
+            });
+            console.log('📱 Supplier update SMS sent');
+          } catch (smsErr) {
+            console.error('Failed to send supplier update SMS:', smsErr);
+          }
+        }
       }
     } catch (error) {
       console.error('❌ Error in handleEditSupplier:', error);
