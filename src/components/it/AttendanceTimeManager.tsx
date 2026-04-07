@@ -346,9 +346,9 @@ const AttendanceTimeManager = () => {
   };
 
   const activeEmployees = employees.filter(e => e.status === 'Active' && !e.is_training_account);
-  // Deduplicate: use Supabase employees as primary, only add company workers not already present
-  const supabaseEmails = new Set(activeEmployees.map(e => e.email?.toLowerCase()));
-  const uniqueCompanyWorkers = companyWorkers.filter(w => !supabaseEmails.has(w.email?.toLowerCase()));
+  // Deduplicate: use Supabase employees as primary, only add company workers not already present by name
+  const supabaseNames = new Set(activeEmployees.map(e => e.name?.toLowerCase().trim()));
+  const uniqueCompanyWorkers = companyWorkers.filter(w => !supabaseNames.has(w.name?.toLowerCase().trim()));
   const allAttendanceList = [
     ...activeEmployees.map(e => ({ id: e.id, name: e.name, email: e.email, department: e.department, isCompanyWorker: false })),
     ...uniqueCompanyWorkers.map(w => ({ id: w.id, name: w.name, email: w.email, department: w.department, isCompanyWorker: true })),
