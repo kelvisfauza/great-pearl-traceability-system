@@ -7975,10 +7975,12 @@ export type Database = {
         Row: {
           account_name: string | null
           account_number: string | null
+          alternative_phone: string | null
           bank_name: string | null
           code: string
           created_at: string
           date_registered: string
+          email: string | null
           id: string
           name: string
           opening_balance: number
@@ -7989,10 +7991,12 @@ export type Database = {
         Insert: {
           account_name?: string | null
           account_number?: string | null
+          alternative_phone?: string | null
           bank_name?: string | null
           code: string
           created_at?: string
           date_registered?: string
+          email?: string | null
           id?: string
           name: string
           opening_balance?: number
@@ -8003,10 +8007,12 @@ export type Database = {
         Update: {
           account_name?: string | null
           account_number?: string | null
+          alternative_phone?: string | null
           bank_name?: string | null
           code?: string
           created_at?: string
           date_registered?: string
+          email?: string | null
           id?: string
           name?: string
           opening_balance?: number
