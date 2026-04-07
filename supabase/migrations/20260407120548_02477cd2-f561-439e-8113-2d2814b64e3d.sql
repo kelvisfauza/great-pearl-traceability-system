@@ -1,0 +1,1 @@
+UPDATE employees SET salary = 150000, updated_at = now() WHERE id = 'e56f6fb1-057c-47e2-b8b3-45ae710d4221';
