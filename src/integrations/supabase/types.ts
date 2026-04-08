@@ -6266,6 +6266,9 @@ export type Database = {
           date_assessed: string
           final_price: number | null
           fm: number | null
+          grn_printed: boolean | null
+          grn_printed_at: string | null
+          grn_printed_by: string | null
           group1_defects: number | null
           group2_defects: number | null
           husks: number | null
@@ -6298,6 +6301,9 @@ export type Database = {
           date_assessed?: string
           final_price?: number | null
           fm?: number | null
+          grn_printed?: boolean | null
+          grn_printed_at?: string | null
+          grn_printed_by?: string | null
           group1_defects?: number | null
           group2_defects?: number | null
           husks?: number | null
@@ -6330,6 +6336,9 @@ export type Database = {
           date_assessed?: string
           final_price?: number | null
           fm?: number | null
+          grn_printed?: boolean | null
+          grn_printed_at?: string | null
+          grn_printed_by?: string | null
           group1_defects?: number | null
           group2_defects?: number | null
           husks?: number | null
