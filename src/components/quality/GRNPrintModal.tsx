@@ -29,7 +29,9 @@ interface GRNPrintModalProps {
     calculatorComments?: string;
     isDiscretionBuy?: boolean;
     rejectionReason?: string;
+    printedBy?: string;
   } | null;
+  onPrinted?: () => void;
 }
 
 const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData }) => {
