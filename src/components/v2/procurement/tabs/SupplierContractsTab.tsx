@@ -11,6 +11,7 @@ import { Loader2, Search, FileText, Plus, Pencil, Eye, Trash2 } from "lucide-rea
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useDeletionRequest } from "@/hooks/useDeletionRequest";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import SupplierContractFormDialog from "../dialogs/SupplierContractFormDialog";
 import SupplierContractDetailDialog from "../dialogs/SupplierContractDetailDialog";
