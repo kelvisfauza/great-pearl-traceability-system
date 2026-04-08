@@ -35,7 +35,8 @@ export const BuyerContractsList = ({
   onDeleted
 }: BuyerContractsListProps) => {
   const { toast } = useToast();
-  const { submitDeletionRequest, checkAdminPermission, isSubmitting: isDeleting } = useDeletionRequest();
+  const { submitDeletionRequest, isSubmitting: isDeleting } = useDeletionRequest();
+  const { canSeeDeleteButton } = useRolePermissions();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<BuyerContract | null>(null);
   const [formData, setFormData] = useState({
