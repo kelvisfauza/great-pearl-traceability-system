@@ -189,7 +189,36 @@ export const AccountButton = () => {
     printWindow.document.close();
   };
 
-  const getStatusIcon = (status: string) => {
+  const cancelWithdrawalRequest = async (withdrawalId: string) => {
+    try {
+      // Find the matching approval_request by looking up the withdrawal
+      const { error } = await supabase
+        .from('approval_requests')
+        .update({ 
+          status: 'Withdrawn', 
+          approval_stage: 'withdrawn',
+          rejection_reason: 'Cancelled by user'
+        })
+        .eq('id', withdrawalId)
+        .in('approval_stage', ['pending_finance', 'pending_admin', 'pending_admin_2']);
+
+      if (error) throw error;
+      
+      // Also check withdrawal_requests view
+      await supabase
+        .from('approval_requests')
+        .update({ 
+          status: 'Withdrawn',
+          approval_stage: 'withdrawn', 
+          rejection_reason: 'Cancelled by user'
+        })
+        .eq('id', withdrawalId);
+
+      window.location.reload();
+    } catch (err) {
+      console.error('Failed to cancel withdrawal:', err);
+    }
+  };
     switch (status) {
       case 'approved': case 'completed':
         return <CheckCircle className="h-4 w-4 text-green-600" />;
