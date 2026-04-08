@@ -376,10 +376,17 @@ export const BuyerContractsList = ({
                       </DropdownMenu>
                     </TableCell>
                     <TableCell>
-                      <Button variant="outline" size="sm" onClick={() => onSelectContract(contract)}>
-                        <Eye className="h-4 w-4 mr-1" />
-                        View & Subcontracts
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button variant="outline" size="sm" onClick={() => onSelectContract(contract)}>
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                        {checkAdminPermission() && (
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteTarget(contract)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
