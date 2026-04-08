@@ -195,8 +195,8 @@ const AdminWithdrawalPinPrompt = () => {
   if (!pendingWithdrawal) return null;
 
   return (
-    <Dialog open={!!pendingWithdrawal} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-md" onPointerDownOutside={e => e.preventDefault()}>
+    <Dialog open={!!pendingWithdrawal} onOpenChange={(open) => { if (!open) handleDecline(); }}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-destructive">
             <ShieldAlert className="h-5 w-5" />
