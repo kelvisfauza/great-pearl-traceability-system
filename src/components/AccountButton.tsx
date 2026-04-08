@@ -8,7 +8,7 @@ import {
 import { 
   Wallet, DollarSign, TrendingUp, Plus, Smartphone, Printer, Send,
   Clock, CheckCircle, XCircle, AlertCircle, Star, Zap, Award, Gift, FileText,
-  Landmark, Eye, EyeOff
+  Landmark, Eye, EyeOff, Ban
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -187,6 +187,24 @@ export const AccountButton = () => {
     const content = `<!doctype html><html><head><meta charset="utf-8"/><title>Withdrawal Voucher – ${withdrawal.request_ref || 'N/A'}</title><style>body{font:14px/1.4 system-ui;margin:0;padding:20px}.card{width:640px;margin:0 auto;padding:24px;border:1px solid #ddd}h1{font-size:18px;margin:0 0 12px}.row{display:flex;justify-content:space-between;margin:6px 0}.muted{color:#555}</style></head><body onload="window.print();"><div class="card"><h1>Withdrawal Request Voucher</h1><div class="row"><div>Ref</div><div><strong>${withdrawal.request_ref || 'N/A'}</strong></div></div><div class="row"><div>Amount</div><div><strong>UGX ${withdrawal.amount.toLocaleString()}</strong></div></div><div class="row"><div>Channel</div><div>${withdrawal.channel || 'N/A'}</div></div><div class="row"><div>Phone</div><div>${withdrawal.phone_number}</div></div><div class="row"><div>Requested</div><div>${new Date(withdrawal.created_at).toLocaleString()}</div></div><hr/><p class="muted">This is a withdrawal request voucher. Present to Finance for processing.</p><div style="margin-top:24px"><div>Employee Signature: _____________________</div><div>Date: ______________</div></div></div></body></html>`;
     printWindow.document.write(content);
     printWindow.document.close();
+  };
+
+  const cancelWithdrawalRequest = async (withdrawalId: string) => {
+    try {
+      const { error } = await supabase
+        .from('approval_requests')
+        .update({ 
+          status: 'Withdrawn', 
+          approval_stage: 'withdrawn',
+          rejection_reason: 'Cancelled by user'
+        })
+        .eq('id', withdrawalId);
+
+      if (error) throw error;
+      window.location.reload();
+    } catch (err) {
+      console.error('Failed to cancel withdrawal:', err);
+    }
   };
 
   const getStatusIcon = (status: string) => {
@@ -564,6 +582,23 @@ export const AccountButton = () => {
                           <Printer className="h-3 w-3 mr-1" />
                           Reprint
                         </Button>
+                        {withdrawal.status && ['Pending Finance', 'pending', 'Pending Admin', 'Pending'].some(s => 
+                          withdrawal.status?.toLowerCase().includes(s.toLowerCase())
+                        ) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 text-xs px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => {
+                              if (withdrawal.id && window.confirm('Are you sure you want to cancel this withdrawal request?')) {
+                                cancelWithdrawalRequest(withdrawal.id);
+                              }
+                            }}
+                          >
+                            <Ban className="h-3 w-3 mr-1" />
+                            Cancel
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}
