@@ -189,6 +189,61 @@ serve(async (req) => {
     
     console.log('📱 SMS request from user:', userId, '| type:', messageType)
     console.log('Received SMS request:', { phone, userName, messageLength: message?.length })
+
+    // SMS GATEKEEPER: Only allow OTP/verification and account creation SMS through
+    // All other notifications should use email instead to save SMS credits
+    const ALLOWED_SMS_TYPES = [
+      'verification',
+      'otp',
+      'login_code',
+      'twofa',
+      'account_creation',
+      'bypass_sms',
+    ]
+    
+    const isAllowedType = ALLOWED_SMS_TYPES.includes(messageType?.toLowerCase() || '')
+    const isOtpMessage = message && (
+      /\bcode\b.*\d{4,6}/i.test(message) || 
+      /\d{4,6}.*\bcode\b/i.test(message) ||
+      /verification\s*code/i.test(message) ||
+      /login\s*code/i.test(message) ||
+      /Temporary Password/i.test(message)
+    )
+    
+    if (!isAllowedType && !isOtpMessage) {
+      console.log(`🚫 SMS BLOCKED (non-OTP type: ${messageType}). Use email instead. Recipient: ${userName || recipientEmail || phone}`)
+      
+      // Log as redirected but return success so callers don't break
+      try {
+        await supabase.from('sms_logs').insert({
+          recipient_phone: phone,
+          recipient_name: userName,
+          recipient_email: recipientEmail,
+          message_content: message?.substring(0, 50) + '... [blocked - use email]',
+          message_type: messageType || 'general',
+          status: 'redirected_to_email',
+          provider: 'BLOCKED',
+          credits_used: 0,
+          department: department,
+          triggered_by: triggeredBy,
+          request_id: requestId,
+        })
+      } catch (logErr) {
+        console.error('Failed to log blocked SMS:', logErr)
+      }
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          blocked: true, 
+          reason: 'Non-OTP SMS blocked to save credits. Use email for this notification type.',
+          messageType 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    console.log(`✅ SMS ALLOWED (type: ${messageType}, isOtp: ${isOtpMessage})`)
     
     if (!phone || !message) {
       console.error('Missing required fields:', { phone: !!phone, message: !!message })
