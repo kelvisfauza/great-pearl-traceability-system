@@ -95,15 +95,19 @@ const AdminWithdrawalPinPrompt = () => {
         return;
       }
 
-      // PIN correct - deduct from wallet via ledger entry
+      // PIN correct - resolve unified user ID for ledger
+      const { data: unifiedId } = await supabase
+        .rpc('get_unified_user_id', { input_email: pendingWithdrawal.employee_email });
+      
+      const walletUserId = unifiedId || pendingWithdrawal.employee_id;
       const reference = `ADM-WD-${pendingWithdrawal.id.substring(0, 8).toUpperCase()}`;
 
       const { error: ledgerError } = await supabase
         .from('ledger_entries' as any)
         .insert({
-          user_id: pendingWithdrawal.employee_id,
-          entry_type: 'debit',
-          amount: pendingWithdrawal.amount,
+          user_id: walletUserId,
+          entry_type: 'WITHDRAWAL',
+          amount: -Math.abs(pendingWithdrawal.amount),
           reference,
           source_category: 'WITHDRAWAL',
           metadata: {
