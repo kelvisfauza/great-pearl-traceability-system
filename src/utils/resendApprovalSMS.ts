@@ -19,7 +19,4 @@ export const resendApprovalSMS = async (requestId: string) => {
   }
 };
 
-// Immediately send SMS for Shafik's request
-resendApprovalSMS('9a0abbcb-eaa6-415a-9139-d2239a9d690e').then(result => {
-  console.log('📧 SMS Notification Result:', result);
-});
+// Auto-execution removed - use resendApprovalSMS() manually when needed

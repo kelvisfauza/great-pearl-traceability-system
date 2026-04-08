@@ -132,18 +132,7 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const { error: smsError } = await supabase.functions.invoke('send-sms', {
-          body: {
-            phone: employee.phone,
-            message,
-            userName: employee.name,
-            messageType: 'daily_loyalty_wallet_summary',
-            triggeredBy: 'daily-loyalty-wallet-summary',
-            recipientEmail: employee.email,
-          },
-        });
-
-        // Also send detailed email
+        // Email notification (primary channel - replaces SMS to save credits)
         await supabase.functions.invoke('send-transactional-email', {
           body: {
             templateName: 'daily-wallet-summary',
@@ -161,13 +150,6 @@ Deno.serve(async (req) => {
         });
 
         processed += 1;
-
-        if (smsError) {
-          failed += 1;
-          errors.push({ employee: employee.name, error: smsError.message });
-          continue;
-        }
-
         sent += 1;
       } catch (error) {
         failed += 1;

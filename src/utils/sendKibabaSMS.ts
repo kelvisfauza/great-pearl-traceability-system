@@ -77,8 +77,4 @@ export const sendKibabaSMS = async () => {
   }
 };
 
-// Execute immediately
-console.log('🚀 Sending SMS to Kibaba...');
-sendKibabaSMS().then(result => {
-  console.log('📧 SMS Result:', result);
-});
+// Auto-execution removed - use sendKibabaSMS() manually when needed
