@@ -99,4 +99,6 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'supplier-price-notice': supplierPriceNotice,
   'supplier-contract-notice': supplierContractNotice,
   'supplier-update-notice': supplierUpdateNotice,
+  'admin-withdrawal-pin': adminWithdrawalPin,
+  'admin-withdrawal-confirmed': adminWithdrawalConfirmed,
 }
