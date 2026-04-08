@@ -93,7 +93,7 @@ export const useEUDRDocumentation = () => {
 
   const fetchEUDRBatches = async () => {
     try {
-      const data = await fetchAllRows<any>('eudr_batches', 'batch_sequence', true);
+      const data = await fetchAllRows('eudr_batches', 'batch_sequence', true);
       setEudrBatches(data.map(batch => ({
         ...batch,
         status: batch.status as 'available' | 'partially_sold' | 'sold_out'
