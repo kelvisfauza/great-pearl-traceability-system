@@ -51,16 +51,31 @@ export const useEUDRDocumentation = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
+  // Helper to fetch all rows from a table, paginating past the 1000-row limit
+  const fetchAllRows = async (table: 'eudr_documents' | 'eudr_batches' | 'eudr_sales', orderCol: string, ascending: boolean): Promise<any[]> => {
+    const PAGE = 1000;
+    let allRows: any[] = [];
+    let from = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from(table)
+        .select('*')
+        .order(orderCol, { ascending })
+        .range(from, from + PAGE - 1);
+      if (error) throw error;
+      allRows = allRows.concat(data || []);
+      hasMore = (data?.length || 0) === PAGE;
+      from += PAGE;
+    }
+    return allRows;
+  };
+
   const fetchEUDRDocuments = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('eudr_documents')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setEudrDocuments((data || []).map(doc => ({
+      const data = await fetchAllRows('eudr_documents', 'created_at', false);
+      setEudrDocuments(data.map(doc => ({
         ...doc,
         status: doc.status as 'documented' | 'partially_sold' | 'sold_out'
       })));
@@ -78,13 +93,8 @@ export const useEUDRDocumentation = () => {
 
   const fetchEUDRBatches = async () => {
     try {
-      const { data, error } = await supabase
-        .from('eudr_batches')
-        .select('*')
-        .order('batch_sequence', { ascending: true });
-
-      if (error) throw error;
-      setEudrBatches((data || []).map(batch => ({
+      const data = await fetchAllRows('eudr_batches', 'batch_sequence', true);
+      setEudrBatches(data.map(batch => ({
         ...batch,
         status: batch.status as 'available' | 'partially_sold' | 'sold_out'
       })));
@@ -95,13 +105,8 @@ export const useEUDRDocumentation = () => {
 
   const fetchEUDRSales = async () => {
     try {
-      const { data, error } = await supabase
-        .from('eudr_sales')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setEudrSales(data || []);
+      const data = await fetchAllRows('eudr_sales', 'created_at', false);
+      setEudrSales(data);
     } catch (error) {
       console.error('Error fetching EUDR sales:', error);
     }
