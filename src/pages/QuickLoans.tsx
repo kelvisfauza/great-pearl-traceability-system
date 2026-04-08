@@ -1073,6 +1073,7 @@ const QuickLoans = () => {
               sources: `Wallet: UGX ${amount.toLocaleString()}`,
               remainingBalance: newRemainingBalance.toLocaleString(),
               isFullyPaid,
+              isVoluntaryPayment: true,
             },
           },
         });
