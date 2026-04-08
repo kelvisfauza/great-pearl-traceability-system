@@ -148,7 +148,7 @@ const AdminWithdrawalPinPrompt = () => {
             initiatedBy: pendingWithdrawal.initiated_by_name,
             reference,
             remainingBalance: userBalance
-              ? Number(userBalance.balance).toLocaleString()
+              ? Number(userBalance.wallet_balance).toLocaleString()
               : 'N/A',
           },
         },
