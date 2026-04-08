@@ -1380,6 +1380,19 @@ const QualityControl = () => {
                           </TableCell>
                           <TableCell>{assessment.date_assessed}</TableCell>
                           <TableCell>{getStatusBadge(assessment.status)}</TableCell>
+                          <TableCell>
+                            {assessment.grn_printed ? (
+                              <div className="space-y-0.5">
+                                <Badge variant="secondary" className="text-xs gap-1">
+                                  <CheckCircle className="h-3 w-3 text-green-500" />
+                                  Printed
+                                </Badge>
+                                <p className="text-[10px] text-muted-foreground">{assessment.grn_printed_by}</p>
+                              </div>
+                            ) : (
+                              <Badge variant="outline" className="text-xs">Not Printed</Badge>
+                            )}
+                          </TableCell>
                            <TableCell>
                             <div className="flex gap-2">
                               <Button 
@@ -1391,14 +1404,25 @@ const QualityControl = () => {
                                 <Edit className="h-4 w-4 mr-1" />
                                 Edit
                               </Button>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => handlePrintGRN(assessment)}
-                              >
-                                <FileDown className="h-4 w-4 mr-1" />
-                                Print GRN
-                              </Button>
+                              {!assessment.grn_printed ? (
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => handlePrintGRN(assessment)}
+                                >
+                                  <Printer className="h-4 w-4 mr-1" />
+                                  Print GRN
+                                </Button>
+                              ) : isAdmin() ? (
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost"
+                                  onClick={() => handlePrintGRN(assessment)}
+                                >
+                                  <Printer className="h-4 w-4 mr-1" />
+                                  Reprint
+                                </Button>
+                              ) : null}
                             </div>
                           </TableCell>
                         </TableRow>
