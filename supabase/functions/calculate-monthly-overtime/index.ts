@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
       empMap[r.employee_id].total_late += Number(r.late_minutes || 0);
     }
 
-    const RATE_PER_HOUR = 1000; // UGX per hour
+    const RATE_PER_HOUR = 3000; // UGX per hour
     const records = Object.values(empMap).map((emp) => {
       const netOT = Math.max(0, emp.total_overtime - emp.total_late);
       const hours = Math.ceil(netOT / 60);
