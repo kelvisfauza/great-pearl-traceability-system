@@ -31,10 +31,13 @@ export const BuyerContractsList = ({
   onCreateContract,
   onUpdateContract,
   onSelectContract,
-  getRemainingQuantity
+  getRemainingQuantity,
+  onDeleted
 }: BuyerContractsListProps) => {
   const { toast } = useToast();
+  const { submitDeletionRequest, checkAdminPermission, isSubmitting: isDeleting } = useDeletionRequest();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<BuyerContract | null>(null);
   const [formData, setFormData] = useState({
     buyer_ref: '',
     buyer_name: '',
