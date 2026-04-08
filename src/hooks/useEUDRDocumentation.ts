@@ -105,7 +105,7 @@ export const useEUDRDocumentation = () => {
 
   const fetchEUDRSales = async () => {
     try {
-      const data = await fetchAllRows<any>('eudr_sales', 'created_at', false);
+      const data = await fetchAllRows('eudr_sales', 'created_at', false);
       setEudrSales(data);
     } catch (error) {
       console.error('Error fetching EUDR sales:', error);
