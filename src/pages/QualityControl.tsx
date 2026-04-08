@@ -1387,6 +1387,18 @@ const QualityControl = () => {
                             isHighlighted(assessment.id, assessment.batch_number) && "ring-2 ring-primary ring-offset-2 bg-primary/10 animate-pulse-highlight"
                           )}
                         >
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedForBulkPrint.includes(assessment.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedForBulkPrint(prev => [...prev, assessment.id]);
+                                } else {
+                                  setSelectedForBulkPrint(prev => prev.filter(id => id !== assessment.id));
+                                }
+                              }}
+                            />
+                          </TableCell>
                           <TableCell className="font-medium">{assessment.batch_number}</TableCell>
                           <TableCell>
                             <div className="space-y-0.5">
