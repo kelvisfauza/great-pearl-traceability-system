@@ -1305,8 +1305,26 @@ const QualityControl = () => {
                       <Badge variant="outline" className="ml-2">
                         {filteredAssessments.length} assessment{filteredAssessments.length !== 1 ? 's' : ''}
                       </Badge>
+                      {selectedForBulkPrint.length > 0 && (
+                        <Button
+                          size="sm"
+                          onClick={async () => {
+                            for (const id of selectedForBulkPrint) {
+                              const assessment = filteredAssessments.find((a: any) => a.id === id);
+                              if (assessment) {
+                                await handlePrintGRN(assessment);
+                                // Small delay between prints
+                                await new Promise(r => setTimeout(r, 500));
+                              }
+                            }
+                            setSelectedForBulkPrint([]);
+                          }}
+                        >
+                          <Printer className="h-4 w-4 mr-1" />
+                          Bulk Print GRN ({selectedForBulkPrint.length})
+                        </Button>
+                      )}
                     </div>
-                  </div>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
