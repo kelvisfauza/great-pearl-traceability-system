@@ -42,6 +42,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRoleBasedAccess } from "@/hooks/useRoleBasedAccess";
 import { useSearchHighlight } from "@/hooks/useSearchHighlight";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
+import { openBulkGRNPrintWindow, GRNData } from "@/utils/bulkGRNPrint";
 import ArabicaPriceCalculator from "@/components/milling/ArabicaPriceCalculator";
 import QualityPriceCalculator from "@/components/quality/QualityPriceCalculator";
 import QuickAnalysesList from "@/components/quality/QuickAnalysesList";
