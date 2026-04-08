@@ -43,16 +43,26 @@ const AdminInitiateWithdrawal = () => {
     setEmployees(data || []);
   };
 
-  const fetchWalletBalances = async () => {
+  const fetchWalletBalances = async (empList?: any[]) => {
     try {
-      const { data } = await supabase.rpc('get_all_wallet_balances' as any);
-      if (data) {
-        const balanceMap: Record<string, number> = {};
-        (data as any[]).forEach((b: any) => {
-          balanceMap[b.user_id] = Number(b.balance) || 0;
-        });
-        setWalletBalances(balanceMap);
-      }
+      const list = empList || employees;
+      if (!list.length) return;
+
+      const balanceMap: Record<string, number> = {};
+
+      // Fetch balances for all employees using their emails
+      const promises = list.map(async (emp: any) => {
+        const { data } = await supabase.rpc('get_user_balance_safe', { user_email: emp.email });
+        const row = data?.[0];
+        if (row) {
+          balanceMap[emp.id] = Number(row.wallet_balance) || 0;
+        } else {
+          balanceMap[emp.id] = 0;
+        }
+      });
+
+      await Promise.all(promises);
+      setWalletBalances(balanceMap);
     } catch (err) {
       console.error('Error fetching wallet balances:', err);
     }
