@@ -40,7 +40,10 @@ const AdminInitiateWithdrawal = () => {
       .select('id, name, email, department, position')
       .eq('status', 'Active')
       .order('name');
-    setEmployees(data || []);
+    const empList = data || [];
+    setEmployees(empList);
+    // Fetch balances after employees are loaded
+    fetchWalletBalances(empList);
   };
 
   const fetchWalletBalances = async (empList?: any[]) => {
