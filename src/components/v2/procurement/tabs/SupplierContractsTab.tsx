@@ -7,9 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Search, FileText, Plus, Pencil, Eye } from "lucide-react";
+import { Loader2, Search, FileText, Plus, Pencil, Eye, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { useDeletionRequest } from "@/hooks/useDeletionRequest";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import SupplierContractFormDialog from "../dialogs/SupplierContractFormDialog";
 import SupplierContractDetailDialog from "../dialogs/SupplierContractDetailDialog";
 import type { SupplierContract } from "@/hooks/useSupplierContracts";
@@ -21,6 +23,8 @@ const SupplierContractsTab = () => {
   const [editingContract, setEditingContract] = useState<SupplierContract | null>(null);
   const [detailContract, setDetailContract] = useState<SupplierContract | null>(null);
   const { toast } = useToast();
+  const { submitDeletionRequest, checkAdminPermission, isSubmitting: isDeleting } = useDeletionRequest();
+  const [deleteTarget, setDeleteTarget] = useState<SupplierContract | null>(null);
 
   if (loading) return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>;
 
@@ -174,6 +178,11 @@ const SupplierContractsTab = () => {
                         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingContract(c); setFormOpen(true); }}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
+                        {checkAdminPermission() && (
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeleteTarget(c)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -230,6 +239,40 @@ const SupplierContractsTab = () => {
           onChanged={() => { fetchContracts(); }}
         />
       )}
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Supplier Contract</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the contract for <strong>{deleteTarget?.supplierName}</strong> ({deleteTarget?.contractType})? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (!deleteTarget) return;
+                const success = await submitDeletionRequest(
+                  'supplier_contracts',
+                  deleteTarget.id,
+                  deleteTarget,
+                  'Admin deletion',
+                  `Supplier Contract - ${deleteTarget.supplierName} (${deleteTarget.contractType})`
+                );
+                if (success) {
+                  setDeleteTarget(null);
+                  fetchContracts();
+                }
+              }}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -9,9 +9,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, FileText, Eye, CheckCircle, XCircle, Clock, Pause } from "lucide-react";
+import { Plus, FileText, Eye, CheckCircle, XCircle, Clock, Pause, Trash2 } from "lucide-react";
 import { BuyerContract } from '@/hooks/useBuyerContracts';
 import { useToast } from '@/hooks/use-toast';
+import { useDeletionRequest } from '@/hooks/useDeletionRequest';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface BuyerContractsListProps {
   contracts: BuyerContract[];
@@ -20,6 +22,7 @@ interface BuyerContractsListProps {
   onUpdateContract: (id: string, updates: Partial<BuyerContract>) => Promise<void>;
   onSelectContract: (contract: BuyerContract) => void;
   getRemainingQuantity: (contract: BuyerContract) => number;
+  onDeleted?: () => void;
 }
 
 export const BuyerContractsList = ({
@@ -28,10 +31,13 @@ export const BuyerContractsList = ({
   onCreateContract,
   onUpdateContract,
   onSelectContract,
-  getRemainingQuantity
+  getRemainingQuantity,
+  onDeleted
 }: BuyerContractsListProps) => {
   const { toast } = useToast();
+  const { submitDeletionRequest, checkAdminPermission, isSubmitting: isDeleting } = useDeletionRequest();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<BuyerContract | null>(null);
   const [formData, setFormData] = useState({
     buyer_ref: '',
     buyer_name: '',
@@ -370,10 +376,17 @@ export const BuyerContractsList = ({
                       </DropdownMenu>
                     </TableCell>
                     <TableCell>
-                      <Button variant="outline" size="sm" onClick={() => onSelectContract(contract)}>
-                        <Eye className="h-4 w-4 mr-1" />
-                        View & Subcontracts
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button variant="outline" size="sm" onClick={() => onSelectContract(contract)}>
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                        {checkAdminPermission() && (
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteTarget(contract)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -382,6 +395,40 @@ export const BuyerContractsList = ({
           </Table>
         )}
       </CardContent>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Buyer Contract</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete contract <strong>{deleteTarget?.contract_ref}</strong> for <strong>{deleteTarget?.buyer_name}</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (!deleteTarget) return;
+                const success = await submitDeletionRequest(
+                  'buyer_contracts',
+                  deleteTarget.id,
+                  deleteTarget,
+                  'Admin deletion',
+                  `Buyer Contract ${deleteTarget.contract_ref} - ${deleteTarget.buyer_name}`
+                );
+                if (success) {
+                  setDeleteTarget(null);
+                  onDeleted?.();
+                }
+              }}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
