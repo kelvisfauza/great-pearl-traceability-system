@@ -95,15 +95,19 @@ const AdminWithdrawalPinPrompt = () => {
         return;
       }
 
-      // PIN correct - deduct from wallet via ledger entry
+      // PIN correct - resolve unified user ID for ledger
+      const { data: unifiedId } = await supabase
+        .rpc('get_unified_user_id', { input_email: pendingWithdrawal.employee_email });
+      
+      const walletUserId = unifiedId || pendingWithdrawal.employee_id;
       const reference = `ADM-WD-${pendingWithdrawal.id.substring(0, 8).toUpperCase()}`;
 
       const { error: ledgerError } = await supabase
         .from('ledger_entries' as any)
         .insert({
-          user_id: pendingWithdrawal.employee_id,
-          entry_type: 'debit',
-          amount: pendingWithdrawal.amount,
+          user_id: walletUserId,
+          entry_type: 'WITHDRAWAL',
+          amount: -Math.abs(pendingWithdrawal.amount),
           reference,
           source_category: 'WITHDRAWAL',
           metadata: {
@@ -127,11 +131,9 @@ const AdminWithdrawalPinPrompt = () => {
 
       // Get remaining balance for email
       const { data: balanceData } = await supabase
-        .rpc('get_all_wallet_balances' as any);
+        .rpc('get_user_balance_safe', { user_email: pendingWithdrawal.employee_email });
       
-      const userBalance = (balanceData as any[])?.find(
-        (b: any) => b.user_id === pendingWithdrawal.employee_id
-      );
+      const userBalance = (balanceData as any[])?.[0];
 
       // Send confirmation email
       await supabase.functions.invoke('send-transactional-email', {
@@ -146,7 +148,7 @@ const AdminWithdrawalPinPrompt = () => {
             initiatedBy: pendingWithdrawal.initiated_by_name,
             reference,
             remainingBalance: userBalance
-              ? Number(userBalance.balance).toLocaleString()
+              ? Number(userBalance.wallet_balance).toLocaleString()
               : 'N/A',
           },
         },
