@@ -1697,6 +1697,19 @@ const QualityControl = () => {
           open={grnPrintModal.open}
           onClose={() => setGrnPrintModal({open: false, grnData: null})}
           grnData={grnPrintModal.grnData}
+          onPrinted={async () => {
+            // Find the assessment that matches this GRN
+            const batchNum = grnPrintModal.grnData?.grnNumber?.replace('GRN-', '');
+            const assessment = qualityAssessments.find((a: any) => a.batch_number === batchNum);
+            if (assessment) {
+              await supabase.from('quality_assessments').update({
+                grn_printed: true,
+                grn_printed_by: employee?.name || 'Unknown',
+                grn_printed_at: new Date().toISOString()
+              }).eq('id', assessment.id);
+              refreshData();
+            }
+          }}
         />
       </div>
     </Layout>
