@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { CoffeeMarketBriefing, CoffeeMarketSnapshot } from "@/components/display-tv/types";
 
@@ -27,6 +27,8 @@ const fallbackBriefing: CoffeeMarketBriefing = {
   source: "Live market briefing",
 };
 
+const REFRESH_INTERVAL_MS = 3 * 60 * 1000; // 3 minutes
+
 export const useCoffeeMarketBriefing = (snapshot: CoffeeMarketSnapshot) => {
   const [state, setState] = useState<BriefingState>({
     briefing: fallbackBriefing,
@@ -34,12 +36,16 @@ export const useCoffeeMarketBriefing = (snapshot: CoffeeMarketSnapshot) => {
     error: null,
   });
 
+  // Use a ref so the interval always reads the latest snapshot without restarting
+  const snapshotRef = useRef(snapshot);
+  snapshotRef.current = snapshot;
+
   const refresh = useCallback(async () => {
     try {
       setState((current) => ({ ...current, loading: true, error: null }));
 
       const { data, error } = await supabase.functions.invoke("coffee-market-briefing", {
-        body: { marketSnapshot: snapshot },
+        body: { marketSnapshot: snapshotRef.current },
       });
 
       if (error) {
@@ -59,11 +65,12 @@ export const useCoffeeMarketBriefing = (snapshot: CoffeeMarketSnapshot) => {
         error: message,
       }));
     }
-  }, [snapshot]);
+  }, []);
 
+  // Initial fetch + stable interval (doesn't restart on snapshot changes)
   useEffect(() => {
     refresh();
-    const interval = window.setInterval(refresh, 5 * 60 * 1000);
+    const interval = window.setInterval(refresh, REFRESH_INTERVAL_MS);
     return () => window.clearInterval(interval);
   }, [refresh]);
 
