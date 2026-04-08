@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { openBulkGRNPrintWindow, GRNData } from "@/utils/bulkGRNPrint";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -128,14 +129,44 @@ const BatchAssessmentsTab = () => {
     }
 
     setBulkPrinting(true);
+
+    // Build all GRN data and open a single print window
+    const grnDataList: GRNData[] = printableLots.map(lot => {
+      const assessment = getAssessmentForLot(lot.batch_number)!;
+      return {
+        grnNumber: `GRN-${lot.batch_number}`,
+        supplierName: lot.supplier_name,
+        coffeeType: lot.coffee_type,
+        numberOfBags: lot.bags,
+        totalKgs: lot.kilograms,
+        unitPrice: assessment.final_price || assessment.suggested_price || 0,
+        assessedBy: assessment.assessed_by || '',
+        createdAt: assessment.created_at,
+        moisture: assessment.moisture,
+        group1_defects: assessment.group1_defects,
+        group2_defects: assessment.group2_defects,
+        below12: assessment.below12,
+        pods: assessment.pods,
+        husks: assessment.husks,
+        stones: assessment.stones,
+        outturn: assessment.outturn,
+        calculatorComments: assessment.quality_note,
+        isDiscretionBuy: assessment.admin_discretion_buy,
+        printedBy: currentUserName,
+      };
+    });
+
+    openBulkGRNPrintWindow(grnDataList);
+
+    // Mark all as printed
     for (const lot of printableLots) {
       const assessment = getAssessmentForLot(lot.batch_number)!;
-      openGRNForLot(lot, assessment);
-      // Wait briefly for modal to render, then auto-print
-      await new Promise(r => setTimeout(r, 500));
+      await markGRNPrinted(assessment.id);
     }
+
     setBulkPrinting(false);
     setSelectedIds([]);
+    toast({ title: "Bulk GRN Printed", description: `${grnDataList.length} GRN documents sent to printer.` });
   };
 
   const toggleSelect = (id: string) => {
