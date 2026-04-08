@@ -13,6 +13,7 @@ import { Plus, FileText, Eye, CheckCircle, XCircle, Clock, Pause, Trash2 } from 
 import { BuyerContract } from '@/hooks/useBuyerContracts';
 import { useToast } from '@/hooks/use-toast';
 import { useDeletionRequest } from '@/hooks/useDeletionRequest';
+import { useRolePermissions } from '@/hooks/useRolePermissions';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface BuyerContractsListProps {
@@ -35,7 +36,8 @@ export const BuyerContractsList = ({
   onDeleted
 }: BuyerContractsListProps) => {
   const { toast } = useToast();
-  const { submitDeletionRequest, checkAdminPermission, isSubmitting: isDeleting } = useDeletionRequest();
+  const { submitDeletionRequest, isSubmitting: isDeleting } = useDeletionRequest();
+  const { canSeeDeleteButton } = useRolePermissions();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<BuyerContract | null>(null);
   const [formData, setFormData] = useState({
@@ -381,7 +383,7 @@ export const BuyerContractsList = ({
                           <Eye className="h-4 w-4 mr-1" />
                           View
                         </Button>
-                        {checkAdminPermission() && (
+                        {canSeeDeleteButton && (
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteTarget(contract)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>

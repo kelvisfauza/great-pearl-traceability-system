@@ -24,11 +24,12 @@ export const useDeletionRequest = () => {
       return false;
     }
 
-    // Only administrators can delete
-    if (employee.role !== 'Administrator') {
+    // Check role-based delete permission
+    const allowedRoles = ['Administrator', 'Super Admin', 'Manager'];
+    if (!allowedRoles.includes(employee.role)) {
       toast({
         title: "Permission Denied",
-        description: "Only administrators can delete records",
+        description: "You don't have permission to delete records",
         variant: "destructive"
       });
       return false;
