@@ -221,11 +221,14 @@ const AdminInitiateWithdrawal = () => {
                   <SelectValue placeholder="Choose employee..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {employees.map(emp => (
-                    <SelectItem key={emp.id} value={emp.id}>
-                      {emp.name} — {emp.department}
-                    </SelectItem>
-                  ))}
+                  {employees.map(emp => {
+                    const bal = walletBalances[emp.id] || 0;
+                    return (
+                      <SelectItem key={emp.id} value={emp.id}>
+                        {emp.name} — {emp.department} (UGX {bal.toLocaleString()})
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
