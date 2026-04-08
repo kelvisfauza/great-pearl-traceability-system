@@ -23,6 +23,8 @@ const SupplierContractsTab = () => {
   const [editingContract, setEditingContract] = useState<SupplierContract | null>(null);
   const [detailContract, setDetailContract] = useState<SupplierContract | null>(null);
   const { toast } = useToast();
+  const { submitDeletionRequest, checkAdminPermission, isSubmitting: isDeleting } = useDeletionRequest();
+  const [deleteTarget, setDeleteTarget] = useState<SupplierContract | null>(null);
 
   if (loading) return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>;
 
