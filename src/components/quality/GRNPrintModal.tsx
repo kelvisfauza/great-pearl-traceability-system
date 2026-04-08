@@ -34,7 +34,7 @@ interface GRNPrintModalProps {
   onPrinted?: () => void;
 }
 
-const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData }) => {
+const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, onPrinted }) => {
   const printRef = useRef<HTMLDivElement>(null);
   const { createVerification } = useDocumentVerification();
   const [verificationCode, setVerificationCode] = useState<string | null>(null);
