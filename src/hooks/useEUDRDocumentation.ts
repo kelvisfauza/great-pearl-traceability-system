@@ -74,7 +74,7 @@ export const useEUDRDocumentation = () => {
   const fetchEUDRDocuments = async () => {
     setLoading(true);
     try {
-      const data = await fetchAllRows<any>('eudr_documents', 'created_at', false);
+      const data = await fetchAllRows('eudr_documents', 'created_at', false);
       setEudrDocuments(data.map(doc => ({
         ...doc,
         status: doc.status as 'documented' | 'partially_sold' | 'sold_out'
