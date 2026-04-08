@@ -199,6 +199,7 @@ serve(async (req) => {
       'twofa',
       'account_creation',
       'bypass_sms',
+      'loan_reminder',
     ]
     
     const isAllowedType = ALLOWED_SMS_TYPES.includes(messageType?.toLowerCase() || '')
