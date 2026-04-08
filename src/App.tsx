@@ -82,6 +82,7 @@ import EUDRDispatchReports from "./pages/reports/EUDRDispatchReports";
 import WholeBusinessReport from "./pages/reports/WholeBusinessReport";
 import SystemSettings from "./pages/admin/SystemSettings";
 import SystemTransactions from "./pages/admin/SystemTransactions";
+import AdminInitiateWithdrawal from "./pages/admin/AdminInitiateWithdrawal";
 import UserDailyReports from "./pages/UserDailyReports";
 import { DailyReportReminder } from "./components/reports/DailyReportReminder";
 import { MonthlyReportReminder } from "./components/reports/MonthlyReportReminder";
@@ -96,6 +97,7 @@ import BirthdayNotification from "./components/BirthdayNotification";
 import { useInactivityTimer } from './hooks/useInactivityTimer';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import GlobalErrorCaptureInitializer from './components/GlobalErrorCaptureInitializer';
+import AdminWithdrawalPinPrompt from './components/AdminWithdrawalPinPrompt';
 import ScanWeighBridge from './pages/ScanWeighBridge';
 
 // Disabled: Error Handler was causing infinite loops and performance issues
@@ -387,9 +389,15 @@ const App: React.ComponentType = () => {
                     <SystemTransactions />
                   </ProtectedRoute>
                 } />
+                <Route path="/admin/initiate-withdrawal" element={
+                  <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
+                    <AdminInitiateWithdrawal />
+                  </ProtectedRoute>
+                } />
                 <Route path="/scan-weighbridge" element={<ScanWeighBridge />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              <AdminWithdrawalPinPrompt />
               </MaintenanceGuard>
             </BrowserRouter>
           </TooltipProvider>
