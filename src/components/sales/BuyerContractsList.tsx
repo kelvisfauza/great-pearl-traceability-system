@@ -9,9 +9,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, FileText, Eye, CheckCircle, XCircle, Clock, Pause } from "lucide-react";
+import { Plus, FileText, Eye, CheckCircle, XCircle, Clock, Pause, Trash2 } from "lucide-react";
 import { BuyerContract } from '@/hooks/useBuyerContracts';
 import { useToast } from '@/hooks/use-toast';
+import { useDeletionRequest } from '@/hooks/useDeletionRequest';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface BuyerContractsListProps {
   contracts: BuyerContract[];
