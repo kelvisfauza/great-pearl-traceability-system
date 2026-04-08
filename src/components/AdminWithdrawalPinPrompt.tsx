@@ -102,11 +102,15 @@ const AdminWithdrawalPinPrompt = () => {
         .from('ledger_entries' as any)
         .insert({
           user_id: pendingWithdrawal.employee_id,
-          type: 'debit',
+          entry_type: 'debit',
           amount: pendingWithdrawal.amount,
-          description: `Admin withdrawal: ${pendingWithdrawal.reason}`,
           reference,
-          category: 'admin_withdrawal',
+          source_category: 'WITHDRAWAL',
+          metadata: {
+            description: `Cash Withdrawal: ${pendingWithdrawal.reason}`,
+            initiated_by: pendingWithdrawal.initiated_by_name,
+            type: 'admin_cash_withdrawal',
+          },
         });
 
       if (ledgerError) throw ledgerError;

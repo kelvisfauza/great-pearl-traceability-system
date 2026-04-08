@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Send, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Send, Clock, CheckCircle, XCircle, AlertTriangle, Wallet } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 
@@ -25,19 +25,37 @@ const AdminInitiateWithdrawal = () => {
   const [loading, setLoading] = useState(false);
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [walletBalances, setWalletBalances] = useState<Record<string, number>>({});
+  const [selectedBalance, setSelectedBalance] = useState<number | null>(null);
 
   useEffect(() => {
     fetchEmployees();
     fetchWithdrawals();
+    fetchWalletBalances();
   }, []);
 
   const fetchEmployees = async () => {
     const { data } = await supabase
       .from('employees')
       .select('id, name, email, department, position')
-      .eq('status', 'active')
+      .eq('status', 'Active')
       .order('name');
     setEmployees(data || []);
+  };
+
+  const fetchWalletBalances = async () => {
+    try {
+      const { data } = await supabase.rpc('get_all_wallet_balances' as any);
+      if (data) {
+        const balanceMap: Record<string, number> = {};
+        (data as any[]).forEach((b: any) => {
+          balanceMap[b.user_id] = Number(b.balance) || 0;
+        });
+        setWalletBalances(balanceMap);
+      }
+    } catch (err) {
+      console.error('Error fetching wallet balances:', err);
+    }
   };
 
   const fetchWithdrawals = async () => {
@@ -55,6 +73,16 @@ const AdminInitiateWithdrawal = () => {
     return Math.floor(10000 + Math.random() * 90000).toString();
   };
 
+  // Update selected balance when employee changes
+  useEffect(() => {
+    if (selectedEmployee) {
+      const bal = walletBalances[selectedEmployee];
+      setSelectedBalance(bal !== undefined ? bal : null);
+    } else {
+      setSelectedBalance(null);
+    }
+  }, [selectedEmployee, walletBalances]);
+
   const handleInitiate = async () => {
     if (!selectedEmployee || !amount || !reason) {
       toast({ title: 'Missing fields', description: 'Please fill in all fields', variant: 'destructive' });
@@ -70,12 +98,22 @@ const AdminInitiateWithdrawal = () => {
       return;
     }
 
+    // Check balance
+    const balance = walletBalances[selectedEmployee] || 0;
+    if (numAmount > balance) {
+      toast({
+        title: 'Insufficient Balance',
+        description: `${emp.name} has UGX ${balance.toLocaleString()} but you're trying to withdraw UGX ${numAmount.toLocaleString()}.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const pin = generatePin();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-      // Insert the withdrawal record
       const { data, error } = await supabase
         .from('admin_initiated_withdrawals' as any)
         .insert({
@@ -95,7 +133,6 @@ const AdminInitiateWithdrawal = () => {
 
       if (error) throw error;
 
-      // Send PIN email to user
       await supabase.functions.invoke('send-transactional-email', {
         body: {
           templateName: 'admin-withdrawal-pin',
@@ -181,6 +218,32 @@ const AdminInitiateWithdrawal = () => {
               </Select>
             </div>
 
+            {/* Show wallet balance for selected employee */}
+            {selectedEmployee && (
+              <div className={`rounded-lg p-3 flex items-center gap-2 ${
+                selectedBalance !== null && selectedBalance > 0
+                  ? 'bg-green-50 border border-green-200 dark:bg-green-950/20 dark:border-green-800'
+                  : 'bg-destructive/10 border border-destructive/30'
+              }`}>
+                <Wallet className="h-4 w-4" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Wallet Balance</p>
+                  <p className={`font-bold text-sm ${
+                    selectedBalance !== null && selectedBalance > 0
+                      ? 'text-green-700 dark:text-green-400'
+                      : 'text-destructive'
+                  }`}>
+                    {selectedBalance !== null
+                      ? `UGX ${selectedBalance.toLocaleString()}`
+                      : 'UGX 0'}
+                  </p>
+                  {(selectedBalance === null || selectedBalance <= 0) && (
+                    <p className="text-xs text-destructive font-medium">Insufficient balance</p>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div>
               <Label>Amount (UGX)</Label>
               <Input
@@ -190,6 +253,9 @@ const AdminInitiateWithdrawal = () => {
                 onChange={e => setAmount(e.target.value)}
                 min={1000}
               />
+              {amount && selectedBalance !== null && parseFloat(amount) > selectedBalance && (
+                <p className="text-xs text-destructive mt-1">⚠️ Amount exceeds available balance</p>
+              )}
             </div>
 
             <div>
@@ -202,7 +268,11 @@ const AdminInitiateWithdrawal = () => {
               />
             </div>
 
-            <Button onClick={handleInitiate} disabled={loading} className="w-full">
+            <Button
+              onClick={handleInitiate}
+              disabled={loading || !selectedEmployee || !amount || !reason || (selectedBalance !== null && parseFloat(amount) > selectedBalance)}
+              className="w-full"
+            >
               <Send className="h-4 w-4 mr-2" />
               {loading ? 'Sending PIN...' : 'Initiate & Send PIN'}
             </Button>
