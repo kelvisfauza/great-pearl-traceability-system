@@ -1310,13 +1310,38 @@ const QualityControl = () => {
                         <Button
                           size="sm"
                           onClick={async () => {
+                            const grnDataList: GRNData[] = [];
                             for (const id of selectedForBulkPrint) {
                               const assessment = filteredAssessments.find((a: any) => a.id === id);
-                              if (assessment) {
-                                await handlePrintGRN(assessment);
-                                // Small delay between prints
-                                await new Promise(r => setTimeout(r, 500));
+                              if (!assessment) continue;
+                              let storeRecord = storeRecords.find(record => record.id === assessment.store_record_id);
+                              if (!storeRecord) {
+                                const { data } = await supabase.from('coffee_records').select('*').eq('id', assessment.store_record_id).maybeSingle();
+                                if (data) storeRecord = { id: data.id, supplier_name: data.supplier_name, coffee_type: data.coffee_type, bags: data.bags, kilograms: data.kilograms, batch_number: data.batch_number, date: data.date, status: data.status, created_at: data.created_at, updated_at: data.updated_at };
                               }
+                              if (storeRecord) {
+                                grnDataList.push({
+                                  grnNumber: `GRN-${assessment.batch_number}`,
+                                  supplierName: storeRecord.supplier_name || 'Unknown',
+                                  coffeeType: storeRecord.coffee_type || 'Unknown',
+                                  numberOfBags: storeRecord.bags || 0,
+                                  totalKgs: storeRecord.kilograms || 0,
+                                  unitPrice: assessment.final_price || assessment.suggested_price || 0,
+                                  assessedBy: assessment.assessed_by || 'Quality Controller',
+                                  createdAt: assessment.date_assessed || new Date().toISOString(),
+                                  moisture: assessment.moisture,
+                                  group1_defects: assessment.group1_defects,
+                                  group2_defects: assessment.group2_defects,
+                                  below12: assessment.below12,
+                                  pods: assessment.pods,
+                                  husks: assessment.husks,
+                                  stones: assessment.stones,
+                                  printedBy: employee?.name || employee?.email || 'Unknown',
+                                });
+                              }
+                            }
+                            if (grnDataList.length > 0) {
+                              openBulkGRNPrintWindow(grnDataList);
                             }
                             setSelectedForBulkPrint([]);
                           }}
