@@ -1355,6 +1355,18 @@ const QualityControl = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-10">
+                          <Checkbox
+                            checked={filteredAssessments.length > 0 && selectedForBulkPrint.length === filteredAssessments.length}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedForBulkPrint(filteredAssessments.map((a: any) => a.id));
+                              } else {
+                                setSelectedForBulkPrint([]);
+                              }
+                            }}
+                          />
+                        </TableHead>
                         <TableHead>Batch Number</TableHead>
                         <TableHead>Supplier</TableHead>
                         <TableHead>Moisture %</TableHead>
