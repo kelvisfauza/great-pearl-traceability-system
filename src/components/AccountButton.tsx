@@ -191,7 +191,6 @@ export const AccountButton = () => {
 
   const cancelWithdrawalRequest = async (withdrawalId: string) => {
     try {
-      // Find the matching approval_request by looking up the withdrawal
       const { error } = await supabase
         .from('approval_requests')
         .update({ 
@@ -199,21 +198,9 @@ export const AccountButton = () => {
           approval_stage: 'withdrawn',
           rejection_reason: 'Cancelled by user'
         })
-        .eq('id', withdrawalId)
-        .in('approval_stage', ['pending_finance', 'pending_admin', 'pending_admin_2']);
-
-      if (error) throw error;
-      
-      // Also check withdrawal_requests view
-      await supabase
-        .from('approval_requests')
-        .update({ 
-          status: 'Withdrawn',
-          approval_stage: 'withdrawn', 
-          rejection_reason: 'Cancelled by user'
-        })
         .eq('id', withdrawalId);
 
+      if (error) throw error;
       window.location.reload();
     } catch (err) {
       console.error('Failed to cancel withdrawal:', err);
