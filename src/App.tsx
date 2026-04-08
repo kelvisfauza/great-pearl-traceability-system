@@ -389,9 +389,15 @@ const App: React.ComponentType = () => {
                     <SystemTransactions />
                   </ProtectedRoute>
                 } />
+                <Route path="/admin/initiate-withdrawal" element={
+                  <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
+                    <AdminInitiateWithdrawal />
+                  </ProtectedRoute>
+                } />
                 <Route path="/scan-weighbridge" element={<ScanWeighBridge />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              <AdminWithdrawalPinPrompt />
               </MaintenanceGuard>
             </BrowserRouter>
           </TooltipProvider>
