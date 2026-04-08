@@ -177,6 +177,9 @@ const priceData = {
   useEffect(() => {
     fetchPrices();
 
+    // Auto-refresh every 45 seconds so the display always has fresh prices
+    const interval = setInterval(fetchPrices, 45000);
+
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         fetchPrices();
@@ -196,7 +199,7 @@ const priceData = {
         (payload) => {
           if (payload.new) {
             const data = payload.new as any;
-setPrices({
+            setPrices({
               iceArabica: data.ice_arabica || 185.50,
               robusta: data.robusta || 2450,
               exchangeRate: data.exchange_rate || 3750,
@@ -220,6 +223,7 @@ setPrices({
       .subscribe();
 
     return () => {
+      clearInterval(interval);
       supabase.removeChannel(channel);
       authSubscription.unsubscribe();
     };
