@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -169,6 +170,7 @@ const QualityControl = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingAssessmentId, setEditingAssessmentId] = useState<string | null>(null);
+  const [selectedForBulkPrint, setSelectedForBulkPrint] = useState<string[]>([]);
   const [grnPrintModal, setGrnPrintModal] = useState<{
     open: boolean;
     grnData: {
@@ -1303,6 +1305,25 @@ const QualityControl = () => {
                       <Badge variant="outline" className="ml-2">
                         {filteredAssessments.length} assessment{filteredAssessments.length !== 1 ? 's' : ''}
                       </Badge>
+                      {selectedForBulkPrint.length > 0 && (
+                        <Button
+                          size="sm"
+                          onClick={async () => {
+                            for (const id of selectedForBulkPrint) {
+                              const assessment = filteredAssessments.find((a: any) => a.id === id);
+                              if (assessment) {
+                                await handlePrintGRN(assessment);
+                                // Small delay between prints
+                                await new Promise(r => setTimeout(r, 500));
+                              }
+                            }
+                            setSelectedForBulkPrint([]);
+                          }}
+                        >
+                          <Printer className="h-4 w-4 mr-1" />
+                          Bulk Print GRN ({selectedForBulkPrint.length})
+                        </Button>
+                      )}
                     </div>
                   </div>
                   <div className="relative">
@@ -1334,6 +1355,18 @@ const QualityControl = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-10">
+                          <Checkbox
+                            checked={filteredAssessments.length > 0 && selectedForBulkPrint.length === filteredAssessments.length}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedForBulkPrint(filteredAssessments.map((a: any) => a.id));
+                              } else {
+                                setSelectedForBulkPrint([]);
+                              }
+                            }}
+                          />
+                        </TableHead>
                         <TableHead>Batch Number</TableHead>
                         <TableHead>Supplier</TableHead>
                         <TableHead>Moisture %</TableHead>
@@ -1354,6 +1387,18 @@ const QualityControl = () => {
                             isHighlighted(assessment.id, assessment.batch_number) && "ring-2 ring-primary ring-offset-2 bg-primary/10 animate-pulse-highlight"
                           )}
                         >
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedForBulkPrint.includes(assessment.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedForBulkPrint(prev => [...prev, assessment.id]);
+                                } else {
+                                  setSelectedForBulkPrint(prev => prev.filter(id => id !== assessment.id));
+                                }
+                              }}
+                            />
+                          </TableCell>
                           <TableCell className="font-medium">{assessment.batch_number}</TableCell>
                           <TableCell>
                             <div className="space-y-0.5">
