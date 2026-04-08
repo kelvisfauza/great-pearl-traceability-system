@@ -194,8 +194,8 @@ export const AccountButton = () => {
       const { error } = await supabase
         .from('approval_requests')
         .update({ 
-          status: 'Withdrawn', 
-          approval_stage: 'withdrawn',
+          status: 'Cancelled', 
+          approval_stage: 'cancelled',
           rejection_reason: 'Cancelled by user'
         })
         .eq('id', withdrawalId);
