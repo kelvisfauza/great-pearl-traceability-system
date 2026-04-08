@@ -8,7 +8,7 @@ import {
 import { 
   Wallet, DollarSign, TrendingUp, Plus, Smartphone, Printer, Send,
   Clock, CheckCircle, XCircle, AlertCircle, Star, Zap, Award, Gift, FileText,
-  Landmark, Eye, EyeOff
+  Landmark, Eye, EyeOff, Ban
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
