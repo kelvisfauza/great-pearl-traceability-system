@@ -116,8 +116,7 @@ const GRNGenerator: React.FC<GRNGeneratorProps> = ({ open, onClose }) => {
             ${grnContent}
             <script>
               window.onload = function() {
-                window.print();
-                window.close();
+                setTimeout(function() { window.print(); }, 500);
               };
             </script>
           </body>
