@@ -395,6 +395,40 @@ export const BuyerContractsList = ({
           </Table>
         )}
       </CardContent>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Buyer Contract</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete contract <strong>{deleteTarget?.contract_ref}</strong> for <strong>{deleteTarget?.buyer_name}</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (!deleteTarget) return;
+                const success = await submitDeletionRequest(
+                  'buyer_contracts',
+                  deleteTarget.id,
+                  deleteTarget,
+                  'Admin deletion',
+                  `Buyer Contract ${deleteTarget.contract_ref} - ${deleteTarget.buyer_name}`
+                );
+                if (success) {
+                  setDeleteTarget(null);
+                  onDeleted?.();
+                }
+              }}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
