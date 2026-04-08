@@ -133,6 +133,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
       </html>
     `);
     printWindow.document.close();
+    onPrinted?.();
   };
 
   return (
