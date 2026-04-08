@@ -595,6 +595,23 @@ export const AccountButton = () => {
                           <Printer className="h-3 w-3 mr-1" />
                           Reprint
                         </Button>
+                        {withdrawal.status && ['Pending Finance', 'pending', 'Pending Admin', 'Pending'].some(s => 
+                          withdrawal.status?.toLowerCase().includes(s.toLowerCase())
+                        ) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 text-xs px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => {
+                              if (withdrawal.id && window.confirm('Are you sure you want to cancel this withdrawal request?')) {
+                                cancelWithdrawalRequest(withdrawal.id);
+                              }
+                            }}
+                          >
+                            <Ban className="h-3 w-3 mr-1" />
+                            Cancel
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}
