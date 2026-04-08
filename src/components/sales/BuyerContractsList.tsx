@@ -13,6 +13,7 @@ import { Plus, FileText, Eye, CheckCircle, XCircle, Clock, Pause, Trash2 } from 
 import { BuyerContract } from '@/hooks/useBuyerContracts';
 import { useToast } from '@/hooks/use-toast';
 import { useDeletionRequest } from '@/hooks/useDeletionRequest';
+import { useRolePermissions } from '@/hooks/useRolePermissions';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface BuyerContractsListProps {
