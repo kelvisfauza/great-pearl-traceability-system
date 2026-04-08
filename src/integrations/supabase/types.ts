@@ -77,6 +77,60 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_initiated_withdrawals: {
+        Row: {
+          amount: number
+          created_at: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          id: string
+          initiated_by: string
+          initiated_by_name: string
+          ledger_reference: string | null
+          pin_code: string
+          pin_expires_at: string
+          reason: string
+          status: string
+          updated_at: string
+          verified_at: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          id?: string
+          initiated_by: string
+          initiated_by_name: string
+          ledger_reference?: string | null
+          pin_code: string
+          pin_expires_at: string
+          reason: string
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          employee_email?: string
+          employee_id?: string
+          employee_name?: string
+          id?: string
+          initiated_by?: string
+          initiated_by_name?: string
+          ledger_reference?: string | null
+          pin_code?: string
+          pin_expires_at?: string
+          reason?: string
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
       advance_recoveries: {
         Row: {
           advance_id: string
