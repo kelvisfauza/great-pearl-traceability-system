@@ -219,6 +219,8 @@ export const AccountButton = () => {
       console.error('Failed to cancel withdrawal:', err);
     }
   };
+
+  const getStatusIcon = (status: string) => {
     switch (status) {
       case 'approved': case 'completed':
         return <CheckCircle className="h-4 w-4 text-green-600" />;
