@@ -22,6 +22,7 @@ interface BuyerContractsListProps {
   onUpdateContract: (id: string, updates: Partial<BuyerContract>) => Promise<void>;
   onSelectContract: (contract: BuyerContract) => void;
   getRemainingQuantity: (contract: BuyerContract) => number;
+  onDeleted?: () => void;
 }
 
 export const BuyerContractsList = ({
