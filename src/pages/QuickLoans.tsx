@@ -815,6 +815,7 @@ const QuickLoans = () => {
               sources: `${earlyPayMethod === 'wallet' ? 'Wallet' : earlyPayMethod}: UGX ${amount.toLocaleString()}`,
               remainingBalance: newBalance.toLocaleString(),
               isFullyPaid: newBalance <= 0,
+              isVoluntaryPayment: true,
             },
           },
         });
