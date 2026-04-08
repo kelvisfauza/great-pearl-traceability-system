@@ -178,6 +178,11 @@ const SupplierContractsTab = () => {
                         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingContract(c); setFormOpen(true); }}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
+                        {checkAdminPermission() && (
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeleteTarget(c)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

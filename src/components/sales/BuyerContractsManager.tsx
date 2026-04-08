@@ -36,6 +36,7 @@ export const BuyerContractsManager = () => {
       onUpdateContract={updateContract}
       onSelectContract={handleContractSelect}
       getRemainingQuantity={getRemainingQuantity}
+      onDeleted={fetchContracts}
     />
   );
 };
