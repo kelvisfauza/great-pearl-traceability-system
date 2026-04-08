@@ -201,6 +201,11 @@ const AdminDashboard = () => {
               </CardHeader>
               <CardContent className="flex flex-wrap gap-2">
                 <Button variant="outline" asChild>
+                  <Link to="/admin/initiate-withdrawal" className="flex items-center gap-1">
+                    <ArrowDownToLine className="h-4 w-4" /> Initiate Withdrawal
+                  </Link>
+                </Button>
+                <Button variant="outline" asChild>
                   <Link to="/human-resources">Manage Employees</Link>
                 </Button>
                 <Button variant="outline" asChild>
