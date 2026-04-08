@@ -52,9 +52,9 @@ export const useEUDRDocumentation = () => {
   const { toast } = useToast();
 
   // Helper to fetch all rows from a table, paginating past the 1000-row limit
-  const fetchAllRows = async <T>(table: string, orderCol: string, ascending: boolean): Promise<T[]> => {
+  const fetchAllRows = async (table: 'eudr_documents' | 'eudr_batches' | 'eudr_sales', orderCol: string, ascending: boolean): Promise<any[]> => {
     const PAGE = 1000;
-    let allRows: T[] = [];
+    let allRows: any[] = [];
     let from = 0;
     let hasMore = true;
     while (hasMore) {
@@ -64,7 +64,7 @@ export const useEUDRDocumentation = () => {
         .order(orderCol, { ascending })
         .range(from, from + PAGE - 1);
       if (error) throw error;
-      allRows = allRows.concat((data || []) as T[]);
+      allRows = allRows.concat(data || []);
       hasMore = (data?.length || 0) === PAGE;
       from += PAGE;
     }
