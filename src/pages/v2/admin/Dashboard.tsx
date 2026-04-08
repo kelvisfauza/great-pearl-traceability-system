@@ -6,7 +6,7 @@ import StoreRealTimeTracker from "@/components/v2/admin/StoreRealTimeTracker";
 import PriceApprovalPanel from "@/components/admin/PriceApprovalPanel";
 import AttendanceOverviewCard from "@/components/admin/AttendanceOverviewCard";
 import LoanStatsCard from "@/components/admin/LoanStatsCard";
-import { Shield, Users, Settings, BarChart3, Package, FlaskConical, Warehouse, ShoppingCart, TrendingUp, FileText, Activity, Banknote, ArrowRight } from "lucide-react";
+import { Shield, Users, Settings, BarChart3, Package, FlaskConical, Warehouse, ShoppingCart, TrendingUp, FileText, Activity, Banknote, ArrowRight, ArrowDownToLine } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
@@ -200,6 +200,11 @@ const AdminDashboard = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-wrap gap-2">
+                <Button variant="outline" asChild>
+                  <Link to="/admin/initiate-withdrawal" className="flex items-center gap-1">
+                    <ArrowDownToLine className="h-4 w-4" /> Initiate Withdrawal
+                  </Link>
+                </Button>
                 <Button variant="outline" asChild>
                   <Link to="/human-resources">Manage Employees</Link>
                 </Button>
