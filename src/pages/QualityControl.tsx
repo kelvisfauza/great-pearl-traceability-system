@@ -1341,6 +1341,7 @@ const QualityControl = () => {
                         <TableHead>Final Price</TableHead>
                         <TableHead>Date Assessed</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>GRN</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
