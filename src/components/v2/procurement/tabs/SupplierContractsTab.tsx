@@ -239,6 +239,40 @@ const SupplierContractsTab = () => {
           onChanged={() => { fetchContracts(); }}
         />
       )}
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Supplier Contract</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the contract for <strong>{deleteTarget?.supplierName}</strong> ({deleteTarget?.contractType})? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (!deleteTarget) return;
+                const success = await submitDeletionRequest(
+                  'supplier_contracts',
+                  deleteTarget.id,
+                  deleteTarget,
+                  'Admin deletion',
+                  `Supplier Contract - ${deleteTarget.supplierName} (${deleteTarget.contractType})`
+                );
+                if (success) {
+                  setDeleteTarget(null);
+                  fetchContracts();
+                }
+              }}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
