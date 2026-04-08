@@ -24,6 +24,8 @@ import {
   Send,
   FileDown,
   Edit,
+  Printer,
+  CheckCircle,
   RefreshCw,
   Loader2,
   Calculator,
