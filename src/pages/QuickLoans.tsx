@@ -800,6 +800,28 @@ const QuickLoans = () => {
         }
       }
 
+      // Send loan repayment confirmation email
+      try {
+        await supabase.functions.invoke('send-transactional-email', {
+          body: {
+            templateName: 'loan-repayment',
+            recipientEmail: selectedLoanForPayment.employee_email,
+            idempotencyKey: `loan-repay-${selectedLoanForPayment.id}-${Date.now()}`,
+            templateData: {
+              employeeName: selectedLoanForPayment.employee_name,
+              installmentNumber: String((unpaidInstallments || [])[0]?.installment_number || ''),
+              amountDue: ((unpaidInstallments || [])[0]?.amount_due || amount).toLocaleString(),
+              amountCollected: amount.toLocaleString(),
+              sources: `${earlyPayMethod === 'wallet' ? 'Wallet' : earlyPayMethod}: UGX ${amount.toLocaleString()}`,
+              remainingBalance: newBalance.toLocaleString(),
+              isFullyPaid: newBalance <= 0,
+            },
+          },
+        });
+      } catch (emailErr) {
+        console.error('Failed to send loan repayment email:', emailErr);
+      }
+
       toast({ 
         title: "Payment Recorded", 
         description: `UGX ${amount.toLocaleString()} paid via ${earlyPayMethod}. ${newBalance <= 0 ? 'Loan fully paid off!' : `Remaining: UGX ${newBalance.toLocaleString()}`}`,
