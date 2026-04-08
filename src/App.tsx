@@ -82,6 +82,7 @@ import EUDRDispatchReports from "./pages/reports/EUDRDispatchReports";
 import WholeBusinessReport from "./pages/reports/WholeBusinessReport";
 import SystemSettings from "./pages/admin/SystemSettings";
 import SystemTransactions from "./pages/admin/SystemTransactions";
+import AdminInitiateWithdrawal from "./pages/admin/AdminInitiateWithdrawal";
 import UserDailyReports from "./pages/UserDailyReports";
 import { DailyReportReminder } from "./components/reports/DailyReportReminder";
 import { MonthlyReportReminder } from "./components/reports/MonthlyReportReminder";
