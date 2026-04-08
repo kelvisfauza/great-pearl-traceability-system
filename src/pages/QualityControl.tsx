@@ -1381,13 +1381,13 @@ const QualityControl = () => {
                           <TableCell>{assessment.date_assessed}</TableCell>
                           <TableCell>{getStatusBadge(assessment.status)}</TableCell>
                           <TableCell>
-                            {assessment.grn_printed ? (
+                            {(assessment as any).grn_printed ? (
                               <div className="space-y-0.5">
                                 <Badge variant="secondary" className="text-xs gap-1">
                                   <CheckCircle className="h-3 w-3 text-green-500" />
                                   Printed
                                 </Badge>
-                                <p className="text-[10px] text-muted-foreground">{assessment.grn_printed_by}</p>
+                                <p className="text-[10px] text-muted-foreground">{(assessment as any).grn_printed_by}</p>
                               </div>
                             ) : (
                               <Badge variant="outline" className="text-xs">Not Printed</Badge>
@@ -1404,7 +1404,7 @@ const QualityControl = () => {
                                 <Edit className="h-4 w-4 mr-1" />
                                 Edit
                               </Button>
-                              {!assessment.grn_printed ? (
+                              {!(assessment as any).grn_printed ? (
                                 <Button 
                                   size="sm" 
                                   variant="outline"
