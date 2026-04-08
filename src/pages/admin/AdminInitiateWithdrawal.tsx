@@ -31,7 +31,6 @@ const AdminInitiateWithdrawal = () => {
   useEffect(() => {
     fetchEmployees();
     fetchWithdrawals();
-    fetchWalletBalances();
   }, []);
 
   const fetchEmployees = async () => {
