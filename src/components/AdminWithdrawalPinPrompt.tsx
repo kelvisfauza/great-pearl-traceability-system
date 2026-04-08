@@ -131,11 +131,9 @@ const AdminWithdrawalPinPrompt = () => {
 
       // Get remaining balance for email
       const { data: balanceData } = await supabase
-        .rpc('get_all_wallet_balances' as any);
+        .rpc('get_user_balance_safe', { user_email: pendingWithdrawal.employee_email });
       
-      const userBalance = (balanceData as any[])?.find(
-        (b: any) => b.user_id === pendingWithdrawal.employee_id
-      );
+      const userBalance = (balanceData as any[])?.[0];
 
       // Send confirmation email
       await supabase.functions.invoke('send-transactional-email', {
