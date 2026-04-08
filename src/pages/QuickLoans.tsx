@@ -1057,6 +1057,28 @@ const QuickLoans = () => {
         remaining -= payable;
       }
 
+      // Send loan repayment confirmation email
+      try {
+        await supabase.functions.invoke('send-transactional-email', {
+          body: {
+            templateName: 'loan-repayment',
+            recipientEmail: walletRepayLoan.employee_email,
+            idempotencyKey: `loan-repay-wallet-${walletRepayLoan.id}-${Date.now()}`,
+            templateData: {
+              employeeName: walletRepayLoan.employee_name,
+              installmentNumber: String((unpaidInstallments || [])[0]?.installment_number || ''),
+              amountDue: ((unpaidInstallments || [])[0]?.amount_due || amount).toLocaleString(),
+              amountCollected: amount.toLocaleString(),
+              sources: `Wallet: UGX ${amount.toLocaleString()}`,
+              remainingBalance: newRemainingBalance.toLocaleString(),
+              isFullyPaid,
+            },
+          },
+        });
+      } catch (emailErr) {
+        console.error('Failed to send loan repayment email:', emailErr);
+      }
+
       toast({
         title: isFullyPaid ? "Loan Fully Paid Off! 🎉" : "Wallet Payment Successful! ✅",
         description: `UGX ${amount.toLocaleString()} deducted from your wallet.${isFullyPaid ? '' : ` Remaining: UGX ${newRemainingBalance.toLocaleString()}`}`,

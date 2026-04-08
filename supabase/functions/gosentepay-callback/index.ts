@@ -147,6 +147,27 @@ serve(async (req) => {
           });
 
           console.log(`Loan repayment processed successfully for loan ${loanId}`);
+
+          // Send loan repayment confirmation email
+          try {
+            await supabaseClient.functions.invoke('send-transactional-email', {
+              body: {
+                templateName: 'loan-repayment',
+                recipientEmail: loan.employee_email,
+                idempotencyKey: `loan-repay-momo-${loanId}-${Date.now()}`,
+                templateData: {
+                  employeeName: loan.employee_name,
+                  amountCollected: depositAmount.toLocaleString(),
+                  sources: `Mobile Money: UGX ${depositAmount.toLocaleString()}`,
+                  remainingBalance: newBalance.toLocaleString(),
+                  isFullyPaid: newBalance <= 0,
+                },
+              },
+            });
+            console.log(`Loan repayment email sent to ${loan.employee_email}`);
+          } catch (emailErr) {
+            console.error('Failed to send loan repayment email:', emailErr);
+          }
         }
       } else {
         // Regular deposit - credit user's wallet
