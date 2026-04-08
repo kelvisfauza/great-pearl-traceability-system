@@ -161,6 +161,7 @@ serve(async (req) => {
                   sources: `Mobile Money: UGX ${depositAmount.toLocaleString()}`,
                   remainingBalance: newBalance.toLocaleString(),
                   isFullyPaid: newBalance <= 0,
+                  isVoluntaryPayment: true,
                 },
               },
             });
