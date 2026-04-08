@@ -52,6 +52,8 @@ import { template as salaryReductionNotice } from './salary-reduction-notice.tsx
 import { template as supplierPriceNotice } from './supplier-price-notice.tsx'
 import { template as supplierContractNotice } from './supplier-contract-notice.tsx'
 import { template as supplierUpdateNotice } from './supplier-update-notice.tsx'
+import { template as adminWithdrawalPin } from './admin-withdrawal-pin.tsx'
+import { template as adminWithdrawalConfirmed } from './admin-withdrawal-confirmed.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'verification-code': verificationCode,
