@@ -229,6 +229,15 @@ export const AccountButton = () => {
     }
   };
 
+  const canCancelWithdrawal = (withdrawal: { status?: string; approval_stage?: string }) => {
+    const normalizedStatus = (withdrawal.status || '').toLowerCase();
+    const normalizedStage = (withdrawal.approval_stage || '').toLowerCase();
+
+    return normalizedStatus.includes('pending')
+      || ['pending_approval', 'pending_admin_2', 'pending_admin_3', 'pending_finance'].includes(normalizedStatus)
+      || ['pending_approval', 'pending_admin_2', 'pending_admin_3', 'pending_finance'].includes(normalizedStage);
+  };
+
   if (loading) {
     return (
       <Button variant="outline" size="sm" disabled>
@@ -582,9 +591,7 @@ export const AccountButton = () => {
                           <Printer className="h-3 w-3 mr-1" />
                           Reprint
                         </Button>
-                        {withdrawal.status && ['Pending Finance', 'pending', 'Pending Admin', 'Pending'].some(s => 
-                          withdrawal.status?.toLowerCase().includes(s.toLowerCase())
-                        ) && (
+                        {canCancelWithdrawal(withdrawal) && (
                           <Button
                             variant="ghost"
                             size="sm"

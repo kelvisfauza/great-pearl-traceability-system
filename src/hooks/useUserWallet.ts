@@ -18,6 +18,8 @@ interface WithdrawalRequest {
   request_ref?: string;
   channel?: string;
   created_at: string;
+  approval_stage?: string;
+  source?: 'wallet' | 'approval';
 }
 
 const PENDING_WITHDRAWAL_STATUSES = [
@@ -34,6 +36,26 @@ export const useUserWallet = () => {
   const [unifiedUserId, setUnifiedUserId] = useState<string | null>(null);
   const { user, employee } = useAuth();
   const { toast } = useToast();
+
+  const isPendingWithdrawal = (withdrawal: Pick<WithdrawalRequest, 'status' | 'approval_stage'>) => {
+    const normalizedStatus = (withdrawal.status || '').toLowerCase();
+    const normalizedStage = (withdrawal.approval_stage || '').toLowerCase();
+
+    return PENDING_WITHDRAWAL_STATUSES.includes(normalizedStatus)
+      || PENDING_WITHDRAWAL_STATUSES.includes(normalizedStage)
+      || normalizedStatus.includes('pending');
+  };
+
+  const normalizeApprovalChannel = (method?: string | null) => {
+    switch ((method || '').toLowerCase()) {
+      case 'mobile_money':
+        return 'MOBILE_MONEY';
+      case 'bank_transfer':
+        return 'BANK';
+      default:
+        return 'CASH';
+    }
+  };
 
   const fetchWalletData = async () => {
     const walletOwnerEmail = employee?.email || user?.email;
@@ -87,18 +109,56 @@ export const useUserWallet = () => {
         return;
       }
       
-      // Fetch withdrawal requests
+      // Fetch legacy wallet withdrawal requests
       const { data: withdrawalRequestsData } = await supabase
         .from('withdrawal_requests')
         .select('*')
         .eq('user_id', unifiedId)
         .order('created_at', { ascending: false });
 
-      const allWithdrawals = withdrawalRequestsData || [];
+      // Fetch approval-based withdrawal requests used by the current approvals flow
+      const { data: approvalWithdrawalRequestsData } = await supabase
+        .from('approval_requests')
+        .select('id, amount, status, created_at, approval_stage, disbursement_phone, disbursement_method, details')
+        .eq('requestedby', walletOwnerEmail)
+        .eq('type', 'Withdrawal Request')
+        .order('created_at', { ascending: false });
+
+      const legacyWithdrawals: WithdrawalRequest[] = (withdrawalRequestsData || []).map((withdrawal) => ({
+        id: withdrawal.id,
+        amount: Number(withdrawal.amount) || 0,
+        phone_number: withdrawal.phone_number || 'N/A',
+        status: withdrawal.status || 'pending',
+        request_ref: withdrawal.request_ref || withdrawal.id,
+        channel: withdrawal.channel || 'CASH',
+        created_at: withdrawal.created_at,
+        source: 'wallet',
+      }));
+
+      const approvalWithdrawals: WithdrawalRequest[] = (approvalWithdrawalRequestsData || []).map((withdrawal) => {
+        const details = withdrawal.details && typeof withdrawal.details === 'object' ? withdrawal.details as Record<string, any> : null;
+
+        return {
+          id: withdrawal.id,
+          amount: Number(withdrawal.amount) || 0,
+          phone_number: withdrawal.disbursement_phone || 'N/A',
+          status: withdrawal.status || 'pending',
+          request_ref: details?.ref || details?.withdrawal_id || withdrawal.id,
+          channel: normalizeApprovalChannel(withdrawal.disbursement_method),
+          created_at: withdrawal.created_at,
+          approval_stage: withdrawal.approval_stage || undefined,
+          source: 'approval',
+        };
+      });
+
+      const allWithdrawals = [...approvalWithdrawals, ...legacyWithdrawals].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
       setWithdrawalRequests(allWithdrawals);
 
       const frozenPending = allWithdrawals
-        .filter((withdrawal) => PENDING_WITHDRAWAL_STATUSES.includes((withdrawal.status || '').toLowerCase()))
+        .filter(isPendingWithdrawal)
         .reduce((sum, withdrawal) => sum + (Number(withdrawal.amount) || 0), 0);
 
       setWalletData((prev) => {
