@@ -66,9 +66,13 @@ export const useInvestments = () => {
         user_id: unifiedId,
         entry_type: 'WITHDRAWAL',
         amount: -amount,
-        description: `Investment locked - ${investRef}`,
         reference: investRef,
         source_category: 'WITHDRAWAL',
+        metadata: {
+          description: `Investment locked - ${investRef}`,
+          type: 'investment_lock',
+          investment_amount: amount,
+        },
       }]);
       if (ledgerErr) throw ledgerErr;
 
@@ -113,9 +117,14 @@ export const useInvestments = () => {
         user_id: unifiedId,
         entry_type: 'DEPOSIT',
         amount: payout,
-        description: `Early investment withdrawal (3% rate) - ${refundRef}`,
         reference: refundRef,
         source_category: 'SYSTEM_AWARD',
+        metadata: {
+          description: `Early investment withdrawal (3% rate) - ${refundRef}`,
+          type: 'investment_early_withdrawal',
+          investment_id: investmentId,
+          reduced_interest: reducedInterest,
+        },
       }]);
       if (ledgerErr) throw ledgerErr;
 
