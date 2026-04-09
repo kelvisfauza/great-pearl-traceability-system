@@ -67,13 +67,13 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const callbackUrl = `${supabaseUrl}/functions/v1/gosentepay-callback`;
 
-    // Build XML request for Yo Payments acreceivefunds (collect money from user)
+    // Build XML request for Yo Payments acwithdrawfunds (collect/pull money from user's mobile money)
     const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
 <AutoCreate>
   <Request>
     <APIUsername>${username}</APIUsername>
     <APIPassword>${password}</APIPassword>
-    <Method>acreceivefunds</Method>
+    <Method>acwithdrawfunds</Method>
     <NonBlocking>TRUE</NonBlocking>
     <Amount>${numAmount}</Amount>
     <Account>${cleanPhone}</Account>
@@ -103,10 +103,14 @@ serve(async (req) => {
     // Parse Yo XML response
     const statusMatch = responseText.match(/<Status>(.*?)<\/Status>/);
     const status = statusMatch?.[1]?.trim();
+    const statusCodeMatch = responseText.match(/<StatusCode>(.*?)<\/StatusCode>/);
+    const statusCode = statusCodeMatch?.[1]?.trim();
     const txRefMatch = responseText.match(/<TransactionReference>(.*?)<\/TransactionReference>/);
     const statusMsgMatch = responseText.match(/<StatusMessage>(.*?)<\/StatusMessage>/);
 
-    if (status === "OK") {
+    // Status "OK" = immediate success
+    // StatusCode "-22" = pending authorization (user gets a prompt on their phone) - treat as success
+    if (status === "OK" || statusCode === "-22") {
       return new Response(
         JSON.stringify({
           status: "success",
