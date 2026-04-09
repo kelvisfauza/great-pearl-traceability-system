@@ -4143,6 +4143,63 @@ export type Database = {
         }
         Relationships: []
       }
+      investments: {
+        Row: {
+          amount: number
+          created_at: string
+          earned_interest: number
+          employee_name: string
+          id: string
+          interest_rate: number
+          maturity_date: string
+          maturity_months: number
+          reduced_rate: number
+          start_date: string
+          status: string
+          total_payout: number
+          updated_at: string
+          user_email: string
+          user_id: string
+          withdrawn_at: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          earned_interest?: number
+          employee_name?: string
+          id?: string
+          interest_rate?: number
+          maturity_date: string
+          maturity_months?: number
+          reduced_rate?: number
+          start_date?: string
+          status?: string
+          total_payout?: number
+          updated_at?: string
+          user_email: string
+          user_id: string
+          withdrawn_at?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          earned_interest?: number
+          employee_name?: string
+          id?: string
+          interest_rate?: number
+          maturity_date?: string
+          maturity_months?: number
+          reduced_rate?: number
+          start_date?: string
+          status?: string
+          total_payout?: number
+          updated_at?: string
+          user_email?: string
+          user_id?: string
+          withdrawn_at?: string | null
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           amount_paid: number
