@@ -101,7 +101,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
       if (!token) throw new Error('Not authenticated');
 
       const { data, error } = await supabase.functions.invoke('instant-withdrawal', {
-        body: { amount: withdrawalAmount },
+        body: { amount: withdrawalAmount, depositPhone: instantEligibility.deposit_phone },
       });
 
       if (error) throw new Error(error.message || 'Instant withdrawal failed');
