@@ -67,13 +67,13 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const callbackUrl = `${supabaseUrl}/functions/v1/gosentepay-callback`;
 
-    // Build XML request for Yo Payments acwithdrawfunds (collect/pull money from user's mobile money)
+    // Build XML request for Yo Payments acdepositfunds (collect/receive money from user's mobile money)
     const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
 <AutoCreate>
   <Request>
     <APIUsername>${username}</APIUsername>
     <APIPassword>${password}</APIPassword>
-    <Method>acwithdrawfunds</Method>
+    <Method>acdepositfunds</Method>
     <NonBlocking>TRUE</NonBlocking>
     <Amount>${numAmount}</Amount>
     <Account>${cleanPhone}</Account>
