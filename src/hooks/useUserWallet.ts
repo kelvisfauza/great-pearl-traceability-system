@@ -242,8 +242,8 @@ export const useUserWallet = () => {
           requestedby: walletOwnerEmail,
           daterequested: new Date().toISOString().split('T')[0],
           priority: amount > 100000 ? 'High' : 'Medium',
-          status: 'Pending Finance',
-          approval_stage: 'pending_finance',
+          status: 'Pending Admin',
+          approval_stage: 'pending_admin',
           finance_approved: false,
           admin_approved: false,
           requestedby_name: employee?.name || walletOwnerEmail,
@@ -267,7 +267,7 @@ export const useUserWallet = () => {
 
       toast({
         title: "Withdrawal Submitted!",
-        description: `Reference: ${requestRef}. Your request for UGX ${amount.toLocaleString()} has been submitted for Finance review.`,
+        description: `Reference: ${requestRef}. Your request for UGX ${amount.toLocaleString()} has been submitted for Admin approval.`,
         duration: 8000,
       });
 
