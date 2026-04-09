@@ -136,7 +136,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
 
   const isUgandanMobileNumber = (value: string) => {
     const normalizedValue = value.replace(/\s/g, '').replace(/^\+/, '');
-    return /^(070|074|075|077|078)\d{7}$/.test(normalizedValue) || /^(256(?:70|74|75|77|78))\d{7}$/.test(normalizedValue);
+    return /^(070|074|075|076|077|078)\d{7}$/.test(normalizedValue) || /^(256(?:70|74|75|76|77|78))\d{7}$/.test(normalizedValue);
   };
 
   const handleInstantWithdraw = async () => {
