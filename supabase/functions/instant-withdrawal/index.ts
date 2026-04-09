@@ -250,7 +250,7 @@ serve(async (req) => {
     return respond(true, {
       success: true,
       message: isPending 
-        ? "Withdrawal initiated. Please approve from your Yo Payments dashboard." 
+        ? "Withdrawal request created successfully. Awaiting admin approval — you'll be notified once processed." 
         : "Instant withdrawal processed successfully",
       status: finalStatus,
       ref: txRef,
