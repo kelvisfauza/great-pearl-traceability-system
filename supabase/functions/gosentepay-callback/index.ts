@@ -245,14 +245,34 @@ serve(async (req) => {
           }
         }
       } else {
+        // Resolve unified user ID for wallet credit
+        let walletUserId = transaction.user_id;
+        try {
+          const { data: emp } = await supabaseClient
+            .from("employees")
+            .select("email")
+            .eq("auth_user_id", transaction.user_id)
+            .maybeSingle();
+
+          if (emp?.email) {
+            const { data: unifiedId } = await supabaseClient.rpc("get_unified_user_id", {
+              input_email: emp.email,
+            });
+            if (unifiedId) walletUserId = unifiedId;
+          }
+        } catch (e) {
+          console.error("Could not resolve unified user ID, using auth user ID:", e);
+        }
+
         // Regular deposit - credit user's wallet
         const { error: ledgerError } = await supabaseClient
           .from("ledger_entries")
           .insert({
-            user_id: transaction.user_id,
+            user_id: walletUserId,
             entry_type: "DEPOSIT",
             amount: depositAmount,
             reference: `DEPOSIT-${ref}`,
+            source_category: "SELF_DEPOSIT",
             metadata: JSON.stringify({
               transaction_ref: ref,
               phone: phone,
