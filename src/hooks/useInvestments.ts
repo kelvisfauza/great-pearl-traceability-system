@@ -87,6 +87,32 @@ export const useInvestments = () => {
       if (investErr) throw investErr;
 
       toast({ title: "Investment Created! 📈", description: `UGX ${amount.toLocaleString()} locked for 5 months at 10% interest. Expected return: UGX ${(amount * 1.1).toLocaleString()}` });
+
+      // Send email notification
+      const startDate = new Date().toISOString().split('T')[0];
+      const maturityDate = new Date(Date.now() + 5 * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      try {
+        await supabase.functions.invoke('send-transactional-email', {
+          body: {
+            templateName: 'investment-confirmation',
+            recipientEmail: employee?.email || user.email,
+            idempotencyKey: `investment-confirm-${investRef}`,
+            templateData: {
+              employeeName: employee?.name || user.email,
+              amount,
+              interestRate: 10,
+              maturityMonths: 5,
+              expectedReturn: amount * 1.1,
+              startDate,
+              maturityDate,
+              investmentRef: investRef,
+            },
+          },
+        });
+      } catch (emailErr) {
+        console.warn('Failed to send investment email:', emailErr);
+      }
+
       fetchInvestments();
       return true;
     } catch (err: any) {

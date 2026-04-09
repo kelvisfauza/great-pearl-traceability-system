@@ -54,6 +54,7 @@ import { template as supplierContractNotice } from './supplier-contract-notice.t
 import { template as supplierUpdateNotice } from './supplier-update-notice.tsx'
 import { template as adminWithdrawalPin } from './admin-withdrawal-pin.tsx'
 import { template as adminWithdrawalConfirmed } from './admin-withdrawal-confirmed.tsx'
+import { template as investmentConfirmation } from './investment-confirmation.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'verification-code': verificationCode,
@@ -101,4 +102,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'supplier-update-notice': supplierUpdateNotice,
   'admin-withdrawal-pin': adminWithdrawalPin,
   'admin-withdrawal-confirmed': adminWithdrawalConfirmed,
+  'investment-confirmation': investmentConfirmation,
 }
