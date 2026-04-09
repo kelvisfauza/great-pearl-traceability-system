@@ -420,6 +420,9 @@ export const AccountButton = () => {
               </Card>
             )}
 
+            {/* Investments Card */}
+            <InvestmentsCard />
+
             {/* Loyalty Points Section */}
             <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50">
               <CardHeader className="pb-2">
@@ -642,6 +645,7 @@ export const AccountButton = () => {
       />
       <DepositModal open={showDeposit} onOpenChange={setShowDeposit} />
       <SendMoneyModal open={showSendMoney} onOpenChange={setShowSendMoney} availableBalance={availableLoyalty} />
+      <InvestmentModal open={showInvestment} onOpenChange={setShowInvestment} availableBalance={availableLoyalty} />
     </>
   );
 };
