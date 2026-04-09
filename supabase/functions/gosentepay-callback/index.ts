@@ -53,7 +53,7 @@ serve(async (req) => {
       const params = new URLSearchParams(formText);
       rawBody = Object.fromEntries(params.entries());
 
-      ref = params.get("external_reference") || params.get("ExternalReference") || params.get("customer_reference") || undefined;
+      ref = params.get("external_ref") || params.get("external_reference") || params.get("ExternalReference") || params.get("customer_reference") || undefined;
       phone = params.get("msisdn") || params.get("MsisdnAccount") || params.get("account") || undefined;
 
       const txStatus = (params.get("transaction_status") || params.get("TransactionStatus") || "").toUpperCase();
