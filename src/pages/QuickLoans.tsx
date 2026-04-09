@@ -1196,12 +1196,10 @@ const QuickLoans = () => {
         repayment_frequency: modifyFrequency,
         interest_rate: monthlyRate,
         daily_interest_rate: monthlyRate / 30,
-        total_interest: interest,
         total_repayable: totalRepayable,
         monthly_installment: installment,
         total_weeks: totalWeeks,
         remaining_balance: totalRepayable,
-        loan_purpose: modifyPurpose || modifyLoan.loan_purpose,
         guarantor_id: guarantor.id,
         guarantor_email: guarantor.email,
         guarantor_name: guarantor.name,
@@ -2277,7 +2275,7 @@ const QuickLoans = () => {
                         setModifyDuration(String(loan.duration_months || ''));
                         setModifyType((loan.loan_type || 'quick') as LoanType);
                         setModifyFrequency((loan.repayment_frequency || 'weekly') as RepaymentFrequency);
-                        setModifyPurpose(loan.loan_purpose || '');
+                        setModifyPurpose('');
                         setModifyGuarantorId('');
                         setShowModifyDialog(true);
                       }}>
@@ -2494,7 +2492,7 @@ const QuickLoans = () => {
                                     setModifyDuration(String(loan.duration_months || ''));
                                     setModifyType((loan.loan_type || 'quick') as LoanType);
                                     setModifyFrequency((loan.repayment_frequency || 'weekly') as RepaymentFrequency);
-                                    setModifyPurpose(loan.loan_purpose || '');
+                                    setModifyPurpose('');
                                     setModifyGuarantorId('');
                                     setShowModifyDialog(true);
                                   }}>
@@ -2509,7 +2507,7 @@ const QuickLoans = () => {
                                   setModifyDuration(String(loan.duration_months || ''));
                                   setModifyType((loan.loan_type || 'quick') as LoanType);
                                   setModifyFrequency((loan.repayment_frequency || 'weekly') as RepaymentFrequency);
-                                  setModifyPurpose(loan.loan_purpose || '');
+                                  setModifyPurpose('');
                                   setModifyGuarantorId('');
                                   setShowModifyDialog(true);
                                 }}>
