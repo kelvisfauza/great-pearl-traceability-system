@@ -151,7 +151,9 @@ serve(async (req) => {
     const statusMatch = yoText.match(/<Status>(.*?)<\/Status>/);
     const txRefMatch = yoText.match(/<TransactionReference>(.*?)<\/TransactionReference>/);
     const statusMsgMatch = yoText.match(/<StatusMessage>(.*?)<\/StatusMessage>/);
+    const txStatusMatch = yoText.match(/<TransactionStatus>(.*?)<\/TransactionStatus>/);
     const yoStatus = statusMatch?.[1]?.trim();
+    const txStatus = txStatusMatch?.[1]?.trim();
 
     if (yoStatus !== "OK") {
       await supabase.from('instant_withdrawals')
@@ -161,6 +163,17 @@ serve(async (req) => {
       return respond(false, {
         error: "Payout failed: " + (statusMsgMatch?.[1]?.trim() || "Yo Payments rejected the transaction"),
       });
+    }
+
+    // acwithdrawfunds can return SUCCEEDED, FAILED, or PENDING
+    const isPending = txStatus === 'PENDING' || txStatus === 'INDETERMINATE';
+    const isFailed = txStatus === 'FAILED';
+
+    if (isFailed) {
+      await supabase.from('instant_withdrawals')
+        .update({ payout_status: 'failed', completed_at: new Date().toISOString() })
+        .eq('id', instantRecord.id);
+      return respond(false, { error: "Payout failed at mobile money provider" });
     }
 
     const txRef = txRefMatch?.[1]?.trim() || ref;
