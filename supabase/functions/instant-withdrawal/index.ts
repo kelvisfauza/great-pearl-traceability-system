@@ -54,8 +54,10 @@ serve(async (req) => {
       return respond(false, { error: "Server configuration missing" });
     }
 
-    const authHeader = req.headers.get("Authorization");
+    const authHeader = req.headers.get("Authorization") || req.headers.get("x-supabase-authorization");
+    console.log("[instant-withdrawal] Auth header present:", !!authHeader, "starts with Bearer:", authHeader?.startsWith("Bearer "));
     if (!authHeader?.startsWith("Bearer ")) {
+      console.error("[instant-withdrawal] No valid auth header found. Headers:", JSON.stringify(Object.fromEntries(req.headers.entries())));
       return respond(false, { error: "Unauthorized" });
     }
 
