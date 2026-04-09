@@ -134,6 +134,11 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     }
   }, [open, employee?.email, user?.email]);
 
+  const isUgandanMobileNumber = (value: string) => {
+    const normalizedValue = value.replace(/\s/g, '').replace(/^\+/, '');
+    return /^(070|074|075|077|078)\d{7}$/.test(normalizedValue) || /^(256(?:70|74|75|77|78))\d{7}$/.test(normalizedValue);
+  };
+
   const handleInstantWithdraw = async () => {
     if (!instantEligibility?.eligible || !amount) return;
     const withdrawalAmount = parseFloat(amount);
@@ -145,8 +150,9 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
       const token = sessionData?.session?.access_token;
       if (!token) throw new Error('Not authenticated');
 
-      const phoneToUse = instantEligibility.deposit_phone || mobileNumber || '';
+      const phoneToUse = (instantEligibility.deposit_phone || employee?.phone || mobileNumber || '').trim();
       if (!phoneToUse) throw new Error('No phone number available for instant withdrawal. Please enter your mobile money number.');
+      if (!isUgandanMobileNumber(phoneToUse)) throw new Error('Enter a valid MTN or Airtel mobile money number to continue.');
 
       const { data, error } = await supabase.functions.invoke('instant-withdrawal', {
         body: { amount: withdrawalAmount, depositPhone: phoneToUse },
@@ -427,7 +433,10 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const instantUnavailable = eligibilityResolved && !eligibilityLoading && !instantEligibility?.eligible;
   const isCashRoundAmount = channel !== 'CASH' || parsedAmount % 500 === 0;
   const cleanMobile = mobileNumber.replace(/\s/g, '');
-  const isValidMobileNumber = /^(070|074|075|077|078)\d{7}$/.test(cleanMobile) || /^(256(?:70|74|75|77|78))\d{7}$/.test(cleanMobile.replace(/\+/g, ''));
+  const storedInstantPhone = (instantEligibility?.deposit_phone || employee?.phone || '').trim();
+  const instantPhoneDisplay = storedInstantPhone || mobileNumber.trim();
+  const needsInstantPhoneInput = Boolean(instantEligibility?.eligible && !storedInstantPhone);
+  const isValidMobileNumber = isUgandanMobileNumber(cleanMobile);
   const isDisbursementValid = channel === 'CASH' || (channel === 'MOBILE_MONEY' && isValidMobileNumber) || (channel === 'BANK' && bankName && accountNumber && accountName);
   const isAmountValid = amount && parsedAmount <= availableAmount && parsedAmount >= 2000 && isCashRoundAmount && !withdrawalStatus.disabled && !isWalletFrozen && isDisbursementValid;
 
@@ -464,7 +473,10 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                     <strong className="text-green-800">⚡ Instant Withdrawal Available!</strong>
                     <br />
                     <span className="text-xs text-green-700">
-                      Withdraw up to <strong>UGX {Number(instantEligibility.max_instant_amount).toLocaleString()}</strong> instantly to your number ({instantEligibility.deposit_phone}) — no approval needed!
+                      Withdraw up to <strong>UGX {Number(instantEligibility.max_instant_amount).toLocaleString()}</strong> instantly
+                      {instantPhoneDisplay
+                        ? <> to your number ({instantPhoneDisplay})</>
+                        : <> once you enter your mobile money number below</>} — no approval needed!
                     </span>
                   </AlertDescription>
                 </Alert>
@@ -543,12 +555,32 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                   )}
                 </div>
 
+                {needsInstantPhoneInput && (
+                  <div className="space-y-2">
+                    <Label htmlFor="instant-mobile-number">Mobile Money Number</Label>
+                    <Input
+                      id="instant-mobile-number"
+                      type="tel"
+                      inputMode="numeric"
+                      autoComplete="tel"
+                      placeholder="07XXXXXXXX or 2567XXXXXXXX"
+                      value={mobileNumber}
+                      onChange={(e) => setMobileNumber(e.target.value)}
+                      disabled={instantLoading}
+                    />
+                    {mobileNumber && !isValidMobileNumber && (
+                      <p className="text-sm text-destructive">Enter a valid MTN or Airtel mobile money number.</p>
+                    )}
+                  </div>
+                )}
+
                 {/* Instant withdrawal hint */}
                 {instantEligibility?.eligible && parsedAmount >= 2000 && parsedAmount <= instantMaxAmount && (
                   <Alert className="border-green-300 bg-green-50 py-2">
                     <Zap className="h-3 w-3 text-green-600" />
                     <AlertDescription className="text-xs text-green-700">
-                      This amount qualifies for <strong>instant withdrawal</strong> to {instantEligibility.deposit_phone}!
+                      This amount qualifies for <strong>instant withdrawal</strong>
+                      {instantPhoneDisplay ? <> to {instantPhoneDisplay}</> : <> once you add a mobile money number</>}!
                     </AlertDescription>
                   </Alert>
                 )}
@@ -561,7 +593,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                     <Button
                       type="button"
                       onClick={handleInstantWithdraw}
-                      disabled={instantLoading || !amount || parsedAmount < 2000 || parsedAmount > instantMaxAmount}
+                      disabled={instantLoading || !amount || parsedAmount < 2000 || parsedAmount > instantMaxAmount || (needsInstantPhoneInput && !isValidMobileNumber)}
                       className="bg-green-600 hover:bg-green-700 text-white"
                     >
                       {instantLoading ? (
