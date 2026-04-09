@@ -142,23 +142,28 @@ export const DepositModal: React.FC<DepositModalProps> = ({ open, onOpenChange }
     if (step !== 'pending' || !transactionRef) return;
 
     const interval = setInterval(async () => {
-      const { data } = await supabase
-        .from('mobile_money_transactions')
-        .select('status')
-        .eq('transaction_ref', transactionRef)
-        .single();
+      try {
+        // Call the status-check edge function which polls Yo Payments directly
+        const { data: checkData } = await supabase.functions.invoke('gosentepay-check-status', {
+          body: { transactionRef },
+        });
 
-      if (data?.status === 'completed') {
-        setStep('done');
-        refreshAccount();
-        clearInterval(interval);
-        toast({ title: "Deposit Successful!", description: `UGX ${parseFloat(amount).toLocaleString()} has been added to your balance.` });
-      } else if (data?.status === 'failed') {
-        setStep('form');
-        clearInterval(interval);
-        toast({ title: "Deposit Failed", description: "The mobile money transaction was not completed.", variant: "destructive" });
+        const txStatus = checkData?.status;
+
+        if (txStatus === 'completed') {
+          setStep('done');
+          refreshAccount();
+          clearInterval(interval);
+          toast({ title: "Deposit Successful!", description: `UGX ${parseFloat(amount).toLocaleString()} has been added to your balance.` });
+        } else if (txStatus === 'failed') {
+          setStep('form');
+          clearInterval(interval);
+          toast({ title: "Deposit Failed", description: "The mobile money transaction was not completed.", variant: "destructive" });
+        }
+      } catch (err) {
+        console.error('Status check error:', err);
       }
-    }, 5000);
+    }, 8000);
 
     // Stop polling after 3 minutes
     const timeout = setTimeout(() => {
