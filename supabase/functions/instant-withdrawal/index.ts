@@ -173,8 +173,9 @@ serve(async (req) => {
     }
 
     // acwithdrawfunds can return SUCCEEDED, FAILED, or PENDING
-    const isPending = txStatus === 'PENDING' || txStatus === 'INDETERMINATE';
-    const isFailed = txStatus === 'FAILED';
+    // StatusCode -22 always means pending authorization
+    const isPending = isPendingAuthorization || txStatus === 'PENDING' || txStatus === 'INDETERMINATE';
+    const isFailed = !isPendingAuthorization && txStatus === 'FAILED';
 
     if (isFailed) {
       await supabase.from('instant_withdrawals')
