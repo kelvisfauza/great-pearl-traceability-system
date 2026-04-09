@@ -100,8 +100,11 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
       const token = sessionData?.session?.access_token;
       if (!token) throw new Error('Not authenticated');
 
+      const phoneToUse = instantEligibility.deposit_phone || mobileNumber || '';
+      if (!phoneToUse) throw new Error('No phone number available for instant withdrawal. Please enter your mobile money number.');
+
       const { data, error } = await supabase.functions.invoke('instant-withdrawal', {
-        body: { amount: withdrawalAmount, depositPhone: instantEligibility.deposit_phone },
+        body: { amount: withdrawalAmount, depositPhone: phoneToUse },
       });
 
       if (error) throw new Error(error.message || 'Instant withdrawal failed');
