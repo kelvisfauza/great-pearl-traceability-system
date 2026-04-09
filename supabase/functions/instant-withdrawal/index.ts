@@ -131,12 +131,12 @@ serve(async (req) => {
   <Request>
     <APIUsername>${yoUsername}</APIUsername>
     <APIPassword>${yoPassword}</APIPassword>
-    <Method>acdepositfunds</Method>
-    <NonBlocking>TRUE</NonBlocking>
+    <Method>acwithdrawfunds</Method>
     <Amount>${numAmount}</Amount>
     <Account>${cleanPhone}</Account>
     <AccountProviderCode>${getProviderCode(cleanPhone)}</AccountProviderCode>
     <Narrative>${escapeXml(`Instant withdrawal - ${ref}`)}</Narrative>
+    <ExternalReference>${escapeXml(ref)}</ExternalReference>
   </Request>
 </AutoCreate>`;
 
@@ -151,7 +151,9 @@ serve(async (req) => {
     const statusMatch = yoText.match(/<Status>(.*?)<\/Status>/);
     const txRefMatch = yoText.match(/<TransactionReference>(.*?)<\/TransactionReference>/);
     const statusMsgMatch = yoText.match(/<StatusMessage>(.*?)<\/StatusMessage>/);
+    const txStatusMatch = yoText.match(/<TransactionStatus>(.*?)<\/TransactionStatus>/);
     const yoStatus = statusMatch?.[1]?.trim();
+    const txStatus = txStatusMatch?.[1]?.trim();
 
     if (yoStatus !== "OK") {
       await supabase.from('instant_withdrawals')
@@ -163,9 +165,21 @@ serve(async (req) => {
       });
     }
 
-    const txRef = txRefMatch?.[1]?.trim() || ref;
+    // acwithdrawfunds can return SUCCEEDED, FAILED, or PENDING
+    const isPending = txStatus === 'PENDING' || txStatus === 'INDETERMINATE';
+    const isFailed = txStatus === 'FAILED';
 
-    // Deduct from wallet via ledger
+    if (isFailed) {
+      await supabase.from('instant_withdrawals')
+        .update({ payout_status: 'failed', completed_at: new Date().toISOString() })
+        .eq('id', instantRecord.id);
+      return respond(false, { error: "Payout failed at mobile money provider" });
+    }
+
+    const txRef = txRefMatch?.[1]?.trim() || ref;
+    const finalStatus = isPending ? 'pending_approval' : 'success';
+
+    // Deduct from wallet via ledger (deduct immediately even if pending approval)
     const ledgerRef = `INSTANT-WD-${instantRecord.id}`;
     await supabase.from('ledger_entries').insert({
       user_id: resolvedUserId,
@@ -178,20 +192,21 @@ serve(async (req) => {
         phone: cleanPhone,
         payout_ref: txRef,
         instant_withdrawal_id: instantRecord.id,
+        yo_status: txStatus,
       },
     });
 
     // Update tracking record
     await supabase.from('instant_withdrawals')
       .update({
-        payout_status: 'success',
+        payout_status: finalStatus,
         payout_ref: txRef,
         ledger_reference: ledgerRef,
-        completed_at: new Date().toISOString(),
+        completed_at: isPending ? null : new Date().toISOString(),
       })
       .eq('id', instantRecord.id);
 
-    console.log(`[instant-withdrawal] Success! Ref: ${txRef}`);
+    console.log(`[instant-withdrawal] ${finalStatus}! Ref: ${txRef}`);
 
     // Send SMS (fire and forget)
     const yoolaSmsApiKey = Deno.env.get("YOOLA_SMS_API_KEY");
@@ -226,7 +241,10 @@ serve(async (req) => {
 
     return respond(true, {
       success: true,
-      message: "Instant withdrawal processed successfully",
+      message: isPending 
+        ? "Withdrawal initiated. Please approve from your Yo Payments dashboard." 
+        : "Instant withdrawal processed successfully",
+      status: finalStatus,
       ref: txRef,
       amount: numAmount,
       phone: cleanPhone,
