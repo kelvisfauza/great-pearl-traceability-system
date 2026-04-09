@@ -114,7 +114,7 @@ export const useUnifiedApprovalRequests = () => {
           .from('approval_requests' as any)
           .select('*')
           .eq('request_type', 'withdrawal')
-          .in('status', ['pending_approval', 'pending_admin_2', 'pending_admin_3', 'Finance Approved'])
+          .in('status', ['pending_approval', 'pending_admin_2', 'pending_admin_3', 'Finance Approved', 'Pending Admin'])
           .order('created_at', { ascending: false });
 
         const { data: failedPayouts, error: failedError } = await supabase
@@ -458,10 +458,7 @@ export const useUnifiedApprovalRequests = () => {
         const wUpdateData: any = { updated_at: new Date().toISOString() };
 
         if (status === 'Approved') {
-          // CRITICAL: Enforce Finance-First approval order
-          if (!currentWithdrawal.finance_approved_at) {
-            return { blocked: true, reason: 'This withdrawal has not yet been approved by Finance. Finance must review and approve first before Admin can approve.' };
-          }
+          // Withdrawals go directly to admin - no finance step required
           if (reqThreeApprovals) {
             // 2 admin approvals needed for high-value withdrawals (Admin is final step)
             if (!currentWithdrawal.admin_approved_1_at) {

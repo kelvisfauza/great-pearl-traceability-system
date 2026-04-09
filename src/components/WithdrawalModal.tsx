@@ -314,8 +314,8 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
           requestedby: user?.email || employee?.email || '',
           daterequested: new Date().toISOString().split('T')[0],
           priority: withdrawalAmount > 100000 ? 'High' : 'Medium',
-          status: 'Pending Finance',
-          approval_stage: 'pending_finance',
+           status: 'Pending Admin',
+           approval_stage: 'pending_admin',
           finance_approved: false,
           admin_approved: false,
           requestedby_name: employee?.name || user?.email || 'Unknown',
@@ -344,7 +344,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
 
       toast({
         title: "Withdrawal Request Submitted!",
-        description: `Reference: ${ref}. Your request for UGX ${withdrawalAmount.toLocaleString()} has been submitted for Finance review.`,
+        description: `Reference: ${ref}. Your request for UGX ${withdrawalAmount.toLocaleString()} has been submitted for Admin approval.`,
         duration: 8000,
       });
     } catch (error) {
