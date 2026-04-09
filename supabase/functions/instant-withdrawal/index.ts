@@ -154,10 +154,15 @@ serve(async (req) => {
     const txRefMatch = yoText.match(/<TransactionReference>(.*?)<\/TransactionReference>/);
     const statusMsgMatch = yoText.match(/<StatusMessage>(.*?)<\/StatusMessage>/);
     const txStatusMatch = yoText.match(/<TransactionStatus>(.*?)<\/TransactionStatus>/);
+    const statusCodeMatch = yoText.match(/<StatusCode>(.*?)<\/StatusCode>/);
     const yoStatus = statusMatch?.[1]?.trim();
     const txStatus = txStatusMatch?.[1]?.trim();
+    const statusCode = statusCodeMatch?.[1]?.trim();
 
-    if (yoStatus !== "OK") {
+    // StatusCode -22 means "extra authorization required" — treat as pending approval, not failure
+    const isPendingAuthorization = statusCode === '-22';
+
+    if (yoStatus !== "OK" && !isPendingAuthorization) {
       await supabase.from('instant_withdrawals')
         .update({ payout_status: 'failed', completed_at: new Date().toISOString() })
         .eq('id', instantRecord.id);
@@ -168,8 +173,9 @@ serve(async (req) => {
     }
 
     // acwithdrawfunds can return SUCCEEDED, FAILED, or PENDING
-    const isPending = txStatus === 'PENDING' || txStatus === 'INDETERMINATE';
-    const isFailed = txStatus === 'FAILED';
+    // StatusCode -22 always means pending authorization
+    const isPending = isPendingAuthorization || txStatus === 'PENDING' || txStatus === 'INDETERMINATE';
+    const isFailed = !isPendingAuthorization && txStatus === 'FAILED';
 
     if (isFailed) {
       await supabase.from('instant_withdrawals')
@@ -244,7 +250,7 @@ serve(async (req) => {
     return respond(true, {
       success: true,
       message: isPending 
-        ? "Withdrawal initiated. Please approve from your Yo Payments dashboard." 
+        ? "Withdrawal request created successfully. Awaiting admin approval — you'll be notified once processed." 
         : "Instant withdrawal processed successfully",
       status: finalStatus,
       ref: txRef,

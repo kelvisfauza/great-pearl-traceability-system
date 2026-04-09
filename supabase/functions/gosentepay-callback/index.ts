@@ -112,6 +112,68 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
+    // Check if this is an instant withdrawal callback (INSTANT-WD-* ref)
+    if (ref?.startsWith("INSTANT-WD-")) {
+      console.log(`Processing instant withdrawal callback: ref=${ref}, status=${status}`);
+      
+      const { data: instantWd, error: iwErr } = await supabaseClient
+        .from("instant_withdrawals")
+        .select("*")
+        .eq("payout_ref", ref)
+        .maybeSingle();
+
+      if (iwErr || !instantWd) {
+        console.error("Instant withdrawal not found for ref:", ref);
+        return new Response(
+          JSON.stringify({ error: "Unknown instant withdrawal reference" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (instantWd.payout_status === 'success' || instantWd.payout_status === 'failed') {
+        console.log(`Instant withdrawal ${ref} already finalized: ${instantWd.payout_status}`);
+        return new Response(
+          JSON.stringify({ received: true, already_processed: true }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const isSuccess = status === "successful";
+
+      if (isSuccess) {
+        await supabaseClient.from("instant_withdrawals")
+          .update({ payout_status: 'success', completed_at: new Date().toISOString() })
+          .eq("id", instantWd.id);
+        console.log(`Instant withdrawal ${ref} marked as success`);
+      } else {
+        // Refund: reverse the ledger deduction
+        await supabaseClient.from("instant_withdrawals")
+          .update({ payout_status: 'failed', completed_at: new Date().toISOString() })
+          .eq("id", instantWd.id);
+
+        if (instantWd.ledger_reference) {
+          await supabaseClient.from("ledger_entries").insert({
+            user_id: instantWd.user_id,
+            entry_type: "DEPOSIT",
+            amount: instantWd.amount,
+            reference: `REFUND-${instantWd.ledger_reference}`,
+            source_category: "SYSTEM_AWARD",
+            metadata: {
+              type: "instant_withdrawal_refund",
+              original_ref: ref,
+              reason: "Payout rejected/failed at provider",
+            },
+          });
+          console.log(`Refunded UGX ${instantWd.amount} for failed instant withdrawal ${ref}`);
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ received: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Verify authenticity: reference must exist in our database
     const { data: transaction, error: fetchError } = await supabaseClient
       .from("mobile_money_transactions")
