@@ -68,21 +68,66 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   // Instant withdrawal state
   const [instantEligibility, setInstantEligibility] = useState<InstantEligibility | null>(null);
   const [instantLoading, setInstantLoading] = useState(false);
+  const [eligibilityLoading, setEligibilityLoading] = useState(false);
+  const [eligibilityResolved, setEligibilityResolved] = useState(false);
   const [useInstant, setUseInstant] = useState(false);
 
   // Fetch instant withdrawal eligibility when modal opens
   useEffect(() => {
     if (open && (employee?.email || user?.email)) {
       const fetchEligibility = async () => {
+        setEligibilityLoading(true);
+        setEligibilityResolved(false);
         try {
           const { data, error } = await supabase.rpc('get_instant_withdrawal_eligibility', {
             p_user_email: employee?.email || user?.email || '',
           });
-          if (!error && data) {
-            setInstantEligibility(data as unknown as InstantEligibility);
+
+          if (error) {
+            throw error;
+          }
+
+          if (data && typeof data === 'object' && !Array.isArray(data)) {
+            const eligibilityData = data as Record<string, unknown>;
+            setInstantEligibility({
+              eligible: Boolean(eligibilityData.eligible),
+              self_deposit_balance: Number(eligibilityData.self_deposit_balance ?? 0),
+              max_instant_amount: Number(eligibilityData.max_instant_amount ?? 0),
+              today_withdrawn: Number(eligibilityData.today_withdrawn ?? 0),
+              daily_limit: Number(eligibilityData.daily_limit ?? 150000),
+              deposit_phone: typeof eligibilityData.deposit_phone === 'string' ? eligibilityData.deposit_phone : null,
+              reason: typeof eligibilityData.reason === 'string'
+                ? eligibilityData.reason
+                : 'Instant withdrawal is unavailable right now.',
+              next_eligible_at: typeof eligibilityData.next_eligible_at === 'string'
+                ? eligibilityData.next_eligible_at
+                : undefined,
+            });
+          } else {
+            setInstantEligibility({
+              eligible: false,
+              self_deposit_balance: 0,
+              max_instant_amount: 0,
+              today_withdrawn: 0,
+              daily_limit: 150000,
+              deposit_phone: null,
+              reason: 'Instant withdrawal is unavailable right now.',
+            });
           }
         } catch (err) {
           console.error('Error fetching instant eligibility:', err);
+          setInstantEligibility({
+            eligible: false,
+            self_deposit_balance: 0,
+            max_instant_amount: 0,
+            today_withdrawn: 0,
+            daily_limit: 150000,
+            deposit_phone: null,
+            reason: 'Could not check your instant withdrawal limit right now. Please try again.',
+          });
+        } finally {
+          setEligibilityLoading(false);
+          setEligibilityResolved(true);
         }
       };
       fetchEligibility();
@@ -378,6 +423,8 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   };
 
   const parsedAmount = amount ? parseFloat(amount) : 0;
+  const instantMaxAmount = Number(instantEligibility?.max_instant_amount ?? 0);
+  const instantUnavailable = eligibilityResolved && !eligibilityLoading && !instantEligibility?.eligible;
   const isCashRoundAmount = channel !== 'CASH' || parsedAmount % 500 === 0;
   const cleanMobile = mobileNumber.replace(/\s/g, '');
   const isValidMobileNumber = /^(070|074|075|077|078)\d{7}$/.test(cleanMobile) || /^(256(?:70|74|75|77|78))\d{7}$/.test(cleanMobile.replace(/\+/g, ''));
@@ -401,6 +448,15 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
           {step === 'amount' && (
             <>
               {/* Instant Withdrawal Option */}
+              {eligibilityLoading && (
+                <Alert>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <AlertDescription className="text-xs">
+                    Checking your instant withdrawal limit...
+                  </AlertDescription>
+                </Alert>
+              )}
+
               {instantEligibility?.eligible && (
                 <Alert className="border-green-300 bg-green-50">
                   <Zap className="h-4 w-4 text-green-600" />
@@ -415,7 +471,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                 </Alert>
               )}
 
-              {instantEligibility && !instantEligibility.eligible && instantEligibility.self_deposit_balance > 0 && (
+              {instantEligibility && instantUnavailable && instantEligibility.self_deposit_balance > 0 && (
                 <Alert className="border-amber-300 bg-amber-50">
                   <Clock className="h-4 w-4 text-amber-600" />
                   <AlertDescription className="text-xs text-amber-700">
@@ -427,14 +483,14 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                 </Alert>
               )}
 
-              {!instantEligibility?.eligible && (
-                <Alert>
+              {instantEligibility && instantUnavailable && instantEligibility.self_deposit_balance <= 0 && (
+                <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>
                     Available Balance: <strong>{formatCurrency(availableAmount)}</strong>
                     <br />
                     <span className="text-xs text-muted-foreground">
-                      Only instant withdrawals are available at this time. You can withdraw up to UGX 150,000 from your own deposits — no approval needed.
+                      {instantEligibility.reason}
                     </span>
                   </AlertDescription>
                 </Alert>
@@ -471,24 +527,25 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                   <Input
                     id="amount"
                     type="number"
-                    placeholder="Enter withdrawal amount"
+                    placeholder={instantUnavailable ? 'Instant withdrawal unavailable' : 'Enter withdrawal amount'}
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     required
                     min="2000"
-                    max={instantEligibility?.max_instant_amount || 0}
+                    max={instantEligibility?.eligible ? instantMaxAmount : undefined}
                     step="1"
+                    disabled={eligibilityLoading || instantUnavailable}
                   />
                   {amount && parsedAmount < 2000 && (
                     <p className="text-sm text-destructive">Minimum withdrawal is UGX 2,000</p>
                   )}
-                  {amount && parsedAmount > (instantEligibility?.max_instant_amount || 0) && (
-                    <p className="text-sm text-destructive">Amount exceeds instant withdrawal limit (UGX {Number(instantEligibility?.max_instant_amount || 0).toLocaleString()})</p>
+                  {instantEligibility?.eligible && amount && parsedAmount > instantMaxAmount && (
+                    <p className="text-sm text-destructive">Amount exceeds instant withdrawal limit (UGX {instantMaxAmount.toLocaleString()})</p>
                   )}
                 </div>
 
                 {/* Instant withdrawal hint */}
-                {instantEligibility?.eligible && parsedAmount >= 2000 && parsedAmount <= (instantEligibility.max_instant_amount || 0) && (
+                {instantEligibility?.eligible && parsedAmount >= 2000 && parsedAmount <= instantMaxAmount && (
                   <Alert className="border-green-300 bg-green-50 py-2">
                     <Zap className="h-3 w-3 text-green-600" />
                     <AlertDescription className="text-xs text-green-700">
@@ -505,7 +562,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                     <Button
                       type="button"
                       onClick={handleInstantWithdraw}
-                      disabled={instantLoading || !amount || parsedAmount < 2000 || parsedAmount > (instantEligibility.max_instant_amount || 0)}
+                      disabled={instantLoading || !amount || parsedAmount < 2000 || parsedAmount > instantMaxAmount}
                       className="bg-green-600 hover:bg-green-700 text-white"
                     >
                       {instantLoading ? (
