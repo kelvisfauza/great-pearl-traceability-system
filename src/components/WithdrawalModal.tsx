@@ -115,9 +115,12 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
       setStep('done');
       setUseInstant(true);
 
+      const isPendingApproval = data.status === 'pending_approval';
       toast({
-        title: "💸 Instant Withdrawal Sent!",
-        description: `UGX ${withdrawalAmount.toLocaleString()} sent to ${data.phone || instantEligibility.deposit_phone}. No approval needed!`,
+        title: isPendingApproval ? "⏳ Withdrawal Request Created!" : "💸 Instant Withdrawal Sent!",
+        description: isPendingApproval
+          ? `UGX ${withdrawalAmount.toLocaleString()} withdrawal request created. Awaiting admin approval — you'll be notified once processed.`
+          : `UGX ${withdrawalAmount.toLocaleString()} sent to ${data.phone || instantEligibility.deposit_phone}. No approval needed!`,
         duration: 8000,
       });
     } catch (error: any) {
