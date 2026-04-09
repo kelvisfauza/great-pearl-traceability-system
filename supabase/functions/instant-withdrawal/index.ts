@@ -177,8 +177,9 @@ serve(async (req) => {
     }
 
     const txRef = txRefMatch?.[1]?.trim() || ref;
+    const finalStatus = isPending ? 'pending_approval' : 'success';
 
-    // Deduct from wallet via ledger
+    // Deduct from wallet via ledger (deduct immediately even if pending approval)
     const ledgerRef = `INSTANT-WD-${instantRecord.id}`;
     await supabase.from('ledger_entries').insert({
       user_id: resolvedUserId,
@@ -191,16 +192,17 @@ serve(async (req) => {
         phone: cleanPhone,
         payout_ref: txRef,
         instant_withdrawal_id: instantRecord.id,
+        yo_status: txStatus,
       },
     });
 
     // Update tracking record
     await supabase.from('instant_withdrawals')
       .update({
-        payout_status: 'success',
+        payout_status: finalStatus,
         payout_ref: txRef,
         ledger_reference: ledgerRef,
-        completed_at: new Date().toISOString(),
+        completed_at: isPending ? null : new Date().toISOString(),
       })
       .eq('id', instantRecord.id);
 
