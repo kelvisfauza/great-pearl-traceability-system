@@ -131,12 +131,12 @@ serve(async (req) => {
   <Request>
     <APIUsername>${yoUsername}</APIUsername>
     <APIPassword>${yoPassword}</APIPassword>
-    <Method>acdepositfunds</Method>
-    <NonBlocking>TRUE</NonBlocking>
+    <Method>acwithdrawfunds</Method>
     <Amount>${numAmount}</Amount>
     <Account>${cleanPhone}</Account>
     <AccountProviderCode>${getProviderCode(cleanPhone)}</AccountProviderCode>
     <Narrative>${escapeXml(`Instant withdrawal - ${ref}`)}</Narrative>
+    <ExternalReference>${escapeXml(ref)}</ExternalReference>
   </Request>
 </AutoCreate>`;
 
