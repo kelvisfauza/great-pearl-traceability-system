@@ -1149,6 +1149,30 @@ const QuickLoans = () => {
     }
   };
 
+  // Cancel a pending/declined loan
+  const handleCancelLoan = async (loan: any) => {
+    if (!employee) return;
+    const canCancel = ['pending_guarantor', 'pending_admin', 'guarantor_declined', 'admin_rejected'].includes(loan.status);
+    if (!canCancel) {
+      toast({ title: "Cannot Cancel", description: "Only unapproved loans can be cancelled.", variant: "destructive" });
+      return;
+    }
+    try {
+      setSubmitting(true);
+      const { error } = await supabase.from('loans').update({
+        status: 'cancelled',
+        admin_rejection_reason: `Cancelled by borrower: ${employee.name}`,
+      } as any).eq('id', loan.id);
+      if (error) throw error;
+      toast({ title: "Loan Cancelled ✅", description: "Your loan application has been cancelled. You can apply for a new loan." });
+      await fetchLoans();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to cancel loan", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // Modify a pending/declined loan
   const handleModifyLoan = async () => {
     if (!modifyLoan || !employee || !modifyAmount || !modifyDuration || !modifyGuarantorId) return;
@@ -1196,12 +1220,10 @@ const QuickLoans = () => {
         repayment_frequency: modifyFrequency,
         interest_rate: monthlyRate,
         daily_interest_rate: monthlyRate / 30,
-        total_interest: interest,
         total_repayable: totalRepayable,
         monthly_installment: installment,
         total_weeks: totalWeeks,
         remaining_balance: totalRepayable,
-        loan_purpose: modifyPurpose || modifyLoan.loan_purpose,
         guarantor_id: guarantor.id,
         guarantor_email: guarantor.email,
         guarantor_name: guarantor.name,
@@ -2277,7 +2299,7 @@ const QuickLoans = () => {
                         setModifyDuration(String(loan.duration_months || ''));
                         setModifyType((loan.loan_type || 'quick') as LoanType);
                         setModifyFrequency((loan.repayment_frequency || 'weekly') as RepaymentFrequency);
-                        setModifyPurpose(loan.loan_purpose || '');
+                        setModifyPurpose('');
                         setModifyGuarantorId('');
                         setShowModifyDialog(true);
                       }}>
@@ -2494,7 +2516,7 @@ const QuickLoans = () => {
                                     setModifyDuration(String(loan.duration_months || ''));
                                     setModifyType((loan.loan_type || 'quick') as LoanType);
                                     setModifyFrequency((loan.repayment_frequency || 'weekly') as RepaymentFrequency);
-                                    setModifyPurpose(loan.loan_purpose || '');
+                                    setModifyPurpose('');
                                     setModifyGuarantorId('');
                                     setShowModifyDialog(true);
                                   }}>
@@ -2503,17 +2525,27 @@ const QuickLoans = () => {
                                 </>
                               )}
                               {['pending_guarantor', 'pending_admin'].includes(loan.status) && (
-                                <Button size="sm" variant="secondary" onClick={() => {
-                                  setModifyLoan(loan);
-                                  setModifyAmount(String(loan.loan_amount || ''));
-                                  setModifyDuration(String(loan.duration_months || ''));
-                                  setModifyType((loan.loan_type || 'quick') as LoanType);
-                                  setModifyFrequency((loan.repayment_frequency || 'weekly') as RepaymentFrequency);
-                                  setModifyPurpose(loan.loan_purpose || '');
-                                  setModifyGuarantorId('');
-                                  setShowModifyDialog(true);
-                                }}>
-                                  <Edit className="mr-1 h-3 w-3" /> Modify Loan
+                                <>
+                                  <Button size="sm" variant="secondary" onClick={() => {
+                                    setModifyLoan(loan);
+                                    setModifyAmount(String(loan.loan_amount || ''));
+                                    setModifyDuration(String(loan.duration_months || ''));
+                                    setModifyType((loan.loan_type || 'quick') as LoanType);
+                                    setModifyFrequency((loan.repayment_frequency || 'weekly') as RepaymentFrequency);
+                                    setModifyPurpose('');
+                                    setModifyGuarantorId('');
+                                    setShowModifyDialog(true);
+                                  }}>
+                                    <Edit className="mr-1 h-3 w-3" /> Modify Loan
+                                  </Button>
+                                  <Button size="sm" variant="destructive" onClick={() => handleCancelLoan(loan)} disabled={submitting}>
+                                    <XCircle className="mr-1 h-3 w-3" /> Cancel Loan
+                                  </Button>
+                                </>
+                              )}
+                              {loan.status === 'guarantor_declined' && (
+                                <Button size="sm" variant="destructive" onClick={() => handleCancelLoan(loan)} disabled={submitting}>
+                                  <XCircle className="mr-1 h-3 w-3" /> Cancel Loan
                                 </Button>
                               )}
                               {loan.status === 'counter_offered' && (
