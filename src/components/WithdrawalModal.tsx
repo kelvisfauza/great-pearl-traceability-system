@@ -105,7 +105,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
       });
 
       if (error) throw new Error(error.message || 'Instant withdrawal failed');
-      if (data?.error) throw new Error(data.error);
+      if (!data?.ok || data?.error) throw new Error(data?.error || 'Instant withdrawal failed');
 
       setCompletedRef(data.ref || 'INSTANT');
       setCompletedAmount(withdrawalAmount);
