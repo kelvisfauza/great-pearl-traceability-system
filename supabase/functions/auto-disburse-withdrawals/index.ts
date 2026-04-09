@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { yoPayout, normalizePhone } from "../_shared/yo-payments.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,31 +15,28 @@ serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-  const gosentepayApiKey = Deno.env.get("GOSENTEPAY_API_KEY");
-  const gosentepaySecretKey = Deno.env.get("GOSENTEPAY_SECRET_KEY");
   const yoolaSmsApiKey = Deno.env.get("YOOLA_SMS_API_KEY");
 
-  if (!gosentepayApiKey || !gosentepaySecretKey) {
-    console.error("GosentePay credentials not configured");
-    return new Response(JSON.stringify({ error: "GosentePay not configured" }), {
+  // Check Yo Payments credentials
+  if (!Deno.env.get("YO_API_USERNAME") || !Deno.env.get("YO_API_PASSWORD")) {
+    console.error("Yo Payments credentials not configured");
+    return new Response(JSON.stringify({ error: "Yo Payments not configured" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   }
 
   try {
     // SAFETY: Only pick up withdrawals that have NEVER been attempted (payout_attempted_at IS NULL)
-    // This prevents dangerous retry loops. Failed payouts must be retried MANUALLY by Finance.
     const { data: pendingPayouts, error: fetchError } = await supabase
       .from("withdrawal_requests")
       .select("*")
       .eq("status", "approved")
       .eq("payment_channel", "MOBILE_MONEY")
       .eq("payout_status", "pending")
-      .is("payout_attempted_at", null)  // CRITICAL: Only never-attempted records
+      .is("payout_attempted_at", null)
       .not("finance_approved_at", "is", null)
-      .not("admin_approved_1_at", "is", null)  // CRITICAL: Must have at least one admin approval
-      .not("approved_at", "is", null)  // CRITICAL: Must have final admin approval timestamp (set by admin, not finance)
+      .not("admin_approved_1_at", "is", null)
+      .not("approved_at", "is", null)
       .order("approved_at", { ascending: true })
       .limit(5);
 
@@ -53,7 +51,7 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Found ${pendingPayouts.length} NEW payout(s) to process (never attempted before)`);
+    console.log(`Found ${pendingPayouts.length} NEW payout(s) to process`);
 
     let processed = 0;
     let failed = 0;
@@ -61,10 +59,10 @@ serve(async (req) => {
     for (let i = 0; i < pendingPayouts.length; i++) {
       const withdrawal = pendingPayouts[i];
       
-      // GosentePay rate limit: wait 12 seconds between transfers
+      // Rate limit: wait 5 seconds between transfers
       if (i > 0) {
-        console.log("Waiting 12s for GosentePay rate limit...");
-        await new Promise(r => setTimeout(r, 12000));
+        console.log("Waiting 5s between Yo Payments transfers...");
+        await new Promise(r => setTimeout(r, 5000));
       }
 
       const phone = withdrawal.disbursement_phone || withdrawal.phone_number;
@@ -79,53 +77,32 @@ serve(async (req) => {
         continue;
       }
 
-      // Normalize phone
-      let cleanPhone = phone.replace(/\D/g, "");
-      if (cleanPhone.startsWith("0")) cleanPhone = "256" + cleanPhone.slice(1);
-      if (!cleanPhone.startsWith("256")) cleanPhone = "256" + cleanPhone;
+      const cleanPhone = normalizePhone(phone);
 
       // Mark as processing IMMEDIATELY to prevent double-sends
       const { error: lockError } = await supabase.from("withdrawal_requests").update({
         payout_status: "processing",
         payout_attempted_at: new Date().toISOString()
       }).eq("id", withdrawal.id)
-        .eq("payout_status", "pending")  // Optimistic lock - only update if still pending
+        .eq("payout_status", "pending")
         .is("payout_attempted_at", null);
 
       if (lockError) {
-        console.error(`Failed to lock withdrawal ${withdrawal.id}, skipping (may already be processing)`);
+        console.error(`Failed to lock withdrawal ${withdrawal.id}, skipping`);
         continue;
       }
 
       try {
         console.log(`Processing payout: ${withdrawal.id} - UGX ${withdrawal.amount} to ${cleanPhone}`);
 
-        const payoutResponse = await fetch("https://api.gosentepay.com/v1/withdraw_collections.php", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": gosentepayApiKey,
-          },
-          body: JSON.stringify({
-            secret_key: gosentepaySecretKey,
-            currency: "UGX",
-            amount: String(withdrawal.amount),
-            emailAddress: "system@greatagrocoffee.com",
-            phone: cleanPhone,
-            reason: `Wallet withdrawal - ${withdrawal.request_ref || withdrawal.id}`,
-          }),
+        const result = await yoPayout({
+          phone: cleanPhone,
+          amount: withdrawal.amount,
+          narrative: `Wallet withdrawal - ${withdrawal.request_ref || withdrawal.id}`,
         });
 
-        const payoutData = await payoutResponse.json();
-        console.log(`Payout response for ${withdrawal.id}:`, JSON.stringify(payoutData));
-
-        const innerData = payoutData.data || payoutData;
-        const isSuccess =
-          (innerData.status === 200 || innerData.status === 202 || innerData.code === 200 || innerData.code === 202) &&
-          (innerData.message?.toLowerCase().includes("accepted") || innerData.message?.toLowerCase().includes("success") || payoutData.status === "success");
-
-        if (isSuccess) {
-          const txRef = payoutData.txRef || withdrawal.request_ref;
+        if (result.success) {
+          const txRef = result.transactionRef || withdrawal.request_ref || `YO-${Date.now()}`;
           
           await supabase.from("withdrawal_requests").update({
             payout_status: "sent",
@@ -133,35 +110,6 @@ serve(async (req) => {
             payout_attempted_at: new Date().toISOString(),
             payout_error: null
           }).eq("id", withdrawal.id);
-
-          // Deduct from tracked GosentePay balance
-          const { data: currentBal } = await supabase
-            .from("gosentepay_balance")
-            .select("balance")
-            .order("updated_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (currentBal) {
-            const newBal = currentBal.balance - withdrawal.amount;
-            await supabase.from("gosentepay_balance").update({
-              balance: newBal,
-              last_updated_by: "auto-disburse",
-              last_transaction_ref: txRef,
-              last_transaction_type: "payout_deduction",
-              updated_at: new Date().toISOString()
-            }).order("updated_at", { ascending: false }).limit(1);
-
-            await supabase.from("gosentepay_balance_log").insert({
-              previous_balance: currentBal.balance,
-              new_balance: newBal,
-              change_amount: -withdrawal.amount,
-              change_type: "payout_deduction",
-              reference: txRef,
-              notes: `Auto-disburse to ${cleanPhone}`,
-              created_by: "system"
-            });
-          }
 
           // Get employee name and system phone for SMS
           let employeeName = "User";
@@ -176,7 +124,7 @@ serve(async (req) => {
             employeeSystemPhone = emp.phone || "";
           }
 
-          // Send SMS to employee's system phone, NOT the disbursement number
+          // Send SMS notification
           if (yoolaSmsApiKey && employeeSystemPhone) {
             let smsPhone = employeeSystemPhone.replace(/\D/g, "");
             if (smsPhone.startsWith("0")) smsPhone = "+256" + smsPhone.slice(1);
@@ -201,14 +149,13 @@ serve(async (req) => {
           processed++;
           console.log(`Payout SUCCESS for ${withdrawal.id}: ${txRef}`);
         } else {
-          // Mark as FAILED - will NOT be auto-retried. Finance must manually retry.
           await supabase.from("withdrawal_requests").update({
             payout_status: "failed",
-            payout_error: innerData.message || "Transfer rejected by provider",
+            payout_error: result.errorMessage || "Transfer rejected by Yo Payments",
             payout_attempted_at: new Date().toISOString()
           }).eq("id", withdrawal.id);
           failed++;
-          console.error(`Payout FAILED for ${withdrawal.id}: ${innerData.message}. Will NOT auto-retry - Finance must retry manually.`);
+          console.error(`Payout FAILED for ${withdrawal.id}: ${result.errorMessage}`);
         }
       } catch (payoutErr) {
         console.error(`Payout exception for ${withdrawal.id}:`, payoutErr);
@@ -221,7 +168,7 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Auto-disburse complete: ${processed} sent, ${failed} failed (failed ones require manual retry)`);
+    console.log(`Auto-disburse complete: ${processed} sent, ${failed} failed`);
 
     return new Response(
       JSON.stringify({ status: "ok", processed, failed, total: pendingPayouts.length }),
