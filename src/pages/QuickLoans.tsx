@@ -888,7 +888,7 @@ const QuickLoans = () => {
         amount: amount,
         phone: cleanPhone,
         status: 'pending',
-        provider: 'gosentepay',
+        provider: 'yo_payments',
         withdrawal_id: momoRepayLoan.id, // Store loan_id in withdrawal_id field
       });
 

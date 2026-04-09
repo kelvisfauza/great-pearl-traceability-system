@@ -71,7 +71,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({ open, onOpenChange }
           amount: depositAmount,
           transaction_type: 'deposit',
           status: 'pending',
-          provider: 'gosentepay',
+          provider: 'yo_payments',
         });
 
       if (txError) throw txError;

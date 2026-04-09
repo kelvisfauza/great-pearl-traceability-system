@@ -12,13 +12,50 @@ serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
-    console.log("GosentePay callback received:", JSON.stringify(body));
+    const contentType = req.headers.get("content-type") || "";
+    let ref: string | undefined;
+    let status: string | undefined;
+    let phone: string | undefined;
+    let rawBody: any;
 
-    // Extract reference - GosentePay sends as customer_reference
-    const ref = body.customer_reference || body.ref;
-    const status = (body.status || "").toLowerCase();
-    const phone = body.msisdn || body.phone;
+    // Handle both XML (Yo Payments) and JSON (legacy) callbacks
+    if (contentType.includes("xml") || contentType.includes("text/xml")) {
+      const xmlText = await req.text();
+      console.log("Yo Payments callback received (XML):", xmlText);
+      rawBody = { raw_xml: xmlText };
+
+      // Parse Yo Payments XML notification
+      // Yo sends: <ExternalReference>, <TransactionStatus> (SUCCEEDED/FAILED), <MsisdnAccount>
+      const extRefMatch = xmlText.match(/<ExternalReference>(.*?)<\/ExternalReference>/);
+      const txStatusMatch = xmlText.match(/<TransactionStatus>(.*?)<\/TransactionStatus>/);
+      const msisdnMatch = xmlText.match(/<MsisdnAccount>(.*?)<\/MsisdnAccount>/);
+      const statusMsgMatch = xmlText.match(/<StatusMessage>(.*?)<\/StatusMessage>/);
+      const statusMatch = xmlText.match(/<Status>(.*?)<\/Status>/);
+
+      ref = extRefMatch?.[1]?.trim();
+      phone = msisdnMatch?.[1]?.trim();
+      
+      // Yo uses TransactionStatus: SUCCEEDED or FAILED
+      const txStatus = txStatusMatch?.[1]?.trim()?.toUpperCase();
+      const yoStatus = statusMatch?.[1]?.trim()?.toUpperCase();
+      
+      if (txStatus === "SUCCEEDED" || yoStatus === "OK") {
+        status = "successful";
+      } else {
+        status = "failed";
+      }
+
+      console.log(`Yo Payments parsed: ref=${ref}, status=${status}, phone=${phone}`);
+    } else {
+      // JSON callback (legacy GosentePay format)
+      const body = await req.json();
+      console.log("Callback received (JSON):", JSON.stringify(body));
+      rawBody = body;
+
+      ref = body.customer_reference || body.ref || body.external_reference;
+      status = (body.status || "").toLowerCase();
+      phone = body.msisdn || body.phone;
+    }
 
     if (!ref) {
       console.error("Callback missing ref");
@@ -67,7 +104,7 @@ serve(async (req) => {
       .from("mobile_money_transactions")
       .update({
         status: isSuccess ? "completed" : "failed",
-        provider_response: body,
+        provider_response: rawBody,
         completed_at: new Date().toISOString(),
       })
       .eq("transaction_ref", ref);
@@ -84,7 +121,6 @@ serve(async (req) => {
         const loanId = transaction.withdrawal_id;
         console.log(`Processing loan repayment for loan ${loanId}, amount: ${depositAmount}`);
 
-        // Get current loan
         const { data: loan, error: loanErr } = await supabaseClient
           .from("loans")
           .select("*")
@@ -97,7 +133,6 @@ serve(async (req) => {
           const newBalance = Math.max(0, (loan.remaining_balance || 0) - depositAmount);
           const newPaidAmount = (loan.paid_amount || 0) + depositAmount;
 
-          // Update loan balance
           await supabaseClient.from("loans").update({
             remaining_balance: newBalance,
             paid_amount: newPaidAmount,
@@ -108,7 +143,6 @@ serve(async (req) => {
 
           console.log(`Loan ${loanId} updated: balance=${newBalance}, paid=${newPaidAmount}`);
 
-          // Mark pending installments as paid
           const { data: unpaidInstallments } = await supabaseClient
             .from("loan_repayments")
             .select("*")
@@ -131,7 +165,6 @@ serve(async (req) => {
             remaining -= payable;
           }
 
-          // Create ledger entry for loan repayment tracking (does NOT affect wallet balance)
           await supabaseClient.from("ledger_entries").insert({
             user_id: transaction.user_id,
             entry_type: "LOAN_REPAYMENT",
@@ -148,7 +181,6 @@ serve(async (req) => {
 
           console.log(`Loan repayment processed successfully for loan ${loanId}`);
 
-          // Send loan repayment confirmation email
           try {
             await supabaseClient.functions.invoke('send-transactional-email', {
               body: {
@@ -182,8 +214,9 @@ serve(async (req) => {
             metadata: JSON.stringify({
               transaction_ref: ref,
               phone: phone,
-              currency: body.currency || "UGX",
-              provider: "gosentepay",
+              currency: "UGX",
+              provider: "yo_payments",
+              source: "mobile_money",
             }),
           });
 
@@ -202,7 +235,7 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("GosentePay callback error:", error);
+    console.error("Callback error:", error);
     return new Response(
       JSON.stringify({ error: "Callback processing failed" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

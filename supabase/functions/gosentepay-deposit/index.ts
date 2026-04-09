@@ -1,9 +1,29 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { normalizePhone } from "../_shared/yo-payments.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const YO_API_URL = "https://paymentsapi1.yo.co.ug/ybs/task.php";
+
+function escapeXml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function getProviderCode(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  const local = digits.startsWith("256") ? "0" + digits.slice(3) : digits;
+  if (local.startsWith("077") || local.startsWith("078") || local.startsWith("076")) return "MTN";
+  if (local.startsWith("070") || local.startsWith("075") || local.startsWith("074")) return "AIRTEL";
+  return "MTN";
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -11,11 +31,11 @@ serve(async (req) => {
   }
 
   try {
-    const apiKey = Deno.env.get("GOSENTEPAY_API_KEY");
-    const secretKey = Deno.env.get("GOSENTEPAY_SECRET_KEY");
+    const username = Deno.env.get("YO_API_USERNAME");
+    const password = Deno.env.get("YO_API_PASSWORD");
 
-    if (!apiKey || !secretKey) {
-      throw new Error("GosentePay API credentials not configured");
+    if (!username || !password) {
+      throw new Error("Yo Payments API credentials not configured");
     }
 
     const { phone, amount, email, ref } = await req.json();
@@ -27,9 +47,8 @@ serve(async (req) => {
       );
     }
 
-    // Validate phone format (must start with 256)
-    const cleanPhone = phone.replace(/\+/g, "").replace(/\s/g, "");
-    if (!cleanPhone.startsWith("256") || cleanPhone.length < 12) {
+    const cleanPhone = normalizePhone(phone);
+    if (cleanPhone.length < 12) {
       return new Response(
         JSON.stringify({ error: "Phone number must start with 256 and be at least 12 digits" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -44,66 +63,83 @@ serve(async (req) => {
       );
     }
 
-    // Build callback URL
+    // Build callback URL for Yo Payments notification
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const callbackUrl = `${supabaseUrl}/functions/v1/gosentepay-callback`;
 
-    const requestBody = {
-      secret_key: secretKey,
-      currency: "UGX",
-      phone: cleanPhone,
-      amount: String(numAmount),
-      email: email || "customer@example.com",
-      ref,
-      callback: callbackUrl,
-    };
+    // Build XML request for Yo Payments acreceivefunds (collect money from user)
+    const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
+<AutoCreate>
+  <Request>
+    <APIUsername>${username}</APIUsername>
+    <APIPassword>${password}</APIPassword>
+    <Method>acreceivefunds</Method>
+    <NonBlocking>TRUE</NonBlocking>
+    <Amount>${numAmount}</Amount>
+    <Account>${cleanPhone}</Account>
+    <AccountProviderCode>${getProviderCode(cleanPhone)}</AccountProviderCode>
+    <Narrative>${escapeXml(`Wallet deposit ${ref}`)}</Narrative>
+    <ExternalReference>${escapeXml(ref)}</ExternalReference>
+    <ProviderReferenceText>${escapeXml(`Deposit UGX ${numAmount.toLocaleString()}`)}</ProviderReferenceText>
+    <InstantNotificationUrl>${escapeXml(callbackUrl)}</InstantNotificationUrl>
+    <FailureNotificationUrl>${escapeXml(callbackUrl)}</FailureNotificationUrl>
+  </Request>
+</AutoCreate>`;
 
-    console.log("Initiating GosentePay deposit:", { phone: cleanPhone, amount: numAmount, ref, callback: callbackUrl });
+    console.log(`[Yo Payments Deposit] Collecting UGX ${numAmount} from ${cleanPhone} (${getProviderCode(cleanPhone)}), ref: ${ref}`);
 
-    const response = await fetch("https://api.gosentepay.com/v1/deposit", {
+    const response = await fetch(YO_API_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": apiKey,
+        "Content-Type": "text/xml",
+        "Content-Transfer-Encoding": "text",
       },
-      body: JSON.stringify(requestBody),
+      body: xmlBody,
     });
 
-    const data = await response.json();
-    console.log("GosentePay deposit response:", JSON.stringify(data));
-    console.log("GosentePay HTTP status:", response.status);
+    const responseText = await response.text();
+    console.log(`[Yo Payments Deposit] HTTP ${response.status}, Response: ${responseText}`);
 
-    if (data.status === "success" && data.code === 200) {
+    // Parse Yo XML response
+    const statusMatch = responseText.match(/<Status>(.*?)<\/Status>/);
+    const status = statusMatch?.[1]?.trim();
+    const txRefMatch = responseText.match(/<TransactionReference>(.*?)<\/TransactionReference>/);
+    const statusMsgMatch = responseText.match(/<StatusMessage>(.*?)<\/StatusMessage>/);
+
+    if (status === "OK") {
       return new Response(
         JSON.stringify({
           status: "success",
           code: 200,
-          message: data.message || "A push notification has been sent to the phone",
-          ref: data.ref || ref,
+          message: "A payment prompt has been sent to your phone. Enter your PIN to confirm.",
+          ref: ref,
+          transactionRef: txRefMatch?.[1]?.trim(),
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } else {
+      const errorMsg = statusMsgMatch?.[1]?.trim() || `Yo Payments returned status: ${status}`;
+      console.error(`[Yo Payments Deposit] Failed: ${errorMsg}`);
       return new Response(
         JSON.stringify({
           status: "error",
-          code: data.code || response.status,
-          message: data.message || "Failed to initiate deposit",
-          details: data,
+          code: 400,
+          message: errorMsg,
+          details: responseText,
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
   } catch (error) {
-    console.error("GosentePay deposit error:", error);
-    
+    console.error("Yo Payments deposit error:", error);
+
     const errorMsg = error instanceof Error ? error.message : "Unknown error";
     const isConnectionError = errorMsg.includes("Connection refused") || errorMsg.includes("ECONNREFUSED") || errorMsg.includes("tcp connect error");
-    
+
     const userMessage = isConnectionError
       ? "Mobile money service is temporarily unavailable. Please try again later."
       : errorMsg;
-    
+
     return new Response(
       JSON.stringify({ error: userMessage, technical_error: errorMsg }),
       { status: isConnectionError ? 503 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
