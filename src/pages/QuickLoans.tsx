@@ -2525,17 +2525,27 @@ const QuickLoans = () => {
                                 </>
                               )}
                               {['pending_guarantor', 'pending_admin'].includes(loan.status) && (
-                                <Button size="sm" variant="secondary" onClick={() => {
-                                  setModifyLoan(loan);
-                                  setModifyAmount(String(loan.loan_amount || ''));
-                                  setModifyDuration(String(loan.duration_months || ''));
-                                  setModifyType((loan.loan_type || 'quick') as LoanType);
-                                  setModifyFrequency((loan.repayment_frequency || 'weekly') as RepaymentFrequency);
-                                  setModifyPurpose('');
-                                  setModifyGuarantorId('');
-                                  setShowModifyDialog(true);
-                                }}>
-                                  <Edit className="mr-1 h-3 w-3" /> Modify Loan
+                                <>
+                                  <Button size="sm" variant="secondary" onClick={() => {
+                                    setModifyLoan(loan);
+                                    setModifyAmount(String(loan.loan_amount || ''));
+                                    setModifyDuration(String(loan.duration_months || ''));
+                                    setModifyType((loan.loan_type || 'quick') as LoanType);
+                                    setModifyFrequency((loan.repayment_frequency || 'weekly') as RepaymentFrequency);
+                                    setModifyPurpose('');
+                                    setModifyGuarantorId('');
+                                    setShowModifyDialog(true);
+                                  }}>
+                                    <Edit className="mr-1 h-3 w-3" /> Modify Loan
+                                  </Button>
+                                  <Button size="sm" variant="destructive" onClick={() => handleCancelLoan(loan)} disabled={submitting}>
+                                    <XCircle className="mr-1 h-3 w-3" /> Cancel Loan
+                                  </Button>
+                                </>
+                              )}
+                              {loan.status === 'guarantor_declined' && (
+                                <Button size="sm" variant="destructive" onClick={() => handleCancelLoan(loan)} disabled={submitting}>
+                                  <XCircle className="mr-1 h-3 w-3" /> Cancel Loan
                                 </Button>
                               )}
                               {loan.status === 'counter_offered' && (
