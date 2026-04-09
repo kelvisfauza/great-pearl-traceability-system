@@ -1149,6 +1149,30 @@ const QuickLoans = () => {
     }
   };
 
+  // Cancel a pending/declined loan
+  const handleCancelLoan = async (loan: any) => {
+    if (!employee) return;
+    const canCancel = ['pending_guarantor', 'pending_admin', 'guarantor_declined', 'admin_rejected'].includes(loan.status);
+    if (!canCancel) {
+      toast({ title: "Cannot Cancel", description: "Only unapproved loans can be cancelled.", variant: "destructive" });
+      return;
+    }
+    try {
+      setSubmitting(true);
+      const { error } = await supabase.from('loans').update({
+        status: 'cancelled',
+        admin_rejection_reason: `Cancelled by borrower: ${employee.name}`,
+      } as any).eq('id', loan.id);
+      if (error) throw error;
+      toast({ title: "Loan Cancelled ✅", description: "Your loan application has been cancelled. You can apply for a new loan." });
+      await fetchLoans();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to cancel loan", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // Modify a pending/declined loan
   const handleModifyLoan = async () => {
     if (!modifyLoan || !employee || !modifyAmount || !modifyDuration || !modifyGuarantorId) return;
