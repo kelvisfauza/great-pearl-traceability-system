@@ -103,10 +103,14 @@ serve(async (req) => {
     // Parse Yo XML response
     const statusMatch = responseText.match(/<Status>(.*?)<\/Status>/);
     const status = statusMatch?.[1]?.trim();
+    const statusCodeMatch = responseText.match(/<StatusCode>(.*?)<\/StatusCode>/);
+    const statusCode = statusCodeMatch?.[1]?.trim();
     const txRefMatch = responseText.match(/<TransactionReference>(.*?)<\/TransactionReference>/);
     const statusMsgMatch = responseText.match(/<StatusMessage>(.*?)<\/StatusMessage>/);
 
-    if (status === "OK") {
+    // Status "OK" = immediate success
+    // StatusCode "-22" = pending authorization (user gets a prompt on their phone) - treat as success
+    if (status === "OK" || statusCode === "-22") {
       return new Response(
         JSON.stringify({
           status: "success",
