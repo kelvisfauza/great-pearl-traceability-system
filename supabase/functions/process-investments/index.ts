@@ -41,9 +41,14 @@ Deno.serve(async (req) => {
         user_id: userId,
         entry_type: "DEPOSIT",
         amount: payout,
-        description: `Investment matured - ${Number(inv.interest_rate)}% interest earned`,
         reference: ref,
         source_category: "SYSTEM_AWARD",
+        metadata: {
+          description: `Investment matured - ${Number(inv.interest_rate)}% interest earned`,
+          type: 'investment_matured',
+          investment_id: inv.id,
+          interest,
+        },
       }]);
 
       if (ledgerErr) {
