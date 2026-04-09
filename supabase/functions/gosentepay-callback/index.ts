@@ -46,15 +46,57 @@ serve(async (req) => {
       }
 
       console.log(`Yo Payments parsed: ref=${ref}, status=${status}, phone=${phone}`);
-    } else {
-      // JSON callback (legacy GosentePay format)
-      const body = await req.json();
-      console.log("Callback received (JSON):", JSON.stringify(body));
-      rawBody = body;
+    } else if (contentType.includes("application/x-www-form-urlencoded")) {
+      // Yo Payments sometimes sends form-urlencoded IPN callbacks
+      const formText = await req.text();
+      console.log("Yo Payments callback received (form-urlencoded):", formText);
+      const params = new URLSearchParams(formText);
+      rawBody = Object.fromEntries(params.entries());
 
-      ref = body.customer_reference || body.ref || body.external_reference;
-      status = (body.status || "").toLowerCase();
-      phone = body.msisdn || body.phone;
+      ref = params.get("external_reference") || params.get("ExternalReference") || params.get("customer_reference") || undefined;
+      phone = params.get("msisdn") || params.get("MsisdnAccount") || params.get("account") || undefined;
+
+      const txStatus = (params.get("transaction_status") || params.get("TransactionStatus") || "").toUpperCase();
+      const yoStatus = (params.get("status") || params.get("Status") || "").toUpperCase();
+
+      if (txStatus === "SUCCEEDED" || yoStatus === "OK" || yoStatus === "SUCCESSFUL") {
+        status = "successful";
+      } else if (txStatus === "FAILED" || yoStatus === "FAILED") {
+        status = "failed";
+      } else {
+        status = "failed";
+      }
+
+      console.log(`Yo Payments form parsed: ref=${ref}, status=${status}, phone=${phone}, raw keys: ${Array.from(params.keys()).join(', ')}`);
+    } else {
+      // Try JSON first, fall back to form-urlencoded
+      const bodyText = await req.text();
+      console.log("Callback received (raw):", bodyText);
+      
+      try {
+        const body = JSON.parse(bodyText);
+        rawBody = body;
+        ref = body.customer_reference || body.ref || body.external_reference;
+        status = (body.status || "").toLowerCase();
+        phone = body.msisdn || body.phone;
+      } catch {
+        // Try as form-urlencoded
+        const params = new URLSearchParams(bodyText);
+        rawBody = Object.fromEntries(params.entries());
+        ref = params.get("external_reference") || params.get("ExternalReference") || params.get("customer_reference") || undefined;
+        phone = params.get("msisdn") || params.get("MsisdnAccount") || undefined;
+        
+        const txStatus = (params.get("transaction_status") || params.get("TransactionStatus") || "").toUpperCase();
+        const yoStatus = (params.get("status") || params.get("Status") || "").toUpperCase();
+        
+        if (txStatus === "SUCCEEDED" || yoStatus === "OK" || yoStatus === "SUCCESSFUL") {
+          status = "successful";
+        } else {
+          status = "failed";
+        }
+        
+        console.log(`Fallback form parsed: ref=${ref}, status=${status}, phone=${phone}`);
+      }
     }
 
     if (!ref) {
