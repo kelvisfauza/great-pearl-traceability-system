@@ -23,6 +23,8 @@ import { WithdrawalModal } from './WithdrawalModal';
 import { DepositModal } from './DepositModal';
 import { SendMoneyModal } from './SendMoneyModal';
 import { TransactionStatement } from './TransactionStatement';
+import { InvestmentModal } from './InvestmentModal';
+import { InvestmentsCard } from './InvestmentsCard';
 import { format } from 'date-fns';
 
 const ACTIVITY_LABELS: Record<string, string> = {
@@ -45,6 +47,7 @@ export const AccountButton = () => {
   const [showDeposit, setShowDeposit] = useState(false);
   const [showSendMoney, setShowSendMoney] = useState(false);
   const [showStatement, setShowStatement] = useState(false);
+  const [showInvestment, setShowInvestment] = useState(false);
   const [balanceHidden, setBalanceHidden] = useState(() => {
     return localStorage.getItem('balanceHidden') === 'true';
   });
@@ -506,6 +509,15 @@ export const AccountButton = () => {
               >
                 <Send className="h-4 w-4" />
                 Send Money
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => setShowInvestment(true)}
+                className="flex items-center gap-2 border-blue-200 text-blue-700 hover:bg-blue-50"
+                disabled={availableLoyalty < 100000}
+              >
+                <TrendingUp className="h-4 w-4" />
+                Invest & Earn
               </Button>
             </div>
 
