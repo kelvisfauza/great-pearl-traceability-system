@@ -427,27 +427,20 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                 </Alert>
               )}
 
-              <Alert>
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  Available to Request: <strong>{formatCurrency(availableAmount)}</strong>
-                  <br />
-                  <span className="text-xs text-muted-foreground">
-                    Regular withdrawals require admin & finance approval before disbursement.
-                  </span>
-                </AlertDescription>
-              </Alert>
-
-              {parseFloat(amount) > 100000 && (
+              {!instantEligibility?.eligible && (
                 <Alert>
                   <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription className="text-xs">
-                    <strong>High-value withdrawal:</strong> Amounts above UGX 100,000 require 3 admin approvals + finance approval.
+                  <AlertDescription>
+                    Available Balance: <strong>{formatCurrency(availableAmount)}</strong>
+                    <br />
+                    <span className="text-xs text-muted-foreground">
+                      Only instant withdrawals are available at this time. You can withdraw up to UGX 150,000 from your own deposits — no approval needed.
+                    </span>
                   </AlertDescription>
                 </Alert>
               )}
 
-              <form onSubmit={handleAmountSubmit} className="space-y-4">
+              <div className="space-y-4">
                 {isWalletFrozen && (
                   <Alert variant="destructive">
                     <AlertTriangle className="h-4 w-4" />
@@ -472,60 +465,6 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                     </AlertDescription>
                   </Alert>
                 )}
-                <div className="space-y-2">
-                  <Label>Disbursement Method</Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(['CASH', 'MOBILE_MONEY', 'BANK'] as const).map((method) => (
-                      <button
-                        key={method}
-                        type="button"
-                        onClick={() => setChannel(method)}
-                        className={`p-2 text-xs rounded-lg border text-center transition-colors ${
-                          channel === method
-                            ? 'bg-primary text-primary-foreground border-primary'
-                            : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
-                        }`}
-                      >
-                        {method === 'CASH' ? '💵 Cash' : method === 'MOBILE_MONEY' ? '📱 Mobile Money' : '🏦 Bank'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {channel === 'MOBILE_MONEY' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="mobileNumber">Mobile Money Number</Label>
-                    <Input
-                      id="mobileNumber"
-                      type="tel"
-                      placeholder="e.g. 0752724165"
-                      value={mobileNumber}
-                      onChange={(e) => setMobileNumber(e.target.value)}
-                      required
-                    />
-                    <Alert className="py-2">
-                      <AlertTriangle className="h-3 w-3" />
-                      <AlertDescription className="text-xs">
-                        <strong>MTN & Airtel supported</strong> (070, 074, 075, 077, 078).
-                      </AlertDescription>
-                    </Alert>
-                    {mobileNumber && !isValidMobileNumber && (
-                      <p className="text-sm text-destructive">Please enter a valid MTN or Airtel number (070, 074, 075, 077, or 078)</p>
-                    )}
-                    <p className="text-xs text-muted-foreground">Money will be sent automatically to this number after full approval.</p>
-                  </div>
-                )}
-
-                {channel === 'BANK' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="bankName">Bank Name</Label>
-                    <Input id="bankName" placeholder="e.g. Stanbic Bank" value={bankName} onChange={(e) => setBankName(e.target.value)} required />
-                    <Label htmlFor="accountName">Account Name</Label>
-                    <Input id="accountName" placeholder="Full name on account" value={accountName} onChange={(e) => setAccountName(e.target.value)} required />
-                    <Label htmlFor="accountNumber">Account Number</Label>
-                    <Input id="accountNumber" placeholder="Account number" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} required />
-                  </div>
-                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="amount">Amount (UGX)</Label>
@@ -537,17 +476,14 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                     onChange={(e) => setAmount(e.target.value)}
                     required
                     min="2000"
-                    max={availableAmount}
-                    step={channel === 'CASH' ? '500' : '1'}
+                    max={instantEligibility?.max_instant_amount || 0}
+                    step="1"
                   />
                   {amount && parsedAmount < 2000 && (
                     <p className="text-sm text-destructive">Minimum withdrawal is UGX 2,000</p>
                   )}
-                  {amount && parsedAmount > availableAmount && (
-                    <p className="text-sm text-destructive">Amount exceeds available balance</p>
-                  )}
-                  {amount && channel === 'CASH' && parsedAmount >= 2000 && parsedAmount % 500 !== 0 && (
-                    <p className="text-sm text-destructive">Cash must be in round figures (multiples of 500)</p>
+                  {amount && parsedAmount > (instantEligibility?.max_instant_amount || 0) && (
+                    <p className="text-sm text-destructive">Amount exceeds instant withdrawal limit (UGX {Number(instantEligibility?.max_instant_amount || 0).toLocaleString()})</p>
                   )}
                 </div>
 
@@ -562,14 +498,14 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                 )}
 
                 <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={handleClose} disabled={sendingCode || instantLoading}>
+                  <Button type="button" variant="outline" onClick={handleClose} disabled={instantLoading}>
                     Cancel
                   </Button>
-                  {instantEligibility?.eligible && parsedAmount >= 2000 && parsedAmount <= (instantEligibility.max_instant_amount || 0) && (
+                  {instantEligibility?.eligible && (
                     <Button
                       type="button"
                       onClick={handleInstantWithdraw}
-                      disabled={instantLoading || !amount || parsedAmount < 2000}
+                      disabled={instantLoading || !amount || parsedAmount < 2000 || parsedAmount > (instantEligibility.max_instant_amount || 0)}
                       className="bg-green-600 hover:bg-green-700 text-white"
                     >
                       {instantLoading ? (
@@ -579,15 +515,8 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                       )}
                     </Button>
                   )}
-                  <Button type="submit" disabled={sendingCode || !isAmountValid}>
-                    {sendingCode ? (
-                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending Code...</>
-                    ) : (
-                      'Regular Withdrawal'
-                    )}
-                  </Button>
                 </div>
-              </form>
+              </div>
             </>
           )}
 
