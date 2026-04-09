@@ -241,7 +241,10 @@ serve(async (req) => {
 
     return respond(true, {
       success: true,
-      message: "Instant withdrawal processed successfully",
+      message: isPending 
+        ? "Withdrawal initiated. Please approve from your Yo Payments dashboard." 
+        : "Instant withdrawal processed successfully",
+      status: finalStatus,
       ref: txRef,
       amount: numAmount,
       phone: cleanPhone,
