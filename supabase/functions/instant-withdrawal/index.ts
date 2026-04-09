@@ -33,17 +33,22 @@ serve(async (req) => {
     const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: userData, error: userError } = await supabaseAuth.auth.getUser();
+    if (userError || !userData?.user) {
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const userId = claimsData.claims.sub as string;
-    const supabase = createClient(supabaseUrl, serviceKey);
+    const userId = userData.user.id;
+    const userEmail = userData.user.email;
+    if (!userEmail) {
+      return new Response(JSON.stringify({ error: "Could not determine user email" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
+    const supabase = createClient(supabaseUrl, serviceKey);
     const { amount, depositPhone } = await req.json();
 
     if (!amount || !depositPhone) {
@@ -55,15 +60,6 @@ serve(async (req) => {
     const numAmount = Number(amount);
     if (isNaN(numAmount) || numAmount < 2000) {
       return new Response(JSON.stringify({ error: "Minimum withdrawal is UGX 2,000" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Get user email
-    const { data: userData } = await supabaseAuth.auth.getUser();
-    const userEmail = userData?.user?.email;
-    if (!userEmail) {
-      return new Response(JSON.stringify({ error: "Could not determine user email" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
