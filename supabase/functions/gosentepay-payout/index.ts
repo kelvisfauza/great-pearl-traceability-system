@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { yoPayout, normalizePhone } from "../_shared/yo-payments.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,7 +17,6 @@ async function sendPayoutSMS(phone: string, employeeName: string, amount: number
       return;
     }
 
-    // Format phone for SMS (needs +256 prefix)
     let smsPhone = phone.replace(/\D/g, "");
     if (smsPhone.startsWith("256")) smsPhone = "+" + smsPhone;
     else if (smsPhone.startsWith("0")) smsPhone = "+256" + smsPhone.slice(1);
@@ -29,11 +29,7 @@ async function sendPayoutSMS(phone: string, employeeName: string, amount: number
     const smsResponse = await fetch("https://yoolasms.com/api/v1/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        phone: smsPhone,
-        message: message,
-        api_key: apiKey,
-      }),
+      body: JSON.stringify({ phone: smsPhone, message, api_key: apiKey }),
     });
 
     const smsResult = await smsResponse.text();
@@ -49,14 +45,11 @@ serve(async (req) => {
   }
 
   try {
-    const apiKey = Deno.env.get("GOSENTEPAY_API_KEY");
-    const secretKey = Deno.env.get("GOSENTEPAY_SECRET_KEY");
-
-    if (!apiKey || !secretKey) {
-      throw new Error("GosentePay API credentials not configured");
+    if (!Deno.env.get("YO_API_USERNAME") || !Deno.env.get("YO_API_PASSWORD")) {
+      throw new Error("Yo Payments API credentials not configured");
     }
 
-    const { phone, amount, ref, emailAddress, employeeName } = await req.json();
+    const { phone, amount, ref, employeeName } = await req.json();
 
     if (!phone || !amount) {
       return new Response(
@@ -65,10 +58,7 @@ serve(async (req) => {
       );
     }
 
-    // Validate and normalize phone format (must start with 256)
-    let cleanPhone = phone.replace(/\+/g, "").replace(/\s/g, "");
-    if (cleanPhone.startsWith("0")) cleanPhone = "256" + cleanPhone.slice(1);
-    if (!cleanPhone.startsWith("256")) cleanPhone = "256" + cleanPhone;
+    const cleanPhone = normalizePhone(phone);
     
     if (cleanPhone.length < 12) {
       return new Response(
@@ -85,52 +75,27 @@ serve(async (req) => {
       );
     }
 
-    const requestBody = {
-      secret_key: secretKey,
-      currency: "UGX",
-      amount: String(numAmount),
-      emailAddress: emailAddress || "system@greatagrocoffee.com",
+    console.log(`Initiating Yo Payments payout: ${cleanPhone}, UGX ${numAmount}, ref: ${ref}`);
+
+    const result = await yoPayout({
       phone: cleanPhone,
-      reason: ref ? `Wallet withdrawal - ${ref}` : "Wallet withdrawal",
-    };
-
-    console.log("Initiating GosentePay withdraw collection:", { phone: cleanPhone, amount: numAmount, ref });
-
-    const response = await fetch("https://api.gosentepay.com/v1/withdraw_collections.php", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": apiKey,
-      },
-      body: JSON.stringify(requestBody),
+      amount: numAmount,
+      narrative: ref ? `Wallet withdrawal - ${ref}` : "Wallet withdrawal",
     });
 
-    const data = await response.json();
-    console.log("GosentePay withdraw collection response:", JSON.stringify(data));
-    console.log("GosentePay withdraw collection HTTP status:", response.status);
+    if (result.success) {
+      const txRef = result.transactionRef || ref || `YO-${Date.now()}`;
 
-    // GosentePay returns nested: { data: { status: 200, message: "transfer accepted" }, txRef: "..." }
-    // Sometimes data.data is null but txRef is present with HTTP 200 — that's still a success
-    const innerData = data.data || data;
-    const isSuccess = 
-      (innerData.status === 200 || innerData.status === 202 || innerData.code === 200 || innerData.code === 202) &&
-      (innerData.message?.toLowerCase().includes("accepted") || innerData.message?.toLowerCase().includes("success") || data.status === "success");
-
-    if (isSuccess) {
-      const txRef = data.txRef || ref;
-
-      // Send SMS notification directly after successful payout
+      // Send SMS notification
       if (employeeName) {
         await sendPayoutSMS(cleanPhone, employeeName, numAmount, txRef);
-      } else {
-        console.log("No employeeName provided, skipping server-side SMS");
       }
 
       return new Response(
         JSON.stringify({
           status: "success",
-          code: innerData.code || innerData.status || 200,
-          message: innerData.message || "Withdraw collection initiated successfully",
+          code: 200,
+          message: result.statusMessage || "Payout initiated successfully via Yo Payments",
           ref: txRef,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -139,25 +104,25 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           status: "error",
-          code: innerData.code || innerData.status || response.status,
-          message: innerData.message || "Failed to initiate withdraw collection",
-          details: data,
+          code: 400,
+          message: result.errorMessage || "Payout failed via Yo Payments",
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
   } catch (error) {
-    console.error("GosentePay payout error:", error);
+    console.error("Yo Payments payout error:", error);
 
     const errorMsg = error instanceof Error ? error.message : "Unknown error";
     const isConnectionError = errorMsg.includes("Connection refused") || errorMsg.includes("ECONNREFUSED") || errorMsg.includes("tcp connect error");
 
-    const userMessage = isConnectionError
-      ? "Mobile money payout service is temporarily unavailable. Please try again later."
-      : errorMsg;
-
     return new Response(
-      JSON.stringify({ error: userMessage, technical_error: errorMsg }),
+      JSON.stringify({
+        error: isConnectionError
+          ? "Mobile money payout service is temporarily unavailable. Please try again later."
+          : errorMsg,
+        technical_error: errorMsg,
+      }),
       { status: isConnectionError ? 503 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
