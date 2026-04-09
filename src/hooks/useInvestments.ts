@@ -49,10 +49,13 @@ export const useInvestments = () => {
       const { data: userIdData } = await supabase.rpc('get_unified_user_id', { input_email: employee?.email || user.email });
       const unifiedId = userIdData || user.id;
 
-      // Validate balance
-      const { data: isValid, error: valErr } = await supabase.rpc('validate_withdrawal_balance', { p_user_id: unifiedId, p_amount: amount });
-      if (valErr || !isValid) {
-        toast({ title: "Insufficient Balance", description: "You don't have enough available balance for this investment.", variant: "destructive" });
+      // Validate balance using the safe balance RPC instead of validate_withdrawal_balance (which has type issues)
+      const { data: balanceData } = await supabase.rpc('get_user_balance_safe', { user_email: employee?.email || user.email });
+      const userBalance = balanceData?.[0];
+      const availableBalance = Number(userBalance?.available_balance) || 0;
+      
+      if (amount > availableBalance) {
+        toast({ title: "Insufficient Balance", description: `Your available balance is UGX ${availableBalance.toLocaleString()}`, variant: "destructive" });
         return false;
       }
 
