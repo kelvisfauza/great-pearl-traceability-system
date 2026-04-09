@@ -1,11 +1,39 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { yoPayout, normalizePhone } from "../_shared/yo-payments.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+function respond(ok: boolean, payload: Record<string, unknown>): Response {
+  return new Response(JSON.stringify({ ok, ...payload }), {
+    status: 200,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+// Yo Payments helpers (inline to avoid import issues)
+const YO_API_URL = "https://paymentsapi1.yo.co.ug/ybs/task.php";
+
+function escapeXml(str: string): string {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+}
+
+function getProviderCode(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  const local = digits.startsWith("256") ? "0" + digits.slice(3) : digits;
+  if (local.startsWith("077") || local.startsWith("078") || local.startsWith("076")) return "MTN";
+  if (local.startsWith("070") || local.startsWith("075") || local.startsWith("074")) return "AIRTEL";
+  return "MTN";
+}
+
+function normalizePhone(phone: string): string {
+  let clean = phone.replace(/\D/g, "");
+  if (clean.startsWith("0")) clean = "256" + clean.slice(1);
+  if (!clean.startsWith("256")) clean = "256" + clean;
+  return clean;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -13,55 +41,54 @@ serve(async (req) => {
   }
 
   try {
+    console.log("[instant-withdrawal] Request received");
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const yoUsername = Deno.env.get("YO_API_USERNAME");
+    const yoPassword = Deno.env.get("YO_API_PASSWORD");
 
-    if (!serviceKey || !Deno.env.get("YO_API_USERNAME") || !Deno.env.get("YO_API_PASSWORD")) {
-      return new Response(JSON.stringify({ error: "Server configuration missing" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (!serviceKey || !yoUsername || !yoPassword) {
+      console.error("[instant-withdrawal] Missing server config");
+      return respond(false, { error: "Server configuration missing" });
     }
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return respond(false, { error: "Unauthorized" });
     }
 
+    // Authenticate user
     const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
     const { data: userData, error: userError } = await supabaseAuth.auth.getUser();
     if (userError || !userData?.user) {
-      return new Response(JSON.stringify({ error: "Invalid token" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.error("[instant-withdrawal] Auth error:", userError?.message);
+      return respond(false, { error: "Invalid token" });
     }
 
     const userId = userData.user.id;
     const userEmail = userData.user.email;
     if (!userEmail) {
-      return new Response(JSON.stringify({ error: "Could not determine user email" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return respond(false, { error: "Could not determine user email" });
     }
 
+    console.log(`[instant-withdrawal] User: ${userEmail}`);
+
     const supabase = createClient(supabaseUrl, serviceKey);
+
     const { amount, depositPhone } = await req.json();
+    console.log(`[instant-withdrawal] amount=${amount}, depositPhone=${depositPhone}`);
 
     if (!amount || !depositPhone) {
-      return new Response(JSON.stringify({ error: "Missing amount or depositPhone" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return respond(false, { error: "Missing amount or depositPhone" });
     }
 
     const numAmount = Number(amount);
     if (isNaN(numAmount) || numAmount < 2000) {
-      return new Response(JSON.stringify({ error: "Minimum withdrawal is UGX 2,000" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return respond(false, { error: "Minimum withdrawal is UGX 2,000" });
     }
 
     // Get unified user ID
@@ -72,9 +99,7 @@ serve(async (req) => {
     const { data: balanceData } = await supabase.rpc('get_user_balance_safe', { user_email: userEmail });
     const walletBalance = Number(balanceData?.[0]?.wallet_balance || 0);
     if (walletBalance < numAmount) {
-      return new Response(JSON.stringify({ error: "Insufficient overall wallet balance" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return respond(false, { error: `Insufficient wallet balance. Available: UGX ${walletBalance.toLocaleString()}` });
     }
 
     const cleanPhone = normalizePhone(depositPhone);
@@ -94,35 +119,51 @@ serve(async (req) => {
       .single();
 
     if (insertErr) {
-      console.error("Insert error:", insertErr);
-      return new Response(JSON.stringify({ error: "Failed to create withdrawal record" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.error("[instant-withdrawal] Insert error:", insertErr);
+      return respond(false, { error: "Failed to create withdrawal record: " + insertErr.message });
     }
 
     // Trigger Yo Payments payout
-    console.log(`Instant withdrawal: ${cleanPhone}, UGX ${numAmount}, ref: ${ref}`);
+    console.log(`[instant-withdrawal] Sending UGX ${numAmount} to ${cleanPhone} via Yo Payments`);
 
-    const result = await yoPayout({
-      phone: cleanPhone,
-      amount: numAmount,
-      narrative: `Instant withdrawal - ${ref}`,
+    const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
+<AutoCreate>
+  <Request>
+    <APIUsername>${yoUsername}</APIUsername>
+    <APIPassword>${yoPassword}</APIPassword>
+    <Method>acdepositfunds</Method>
+    <NonBlocking>TRUE</NonBlocking>
+    <Amount>${numAmount}</Amount>
+    <Account>${cleanPhone}</Account>
+    <AccountProviderCode>${getProviderCode(cleanPhone)}</AccountProviderCode>
+    <Narrative>${escapeXml(`Instant withdrawal - ${ref}`)}</Narrative>
+  </Request>
+</AutoCreate>`;
+
+    const yoResponse = await fetch(YO_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/xml", "Content-Transfer-Encoding": "text" },
+      body: xmlBody,
     });
+    const yoText = await yoResponse.text();
+    console.log(`[instant-withdrawal] Yo response: ${yoText}`);
 
-    if (!result.success) {
+    const statusMatch = yoText.match(/<Status>(.*?)<\/Status>/);
+    const txRefMatch = yoText.match(/<TransactionReference>(.*?)<\/TransactionReference>/);
+    const statusMsgMatch = yoText.match(/<StatusMessage>(.*?)<\/StatusMessage>/);
+    const yoStatus = statusMatch?.[1]?.trim();
+
+    if (yoStatus !== "OK") {
       await supabase.from('instant_withdrawals')
         .update({ payout_status: 'failed', completed_at: new Date().toISOString() })
         .eq('id', instantRecord.id);
 
-      return new Response(JSON.stringify({
-        error: "Payout failed",
-        details: result.errorMessage || "Yo Payments rejected the transaction",
-      }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return respond(false, {
+        error: "Payout failed: " + (statusMsgMatch?.[1]?.trim() || "Yo Payments rejected the transaction"),
       });
     }
 
-    const txRef = result.transactionRef || ref;
+    const txRef = txRefMatch?.[1]?.trim() || ref;
 
     // Deduct from wallet via ledger
     const ledgerRef = `INSTANT-WD-${instantRecord.id}`;
@@ -150,7 +191,9 @@ serve(async (req) => {
       })
       .eq('id', instantRecord.id);
 
-    // Send SMS
+    console.log(`[instant-withdrawal] Success! Ref: ${txRef}`);
+
+    // Send SMS (fire and forget)
     const yoolaSmsApiKey = Deno.env.get("YOOLA_SMS_API_KEY");
     if (yoolaSmsApiKey) {
       const { data: emp } = await supabase
@@ -181,38 +224,17 @@ serve(async (req) => {
       }
     }
 
-    // Send email notification
-    try {
-      await supabase.functions.invoke('send-transactional-email', {
-        body: {
-          templateName: 'instant-withdrawal',
-          recipientEmail: userEmail,
-          data: {
-            amount: String(numAmount),
-            phone: depositPhone,
-            reference: txRef,
-            date: new Date().toLocaleDateString('en-UG', { dateStyle: 'full' }),
-          },
-        },
-      });
-    } catch (emailErr) {
-      console.error("Email error:", emailErr);
-    }
-
-    return new Response(JSON.stringify({
+    return respond(true, {
       success: true,
-      message: "Instant withdrawal processed successfully via Yo Payments",
+      message: "Instant withdrawal processed successfully",
       ref: txRef,
       amount: numAmount,
-    }), {
-      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      phone: cleanPhone,
     });
   } catch (error) {
-    console.error("Instant withdrawal error:", error);
-    return new Response(JSON.stringify({
+    console.error("[instant-withdrawal] Unhandled error:", error);
+    return respond(false, {
       error: error instanceof Error ? error.message : "Unknown error",
-    }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
