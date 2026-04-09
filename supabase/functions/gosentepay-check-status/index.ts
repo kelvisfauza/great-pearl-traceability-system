@@ -144,13 +144,13 @@ serve(async (req) => {
           amount: depositAmount,
           reference: `DEPOSIT-${transactionRef}`,
           source_category: "SELF_DEPOSIT",
-          metadata: JSON.stringify({
+          metadata: {
             transaction_ref: transactionRef,
             phone: transaction.phone,
             currency: "UGX",
             provider: "yo_payments",
             source: "mobile_money",
-          }),
+          },
         });
 
       if (ledgerError) {
