@@ -464,8 +464,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                     <strong className="text-green-800">⚡ Instant Withdrawal Available!</strong>
                     <br />
                     <span className="text-xs text-green-700">
-                      You have <strong>UGX {Number(instantEligibility.self_deposit_balance).toLocaleString()}</strong> from your own deposits.
-                      Withdraw up to <strong>UGX {Number(instantEligibility.max_instant_amount).toLocaleString()}</strong> instantly to your deposit number ({instantEligibility.deposit_phone}) — no approval needed!
+                      Withdraw up to <strong>UGX {Number(instantEligibility.max_instant_amount).toLocaleString()}</strong> instantly to your number ({instantEligibility.deposit_phone}) — no approval needed!
                     </span>
                   </AlertDescription>
                 </Alert>
