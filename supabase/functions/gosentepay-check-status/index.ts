@@ -66,7 +66,7 @@ serve(async (req) => {
     <APIUsername>${username}</APIUsername>
     <APIPassword>${password}</APIPassword>
     <Method>actransactioncheckstatus</Method>
-    <TransactionReference>${escapeXml(transactionRef)}</TransactionReference>
+    <PrivateTransactionReference>${escapeXml(transactionRef)}</PrivateTransactionReference>
   </Request>
 </AutoCreate>`;
 
