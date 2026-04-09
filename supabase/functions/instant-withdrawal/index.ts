@@ -206,7 +206,7 @@ serve(async (req) => {
       })
       .eq('id', instantRecord.id);
 
-    console.log(`[instant-withdrawal] Success! Ref: ${txRef}`);
+    console.log(`[instant-withdrawal] ${finalStatus}! Ref: ${txRef}`);
 
     // Send SMS (fire and forget)
     const yoolaSmsApiKey = Deno.env.get("YOOLA_SMS_API_KEY");
