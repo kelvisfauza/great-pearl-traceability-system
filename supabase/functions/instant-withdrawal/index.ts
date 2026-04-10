@@ -218,12 +218,15 @@ serve(async (req) => {
 
     // Send SMS (fire and forget)
     const yoolaSmsApiKey = Deno.env.get("YOOLA_SMS_API_KEY");
+    let employeeName = "User";
     if (yoolaSmsApiKey) {
       const { data: emp } = await supabase
         .from('employees')
         .select('name, phone')
         .eq('email', userEmail)
         .maybeSingle();
+
+      if (emp?.name) employeeName = emp.name;
 
       if (emp?.phone) {
         let smsPhone = emp.phone.replace(/\D/g, "");
@@ -245,6 +248,49 @@ serve(async (req) => {
           console.error("SMS error:", smsErr);
         }
       }
+    } else {
+      const { data: emp } = await supabase
+        .from('employees')
+        .select('name')
+        .eq('email', userEmail)
+        .maybeSingle();
+      if (emp?.name) employeeName = emp.name;
+    }
+
+    // Calculate remaining balance for email
+    let remainingBalance: number | undefined;
+    try {
+      const { data: balData } = await supabase
+        .from('ledger_entries')
+        .select('amount')
+        .eq('user_id', resolvedUserId);
+      if (balData) {
+        remainingBalance = Math.max(0, balData.reduce((sum: number, e: any) => sum + Number(e.amount), 0));
+      }
+    } catch (e) {
+      console.error("Balance calc error:", e);
+    }
+
+    // Send email confirmation (fire and forget)
+    try {
+      await supabase.functions.invoke('send-transactional-email', {
+        body: {
+          templateName: 'instant-withdrawal-confirmation',
+          recipientEmail: userEmail,
+          idempotencyKey: `instant-wd-confirm-${instantRecord.id}`,
+          templateData: {
+            employeeName,
+            amount: numAmount,
+            phone: depositPhone,
+            ref: txRef,
+            status: finalStatus,
+            remainingBalance,
+          },
+        },
+      });
+      console.log(`[instant-withdrawal] Email confirmation sent to ${userEmail}`);
+    } catch (emailErr) {
+      console.error("[instant-withdrawal] Email error (non-blocking):", emailErr);
     }
 
     return respond(true, {
