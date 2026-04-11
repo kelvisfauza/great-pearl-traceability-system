@@ -38,10 +38,10 @@ const MessagingSettings = () => {
 
   const fetchSettings = async () => {
     try {
-      const { data, error } = await supabase
-        .from('system_settings')
+      const { data, error } = await (supabase
+        .from('system_settings' as any)
         .select('setting_key, setting_value')
-        .in('setting_key', ['sms_provider', 'sendgrid_configured', 'twilio_configured']);
+        .in('setting_key', ['sms_provider', 'sendgrid_configured', 'twilio_configured']) as any);
 
       if (error) throw error;
 
@@ -66,8 +66,8 @@ const MessagingSettings = () => {
   const saveSettings = async () => {
     setSaving(true);
     try {
-      await supabase
-        .from('system_settings')
+      await (supabase
+        .from('system_settings' as any) as any)
         .upsert({ setting_key: 'sms_provider', setting_value: smsProvider }, { onConflict: 'setting_key' });
 
       toast({

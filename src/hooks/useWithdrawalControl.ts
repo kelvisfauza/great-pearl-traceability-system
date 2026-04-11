@@ -13,11 +13,11 @@ export const useWithdrawalControl = () => {
   const { data, isLoading } = useQuery({
     queryKey: ["withdrawal-control"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("system_settings")
+      const { data, error } = await (supabase
+        .from("system_settings" as any)
         .select("setting_value")
         .eq("setting_key", "withdrawal_control")
-        .maybeSingle();
+        .maybeSingle() as any);
 
       if (error) throw error;
       if (!data) return { disabled: false, disabled_until: null, disabled_reason: "" } as WithdrawalControl;
@@ -41,8 +41,8 @@ export const useWithdrawalControl = () => {
 
   const updateControl = useMutation({
     mutationFn: async (control: WithdrawalControl) => {
-      const { error } = await supabase
-        .from("system_settings")
+      const { error } = await (supabase
+        .from("system_settings" as any) as any)
         .update({ 
           setting_value: control as any, 
           updated_at: new Date().toISOString() 
