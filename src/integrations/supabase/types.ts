@@ -7052,6 +7052,48 @@ export type Database = {
           },
         ]
       }
+      salary_auto_invest: {
+        Row: {
+          created_at: string
+          employee_name: string
+          fixed_amount: number | null
+          id: string
+          invest_type: string
+          is_enabled: boolean
+          last_processed_at: string | null
+          percentage: number | null
+          updated_at: string
+          user_email: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          employee_name: string
+          fixed_amount?: number | null
+          id?: string
+          invest_type?: string
+          is_enabled?: boolean
+          last_processed_at?: string | null
+          percentage?: number | null
+          updated_at?: string
+          user_email: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          employee_name?: string
+          fixed_amount?: number | null
+          id?: string
+          invest_type?: string
+          is_enabled?: boolean
+          last_processed_at?: string | null
+          percentage?: number | null
+          updated_at?: string
+          user_email?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       salary_payslips: {
         Row: {
           allowances: number
