@@ -20,7 +20,7 @@ interface MillingMoMoCollectModalProps {
 type CollectionStatus = 'idle' | 'sending' | 'prompt_sent' | 'error';
 
 const MillingMoMoCollectModal = ({ open, onClose, preselectedCustomerId }: MillingMoMoCollectModalProps) => {
-  const { customers } = useMillingData();
+  const { customers, loading: customersLoading } = useMillingData();
   const { employee } = useAuth();
   const { toast } = useToast();
   
@@ -143,14 +143,21 @@ const MillingMoMoCollectModal = ({ open, onClose, preselectedCustomerId }: Milli
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Customer *</Label>
-              <Autocomplete
-                options={customerOptions}
-                value={customerId}
-                onValueChange={handleCustomerSelect}
-                placeholder="Select customer with balance..."
-                searchPlaceholder="Search customers..."
-                emptyText="No customers with balance found."
-              />
+              {customersLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading customers...
+                </div>
+              ) : (
+                <Autocomplete
+                  options={customerOptions}
+                  value={customerId}
+                  onValueChange={handleCustomerSelect}
+                  placeholder="Select customer with balance..."
+                  searchPlaceholder="Search customers..."
+                  emptyText="No customers with balance found."
+                />
+              )}
             </div>
 
             {selectedCustomer && (
