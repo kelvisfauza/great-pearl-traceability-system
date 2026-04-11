@@ -183,13 +183,27 @@ const MillingCustomerLedger = () => {
                   </Popover>
                   
                   {selectedCustomerData && (
-                    <Button 
-                      onClick={() => handlePrintReport(selectedCustomerData)}
-                      variant="outline"
-                    >
-                      <Printer className="mr-2 h-4 w-4" />
-                      Print Report
-                    </Button>
+                    <>
+                      {selectedCustomerData.current_balance > 0 && (
+                        <Button 
+                          onClick={() => {
+                            setMomoCustomerId(selectedCustomerData.id);
+                            setShowMoMoCollect(true);
+                          }}
+                          variant="outline"
+                        >
+                          <Smartphone className="mr-2 h-4 w-4" />
+                          Collect via MoMo
+                        </Button>
+                      )}
+                      <Button 
+                        onClick={() => handlePrintReport(selectedCustomerData)}
+                        variant="outline"
+                      >
+                        <Printer className="mr-2 h-4 w-4" />
+                        Print Report
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
@@ -449,6 +463,17 @@ const MillingCustomerLedger = () => {
             setShowReportModal(false);
             setReportCustomer(null);
           }}
+        />
+      )}
+
+      {showMoMoCollect && (
+        <MillingMoMoCollectModal
+          open={showMoMoCollect}
+          onClose={() => {
+            setShowMoMoCollect(false);
+            setMomoCustomerId(undefined);
+          }}
+          preselectedCustomerId={momoCustomerId}
         />
       )}
     </div>
