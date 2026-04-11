@@ -42,7 +42,7 @@ export const InvestmentModal = ({ open, onOpenChange, availableBalance }: Invest
             Invest & Earn
           </DialogTitle>
           <DialogDescription>
-            Lock your funds for 5 months and earn 25% interest
+            Lock your funds for 3 months and earn 25% interest. Money keeps growing if left!
           </DialogDescription>
         </DialogHeader>
 
@@ -56,8 +56,8 @@ export const InvestmentModal = ({ open, onOpenChange, availableBalance }: Invest
             </div>
             <div className="bg-purple-50 rounded-lg p-3">
               <Clock className="h-4 w-4 mx-auto text-purple-600 mb-1" />
-              <p className="text-lg font-bold text-purple-700">5</p>
-              <p className="text-[10px] text-muted-foreground">Months Lock</p>
+              <p className="text-lg font-bold text-purple-700">3</p>
+              <p className="text-[10px] text-muted-foreground">Months Min</p>
             </div>
             <div className="bg-amber-50 rounded-lg p-3">
               <Shield className="h-4 w-4 mx-auto text-amber-600 mb-1" />
@@ -99,7 +99,7 @@ export const InvestmentModal = ({ open, onOpenChange, availableBalance }: Invest
 
           <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
             <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-            <span>Early withdrawal is allowed. Interest is pro-rated at 25% based on days completed.</span>
+            <span>Early withdrawal allowed (pro-rated 25%). After 3 months, interest compounds automatically — your money keeps growing!</span>
           </div>
 
           <Button

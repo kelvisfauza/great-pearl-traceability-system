@@ -86,11 +86,11 @@ export const useInvestments = () => {
       }]);
       if (investErr) throw investErr;
 
-      toast({ title: "Investment Created! 📈", description: `UGX ${amount.toLocaleString()} locked for 5 months at 25% interest. Expected return: UGX ${(amount * 1.25).toLocaleString()}` });
+      toast({ title: "Investment Created! 📈", description: `UGX ${amount.toLocaleString()} locked for 3 months at 25% interest. Money keeps growing if left!` });
 
       // Send email notification
       const startDate = new Date().toISOString().split('T')[0];
-      const maturityDate = new Date(Date.now() + 5 * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const maturityDate = new Date(Date.now() + 3 * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       try {
         await supabase.functions.invoke('send-transactional-email', {
           body: {
@@ -101,7 +101,7 @@ export const useInvestments = () => {
               employeeName: employee?.name || user.email,
               amount,
               interestRate: 25,
-              maturityMonths: 5,
+              maturityMonths: 3,
               expectedReturn: amount * 1.25,
               startDate,
               maturityDate,
@@ -132,7 +132,7 @@ export const useInvestments = () => {
       const unifiedId = userIdData || user.id;
 
       // Calculate pro-rated interest at 25% based on days elapsed
-      const totalDays = investment.maturity_months * 30; // ~150 days
+      const totalDays = investment.maturity_months * 30; // ~90 days
       const daysElapsed = Math.max(0, Math.floor((Date.now() - new Date(investment.start_date).getTime()) / (24 * 60 * 60 * 1000)));
       const reducedInterest = investment.amount * 0.25 * (daysElapsed / totalDays);
       const payout = investment.amount + reducedInterest;

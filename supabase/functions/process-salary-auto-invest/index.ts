@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
 
       // Create investment record
       const startDate = new Date().toISOString().split("T")[0];
-      const maturityDate = new Date(Date.now() + 5 * 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+      const maturityDate = new Date(Date.now() + 3 * 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
       const { error: investErr } = await supabase.from("investments").insert([{
         user_id: cfg.user_id,
@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
               employeeName: cfg.employee_name,
               amount: investAmount,
               interestRate: 25,
-              maturityMonths: 5,
+              maturityMonths: 3,
               expectedReturn: investAmount * 1.25,
               startDate,
               maturityDate,

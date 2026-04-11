@@ -27,45 +27,30 @@ Deno.serve(async (req) => {
     let processed = 0;
 
     for (const inv of matured || []) {
-      const interest = Number(inv.amount) * (Number(inv.interest_rate) / 100);
-      const payout = Number(inv.amount) + interest;
+      const principal = Number(inv.amount);
+      const rate = Number(inv.interest_rate) / 100;
+      const interest = principal * rate;
+      const newPrincipal = principal + interest;
 
-      // Get unified user ID
-      const { data: unifiedId } = await supabase.rpc("get_unified_user_id", { input_email: inv.user_email });
-      const userId = unifiedId || inv.user_id;
+      // Auto-compound: add interest to principal and extend by another 3 months
+      const newMaturity = new Date();
+      newMaturity.setMonth(newMaturity.getMonth() + 3);
+      const newMaturityDate = newMaturity.toISOString().split("T")[0];
 
-      const ref = `INVEST-MATURED-${inv.id.slice(0, 8)}`;
+      const { error: updateErr } = await supabase.from("investments").update({
+        amount: newPrincipal,
+        start_date: today,
+        maturity_date: newMaturityDate,
+        earned_interest: (Number(inv.earned_interest) || 0) + interest,
+      }).eq("id", inv.id);
 
-      // Credit wallet
-      const { error: ledgerErr } = await supabase.from("ledger_entries").insert([{
-        user_id: userId,
-        entry_type: "DEPOSIT",
-        amount: payout,
-        reference: ref,
-        source_category: "SYSTEM_AWARD",
-        metadata: {
-          description: `Investment matured - ${Number(inv.interest_rate)}% interest earned`,
-          type: 'investment_matured',
-          investment_id: inv.id,
-          interest,
-        },
-      }]);
-
-      if (ledgerErr) {
-        console.error(`Failed to credit ${inv.user_email}:`, ledgerErr);
+      if (updateErr) {
+        console.error(`Failed to compound ${inv.user_email}:`, updateErr);
         continue;
       }
 
-      // Update investment
-      await supabase.from("investments").update({
-        status: "matured",
-        earned_interest: interest,
-        total_payout: payout,
-        withdrawn_at: new Date().toISOString(),
-      }).eq("id", inv.id);
-
       processed++;
-      console.log(`✅ Matured investment for ${inv.user_email}: ${payout} credited`);
+      console.log(`🔄 Compounded investment for ${inv.user_email}: ${principal} → ${newPrincipal} (+ ${interest} interest), next maturity: ${newMaturityDate}`);
     }
 
     return new Response(JSON.stringify({ ok: true, processed, total: matured?.length || 0 }), {
