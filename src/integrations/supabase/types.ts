@@ -283,6 +283,7 @@ export type Database = {
           admin_final_approval_at: string | null
           admin_final_approval_by: string | null
           amount: number
+          approval_notes: string | null
           approval_stage: string | null
           created_at: string
           daterequested: string
@@ -329,6 +330,7 @@ export type Database = {
           admin_final_approval_at?: string | null
           admin_final_approval_by?: string | null
           amount: number
+          approval_notes?: string | null
           approval_stage?: string | null
           created_at?: string
           daterequested: string
@@ -375,6 +377,7 @@ export type Database = {
           admin_final_approval_at?: string | null
           admin_final_approval_by?: string | null
           amount?: number
+          approval_notes?: string | null
           approval_stage?: string | null
           created_at?: string
           daterequested?: string
