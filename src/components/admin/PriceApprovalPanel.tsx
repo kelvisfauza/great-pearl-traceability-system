@@ -215,20 +215,18 @@ await savePrices({
         await sendSmsWithDelay(allPhones[i], message, i === 0 ? 0 : 500);
       }
 
-      // If notify suppliers is checked, send to suppliers too
-      if (request.notify_suppliers) {
-        const { data: suppliers } = await supabase
-          .from('suppliers')
-          .select('phone')
-          .not('phone', 'is', null);
+      // Always send price SMS to suppliers
+      const { data: suppliers } = await supabase
+        .from('suppliers')
+        .select('phone')
+        .not('phone', 'is', null);
 
-        const supplierPhones = suppliers?.filter(s => s.phone).map(s => s.phone!) || [];
-        // Supplier message - plain text, no emojis, short for reliable delivery
-        const supplierMessage = `${correctionPrefix}Great Agro Coffee Prices ${date}\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}%)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}%)\nSorted: UGX ${(request.sorted_price || 0).toLocaleString()}/kg\n${request.is_correction ? 'Disregard previous prices.' : 'Deliver your coffee now!'}`;
+      const supplierPhones = suppliers?.filter(s => s.phone).map(s => s.phone!) || [];
+      // Supplier message - plain text, no emojis, short for reliable delivery
+      const supplierMessage = `${correctionPrefix}Great Agro Coffee Prices ${date}\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}%)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}%)\nSorted: UGX ${(request.sorted_price || 0).toLocaleString()}/kg\n${request.is_correction ? 'Disregard previous prices.' : 'Deliver your coffee now!'}`;
 
-        for (let i = 0; i < supplierPhones.length; i++) {
-          await sendSmsWithDelay(supplierPhones[i], supplierMessage, 500);
-        }
+      for (let i = 0; i < supplierPhones.length; i++) {
+        await sendSmsWithDelay(supplierPhones[i], supplierMessage, 500);
       }
     } catch (error) {
       console.error('Error sending price notifications:', error);
