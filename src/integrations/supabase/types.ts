@@ -168,6 +168,13 @@ export type Database = {
             referencedRelation: "supplier_payments"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "advance_recoveries_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_payments_report"
+            referencedColumns: ["id"]
+          },
         ]
       }
       announcements: {
@@ -3776,39 +3783,6 @@ export type Database = {
         }
         Relationships: []
       }
-      finance_settings: {
-        Row: {
-          category: string
-          created_at: string | null
-          description: string | null
-          id: string
-          key: string
-          updated_at: string | null
-          updated_by: string | null
-          value: Json
-        }
-        Insert: {
-          category: string
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          key: string
-          updated_at?: string | null
-          updated_by?: string | null
-          value?: Json
-        }
-        Update: {
-          category?: string
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          key?: string
-          updated_at?: string | null
-          updated_by?: string | null
-          value?: Json
-        }
-        Relationships: []
-      }
       gosentepay_balance: {
         Row: {
           balance: number
@@ -7140,6 +7114,9 @@ export type Database = {
           created_by: string | null
           customer_name: string | null
           id: string
+          notes: string | null
+          payment_method: string | null
+          price_per_kg: number | null
           quantity_kg: number
           sale_date: string | null
           sale_id: string
@@ -7152,6 +7129,9 @@ export type Database = {
           created_by?: string | null
           customer_name?: string | null
           id?: string
+          notes?: string | null
+          payment_method?: string | null
+          price_per_kg?: number | null
           quantity_kg: number
           sale_date?: string | null
           sale_id: string
@@ -7164,6 +7144,9 @@ export type Database = {
           created_by?: string | null
           customer_name?: string | null
           id?: string
+          notes?: string | null
+          payment_method?: string | null
+          price_per_kg?: number | null
           quantity_kg?: number
           sale_date?: string | null
           sale_id?: string
@@ -7911,6 +7894,7 @@ export type Database = {
           lot_id: string | null
           method: Database["public"]["Enums"]["payment_method"]
           notes: string | null
+          payment_date: string
           processed_at: string | null
           provider_message: string | null
           provider_name: string | null
@@ -7937,6 +7921,7 @@ export type Database = {
           lot_id?: string | null
           method: Database["public"]["Enums"]["payment_method"]
           notes?: string | null
+          payment_date?: string
           processed_at?: string | null
           provider_message?: string | null
           provider_name?: string | null
@@ -7963,6 +7948,7 @@ export type Database = {
           lot_id?: string | null
           method?: Database["public"]["Enums"]["payment_method"]
           notes?: string | null
+          payment_date?: string
           processed_at?: string | null
           provider_message?: string | null
           provider_name?: string | null
@@ -7983,6 +7969,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "finance_coffee_lots"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "pending_payments_aging"
+            referencedColumns: ["lot_id"]
           },
           {
             foreignKeyName: "supplier_payments_supplier_id_fkey"
@@ -8289,36 +8282,6 @@ export type Database = {
           recovery_pin?: string | null
           recovery_sms_sent?: boolean | null
           updated_at?: string
-        }
-        Relationships: []
-      }
-      system_settings: {
-        Row: {
-          created_at: string
-          description: string | null
-          id: string
-          setting_key: string
-          setting_value: Json
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          setting_key: string
-          setting_value?: Json
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          setting_key?: string
-          setting_value?: Json
-          updated_at?: string
-          updated_by?: string | null
         }
         Relationships: []
       }
@@ -9336,6 +9299,28 @@ export type Database = {
         }
         Relationships: []
       }
+      monthly_payment_summary: {
+        Row: {
+          average_payment: number | null
+          month: string | null
+          total_amount: number | null
+          total_payments: number | null
+          unique_suppliers: number | null
+        }
+        Relationships: []
+      }
+      pending_payments_aging: {
+        Row: {
+          aging_bucket: string | null
+          assessed_at: string | null
+          days_since_assessment: number | null
+          lot_id: string | null
+          supplier_code: string | null
+          supplier_name: string | null
+          total_amount_ugx: number | null
+        }
+        Relationships: []
+      }
       supplier_balances: {
         Row: {
           balance: number | null
@@ -9345,6 +9330,59 @@ export type Database = {
           total_payable: number | null
         }
         Relationships: []
+      }
+      supplier_payments_report: {
+        Row: {
+          advance_recovered_ugx: number | null
+          amount_paid_ugx: number | null
+          batch_number: string | null
+          coffee_type: string | null
+          created_at: string | null
+          gross_payable_ugx: number | null
+          id: string | null
+          lot_id: string | null
+          lot_quantity: number | null
+          lot_total_amount: number | null
+          notes: string | null
+          payment_date: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
+          reference: string | null
+          requested_by: string | null
+          status: Database["public"]["Enums"]["payment_status"] | null
+          supplier_code: string | null
+          supplier_id: string | null
+          supplier_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_payments_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "finance_coffee_lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "pending_payments_aging"
+            referencedColumns: ["lot_id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       withdrawal_requests: {
         Row: {
@@ -9509,6 +9547,19 @@ export type Database = {
         Args: { p_batch_date: string; p_coffee_type: string }
         Returns: string
       }
+      get_payment_summary_by_date: {
+        Args: { end_date: string; start_date: string }
+        Returns: {
+          avg_payment_ugx: number
+          bank_transfer_count: number
+          cash_count: number
+          cheque_count: number
+          mobile_money_count: number
+          payment_date: string
+          total_amount_ugx: number
+          total_payments: number
+        }[]
+      }
       get_pending_withdrawals: { Args: { user_uuid: string }; Returns: number }
       get_pending_withdrawals_safe: {
         Args: { user_uuid: string }
@@ -9611,6 +9662,7 @@ export type Database = {
         }[]
       }
       refresh_current_week_allowances: { Args: never; Returns: Json }
+      refresh_monthly_payment_summary: { Args: never; Returns: undefined }
       reject_transfer_reversal: {
         Args: { p_notes?: string; p_request_id: string }
         Returns: Json
