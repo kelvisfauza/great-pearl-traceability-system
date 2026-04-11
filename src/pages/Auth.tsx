@@ -23,6 +23,10 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
   
   const [showEmailVerification, setShowEmailVerification] = useState(false);
   const [pendingLoginEmail, setPendingLoginEmail] = useState('');
@@ -408,6 +412,17 @@ const Auth = () => {
                   'Sign In'
                 )}
               </Button>
+
+              <div className="text-center">
+                <Button
+                  type="button"
+                  variant="link"
+                  className="text-sm text-muted-foreground hover:text-primary"
+                  onClick={() => setShowForgotPassword(true)}
+                >
+                  Forgot Password?
+                </Button>
+              </div>
             </form>
           </CardContent>
         </Card>
