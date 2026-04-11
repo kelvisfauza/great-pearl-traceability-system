@@ -20,7 +20,7 @@ interface MillingMoMoCollectModalProps {
 type CollectionStatus = 'idle' | 'sending' | 'prompt_sent' | 'error';
 
 const MillingMoMoCollectModal = ({ open, onClose, preselectedCustomerId }: MillingMoMoCollectModalProps) => {
-  const { customers } = useMillingData();
+  const { customers, loading: customersLoading } = useMillingData();
   const { employee } = useAuth();
   const { toast } = useToast();
   
