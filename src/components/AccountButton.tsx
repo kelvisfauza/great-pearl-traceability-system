@@ -25,6 +25,7 @@ import { SendMoneyModal } from './SendMoneyModal';
 import { TransactionStatement } from './TransactionStatement';
 import { InvestmentModal } from './InvestmentModal';
 import { InvestmentsCard } from './InvestmentsCard';
+import { SalaryAutoInvestCard } from './SalaryAutoInvestCard';
 import { format } from 'date-fns';
 
 const ACTIVITY_LABELS: Record<string, string> = {
@@ -422,6 +423,9 @@ export const AccountButton = () => {
 
             {/* Investments Card */}
             <InvestmentsCard />
+
+            {/* Auto-Invest from Salary */}
+            <SalaryAutoInvestCard />
 
             {/* Loyalty Points Section */}
             <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50">
