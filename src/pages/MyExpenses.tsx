@@ -196,8 +196,8 @@ const MyExpenses = () => {
           department: employee.department,
           daterequested: new Date().toISOString().split('T')[0],
           priority: 'Medium',
-          status: 'Pending Finance',
-          approval_stage: 'pending_finance',
+           status: 'Pending Admin',
+           approval_stage: 'pending_admin',
           requires_three_approvals: parseFloat(requisitionForm.amount) > 50000
         });
 
@@ -291,8 +291,8 @@ const MyExpenses = () => {
           department: employee.department,
           daterequested: new Date().toISOString().split('T')[0],
           priority: 'Medium',
-          status: 'Pending Finance',
-          approval_stage: 'pending_finance',
+           status: 'Pending Admin',
+           approval_stage: 'pending_admin',
           requires_three_approvals: requestAmount > 50000
         });
 
@@ -386,8 +386,8 @@ const MyExpenses = () => {
           department: employee.department,
           daterequested: new Date().toISOString().split('T')[0],
           priority: 'High',
-          status: 'Pending Finance',
-          approval_stage: 'pending_finance',
+           status: 'Pending Admin',
+           approval_stage: 'pending_admin',
           requires_three_approvals: netAmount > 50000,
           details: employeeAdvance ? JSON.stringify({
             gross_salary: salaryAmount,

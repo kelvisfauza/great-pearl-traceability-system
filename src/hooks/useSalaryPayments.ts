@@ -72,7 +72,7 @@ export const useSalaryPayments = () => {
           requestedby: requestData.requestedby,
           daterequested: requestData.daterequested,
           priority: requestData.priority,
-          status: 'Pending Finance',
+          status: 'Pending Admin',
           details: requestData.details
         })
         .select()

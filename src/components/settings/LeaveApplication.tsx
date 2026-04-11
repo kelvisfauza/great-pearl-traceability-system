@@ -64,7 +64,7 @@ const LeaveApplication = () => {
         daterequested: new Date().toISOString(),
         amount: days,
         priority: "medium",
-        status: "Pending Finance",
+        status: "Pending Admin",
         details: {
           leave_type: leaveType,
           start_date: startDate,

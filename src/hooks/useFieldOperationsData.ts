@@ -309,7 +309,7 @@ export const useFieldOperationsData = () => {
         department: 'Field Operations',
         requestedby: requestData.requested_by,
         daterequested: new Date().toISOString().split('T')[0],
-        status: 'Pending Finance',
+        status: 'Pending Admin',
         priority: 'Medium',
         details: {
           request_type: requestData.request_type,

@@ -42,8 +42,8 @@ export const useSalaryAdvanceApprovals = () => {
           department: data.department,
           daterequested: new Date().toISOString().split('T')[0],
           priority: 'High',
-          status: 'Pending Finance',
-          approval_stage: 'pending_finance',
+           status: 'Pending Admin',
+           approval_stage: 'pending_admin',
           details: JSON.stringify({
             advance_type: 'salary_advance',
             employee_email: data.employee_email,
