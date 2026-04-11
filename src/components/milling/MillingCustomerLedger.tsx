@@ -10,9 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useMillingData } from "@/hooks/useMillingData";
 import { format, isWithinInterval, parseISO } from 'date-fns';
-import { CalendarIcon, Search, Printer, Download, Star, TrendingUp, TrendingDown, DollarSign, Package, User, FileText } from 'lucide-react';
+import { CalendarIcon, Search, Printer, Download, Star, TrendingUp, TrendingDown, DollarSign, Package, User, FileText, Smartphone } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import MillingCustomerReportModal from './MillingCustomerReportModal';
+import MillingMoMoCollectModal from './MillingMoMoCollectModal';
 
 const MillingCustomerLedger = () => {
   const { customers, transactions, cashTransactions } = useMillingData();
@@ -21,6 +22,8 @@ const MillingCustomerLedger = () => {
   const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportCustomer, setReportCustomer] = useState<any>(null);
+  const [showMoMoCollect, setShowMoMoCollect] = useState(false);
+  const [momoCustomerId, setMomoCustomerId] = useState<string | undefined>();
 
   // Filter customers based on search
   const filteredCustomers = customers?.filter(customer =>
