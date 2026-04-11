@@ -39,6 +39,7 @@ import CoffeeBookings from "./pages/CoffeeBookings";
 import PriceDisplay from "./pages/PriceDisplay";
 import ApproveAction from "./pages/ApproveAction";
 import VerifyDevice from "./pages/VerifyDevice";
+import ResetPassword from "./pages/ResetPassword";
 
 // V2 System Pages
 import V2DepartmentRouter from "./components/v2/V2DepartmentRouter";
@@ -155,6 +156,7 @@ const App: React.ComponentType = () => {
                 {/* Public approval action route - no auth required */}
                 <Route path="/approve-action" element={<ApproveAction />} />
                 <Route path="/verify-device" element={<VerifyDevice />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 {/* Public price display for monitors - no auth required */}
                 <Route path="/display" element={<PriceDisplay />} />
                 
