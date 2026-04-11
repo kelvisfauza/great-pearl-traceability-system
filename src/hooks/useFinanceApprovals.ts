@@ -40,8 +40,8 @@ export const useFinanceApprovals = () => {
       const { data, error } = await supabase
         .from('approval_requests')
         .select('*')
-        .eq('finance_reviewed', false)
-        .in('status', ['Pending Finance', 'Pending'])
+        // Finance is the FINAL step - fetch requests that Admin has approved
+        .in('status', ['Pending Finance', 'Admin Approved'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -70,8 +70,7 @@ export const useFinanceApprovals = () => {
         {
           event: '*',
           schema: 'public',
-          table: 'approval_requests',
-          filter: 'admin_approved=eq.true'
+          table: 'approval_requests'
         },
         () => {
           fetchRequests();
@@ -191,8 +190,8 @@ export const useFinanceApprovals = () => {
       };
 
       if (approve) {
-        updateData.status = 'Finance Approved';
-        updateData.approval_stage = 'finance_approved';
+        updateData.status = 'Approved';
+        updateData.approval_stage = 'approved';
       } else {
         updateData.status = 'Rejected';
         updateData.rejection_reason = rejectionReason || 'Rejected by Finance';
@@ -223,7 +222,7 @@ export const useFinanceApprovals = () => {
 
         if (requesterEmployee?.phone) {
           const message = approve
-            ? `Your ${data.type} request for UGX ${data.amount.toLocaleString()} has been approved by Finance. It is now pending final Admin approval.`
+            ? `Your ${data.type} request for UGX ${data.amount.toLocaleString()} has been FULLY APPROVED by Finance. Payment will be processed shortly.`
             : `Your ${data.type} request for UGX ${data.amount.toLocaleString()} has been REJECTED by Finance. Reason: ${rejectionReason}`;
 
           await sendApprovalRequestSMS(
@@ -239,8 +238,8 @@ export const useFinanceApprovals = () => {
       }
 
       toast({
-        title: approve ? "Request Approved by Finance" : "Request Rejected",
-        description: `Request has been ${approve ? 'approved by Finance and sent to Admin for final approval' : 'rejected'} successfully`
+        title: approve ? "Request Fully Approved" : "Request Rejected",
+        description: `Request has been ${approve ? 'fully approved. Payment will be processed.' : 'rejected'} successfully`
       });
 
       await fetchRequests();

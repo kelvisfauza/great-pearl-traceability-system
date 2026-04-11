@@ -33,7 +33,7 @@ export const useApprovalSystem = () => {
         requestedby: employee?.email || 'Unknown User',
         daterequested: new Date().toLocaleDateString(),
         priority: details.priority || 'High',
-        status: 'Pending Finance', // Finance approves first, then Admin
+        status: 'Pending Admin', // Admin approves first, then Finance
         admin_approved: false,
         finance_approved: false,
         details: JSON.stringify(details), // Stringify details for Supabase
@@ -82,9 +82,9 @@ export const useApprovalSystem = () => {
           throw new Error(`Failed to fetch approvers: ${approversError.message}`);
         }
 
-        // Filter for Finance department staff (they review first now)
+        // Filter for Admin/Manager staff (they review first now)
         const approvers = allEmployees?.filter(emp => 
-          emp.department === 'Finance' || ['Administrator', 'Super Admin'].includes(emp.role)
+          ['Administrator', 'Super Admin', 'Manager'].includes(emp.role)
         );
 
         console.log('👥 All active employees with phones:', allEmployees?.length || 0);
@@ -164,15 +164,15 @@ export const useApprovalSystem = () => {
           priority: details.priority || 'High',
           description,
           dateRequested: new Date().toLocaleDateString(),
-        }, 'finance');
-        console.log('✅ Approval action emails sent to Finance');
+        }, 'admin');
+        console.log('✅ Approval action emails sent to Admin');
       } catch (emailErr) {
         console.error('Failed to send approval action emails:', emailErr);
       }
 
       toast({
         title: "Approval Request Created",
-        description: "Request has been submitted for Finance review. Approvers have been emailed with action buttons."
+        description: "Request has been submitted for Admin review. Approvers have been emailed with action buttons."
       });
 
       return true;

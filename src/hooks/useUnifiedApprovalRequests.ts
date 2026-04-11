@@ -49,16 +49,16 @@ export const useUnifiedApprovalRequests = () => {
       
       const allRequests: UnifiedApprovalRequest[] = [];
 
-      // 1. Fetch Supabase approval requests - ONLY pending for Admin approval (final step)
-      // Requests with 'Pending Finance' status should NOT appear here - they go to Finance portal first
+      // 1. Fetch Supabase approval requests - ONLY pending for Admin approval (first step)
+      // Requests start at Admin, then go to Finance for final approval with payment method
       try {
         const { data: supabaseRequests, error } = await supabase
           .from('approval_requests')
           .select('*')
-          // Fetch requests pending any Admin approval stage (after Finance has approved)
+          // Fetch requests pending Admin approval (first step in flow)
           .in('status', [
-            'Finance Approved',
             'Pending Admin',
+            'Pending',
             'Pending Admin Approval',
             'Pending Admin 2',
           ])
@@ -694,7 +694,7 @@ export const useUnifiedApprovalRequests = () => {
 
         if (status === 'Approved') {
           if (requiresThreeApprovals) {
-            // 3-tier flow: need 2 admin approvals (Admin is final step after Finance)
+            // 3-tier flow: need 2 admin approvals (Admin is first step, then Finance)
             if (!currentReq.admin_approved_1) {
               // First admin approval
               updateData.admin_approved_1 = true;
@@ -709,33 +709,31 @@ export const useUnifiedApprovalRequests = () => {
               if (currentReq.admin_approved_1_by === adminName) {
                 return { blocked: true, reason: 'You already approved this request as Admin 1. A different administrator must provide the second approval.' };
               }
-              // Second admin approval - FINAL step
+              // Second admin approval - send to Finance for final step
               updateData.admin_approved_2 = true;
               updateData.admin_approved_2_at = new Date().toISOString();
               updateData.admin_approved_2_by = adminName;
               updateData.admin_approved = true;
               updateData.admin_approved_by = adminName;
               updateData.admin_approved_at = new Date().toISOString();
-              // New columns
               updateData.admin_final_approval = true;
               updateData.admin_final_approval_at = new Date().toISOString();
               updateData.admin_final_approval_by = adminName;
-              updateData.status = 'Approved';
-              updateData.approval_stage = 'approved';
-              console.log('✅ 3-tier: Admin 2 approved - FULLY APPROVED');
+              updateData.status = 'Pending Finance';
+              updateData.approval_stage = 'pending_finance';
+              console.log('✅ 3-tier: Admin 2 approved - sent to Finance for final approval');
             }
           } else {
-            // Standard 2-tier: single admin approval (FINAL step after Finance)
+            // Standard 2-tier: single admin approval → send to Finance
             updateData.admin_approved = true;
             updateData.admin_approved_by = adminName;
             updateData.admin_approved_at = new Date().toISOString();
-            // New columns
             updateData.admin_final_approval = true;
             updateData.admin_final_approval_at = new Date().toISOString();
             updateData.admin_final_approval_by = adminName;
-            updateData.status = 'Approved';
-            updateData.approval_stage = 'approved';
-            console.log('✅ 2-tier: Admin approved - FULLY APPROVED');
+            updateData.status = 'Pending Finance';
+            updateData.approval_stage = 'pending_finance';
+            console.log('✅ 2-tier: Admin approved - sent to Finance for final approval');
           }
         } else {
           // Rejected by admin

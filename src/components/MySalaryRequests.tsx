@@ -70,10 +70,10 @@ const MySalaryRequests = ({ employees = [] }: MySalaryRequestsProps) => {
     // For Supabase money_requests
     if (request.approval_stage === 'completed') {
       return 'Fully Approved';
-    } else if (request.approval_stage === 'finance_approved') {
-      return 'Finance Approved - Awaiting Admin';
+     } else if (request.approval_stage === 'finance_approved' || request.approval_stage === 'approved') {
+      return 'Fully Approved';
     } else if (request.approval_stage === 'pending_finance') {
-      return 'Pending Finance Approval';
+      return 'Admin Approved - Awaiting Finance';
     } else {
       return request.status || 'Pending';
     }

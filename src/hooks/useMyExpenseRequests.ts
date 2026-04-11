@@ -61,23 +61,23 @@ export const useMyExpenseRequests = () => {
   const getApprovalStatus = (request: MyExpenseRequest) => {
     if (request.status === 'Rejected') return 'Rejected';
     if (request.status === 'Approved') return 'Fully Approved';
-    if (request.status === 'Finance Approved') return 'Finance Approved - Awaiting Admin';
+    if (request.status === 'Pending Finance') return 'Admin Approved - Awaiting Finance';
     
+    const adminApproved = !!request.admin_approved_at;
     const financeReviewed = !!(request as any).finance_reviewed || !!request.finance_approved_at;
-    const adminFinal = !!(request as any).admin_final_approval || !!request.admin_approved_at;
     
-    if (financeReviewed && adminFinal) return 'Fully Approved';
-    if (financeReviewed && !adminFinal) return 'Finance Approved - Awaiting Admin';
-    return 'Pending - Awaiting Finance Review';
+    if (financeReviewed && adminApproved) return 'Fully Approved';
+    if (adminApproved && !financeReviewed) return 'Admin Approved - Awaiting Finance';
+    return 'Pending - Awaiting Admin Review';
   };
 
   const getStatusColor = (request: MyExpenseRequest) => {
     if (request.status === 'Rejected') return 'text-red-600 bg-red-50';
     if (request.status === 'Approved') return 'text-green-600 bg-green-50';
-    if (request.status === 'Finance Approved') return 'text-blue-600 bg-blue-50';
+    if (request.status === 'Pending Finance') return 'text-blue-600 bg-blue-50';
     
-    const financeReviewed = !!(request as any).finance_reviewed || !!request.finance_approved_at;
-    if (financeReviewed) return 'text-blue-600 bg-blue-50';
+    const adminApproved = !!request.admin_approved_at;
+    if (adminApproved) return 'text-blue-600 bg-blue-50';
     return 'text-yellow-600 bg-yellow-50';
   };
 
@@ -86,12 +86,12 @@ export const useMyExpenseRequests = () => {
     
     // Determine who rejected it based on approval timestamps and status
     let rejectedBy = 'Unknown';
-    if (!request.finance_approved_at && !request.admin_approved_at) {
-      rejectedBy = 'Finance'; // Finance is the first step
-    } else if (request.finance_approved_at && !request.admin_approved_at) {
-      rejectedBy = 'Admin';
-    } else if (!request.finance_approved_at && request.admin_approved_at) {
+    if (!request.admin_approved_at && !request.finance_approved_at) {
+      rejectedBy = 'Admin'; // Admin is the first step
+    } else if (request.admin_approved_at && !request.finance_approved_at) {
       rejectedBy = 'Finance';
+    } else if (!request.admin_approved_at && request.finance_approved_at) {
+      rejectedBy = 'Admin';
     }
     
     return {

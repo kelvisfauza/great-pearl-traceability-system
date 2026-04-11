@@ -27,8 +27,8 @@ export const FinanceExpensesPage = () => {
       <Alert>
         <ShieldAlert className="h-4 w-4" />
         <AlertDescription>
-          <strong>Approval Workflow:</strong> Finance reviews and approves requests first.
-          Once Finance approves, requests move to Admin for final approval.
+          <strong>Approval Workflow:</strong> Admin reviews and approves requests first.
+          Once Admin approves, requests move to Finance for final approval and payment method selection.
         </AlertDescription>
       </Alert>
 
