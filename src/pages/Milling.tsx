@@ -1,4 +1,5 @@
 import { useState } from 'react';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ import MillingCustomerLedger from '@/components/milling/MillingCustomerLedger';
 import MillingExpenses from '@/components/milling/MillingExpenses';
 import MillingPrintReportModal from '@/components/milling/MillingPrintReportModal';
 import MillingMoMoCollectModal from '@/components/milling/MillingMoMoCollectModal';
+import MillingMoMoTransactions from '@/components/milling/MillingMoMoTransactions';
 
 const Milling = () => {
   const { stats, loading, customers, transactions, getReportData, clearAllData, clearAllDebts } = useMillingData();
@@ -224,11 +226,7 @@ const Milling = () => {
                 </Button>
               </div>
             </div>
-            <Card>
-              <CardContent className="p-6">
-                <p className="text-center text-muted-foreground">Cash transaction history will be displayed here</p>
-              </CardContent>
-            </Card>
+            <MillingMoMoTransactions />
           </TabsContent>
 
           <TabsContent value="expenses" className="space-y-4">

@@ -16,32 +16,53 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    const contentType = req.headers.get("content-type") || "";
+    const body = await req.text();
+    console.log(`[Milling MoMo Callback] Raw body: ${body}`);
+
     let externalRef = "";
     let transactionStatus = "";
 
+    // Try all known Yo Payments callback formats
+    // 1. URL-encoded form
+    const contentType = req.headers.get("content-type") || "";
     if (contentType.includes("application/x-www-form-urlencoded")) {
-      const body = await req.text();
       const params = new URLSearchParams(body);
-      externalRef = params.get("external_ref") || params.get("external_reference") || "";
-      transactionStatus = params.get("transaction_status") || params.get("status") || "";
-    } else {
-      const body = await req.text();
-      // Try XML parsing
-      const extRefMatch = body.match(/<ExternalReference>(.*?)<\/ExternalReference>/i);
-      const statusMatch = body.match(/<TransactionStatus>(.*?)<\/TransactionStatus>/i) ||
-                          body.match(/<Status>(.*?)<\/Status>/i);
-      externalRef = extRefMatch?.[1]?.trim() || "";
-      transactionStatus = statusMatch?.[1]?.trim() || "";
-      
-      // Try JSON if no XML match
-      if (!externalRef) {
-        try {
-          const json = JSON.parse(body);
-          externalRef = json.external_ref || json.external_reference || "";
-          transactionStatus = json.transaction_status || json.status || "";
-        } catch { /* not JSON */ }
+      externalRef = params.get("external_ref") || params.get("external_reference") || params.get("ExternalReference") || "";
+      transactionStatus = params.get("transaction_status") || params.get("status") || params.get("Status") || params.get("TransactionStatus") || "";
+    }
+
+    // 2. XML parsing - try multiple tag patterns Yo uses
+    if (!externalRef) {
+      const extRefPatterns = [
+        /<ExternalReference>(.*?)<\/ExternalReference>/i,
+        /<external_reference>(.*?)<\/external_reference>/i,
+        /<ExternalRef>(.*?)<\/ExternalRef>/i,
+      ];
+      const statusPatterns = [
+        /<TransactionStatus>(.*?)<\/TransactionStatus>/i,
+        /<Status>(.*?)<\/Status>/i,
+        /<StatusCode>(.*?)<\/StatusCode>/i,
+        /<transaction_status>(.*?)<\/transaction_status>/i,
+        /<IsSuccessful>(.*?)<\/IsSuccessful>/i,
+      ];
+
+      for (const p of extRefPatterns) {
+        const m = body.match(p);
+        if (m?.[1]?.trim()) { externalRef = m[1].trim(); break; }
       }
+      for (const p of statusPatterns) {
+        const m = body.match(p);
+        if (m?.[1]?.trim()) { transactionStatus = m[1].trim(); break; }
+      }
+    }
+
+    // 3. Try JSON
+    if (!externalRef) {
+      try {
+        const json = JSON.parse(body);
+        externalRef = json.external_ref || json.external_reference || json.ExternalReference || "";
+        transactionStatus = json.transaction_status || json.status || json.TransactionStatus || json.Status || "";
+      } catch { /* not JSON */ }
     }
 
     console.log(`[Milling MoMo Callback] ref: ${externalRef}, status: ${transactionStatus}`);
@@ -53,8 +74,20 @@ serve(async (req) => {
       });
     }
 
-    const isSuccess = transactionStatus.toLowerCase().includes("success") ||
-                      transactionStatus.toLowerCase().includes("completed");
+    // Determine success - check multiple indicators
+    const statusLower = transactionStatus.toLowerCase();
+    const isSuccess = statusLower.includes("success") ||
+                      statusLower.includes("completed") ||
+                      statusLower.includes("succeeded") ||
+                      statusLower === "ok" ||
+                      statusLower === "true" ||  // IsSuccessful=TRUE
+                      statusLower === "1";        // StatusCode 1 = OK
+    
+    const isExplicitFail = statusLower.includes("fail") ||
+                           statusLower.includes("cancel") ||
+                           statusLower.includes("expired") ||
+                           statusLower.includes("rejected") ||
+                           statusLower.includes("declined");
 
     // Get the pending transaction
     const { data: txn, error: txnError } = await supabase
@@ -71,52 +104,65 @@ serve(async (req) => {
       });
     }
 
-    if (isSuccess) {
-      // Update momo transaction status
-      await supabase
-        .from("milling_momo_transactions")
-        .update({ status: "completed", completed_at: new Date().toISOString() })
-        .eq("id", txn.id);
-
-      // Get customer's current balance
-      const { data: customer } = await supabase
-        .from("milling_customers")
-        .select("current_balance")
-        .eq("id", txn.customer_id)
-        .single();
-
-      if (customer) {
-        const previousBalance = customer.current_balance;
-        const newBalance = Math.max(0, previousBalance - txn.amount);
-
-        // Record as cash transaction
-        await supabase.from("milling_cash_transactions").insert({
-          customer_id: txn.customer_id,
-          customer_name: txn.customer_name,
-          amount_paid: txn.amount,
-          previous_balance: previousBalance,
-          new_balance: newBalance,
-          payment_method: "Mobile Money",
-          notes: `MoMo collection - Ref: ${txn.reference}`,
-          date: new Date().toISOString().split("T")[0],
-          created_by: txn.initiated_by,
-        });
-
-        // Update customer balance
-        await supabase
-          .from("milling_customers")
-          .update({ current_balance: newBalance })
-          .eq("id", txn.customer_id);
-
-        console.log(`[Milling MoMo Callback] ✅ Customer ${txn.customer_name} balance updated: ${previousBalance} → ${newBalance}`);
+    // If status is empty/ambiguous (not explicit success or fail), do a proactive check
+    if (!isSuccess && !isExplicitFail) {
+      console.log(`[Milling MoMo Callback] Ambiguous status "${transactionStatus}", checking with Yo API...`);
+      
+      const username = Deno.env.get("YO_API_USERNAME");
+      const password = Deno.env.get("YO_API_PASSWORD");
+      
+      if (username && password && txn.yo_reference) {
+        const checkXml = `<?xml version="1.0" encoding="UTF-8"?>
+<AutoCreate>
+  <Request>
+    <APIUsername>${username}</APIUsername>
+    <APIPassword>${password}</APIPassword>
+    <Method>actransactioncheckstatus</Method>
+    <PrivateTransactionReference>${txn.yo_reference}</PrivateTransactionReference>
+  </Request>
+</AutoCreate>`;
+        
+        try {
+          const checkResp = await fetch("https://paymentsapi1.yo.co.ug/ybs/task.php", {
+            method: "POST",
+            headers: { "Content-Type": "text/xml" },
+            body: checkXml,
+          });
+          const checkText = await checkResp.text();
+          console.log(`[Milling MoMo Callback] Check status response: ${checkText}`);
+          
+          const txStatusMatch = checkText.match(/<TransactionStatus>(.*?)<\/TransactionStatus>/i);
+          const txStatusVal = txStatusMatch?.[1]?.trim()?.toUpperCase();
+          
+          if (txStatusVal === "SUCCEEDED" || txStatusVal === "COMPLETED") {
+            await processSuccess(supabase, txn);
+            return new Response(JSON.stringify({ status: "ok" }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          } else if (txStatusVal === "FAILED" || txStatusVal === "EXPIRED" || txStatusVal === "CANCELLED") {
+            await processFailed(supabase, txn);
+            return new Response(JSON.stringify({ status: "ok" }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          // Still pending - mark as failed since callback was triggered
+          console.log(`[Milling MoMo Callback] Check returned "${txStatusVal}", marking as failed`);
+        } catch (e) {
+          console.error(`[Milling MoMo Callback] Check status error:`, e);
+        }
       }
-    } else {
-      await supabase
-        .from("milling_momo_transactions")
-        .update({ status: "failed", completed_at: new Date().toISOString() })
-        .eq("id", txn.id);
+      
+      // Default: mark as failed if we can't determine success
+      await processFailed(supabase, txn);
+      return new Response(JSON.stringify({ status: "ok" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-      console.log(`[Milling MoMo Callback] ❌ Transaction failed for ${txn.customer_name}`);
+    if (isSuccess) {
+      await processSuccess(supabase, txn);
+    } else {
+      await processFailed(supabase, txn);
     }
 
     return new Response(JSON.stringify({ status: "ok" }), {
@@ -130,3 +176,49 @@ serve(async (req) => {
     });
   }
 });
+
+async function processSuccess(supabase: any, txn: any) {
+  await supabase
+    .from("milling_momo_transactions")
+    .update({ status: "completed", completed_at: new Date().toISOString() })
+    .eq("id", txn.id);
+
+  const { data: customer } = await supabase
+    .from("milling_customers")
+    .select("current_balance")
+    .eq("id", txn.customer_id)
+    .single();
+
+  if (customer) {
+    const previousBalance = customer.current_balance;
+    const newBalance = Math.max(0, previousBalance - txn.amount);
+
+    await supabase.from("milling_cash_transactions").insert({
+      customer_id: txn.customer_id,
+      customer_name: txn.customer_name,
+      amount_paid: txn.amount,
+      previous_balance: previousBalance,
+      new_balance: newBalance,
+      payment_method: "Mobile Money",
+      notes: `MoMo collection - Ref: ${txn.reference}`,
+      date: new Date().toISOString().split("T")[0],
+      created_by: txn.initiated_by,
+    });
+
+    await supabase
+      .from("milling_customers")
+      .update({ current_balance: newBalance })
+      .eq("id", txn.customer_id);
+
+    console.log(`[Milling MoMo Callback] ✅ Customer ${txn.customer_name} balance updated: ${previousBalance} → ${newBalance}`);
+  }
+}
+
+async function processFailed(supabase: any, txn: any) {
+  await supabase
+    .from("milling_momo_transactions")
+    .update({ status: "failed", completed_at: new Date().toISOString() })
+    .eq("id", txn.id);
+
+  console.log(`[Milling MoMo Callback] ❌ Transaction failed for ${txn.customer_name}`);
+}
