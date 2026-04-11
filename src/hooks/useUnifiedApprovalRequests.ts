@@ -61,6 +61,8 @@ export const useUnifiedApprovalRequests = () => {
             'Pending',
             'Pending Admin Approval',
             'Pending Admin 2',
+            'Finance Approved',
+            'Pending Finance',
           ])
           .order('created_at', { ascending: false });
         
