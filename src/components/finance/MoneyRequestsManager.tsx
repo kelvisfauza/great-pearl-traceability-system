@@ -235,10 +235,10 @@ const MoneyRequestsManager = () => {
   };
 
   const getStatusBadge = (request: MoneyRequest) => {
-    if (request.approval_stage === 'pending_finance') {
-      return <Badge variant="secondary">Pending Finance Review</Badge>;
-    } else if (request.approval_stage === 'finance_approved') {
-      return <Badge className="bg-blue-100 text-blue-800">Awaiting Admin Approval</Badge>;
+     if (request.approval_stage === 'pending_admin') {
+      return <Badge variant="secondary">Pending Admin Review</Badge>;
+    } else if (request.approval_stage === 'pending_finance') {
+      return <Badge className="bg-blue-100 text-blue-800">Admin Approved - Awaiting Finance</Badge>;
     }
     return <Badge variant="outline">{request.status}</Badge>;
   };
