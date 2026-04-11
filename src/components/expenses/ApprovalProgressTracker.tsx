@@ -53,13 +53,6 @@ const ApprovalProgressTracker = ({
   const steps: ApprovalStep[] = requiresThreeApprovals
     ? [
         {
-          label: 'Finance',
-          icon: <DollarSign className="h-3.5 w-3.5" />,
-          approved: !!effectiveFinanceAt,
-          approvedBy: effectiveFinanceBy,
-          approvedAt: effectiveFinanceAt,
-        },
-        {
           label: 'Admin 1',
           icon: <Shield className="h-3.5 w-3.5" />,
           approved: !!adminApproved1At,
@@ -73,8 +66,6 @@ const ApprovalProgressTracker = ({
           approvedBy: adminApproved2By,
           approvedAt: adminApproved2At,
         },
-      ]
-    : [
         {
           label: 'Finance',
           icon: <DollarSign className="h-3.5 w-3.5" />,
@@ -82,12 +73,21 @@ const ApprovalProgressTracker = ({
           approvedBy: effectiveFinanceBy,
           approvedAt: effectiveFinanceAt,
         },
+      ]
+    : [
         {
           label: 'Admin',
           icon: <Shield className="h-3.5 w-3.5" />,
           approved: !!effectiveAdminAt,
           approvedBy: effectiveAdminBy,
           approvedAt: effectiveAdminAt,
+        },
+        {
+          label: 'Finance',
+          icon: <DollarSign className="h-3.5 w-3.5" />,
+          approved: !!effectiveFinanceAt,
+          approvedBy: effectiveFinanceBy,
+          approvedAt: effectiveFinanceAt,
         },
       ];
 
