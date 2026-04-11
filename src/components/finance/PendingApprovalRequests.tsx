@@ -95,12 +95,12 @@ const PendingApprovalRequests = () => {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Pending Finance Approval</CardTitle>
+          <CardTitle>Pending Finance Final Approval</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
             <FileText className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
-            <p className="text-sm text-muted-foreground">No requests pending finance approval</p>
+            <p className="text-sm text-muted-foreground">No requests pending finance final approval</p>
           </div>
         </CardContent>
       </Card>
@@ -112,7 +112,7 @@ const PendingApprovalRequests = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Pending Finance Approval</span>
+            <span>Pending Finance Final Approval</span>
             <Badge variant="outline" className="ml-2">
               {requests.length} {requests.length === 1 ? 'request' : 'requests'}
             </Badge>
