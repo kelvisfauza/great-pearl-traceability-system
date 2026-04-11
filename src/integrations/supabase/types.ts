@@ -4146,7 +4146,7 @@ export type Database = {
           employee_name?: string
           id?: string
           interest_rate?: number
-          maturity_date: string
+          maturity_date?: string
           maturity_months?: number
           reduced_rate?: number
           start_date?: string
