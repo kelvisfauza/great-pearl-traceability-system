@@ -42,8 +42,8 @@ serve(async (req) => {
       });
     }
 
-    // Already resolved
-    if (txn.status === "completed" || txn.status === "failed") {
+    // Completed transactions are already final, but failed ones can still be re-checked
+    if (txn.status === "completed") {
       return new Response(JSON.stringify({ status: txn.status, message: `Transaction already ${txn.status}` }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
