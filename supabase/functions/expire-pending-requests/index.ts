@@ -39,21 +39,16 @@ serve(async (req) => {
 
     console.log(`[expire-requests] Found ${expiredRequests.length} expired requests`);
 
+    // Only these request types involve wallet deductions and need refunds
+    const WALLET_FUNDED_TYPES = ["Withdrawal Request", "Salary Advance"];
+
     let processed = 0;
 
     for (const req of expiredRequests) {
       const email = req.requestedby;
       const amount = req.amount;
       const name = req.requestedby_name || email;
-
-      // Resolve auth user ID for ledger
-      const { data: emp } = await supabase
-        .from("employees")
-        .select("auth_user_id")
-        .eq("email", email)
-        .maybeSingle();
-
-      const userId = emp?.auth_user_id;
+      const isWalletFunded = WALLET_FUNDED_TYPES.includes(req.type);
 
       // Update request status to expired
       const { error: updateErr } = await supabase
@@ -70,32 +65,48 @@ serve(async (req) => {
         continue;
       }
 
-      // Credit wallet via ledger if we have a user ID
-      if (userId) {
-        const ledgerRef = `REFUND-EXPIRED-${req.id.slice(0, 8).toUpperCase()}`;
-
-        // Check if refund already issued (idempotency)
-        const { data: existing } = await supabase
-          .from("ledger_entries")
-          .select("id")
-          .eq("reference", ledgerRef)
+      // Only refund wallet-funded request types (Withdrawals, Salary Advances)
+      // Company expenses (Cash Requisition, Expense, etc.) don't deduct from wallets
+      if (isWalletFunded) {
+        // Resolve auth user ID for ledger
+        const { data: emp } = await supabase
+          .from("employees")
+          .select("auth_user_id")
+          .eq("email", email)
           .maybeSingle();
 
-        if (!existing) {
-          await supabase.from("ledger_entries").insert({
-            user_id: userId,
-            entry_type: "DEPOSIT",
-            amount: amount,
-            reference: ledgerRef,
-            metadata: {
-              reason: "Refund: request expired (no approval within 24h)",
-              original_request_id: req.id,
-              request_type: req.type,
-            },
-            source_category: "system",
-          });
-          console.log(`[expire-requests] Refunded UGX ${amount} to ${email} (${ledgerRef})`);
+        const userId = emp?.auth_user_id;
+
+        if (userId) {
+          const ledgerRef = `REFUND-EXPIRED-${req.id.slice(0, 8).toUpperCase()}`;
+
+          // Check if refund already issued (idempotency)
+          const { data: existing } = await supabase
+            .from("ledger_entries")
+            .select("id")
+            .eq("reference", ledgerRef)
+            .maybeSingle();
+
+          if (!existing) {
+            await supabase.from("ledger_entries").insert({
+              user_id: userId,
+              entry_type: "DEPOSIT",
+              amount: amount,
+              reference: ledgerRef,
+              metadata: {
+                reason: "Refund: request expired (no approval within 24h)",
+                original_request_id: req.id,
+                request_type: req.type,
+              },
+              source_category: "system",
+            });
+            console.log(`[expire-requests] Refunded UGX ${amount} to ${email} (${ledgerRef})`);
+          }
+        } else {
+          console.warn(`[expire-requests] No auth_user_id found for ${email}, skipping refund for ${req.id}`);
         }
+      } else {
+        console.log(`[expire-requests] Skipping refund for ${req.type} "${req.title}" — company expense, no wallet deduction`);
       }
 
       // Send email notification
