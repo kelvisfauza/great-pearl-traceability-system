@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, AlertCircle, Phone, Mail, MessageCircle, Lock } from 'lucide-react';
+import { Loader2, AlertCircle, Phone, Mail, MessageCircle, Lock, KeyRound } from 'lucide-react';
 import PasswordChangeModal from '@/components/PasswordChangeModal';
 import { UnifiedVerification } from '@/components/auth/UnifiedVerification';
 import { supabase } from '@/integrations/supabase/client';
