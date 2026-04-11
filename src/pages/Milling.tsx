@@ -16,6 +16,7 @@ import MillingCustomersList from '@/components/milling/MillingCustomersList';
 import MillingCustomerLedger from '@/components/milling/MillingCustomerLedger';
 import MillingExpenses from '@/components/milling/MillingExpenses';
 import MillingPrintReportModal from '@/components/milling/MillingPrintReportModal';
+import MillingMoMoCollectModal from '@/components/milling/MillingMoMoCollectModal';
 
 const Milling = () => {
   const { stats, loading, customers, transactions, getReportData, clearAllData, clearAllDebts } = useMillingData();
@@ -24,6 +25,7 @@ const Milling = () => {
   const [showCashTransactionForm, setShowCashTransactionForm] = useState(false);
   const [showReports, setShowReports] = useState(false);
   const [showPrintReport, setShowPrintReport] = useState(false);
+  const [showMoMoCollect, setShowMoMoCollect] = useState(false);
 
   const handleClearAll = async () => {
     await clearAllData();
@@ -211,10 +213,16 @@ const Milling = () => {
           <TabsContent value="payments" className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">Cash Transactions</h2>
-              <Button onClick={() => setShowCashTransactionForm(true)} className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                Record Payment
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={() => setShowMoMoCollect(true)} variant="outline" className="flex items-center gap-2">
+                  <Receipt className="h-4 w-4" />
+                  Collect via MoMo
+                </Button>
+                <Button onClick={() => setShowCashTransactionForm(true)} className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Record Payment
+                </Button>
+              </div>
             </div>
             <Card>
               <CardContent className="p-6">
@@ -275,6 +283,13 @@ const Milling = () => {
           <MillingPrintReportModal
             open={showPrintReport}
             onClose={() => setShowPrintReport(false)}
+          />
+        )}
+
+        {showMoMoCollect && (
+          <MillingMoMoCollectModal
+            open={showMoMoCollect}
+            onClose={() => setShowMoMoCollect(false)}
           />
         )}
       </div>

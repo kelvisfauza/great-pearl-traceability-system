@@ -5404,6 +5404,51 @@ export type Database = {
         }
         Relationships: []
       }
+      milling_momo_transactions: {
+        Row: {
+          amount: number
+          completed_at: string | null
+          created_at: string
+          customer_id: string
+          customer_name: string
+          id: string
+          initiated_by: string
+          phone: string
+          reference: string
+          status: string
+          updated_at: string
+          yo_reference: string | null
+        }
+        Insert: {
+          amount: number
+          completed_at?: string | null
+          created_at?: string
+          customer_id: string
+          customer_name: string
+          id?: string
+          initiated_by: string
+          phone: string
+          reference: string
+          status?: string
+          updated_at?: string
+          yo_reference?: string | null
+        }
+        Update: {
+          amount?: number
+          completed_at?: string | null
+          created_at?: string
+          customer_id?: string
+          customer_name?: string
+          id?: string
+          initiated_by?: string
+          phone?: string
+          reference?: string
+          status?: string
+          updated_at?: string
+          yo_reference?: string | null
+        }
+        Relationships: []
+      }
       milling_transactions: {
         Row: {
           amount_paid: number

@@ -29,11 +29,11 @@ const ReportRemindersSettings = () => {
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('system_settings')
+      const { data, error } = await (supabase
+        .from('system_settings' as any)
         .select('setting_value')
         .eq('setting_key', 'report_reminders')
-        .single();
+        .single() as any);
 
       if (error) {
         if (error.code === 'PGRST116') {
@@ -65,8 +65,8 @@ const ReportRemindersSettings = () => {
       setSaving(true);
       const newSettings = { ...settings, [key]: value };
       
-      const { error } = await supabase
-        .from('system_settings')
+      const { error } = await (supabase
+        .from('system_settings' as any) as any)
         .update({
           setting_value: newSettings,
           updated_by: user?.email || 'unknown',
