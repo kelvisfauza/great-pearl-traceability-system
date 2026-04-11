@@ -1,16 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { resolveYoTransactionStatus } from "../_shared/yo-status.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-const YO_API_URL = "https://paymentsapi1.yo.co.ug/ybs/task.php";
-
-function escapeXml(str: string): string {
-  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -42,8 +37,8 @@ serve(async (req) => {
       });
     }
 
-    // Already resolved
-    if (txn.status === "completed" || txn.status === "failed") {
+    // Completed transactions are already final, but failed ones can still be re-checked
+    if (txn.status === "completed") {
       return new Response(JSON.stringify({ status: txn.status, message: `Transaction already ${txn.status}` }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -64,31 +59,10 @@ serve(async (req) => {
       });
     }
 
-    const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
-<AutoCreate>
-  <Request>
-    <APIUsername>${username}</APIUsername>
-    <APIPassword>${password}</APIPassword>
-    <Method>actransactioncheckstatus</Method>
-    <PrivateTransactionReference>${escapeXml(txn.yo_reference)}</PrivateTransactionReference>
-  </Request>
-</AutoCreate>`;
+    const yoStatus = await resolveYoTransactionStatus(username, password, [txn.yo_reference, txn.reference]);
+    console.log(`[Milling MoMo Check] Final resolution using ${yoStatus.checkedReference}: ${yoStatus.resolvedStatus}`);
 
-    console.log(`[Milling MoMo Check] Checking ref: ${txn.yo_reference}`);
-
-    const response = await fetch(YO_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/xml", "Content-Transfer-Encoding": "text" },
-      body: xmlBody,
-    });
-
-    const responseText = await response.text();
-    console.log(`[Milling MoMo Check] Response: ${responseText}`);
-
-    const txStatusMatch = responseText.match(/<TransactionStatus>(.*?)<\/TransactionStatus>/i);
-    const txStatus = txStatusMatch?.[1]?.trim()?.toUpperCase();
-
-    if (txStatus === "SUCCEEDED" || txStatus === "COMPLETED") {
+    if (yoStatus.resolvedStatus === "completed") {
       // Process success - update momo txn, clear balance, record cash txn
       await supabase
         .from("milling_momo_transactions")
@@ -128,18 +102,18 @@ serve(async (req) => {
       return new Response(JSON.stringify({ status: "completed", message: "Payment successful! Balance updated." }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-    } else if (txStatus === "FAILED" || txStatus === "EXPIRED" || txStatus === "CANCELLED") {
+    } else if (yoStatus.resolvedStatus === "failed") {
       await supabase
         .from("milling_momo_transactions")
         .update({ status: "failed", completed_at: new Date().toISOString() })
         .eq("id", txn.id);
 
-      return new Response(JSON.stringify({ status: "failed", message: `Transaction ${txStatus.toLowerCase()}` }), {
+      return new Response(JSON.stringify({ status: "failed", message: yoStatus.statusMessage || "Transaction failed" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    return new Response(JSON.stringify({ status: "pending", message: "Still waiting for customer to confirm" }), {
+    return new Response(JSON.stringify({ status: "pending", message: yoStatus.statusMessage || "Still waiting for customer to confirm" }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {

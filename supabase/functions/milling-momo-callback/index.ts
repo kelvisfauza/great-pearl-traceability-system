@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { resolveYoTransactionStatus } from "../_shared/yo-status.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -112,48 +113,32 @@ serve(async (req) => {
       const password = Deno.env.get("YO_API_PASSWORD");
       
       if (username && password && txn.yo_reference) {
-        const checkXml = `<?xml version="1.0" encoding="UTF-8"?>
-<AutoCreate>
-  <Request>
-    <APIUsername>${username}</APIUsername>
-    <APIPassword>${password}</APIPassword>
-    <Method>actransactioncheckstatus</Method>
-    <PrivateTransactionReference>${txn.yo_reference}</PrivateTransactionReference>
-  </Request>
-</AutoCreate>`;
-        
         try {
-          const checkResp = await fetch("https://paymentsapi1.yo.co.ug/ybs/task.php", {
-            method: "POST",
-            headers: { "Content-Type": "text/xml" },
-            body: checkXml,
-          });
-          const checkText = await checkResp.text();
-          console.log(`[Milling MoMo Callback] Check status response: ${checkText}`);
-          
-          const txStatusMatch = checkText.match(/<TransactionStatus>(.*?)<\/TransactionStatus>/i);
-          const txStatusVal = txStatusMatch?.[1]?.trim()?.toUpperCase();
-          
-          if (txStatusVal === "SUCCEEDED" || txStatusVal === "COMPLETED") {
+          const yoStatus = await resolveYoTransactionStatus(username, password, [txn.yo_reference, txn.reference]);
+          console.log(`[Milling MoMo Callback] Resolved ambiguous callback using ${yoStatus.checkedReference}: ${yoStatus.resolvedStatus}`);
+
+          if (yoStatus.resolvedStatus === "completed") {
             await processSuccess(supabase, txn);
             return new Response(JSON.stringify({ status: "ok" }), {
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
-          } else if (txStatusVal === "FAILED" || txStatusVal === "EXPIRED" || txStatusVal === "CANCELLED") {
+          } else if (yoStatus.resolvedStatus === "failed") {
             await processFailed(supabase, txn);
             return new Response(JSON.stringify({ status: "ok" }), {
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
           }
-          // Still pending - mark as failed since callback was triggered
-          console.log(`[Milling MoMo Callback] Check returned "${txStatusVal}", marking as failed`);
+
+          console.log(`[Milling MoMo Callback] Check still pending for ${txn.reference}; leaving transaction pending`);
+          return new Response(JSON.stringify({ status: "ok" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
         } catch (e) {
           console.error(`[Milling MoMo Callback] Check status error:`, e);
         }
       }
-      
-      // Default: mark as failed if we can't determine success
-      await processFailed(supabase, txn);
+
+      console.log(`[Milling MoMo Callback] Could not verify ambiguous status for ${txn.reference}; leaving pending`);
       return new Response(JSON.stringify({ status: "ok" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
