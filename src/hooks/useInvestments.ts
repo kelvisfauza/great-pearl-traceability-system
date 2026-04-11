@@ -86,7 +86,7 @@ export const useInvestments = () => {
       }]);
       if (investErr) throw investErr;
 
-      toast({ title: "Investment Created! 📈", description: `UGX ${amount.toLocaleString()} locked for 5 months at 10% interest. Expected return: UGX ${(amount * 1.1).toLocaleString()}` });
+      toast({ title: "Investment Created! 📈", description: `UGX ${amount.toLocaleString()} locked for 5 months at 25% interest. Expected return: UGX ${(amount * 1.25).toLocaleString()}` });
 
       // Send email notification
       const startDate = new Date().toISOString().split('T')[0];
@@ -100,9 +100,9 @@ export const useInvestments = () => {
             templateData: {
               employeeName: employee?.name || user.email,
               amount,
-              interestRate: 10,
+              interestRate: 25,
               maturityMonths: 5,
-              expectedReturn: amount * 1.1,
+              expectedReturn: amount * 1.25,
               startDate,
               maturityDate,
               investmentRef: investRef,
@@ -131,9 +131,10 @@ export const useInvestments = () => {
       const { data: userIdData } = await supabase.rpc('get_unified_user_id', { input_email: employee?.email || user.email });
       const unifiedId = userIdData || user.id;
 
-      // Calculate reduced interest (3% instead of 10%)
-      const monthsElapsed = Math.max(0, Math.floor((Date.now() - new Date(investment.start_date).getTime()) / (30 * 24 * 60 * 60 * 1000)));
-      const reducedInterest = investment.amount * (investment.reduced_rate / 100) * (monthsElapsed / investment.maturity_months);
+      // Calculate pro-rated interest at 25% based on days elapsed
+      const totalDays = investment.maturity_months * 30; // ~150 days
+      const daysElapsed = Math.max(0, Math.floor((Date.now() - new Date(investment.start_date).getTime()) / (24 * 60 * 60 * 1000)));
+      const reducedInterest = investment.amount * 0.25 * (daysElapsed / totalDays);
       const payout = investment.amount + reducedInterest;
 
       const refundRef = `INVEST-EARLY-${investmentId.slice(0, 8)}`;
@@ -146,7 +147,7 @@ export const useInvestments = () => {
         reference: refundRef,
         source_category: 'SYSTEM_AWARD',
         metadata: {
-          description: `Early investment withdrawal (3% rate) - ${refundRef}`,
+          description: `Early investment withdrawal (pro-rated 25%) - ${refundRef}`,
           type: 'investment_early_withdrawal',
           investment_id: investmentId,
           reduced_interest: reducedInterest,
@@ -162,7 +163,7 @@ export const useInvestments = () => {
 
       toast({
         title: "Early Withdrawal Complete",
-        description: `UGX ${payout.toLocaleString()} returned (${reducedInterest.toLocaleString()} interest at 3% reduced rate)`,
+        description: `UGX ${payout.toLocaleString()} returned (${Math.round(reducedInterest).toLocaleString()} interest for ${daysElapsed} days)`,
       });
       fetchInvestments();
       return true;
