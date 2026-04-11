@@ -18,8 +18,8 @@ export const InvestmentModal = ({ open, onOpenChange, availableBalance }: Invest
   const { createInvestment } = useInvestments();
 
   const numAmount = Number(amount) || 0;
-  const expectedReturn = numAmount * 1.1;
-  const profit = numAmount * 0.1;
+  const expectedReturn = numAmount * 1.25;
+  const profit = numAmount * 0.25;
 
   const handleInvest = async () => {
     if (numAmount < 100000) return;
@@ -42,7 +42,7 @@ export const InvestmentModal = ({ open, onOpenChange, availableBalance }: Invest
             Invest & Earn
           </DialogTitle>
           <DialogDescription>
-            Lock your funds for 5 months and earn 10% interest
+            Lock your funds for 5 months and earn 25% interest
           </DialogDescription>
         </DialogHeader>
 
@@ -51,7 +51,7 @@ export const InvestmentModal = ({ open, onOpenChange, availableBalance }: Invest
           <div className="grid grid-cols-3 gap-2 text-center">
             <div className="bg-blue-50 rounded-lg p-3">
               <TrendingUp className="h-4 w-4 mx-auto text-blue-600 mb-1" />
-              <p className="text-lg font-bold text-blue-700">10%</p>
+              <p className="text-lg font-bold text-blue-700">25%</p>
               <p className="text-[10px] text-muted-foreground">Interest Rate</p>
             </div>
             <div className="bg-purple-50 rounded-lg p-3">
@@ -61,8 +61,8 @@ export const InvestmentModal = ({ open, onOpenChange, availableBalance }: Invest
             </div>
             <div className="bg-amber-50 rounded-lg p-3">
               <Shield className="h-4 w-4 mx-auto text-amber-600 mb-1" />
-              <p className="text-lg font-bold text-amber-700">3%</p>
-              <p className="text-[10px] text-muted-foreground">Early Exit Rate</p>
+              <p className="text-lg font-bold text-amber-700">25%</p>
+              <p className="text-[10px] text-muted-foreground">Pro-rated</p>
             </div>
           </div>
 
@@ -87,7 +87,7 @@ export const InvestmentModal = ({ open, onOpenChange, availableBalance }: Invest
                 <span className="font-medium">UGX {numAmount.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-sm text-green-700">
-                <span>Interest (10%)</span>
+                <span>Interest (25%)</span>
                 <span className="font-medium">+ UGX {profit.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-sm font-bold border-t border-green-200 pt-1">
@@ -99,7 +99,7 @@ export const InvestmentModal = ({ open, onOpenChange, availableBalance }: Invest
 
           <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
             <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-            <span>Early withdrawal is allowed but reduces your interest rate from 10% to 3%.</span>
+            <span>Early withdrawal is allowed. Interest is pro-rated at 25% based on days completed.</span>
           </div>
 
           <Button

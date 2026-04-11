@@ -61,13 +61,13 @@ export const InvestmentsCard = () => {
                     size="sm"
                     className="w-full text-xs h-7 text-amber-700 border-amber-200 hover:bg-amber-50"
                     onClick={() => {
-                      if (window.confirm('Early withdrawal reduces your interest from 10% to 3%. Continue?')) {
+                      if (window.confirm('Early withdrawal will give you pro-rated 25% interest based on days completed. Continue?')) {
                         withdrawEarly(inv.id);
                       }
                     }}
                   >
                     <AlertTriangle className="h-3 w-3 mr-1" />
-                    Withdraw Early (3% rate)
+                    Withdraw Early (Pro-rated)
                   </Button>
                 </>
               )}
