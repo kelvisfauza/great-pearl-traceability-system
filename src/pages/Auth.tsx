@@ -463,6 +463,82 @@ const Auth = () => {
         open={showPasswordChange}
         onPasswordChanged={handlePasswordChangeComplete}
       />
+
+      {/* Forgot Password Dialog */}
+      {showForgotPassword && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <KeyRound className="h-5 w-5" />
+                Reset Password
+              </CardTitle>
+              <CardDescription>
+                Enter your email and we'll send you a link to reset your password.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {forgotSent ? (
+                <div className="text-center space-y-3">
+                  <div className="flex justify-center">
+                    <div className="p-3 bg-green-100 rounded-full">
+                      <Mail className="h-6 w-6 text-green-600" />
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Password reset link sent to <strong>{forgotEmail}</strong>. Check your inbox and spam folder.
+                  </p>
+                  <Button variant="outline" className="w-full" onClick={() => { setShowForgotPassword(false); setForgotSent(false); setForgotEmail(''); }}>
+                    Back to Login
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="forgot-email">Email Address</Label>
+                    <Input
+                      id="forgot-email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      disabled={forgotLoading}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" className="flex-1" onClick={() => { setShowForgotPassword(false); setForgotEmail(''); }}>
+                      Cancel
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      disabled={forgotLoading || !forgotEmail}
+                      onClick={async () => {
+                        setForgotLoading(true);
+                        try {
+                          const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+                            redirectTo: `${window.location.origin}/reset-password`
+                          });
+                          if (error) {
+                            toast({ title: "Error", description: error.message, variant: "destructive" });
+                          } else {
+                            setForgotSent(true);
+                          }
+                        } catch {
+                          toast({ title: "Error", description: "Failed to send reset email", variant: "destructive" });
+                        } finally {
+                          setForgotLoading(false);
+                        }
+                      }}
+                    >
+                      {forgotLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send Reset Link'}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
