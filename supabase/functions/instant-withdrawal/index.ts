@@ -104,8 +104,17 @@ serve(async (req) => {
       return respond(false, { error: `Insufficient wallet balance. Available: UGX ${walletBalance.toLocaleString()}` });
     }
 
+    // Fetch employee name early for narrative
+    const { data: empData } = await supabase
+      .from('employees')
+      .select('name, phone')
+      .eq('email', userEmail)
+      .maybeSingle();
+    const employeeName = empData?.name || 'User';
+
     const cleanPhone = normalizePhone(depositPhone);
     const ref = `INSTANT-WD-${Date.now()}`;
+    const remainingAfter = walletBalance - numAmount;
 
     // Create tracking record
     const { data: instantRecord, error: insertErr } = await supabase
@@ -125,8 +134,10 @@ serve(async (req) => {
       return respond(false, { error: "Failed to create withdrawal record: " + insertErr.message });
     }
 
-    // Trigger Yo Payments payout
+    // Trigger Yo Payments payout - include employee name and balance in narrative
     console.log(`[instant-withdrawal] Sending UGX ${numAmount} to ${cleanPhone} via Yo Payments`);
+
+    const narrative = `${employeeName} - Instant withdrawal ${ref} - Bal: UGX ${remainingAfter.toLocaleString()}`;
 
     const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
 <AutoCreate>
@@ -137,7 +148,7 @@ serve(async (req) => {
     <Amount>${numAmount}</Amount>
     <Account>${cleanPhone}</Account>
     <AccountProviderCode>${getProviderCode(cleanPhone)}</AccountProviderCode>
-    <Narrative>${escapeXml(`Instant withdrawal - ${ref}`)}</Narrative>
+    <Narrative>${escapeXml(narrative)}</Narrative>
     <ExternalReference>${escapeXml(ref)}</ExternalReference>
   </Request>
 </AutoCreate>`;
@@ -218,43 +229,25 @@ serve(async (req) => {
 
     // Send SMS (fire and forget)
     const yoolaSmsApiKey = Deno.env.get("YOOLA_SMS_API_KEY");
-    let employeeName = "User";
-    if (yoolaSmsApiKey) {
-      const { data: emp } = await supabase
-        .from('employees')
-        .select('name, phone')
-        .eq('email', userEmail)
-        .maybeSingle();
+    if (yoolaSmsApiKey && empData?.phone) {
+      let smsPhone = empData.phone.replace(/\D/g, "");
+      if (smsPhone.startsWith("0")) smsPhone = "+256" + smsPhone.slice(1);
+      else if (smsPhone.startsWith("256")) smsPhone = "+" + smsPhone;
+      else if (!smsPhone.startsWith("+")) smsPhone = "+256" + smsPhone;
 
-      if (emp?.name) employeeName = emp.name;
-
-      if (emp?.phone) {
-        let smsPhone = emp.phone.replace(/\D/g, "");
-        if (smsPhone.startsWith("0")) smsPhone = "+256" + smsPhone.slice(1);
-        else if (smsPhone.startsWith("256")) smsPhone = "+" + smsPhone;
-        else if (!smsPhone.startsWith("+")) smsPhone = "+256" + smsPhone;
-
-        try {
-          await fetch("https://yoolasms.com/api/v1/send", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              phone: smsPhone,
-              message: `Dear ${emp.name}, UGX ${numAmount.toLocaleString()} has been sent to ${depositPhone} from your wallet. Ref: ${txRef}. Great Agro Coffee.`,
-              api_key: yoolaSmsApiKey,
-            }),
-          });
-        } catch (smsErr) {
-          console.error("SMS error:", smsErr);
-        }
+      try {
+        await fetch("https://yoolasms.com/api/v1/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            phone: smsPhone,
+            message: `Dear ${employeeName}, UGX ${numAmount.toLocaleString()} has been sent to ${depositPhone} from your wallet. Ref: ${txRef}. Great Agro Coffee.`,
+            api_key: yoolaSmsApiKey,
+          }),
+        });
+      } catch (smsErr) {
+        console.error("SMS error:", smsErr);
       }
-    } else {
-      const { data: emp } = await supabase
-        .from('employees')
-        .select('name')
-        .eq('email', userEmail)
-        .maybeSingle();
-      if (emp?.name) employeeName = emp.name;
     }
 
     // Calculate remaining balance for email
@@ -291,6 +284,38 @@ serve(async (req) => {
       console.log(`[instant-withdrawal] Email confirmation sent to ${userEmail}`);
     } catch (emailErr) {
       console.error("[instant-withdrawal] Email error (non-blocking):", emailErr);
+    }
+
+    // If pending authorization (-22), send emails to admins to authorize on Yo Payments
+    if (isPending) {
+      const adminRecipients = [
+        { name: 'Musema Wyclif', email: 'musemawyclif@greatpearlcoffee.com' },
+        { name: 'Bwambale Denis', email: 'bwambaledenis@greatpearlcoffee.com' },
+        { name: 'Fauza Kusa', email: 'fauzakusa@greatpearlcoffee.com' },
+      ];
+
+      for (const admin of adminRecipients) {
+        try {
+          await supabase.functions.invoke('send-transactional-email', {
+            body: {
+              templateName: 'withdrawal-auth-request',
+              recipientEmail: admin.email,
+              idempotencyKey: `wd-auth-${instantRecord.id}-${admin.email}`,
+              templateData: {
+                adminName: admin.name.split(' ')[0],
+                employeeName,
+                amount: numAmount,
+                phone: cleanPhone,
+                ref: txRef,
+                walletBalance: remainingBalance ?? remainingAfter,
+              },
+            },
+          });
+          console.log(`[instant-withdrawal] Auth request email sent to ${admin.email}`);
+        } catch (adminEmailErr) {
+          console.error(`[instant-withdrawal] Admin email error for ${admin.email}:`, adminEmailErr);
+        }
+      }
     }
 
     return respond(true, {
