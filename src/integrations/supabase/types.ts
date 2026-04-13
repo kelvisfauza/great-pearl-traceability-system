@@ -10344,6 +10344,10 @@ export type Database = {
         | "Manager"
         | "User"
         | "Supervisor"
+        | "finance_assistant"
+        | "finance_manager"
+        | "accountant"
+        | "viewer"
       expense_status: "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "POSTED"
       lot_finance_status: "READY_FOR_FINANCE" | "APPROVED_FOR_PAYMENT" | "PAID"
       payment_method: "CASH" | "CHEQUE" | "BANK_TRANSFER"
@@ -10481,6 +10485,10 @@ export const Constants = {
         "Manager",
         "User",
         "Supervisor",
+        "finance_assistant",
+        "finance_manager",
+        "accountant",
+        "viewer",
       ],
       expense_status: ["PENDING_APPROVAL", "APPROVED", "REJECTED", "POSTED"],
       lot_finance_status: ["READY_FOR_FINANCE", "APPROVED_FOR_PAYMENT", "PAID"],
