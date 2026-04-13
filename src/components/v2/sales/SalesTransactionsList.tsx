@@ -119,7 +119,7 @@ const SalesTransactionsList = () => {
         </TableHeader>
         <TableBody>
           {transactions.map((transaction) => (
-            <TableRow key={transaction.id}>
+            <TableRow key={transaction.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setViewSaleId(transaction.id)}>
               <TableCell>
                 {format(new Date(transaction.date || transaction.created_at), 'dd MMM yyyy')}
               </TableCell>
