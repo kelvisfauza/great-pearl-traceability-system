@@ -28,6 +28,7 @@ import AttendanceTimeManager from '@/components/it/AttendanceTimeManager';
 import MaintenanceToggle from '@/components/it/MaintenanceToggle';
 import EmailTracker from '@/components/it/EmailTracker';
 import ActiveUsers from '@/components/it/ActiveUsers';
+import SessionLogs from '@/components/it/SessionLogs';
 
 const ITDepartment = () => {
   const { hasPermission, employee } = useAuth();
