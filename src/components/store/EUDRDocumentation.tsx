@@ -1531,6 +1531,14 @@ const EUDRDocumentation = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {attachSaleBatch && (
+        <AttachSaleDialog
+          open={!!attachSaleBatch}
+          onOpenChange={(open) => !open && setAttachSaleBatch(null)}
+          batch={attachSaleBatch}
+        />
+      )}
     </div>
   );
 };
