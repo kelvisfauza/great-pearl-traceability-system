@@ -166,15 +166,17 @@ const EUDRInventoryLinking = () => {
 
     setLinking(true);
     try {
-      // Get the coffee type from first selected source (get from coffee_records)
-      const firstSource = sources.find(s => s.id === selectedSources[0]);
+      // Determine coffee type from selected sources
+      const selectedRecords = sources.filter(s => selectedSources.includes(s.id));
+      const coffeeTypes = [...new Set(selectedRecords.map(s => (s as any).coffee_type?.toLowerCase()).filter(Boolean))];
+      const detectedCoffeeType = coffeeTypes.includes('arabica') ? 'arabica' : (coffeeTypes[0] || 'arabica');
       
       // Create EUDR document for the traced receipts
       const batchNumber = `EUDR-TRACED-${Date.now()}`;
       const { data: docData, error: docError } = await supabase
         .from('eudr_documents')
         .insert({
-          coffee_type: 'robusta', // Default, can be enhanced
+          coffee_type: detectedCoffeeType,
           total_kilograms: totalSelectedKg,
           available_kilograms: totalSelectedKg,
           total_receipts: selectedSources.length,
