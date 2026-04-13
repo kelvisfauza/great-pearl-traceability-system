@@ -693,118 +693,14 @@ const MyExpenses = () => {
           <TabsContent value="personal" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Submit Personal Expense</CardTitle>
-                <CardDescription>
-                  Request reimbursement for personal expenses (lunch, airtime, etc.)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handlePersonalExpenseSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="exp-type">Expense Type</Label>
-                    <Select 
-                      value={personalExpenseForm.expenseType} 
-                      onValueChange={(value) => setPersonalExpenseForm({ ...personalExpenseForm, expenseType: value, title: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select expense type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Food Allowance">
-                          🍽️ Food Allowance (Max 3,000 UGX/day)
-                        </SelectItem>
-                        <SelectItem value="Airtime">📱 Airtime (Max 20,000 UGX)</SelectItem>
-                        <SelectItem value="Data">📶 Data (Max 50,000 UGX)</SelectItem>
-                        <SelectItem value="Transport">🚗 Transport</SelectItem>
-                        <SelectItem value="Office Supplies">📋 Office Supplies</SelectItem>
-                        <SelectItem value="Per Diem">🗓️ Per Diem</SelectItem>
-                        <SelectItem value="Other">💼 Other Personal Expense</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    
-                     {personalExpenseForm.expenseType === 'Food Allowance' && (
-                      <Alert className="border-orange-200 bg-orange-50 mt-2">
-                        <AlertCircle className="h-4 w-4 text-orange-600" />
-                        <AlertDescription className="text-xs text-orange-800">
-                          <div className="space-y-1">
-                            <div className="font-semibold">⚠️ Important Notice:</div>
-                            <p>Food will now be prepared on-site. Food allowance requests (max <strong>3,000 UGX/day</strong>) will only be approved if the cooks have not prepared the food.</p>
-                          </div>
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="exp-amount">
-                      Amount (UGX)
-                      {personalExpenseForm.expenseType === 'Food Allowance' && (
-                        <span className="text-xs text-muted-foreground ml-2">
-                          Max: 3,000 UGX/day
-                        </span>
-                      )}
-                    </Label>
-                    <Input
-                      id="exp-amount"
-                      type="number"
-                      placeholder="0.00"
-                      value={personalExpenseForm.amount}
-                      onChange={(e) => setPersonalExpenseForm({ ...personalExpenseForm, amount: e.target.value })}
-                      required
-                      min="1000"
-                      step="500"
-                      max={personalExpenseForm.expenseType === 'Food Allowance' ? 3000 : undefined}
-                    />
-                    {personalExpenseForm.expenseType === 'Food Allowance' && 
-                     parseFloat(personalExpenseForm.amount) > 3000 && (
-                      <p className="text-xs text-destructive">Amount exceeds the daily food allowance of 3,000 UGX</p>
-                    )}
-                    {parseFloat(personalExpenseForm.amount) > 50000 && (
-                      <Alert className="border-amber-200 bg-amber-50 mt-2">
-                        <ShieldCheck className="h-4 w-4 text-amber-600" />
-                        <AlertDescription className="text-xs text-amber-800">
-                          <strong>Enhanced Approval Required:</strong> Amounts above 50,000 UGX require <strong>3 approvals</strong> (2 Administrators + 1 Finance).
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="exp-description">Description</Label>
-                    <Textarea
-                      id="exp-description"
-                      placeholder="Explain the expense..."
-                      value={personalExpenseForm.description}
-                      onChange={(e) => setPersonalExpenseForm({ ...personalExpenseForm, description: e.target.value })}
-                      rows={4}
-                      required
-                    />
-                  </div>
-
-                  <Button 
-                    type="submit" 
-                    disabled={
-                      loading || 
-                      (personalExpenseForm.expenseType === 'Food Allowance' && parseFloat(personalExpenseForm.amount) > 3000)
-                    }
-                    className="w-full"
-                  >
-                    {loading ? 'Submitting...' : 'Submit Expense'}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-
-            {/* My Personal Expenses */}
-            <Card>
-              <CardHeader>
                 <CardTitle>My Personal Expenses</CardTitle>
+                <CardDescription>History of your submitted personal expense forms</CardDescription>
               </CardHeader>
               <CardContent>
                 {fetchingRequests ? (
                   <p className="text-muted-foreground">Loading...</p>
                 ) : filterRequestsByType('Personal Expense').length === 0 ? (
-                  <p className="text-muted-foreground">No personal expenses yet</p>
+                  <p className="text-muted-foreground">No personal expenses yet. Download a template from the "Download Forms" tab to get started.</p>
                 ) : (
                   <div className="space-y-4">
                     {filterRequestsByType('Personal Expense').map((request) => (
