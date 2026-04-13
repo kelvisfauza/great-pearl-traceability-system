@@ -370,6 +370,10 @@ export const usePresence = (userId?: string) => {
         clearInterval(heartbeatRef.current);
         heartbeatRef.current = null;
       }
+      if (locationTrackingRef.current) {
+        clearInterval(locationTrackingRef.current);
+        locationTrackingRef.current = null;
+      }
       if (sessionLogIdRef.current) {
         supabase
           .from('user_session_logs')
