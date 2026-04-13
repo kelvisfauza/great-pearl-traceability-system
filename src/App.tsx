@@ -402,6 +402,7 @@ const App: React.ComponentType = () => {
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <AdminWithdrawalPinPrompt />
+              </LocationPermissionGate>
               </MaintenanceGuard>
             </BrowserRouter>
           </TooltipProvider>
