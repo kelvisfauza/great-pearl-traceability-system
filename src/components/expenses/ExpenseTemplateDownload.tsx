@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Download, FileText, ShoppingCart, Coffee, Wallet, Info } from 'lucide-react';
+import { Download, ShoppingCart, Coffee, Wallet, Info } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-
-const LOGO_URL = 'https://pudfybkyfedeggmokhco.supabase.co/storage/v1/object/public/assets/great-agro-logo.png';
+import { jsPDF } from 'jspdf';
 
 const generateRefNumber = (prefix: string) => {
   const date = new Date();
@@ -72,139 +71,131 @@ const templates: TemplateConfig[] = [
   },
 ];
 
-const drawTemplate = (template: TemplateConfig, employeeName: string, department: string, position: string) => {
+const generatePDF = (template: TemplateConfig, employeeName: string, department: string, position: string) => {
   const refNo = generateRefNumber(template.prefix);
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-UG', { year: 'numeric', month: 'long', day: 'numeric' });
 
-  // Create a canvas to render the PDF
-  const canvas = document.createElement('canvas');
-  const dpi = 2;
-  const w = 595 * dpi; // A4 width in points
-  const h = 842 * dpi; // A4 height in points
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext('2d')!;
-  ctx.scale(dpi, dpi);
-
-  const pageW = 595;
-  const pageH = 842;
-  const margin = 50;
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const pageW = 210;
+  const margin = 15;
   const contentW = pageW - margin * 2;
 
-  // Background
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(0, 0, pageW, pageH);
-
-  let y = margin;
-
   // Header background
-  ctx.fillStyle = '#1a5632';
-  ctx.fillRect(0, 0, pageW, 90);
+  doc.setFillColor(26, 86, 50);
+  doc.rect(0, 0, pageW, 28, 'F');
 
   // Company name
-  ctx.fillStyle = '#FFFFFF';
-  ctx.font = 'bold 22px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText('GREAT AGRO COFFEE LTD', pageW / 2, 35);
-  
-  ctx.font = '10px Arial';
-  ctx.fillText('P.O. Box XXXX, Kampala, Uganda | Tel: +256 XXXX XXXX | Email: info@greatagrocoffee.com', pageW / 2, 52);
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('GREAT AGRO COFFEE LTD', pageW / 2, 11, { align: 'center' });
 
-  // Decorative line
-  ctx.fillStyle = '#d4a017';
-  ctx.fillRect(0, 88, pageW, 4);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.text('P.O. Box XXXX, Kampala, Uganda  |  Tel: +256 XXXX XXXX  |  Email: info@greatagrocoffee.com', pageW / 2, 17, { align: 'center' });
 
-  y = 110;
+  // Gold accent line
+  doc.setFillColor(212, 160, 23);
+  doc.rect(0, 27, pageW, 1.5, 'F');
+
+  let y = 35;
 
   // Document title
-  ctx.fillStyle = '#1a5632';
-  ctx.font = 'bold 18px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText(template.title.toUpperCase(), pageW / 2, y);
-  y += 30;
+  doc.setTextColor(26, 86, 50);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text(template.title.toUpperCase(), pageW / 2, y, { align: 'center' });
+  y += 10;
 
-  // Reference and date row
-  ctx.textAlign = 'left';
-  ctx.font = 'bold 10px Arial';
-  ctx.fillStyle = '#333333';
-  ctx.fillText(`Reference No:`, margin, y);
-  ctx.font = '10px Arial';
-  ctx.fillStyle = '#c0392b';
-  ctx.fillText(refNo, margin + 85, y);
+  // Reference and date
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(51, 51, 51);
+  doc.text('Reference No:', margin, y);
+  doc.setTextColor(192, 57, 43);
+  doc.setFont('helvetica', 'normal');
+  doc.text(refNo, margin + 28, y);
 
-  ctx.textAlign = 'right';
-  ctx.font = 'bold 10px Arial';
-  ctx.fillStyle = '#333333';
-  ctx.fillText(`Date:`, pageW - margin - 100, y);
-  ctx.font = '10px Arial';
-  ctx.fillStyle = '#333333';
-  ctx.fillText(dateStr, pageW - margin, y);
-  y += 25;
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(51, 51, 51);
+  doc.text('Date:', pageW - margin - 45, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(dateStr, pageW - margin - 35, y);
+  y += 8;
 
   // Employee info box
-  ctx.strokeStyle = '#cccccc';
-  ctx.lineWidth = 1;
-  ctx.fillStyle = '#f8f9fa';
-  ctx.fillRect(margin, y, contentW, 70);
-  ctx.strokeRect(margin, y, contentW, 70);
+  doc.setFillColor(248, 249, 250);
+  doc.setDrawColor(204, 204, 204);
+  doc.roundedRect(margin, y, contentW, 22, 2, 2, 'FD');
 
-  ctx.textAlign = 'left';
-  ctx.font = 'bold 9px Arial';
-  ctx.fillStyle = '#666666';
-  const infoY = y + 15;
-  
-  ctx.fillText('EMPLOYEE DETAILS', margin + 10, infoY);
-  ctx.font = '10px Arial';
-  ctx.fillStyle = '#333333';
-  ctx.fillText(`Name: ${employeeName}`, margin + 10, infoY + 18);
-  ctx.fillText(`Department: ${department}`, margin + 10, infoY + 34);
-  ctx.fillText(`Position: ${position || 'N/A'}`, margin + contentW / 2, infoY + 18);
-  ctx.fillText(`Date Generated: ${dateStr}`, margin + contentW / 2, infoY + 34);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(100, 100, 100);
+  doc.text('EMPLOYEE DETAILS', margin + 4, y + 5);
 
-  y += 90;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(51, 51, 51);
+  doc.text(`Name: ${employeeName}`, margin + 4, y + 11);
+  doc.text(`Department: ${department}`, margin + 4, y + 17);
+  doc.text(`Position: ${position || 'N/A'}`, margin + contentW / 2, y + 11);
+  doc.text(`Date Generated: ${dateStr}`, margin + contentW / 2, y + 17);
+
+  y += 28;
+
+  // Section header: REQUEST DETAILS
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(26, 86, 50);
+  doc.text('REQUEST DETAILS', margin, y);
+  y += 1;
+  doc.setDrawColor(26, 86, 50);
+  doc.setLineWidth(0.5);
+  doc.line(margin, y, margin + contentW, y);
+  y += 6;
 
   // Form fields
-  ctx.font = 'bold 10px Arial';
-  ctx.fillStyle = '#1a5632';
-  ctx.fillText('REQUEST DETAILS', margin, y);
-  y += 5;
-  ctx.fillStyle = '#1a5632';
-  ctx.fillRect(margin, y, contentW, 2);
-  y += 15;
-
   template.fields.forEach((field) => {
     const lines = field.lines || 1;
-    const fieldH = 15 + lines * 22;
 
-    ctx.font = 'bold 10px Arial';
-    ctx.fillStyle = '#333333';
-    ctx.fillText(field.label + ':', margin, y + 12);
-    y += 18;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(51, 51, 51);
+    doc.text(`${field.label}:`, margin, y);
+    y += 4;
 
-    // Draw lines for writing
+    // Draw dotted lines for writing
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.3);
     for (let i = 0; i < lines; i++) {
-      const lineY = y + i * 22;
-      ctx.strokeStyle = '#cccccc';
-      ctx.lineWidth = 0.5;
-      ctx.beginPath();
-      ctx.moveTo(margin, lineY + 15);
-      ctx.lineTo(margin + contentW, lineY + 15);
-      ctx.stroke();
+      const lineY = y + i * 7;
+      // Draw dashed line
+      const dashLen = 2;
+      const gapLen = 1.5;
+      let x = margin;
+      while (x < margin + contentW) {
+        const end = Math.min(x + dashLen, margin + contentW);
+        doc.line(x, lineY + 4, end, lineY + 4);
+        x = end + gapLen;
+      }
     }
-    y += lines * 22 + 8;
+    y += lines * 7 + 4;
   });
 
   // Approval section
-  y += 10;
-  ctx.font = 'bold 10px Arial';
-  ctx.fillStyle = '#1a5632';
-  ctx.fillText('APPROVAL SECTION', margin, y);
   y += 5;
-  ctx.fillRect(margin, y, contentW, 2);
-  y += 20;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(26, 86, 50);
+  doc.text('APPROVAL SECTION', margin, y);
+  y += 1;
+  doc.setDrawColor(26, 86, 50);
+  doc.setLineWidth(0.5);
+  doc.line(margin, y, margin + contentW, y);
+  y += 6;
 
-  const boxW = (contentW - 20) / 3;
+  const boxW = (contentW - 8) / 3;
   const boxes = [
     { title: 'Requested By', subtitle: '(Employee Signature)' },
     { title: 'Admin Approval', subtitle: '(Signature & Date)' },
@@ -212,74 +203,59 @@ const drawTemplate = (template: TemplateConfig, employeeName: string, department
   ];
 
   boxes.forEach((box, i) => {
-    const bx = margin + i * (boxW + 10);
-    ctx.strokeStyle = '#cccccc';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(bx, y, boxW, 80);
+    const bx = margin + i * (boxW + 4);
+    doc.setDrawColor(180, 180, 180);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(bx, y, boxW, 28, 1, 1, 'S');
 
-    ctx.font = 'bold 9px Arial';
-    ctx.fillStyle = '#333333';
-    ctx.textAlign = 'center';
-    ctx.fillText(box.title, bx + boxW / 2, y + 15);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(51, 51, 51);
+    doc.text(box.title, bx + boxW / 2, y + 5, { align: 'center' });
 
     // Signature line
-    ctx.strokeStyle = '#999999';
-    ctx.beginPath();
-    ctx.moveTo(bx + 10, y + 55);
-    ctx.lineTo(bx + boxW - 10, y + 55);
-    ctx.stroke();
+    doc.setDrawColor(150, 150, 150);
+    doc.line(bx + 5, y + 19, bx + boxW - 5, y + 19);
 
-    ctx.font = '8px Arial';
-    ctx.fillStyle = '#999999';
-    ctx.fillText(box.subtitle, bx + boxW / 2, y + 70);
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(150, 150, 150);
+    doc.text(box.subtitle, bx + boxW / 2, y + 24, { align: 'center' });
   });
 
-  ctx.textAlign = 'left';
-  y += 100;
+  y += 35;
 
   // Footer
-  ctx.fillStyle = '#f8f9fa';
-  ctx.fillRect(0, pageH - 50, pageW, 50);
-  ctx.fillStyle = '#1a5632';
-  ctx.fillRect(0, pageH - 50, pageW, 2);
+  const footerY = 287;
+  doc.setDrawColor(26, 86, 50);
+  doc.setLineWidth(0.5);
+  doc.line(0, footerY - 5, pageW, footerY - 5);
 
-  ctx.font = '8px Arial';
-  ctx.fillStyle = '#999999';
-  ctx.textAlign = 'center';
-  ctx.fillText(`Ref: ${refNo} | This form must be submitted to the Finance Department with all supporting documents.`, pageW / 2, pageH - 30);
-  ctx.fillText('Great Agro Coffee Ltd - Internal Use Only', pageW / 2, pageH - 18);
+  doc.setFontSize(6);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(150, 150, 150);
+  doc.text(`Ref: ${refNo}  |  This form must be submitted to the Finance Department with all supporting documents.`, pageW / 2, footerY, { align: 'center' });
+  doc.text('Great Agro Coffee Ltd - Internal Use Only', pageW / 2, footerY + 4, { align: 'center' });
 
-  return { canvas, refNo };
+  // Save
+  doc.save(`${template.prefix}-${refNo}.pdf`);
 };
 
 const ExpenseTemplateDownload = () => {
   const { employee } = useAuth();
   const [downloading, setDownloading] = useState<TemplateType | null>(null);
 
-  const handleDownload = async (template: TemplateConfig) => {
+  const handleDownload = (template: TemplateConfig) => {
     if (!employee) return;
     setDownloading(template.type);
 
     try {
-      const { canvas, refNo } = drawTemplate(
+      generatePDF(
         template,
         employee.name || 'N/A',
         employee.department || 'N/A',
         employee.position || 'N/A'
       );
-
-      // Convert canvas to blob and download
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${template.prefix}-${refNo}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }, 'image/png');
     } finally {
       setTimeout(() => setDownloading(null), 500);
     }
