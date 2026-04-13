@@ -174,6 +174,14 @@ const SalesTransactionsList = () => {
           onSuccess={handleEditSuccess}
         />
       )}
+
+      {viewSaleId && (
+        <SaleFullViewDialog
+          open={!!viewSaleId}
+          onOpenChange={(open) => !open && setViewSaleId(null)}
+          saleId={viewSaleId}
+        />
+      )}
     </>
   );
 };
