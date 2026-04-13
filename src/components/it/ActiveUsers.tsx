@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Users, TrendingUp, Clock, Wifi, WifiOff } from 'lucide-react';
+import { Users, TrendingUp, Clock, Wifi, WifiOff, Monitor, Smartphone, Tablet, MapPin, Globe } from 'lucide-react';
 import { usePresenceList } from '@/hooks/usePresenceList';
 import { useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
@@ -35,6 +35,12 @@ const getUsageLevel = (activeDays: number) => {
   return { label: 'Low', color: 'bg-red-100 text-red-800', percent: rate };
 };
 
+const DeviceIcon = ({ type }: { type?: string | null }) => {
+  if (type === 'Mobile') return <Smartphone className="h-3 w-3" />;
+  if (type === 'Tablet') return <Tablet className="h-3 w-3" />;
+  return <Monitor className="h-3 w-3" />;
+};
+
 const ActiveUsers = () => {
   const { users, loading, onlineCount } = usePresenceList();
   const { user } = useAuth();
@@ -46,7 +52,10 @@ const ActiveUsers = () => {
       (u) =>
         (u.name || '').toLowerCase().includes(qq) ||
         (u.email || '').toLowerCase().includes(qq) ||
-        (u.department || '').toLowerCase().includes(qq)
+        (u.department || '').toLowerCase().includes(qq) ||
+        (u.city || '').toLowerCase().includes(qq) ||
+        (u.country || '').toLowerCase().includes(qq) ||
+        (u.browser || '').toLowerCase().includes(qq)
     );
   }, [users, q]);
 
@@ -68,7 +77,7 @@ const ActiveUsers = () => {
       </CardHeader>
       <CardContent className="space-y-3">
         <Input
-          placeholder="Search by name, email, or department..."
+          placeholder="Search by name, email, department, location, browser..."
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
@@ -84,6 +93,8 @@ const ActiveUsers = () => {
             const isAway = u.status === 'away';
             const isCurrentUser = u.id === user?.id;
             const usage = getUsageLevel(u.active_days || 0);
+            const hasLocation = u.city && u.city !== 'unknown';
+            const hasDevice = u.browser && u.browser !== 'Unknown';
             
             return (
               <div
@@ -125,11 +136,35 @@ const ActiveUsers = () => {
                       {u.email}
                       {u.department && <span> • {u.department}</span>}
                     </p>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                    
+                    {/* Location & Device info */}
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
                         {isOnline ? 'Active now' : `Last seen: ${formatLastSeen(u.online_at || u.last_login)}`}
                       </span>
+                      
+                      {hasLocation && (
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {u.city}, {u.country}
+                        </span>
+                      )}
+                      
+                      {hasDevice && (
+                        <span className="flex items-center gap-1">
+                          <DeviceIcon type={u.device_type} />
+                          {u.browser} • {u.os}
+                        </span>
+                      )}
+                      
+                      {u.ip_address && u.ip_address !== 'unknown' && (
+                        <span className="flex items-center gap-1">
+                          <Globe className="h-3 w-3" />
+                          {u.ip_address}
+                        </span>
+                      )}
+                      
                       {(u.total_logins || 0) > 0 && (
                         <span className="flex items-center gap-1">
                           <TrendingUp className="h-3 w-3" />
@@ -137,6 +172,7 @@ const ActiveUsers = () => {
                         </span>
                       )}
                     </div>
+                    
                     {(u.active_days || 0) > 0 && (
                       <div className="flex items-center gap-2 mt-1">
                         <Progress value={Math.min(usage.percent, 100)} className="h-1.5 flex-1 max-w-[120px]" />
@@ -165,6 +201,12 @@ const ActiveUsers = () => {
                       <><WifiOff className="h-3 w-3 mr-1" /> Offline</>
                     )}
                   </Badge>
+                  {u.device_type && (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                      <DeviceIcon type={u.device_type} />
+                      <span className="ml-1">{u.device_type}</span>
+                    </Badge>
+                  )}
                   {u.role && (
                     <span className="text-[10px] text-muted-foreground">{u.role}</span>
                   )}

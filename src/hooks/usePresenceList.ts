@@ -15,6 +15,13 @@ export interface PresenceRecord {
   last_login?: string;
   total_logins?: number;
   active_days?: number;
+  // Device & location info
+  ip_address?: string | null;
+  city?: string | null;
+  country?: string | null;
+  browser?: string | null;
+  os?: string | null;
+  device_type?: string | null;
 }
 
 // Consider online if last_seen within 2 minutes
@@ -32,23 +39,35 @@ export const usePresenceList = () => {
 
   const fetchUsers = async () => {
     try {
-      // Fetch login tracker data + presence in parallel
       const [loginRes, presenceRes, employeeRes] = await Promise.all([
         supabase
           .from('employee_login_tracker')
           .select('auth_user_id, employee_name, employee_email, login_date, login_time'),
         supabase
           .from('user_presence')
-          .select('user_id, status, last_seen'),
+          .select('user_id, status, last_seen, ip_address, city, country, browser, os, device_type'),
         supabase
           .from('employees')
           .select('auth_user_id, name, email, department, role')
           .eq('status', 'Active'),
       ]);
 
-      const presenceMap = new Map<string, { status: string; last_seen: string }>();
+      const presenceMap = new Map<string, {
+        status: string; last_seen: string;
+        ip_address?: string; city?: string; country?: string;
+        browser?: string; os?: string; device_type?: string;
+      }>();
       (presenceRes.data || []).forEach(p => {
-        presenceMap.set(p.user_id, { status: p.status, last_seen: p.last_seen });
+        presenceMap.set(p.user_id, {
+          status: p.status,
+          last_seen: p.last_seen,
+          ip_address: p.ip_address,
+          city: p.city,
+          country: p.country,
+          browser: p.browser,
+          os: p.os,
+          device_type: p.device_type,
+        });
       });
 
       // Aggregate login stats
@@ -74,7 +93,6 @@ export const usePresenceList = () => {
         }
       });
 
-      // Build user list from employees
       const employeeMap = new Map<string, any>();
       (employeeRes.data || []).forEach(emp => {
         if (emp.auth_user_id) {
@@ -82,7 +100,6 @@ export const usePresenceList = () => {
         }
       });
 
-      // Merge all data sources
       const allUserIds = new Set([...loginMap.keys(), ...employeeMap.keys()]);
       const userList: PresenceRecord[] = [];
 
@@ -106,6 +123,12 @@ export const usePresenceList = () => {
           last_login: login?.lastTime || undefined,
           total_logins: login?.totalLogins || 0,
           active_days: login?.activeDays.size || 0,
+          ip_address: presence?.ip_address || null,
+          city: presence?.city || null,
+          country: presence?.country || null,
+          browser: presence?.browser || null,
+          os: presence?.os || null,
+          device_type: presence?.device_type || null,
         });
       });
 
@@ -119,10 +142,7 @@ export const usePresenceList = () => {
 
   useEffect(() => {
     fetchUsers();
-
-    // Refresh every 30 seconds
     const interval = setInterval(fetchUsers, 30000);
-
     return () => clearInterval(interval);
   }, []);
 
