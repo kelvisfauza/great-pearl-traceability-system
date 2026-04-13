@@ -9,7 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Plus, DollarSign, Package, AlertTriangle, CheckCircle, Clock, Layers, BarChart3, Calendar, Printer, Download, Eye, Trash2, Pencil, Link2, Truck } from 'lucide-react';
+import { FileText, Plus, DollarSign, Package, AlertTriangle, CheckCircle, Clock, Layers, BarChart3, Calendar, Printer, Download, Eye, Trash2, Pencil, Link2, Truck, ShoppingCart } from 'lucide-react';
+import AttachSaleDialog from '@/components/v2/eudr/AttachSaleDialog';
 import { useEUDRDocumentation } from '@/hooks/useEUDRDocumentation';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -58,6 +59,7 @@ const EUDRDocumentation = () => {
   const [reportEndDate, setReportEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [generatingReport, setGeneratingReport] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
+  const [attachSaleBatch, setAttachSaleBatch] = useState<any>(null);
   const [verificationCode, setVerificationCode] = useState<string>('');
 
   const [newDocument, setNewDocument] = useState({
@@ -670,6 +672,15 @@ const EUDRDocumentation = () => {
                                 >
                                   Add Receipts
                                 </Button>
+                                {batch.status === 'available' && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setAttachSaleBatch(batch)}
+                                  >
+                                    <ShoppingCart className="h-3.5 w-3.5 mr-1" /> Attach Sale
+                                  </Button>
+                                )}
                                 {hasPermission('Administrator') && (
                                   <Button
                                     size="sm"
