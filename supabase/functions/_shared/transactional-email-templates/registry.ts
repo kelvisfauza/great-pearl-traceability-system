@@ -108,4 +108,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'investment-confirmation': investmentConfirmation,
   'instant-withdrawal-confirmation': instantWithdrawalConfirmation,
   'request-expired-refund': requestExpiredRefund,
+  'general-notification': generalNotification,
 }
