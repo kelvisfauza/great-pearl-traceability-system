@@ -2642,6 +2642,51 @@ export type Database = {
         }
         Relationships: []
       }
+      eudr_batch_sales: {
+        Row: {
+          attached_by: string
+          batch_id: string
+          created_at: string
+          id: string
+          kilograms_allocated: number
+          notes: string | null
+          sale_transaction_id: string
+        }
+        Insert: {
+          attached_by: string
+          batch_id: string
+          created_at?: string
+          id?: string
+          kilograms_allocated?: number
+          notes?: string | null
+          sale_transaction_id: string
+        }
+        Update: {
+          attached_by?: string
+          batch_id?: string
+          created_at?: string
+          id?: string
+          kilograms_allocated?: number
+          notes?: string | null
+          sale_transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eudr_batch_sales_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "eudr_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eudr_batch_sales_sale_transaction_id_fkey"
+            columns: ["sale_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "sales_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       eudr_batches: {
         Row: {
           available_kilograms: number
