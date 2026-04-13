@@ -50,7 +50,7 @@ const MyExpenses = () => {
   const { employee, user } = useAuth();
   const { getCurrentWeekAllowance, deductFromAllowance } = useAttendance();
   const { fetchEmployeeAdvance, createAdvancePayment } = useSalaryAdvances();
-  const [activeTab, setActiveTab] = useState('requisitions');
+  const [activeTab, setActiveTab] = useState('templates');
   const [loading, setLoading] = useState(false);
   const [myRequests, setMyRequests] = useState<ExpenseRequest[]>([]);
   const [fetchingRequests, setFetchingRequests] = useState(true);
