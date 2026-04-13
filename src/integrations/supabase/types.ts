@@ -8961,9 +8961,13 @@ export type Database = {
           browser: string | null
           city: string | null
           country: string | null
+          device_model: string | null
           device_type: string | null
           ip_address: string | null
           last_seen: string
+          latitude: number | null
+          location_address: string | null
+          longitude: number | null
           os: string | null
           status: string
           updated_at: string
@@ -8973,9 +8977,13 @@ export type Database = {
           browser?: string | null
           city?: string | null
           country?: string | null
+          device_model?: string | null
           device_type?: string | null
           ip_address?: string | null
           last_seen?: string
+          latitude?: number | null
+          location_address?: string | null
+          longitude?: number | null
           os?: string | null
           status?: string
           updated_at?: string
@@ -8985,9 +8993,13 @@ export type Database = {
           browser?: string | null
           city?: string | null
           country?: string | null
+          device_model?: string | null
           device_type?: string | null
           ip_address?: string | null
           last_seen?: string
+          latitude?: number | null
+          location_address?: string | null
+          longitude?: number | null
           os?: string | null
           status?: string
           updated_at?: string
@@ -9070,13 +9082,17 @@ export type Database = {
           city: string | null
           country: string | null
           created_at: string
+          device_model: string | null
           device_type: string | null
           employee_email: string | null
           employee_name: string | null
           id: string
           ip_address: string | null
+          latitude: number | null
+          location_address: string | null
           login_at: string
           logout_at: string | null
+          longitude: number | null
           os: string | null
           session_duration_minutes: number | null
           user_id: string
@@ -9086,13 +9102,17 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          device_model?: string | null
           device_type?: string | null
           employee_email?: string | null
           employee_name?: string | null
           id?: string
           ip_address?: string | null
+          latitude?: number | null
+          location_address?: string | null
           login_at?: string
           logout_at?: string | null
+          longitude?: number | null
           os?: string | null
           session_duration_minutes?: number | null
           user_id: string
@@ -9102,13 +9122,17 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          device_model?: string | null
           device_type?: string | null
           employee_email?: string | null
           employee_name?: string | null
           id?: string
           ip_address?: string | null
+          latitude?: number | null
+          location_address?: string | null
           login_at?: string
           logout_at?: string | null
+          longitude?: number | null
           os?: string | null
           session_duration_minutes?: number | null
           user_id?: string
