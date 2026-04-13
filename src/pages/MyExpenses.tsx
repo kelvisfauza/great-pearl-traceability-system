@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
-import { DollarSign, ShoppingCart, Coffee, Wallet, Clock, CheckCircle, XCircle, AlertTriangle, AlertCircle, Printer, Edit2, Undo2, ShieldCheck } from 'lucide-react';
+import { DollarSign, ShoppingCart, Coffee, Wallet, Clock, CheckCircle, XCircle, AlertTriangle, AlertCircle, Printer, Edit2, Undo2, ShieldCheck, Download } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { useAttendance } from '@/hooks/useAttendance';
@@ -22,6 +22,7 @@ import SalaryAdvanceDeduction from '@/components/expenses/SalaryAdvanceDeduction
 import SalaryAdvanceReceipt from '@/components/expenses/SalaryAdvanceReceipt';
 import ApprovalProgressTracker from '@/components/expenses/ApprovalProgressTracker';
 import MySalaryPayments from '@/components/expenses/MySalaryPayments';
+import ExpenseTemplateDownload from '@/components/expenses/ExpenseTemplateDownload';
 
 interface ExpenseRequest {
   id: string;
@@ -49,7 +50,7 @@ const MyExpenses = () => {
   const { employee, user } = useAuth();
   const { getCurrentWeekAllowance, deductFromAllowance } = useAttendance();
   const { fetchEmployeeAdvance, createAdvancePayment } = useSalaryAdvances();
-  const [activeTab, setActiveTab] = useState('requisitions');
+  const [activeTab, setActiveTab] = useState('templates');
   const [loading, setLoading] = useState(false);
   const [myRequests, setMyRequests] = useState<ExpenseRequest[]>([]);
   const [fetchingRequests, setFetchingRequests] = useState(true);
@@ -575,92 +576,43 @@ const MyExpenses = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="templates">
+              <Download className="h-4 w-4 mr-2" />
+              Download Forms
+            </TabsTrigger>
             <TabsTrigger value="requisitions">
               <ShoppingCart className="h-4 w-4 mr-2" />
-              Cash Requisitions
+              My Requisitions
             </TabsTrigger>
             <TabsTrigger value="personal">
               <Coffee className="h-4 w-4 mr-2" />
-              Personal Expenses
+              My Expenses
             </TabsTrigger>
             <TabsTrigger value="salary">
               <Wallet className="h-4 w-4 mr-2" />
-              Salary Requests
+              Salary
             </TabsTrigger>
           </TabsList>
 
+          {/* Download Templates Tab */}
+          <TabsContent value="templates" className="space-y-6">
+            <ExpenseTemplateDownload />
+          </TabsContent>
+
           {/* Cash Requisitions Tab */}
           <TabsContent value="requisitions" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Submit Cash Requisition</CardTitle>
-                <CardDescription>
-                  Request money for company purchases or business needs
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleRequisitionSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="req-title">Title</Label>
-                    <Input
-                      id="req-title"
-                      placeholder="e.g., Office Supplies Purchase"
-                      value={requisitionForm.title}
-                      onChange={(e) => setRequisitionForm({ ...requisitionForm, title: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="req-amount">Amount (UGX)</Label>
-                    <Input
-                      id="req-amount"
-                      type="number"
-                      placeholder="0.00"
-                      value={requisitionForm.amount}
-                      onChange={(e) => setRequisitionForm({ ...requisitionForm, amount: e.target.value })}
-                      required
-                    />
-                    {parseFloat(requisitionForm.amount) > 50000 && (
-                      <Alert className="border-amber-200 bg-amber-50 mt-2">
-                        <ShieldCheck className="h-4 w-4 text-amber-600" />
-                        <AlertDescription className="text-xs text-amber-800">
-                          <strong>Enhanced Approval Required:</strong> Amounts above 50,000 UGX require <strong>3 approvals</strong> (2 Administrators + 1 Finance) before processing.
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="req-description">Description</Label>
-                    <Textarea
-                      id="req-description"
-                      placeholder="Explain what you need to purchase and why..."
-                      value={requisitionForm.description}
-                      onChange={(e) => setRequisitionForm({ ...requisitionForm, description: e.target.value })}
-                      rows={4}
-                      required
-                    />
-                  </div>
-
-                  <Button type="submit" disabled={loading} className="w-full">
-                    {loading ? 'Submitting...' : 'Submit Requisition'}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-
             {/* My Cash Requisitions */}
             <Card>
               <CardHeader>
                 <CardTitle>My Cash Requisitions</CardTitle>
+                <CardDescription>History of your submitted cash requisition forms</CardDescription>
               </CardHeader>
               <CardContent>
                 {fetchingRequests ? (
                   <p className="text-muted-foreground">Loading...</p>
                 ) : filterRequestsByType('Cash Requisition').length === 0 ? (
-                  <p className="text-muted-foreground">No cash requisitions yet</p>
+                  <p className="text-muted-foreground">No cash requisitions yet. Download a template from the "Download Forms" tab to get started.</p>
                 ) : (
                   <div className="space-y-4">
                     {filterRequestsByType('Cash Requisition').map((request) => (
@@ -741,118 +693,14 @@ const MyExpenses = () => {
           <TabsContent value="personal" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Submit Personal Expense</CardTitle>
-                <CardDescription>
-                  Request reimbursement for personal expenses (lunch, airtime, etc.)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handlePersonalExpenseSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="exp-type">Expense Type</Label>
-                    <Select 
-                      value={personalExpenseForm.expenseType} 
-                      onValueChange={(value) => setPersonalExpenseForm({ ...personalExpenseForm, expenseType: value, title: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select expense type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Food Allowance">
-                          🍽️ Food Allowance (Max 3,000 UGX/day)
-                        </SelectItem>
-                        <SelectItem value="Airtime">📱 Airtime (Max 20,000 UGX)</SelectItem>
-                        <SelectItem value="Data">📶 Data (Max 50,000 UGX)</SelectItem>
-                        <SelectItem value="Transport">🚗 Transport</SelectItem>
-                        <SelectItem value="Office Supplies">📋 Office Supplies</SelectItem>
-                        <SelectItem value="Per Diem">🗓️ Per Diem</SelectItem>
-                        <SelectItem value="Other">💼 Other Personal Expense</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    
-                     {personalExpenseForm.expenseType === 'Food Allowance' && (
-                      <Alert className="border-orange-200 bg-orange-50 mt-2">
-                        <AlertCircle className="h-4 w-4 text-orange-600" />
-                        <AlertDescription className="text-xs text-orange-800">
-                          <div className="space-y-1">
-                            <div className="font-semibold">⚠️ Important Notice:</div>
-                            <p>Food will now be prepared on-site. Food allowance requests (max <strong>3,000 UGX/day</strong>) will only be approved if the cooks have not prepared the food.</p>
-                          </div>
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="exp-amount">
-                      Amount (UGX)
-                      {personalExpenseForm.expenseType === 'Food Allowance' && (
-                        <span className="text-xs text-muted-foreground ml-2">
-                          Max: 3,000 UGX/day
-                        </span>
-                      )}
-                    </Label>
-                    <Input
-                      id="exp-amount"
-                      type="number"
-                      placeholder="0.00"
-                      value={personalExpenseForm.amount}
-                      onChange={(e) => setPersonalExpenseForm({ ...personalExpenseForm, amount: e.target.value })}
-                      required
-                      min="1000"
-                      step="500"
-                      max={personalExpenseForm.expenseType === 'Food Allowance' ? 3000 : undefined}
-                    />
-                    {personalExpenseForm.expenseType === 'Food Allowance' && 
-                     parseFloat(personalExpenseForm.amount) > 3000 && (
-                      <p className="text-xs text-destructive">Amount exceeds the daily food allowance of 3,000 UGX</p>
-                    )}
-                    {parseFloat(personalExpenseForm.amount) > 50000 && (
-                      <Alert className="border-amber-200 bg-amber-50 mt-2">
-                        <ShieldCheck className="h-4 w-4 text-amber-600" />
-                        <AlertDescription className="text-xs text-amber-800">
-                          <strong>Enhanced Approval Required:</strong> Amounts above 50,000 UGX require <strong>3 approvals</strong> (2 Administrators + 1 Finance).
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="exp-description">Description</Label>
-                    <Textarea
-                      id="exp-description"
-                      placeholder="Explain the expense..."
-                      value={personalExpenseForm.description}
-                      onChange={(e) => setPersonalExpenseForm({ ...personalExpenseForm, description: e.target.value })}
-                      rows={4}
-                      required
-                    />
-                  </div>
-
-                  <Button 
-                    type="submit" 
-                    disabled={
-                      loading || 
-                      (personalExpenseForm.expenseType === 'Food Allowance' && parseFloat(personalExpenseForm.amount) > 3000)
-                    }
-                    className="w-full"
-                  >
-                    {loading ? 'Submitting...' : 'Submit Expense'}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-
-            {/* My Personal Expenses */}
-            <Card>
-              <CardHeader>
                 <CardTitle>My Personal Expenses</CardTitle>
+                <CardDescription>History of your submitted personal expense forms</CardDescription>
               </CardHeader>
               <CardContent>
                 {fetchingRequests ? (
                   <p className="text-muted-foreground">Loading...</p>
                 ) : filterRequestsByType('Personal Expense').length === 0 ? (
-                  <p className="text-muted-foreground">No personal expenses yet</p>
+                  <p className="text-muted-foreground">No personal expenses yet. Download a template from the "Download Forms" tab to get started.</p>
                 ) : (
                   <div className="space-y-4">
                     {filterRequestsByType('Personal Expense').map((request) => (
