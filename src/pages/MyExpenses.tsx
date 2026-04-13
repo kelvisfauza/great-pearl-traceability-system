@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
-import { DollarSign, ShoppingCart, Coffee, Wallet, Clock, CheckCircle, XCircle, AlertTriangle, AlertCircle, Printer, Edit2, Undo2, ShieldCheck } from 'lucide-react';
+import { DollarSign, ShoppingCart, Coffee, Wallet, Clock, CheckCircle, XCircle, AlertTriangle, AlertCircle, Printer, Edit2, Undo2, ShieldCheck, Download } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { useAttendance } from '@/hooks/useAttendance';
@@ -22,6 +22,7 @@ import SalaryAdvanceDeduction from '@/components/expenses/SalaryAdvanceDeduction
 import SalaryAdvanceReceipt from '@/components/expenses/SalaryAdvanceReceipt';
 import ApprovalProgressTracker from '@/components/expenses/ApprovalProgressTracker';
 import MySalaryPayments from '@/components/expenses/MySalaryPayments';
+import ExpenseTemplateDownload from '@/components/expenses/ExpenseTemplateDownload';
 
 interface ExpenseRequest {
   id: string;
