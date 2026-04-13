@@ -104,8 +104,17 @@ serve(async (req) => {
       return respond(false, { error: `Insufficient wallet balance. Available: UGX ${walletBalance.toLocaleString()}` });
     }
 
+    // Fetch employee name early for narrative
+    const { data: empData } = await supabase
+      .from('employees')
+      .select('name, phone')
+      .eq('email', userEmail)
+      .maybeSingle();
+    const employeeName = empData?.name || 'User';
+
     const cleanPhone = normalizePhone(depositPhone);
     const ref = `INSTANT-WD-${Date.now()}`;
+    const remainingAfter = walletBalance - numAmount;
 
     // Create tracking record
     const { data: instantRecord, error: insertErr } = await supabase
@@ -125,8 +134,10 @@ serve(async (req) => {
       return respond(false, { error: "Failed to create withdrawal record: " + insertErr.message });
     }
 
-    // Trigger Yo Payments payout
+    // Trigger Yo Payments payout - include employee name and balance in narrative
     console.log(`[instant-withdrawal] Sending UGX ${numAmount} to ${cleanPhone} via Yo Payments`);
+
+    const narrative = `${employeeName} - Instant withdrawal ${ref} - Bal: UGX ${remainingAfter.toLocaleString()}`;
 
     const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
 <AutoCreate>
@@ -137,7 +148,7 @@ serve(async (req) => {
     <Amount>${numAmount}</Amount>
     <Account>${cleanPhone}</Account>
     <AccountProviderCode>${getProviderCode(cleanPhone)}</AccountProviderCode>
-    <Narrative>${escapeXml(`Instant withdrawal - ${ref}`)}</Narrative>
+    <Narrative>${escapeXml(narrative)}</Narrative>
     <ExternalReference>${escapeXml(ref)}</ExternalReference>
   </Request>
 </AutoCreate>`;
