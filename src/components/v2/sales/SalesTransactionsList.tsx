@@ -3,11 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Trash2, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { EditSalesTransactionDialog } from "./EditSalesTransactionDialog";
 import { useToast } from "@/hooks/use-toast";
+import SaleFullViewDialog from "./SaleFullViewDialog";
 
 interface SalesTransaction {
   id: string;
@@ -28,6 +29,7 @@ const SalesTransactionsList = () => {
   const [transactions, setTransactions] = useState<SalesTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [editTransaction, setEditTransaction] = useState<SalesTransaction | null>(null);
+  const [viewSaleId, setViewSaleId] = useState<string | null>(null);
   const { isAdmin } = useAuth();
   const { toast } = useToast();
   const userIsAdmin = isAdmin();
@@ -117,7 +119,7 @@ const SalesTransactionsList = () => {
         </TableHeader>
         <TableBody>
           {transactions.map((transaction) => (
-            <TableRow key={transaction.id}>
+            <TableRow key={transaction.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setViewSaleId(transaction.id)}>
               <TableCell>
                 {format(new Date(transaction.date || transaction.created_at), 'dd MMM yyyy')}
               </TableCell>
@@ -137,7 +139,14 @@ const SalesTransactionsList = () => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setEditTransaction(transaction)}
+                      onClick={(e) => { e.stopPropagation(); setViewSaleId(transaction.id); }}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => { e.stopPropagation(); setEditTransaction(transaction); }}
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -145,7 +154,7 @@ const SalesTransactionsList = () => {
                       variant="ghost"
                       size="sm"
                       className="text-destructive hover:text-destructive"
-                      onClick={() => handleDelete(transaction)}
+                      onClick={(e) => { e.stopPropagation(); handleDelete(transaction); }}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -163,6 +172,14 @@ const SalesTransactionsList = () => {
           open={!!editTransaction}
           onClose={() => setEditTransaction(null)}
           onSuccess={handleEditSuccess}
+        />
+      )}
+
+      {viewSaleId && (
+        <SaleFullViewDialog
+          open={!!viewSaleId}
+          onOpenChange={(open) => !open && setViewSaleId(null)}
+          saleId={viewSaleId}
         />
       )}
     </>
