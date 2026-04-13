@@ -139,7 +139,14 @@ const SalesTransactionsList = () => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setEditTransaction(transaction)}
+                      onClick={(e) => { e.stopPropagation(); setViewSaleId(transaction.id); }}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => { e.stopPropagation(); setEditTransaction(transaction); }}
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -147,7 +154,7 @@ const SalesTransactionsList = () => {
                       variant="ghost"
                       size="sm"
                       className="text-destructive hover:text-destructive"
-                      onClick={() => handleDelete(transaction)}
+                      onClick={(e) => { e.stopPropagation(); handleDelete(transaction); }}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
