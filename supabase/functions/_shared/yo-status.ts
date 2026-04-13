@@ -102,8 +102,15 @@ export async function resolveYoTransactionStatus(
     };
 
     if (transportStatus === "ERROR" && statusCode === "-30") {
-      lastNotFoundResult = result;
-      continue;
+      // -30 means "transaction not found" — treat as failed/rejected
+      return {
+        checkedReference: reference,
+        rawResponse: responseText,
+        resolvedStatus: "failed",
+        statusCode,
+        statusMessage: statusMessage || "Transaction not found (rejected/declined)",
+        transportStatus,
+      };
     }
 
     lastPendingResult = result;
