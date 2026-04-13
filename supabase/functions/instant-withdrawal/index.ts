@@ -298,7 +298,7 @@ serve(async (req) => {
       console.error("[instant-withdrawal] Email error (non-blocking):", emailErr);
     }
 
-    // If pending authorization (-22), send emails to admins to authorize on Yo Payments
+    // If pending authorization (-22), send emails to admins
     if (isPending) {
       const adminRecipients = [
         { name: 'Musema Wyclif', email: 'musemawyclif@greatpearlcoffee.com' },
@@ -308,6 +308,7 @@ serve(async (req) => {
 
       for (const admin of adminRecipients) {
         try {
+          // Yo Payments authorization email
           await supabase.functions.invoke('send-transactional-email', {
             body: {
               templateName: 'withdrawal-auth-request',
@@ -323,7 +324,26 @@ serve(async (req) => {
               },
             },
           });
-          console.log(`[instant-withdrawal] Auth request email sent to ${admin.email}`);
+
+          // System approval notification email
+          await supabase.functions.invoke('send-transactional-email', {
+            body: {
+              templateName: 'instant-withdrawal-approval-request',
+              recipientEmail: admin.email,
+              idempotencyKey: `wd-sys-approval-${instantRecord.id}-${admin.email}`,
+              templateData: {
+                approverName: admin.name.split(' ')[0],
+                employeeName,
+                amount: numAmount,
+                phone: depositPhone,
+                ref: txRef,
+                remainingBalance,
+                requestDate: new Date().toLocaleDateString('en-UG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+              },
+            },
+          });
+
+          console.log(`[instant-withdrawal] Auth + system approval emails sent to ${admin.email}`);
         } catch (adminEmailErr) {
           console.error(`[instant-withdrawal] Admin email error for ${admin.email}:`, adminEmailErr);
         }
