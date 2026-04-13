@@ -6,6 +6,8 @@ import { Download, ShoppingCart, Coffee, Wallet, Info } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { jsPDF } from 'jspdf';
 
+const LOGO_URL = '/lovable-uploads/great-agro-coffee-logo.png';
+
 const generateRefNumber = (prefix: string) => {
   const date = new Date();
   const yr = date.getFullYear().toString().slice(-2);
@@ -71,7 +73,24 @@ const templates: TemplateConfig[] = [
   },
 ];
 
-const generatePDF = (template: TemplateConfig, employeeName: string, department: string, position: string) => {
+const loadImageAsBase64 = (url: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => reject(new Error('Failed to load logo'));
+    img.src = url;
+  });
+};
+
+const generatePDF = async (template: TemplateConfig, employeeName: string, department: string, position: string) => {
   const refNo = generateRefNumber(template.prefix);
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-UG', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -81,79 +100,135 @@ const generatePDF = (template: TemplateConfig, employeeName: string, department:
   const margin = 15;
   const contentW = pageW - margin * 2;
 
-  // Header background
-  doc.setFillColor(26, 86, 50);
-  doc.rect(0, 0, pageW, 28, 'F');
+  // Try to load logo
+  let logoData: string | null = null;
+  try {
+    logoData = await loadImageAsBase64(LOGO_URL);
+  } catch {
+    console.warn('Could not load logo');
+  }
+
+  // ===== HEADER (matching GRN style) =====
+  // Dark green header background
+  doc.setFillColor(13, 61, 31); // #0d3d1f - same as GRN
+  doc.rect(0, 0, pageW, 32, 'F');
+
+  // Logo on the left
+  if (logoData) {
+    try {
+      doc.addImage(logoData, 'PNG', margin, 3, 26, 26);
+    } catch {
+      // Logo failed, continue without it
+    }
+  }
 
   // Company name
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(16);
+  doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.text('GREAT AGRO COFFEE LTD', pageW / 2, 11, { align: 'center' });
+  doc.text('GREAT AGRO COFFEE LTD', pageW / 2 + 5, 13, { align: 'center' });
 
-  doc.setFontSize(7);
+  // Location
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('P.O. Box XXXX, Kampala, Uganda  |  Tel: +256 XXXX XXXX  |  Email: info@greatagrocoffee.com', pageW / 2, 17, { align: 'center' });
+  doc.text('Kasese, Uganda.', pageW / 2 + 5, 19);
 
-  // Gold accent line
+  // Contact info
+  doc.setFontSize(7);
+  doc.text('Tel: +256 393 001 626  |  Email: info@greatpearlcoffee.com', pageW / 2 + 5, 25);
+
+  // Gold title bar (like GRN)
   doc.setFillColor(212, 160, 23);
-  doc.rect(0, 27, pageW, 1.5, 'F');
+  doc.rect(0, 32, pageW, 9, 'F');
 
-  let y = 35;
-
-  // Document title
-  doc.setTextColor(26, 86, 50);
-  doc.setFontSize(14);
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text(template.title.toUpperCase(), pageW / 2, y, { align: 'center' });
-  y += 10;
+  doc.text(template.title.toUpperCase(), pageW / 2, 38.5, { align: 'center' });
 
-  // Reference and date
+  let y = 48;
+
+  // Reference and date info table
+  doc.setFillColor(245, 245, 245);
+  doc.setDrawColor(200, 200, 200);
+  doc.roundedRect(margin, y, contentW, 14, 1, 1, 'FD');
+
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(51, 51, 51);
-  doc.text('Reference No:', margin, y);
+  doc.setTextColor(80, 80, 80);
+  doc.text('Reference No:', margin + 4, y + 5.5);
   doc.setTextColor(192, 57, 43);
-  doc.setFont('helvetica', 'normal');
-  doc.text(refNo, margin + 28, y);
-
   doc.setFont('helvetica', 'bold');
+  doc.text(refNo, margin + 32, y + 5.5);
+
+  doc.setTextColor(80, 80, 80);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Date:', margin + contentW / 2, y + 5.5);
+  doc.setFont('helvetica', 'normal');
   doc.setTextColor(51, 51, 51);
-  doc.text('Date:', pageW - margin - 45, y);
-  doc.setFont('helvetica', 'normal');
-  doc.text(dateStr, pageW - margin - 35, y);
-  y += 8;
+  doc.text(dateStr, margin + contentW / 2 + 14, y + 5.5);
 
-  // Employee info box
-  doc.setFillColor(248, 249, 250);
-  doc.setDrawColor(204, 204, 204);
-  doc.roundedRect(margin, y, contentW, 22, 2, 2, 'FD');
-
-  doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(100, 100, 100);
+  doc.setTextColor(80, 80, 80);
+  doc.text('Department:', margin + 4, y + 11);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(51, 51, 51);
+  doc.text(department, margin + 30, y + 11);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(80, 80, 80);
+  doc.text('Status:', margin + contentW / 2, y + 11);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(51, 51, 51);
+  doc.text('PENDING', margin + contentW / 2 + 16, y + 11);
+
+  y += 20;
+
+  // Employee details section
+  doc.setFillColor(13, 61, 31);
+  doc.rect(margin, y, contentW, 7, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
   doc.text('EMPLOYEE DETAILS', margin + 4, y + 5);
+  y += 7;
 
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(51, 51, 51);
-  doc.text(`Name: ${employeeName}`, margin + 4, y + 11);
-  doc.text(`Department: ${department}`, margin + 4, y + 17);
-  doc.text(`Position: ${position || 'N/A'}`, margin + contentW / 2, y + 11);
-  doc.text(`Date Generated: ${dateStr}`, margin + contentW / 2, y + 17);
+  // Employee info rows
+  const drawInfoRow = (label1: string, val1: string, label2: string, val2: string, rowY: number) => {
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.3);
+    doc.rect(margin, rowY, contentW, 8);
+    doc.line(margin + contentW / 2, rowY, margin + contentW / 2, rowY + 8);
 
-  y += 28;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(80, 80, 80);
+    doc.text(label1, margin + 3, rowY + 5.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(30, 30, 30);
+    doc.text(val1, margin + 28, rowY + 5.5);
 
-  // Section header: REQUEST DETAILS
-  doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(80, 80, 80);
+    doc.text(label2, margin + contentW / 2 + 3, rowY + 5.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(30, 30, 30);
+    doc.text(val2, margin + contentW / 2 + 28, rowY + 5.5);
+  };
+
+  drawInfoRow('Full Name:', employeeName, 'Position:', position || 'N/A', y);
+  y += 8;
+  drawInfoRow('Department:', department, 'Date:', dateStr, y);
+  y += 14;
+
+  // Request Details section
+  doc.setFillColor(13, 61, 31);
+  doc.rect(margin, y, contentW, 7, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(26, 86, 50);
-  doc.text('REQUEST DETAILS', margin, y);
-  y += 1;
-  doc.setDrawColor(26, 86, 50);
-  doc.setLineWidth(0.5);
-  doc.line(margin, y, margin + contentW, y);
-  y += 6;
+  doc.text('REQUEST DETAILS', margin + 4, y + 5);
+  y += 12;
 
   // Form fields
   template.fields.forEach((field) => {
@@ -163,81 +238,76 @@ const generatePDF = (template: TemplateConfig, employeeName: string, department:
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(51, 51, 51);
     doc.text(`${field.label}:`, margin, y);
-    y += 4;
+    y += 5;
 
-    // Draw dotted lines for writing
-    doc.setDrawColor(200, 200, 200);
+    doc.setDrawColor(180, 180, 180);
     doc.setLineWidth(0.3);
     for (let i = 0; i < lines; i++) {
       const lineY = y + i * 7;
-      // Draw dashed line
-      const dashLen = 2;
-      const gapLen = 1.5;
-      let x = margin;
-      while (x < margin + contentW) {
-        const end = Math.min(x + dashLen, margin + contentW);
-        doc.line(x, lineY + 4, end, lineY + 4);
-        x = end + gapLen;
-      }
+      doc.line(margin, lineY + 4, margin + contentW, lineY + 4);
     }
     y += lines * 7 + 4;
   });
 
   // Approval section
-  y += 5;
-  doc.setFontSize(9);
+  y += 3;
+  doc.setFillColor(13, 61, 31);
+  doc.rect(margin, y, contentW, 7, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(26, 86, 50);
-  doc.text('APPROVAL SECTION', margin, y);
-  y += 1;
-  doc.setDrawColor(26, 86, 50);
-  doc.setLineWidth(0.5);
-  doc.line(margin, y, margin + contentW, y);
-  y += 6;
+  doc.text('APPROVAL SECTION', margin + 4, y + 5);
+  y += 12;
 
   const boxW = (contentW - 8) / 3;
   const boxes = [
-    { title: 'Requested By', subtitle: '(Employee Signature)' },
+    { title: 'Requested By', subtitle: '(Employee Signature & Date)' },
     { title: 'Admin Approval', subtitle: '(Signature & Date)' },
     { title: 'Finance Approval', subtitle: '(Signature & Date)' },
   ];
 
   boxes.forEach((box, i) => {
     const bx = margin + i * (boxW + 4);
+
+    // Box header
+    doc.setFillColor(245, 245, 245);
     doc.setDrawColor(180, 180, 180);
     doc.setLineWidth(0.3);
-    doc.roundedRect(bx, y, boxW, 28, 1, 1, 'S');
+    doc.roundedRect(bx, y, boxW, 30, 1, 1, 'FD');
 
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(51, 51, 51);
+    doc.setTextColor(13, 61, 31);
     doc.text(box.title, bx + boxW / 2, y + 5, { align: 'center' });
 
-    // Signature line
+    // Name line
     doc.setDrawColor(150, 150, 150);
-    doc.line(bx + 5, y + 19, bx + boxW - 5, y + 19);
-
     doc.setFontSize(6);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(150, 150, 150);
-    doc.text(box.subtitle, bx + boxW / 2, y + 24, { align: 'center' });
+    doc.setTextColor(130, 130, 130);
+    doc.text('Name:', bx + 3, y + 12);
+    doc.line(bx + 14, y + 12, bx + boxW - 3, y + 12);
+
+    // Signature line
+    doc.text('Sign:', bx + 3, y + 19);
+    doc.line(bx + 14, y + 19, bx + boxW - 3, y + 19);
+
+    // Date line
+    doc.text('Date:', bx + 3, y + 26);
+    doc.line(bx + 14, y + 26, bx + boxW - 3, y + 26);
   });
 
-  y += 35;
-
   // Footer
-  const footerY = 287;
-  doc.setDrawColor(26, 86, 50);
-  doc.setLineWidth(0.5);
-  doc.line(0, footerY - 5, pageW, footerY - 5);
+  const footerY = 282;
+  doc.setFillColor(13, 61, 31);
+  doc.rect(0, footerY, pageW, 15, 'F');
 
   doc.setFontSize(6);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(150, 150, 150);
-  doc.text(`Ref: ${refNo}  |  This form must be submitted to the Finance Department with all supporting documents.`, pageW / 2, footerY, { align: 'center' });
-  doc.text('Great Agro Coffee Ltd - Internal Use Only', pageW / 2, footerY + 4, { align: 'center' });
+  doc.setTextColor(200, 200, 200);
+  doc.text(`Ref: ${refNo}  |  This form must be submitted to the Finance Department with all supporting documents.`, pageW / 2, footerY + 5, { align: 'center' });
+  doc.text('Great Agro Coffee Ltd  |  Kasese, Uganda  |  Tel: +256 393 001 626  |  Internal Use Only', pageW / 2, footerY + 10, { align: 'center' });
 
-  // Save
   doc.save(`${template.prefix}-${refNo}.pdf`);
 };
 
@@ -245,17 +315,19 @@ const ExpenseTemplateDownload = () => {
   const { employee } = useAuth();
   const [downloading, setDownloading] = useState<TemplateType | null>(null);
 
-  const handleDownload = (template: TemplateConfig) => {
+  const handleDownload = async (template: TemplateConfig) => {
     if (!employee) return;
     setDownloading(template.type);
 
     try {
-      generatePDF(
+      await generatePDF(
         template,
         employee.name || 'N/A',
         employee.department || 'N/A',
         employee.position || 'N/A'
       );
+    } catch (err) {
+      console.error('PDF generation error:', err);
     } finally {
       setTimeout(() => setDownloading(null), 500);
     }
