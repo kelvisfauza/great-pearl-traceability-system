@@ -62,6 +62,7 @@ const AttachSaleDialog = ({ open, onOpenChange, batch }: AttachSaleDialogProps) 
 
       toast({ title: "Sale Attached", description: `${kg}kg linked to sale` });
       queryClient.invalidateQueries({ queryKey: ["eudr-batch-trace"] });
+      queryClient.invalidateQueries({ queryKey: ["eudr"] });
       onOpenChange(false);
       setSaleId("");
       setKg("");

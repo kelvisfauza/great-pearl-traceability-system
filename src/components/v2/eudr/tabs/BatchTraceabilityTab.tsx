@@ -44,8 +44,8 @@ const BatchTraceabilityTab = () => {
 
   if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>;
 
-  const available = batches?.filter((b: any) => b.status === 'available') || [];
-  const sold = batches?.filter((b: any) => b.status === 'sold') || [];
+  const available = batches?.filter((b: any) => b.status === 'available' || b.status === 'partially_sold') || [];
+  const sold = batches?.filter((b: any) => b.status === 'sold_out') || [];
 
   return (
     <div className="space-y-4 mt-4">
