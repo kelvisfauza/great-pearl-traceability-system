@@ -229,43 +229,25 @@ serve(async (req) => {
 
     // Send SMS (fire and forget)
     const yoolaSmsApiKey = Deno.env.get("YOOLA_SMS_API_KEY");
-    let employeeName = "User";
-    if (yoolaSmsApiKey) {
-      const { data: emp } = await supabase
-        .from('employees')
-        .select('name, phone')
-        .eq('email', userEmail)
-        .maybeSingle();
+    if (yoolaSmsApiKey && empData?.phone) {
+      let smsPhone = empData.phone.replace(/\D/g, "");
+      if (smsPhone.startsWith("0")) smsPhone = "+256" + smsPhone.slice(1);
+      else if (smsPhone.startsWith("256")) smsPhone = "+" + smsPhone;
+      else if (!smsPhone.startsWith("+")) smsPhone = "+256" + smsPhone;
 
-      if (emp?.name) employeeName = emp.name;
-
-      if (emp?.phone) {
-        let smsPhone = emp.phone.replace(/\D/g, "");
-        if (smsPhone.startsWith("0")) smsPhone = "+256" + smsPhone.slice(1);
-        else if (smsPhone.startsWith("256")) smsPhone = "+" + smsPhone;
-        else if (!smsPhone.startsWith("+")) smsPhone = "+256" + smsPhone;
-
-        try {
-          await fetch("https://yoolasms.com/api/v1/send", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              phone: smsPhone,
-              message: `Dear ${emp.name}, UGX ${numAmount.toLocaleString()} has been sent to ${depositPhone} from your wallet. Ref: ${txRef}. Great Agro Coffee.`,
-              api_key: yoolaSmsApiKey,
-            }),
-          });
-        } catch (smsErr) {
-          console.error("SMS error:", smsErr);
-        }
+      try {
+        await fetch("https://yoolasms.com/api/v1/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            phone: smsPhone,
+            message: `Dear ${employeeName}, UGX ${numAmount.toLocaleString()} has been sent to ${depositPhone} from your wallet. Ref: ${txRef}. Great Agro Coffee.`,
+            api_key: yoolaSmsApiKey,
+          }),
+        });
+      } catch (smsErr) {
+        console.error("SMS error:", smsErr);
       }
-    } else {
-      const { data: emp } = await supabase
-        .from('employees')
-        .select('name')
-        .eq('email', userEmail)
-        .maybeSingle();
-      if (emp?.name) employeeName = emp.name;
     }
 
     // Calculate remaining balance for email
