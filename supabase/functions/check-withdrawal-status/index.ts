@@ -1,122 +1,169 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import { resolveYoTransactionStatus } from "../_shared/yo-status.ts";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
 
-    if (req.method !== 'POST') {
-      return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-        status: 405,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+    const username = Deno.env.get("YO_API_USERNAME");
+    const password = Deno.env.get("YO_API_PASSWORD");
+
+    if (!username || !password) {
+      console.error("[WD Poller] Yo API credentials not configured");
+      return new Response(JSON.stringify({ error: "Yo credentials missing" }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const { transactionReference } = await req.json()
+    // Fetch all pending_approval instant withdrawals
+    const { data: pendingWds, error: fetchErr } = await supabase
+      .from("instant_withdrawals")
+      .select("*")
+      .eq("payout_status", "pending_approval")
+      .order("created_at", { ascending: true });
 
-    if (!transactionReference) {
-      return new Response(JSON.stringify({ error: 'Transaction reference is required' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+    if (fetchErr) {
+      console.error("[WD Poller] Fetch error:", fetchErr);
+      return new Response(JSON.stringify({ error: fetchErr.message }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    console.log('Checking withdrawal status for transaction:', transactionReference)
+    if (!pendingWds || pendingWds.length === 0) {
+      console.log("[WD Poller] No pending withdrawals to check");
+      return new Response(JSON.stringify({ checked: 0 }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    // Check status with Zengapay
-    const zengapayResponse = await fetch(`https://api.sandbox.zengapay.com/v1/transfers/${transactionReference}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('WITHDRAWAL_API_KEY')}`
+    console.log(`[WD Poller] Checking ${pendingWds.length} pending withdrawals`);
+
+    let resolved = 0;
+    let refunded = 0;
+    let completed = 0;
+
+    for (const wd of pendingWds) {
+      const references = [wd.payout_ref, wd.ledger_reference];
+
+      const result = await resolveYoTransactionStatus(username, password, references);
+      console.log(`[WD Poller] ${wd.id} (${wd.payout_ref}): ${result.resolvedStatus}`);
+
+      if (result.resolvedStatus === "completed") {
+        await supabase
+          .from("instant_withdrawals")
+          .update({ payout_status: "success", completed_at: new Date().toISOString() })
+          .eq("id", wd.id)
+          .eq("payout_status", "pending_approval");
+
+        completed++;
+        resolved++;
+        console.log(`[WD Poller] Marked ${wd.payout_ref} as SUCCESS`);
+
+      } else if (result.resolvedStatus === "failed") {
+        await supabase
+          .from("instant_withdrawals")
+          .update({ payout_status: "failed", completed_at: new Date().toISOString() })
+          .eq("id", wd.id)
+          .eq("payout_status", "pending_approval");
+
+        if (wd.ledger_reference) {
+          const refundRef = `REFUND-${wd.ledger_reference}`;
+          const { error: ledgerErr } = await supabase
+            .from("ledger_entries")
+            .insert({
+              user_id: wd.user_id,
+              entry_type: "DEPOSIT",
+              amount: wd.amount,
+              reference: refundRef,
+              source_category: "SYSTEM_AWARD",
+              metadata: {
+                type: "instant_withdrawal_refund",
+                original_ref: wd.payout_ref,
+                reason: "Declined/failed at Yo Payments",
+                yo_status: result.statusMessage,
+                checked_reference: result.checkedReference,
+              },
+            });
+
+          if (ledgerErr && ledgerErr.code !== "23505") {
+            console.error(`[WD Poller] Refund error for ${wd.payout_ref}:`, ledgerErr);
+          } else {
+            console.log(`[WD Poller] Refunded UGX ${wd.amount} for ${wd.payout_ref}`);
+          }
+        }
+
+        refunded++;
+        resolved++;
+
+      } else {
+        // Still pending — check 24-hour auto-expiry
+        const hoursOld = (Date.now() - new Date(wd.created_at).getTime()) / (1000 * 60 * 60);
+
+        if (hoursOld > 24) {
+          console.log(`[WD Poller] ${wd.payout_ref} is over 24h old, auto-expiring`);
+
+          await supabase
+            .from("instant_withdrawals")
+            .update({ payout_status: "failed", completed_at: new Date().toISOString() })
+            .eq("id", wd.id)
+            .eq("payout_status", "pending_approval");
+
+          if (wd.ledger_reference) {
+            const refundRef = `REFUND-EXPIRED-${wd.ledger_reference}`;
+            const { error: ledgerErr } = await supabase
+              .from("ledger_entries")
+              .insert({
+                user_id: wd.user_id,
+                entry_type: "DEPOSIT",
+                amount: wd.amount,
+                reference: refundRef,
+                source_category: "SYSTEM_AWARD",
+                metadata: {
+                  type: "instant_withdrawal_refund",
+                  original_ref: wd.payout_ref,
+                  reason: "Auto-expired after 24 hours without authorization",
+                },
+              });
+
+            if (ledgerErr && ledgerErr.code !== "23505") {
+              console.error(`[WD Poller] Expiry refund error:`, ledgerErr);
+            }
+          }
+
+          refunded++;
+          resolved++;
+        }
       }
-    })
-
-    const zengapayResult = await zengapayResponse.json()
-    console.log('Zengapay status response:', zengapayResult)
-
-    if (!zengapayResponse.ok) {
-      console.error('Failed to check transaction status:', zengapayResult)
-      return new Response(JSON.stringify({ error: 'Failed to check transaction status' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
     }
 
-    const transactionData = zengapayResult.data
-    const transactionStatus = transactionData.transactionStatus
+    const summary = { checked: pendingWds.length, resolved, completed, refunded };
+    console.log(`[WD Poller] Summary:`, summary);
 
-    // Update withdrawal request status based on Zengapay response
-    let newStatus = 'processing'
-    if (transactionStatus === 'SUCCEEDED') {
-      newStatus = 'completed'
-    } else if (transactionStatus === 'FAILED') {
-      newStatus = 'failed'
-    }
-
-    // Update the withdrawal request in our database
-    const { error: updateError } = await supabaseClient
-      .from('withdrawal_requests')
-      .update({
-        status: newStatus,
-        mno_transaction_id: transactionData.MNOTransactionReferenceId,
-        completion_date: transactionData.transactionCompletionDate !== '0000-00-00 00:00:00' 
-          ? transactionData.transactionCompletionDate 
-          : null,
-        updated_at: new Date().toISOString()
-      })
-      .eq('transaction_reference', transactionReference)
-
-    if (updateError) {
-      console.error('Error updating withdrawal request:', updateError)
-    }
-
-    // If transaction failed, refund the user
-    if (transactionStatus === 'FAILED') {
-      const { data: withdrawalRequest } = await supabaseClient
-        .from('withdrawal_requests')
-        .select('user_id, amount')
-        .eq('transaction_reference', transactionReference)
-        .single()
-
-      if (withdrawalRequest) {
-        await supabaseClient
-          .from('user_accounts')
-          .update({
-            current_balance: supabaseClient.sql`current_balance + ${withdrawalRequest.amount}`,
-            total_withdrawn: supabaseClient.sql`GREATEST(total_withdrawn - ${withdrawalRequest.amount}, 0)`,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', withdrawalRequest.user_id)
-      }
-    }
-
-    return new Response(JSON.stringify({
-      success: true,
-      status: newStatus,
-      transactionData: transactionData
-    }), {
+    return new Response(JSON.stringify(summary), {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
-
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
-    console.error('Error checking withdrawal status:', error)
-    return new Response(JSON.stringify({ error: 'Internal server error' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
+    console.error("[WD Poller] Error:", error);
+    return new Response(JSON.stringify({ error: "Poller failed" }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
-})
+});
