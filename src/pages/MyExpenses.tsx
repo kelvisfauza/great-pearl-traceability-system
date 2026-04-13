@@ -576,20 +576,29 @@ const MyExpenses = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="templates">
+              <Download className="h-4 w-4 mr-2" />
+              Download Forms
+            </TabsTrigger>
             <TabsTrigger value="requisitions">
               <ShoppingCart className="h-4 w-4 mr-2" />
-              Cash Requisitions
+              My Requisitions
             </TabsTrigger>
             <TabsTrigger value="personal">
               <Coffee className="h-4 w-4 mr-2" />
-              Personal Expenses
+              My Expenses
             </TabsTrigger>
             <TabsTrigger value="salary">
               <Wallet className="h-4 w-4 mr-2" />
-              Salary Requests
+              Salary
             </TabsTrigger>
           </TabsList>
+
+          {/* Download Templates Tab */}
+          <TabsContent value="templates" className="space-y-6">
+            <ExpenseTemplateDownload />
+          </TabsContent>
 
           {/* Cash Requisitions Tab */}
           <TabsContent value="requisitions" className="space-y-6">
