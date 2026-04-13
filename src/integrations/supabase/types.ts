@@ -3632,6 +3632,7 @@ export type Database = {
       finance_cash_transactions: {
         Row: {
           amount: number
+          approval_role: string | null
           balance_after: number
           confirmed_at: string | null
           confirmed_by: string | null
@@ -3645,6 +3646,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          approval_role?: string | null
           balance_after: number
           confirmed_at?: string | null
           confirmed_by?: string | null
@@ -3658,6 +3660,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          approval_role?: string | null
           balance_after?: number
           confirmed_at?: string | null
           confirmed_by?: string | null
@@ -9009,24 +9012,39 @@ export type Database = {
       }
       user_roles: {
         Row: {
+          can_approve_transactions: boolean | null
+          can_fully_approve: boolean | null
+          can_record_deposits: boolean | null
           created_at: string | null
           created_by: string | null
           id: string
-          role: Database["public"]["Enums"]["app_role"]
+          max_approval_amount: number | null
+          role: string
+          updated_at: string | null
           user_id: string
         }
         Insert: {
+          can_approve_transactions?: boolean | null
+          can_fully_approve?: boolean | null
+          can_record_deposits?: boolean | null
           created_at?: string | null
           created_by?: string | null
           id?: string
-          role: Database["public"]["Enums"]["app_role"]
+          max_approval_amount?: number | null
+          role: string
+          updated_at?: string | null
           user_id: string
         }
         Update: {
+          can_approve_transactions?: boolean | null
+          can_fully_approve?: boolean | null
+          can_record_deposits?: boolean | null
           created_at?: string | null
           created_by?: string | null
           id?: string
-          role?: Database["public"]["Enums"]["app_role"]
+          max_approval_amount?: number | null
+          role?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
