@@ -91,6 +91,7 @@ import { GlobalActivityTracker } from "./components/GlobalActivityTracker";
 import { OvertimeNotification } from "./components/OvertimeNotification";
 import RoleNotificationHandler from "./components/RoleNotificationHandler";
 import MaintenanceGuard from "./components/MaintenanceGuard";
+import LocationPermissionGate from "./components/LocationPermissionGate";
 import MaintenanceRecovery from "./pages/MaintenanceRecovery";
 import QuickLoans from "./pages/QuickLoans";
 import ProfileCompletionModal from "./components/ProfileCompletionModal";
@@ -134,6 +135,7 @@ const App: React.ComponentType = () => {
             <BrowserRouter>
               <InactivityTimerInitializer />
               <MaintenanceGuard>
+              <LocationPermissionGate>
               <GlobalActivityTracker />
               {/* Global notifications and reminders */}
               <OvertimeNotification />
@@ -400,6 +402,7 @@ const App: React.ComponentType = () => {
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <AdminWithdrawalPinPrompt />
+              </LocationPermissionGate>
               </MaintenanceGuard>
             </BrowserRouter>
           </TooltipProvider>
