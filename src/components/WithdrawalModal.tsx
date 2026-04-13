@@ -94,7 +94,9 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
         if (opStatus.closed) {
           setInstantEligibility({
             eligible: false,
-            remaining_today: 0,
+            self_deposit_balance: 0,
+            max_instant_amount: 0,
+            today_withdrawn: 0,
             daily_limit: 200000,
             deposit_phone: null,
             reason: opStatus.reason,
