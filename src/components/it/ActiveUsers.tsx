@@ -235,6 +235,7 @@ const ActiveUsers = () => {
           })}
       </CardContent>
     </Card>
+    </div>
   );
 };
 
