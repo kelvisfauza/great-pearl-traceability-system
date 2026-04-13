@@ -129,13 +129,15 @@ serve(async (req) => {
         if (hoursOld > 24) {
           console.log(`[WD Poller] ${wd.payout_ref} is over 24h old, auto-expiring`);
 
-          await supabase
+          const { data: updated } = await supabase
             .from("instant_withdrawals")
             .update({ payout_status: "failed", completed_at: new Date().toISOString() })
             .eq("id", wd.id)
-            .eq("payout_status", "pending_approval");
+            .eq("payout_status", "pending_approval")
+            .select("id");
 
-          if (wd.ledger_reference) {
+          // Only refund if we actually changed the status
+          if (updated && updated.length > 0 && wd.ledger_reference) {
             const refundRef = `REFUND-EXPIRED-${wd.ledger_reference}`;
             const { error: ledgerErr } = await supabase
               .from("ledger_entries")
@@ -154,11 +156,13 @@ serve(async (req) => {
 
             if (ledgerErr && ledgerErr.code !== "23505") {
               console.error(`[WD Poller] Expiry refund error:`, ledgerErr);
+            } else {
+              refunded++;
             }
+            resolved++;
+          } else if (updated && updated.length === 0) {
+            console.log(`[WD Poller] ${wd.payout_ref} already processed, skipping expiry refund`);
           }
-
-          refunded++;
-          resolved++;
         }
       }
     }
