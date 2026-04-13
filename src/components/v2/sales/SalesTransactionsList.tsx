@@ -29,6 +29,7 @@ const SalesTransactionsList = () => {
   const [transactions, setTransactions] = useState<SalesTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [editTransaction, setEditTransaction] = useState<SalesTransaction | null>(null);
+  const [viewSaleId, setViewSaleId] = useState<string | null>(null);
   const { isAdmin } = useAuth();
   const { toast } = useToast();
   const userIsAdmin = isAdmin();
