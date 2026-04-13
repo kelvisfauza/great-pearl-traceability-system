@@ -3682,6 +3682,8 @@ export type Database = {
           created_at: string
           finance_notes: string | null
           finance_status: Database["public"]["Enums"]["lot_finance_status"]
+          grn_file_name: string | null
+          grn_file_url: string | null
           id: string
           quality_assessment_id: string | null
           quality_json: Json
@@ -3698,6 +3700,8 @@ export type Database = {
           created_at?: string
           finance_notes?: string | null
           finance_status?: Database["public"]["Enums"]["lot_finance_status"]
+          grn_file_name?: string | null
+          grn_file_url?: string | null
           id?: string
           quality_assessment_id?: string | null
           quality_json: Json
@@ -3714,6 +3718,8 @@ export type Database = {
           created_at?: string
           finance_notes?: string | null
           finance_status?: Database["public"]["Enums"]["lot_finance_status"]
+          grn_file_name?: string | null
+          grn_file_url?: string | null
           id?: string
           quality_assessment_id?: string | null
           quality_json?: Json
@@ -5975,6 +5981,57 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_receipts: {
+        Row: {
+          created_at: string | null
+          id: string
+          lot_id: string
+          notes: string | null
+          receipt_name: string
+          receipt_type: string | null
+          receipt_url: string
+          updated_at: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          lot_id: string
+          notes?: string | null
+          receipt_name: string
+          receipt_type?: string | null
+          receipt_url: string
+          updated_at?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          lot_id?: string
+          notes?: string | null
+          receipt_name?: string
+          receipt_type?: string | null
+          receipt_url?: string
+          updated_at?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_receipts_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "finance_coffee_lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_receipts_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "pending_payments_aging"
+            referencedColumns: ["lot_id"]
           },
         ]
       }
