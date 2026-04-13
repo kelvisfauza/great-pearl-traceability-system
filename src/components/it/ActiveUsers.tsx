@@ -55,7 +55,9 @@ const ActiveUsers = () => {
         (u.department || '').toLowerCase().includes(qq) ||
         (u.city || '').toLowerCase().includes(qq) ||
         (u.country || '').toLowerCase().includes(qq) ||
-        (u.browser || '').toLowerCase().includes(qq)
+        (u.browser || '').toLowerCase().includes(qq) ||
+        (u.device_model || '').toLowerCase().includes(qq) ||
+        (u.location_address || '').toLowerCase().includes(qq)
     );
   }, [users, q]);
 
@@ -77,7 +79,7 @@ const ActiveUsers = () => {
       </CardHeader>
       <CardContent className="space-y-3">
         <Input
-          placeholder="Search by name, email, department, location, browser..."
+          placeholder="Search by name, email, department, location, device..."
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
@@ -93,8 +95,9 @@ const ActiveUsers = () => {
             const isAway = u.status === 'away';
             const isCurrentUser = u.id === user?.id;
             const usage = getUsageLevel(u.active_days || 0);
-            const hasLocation = u.city && u.city !== 'unknown';
-            const hasDevice = u.browser && u.browser !== 'Unknown';
+            const hasAddress = u.location_address && u.location_address !== 'unknown';
+            const hasCity = u.city && u.city !== 'unknown';
+            const hasDevice = u.device_model && u.device_model !== 'Unknown Device';
             
             return (
               <div
@@ -137,23 +140,36 @@ const ActiveUsers = () => {
                       {u.department && <span> • {u.department}</span>}
                     </p>
                     
-                    {/* Location & Device info */}
+                    {/* Location info - street level */}
+                    {hasAddress && (
+                      <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                        <MapPin className="h-3 w-3 text-red-500 flex-shrink-0" />
+                        <span className="truncate">{u.location_address}</span>
+                      </p>
+                    )}
+                    {!hasAddress && hasCity && (
+                      <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                        <MapPin className="h-3 w-3 text-red-500 flex-shrink-0" />
+                        <span>{u.city}, {u.country}</span>
+                      </p>
+                    )}
+                    
+                    {/* Device & session info */}
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
                         {isOnline ? 'Active now' : `Last seen: ${formatLastSeen(u.online_at || u.last_login)}`}
                       </span>
                       
-                      {hasLocation && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {u.city}, {u.country}
+                      {hasDevice && (
+                        <span className="flex items-center gap-1 font-medium text-foreground/70">
+                          <DeviceIcon type={u.device_type} />
+                          {u.device_model}
                         </span>
                       )}
                       
-                      {hasDevice && (
+                      {u.browser && u.browser !== 'Unknown Browser' && (
                         <span className="flex items-center gap-1">
-                          <DeviceIcon type={u.device_type} />
                           {u.browser} • {u.os}
                         </span>
                       )}
@@ -201,7 +217,7 @@ const ActiveUsers = () => {
                       <><WifiOff className="h-3 w-3 mr-1" /> Offline</>
                     )}
                   </Badge>
-                  {u.device_type && (
+                  {hasDevice && (
                     <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                       <DeviceIcon type={u.device_type} />
                       <span className="ml-1">{u.device_type}</span>

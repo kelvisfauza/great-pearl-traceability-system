@@ -22,14 +22,17 @@ export interface PresenceRecord {
   browser?: string | null;
   os?: string | null;
   device_type?: string | null;
+  device_model?: string | null;
+  location_address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
-// Consider online if last_seen within 2 minutes
 const isRecentlyOnline = (lastSeen: string | null, dbStatus: string) => {
   if (!lastSeen) return false;
   if (dbStatus === 'offline') return false;
   const diff = Date.now() - new Date(lastSeen).getTime();
-  return diff < 120000; // 2 minutes
+  return diff < 120000;
 };
 
 export const usePresenceList = () => {
@@ -45,32 +48,18 @@ export const usePresenceList = () => {
           .select('auth_user_id, employee_name, employee_email, login_date, login_time'),
         supabase
           .from('user_presence')
-          .select('user_id, status, last_seen, ip_address, city, country, browser, os, device_type'),
+          .select('user_id, status, last_seen, ip_address, city, country, browser, os, device_type, device_model, location_address, latitude, longitude'),
         supabase
           .from('employees')
           .select('auth_user_id, name, email, department, role')
           .eq('status', 'Active'),
       ]);
 
-      const presenceMap = new Map<string, {
-        status: string; last_seen: string;
-        ip_address?: string; city?: string; country?: string;
-        browser?: string; os?: string; device_type?: string;
-      }>();
+      const presenceMap = new Map<string, any>();
       (presenceRes.data || []).forEach(p => {
-        presenceMap.set(p.user_id, {
-          status: p.status,
-          last_seen: p.last_seen,
-          ip_address: p.ip_address,
-          city: p.city,
-          country: p.country,
-          browser: p.browser,
-          os: p.os,
-          device_type: p.device_type,
-        });
+        presenceMap.set(p.user_id, p);
       });
 
-      // Aggregate login stats
       const loginMap = new Map<string, { name: string; email: string; lastDate: string; lastTime: string; totalLogins: number; activeDays: Set<string> }>();
       (loginRes.data || []).forEach(row => {
         const key = row.auth_user_id;
@@ -95,9 +84,7 @@ export const usePresenceList = () => {
 
       const employeeMap = new Map<string, any>();
       (employeeRes.data || []).forEach(emp => {
-        if (emp.auth_user_id) {
-          employeeMap.set(emp.auth_user_id, emp);
-        }
+        if (emp.auth_user_id) employeeMap.set(emp.auth_user_id, emp);
       });
 
       const allUserIds = new Set([...loginMap.keys(), ...employeeMap.keys()]);
@@ -106,10 +93,10 @@ export const usePresenceList = () => {
       allUserIds.forEach(uid => {
         const emp = employeeMap.get(uid);
         const login = loginMap.get(uid);
-        const presence = presenceMap.get(uid);
+        const p = presenceMap.get(uid);
 
-        const dbStatus = presence?.status || 'offline';
-        const lastSeen = presence?.last_seen || null;
+        const dbStatus = p?.status || 'offline';
+        const lastSeen = p?.last_seen || null;
         const online = isRecentlyOnline(lastSeen, dbStatus);
 
         userList.push({
@@ -123,12 +110,16 @@ export const usePresenceList = () => {
           last_login: login?.lastTime || undefined,
           total_logins: login?.totalLogins || 0,
           active_days: login?.activeDays.size || 0,
-          ip_address: presence?.ip_address || null,
-          city: presence?.city || null,
-          country: presence?.country || null,
-          browser: presence?.browser || null,
-          os: presence?.os || null,
-          device_type: presence?.device_type || null,
+          ip_address: p?.ip_address || null,
+          city: p?.city || null,
+          country: p?.country || null,
+          browser: p?.browser || null,
+          os: p?.os || null,
+          device_type: p?.device_type || null,
+          device_model: p?.device_model || null,
+          location_address: p?.location_address || null,
+          latitude: p?.latitude || null,
+          longitude: p?.longitude || null,
         });
       });
 
