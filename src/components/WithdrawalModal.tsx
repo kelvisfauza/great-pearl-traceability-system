@@ -97,7 +97,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
             self_deposit_balance: 0,
             max_instant_amount: 0,
             today_withdrawn: 0,
-            daily_limit: 200000,
+            daily_limit: 150000,
             deposit_phone: null,
             reason: opStatus.reason,
           });
@@ -121,7 +121,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
               self_deposit_balance: Number(eligibilityData.self_deposit_balance ?? 0),
               max_instant_amount: Number(eligibilityData.max_instant_amount ?? 0),
               today_withdrawn: Number(eligibilityData.today_withdrawn ?? 0),
-              daily_limit: Number(eligibilityData.daily_limit ?? 200000),
+              daily_limit: Number(eligibilityData.daily_limit ?? 150000),
               deposit_phone: typeof eligibilityData.deposit_phone === 'string' ? eligibilityData.deposit_phone : null,
               reason: typeof eligibilityData.reason === 'string'
                 ? eligibilityData.reason
@@ -136,7 +136,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
               self_deposit_balance: 0,
               max_instant_amount: 0,
               today_withdrawn: 0,
-              daily_limit: 200000,
+              daily_limit: 150000,
               deposit_phone: null,
               reason: 'Instant withdrawal is unavailable right now.',
             });
@@ -148,7 +148,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
             self_deposit_balance: 0,
             max_instant_amount: 0,
             today_withdrawn: 0,
-            daily_limit: 200000,
+            daily_limit: 150000,
             deposit_phone: null,
             reason: 'Could not check your instant withdrawal limit right now. Please try again.',
           });
