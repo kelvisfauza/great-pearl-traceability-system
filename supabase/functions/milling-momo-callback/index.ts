@@ -23,13 +23,16 @@ serve(async (req) => {
     let externalRef = "";
     let transactionStatus = "";
 
+    let networkRef = "";
+
     // Try all known Yo Payments callback formats
     // 1. URL-encoded form
     const contentType = req.headers.get("content-type") || "";
-    if (contentType.includes("application/x-www-form-urlencoded")) {
+    if (contentType.includes("application/x-www-form-urlencoded") || body.includes("external_ref=")) {
       const params = new URLSearchParams(body);
       externalRef = params.get("external_ref") || params.get("external_reference") || params.get("ExternalReference") || "";
       transactionStatus = params.get("transaction_status") || params.get("status") || params.get("Status") || params.get("TransactionStatus") || "";
+      networkRef = params.get("network_ref") || params.get("network_reference") || "";
     }
 
     // 2. XML parsing - try multiple tag patterns Yo uses
@@ -66,7 +69,7 @@ serve(async (req) => {
       } catch { /* not JSON */ }
     }
 
-    console.log(`[Milling MoMo Callback] ref: ${externalRef}, status: ${transactionStatus}`);
+    console.log(`[Milling MoMo Callback] ref: ${externalRef}, status: ${transactionStatus}, network_ref: ${networkRef}`);
 
     if (!externalRef) {
       return new Response(JSON.stringify({ error: "No reference found" }), {
@@ -82,7 +85,8 @@ serve(async (req) => {
                       statusLower.includes("succeeded") ||
                       statusLower === "ok" ||
                       statusLower === "true" ||  // IsSuccessful=TRUE
-                      statusLower === "1";        // StatusCode 1 = OK
+                      statusLower === "1" ||     // StatusCode 1 = OK
+                      (!transactionStatus && !!networkRef);  // Yo sends network_ref only for successful collections
     
     const isExplicitFail = statusLower.includes("fail") ||
                            statusLower.includes("cancel") ||

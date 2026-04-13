@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw, CheckCircle, XCircle, Clock, Search } from 'lucide-react';
+import { RefreshCw, CheckCircle, XCircle, Clock, Search, CheckCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -24,6 +24,7 @@ const MillingMoMoTransactions = () => {
   const [transactions, setTransactions] = useState<MoMoTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkingId, setCheckingId] = useState<string | null>(null);
+  const [markingId, setMarkingId] = useState<string | null>(null);
 
   const fetchTransactions = async () => {
     setLoading(true);
@@ -74,6 +75,56 @@ const MillingMoMoTransactions = () => {
       toast.error('Failed to check status: ' + (err.message || 'Unknown error'));
     } finally {
       setCheckingId(null);
+    }
+  };
+
+  const markAsPaid = async (txn: MoMoTransaction) => {
+    if (!confirm(`Mark UGX ${txn.amount.toLocaleString()} from ${txn.customer_name} as successfully paid? This will update their balance.`)) return;
+    
+    setMarkingId(txn.id);
+    try {
+      // Update momo transaction status
+      await supabase
+        .from('milling_momo_transactions')
+        .update({ status: 'completed', completed_at: new Date().toISOString() } as any)
+        .eq('id', txn.id);
+
+      // Get customer current balance and reduce it
+      const { data: customer } = await supabase
+        .from('milling_customers')
+        .select('current_balance')
+        .eq('id', txn.customer_id)
+        .single();
+
+      if (customer) {
+        const previousBalance = customer.current_balance;
+        const newBalance = Math.max(0, previousBalance - txn.amount);
+
+        await supabase.from('milling_cash_transactions').insert({
+          customer_id: txn.customer_id,
+          customer_name: txn.customer_name,
+          amount_paid: txn.amount,
+          previous_balance: previousBalance,
+          new_balance: newBalance,
+          payment_method: 'Mobile Money',
+          notes: `MoMo collection (manually verified) - Ref: ${txn.reference}`,
+          date: new Date().toISOString().split('T')[0],
+          created_by: 'admin-manual',
+        } as any);
+
+        await supabase
+          .from('milling_customers')
+          .update({ current_balance: newBalance } as any)
+          .eq('id', txn.customer_id);
+
+        toast.success(`Marked as paid! ${txn.customer_name} balance: ${previousBalance.toLocaleString()} → ${newBalance.toLocaleString()}`);
+      }
+
+      fetchTransactions();
+    } catch (err: any) {
+      toast.error('Failed to mark as paid: ' + (err.message || 'Unknown error'));
+    } finally {
+      setMarkingId(null);
     }
   };
 
@@ -135,38 +186,56 @@ const MillingMoMoTransactions = () => {
                       {new Date(txn.created_at).toLocaleString()}
                     </td>
                     <td className="py-3">
-                      {txn.status === 'pending' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => checkStatus(txn.id)}
-                          disabled={checkingId === txn.id}
-                          className="gap-1 text-xs"
-                        >
-                          {checkingId === txn.id ? (
-                            <RefreshCw className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <Search className="h-3 w-3" />
-                          )}
-                          Check
-                        </Button>
-                      )}
-                      {txn.status === 'failed' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => checkStatus(txn.id)}
-                          disabled={checkingId === txn.id}
-                          className="gap-1 text-xs"
-                        >
-                          {checkingId === txn.id ? (
-                            <RefreshCw className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <Search className="h-3 w-3" />
-                          )}
-                          Re-check
-                        </Button>
-                      )}
+                      <div className="flex gap-1">
+                        {txn.status === 'pending' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => checkStatus(txn.id)}
+                            disabled={checkingId === txn.id}
+                            className="gap-1 text-xs"
+                          >
+                            {checkingId === txn.id ? (
+                              <RefreshCw className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Search className="h-3 w-3" />
+                            )}
+                            Check
+                          </Button>
+                        )}
+                        {txn.status === 'failed' && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => checkStatus(txn.id)}
+                              disabled={checkingId === txn.id}
+                              className="gap-1 text-xs"
+                            >
+                              {checkingId === txn.id ? (
+                                <RefreshCw className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Search className="h-3 w-3" />
+                              )}
+                              Re-check
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => markAsPaid(txn)}
+                              disabled={markingId === txn.id}
+                              className="gap-1 text-xs text-green-700 border-green-300 hover:bg-green-50"
+                            >
+                              {markingId === txn.id ? (
+                                <RefreshCw className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <CheckCheck className="h-3 w-3" />
+                              )}
+                              Mark Paid
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
