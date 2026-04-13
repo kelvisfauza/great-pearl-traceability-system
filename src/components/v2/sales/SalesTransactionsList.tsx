@@ -3,11 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Trash2, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { EditSalesTransactionDialog } from "./EditSalesTransactionDialog";
 import { useToast } from "@/hooks/use-toast";
+import SaleFullViewDialog from "./SaleFullViewDialog";
 
 interface SalesTransaction {
   id: string;
