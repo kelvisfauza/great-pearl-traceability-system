@@ -8958,19 +8958,37 @@ export type Database = {
       }
       user_presence: {
         Row: {
+          browser: string | null
+          city: string | null
+          country: string | null
+          device_type: string | null
+          ip_address: string | null
           last_seen: string
+          os: string | null
           status: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          device_type?: string | null
+          ip_address?: string | null
           last_seen?: string
+          os?: string | null
           status?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          device_type?: string | null
+          ip_address?: string | null
           last_seen?: string
+          os?: string | null
           status?: string
           updated_at?: string
           user_id?: string
@@ -9042,6 +9060,57 @@ export type Database = {
           question_3?: string
           updated_at?: string | null
           user_email?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_session_logs: {
+        Row: {
+          browser: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          device_type: string | null
+          employee_email: string | null
+          employee_name: string | null
+          id: string
+          ip_address: string | null
+          login_at: string
+          logout_at: string | null
+          os: string | null
+          session_duration_minutes: number | null
+          user_id: string
+        }
+        Insert: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_type?: string | null
+          employee_email?: string | null
+          employee_name?: string | null
+          id?: string
+          ip_address?: string | null
+          login_at?: string
+          logout_at?: string | null
+          os?: string | null
+          session_duration_minutes?: number | null
+          user_id: string
+        }
+        Update: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_type?: string | null
+          employee_email?: string | null
+          employee_name?: string | null
+          id?: string
+          ip_address?: string | null
+          login_at?: string
+          logout_at?: string | null
+          os?: string | null
+          session_duration_minutes?: number | null
           user_id?: string
         }
         Relationships: []
