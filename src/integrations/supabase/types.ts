@@ -7071,6 +7071,8 @@ export type Database = {
           payment_reference_number: string | null
           priority: string | null
           project_code: string | null
+          receipts: Json | null
+          receipts_count: number | null
           rejected: boolean | null
           rejected_at: string | null
           rejected_by: string | null
@@ -7150,6 +7152,8 @@ export type Database = {
           payment_reference_number?: string | null
           priority?: string | null
           project_code?: string | null
+          receipts?: Json | null
+          receipts_count?: number | null
           rejected?: boolean | null
           rejected_at?: string | null
           rejected_by?: string | null
@@ -7229,6 +7233,8 @@ export type Database = {
           payment_reference_number?: string | null
           priority?: string | null
           project_code?: string | null
+          receipts?: Json | null
+          receipts_count?: number | null
           rejected?: boolean | null
           rejected_at?: string | null
           rejected_by?: string | null
