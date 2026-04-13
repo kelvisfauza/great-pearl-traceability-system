@@ -1,0 +1,1 @@
+UPDATE public.eudr_documents SET coffee_type = 'arabica' WHERE coffee_type = 'robusta';
