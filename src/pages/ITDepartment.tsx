@@ -173,6 +173,10 @@ const ITDepartment = () => {
             <ActiveUsers />
           </TabsContent>
 
+          <TabsContent value="session-logs" className="space-y-4">
+            <SessionLogs />
+          </TabsContent>
+
           <TabsContent value="attendance" className="space-y-4">
             <AttendanceTimeManager />
           </TabsContent>
