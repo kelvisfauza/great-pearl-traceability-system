@@ -69,7 +69,7 @@ serve(async (req) => {
       } catch { /* not JSON */ }
     }
 
-    console.log(`[Milling MoMo Callback] ref: ${externalRef}, status: ${transactionStatus}`);
+    console.log(`[Milling MoMo Callback] ref: ${externalRef}, status: ${transactionStatus}, network_ref: ${networkRef}`);
 
     if (!externalRef) {
       return new Response(JSON.stringify({ error: "No reference found" }), {
