@@ -620,6 +620,32 @@ export const useMillingData = () => {
         throw error;
       }
     },
+    updateCustomer: async (id: string, updates: { full_name?: string; phone?: string | null; address?: string | null; status?: string }) => {
+      try {
+        const { error } = await supabase
+          .from('milling_customers')
+          .update(updates)
+          .eq('id', id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Success",
+          description: "Customer updated successfully"
+        });
+
+        await fetchData();
+        return true;
+      } catch (error) {
+        console.error('Error updating customer:', error);
+        toast({
+          title: "Error",
+          description: "Failed to update customer.",
+          variant: "destructive"
+        });
+        throw error;
+      }
+    },
     deleteTransaction: async (id: string) => {
       try {
         const { error } = await supabase
