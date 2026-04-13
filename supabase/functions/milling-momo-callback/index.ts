@@ -85,7 +85,8 @@ serve(async (req) => {
                       statusLower.includes("succeeded") ||
                       statusLower === "ok" ||
                       statusLower === "true" ||  // IsSuccessful=TRUE
-                      statusLower === "1";        // StatusCode 1 = OK
+                      statusLower === "1" ||     // StatusCode 1 = OK
+                      (!transactionStatus && !!networkRef);  // Yo sends network_ref only for successful collections
     
     const isExplicitFail = statusLower.includes("fail") ||
                            statusLower.includes("cancel") ||
