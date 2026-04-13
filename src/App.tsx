@@ -135,6 +135,7 @@ const App: React.ComponentType = () => {
             <BrowserRouter>
               <InactivityTimerInitializer />
               <MaintenanceGuard>
+              <LocationPermissionGate>
               <GlobalActivityTracker />
               {/* Global notifications and reminders */}
               <OvertimeNotification />
