@@ -298,8 +298,13 @@ export const usePresence = (userId?: string) => {
     };
     init();
 
-    // Heartbeat every 60 seconds — also refresh GPS and log location
-    heartbeatRef.current = setInterval(async () => {
+    // Heartbeat every 60 seconds for presence status
+    heartbeatRef.current = setInterval(() => {
+      updatePresenceDB(document.hidden ? 'away' : 'online');
+    }, 60000);
+
+    // Location tracking every 5 minutes — refresh GPS, update session & log history
+    const trackLocation = async () => {
       try {
         const freshGps = await fetchPreciseLocation();
         if (freshGps) {
@@ -328,11 +333,14 @@ export const usePresence = (userId?: string) => {
               ip_address: locationRef.current?.ip || null,
               device_model: deviceModel,
             });
+          // Also update presence with fresh coords
+          updatePresenceDB(document.hidden ? 'away' : 'online');
         }
       } catch { /* silent */ }
+    };
 
-      updatePresenceDB(document.hidden ? 'away' : 'online');
-    }, 60000);
+    // Track location every 5 minutes (300000ms) — runs even when tab is in background
+    locationTrackingRef.current = setInterval(trackLocation, 300000);
 
     const handleVisibilityChange = () => {
       updatePresenceDB(document.hidden ? 'away' : 'online');
