@@ -8836,6 +8836,42 @@ export type Database = {
         }
         Relationships: []
       }
+      ussd_payment_logs: {
+        Row: {
+          amount: number | null
+          created_at: string
+          id: string
+          narrative: string | null
+          phone: string | null
+          raw_payload: string | null
+          reference: string
+          status: string
+          transaction_id: string | null
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          id?: string
+          narrative?: string | null
+          phone?: string | null
+          raw_payload?: string | null
+          reference: string
+          status?: string
+          transaction_id?: string | null
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          id?: string
+          narrative?: string | null
+          phone?: string | null
+          raw_payload?: string | null
+          reference?: string
+          status?: string
+          transaction_id?: string | null
+        }
+        Relationships: []
+      }
       vehicle_trips: {
         Row: {
           arrival_time: string | null
