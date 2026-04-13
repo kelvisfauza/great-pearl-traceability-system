@@ -7017,6 +7017,246 @@ export type Database = {
         }
         Relationships: []
       }
+      requisitions: {
+        Row: {
+          account_code: string | null
+          additional_approver_name: string | null
+          additional_approver_position: string | null
+          additional_approver_signature_date: string | null
+          admin_approved: boolean | null
+          admin_name: string | null
+          admin_position: string | null
+          admin_signature_date: string | null
+          amount: number
+          budget_code: string | null
+          cost_center: string | null
+          created_at: string
+          created_by_department: string | null
+          created_by_email: string
+          created_by_employee_id: string | null
+          created_by_name: string
+          created_by_position: string | null
+          currency: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          department: string
+          description: string | null
+          disbursement_account_name: string | null
+          disbursement_account_number: string | null
+          disbursement_bank_name: string | null
+          disbursement_method: string | null
+          disbursement_phone: string | null
+          finance_approved: boolean | null
+          finance_name: string | null
+          finance_notes: string | null
+          finance_position: string | null
+          finance_signature_date: string | null
+          general_notes: string | null
+          id: string
+          journal_entry_created: boolean | null
+          journal_entry_created_at: string | null
+          journal_entry_created_by: string | null
+          journal_entry_number: string | null
+          metadata: Json | null
+          original_requester_department: string | null
+          original_requester_name: string | null
+          original_requester_position: string | null
+          original_requester_signature_date: string | null
+          payment_method: string | null
+          payment_notes: string | null
+          payment_processed: boolean | null
+          payment_processed_at: string | null
+          payment_processed_by: string | null
+          payment_processed_by_id: string | null
+          payment_reference_number: string | null
+          priority: string | null
+          project_code: string | null
+          rejected: boolean | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejected_by_id: string | null
+          rejection_reason: string | null
+          requisition_number: string
+          stamp_issuing_authority: string | null
+          stamp_received_date: string | null
+          stamp_reference_number: string | null
+          stamped_document_name: string
+          stamped_document_size: number | null
+          stamped_document_type: string | null
+          stamped_document_uploaded_at: string | null
+          stamped_document_url: string
+          status: string | null
+          supervisor_approved: boolean | null
+          supervisor_name: string | null
+          supervisor_position: string | null
+          supervisor_signature_date: string | null
+          supporting_documents: Json | null
+          tax_amount: number | null
+          tax_rate: number | null
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          account_code?: string | null
+          additional_approver_name?: string | null
+          additional_approver_position?: string | null
+          additional_approver_signature_date?: string | null
+          admin_approved?: boolean | null
+          admin_name?: string | null
+          admin_position?: string | null
+          admin_signature_date?: string | null
+          amount: number
+          budget_code?: string | null
+          cost_center?: string | null
+          created_at?: string
+          created_by_department?: string | null
+          created_by_email: string
+          created_by_employee_id?: string | null
+          created_by_name: string
+          created_by_position?: string | null
+          currency?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          department: string
+          description?: string | null
+          disbursement_account_name?: string | null
+          disbursement_account_number?: string | null
+          disbursement_bank_name?: string | null
+          disbursement_method?: string | null
+          disbursement_phone?: string | null
+          finance_approved?: boolean | null
+          finance_name?: string | null
+          finance_notes?: string | null
+          finance_position?: string | null
+          finance_signature_date?: string | null
+          general_notes?: string | null
+          id?: string
+          journal_entry_created?: boolean | null
+          journal_entry_created_at?: string | null
+          journal_entry_created_by?: string | null
+          journal_entry_number?: string | null
+          metadata?: Json | null
+          original_requester_department?: string | null
+          original_requester_name?: string | null
+          original_requester_position?: string | null
+          original_requester_signature_date?: string | null
+          payment_method?: string | null
+          payment_notes?: string | null
+          payment_processed?: boolean | null
+          payment_processed_at?: string | null
+          payment_processed_by?: string | null
+          payment_processed_by_id?: string | null
+          payment_reference_number?: string | null
+          priority?: string | null
+          project_code?: string | null
+          rejected?: boolean | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejected_by_id?: string | null
+          rejection_reason?: string | null
+          requisition_number: string
+          stamp_issuing_authority?: string | null
+          stamp_received_date?: string | null
+          stamp_reference_number?: string | null
+          stamped_document_name: string
+          stamped_document_size?: number | null
+          stamped_document_type?: string | null
+          stamped_document_uploaded_at?: string | null
+          stamped_document_url: string
+          status?: string | null
+          supervisor_approved?: boolean | null
+          supervisor_name?: string | null
+          supervisor_position?: string | null
+          supervisor_signature_date?: string | null
+          supporting_documents?: Json | null
+          tax_amount?: number | null
+          tax_rate?: number | null
+          title: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          account_code?: string | null
+          additional_approver_name?: string | null
+          additional_approver_position?: string | null
+          additional_approver_signature_date?: string | null
+          admin_approved?: boolean | null
+          admin_name?: string | null
+          admin_position?: string | null
+          admin_signature_date?: string | null
+          amount?: number
+          budget_code?: string | null
+          cost_center?: string | null
+          created_at?: string
+          created_by_department?: string | null
+          created_by_email?: string
+          created_by_employee_id?: string | null
+          created_by_name?: string
+          created_by_position?: string | null
+          currency?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          department?: string
+          description?: string | null
+          disbursement_account_name?: string | null
+          disbursement_account_number?: string | null
+          disbursement_bank_name?: string | null
+          disbursement_method?: string | null
+          disbursement_phone?: string | null
+          finance_approved?: boolean | null
+          finance_name?: string | null
+          finance_notes?: string | null
+          finance_position?: string | null
+          finance_signature_date?: string | null
+          general_notes?: string | null
+          id?: string
+          journal_entry_created?: boolean | null
+          journal_entry_created_at?: string | null
+          journal_entry_created_by?: string | null
+          journal_entry_number?: string | null
+          metadata?: Json | null
+          original_requester_department?: string | null
+          original_requester_name?: string | null
+          original_requester_position?: string | null
+          original_requester_signature_date?: string | null
+          payment_method?: string | null
+          payment_notes?: string | null
+          payment_processed?: boolean | null
+          payment_processed_at?: string | null
+          payment_processed_by?: string | null
+          payment_processed_by_id?: string | null
+          payment_reference_number?: string | null
+          priority?: string | null
+          project_code?: string | null
+          rejected?: boolean | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejected_by_id?: string | null
+          rejection_reason?: string | null
+          requisition_number?: string
+          stamp_issuing_authority?: string | null
+          stamp_received_date?: string | null
+          stamp_reference_number?: string | null
+          stamped_document_name?: string
+          stamped_document_size?: number | null
+          stamped_document_type?: string | null
+          stamped_document_uploaded_at?: string | null
+          stamped_document_url?: string
+          status?: string | null
+          supervisor_approved?: boolean | null
+          supervisor_name?: string | null
+          supervisor_position?: string | null
+          supervisor_signature_date?: string | null
+          supporting_documents?: Json | null
+          tax_amount?: number | null
+          tax_rate?: number | null
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       risk_assessments: {
         Row: {
           assessment_content: string
@@ -9470,6 +9710,63 @@ export type Database = {
         }
         Relationships: []
       }
+      department_requisitions: {
+        Row: {
+          amount_paid: number | null
+          amount_pending: number | null
+          department: string | null
+          month: string | null
+          paid_requests: number | null
+          total_amount: number | null
+          total_requests: number | null
+        }
+        Relationships: []
+      }
+      finance_requisitions_dashboard: {
+        Row: {
+          amount: number | null
+          created_at: string | null
+          department: string | null
+          id: string | null
+          original_requester_name: string | null
+          payment_processed: boolean | null
+          priority_status: string | null
+          requisition_number: string | null
+          stamp_received_date: string | null
+          stamp_reference_number: string | null
+          status: string | null
+          title: string | null
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string | null
+          department?: string | null
+          id?: string | null
+          original_requester_name?: string | null
+          payment_processed?: boolean | null
+          priority_status?: never
+          requisition_number?: string | null
+          stamp_received_date?: string | null
+          stamp_reference_number?: string | null
+          status?: string | null
+          title?: string | null
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string | null
+          department?: string | null
+          id?: string | null
+          original_requester_name?: string | null
+          payment_processed?: boolean | null
+          priority_status?: never
+          requisition_number?: string | null
+          stamp_received_date?: string | null
+          stamp_reference_number?: string | null
+          status?: string | null
+          title?: string | null
+        }
+        Relationships: []
+      }
       monthly_payment_summary: {
         Row: {
           average_payment: number | null
@@ -9489,6 +9786,20 @@ export type Database = {
           supplier_code: string | null
           supplier_name: string | null
           total_amount_ugx: number | null
+        }
+        Relationships: []
+      }
+      requisition_statistics: {
+        Row: {
+          awaiting_payment: number | null
+          month: string | null
+          payment_completed: number | null
+          pending_amount: number | null
+          pending_payment: number | null
+          processed_amount: number | null
+          rejected: number | null
+          total_amount: number | null
+          total_requisitions: number | null
         }
         Relationships: []
       }
