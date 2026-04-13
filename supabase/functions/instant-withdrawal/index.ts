@@ -43,6 +43,18 @@ serve(async (req) => {
   try {
     console.log("[instant-withdrawal] Request received");
 
+    // Time restriction: Monday-Saturday, before 7 PM EAT (UTC+3)
+    const nowEAT = new Date(new Date().toLocaleString("en-US", { timeZone: "Africa/Nairobi" }));
+    const dayOfWeek = nowEAT.getDay(); // 0=Sun, 6=Sat
+    const hour = nowEAT.getHours();
+
+    if (dayOfWeek === 0) {
+      return respond(false, { error: "Instant withdrawals are not available on Sundays. Available Monday–Saturday before 7:00 PM." });
+    }
+    if (hour >= 19) {
+      return respond(false, { error: "Instant withdrawals close at 7:00 PM daily. Please try again tomorrow morning." });
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;

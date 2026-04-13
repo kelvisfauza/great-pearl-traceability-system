@@ -72,12 +72,39 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const [eligibilityResolved, setEligibilityResolved] = useState(false);
   const [useInstant, setUseInstant] = useState(false);
 
+  // Check if instant withdrawals are within operating hours (Mon-Sat, before 7 PM EAT)
+  const getOperatingHoursStatus = () => {
+    const nowEAT = new Date(new Date().toLocaleString("en-US", { timeZone: "Africa/Nairobi" }));
+    const day = nowEAT.getDay(); // 0=Sun, 6=Sat
+    const hour = nowEAT.getHours();
+    if (day === 0) return { closed: true, reason: "Instant withdrawals are not available on Sundays. Available Mon–Sat before 7:00 PM." };
+    if (hour >= 19) return { closed: true, reason: "Instant withdrawals close at 7:00 PM daily. Please try again tomorrow morning." };
+    return { closed: false, reason: "" };
+  };
+
   // Fetch instant withdrawal eligibility when modal opens
   useEffect(() => {
     if (open && (employee?.email || user?.email)) {
       const fetchEligibility = async () => {
         setEligibilityLoading(true);
         setEligibilityResolved(false);
+
+        // Check operating hours first
+        const opStatus = getOperatingHoursStatus();
+        if (opStatus.closed) {
+          setInstantEligibility({
+            eligible: false,
+            self_deposit_balance: 0,
+            max_instant_amount: 0,
+            today_withdrawn: 0,
+            daily_limit: 200000,
+            deposit_phone: null,
+            reason: opStatus.reason,
+          });
+          setEligibilityLoading(false);
+          setEligibilityResolved(true);
+          return;
+        }
         try {
           const { data, error } = await supabase.rpc('get_instant_withdrawal_eligibility', {
             p_user_email: employee?.email || user?.email || '',
