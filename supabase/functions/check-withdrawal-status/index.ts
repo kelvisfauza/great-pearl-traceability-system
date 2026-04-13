@@ -65,24 +65,34 @@ serve(async (req) => {
       console.log(`[WD Poller] ${wd.id} (${wd.payout_ref}): ${result.resolvedStatus}`);
 
       if (result.resolvedStatus === "completed") {
-        await supabase
+        // Only mark success if still pending (optimistic lock)
+        const { data: updated } = await supabase
           .from("instant_withdrawals")
           .update({ payout_status: "success", completed_at: new Date().toISOString() })
           .eq("id", wd.id)
-          .eq("payout_status", "pending_approval");
+          .eq("payout_status", "pending_approval")
+          .select("id");
 
-        completed++;
-        resolved++;
-        console.log(`[WD Poller] Marked ${wd.payout_ref} as SUCCESS`);
+        if (updated && updated.length > 0) {
+          completed++;
+          resolved++;
+          console.log(`[WD Poller] Marked ${wd.payout_ref} as SUCCESS`);
+        } else {
+          console.log(`[WD Poller] ${wd.payout_ref} already processed, skipping`);
+        }
 
       } else if (result.resolvedStatus === "failed") {
-        await supabase
+        // Only mark failed if still pending (optimistic lock — prevents double processing)
+        const { data: updated } = await supabase
           .from("instant_withdrawals")
           .update({ payout_status: "failed", completed_at: new Date().toISOString() })
           .eq("id", wd.id)
-          .eq("payout_status", "pending_approval");
+          .eq("payout_status", "pending_approval")
+          .select("id");
 
-        if (wd.ledger_reference) {
+        // CRITICAL: Only refund if WE actually changed the status right now
+        // This prevents double refunds if the poller runs concurrently
+        if (updated && updated.length > 0 && wd.ledger_reference) {
           const refundRef = `REFUND-${wd.ledger_reference}`;
           const { error: ledgerErr } = await supabase
             .from("ledger_entries")
@@ -105,11 +115,12 @@ serve(async (req) => {
             console.error(`[WD Poller] Refund error for ${wd.payout_ref}:`, ledgerErr);
           } else {
             console.log(`[WD Poller] Refunded UGX ${wd.amount} for ${wd.payout_ref}`);
+            refunded++;
           }
+          resolved++;
+        } else if (updated && updated.length === 0) {
+          console.log(`[WD Poller] ${wd.payout_ref} already processed, skipping refund`);
         }
-
-        refunded++;
-        resolved++;
 
       } else {
         // Still pending — check 24-hour auto-expiry
@@ -118,13 +129,15 @@ serve(async (req) => {
         if (hoursOld > 24) {
           console.log(`[WD Poller] ${wd.payout_ref} is over 24h old, auto-expiring`);
 
-          await supabase
+          const { data: updated } = await supabase
             .from("instant_withdrawals")
             .update({ payout_status: "failed", completed_at: new Date().toISOString() })
             .eq("id", wd.id)
-            .eq("payout_status", "pending_approval");
+            .eq("payout_status", "pending_approval")
+            .select("id");
 
-          if (wd.ledger_reference) {
+          // Only refund if we actually changed the status
+          if (updated && updated.length > 0 && wd.ledger_reference) {
             const refundRef = `REFUND-EXPIRED-${wd.ledger_reference}`;
             const { error: ledgerErr } = await supabase
               .from("ledger_entries")
@@ -143,11 +156,13 @@ serve(async (req) => {
 
             if (ledgerErr && ledgerErr.code !== "23505") {
               console.error(`[WD Poller] Expiry refund error:`, ledgerErr);
+            } else {
+              refunded++;
             }
+            resolved++;
+          } else if (updated && updated.length === 0) {
+            console.log(`[WD Poller] ${wd.payout_ref} already processed, skipping expiry refund`);
           }
-
-          refunded++;
-          resolved++;
         }
       }
     }
