@@ -28,6 +28,7 @@ import AttendanceTimeManager from '@/components/it/AttendanceTimeManager';
 import MaintenanceToggle from '@/components/it/MaintenanceToggle';
 import EmailTracker from '@/components/it/EmailTracker';
 import ActiveUsers from '@/components/it/ActiveUsers';
+import SessionLogs from '@/components/it/SessionLogs';
 
 const ITDepartment = () => {
   const { hasPermission, employee } = useAuth();
@@ -148,9 +149,10 @@ const ITDepartment = () => {
         </div>
 
         <Tabs defaultValue="permissions" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-12">
+          <TabsList className="flex flex-wrap gap-1 h-auto">
             <TabsTrigger value="permissions">Permissions</TabsTrigger>
             <TabsTrigger value="online-users">Online</TabsTrigger>
+            <TabsTrigger value="session-logs">Session Logs</TabsTrigger>
             <TabsTrigger value="user-management">Users</TabsTrigger>
             <TabsTrigger value="attendance">Attendance</TabsTrigger>
             <TabsTrigger value="errors">Errors</TabsTrigger>
@@ -169,6 +171,10 @@ const ITDepartment = () => {
 
           <TabsContent value="online-users" className="space-y-4">
             <ActiveUsers />
+          </TabsContent>
+
+          <TabsContent value="session-logs" className="space-y-4">
+            <SessionLogs />
           </TabsContent>
 
           <TabsContent value="attendance" className="space-y-4">

@@ -9094,6 +9094,7 @@ export type Database = {
           logout_at: string | null
           longitude: number | null
           os: string | null
+          session_date: string | null
           session_duration_minutes: number | null
           user_id: string
         }
@@ -9114,6 +9115,7 @@ export type Database = {
           logout_at?: string | null
           longitude?: number | null
           os?: string | null
+          session_date?: string | null
           session_duration_minutes?: number | null
           user_id: string
         }
@@ -9134,6 +9136,7 @@ export type Database = {
           logout_at?: string | null
           longitude?: number | null
           os?: string | null
+          session_date?: string | null
           session_duration_minutes?: number | null
           user_id?: string
         }
