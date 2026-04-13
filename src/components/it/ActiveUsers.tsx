@@ -7,6 +7,7 @@ import { useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
+import UserLocationMap from './UserLocationMap';
 
 const formatLastSeen = (dateStr?: string) => {
   try {
@@ -62,7 +63,9 @@ const ActiveUsers = () => {
   }, [users, q]);
 
   return (
-    <Card>
+    <div className="space-y-4">
+      <UserLocationMap users={filtered} />
+      <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users className="h-5 w-5" />
@@ -232,6 +235,7 @@ const ActiveUsers = () => {
           })}
       </CardContent>
     </Card>
+    </div>
   );
 };
 
