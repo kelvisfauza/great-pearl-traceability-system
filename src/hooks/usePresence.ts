@@ -199,6 +199,7 @@ const fetchIPLocation = async (): Promise<{ ip: string; city: string; country: s
 export const usePresence = (userId?: string) => {
   const { user, employee } = useAuth();
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const locationTrackingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const locationRef = useRef<LocationInfo | null>(null);
   const gpsRef = useRef<{ latitude: number; longitude: number; address: string } | null>(null);
   const sessionLogIdRef = useRef<string | null>(null);
