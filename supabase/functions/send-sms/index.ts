@@ -201,6 +201,8 @@ serve(async (req) => {
       'bypass_sms',
       'loan_reminder',
       'loan_guarantor_request',
+      'price_update',
+      'supplier_price_broadcast',
     ]
     
     const isAllowedType = ALLOWED_SMS_TYPES.includes(messageType?.toLowerCase() || '')
