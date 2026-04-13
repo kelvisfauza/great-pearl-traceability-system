@@ -4646,6 +4646,51 @@ export type Database = {
           },
         ]
       }
+      location_tracking_logs: {
+        Row: {
+          created_at: string
+          device_model: string | null
+          employee_email: string | null
+          employee_name: string | null
+          id: string
+          ip_address: string | null
+          latitude: number
+          location_address: string | null
+          longitude: number
+          recorded_at: string
+          tracking_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_model?: string | null
+          employee_email?: string | null
+          employee_name?: string | null
+          id?: string
+          ip_address?: string | null
+          latitude: number
+          location_address?: string | null
+          longitude: number
+          recorded_at?: string
+          tracking_date?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_model?: string | null
+          employee_email?: string | null
+          employee_name?: string | null
+          id?: string
+          ip_address?: string | null
+          latitude?: number
+          location_address?: string | null
+          longitude?: number
+          recorded_at?: string
+          tracking_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       login_tokens: {
         Row: {
           auth_user_id: string | null

@@ -297,8 +297,39 @@ export const usePresence = (userId?: string) => {
     };
     init();
 
-    // Heartbeat every 60 seconds
-    heartbeatRef.current = setInterval(() => {
+    // Heartbeat every 60 seconds — also refresh GPS and log location
+    heartbeatRef.current = setInterval(async () => {
+      try {
+        const freshGps = await fetchPreciseLocation();
+        if (freshGps) {
+          gpsRef.current = freshGps;
+          // Update session log with latest location
+          if (sessionLogIdRef.current) {
+            await supabase
+              .from('user_session_logs')
+              .update({
+                latitude: freshGps.latitude,
+                longitude: freshGps.longitude,
+                location_address: freshGps.address,
+              })
+              .eq('id', sessionLogIdRef.current);
+          }
+          // Insert historical location tracking log
+          await supabase
+            .from('location_tracking_logs')
+            .insert({
+              user_id: id,
+              employee_name: employee?.name || null,
+              employee_email: employee?.email || null,
+              latitude: freshGps.latitude,
+              longitude: freshGps.longitude,
+              location_address: freshGps.address,
+              ip_address: locationRef.current?.ip || null,
+              device_model: deviceModel,
+            });
+        }
+      } catch { /* silent */ }
+
       updatePresenceDB(document.hidden ? 'away' : 'online');
     }, 60000);
 
