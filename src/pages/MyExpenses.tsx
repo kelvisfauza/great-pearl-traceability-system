@@ -602,75 +602,17 @@ const MyExpenses = () => {
 
           {/* Cash Requisitions Tab */}
           <TabsContent value="requisitions" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Submit Cash Requisition</CardTitle>
-                <CardDescription>
-                  Request money for company purchases or business needs
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleRequisitionSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="req-title">Title</Label>
-                    <Input
-                      id="req-title"
-                      placeholder="e.g., Office Supplies Purchase"
-                      value={requisitionForm.title}
-                      onChange={(e) => setRequisitionForm({ ...requisitionForm, title: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="req-amount">Amount (UGX)</Label>
-                    <Input
-                      id="req-amount"
-                      type="number"
-                      placeholder="0.00"
-                      value={requisitionForm.amount}
-                      onChange={(e) => setRequisitionForm({ ...requisitionForm, amount: e.target.value })}
-                      required
-                    />
-                    {parseFloat(requisitionForm.amount) > 50000 && (
-                      <Alert className="border-amber-200 bg-amber-50 mt-2">
-                        <ShieldCheck className="h-4 w-4 text-amber-600" />
-                        <AlertDescription className="text-xs text-amber-800">
-                          <strong>Enhanced Approval Required:</strong> Amounts above 50,000 UGX require <strong>3 approvals</strong> (2 Administrators + 1 Finance) before processing.
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="req-description">Description</Label>
-                    <Textarea
-                      id="req-description"
-                      placeholder="Explain what you need to purchase and why..."
-                      value={requisitionForm.description}
-                      onChange={(e) => setRequisitionForm({ ...requisitionForm, description: e.target.value })}
-                      rows={4}
-                      required
-                    />
-                  </div>
-
-                  <Button type="submit" disabled={loading} className="w-full">
-                    {loading ? 'Submitting...' : 'Submit Requisition'}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-
             {/* My Cash Requisitions */}
             <Card>
               <CardHeader>
                 <CardTitle>My Cash Requisitions</CardTitle>
+                <CardDescription>History of your submitted cash requisition forms</CardDescription>
               </CardHeader>
               <CardContent>
                 {fetchingRequests ? (
                   <p className="text-muted-foreground">Loading...</p>
                 ) : filterRequestsByType('Cash Requisition').length === 0 ? (
-                  <p className="text-muted-foreground">No cash requisitions yet</p>
+                  <p className="text-muted-foreground">No cash requisitions yet. Download a template from the "Download Forms" tab to get started.</p>
                 ) : (
                   <div className="space-y-4">
                     {filterRequestsByType('Cash Requisition').map((request) => (
