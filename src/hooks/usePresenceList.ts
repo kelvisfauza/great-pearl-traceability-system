@@ -133,8 +133,26 @@ export const usePresenceList = () => {
 
   useEffect(() => {
     fetchUsers();
-    const interval = setInterval(fetchUsers, 30000);
-    return () => clearInterval(interval);
+
+    // Poll every 5 seconds for near-realtime online user updates
+    const interval = setInterval(fetchUsers, 5000);
+
+    // Also subscribe to realtime changes on user_presence for instant updates
+    const channel = supabase
+      .channel('presence-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'user_presence' },
+        () => {
+          fetchUsers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const sorted = useMemo(() => {
