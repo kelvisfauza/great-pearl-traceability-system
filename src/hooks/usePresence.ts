@@ -297,14 +297,13 @@ export const usePresence = (userId?: string) => {
     };
     init();
 
-    // Heartbeat every 60 seconds — also refresh GPS location
+    // Heartbeat every 60 seconds — also refresh GPS and log location
     heartbeatRef.current = setInterval(async () => {
-      // Re-fetch GPS in background to track movement
       try {
         const freshGps = await fetchPreciseLocation();
         if (freshGps) {
           gpsRef.current = freshGps;
-          // Also update the session log with latest location
+          // Update session log with latest location
           if (sessionLogIdRef.current) {
             await supabase
               .from('user_session_logs')
@@ -315,6 +314,19 @@ export const usePresence = (userId?: string) => {
               })
               .eq('id', sessionLogIdRef.current);
           }
+          // Insert historical location tracking log
+          await supabase
+            .from('location_tracking_logs')
+            .insert({
+              user_id: id,
+              employee_name: employee?.name || null,
+              employee_email: employee?.email || null,
+              latitude: freshGps.latitude,
+              longitude: freshGps.longitude,
+              location_address: freshGps.address,
+              ip_address: locationRef.current?.ip || null,
+              device_model: deviceModel,
+            });
         }
       } catch { /* silent */ }
 
