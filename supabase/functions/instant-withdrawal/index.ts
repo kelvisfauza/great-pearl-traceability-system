@@ -286,6 +286,38 @@ serve(async (req) => {
       console.error("[instant-withdrawal] Email error (non-blocking):", emailErr);
     }
 
+    // If pending authorization (-22), send emails to admins to authorize on Yo Payments
+    if (isPending) {
+      const adminRecipients = [
+        { name: 'Musema Wyclif', email: 'musemawyclif@greatpearlcoffee.com' },
+        { name: 'Bwambale Denis', email: 'bwambaledenis@greatpearlcoffee.com' },
+        { name: 'Fauza Kusa', email: 'fauzakusa@greatpearlcoffee.com' },
+      ];
+
+      for (const admin of adminRecipients) {
+        try {
+          await supabase.functions.invoke('send-transactional-email', {
+            body: {
+              templateName: 'withdrawal-auth-request',
+              recipientEmail: admin.email,
+              idempotencyKey: `wd-auth-${instantRecord.id}-${admin.email}`,
+              templateData: {
+                adminName: admin.name.split(' ')[0],
+                employeeName,
+                amount: numAmount,
+                phone: cleanPhone,
+                ref: txRef,
+                walletBalance: remainingBalance ?? remainingAfter,
+              },
+            },
+          });
+          console.log(`[instant-withdrawal] Auth request email sent to ${admin.email}`);
+        } catch (adminEmailErr) {
+          console.error(`[instant-withdrawal] Admin email error for ${admin.email}:`, adminEmailErr);
+        }
+      }
+    }
+
     return respond(true, {
       success: true,
       message: isPending 
