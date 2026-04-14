@@ -5,6 +5,7 @@ import ApprovedRequestsHistory from '@/components/admin/ApprovedRequestsHistory'
 import AdminQualityPricingReview from '@/components/admin/AdminQualityPricingReview';
 import AdminRejectedLotsReview from '@/components/admin/AdminRejectedLotsReview';
 import MealDisbursementSection from '@/components/admin/MealDisbursementSection';
+import ServiceProviderPayments from '@/components/admin/ServiceProviderPayments';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRoleBasedData } from '@/hooks/useRoleBasedData';
 import { Shield, ClipboardCheck, DollarSign } from 'lucide-react';
@@ -73,6 +74,9 @@ const Approvals = () => {
 
         {/* Meal Plan Disbursements */}
         <MealDisbursementSection />
+
+        {/* Service Provider Payments */}
+        <ServiceProviderPayments />
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
