@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Download, ShoppingCart, Coffee, Wallet, Info } from 'lucide-react';
+import { Download, ShoppingCart, Coffee, Wallet, Info, Truck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { jsPDF } from 'jspdf';
 
@@ -17,7 +17,7 @@ const generateRefNumber = (prefix: string) => {
   return `${prefix}-${yr}${mo}${dy}-${rand}`;
 };
 
-type TemplateType = 'cash-requisition' | 'personal-expense' | 'salary-request';
+type TemplateType = 'cash-requisition' | 'personal-expense' | 'salary-request' | 'service-provider-requisition';
 
 interface TemplateConfig {
   type: TemplateType;
