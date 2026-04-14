@@ -26,7 +26,7 @@ const CalibrationTab = () => {
   const { data: logs, isLoading } = useQuery({
     queryKey: ['calibration-logs'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('calibration_logs')
         .select('*')
         .order('calibration_date', { ascending: false })
@@ -44,7 +44,7 @@ const CalibrationTab = () => {
       const expected = parseFloat(form.expected_value);
       const actual = parseFloat(form.actual_value);
       const variance = actual - expected;
-      const { error } = await supabase.from('calibration_logs').insert({
+      const { error } = await (supabase as any).from('calibration_logs').insert({
         device_name: form.device_name,
         expected_value: expected,
         actual_value: actual,

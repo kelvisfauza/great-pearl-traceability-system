@@ -10,7 +10,7 @@ const FinanceWorkSummary = () => {
       const [readyForPayment, pendingApprovals, pendingBills, pendingLoans] = await Promise.all([
         supabase.from("finance_coffee_lots").select("*", { count: "exact", head: true }).eq("finance_status", "READY_FOR_FINANCE"),
         supabase.from("approval_requests").select("*", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("bills").select("*", { count: "exact", head: true }).eq("status", "pending"),
+        (supabase as any).from("bills").select("*", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("approval_requests").select("*", { count: "exact", head: true }).eq("type", "quick_loan").eq("status", "pending"),
       ]);
 
