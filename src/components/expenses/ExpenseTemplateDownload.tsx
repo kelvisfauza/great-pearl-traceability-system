@@ -71,6 +71,24 @@ const templates: TemplateConfig[] = [
       { label: 'Mobile Money / Bank Account Number' },
     ],
   },
+  {
+    type: 'service-provider-requisition',
+    title: 'Service Provider Requisition',
+    prefix: 'SPR',
+    icon: <Truck className="h-5 w-5" />,
+    description: 'Request payment for external service providers (transport, repairs, consultants, etc.)',
+    fields: [
+      { label: 'Service Provider Name' },
+      { label: 'Service Provider Contact / Phone' },
+      { label: 'Service Provided', lines: 3 },
+      { label: 'Amount to be Paid (UGX)' },
+      { label: 'Payment Method (Cash / Mobile Money / Bank Transfer)' },
+      { label: 'Mobile Money / Bank Account Number' },
+      { label: 'Date of Service' },
+      { label: 'Invoice / Receipt Number' },
+      { label: 'Additional Notes / Justification', lines: 2 },
+    ],
+  },
 ];
 
 const loadImageAsBase64 = (url: string): Promise<string> => {
