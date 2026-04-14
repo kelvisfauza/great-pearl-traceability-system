@@ -99,6 +99,23 @@ const MealDisbursementSection = () => {
     }
   };
 
+  const handleRecheck = async () => {
+    setRechecking(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('check-payout-status', { body: {} });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['meal-disbursements'] });
+      toast({
+        title: 'Status check complete',
+        description: `Checked: ${data?.checked || 0}, Completed: ${data?.completed || 0}, Failed: ${data?.failed || 0}`,
+      });
+    } catch (err: any) {
+      toast({ title: 'Error', description: 'Failed to check statuses', variant: 'destructive' });
+    } finally {
+      setRechecking(false);
+    }
+
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'success': return <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Sent</Badge>;
