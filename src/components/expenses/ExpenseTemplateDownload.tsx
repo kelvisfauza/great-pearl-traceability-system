@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Download, ShoppingCart, Coffee, Wallet, Info } from 'lucide-react';
+import { Download, ShoppingCart, Coffee, Wallet, Info, Truck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { jsPDF } from 'jspdf';
 
@@ -17,7 +17,7 @@ const generateRefNumber = (prefix: string) => {
   return `${prefix}-${yr}${mo}${dy}-${rand}`;
 };
 
-type TemplateType = 'cash-requisition' | 'personal-expense' | 'salary-request';
+type TemplateType = 'cash-requisition' | 'personal-expense' | 'salary-request' | 'service-provider-requisition';
 
 interface TemplateConfig {
   type: TemplateType;
@@ -69,6 +69,24 @@ const templates: TemplateConfig[] = [
       { label: 'Reason for Request', lines: 4 },
       { label: 'Preferred Payment Method (Cash / Mobile Money / Bank)' },
       { label: 'Mobile Money / Bank Account Number' },
+    ],
+  },
+  {
+    type: 'service-provider-requisition',
+    title: 'Service Provider Requisition',
+    prefix: 'SPR',
+    icon: <Truck className="h-5 w-5" />,
+    description: 'Request payment for external service providers (transport, repairs, consultants, etc.)',
+    fields: [
+      { label: 'Service Provider Name' },
+      { label: 'Service Provider Contact / Phone' },
+      { label: 'Service Provided', lines: 3 },
+      { label: 'Amount to be Paid (UGX)' },
+      { label: 'Payment Method (Cash / Mobile Money / Bank Transfer)' },
+      { label: 'Mobile Money / Bank Account Number' },
+      { label: 'Date of Service' },
+      { label: 'Invoice / Receipt Number' },
+      { label: 'Additional Notes / Justification', lines: 2 },
     ],
   },
 ];
@@ -342,7 +360,7 @@ const ExpenseTemplateDownload = () => {
         </AlertDescription>
       </Alert>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {templates.map((template) => (
           <Card key={template.type} className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-3">
