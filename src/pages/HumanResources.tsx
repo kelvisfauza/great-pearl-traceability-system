@@ -46,6 +46,7 @@ import { OvertimeClaimsManager } from '@/components/admin/OvertimeClaimsManager'
 import TimeDeductionManager from '@/components/hr/TimeDeductionManager';
 import EmployeeContractsManager from '@/components/hr/EmployeeContractsManager';
 import MonthlyOvertimeReview from '@/components/hr/MonthlyOvertimeReview';
+import EmployeeQRCodes from '@/components/employees/EmployeeQRCodes';
 
 const HumanResources = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -205,6 +206,7 @@ const HumanResources = () => {
               <TabsTrigger value="overtime" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Overtime</TabsTrigger>
               <TabsTrigger value="time-deductions" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Time Deductions</TabsTrigger>
               <TabsTrigger value="contracts" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Contracts</TabsTrigger>
+              <TabsTrigger value="qr-codes" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">QR Codes</TabsTrigger>
             </TabsList>
           </div>
 
@@ -354,6 +356,10 @@ const HumanResources = () => {
 
           <TabsContent value="contracts">
             <EmployeeContractsManager />
+          </TabsContent>
+
+          <TabsContent value="qr-codes">
+            <EmployeeQRCodes employees={employees.filter(e => e.status === 'Active')} />
           </TabsContent>
         </Tabs>
 
