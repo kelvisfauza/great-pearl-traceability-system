@@ -261,6 +261,7 @@ const ServiceProviderPayments = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </CardHeader>
 
       <CardContent>
