@@ -82,15 +82,24 @@ serve(async (req) => {
       narrative,
     });
 
-    // Check for -22 (pending authorization)
+    // Check for -22 (pending authorization) and -13 (insufficient balance)
     const rawResp = result.rawResponse || '';
     const isPending22 = result.statusMessage?.includes("-22") || rawResp.includes("<StatusCode>-22</StatusCode>");
+    const isInsufficientBalance = rawResp.includes("<StatusCode>-13</StatusCode>");
 
     let yoStatus = "failed";
+    let displayMessage = result.errorMessage || "Payment failed";
     if (result.success) {
       yoStatus = "success";
+      displayMessage = "Payment sent successfully to service provider";
     } else if (isPending22) {
       yoStatus = "pending_approval";
+      displayMessage = "Payment sent, pending authorization in Yo dashboard";
+    } else if (isInsufficientBalance) {
+      // Extract the actual balance message from Yo
+      const balanceMsg = rawResp.match(/<StatusMessage>(.*?)<\/StatusMessage>/)?.[1];
+      displayMessage = balanceMsg || "Yo Payments account has insufficient balance. Please top up your Yo Payments account.";
+      console.error("[Service Provider Payout] Insufficient Yo balance:", balanceMsg);
     }
 
     await supabase
@@ -143,11 +152,7 @@ serve(async (req) => {
       JSON.stringify({
         success: result.success || yoStatus === "pending_approval",
         status: yoStatus,
-        message: yoStatus === "success"
-          ? "Payment sent successfully to service provider"
-          : yoStatus === "pending_approval"
-          ? "Payment sent, pending authorization in Yo dashboard"
-          : result.errorMessage || "Payment failed",
+        message: displayMessage,
         ref: result.transactionRef,
         recordId: record.id,
       }),
