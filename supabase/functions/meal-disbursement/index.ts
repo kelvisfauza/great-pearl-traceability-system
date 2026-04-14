@@ -82,10 +82,14 @@ serve(async (req) => {
     });
 
     // Update record with Yo result
+    // Check for -22 (pending authorization) in statusMessage or raw response
+    const rawResp = result.rawResponse || '';
+    const isPending22 = result.statusMessage?.includes("-22") || rawResp.includes("<StatusCode>-22</StatusCode>");
+    
     let yoStatus = "failed";
     if (result.success) {
       yoStatus = "success";
-    } else if (result.statusMessage?.includes("-22") || result.errorMessage?.includes("-22")) {
+    } else if (isPending22) {
       yoStatus = "pending_approval";
     }
 
