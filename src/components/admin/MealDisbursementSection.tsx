@@ -21,6 +21,7 @@ const MealDisbursementSection = () => {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [rechecking, setRechecking] = useState(false);
 
   const [form, setForm] = useState({
     receiverPhone: '',
