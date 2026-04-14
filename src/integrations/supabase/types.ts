@@ -225,48 +225,6 @@ export type Database = {
         }
         Relationships: []
       }
-      approval_action_tokens: {
-        Row: {
-          action_type: string
-          approval_stage: string
-          approver_email: string
-          approver_name: string | null
-          created_at: string
-          expires_at: string
-          id: string
-          request_id: string
-          status: string
-          token: string
-          used_at: string | null
-        }
-        Insert: {
-          action_type: string
-          approval_stage?: string
-          approver_email: string
-          approver_name?: string | null
-          created_at?: string
-          expires_at?: string
-          id?: string
-          request_id: string
-          status?: string
-          token?: string
-          used_at?: string | null
-        }
-        Update: {
-          action_type?: string
-          approval_stage?: string
-          approver_email?: string
-          approver_name?: string | null
-          created_at?: string
-          expires_at?: string
-          id?: string
-          request_id?: string
-          status?: string
-          token?: string
-          used_at?: string | null
-        }
-        Relationships: []
-      }
       approval_requests: {
         Row: {
           admin_approved: boolean | null
@@ -408,255 +366,6 @@ export type Database = {
           title?: string
           type?: string
           updated_at?: string
-        }
-        Relationships: []
-      }
-      archive_history: {
-        Row: {
-          archive_date: string | null
-          archive_period: string
-          archived_by: string
-          created_at: string | null
-          id: string
-          notes: string | null
-          records_archived: Json | null
-        }
-        Insert: {
-          archive_date?: string | null
-          archive_period: string
-          archived_by: string
-          created_at?: string | null
-          id?: string
-          notes?: string | null
-          records_archived?: Json | null
-        }
-        Update: {
-          archive_date?: string | null
-          archive_period?: string
-          archived_by?: string
-          created_at?: string | null
-          id?: string
-          notes?: string | null
-          records_archived?: Json | null
-        }
-        Relationships: []
-      }
-      archived_approval_requests: {
-        Row: {
-          admin_approved: boolean | null
-          admin_approved_at: string | null
-          admin_approved_by: string | null
-          amount: number
-          archive_period: string
-          archived_at: string | null
-          archived_by: string | null
-          created_at: string | null
-          daterequested: string
-          description: string | null
-          details: Json | null
-          finance_approved: boolean | null
-          finance_approved_at: string | null
-          finance_approved_by: string | null
-          id: string
-          original_id: string
-          priority: string | null
-          requestedby: string
-          status: string
-          title: string
-          type: string
-          updated_at: string | null
-        }
-        Insert: {
-          admin_approved?: boolean | null
-          admin_approved_at?: string | null
-          admin_approved_by?: string | null
-          amount: number
-          archive_period: string
-          archived_at?: string | null
-          archived_by?: string | null
-          created_at?: string | null
-          daterequested: string
-          description?: string | null
-          details?: Json | null
-          finance_approved?: boolean | null
-          finance_approved_at?: string | null
-          finance_approved_by?: string | null
-          id?: string
-          original_id: string
-          priority?: string | null
-          requestedby: string
-          status: string
-          title: string
-          type: string
-          updated_at?: string | null
-        }
-        Update: {
-          admin_approved?: boolean | null
-          admin_approved_at?: string | null
-          admin_approved_by?: string | null
-          amount?: number
-          archive_period?: string
-          archived_at?: string | null
-          archived_by?: string | null
-          created_at?: string | null
-          daterequested?: string
-          description?: string | null
-          details?: Json | null
-          finance_approved?: boolean | null
-          finance_approved_at?: string | null
-          finance_approved_by?: string | null
-          id?: string
-          original_id?: string
-          priority?: string | null
-          requestedby?: string
-          status?: string
-          title?: string
-          type?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      archived_finance_cash_transactions: {
-        Row: {
-          amount: number
-          archive_period: string
-          archived_at: string | null
-          archived_by: string | null
-          confirmed_at: string | null
-          confirmed_by: string | null
-          created_at: string | null
-          id: string
-          notes: string | null
-          original_id: string
-          reference: string | null
-          transaction_type: string
-        }
-        Insert: {
-          amount: number
-          archive_period: string
-          archived_at?: string | null
-          archived_by?: string | null
-          confirmed_at?: string | null
-          confirmed_by?: string | null
-          created_at?: string | null
-          id?: string
-          notes?: string | null
-          original_id: string
-          reference?: string | null
-          transaction_type: string
-        }
-        Update: {
-          amount?: number
-          archive_period?: string
-          archived_at?: string | null
-          archived_by?: string | null
-          confirmed_at?: string | null
-          confirmed_by?: string | null
-          created_at?: string | null
-          id?: string
-          notes?: string | null
-          original_id?: string
-          reference?: string | null
-          transaction_type?: string
-        }
-        Relationships: []
-      }
-      archived_money_requests: {
-        Row: {
-          amount: number
-          approved_at: string | null
-          approved_by: string | null
-          archive_period: string
-          archived_at: string | null
-          archived_by: string | null
-          created_at: string | null
-          employee_id: string | null
-          employee_name: string | null
-          id: string
-          original_id: string
-          reason: string | null
-          request_type: string | null
-          status: string | null
-        }
-        Insert: {
-          amount: number
-          approved_at?: string | null
-          approved_by?: string | null
-          archive_period: string
-          archived_at?: string | null
-          archived_by?: string | null
-          created_at?: string | null
-          employee_id?: string | null
-          employee_name?: string | null
-          id?: string
-          original_id: string
-          reason?: string | null
-          request_type?: string | null
-          status?: string | null
-        }
-        Update: {
-          amount?: number
-          approved_at?: string | null
-          approved_by?: string | null
-          archive_period?: string
-          archived_at?: string | null
-          archived_by?: string | null
-          created_at?: string | null
-          employee_id?: string | null
-          employee_name?: string | null
-          id?: string
-          original_id?: string
-          reason?: string | null
-          request_type?: string | null
-          status?: string | null
-        }
-        Relationships: []
-      }
-      archived_payment_records: {
-        Row: {
-          amount: number
-          archive_period: string
-          archived_at: string | null
-          archived_by: string | null
-          created_at: string | null
-          id: string
-          notes: string | null
-          original_id: string
-          payment_date: string | null
-          payment_method: string | null
-          recorded_by: string | null
-          reference: string | null
-          supplier_name: string | null
-        }
-        Insert: {
-          amount: number
-          archive_period: string
-          archived_at?: string | null
-          archived_by?: string | null
-          created_at?: string | null
-          id?: string
-          notes?: string | null
-          original_id: string
-          payment_date?: string | null
-          payment_method?: string | null
-          recorded_by?: string | null
-          reference?: string | null
-          supplier_name?: string | null
-        }
-        Update: {
-          amount?: number
-          archive_period?: string
-          archived_at?: string | null
-          archived_by?: string | null
-          created_at?: string | null
-          id?: string
-          notes?: string | null
-          original_id?: string
-          payment_date?: string | null
-          payment_method?: string | null
-          recorded_by?: string | null
-          reference?: string | null
-          supplier_name?: string | null
         }
         Relationships: []
       }
@@ -816,60 +525,6 @@ export type Database = {
         }
         Relationships: []
       }
-      bills: {
-        Row: {
-          amount_paid: number
-          balance: number
-          bill_date: string
-          bill_number: string
-          created_at: string
-          description: string | null
-          due_date: string | null
-          id: string
-          notes: string | null
-          status: string
-          subtotal: number
-          supplier_name: string
-          tax: number
-          total: number
-          updated_at: string
-        }
-        Insert: {
-          amount_paid?: number
-          balance?: number
-          bill_date: string
-          bill_number: string
-          created_at?: string
-          description?: string | null
-          due_date?: string | null
-          id?: string
-          notes?: string | null
-          status?: string
-          subtotal?: number
-          supplier_name: string
-          tax?: number
-          total?: number
-          updated_at?: string
-        }
-        Update: {
-          amount_paid?: number
-          balance?: number
-          bill_date?: string
-          bill_number?: string
-          created_at?: string
-          description?: string | null
-          due_date?: string | null
-          id?: string
-          notes?: string | null
-          status?: string
-          subtotal?: number
-          supplier_name?: string
-          tax?: number
-          total?: number
-          updated_at?: string
-        }
-        Relationships: []
-      }
       biometric_credentials: {
         Row: {
           created_at: string | null
@@ -891,42 +546,6 @@ export type Database = {
           email?: string
           id?: string
           updated_at?: string | null
-        }
-        Relationships: []
-      }
-      birthday_rewards: {
-        Row: {
-          amount: number | null
-          birthday_year: number
-          created_at: string | null
-          employee_email: string
-          employee_id: string
-          employee_name: string
-          id: string
-          ledger_reference: string | null
-          sms_sent: boolean | null
-        }
-        Insert: {
-          amount?: number | null
-          birthday_year: number
-          created_at?: string | null
-          employee_email: string
-          employee_id: string
-          employee_name: string
-          id?: string
-          ledger_reference?: string | null
-          sms_sent?: boolean | null
-        }
-        Update: {
-          amount?: number | null
-          birthday_year?: number
-          created_at?: string | null
-          employee_email?: string
-          employee_id?: string
-          employee_name?: string
-          id?: string
-          ledger_reference?: string | null
-          sms_sent?: boolean | null
         }
         Relationships: []
       }
@@ -1079,173 +698,6 @@ export type Database = {
           manager_name?: string
           name?: string
           status?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      calibration_logs: {
-        Row: {
-          actual_value: number
-          calibration_date: string
-          created_at: string | null
-          device_name: string
-          done_by: string
-          expected_value: number
-          id: string
-          notes: string | null
-          status: string
-          variance: number | null
-        }
-        Insert: {
-          actual_value: number
-          calibration_date?: string
-          created_at?: string | null
-          device_name: string
-          done_by: string
-          expected_value: number
-          id?: string
-          notes?: string | null
-          status?: string
-          variance?: number | null
-        }
-        Update: {
-          actual_value?: number
-          calibration_date?: string
-          created_at?: string | null
-          device_name?: string
-          done_by?: string
-          expected_value?: number
-          id?: string
-          notes?: string | null
-          status?: string
-          variance?: number | null
-        }
-        Relationships: []
-      }
-      calls: {
-        Row: {
-          caller_id: string
-          caller_name: string
-          created_at: string
-          duration: number | null
-          ended_at: string | null
-          id: string
-          recipient_id: string
-          recipient_name: string
-          started_at: string
-          status: string
-        }
-        Insert: {
-          caller_id: string
-          caller_name: string
-          created_at?: string
-          duration?: number | null
-          ended_at?: string | null
-          id?: string
-          recipient_id: string
-          recipient_name: string
-          started_at?: string
-          status?: string
-        }
-        Update: {
-          caller_id?: string
-          caller_name?: string
-          created_at?: string
-          duration?: number | null
-          ended_at?: string | null
-          id?: string
-          recipient_id?: string
-          recipient_name?: string
-          started_at?: string
-          status?: string
-        }
-        Relationships: []
-      }
-      cash_movements: {
-        Row: {
-          amount_ugx: number
-          created_at: string
-          description: string | null
-          direction: string
-          id: string
-          occurred_at: string
-          session_id: string
-          source_id: string
-          source_type: string
-        }
-        Insert: {
-          amount_ugx: number
-          created_at?: string
-          description?: string | null
-          direction: string
-          id?: string
-          occurred_at?: string
-          session_id: string
-          source_id: string
-          source_type: string
-        }
-        Update: {
-          amount_ugx?: number
-          created_at?: string
-          description?: string | null
-          direction?: string
-          id?: string
-          occurred_at?: string
-          session_id?: string
-          source_id?: string
-          source_type?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "cash_movements_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "cash_sessions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      cash_sessions: {
-        Row: {
-          closed_at: string | null
-          closed_by: string | null
-          created_at: string
-          declared_cash_on_hand_ugx: number | null
-          id: string
-          is_closed: boolean
-          opened_at: string
-          opened_by: string
-          opening_float_ugx: number
-          session_date: string
-          system_closing_balance_ugx: number | null
-          updated_at: string
-        }
-        Insert: {
-          closed_at?: string | null
-          closed_by?: string | null
-          created_at?: string
-          declared_cash_on_hand_ugx?: number | null
-          id?: string
-          is_closed?: boolean
-          opened_at?: string
-          opened_by: string
-          opening_float_ugx: number
-          session_date: string
-          system_closing_balance_ugx?: number | null
-          updated_at?: string
-        }
-        Update: {
-          closed_at?: string | null
-          closed_by?: string | null
-          created_at?: string
-          declared_cash_on_hand_ugx?: number | null
-          id?: string
-          is_closed?: boolean
-          opened_at?: string
-          opened_by?: string
-          opening_float_ugx?: number
-          session_date?: string
-          system_closing_balance_ugx?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -3678,12 +3130,14 @@ export type Database = {
         Row: {
           assessed_at: string
           assessed_by: string
+          batch_number: string | null
           coffee_record_id: string | null
           created_at: string
           finance_notes: string | null
           finance_status: Database["public"]["Enums"]["lot_finance_status"]
           grn_file_name: string | null
           grn_file_url: string | null
+          grn_number: string | null
           id: string
           quality_assessment_id: string | null
           quality_json: Json
@@ -3696,12 +3150,14 @@ export type Database = {
         Insert: {
           assessed_at?: string
           assessed_by: string
+          batch_number?: string | null
           coffee_record_id?: string | null
           created_at?: string
           finance_notes?: string | null
           finance_status?: Database["public"]["Enums"]["lot_finance_status"]
           grn_file_name?: string | null
           grn_file_url?: string | null
+          grn_number?: string | null
           id?: string
           quality_assessment_id?: string | null
           quality_json: Json
@@ -3714,12 +3170,14 @@ export type Database = {
         Update: {
           assessed_at?: string
           assessed_by?: string
+          batch_number?: string | null
           coffee_record_id?: string | null
           created_at?: string
           finance_notes?: string | null
           finance_status?: Database["public"]["Enums"]["lot_finance_status"]
           grn_file_name?: string | null
           grn_file_url?: string | null
+          grn_number?: string | null
           id?: string
           quality_assessment_id?: string | null
           quality_json?: Json
