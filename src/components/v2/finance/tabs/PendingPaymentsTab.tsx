@@ -360,9 +360,9 @@ const PendingPaymentsTab = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="CASH">Cash</SelectItem>
-                    <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
-                    <SelectItem value="CHEQUE">Cheque</SelectItem>
+                    <SelectItem value="CASH">💵 Cash</SelectItem>
+                    <SelectItem value="MOBILE_MONEY">📱 Mobile Money</SelectItem>
+                    <SelectItem value="BANK_TRANSFER">🏦 Bank Transfer</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
