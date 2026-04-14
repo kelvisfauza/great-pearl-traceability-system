@@ -203,7 +203,8 @@ const UserPermissionsList: React.FC = () => {
                 filteredEmployees.map((employee) => (
                   <div
                     key={employee.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/30 transition-colors"
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/30 transition-colors cursor-pointer"
+                    onClick={() => { setProfileEmployee(employee); setIsProfileOpen(true); }}
                   >
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
