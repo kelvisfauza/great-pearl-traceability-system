@@ -2,8 +2,9 @@ import { useState } from "react";
 import V2Navigation from "@/components/v2/V2Navigation";
 import PriceTicker from "@/components/PriceTicker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Wallet, GitCompare, ArrowDownUp, Search, FileText } from "lucide-react";
+import { Wallet, GitCompare, ArrowDownUp, Search, FileText, CreditCard } from "lucide-react";
 import FinanceOverviewTab from "@/components/v2/finance/tabs/FinanceOverviewTab";
+import PendingPaymentsTab from "@/components/v2/finance/tabs/PendingPaymentsTab";
 import TransactionReconciliationTab from "@/components/v2/finance/tabs/TransactionReconciliationTab";
 import AdvancesRecoveriesTab from "@/components/v2/finance/tabs/AdvancesRecoveriesTab";
 import DuplicateDetectionTab from "@/components/v2/finance/tabs/DuplicateDetectionTab";
@@ -11,6 +12,7 @@ import FinanceReportsTab from "@/components/v2/finance/tabs/FinanceReportsTab";
 
 const tabs = [
   { id: "overview", label: "Overview", icon: Wallet },
+  { id: "payments", label: "Pending Payments", icon: CreditCard },
   { id: "reconciliation", label: "Reconciliation", icon: GitCompare },
   { id: "advances", label: "Advances", icon: ArrowDownUp },
   { id: "duplicates", label: "Duplicates", icon: Search },
@@ -42,6 +44,7 @@ const FinanceDashboard = () => {
                 ))}
               </TabsList>
               <TabsContent value="overview"><FinanceOverviewTab /></TabsContent>
+              <TabsContent value="payments"><PendingPaymentsTab /></TabsContent>
               <TabsContent value="reconciliation"><TransactionReconciliationTab /></TabsContent>
               <TabsContent value="advances"><AdvancesRecoveriesTab /></TabsContent>
               <TabsContent value="duplicates"><DuplicateDetectionTab /></TabsContent>
