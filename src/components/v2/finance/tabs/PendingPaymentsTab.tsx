@@ -123,16 +123,12 @@ const PendingPaymentsTab = () => {
         .from("supplier_payments")
         .insert({
           supplier_id: payDialog.supplier_id,
-          supplier_name: payDialog.supplier_name || "Unknown",
           lot_id: payDialog.id,
-          batch_number: payDialog.batch_number || payDialog.coffee_record_id,
-          amount_ugx: payDialog.total_amount_ugx,
           amount_paid_ugx: payDialog.total_amount_ugx,
-          payment_method: payMethod as any,
-          status: "completed",
+          gross_payable_ugx: payDialog.total_amount_ugx,
+          method: payMethod as any,
           notes: payNotes || undefined,
-          quantity_kg: payDialog.quantity_kg,
-          price_per_kg: payDialog.unit_price_ugx,
+          requested_by: "Finance Department",
         });
 
       if (paymentError) throw paymentError;
