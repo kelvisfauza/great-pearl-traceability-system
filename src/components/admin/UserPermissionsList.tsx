@@ -58,6 +58,8 @@ const UserPermissionsList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [profileEmployee, setProfileEmployee] = useState<Employee | null>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { isAdmin } = useAuth();
   const { toast } = useToast();
 
