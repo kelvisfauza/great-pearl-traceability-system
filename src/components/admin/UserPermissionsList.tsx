@@ -287,6 +287,12 @@ const UserPermissionsList: React.FC = () => {
         employee={selectedEmployee}
         onPermissionsUpdated={handlePermissionsUpdated}
       />
+
+      <UserProfileDetailModal
+        open={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        employee={profileEmployee}
+      />
     </>
   );
 };
