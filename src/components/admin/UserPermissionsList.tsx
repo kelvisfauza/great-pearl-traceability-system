@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import PermissionManagementModal from './PermissionManagementModal';
+import UserProfileDetailModal from './UserProfileDetailModal';
 import { PERMISSION_DETAILS, type PermissionType } from '@/types/permissions';
 import { 
   Shield, 
@@ -29,6 +30,25 @@ interface Employee {
   position: string;
   status: string;
   avatar_url?: string;
+  phone?: string;
+  employee_id?: string;
+  join_date?: string;
+  date_of_birth?: string;
+  gender?: string;
+  marital_status?: string;
+  district?: string;
+  address?: string;
+  tribe?: string;
+  national_id_number?: string;
+  national_id_name?: string;
+  next_of_kin_name?: string;
+  next_of_kin_phone?: string;
+  next_of_kin_relationship?: string;
+  emergency_contact?: string;
+  bank_name?: string;
+  account_name?: string;
+  account_number?: string;
+  salary?: number;
 }
 
 const UserPermissionsList: React.FC = () => {
@@ -38,6 +58,8 @@ const UserPermissionsList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [profileEmployee, setProfileEmployee] = useState<Employee | null>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { isAdmin } = useAuth();
   const { toast } = useToast();
 
@@ -181,7 +203,8 @@ const UserPermissionsList: React.FC = () => {
                 filteredEmployees.map((employee) => (
                   <div
                     key={employee.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/30 transition-colors"
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/30 transition-colors cursor-pointer"
+                    onClick={() => { setProfileEmployee(employee); setIsProfileOpen(true); }}
                   >
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
@@ -244,7 +267,7 @@ const UserPermissionsList: React.FC = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleManagePermissions(employee)}
+                        onClick={(e) => { e.stopPropagation(); handleManagePermissions(employee); }}
                       >
                         <Settings className="h-4 w-4 mr-1" />
                         Manage
@@ -263,6 +286,12 @@ const UserPermissionsList: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         employee={selectedEmployee}
         onPermissionsUpdated={handlePermissionsUpdated}
+      />
+
+      <UserProfileDetailModal
+        open={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        employee={profileEmployee}
       />
     </>
   );
