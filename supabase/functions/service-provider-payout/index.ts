@@ -152,11 +152,7 @@ serve(async (req) => {
       JSON.stringify({
         success: result.success || yoStatus === "pending_approval",
         status: yoStatus,
-        message: yoStatus === "success"
-          ? "Payment sent successfully to service provider"
-          : yoStatus === "pending_approval"
-          ? "Payment sent, pending authorization in Yo dashboard"
-          : result.errorMessage || "Payment failed",
+        message: displayMessage,
         ref: result.transactionRef,
         recordId: record.id,
       }),
