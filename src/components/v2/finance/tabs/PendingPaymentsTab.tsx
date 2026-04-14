@@ -380,7 +380,7 @@ const PendingPaymentsTab = () => {
                 ))}
                 {filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                       {search ? "No matching lots found" : "All lots have been paid ✓"}
                     </TableCell>
                   </TableRow>
@@ -449,6 +449,27 @@ const PendingPaymentsTab = () => {
             <Button onClick={handlePay} disabled={processing}>
               {processing && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Confirm Payment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialog} onOpenChange={setDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Duplicate Entries</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {selectedIds.size} selected entries? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialog(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteSelected} disabled={deleting}>
+              {deleting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Delete {selectedIds.size} Entries
             </Button>
           </DialogFooter>
         </DialogContent>
