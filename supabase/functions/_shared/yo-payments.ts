@@ -79,12 +79,19 @@ function parseYoResponse(xml: string): YoPayoutResult {
 
   const txRefMatch = xml.match(/<TransactionReference>(.*?)<\/TransactionReference>/);
   const statusMsgMatch = xml.match(/<StatusMessage>(.*?)<\/StatusMessage>/);
+  const statusCodeMatch = xml.match(/<StatusCode>(.*?)<\/StatusCode>/);
+  const statusCode = statusCodeMatch?.[1]?.trim();
 
-  if (status === "OK") {
+  // StatusCode -22 means "extra authorization required" — treat as pending, not failure
+  const isPendingAuthorization = statusCode === '-22';
+
+  if (status === "OK" || isPendingAuthorization) {
     return {
-      success: true,
+      success: !isPendingAuthorization,
       transactionRef: txRefMatch?.[1]?.trim() || undefined,
-      statusMessage: statusMsgMatch?.[1]?.trim() || "Transaction accepted",
+      statusMessage: isPendingAuthorization
+        ? `StatusCode:-22 ${statusMsgMatch?.[1]?.trim() || 'Pending authorization'}`
+        : (statusMsgMatch?.[1]?.trim() || "Transaction accepted"),
       rawResponse: xml,
     };
   }
@@ -92,6 +99,7 @@ function parseYoResponse(xml: string): YoPayoutResult {
   return {
     success: false,
     errorMessage: statusMsgMatch?.[1]?.trim() || `Yo Payments returned status: ${status}`,
+    statusMessage: statusMsgMatch?.[1]?.trim(),
     rawResponse: xml,
   };
 }
