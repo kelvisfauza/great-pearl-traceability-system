@@ -35,6 +35,9 @@ const PendingPaymentsTab = () => {
   const [payMethod, setPayMethod] = useState<string>("CASH");
   const [payNotes, setPayNotes] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteDialog, setDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: lots, isLoading } = useQuery({
