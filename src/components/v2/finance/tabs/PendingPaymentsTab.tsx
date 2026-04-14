@@ -322,10 +322,21 @@ const PendingPaymentsTab = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead>Batch / Record</TableHead>
                   <TableHead>Supplier</TableHead>
                   <TableHead>Coffee Type</TableHead>
                   <TableHead className="text-right">Qty (kg)</TableHead>
+                  <TableHead className="text-right">Price/kg</TableHead>
+                  <TableHead className="text-right">Total (UGX)</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Action</TableHead>
+                </TableRow>
                   <TableHead className="text-right">Price/kg</TableHead>
                   <TableHead className="text-right">Total (UGX)</TableHead>
                   <TableHead>Date</TableHead>
