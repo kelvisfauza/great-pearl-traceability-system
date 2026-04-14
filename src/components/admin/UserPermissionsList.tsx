@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import PermissionManagementModal from './PermissionManagementModal';
+import UserProfileDetailModal from './UserProfileDetailModal';
 import { PERMISSION_DETAILS, type PermissionType } from '@/types/permissions';
 import { 
   Shield, 
