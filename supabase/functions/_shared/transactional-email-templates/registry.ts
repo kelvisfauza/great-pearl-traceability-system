@@ -60,6 +60,7 @@ import { template as requestExpiredRefund } from './request-expired-refund.tsx'
 import { template as generalNotification } from './general-notification.tsx'
 import { template as withdrawalAuthRequest } from './withdrawal-auth-request.tsx'
 import { template as instantWithdrawalApprovalRequest } from './instant-withdrawal-approval-request.tsx'
+import { template as mealDisbursementNotification } from './meal-disbursement-notification.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'verification-code': verificationCode,
@@ -113,4 +114,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'general-notification': generalNotification,
   'withdrawal-auth-request': withdrawalAuthRequest,
   'instant-withdrawal-approval-request': instantWithdrawalApprovalRequest,
+  'meal-disbursement-notification': mealDisbursementNotification,
 }

@@ -4,6 +4,7 @@ import ApprovalCenter from '@/components/ApprovalCenter';
 import ApprovedRequestsHistory from '@/components/admin/ApprovedRequestsHistory';
 import AdminQualityPricingReview from '@/components/admin/AdminQualityPricingReview';
 import AdminRejectedLotsReview from '@/components/admin/AdminRejectedLotsReview';
+import MealDisbursementSection from '@/components/admin/MealDisbursementSection';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRoleBasedData } from '@/hooks/useRoleBasedData';
 import { Shield, ClipboardCheck, DollarSign } from 'lucide-react';
@@ -69,6 +70,9 @@ const Approvals = () => {
 
         {/* Rejected Lots — Admin Discretion Buying */}
         <AdminRejectedLotsReview />
+
+        {/* Meal Plan Disbursements */}
+        <MealDisbursementSection />
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
