@@ -30,6 +30,25 @@ interface Employee {
   position: string;
   status: string;
   avatar_url?: string;
+  phone?: string;
+  employee_id?: string;
+  join_date?: string;
+  date_of_birth?: string;
+  gender?: string;
+  marital_status?: string;
+  district?: string;
+  address?: string;
+  tribe?: string;
+  national_id_number?: string;
+  national_id_name?: string;
+  next_of_kin_name?: string;
+  next_of_kin_phone?: string;
+  next_of_kin_relationship?: string;
+  emergency_contact?: string;
+  bank_name?: string;
+  account_name?: string;
+  account_number?: string;
+  salary?: number;
 }
 
 const UserPermissionsList: React.FC = () => {
