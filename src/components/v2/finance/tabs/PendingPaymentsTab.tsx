@@ -194,6 +194,46 @@ const PendingPaymentsTab = () => {
     }
   };
 
+  const handleDeleteSelected = async () => {
+    setDeleting(true);
+    try {
+      const ids = Array.from(selectedIds);
+      for (let i = 0; i < ids.length; i += 50) {
+        const chunk = ids.slice(i, i + 50);
+        const { error } = await supabase
+          .from("finance_coffee_lots")
+          .delete()
+          .in("id", chunk);
+        if (error) throw error;
+      }
+      toast.success(`Deleted ${ids.length} duplicate entries`);
+      setSelectedIds(new Set());
+      setDeleteDialog(false);
+      queryClient.invalidateQueries({ queryKey: ["finance-pending-payments"] });
+    } catch (err: any) {
+      toast.error("Delete failed: " + (err.message || "Unknown error"));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((l) => l.id)));
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-8">
