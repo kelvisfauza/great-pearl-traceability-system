@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UtensilsCrossed, Send, Loader2, Phone, DollarSign } from 'lucide-react';
+import { UtensilsCrossed, Send, Loader2, Phone, DollarSign, RefreshCw } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
@@ -21,6 +21,7 @@ const MealDisbursementSection = () => {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [rechecking, setRechecking] = useState(false);
 
   const [form, setForm] = useState({
     receiverPhone: '',
@@ -98,6 +99,23 @@ const MealDisbursementSection = () => {
     }
   };
 
+  const handleRecheck = async () => {
+    setRechecking(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('check-payout-status', { body: {} });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['meal-disbursements'] });
+      toast({
+        title: 'Status check complete',
+        description: `Checked: ${data?.checked || 0}, Completed: ${data?.completed || 0}, Failed: ${data?.failed || 0}`,
+      });
+    } catch (err: any) {
+      toast({ title: 'Error', description: 'Failed to check statuses', variant: 'destructive' });
+    } finally {
+      setRechecking(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'success': return <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Sent</Badge>;
@@ -108,6 +126,8 @@ const MealDisbursementSection = () => {
   };
 
   const formatAmount = (v: number) => `UGX ${Number(v).toLocaleString('en-UG')}`;
+
+  const hasPending = disbursements.some((d: any) => d.yo_status === 'pending_approval');
 
   return (
     <Card className="card-modern">
@@ -122,12 +142,19 @@ const MealDisbursementSection = () => {
           </div>
         </div>
 
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Send className="w-4 h-4" /> Send Meal Money
+        <div className="flex items-center gap-2">
+          {hasPending && (
+            <Button variant="outline" size="sm" onClick={handleRecheck} disabled={rechecking} className="gap-1">
+              <RefreshCw className={`w-4 h-4 ${rechecking ? 'animate-spin' : ''}`} />
+              {rechecking ? 'Checking...' : 'Re-check'}
             </Button>
-          </DialogTrigger>
+          )}
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <Send className="w-4 h-4" /> Send Meal Money
+              </Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -223,6 +250,7 @@ const MealDisbursementSection = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </CardHeader>
 
       <CardContent>
