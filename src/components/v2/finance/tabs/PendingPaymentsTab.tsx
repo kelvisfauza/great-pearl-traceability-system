@@ -39,54 +39,56 @@ const PendingPaymentsTab = () => {
   const { data: lots, isLoading } = useQuery({
     queryKey: ["finance-pending-payments"],
     queryFn: async () => {
-      // Fetch all READY_FOR_FINANCE lots
-      const { data: financeLots, error } = await supabase
-        .from("finance_coffee_lots")
-        .select("*")
-        .eq("finance_status", "READY_FOR_FINANCE")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      // Enrich with supplier names from coffee_records
-      const coffeeRecordIds = (financeLots || [])
-        .map((l: any) => l.coffee_record_id)
-        .filter(Boolean);
-
-      let supplierMap = new Map<string, { supplier_name: string; coffee_type: string; batch_number: string }>();
-
-      if (coffeeRecordIds.length > 0) {
-        // coffee_record_id is stored as text like "CR-xxx", match against coffee_records.id
-        const { data: records } = await supabase
-          .from("coffee_records")
-          .select("id, supplier_name, coffee_type, batch_number");
-
-        if (records) {
-          records.forEach((r: any) => {
-            supplierMap.set(r.id, {
-              supplier_name: r.supplier_name,
-              coffee_type: r.coffee_type,
-              batch_number: r.batch_number,
-            });
-          });
-        }
+      // Fetch all READY_FOR_FINANCE lots (handle >1000 rows)
+      let allLots: any[] = [];
+      let from = 0;
+      const pageSize = 1000;
+      while (true) {
+        const { data: page, error } = await supabase
+          .from("finance_coffee_lots")
+          .select("*")
+          .eq("finance_status", "READY_FOR_FINANCE")
+          .order("created_at", { ascending: false })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        allLots = allLots.concat(page || []);
+        if (!page || page.length < pageSize) break;
+        from += pageSize;
       }
 
-      // Also get supplier names from suppliers table
-      const supplierIds = (financeLots || [])
-        .map((l: any) => l.supplier_id)
-        .filter(Boolean);
+      // Get coffee record details for supplier/type info
+      const coffeeRecordIds = [...new Set(allLots.map((l: any) => l.coffee_record_id).filter(Boolean))];
+      let supplierMap = new Map<string, { supplier_name: string; coffee_type: string; batch_number: string }>();
 
+      // Fetch in chunks of 500
+      for (let i = 0; i < coffeeRecordIds.length; i += 500) {
+        const chunk = coffeeRecordIds.slice(i, i + 500);
+        const { data: records } = await supabase
+          .from("coffee_records")
+          .select("id, supplier_name, coffee_type, batch_number")
+          .in("id", chunk);
+        records?.forEach((r: any) => {
+          supplierMap.set(r.id, {
+            supplier_name: r.supplier_name,
+            coffee_type: r.coffee_type,
+            batch_number: r.batch_number,
+          });
+        });
+      }
+
+      // Get supplier names
+      const supplierIds = [...new Set(allLots.map((l: any) => l.supplier_id).filter(Boolean))];
       let supplierNameMap = new Map<string, string>();
-      if (supplierIds.length > 0) {
+      for (let i = 0; i < supplierIds.length; i += 500) {
+        const chunk = supplierIds.slice(i, i + 500);
         const { data: suppliers } = await supabase
           .from("suppliers")
           .select("id, name")
-          .in("id", supplierIds);
+          .in("id", chunk);
         suppliers?.forEach((s: any) => supplierNameMap.set(s.id, s.name));
       }
 
-      return (financeLots || []).map((lot: any) => {
+      return allLots.map((lot: any) => {
         const record = supplierMap.get(lot.coffee_record_id);
         return {
           ...lot,
