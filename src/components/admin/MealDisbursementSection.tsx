@@ -250,6 +250,7 @@ const MealDisbursementSection = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </CardHeader>
 
       <CardContent>
