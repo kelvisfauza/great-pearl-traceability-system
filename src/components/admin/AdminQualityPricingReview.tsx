@@ -438,7 +438,41 @@ const AdminQualityPricingReview = () => {
           .eq('id', selectedAssessment.store_record_id);
       }
 
-      toast({ title: "Assessment Rejected", description: `Lot ${selectedAssessment.batch_number} has been rejected` });
+      // If admin set a price before rejecting, still create finance lot for payment
+      if (finalPrice > 0 && selectedAssessment.store_record_id && selectedAssessment.coffee_record) {
+        const qualityJson = {
+          moisture_content: selectedAssessment.moisture,
+          group1_percentage: selectedAssessment.group1_defects,
+          group2_percentage: selectedAssessment.group2_defects,
+          pods_percentage: selectedAssessment.pods,
+          husks_percentage: selectedAssessment.husks,
+          fm_percentage: selectedAssessment.fm,
+          outturn_percentage: selectedAssessment.outturn,
+          comments: `QUALITY REJECTED - ${adminComments}`
+        };
+
+        await supabase
+          .from('finance_coffee_lots')
+          .insert({
+            quality_assessment_id: selectedAssessment.id,
+            coffee_record_id: selectedAssessment.store_record_id,
+            supplier_id: selectedAssessment.coffee_record.supplier_id,
+            assessed_by: selectedAssessment.assessed_by,
+            assessed_at: new Date().toISOString(),
+            quality_json: qualityJson,
+            unit_price_ugx: finalPrice,
+            quantity_kg: selectedAssessment.coffee_record.kilograms,
+            finance_status: 'READY_FOR_FINANCE'
+          });
+
+        toast({ 
+          title: "Quality Rejected - Sent to Finance", 
+          description: `Lot ${selectedAssessment.batch_number} rejected but priced at UGX ${finalPrice.toLocaleString()}/kg — sent to Finance for payment` 
+        });
+      } else {
+        toast({ title: "Assessment Rejected", description: `Lot ${selectedAssessment.batch_number} has been rejected` });
+      }
+
       setReviewModalOpen(false);
       fetchPendingAssessments();
     } catch (error: any) {
