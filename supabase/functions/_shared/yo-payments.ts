@@ -41,7 +41,7 @@ function getProviderCode(phone: string): string {
 }
 
 /**
- * Build the XML request body for Yo Payments acdepositfunds
+ * Build the XML request body for Yo Payments acwithdrawfunds (send money TO a phone)
  */
 function buildYoXmlRequest(username: string, password: string, params: YoPayoutParams): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -49,7 +49,7 @@ function buildYoXmlRequest(username: string, password: string, params: YoPayoutP
   <Request>
     <APIUsername>${username}</APIUsername>
     <APIPassword>${password}</APIPassword>
-    <Method>acdepositfunds</Method>
+    <Method>acwithdrawfunds</Method>
     <NonBlocking>TRUE</NonBlocking>
     <Amount>${params.amount}</Amount>
     <Account>${params.phone}</Account>
