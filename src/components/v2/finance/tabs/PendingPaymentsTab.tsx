@@ -1,15 +1,16 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Search, CreditCard, CheckCircle2, DollarSign, Coffee } from "lucide-react";
+import { Loader2, Search, CreditCard, CheckCircle2, DollarSign, Coffee, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface FinanceLot {
@@ -34,6 +35,9 @@ const PendingPaymentsTab = () => {
   const [payMethod, setPayMethod] = useState<string>("CASH");
   const [payNotes, setPayNotes] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteDialog, setDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: lots, isLoading } = useQuery({
@@ -190,6 +194,46 @@ const PendingPaymentsTab = () => {
     }
   };
 
+  const handleDeleteSelected = async () => {
+    setDeleting(true);
+    try {
+      const ids = Array.from(selectedIds);
+      for (let i = 0; i < ids.length; i += 50) {
+        const chunk = ids.slice(i, i + 50);
+        const { error } = await supabase
+          .from("finance_coffee_lots")
+          .delete()
+          .in("id", chunk);
+        if (error) throw error;
+      }
+      toast.success(`Deleted ${ids.length} duplicate entries`);
+      setSelectedIds(new Set());
+      setDeleteDialog(false);
+      queryClient.invalidateQueries({ queryKey: ["finance-pending-payments"] });
+    } catch (err: any) {
+      toast.error("Delete failed: " + (err.message || "Unknown error"));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((l) => l.id)));
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-8">
@@ -249,14 +293,27 @@ const PendingPaymentsTab = () => {
               <CreditCard className="h-5 w-5" />
               Ready for Payment ({filtered.length})
             </CardTitle>
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search supplier, batch..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
+            <div className="flex items-center gap-2">
+              {selectedIds.size > 0 && (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => setDeleteDialog(true)}
+                  className="gap-1"
+                >
+                  <Trash2 className="h-3 w-3" />
+                  Delete ({selectedIds.size})
+                </Button>
+              )}
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search supplier, batch..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -265,6 +322,12 @@ const PendingPaymentsTab = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead>Batch / Record</TableHead>
                   <TableHead>Supplier</TableHead>
                   <TableHead>Coffee Type</TableHead>
@@ -277,7 +340,13 @@ const PendingPaymentsTab = () => {
               </TableHeader>
               <TableBody>
                 {filtered.map((lot) => (
-                  <TableRow key={lot.id}>
+                  <TableRow key={lot.id} className={selectedIds.has(lot.id) ? "bg-muted/50" : ""}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(lot.id)}
+                        onCheckedChange={() => toggleSelect(lot.id)}
+                      />
+                    </TableCell>
                     <TableCell className="font-mono text-xs">
                       {lot.batch_number || lot.coffee_record_id}
                     </TableCell>
@@ -311,7 +380,7 @@ const PendingPaymentsTab = () => {
                 ))}
                 {filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                       {search ? "No matching lots found" : "All lots have been paid ✓"}
                     </TableCell>
                   </TableRow>
@@ -356,9 +425,9 @@ const PendingPaymentsTab = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="CASH">Cash</SelectItem>
-                    <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
-                    <SelectItem value="CHEQUE">Cheque</SelectItem>
+                    <SelectItem value="CASH">💵 Cash</SelectItem>
+                    <SelectItem value="MOBILE_MONEY">📱 Mobile Money</SelectItem>
+                    <SelectItem value="BANK_TRANSFER">🏦 Bank Transfer</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -380,6 +449,27 @@ const PendingPaymentsTab = () => {
             <Button onClick={handlePay} disabled={processing}>
               {processing && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Confirm Payment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialog} onOpenChange={setDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Duplicate Entries</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {selectedIds.size} selected entries? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialog(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteSelected} disabled={deleting}>
+              {deleting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Delete {selectedIds.size} Entries
             </Button>
           </DialogFooter>
         </DialogContent>
