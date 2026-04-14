@@ -337,15 +337,16 @@ const PendingPaymentsTab = () => {
                   <TableHead>Date</TableHead>
                   <TableHead>Action</TableHead>
                 </TableRow>
-                  <TableHead className="text-right">Price/kg</TableHead>
-                  <TableHead className="text-right">Total (UGX)</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Action</TableHead>
-                </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map((lot) => (
-                  <TableRow key={lot.id}>
+                  <TableRow key={lot.id} className={selectedIds.has(lot.id) ? "bg-muted/50" : ""}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(lot.id)}
+                        onCheckedChange={() => toggleSelect(lot.id)}
+                      />
+                    </TableCell>
                     <TableCell className="font-mono text-xs">
                       {lot.batch_number || lot.coffee_record_id}
                     </TableCell>
