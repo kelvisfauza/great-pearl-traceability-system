@@ -114,7 +114,7 @@ const MealDisbursementSection = () => {
     } finally {
       setRechecking(false);
     }
-
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -126,6 +126,8 @@ const MealDisbursementSection = () => {
   };
 
   const formatAmount = (v: number) => `UGX ${Number(v).toLocaleString('en-UG')}`;
+
+  const hasPending = disbursements.some((d: any) => d.yo_status === 'pending_approval');
 
   return (
     <Card className="card-modern">
@@ -140,12 +142,19 @@ const MealDisbursementSection = () => {
           </div>
         </div>
 
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Send className="w-4 h-4" /> Send Meal Money
+        <div className="flex items-center gap-2">
+          {hasPending && (
+            <Button variant="outline" size="sm" onClick={handleRecheck} disabled={rechecking} className="gap-1">
+              <RefreshCw className={`w-4 h-4 ${rechecking ? 'animate-spin' : ''}`} />
+              {rechecking ? 'Checking...' : 'Re-check'}
             </Button>
-          </DialogTrigger>
+          )}
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <Send className="w-4 h-4" /> Send Meal Money
+              </Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
