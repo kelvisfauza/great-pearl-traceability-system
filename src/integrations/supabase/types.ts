@@ -4608,6 +4608,57 @@ export type Database = {
         }
         Relationships: []
       }
+      meal_disbursements: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          id: string
+          initiated_by: string
+          initiated_by_name: string
+          receiver_name: string | null
+          receiver_phone: string
+          total_amount: number
+          updated_at: string
+          withdraw_charge: number
+          yo_raw_response: string | null
+          yo_reference: string | null
+          yo_status: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description: string
+          id?: string
+          initiated_by: string
+          initiated_by_name: string
+          receiver_name?: string | null
+          receiver_phone: string
+          total_amount: number
+          updated_at?: string
+          withdraw_charge?: number
+          yo_raw_response?: string | null
+          yo_reference?: string | null
+          yo_status?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          id?: string
+          initiated_by?: string
+          initiated_by_name?: string
+          receiver_name?: string | null
+          receiver_phone?: string
+          total_amount?: number
+          updated_at?: string
+          withdraw_charge?: number
+          yo_raw_response?: string | null
+          yo_reference?: string | null
+          yo_status?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
