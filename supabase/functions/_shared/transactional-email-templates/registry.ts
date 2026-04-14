@@ -116,4 +116,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'withdrawal-auth-request': withdrawalAuthRequest,
   'instant-withdrawal-approval-request': instantWithdrawalApprovalRequest,
   'meal-disbursement-notification': mealDisbursementNotification,
+  'title-change-confirmation': titleChangeConfirmation,
 }
