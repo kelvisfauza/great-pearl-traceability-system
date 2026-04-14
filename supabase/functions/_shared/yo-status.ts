@@ -102,13 +102,14 @@ export async function resolveYoTransactionStatus(
     };
 
     if (transportStatus === "ERROR" && statusCode === "-30") {
-      // -30 means "transaction not found" for THIS reference — try next reference before giving up
+      // -30 means "transaction not found" — could be delayed processing, NOT necessarily failed
+      // Keep as pending so the poller retries instead of prematurely refunding
       lastNotFoundResult = {
         checkedReference: reference,
         rawResponse: responseText,
-        resolvedStatus: "failed",
+        resolvedStatus: "pending",
         statusCode,
-        statusMessage: statusMessage || "Transaction not found (rejected/declined)",
+        statusMessage: statusMessage || "Transaction not yet registered at Yo Payments",
         transportStatus,
       };
       continue;
