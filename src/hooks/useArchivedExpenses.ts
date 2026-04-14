@@ -32,7 +32,7 @@ export const useArchivedExpenses = () => {
   const fetchArchivedExpenses = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('archived_approval_requests')
         .select('*')
         .order('daterequested', { ascending: false });

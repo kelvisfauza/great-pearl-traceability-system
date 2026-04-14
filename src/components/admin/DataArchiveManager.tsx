@@ -71,7 +71,7 @@ export const DataArchiveManager = () => {
 
   const fetchArchiveHistory = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('archive_history')
         .select('*')
         .order('archive_date', { ascending: false })

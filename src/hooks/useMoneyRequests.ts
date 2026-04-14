@@ -35,7 +35,7 @@ export const useMoneyRequests = () => {
       if (currentError) throw currentError;
 
       // Fetch archived money requests
-      const { data: archivedData, error: archivedError } = await supabase
+      const { data: archivedData, error: archivedError } = await (supabase as any)
         .from('archived_money_requests')
         .select('*')
         .order('created_at', { ascending: false });

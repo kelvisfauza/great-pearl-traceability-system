@@ -56,7 +56,7 @@ export const sendApprovalActionEmails = async (params: ApprovalEmailParams, stag
 
       try {
         // Create approve token
-        const { data: approveToken, error: approveErr } = await supabase
+        const { data: approveToken, error: approveErr } = await (supabase as any)
           .from('approval_action_tokens')
           .insert({
             request_id: params.requestId,
@@ -69,7 +69,7 @@ export const sendApprovalActionEmails = async (params: ApprovalEmailParams, stag
           .single();
 
         // Create reject token
-        const { data: rejectToken, error: rejectErr } = await supabase
+        const { data: rejectToken, error: rejectErr } = await (supabase as any)
           .from('approval_action_tokens')
           .insert({
             request_id: params.requestId,
