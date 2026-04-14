@@ -117,6 +117,17 @@ const MillingMoMoTransactions = () => {
           .update({ current_balance: newBalance } as any)
           .eq('id', txn.customer_id);
 
+        // Log this admin action to audit trail
+        await supabase.from('audit_logs').insert({
+          action: 'MOMO_MARK_PAID',
+          table_name: 'milling_momo_transactions',
+          record_id: txn.id,
+          performed_by: 'admin',
+          department: 'Milling',
+          reason: `Manually marked MoMo payment as paid - ${txn.customer_name} UGX ${txn.amount.toLocaleString()} Ref: ${txn.reference}`,
+          record_data: { customer_id: txn.customer_id, amount: txn.amount, previous_balance: previousBalance, new_balance: newBalance, reference: txn.reference }
+        });
+
         toast.success(`Marked as paid! ${txn.customer_name} balance: ${previousBalance.toLocaleString()} → ${newBalance.toLocaleString()}`);
       }
 
