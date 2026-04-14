@@ -267,7 +267,7 @@ const UserPermissionsList: React.FC = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleManagePermissions(employee)}
+                        onClick={(e) => { e.stopPropagation(); handleManagePermissions(employee); }}
                       >
                         <Settings className="h-4 w-4 mr-1" />
                         Manage
