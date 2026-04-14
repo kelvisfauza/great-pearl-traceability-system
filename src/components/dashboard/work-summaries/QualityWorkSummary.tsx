@@ -19,11 +19,11 @@ const QualityWorkSummary = () => {
         avgMoisture,
         totalStock,
       ] = await Promise.all([
-        supabase.from("coffee_records").select("*", { count: "exact", head: true }).eq("status", "PENDING"),
+        supabase.from("coffee_records").select("*", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("quality_assessments").select("*", { count: "exact", head: true }).gte("created_at", `${today}T00:00:00`),
         supabase.from("quality_assessments").select("*", { count: "exact", head: true }).gte("created_at", `${yesterdayStr}T00:00:00`).lt("created_at", `${today}T00:00:00`),
         supabase.from("quality_assessments").select("moisture").gte("created_at", `${today}T00:00:00`),
-        supabase.from("coffee_records").select("kilograms").not("status", "in", '("sold_out","rejected","QUALITY_REJECTED")').gt("kilograms", 0),
+        supabase.from("coffee_records").select("kilograms").not("status", "in", '("sold_out","rejected")').gt("kilograms", 0),
       ]);
 
       const moistureData = avgMoisture.data || [];

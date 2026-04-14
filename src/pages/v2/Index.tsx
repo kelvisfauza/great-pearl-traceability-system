@@ -18,7 +18,7 @@ const V2Index = () => {
       const { count, error } = await supabase
         .from("coffee_records")
         .select("*", { count: "exact", head: true })
-        .eq("status", "PENDING");
+        .eq("status", "pending");
       
       if (error) throw error;
       return count || 0;
@@ -46,7 +46,7 @@ const V2Index = () => {
       const { data, error } = await supabase
         .from("coffee_records")
         .select("kilograms")
-        .not("status", "in", '("sold_out","rejected","QUALITY_REJECTED")')
+        .not("status", "in", '("sold_out","rejected")')
         .gt("kilograms", 0);
       
       if (error) throw error;
