@@ -150,10 +150,12 @@ const ServiceProviderPayments = () => {
     if (!confirm(`Mark UGX ${Number(payment.amount).toLocaleString()} to ${payment.receiver_name || payment.receiver_phone} as successfully paid?`)) return;
     setMarkingId(payment.id);
     try {
-      await supabase
+      const { error: updateError } = await supabase
         .from('service_provider_payments')
-        .update({ yo_status: 'paid', completed_at: new Date().toISOString() } as any)
+        .update({ yo_status: 'paid', updated_at: new Date().toISOString() } as any)
         .eq('id', payment.id);
+
+      if (updateError) throw updateError;
 
       await supabase.from('audit_logs').insert({
         action: 'SERVICE_PROVIDER_MARK_PAID',
