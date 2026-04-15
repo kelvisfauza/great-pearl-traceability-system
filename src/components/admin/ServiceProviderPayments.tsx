@@ -356,6 +356,34 @@ const ServiceProviderPayments = () => {
                     <TableCell className="text-right text-sm font-medium">{formatAmount(d.total_amount)}</TableCell>
                     <TableCell>{getStatusBadge(d.yo_status)}</TableCell>
                     <TableCell className="text-sm">{d.initiated_by_name}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        {(d.yo_status === 'failed' || d.yo_status === 'pending_approval') && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRetry(d)}
+                            disabled={retryingId === d.id}
+                            className="gap-1 text-xs"
+                          >
+                            {retryingId === d.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
+                            Retry
+                          </Button>
+                        )}
+                        {d.yo_status !== 'success' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleMarkAsPaid(d)}
+                            disabled={markingId === d.id}
+                            className="gap-1 text-xs text-green-700 border-green-300 hover:bg-green-50"
+                          >
+                            {markingId === d.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCheck className="h-3 w-3" />}
+                            Mark Paid
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
