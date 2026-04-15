@@ -191,6 +191,7 @@ const QualityControl = () => {
       pods?: number;
       husks?: number;
       stones?: number;
+      printedBy?: string;
     } | null;
   }>({
     open: false,
