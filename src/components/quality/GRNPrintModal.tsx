@@ -370,7 +370,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
 function getGRNPrintStyles(): string {
   return `
     @page {
-      margin: 12mm 14mm;
+      margin: 8mm 10mm;
       size: A4;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -384,7 +384,7 @@ function getGRNPrintStyles(): string {
     }
 
     /* ===== HEADER ===== */
-    .grn-header { margin-bottom: 10px; }
+    .grn-header { margin-bottom: 6px; }
     .grn-header-row {
       display: flex;
       justify-content: space-between;
@@ -496,7 +496,7 @@ function getGRNPrintStyles(): string {
     .grn-discretion-content p { margin: 1px 0; }
 
     /* ===== SECTIONS ===== */
-    .grn-section { margin: 8px 0; }
+    .grn-section { margin: 4px 0; }
     .grn-section-header {
       background: #e8e8e8;
       border-left: 4px solid #000;
@@ -603,10 +603,10 @@ function getGRNPrintStyles(): string {
     /* ===== REMARKS ===== */
     .grn-remarks-box {
       border: 1px solid #000;
-      padding: 6px 10px;
-      min-height: 30px;
+      padding: 4px 10px;
+      min-height: 20px;
       border-radius: 2px;
-      font-size: 10px;
+      font-size: 9px;
       color: #000;
       font-weight: 500;
     }
@@ -632,7 +632,7 @@ function getGRNPrintStyles(): string {
       text-transform: uppercase;
       margin-bottom: 2px;
     }
-    .grn-sig-space { height: 28px; }
+    .grn-sig-space { height: 18px; }
     .grn-sig-line {
       border-top: 1px solid #000;
       margin: 0 8px 4px;
@@ -650,8 +650,8 @@ function getGRNPrintStyles(): string {
       display: flex;
       justify-content: space-between;
       border-top: 2px solid #000;
-      padding-top: 6px;
-      margin-top: 10px;
+      padding-top: 4px;
+      margin-top: 6px;
       font-size: 7px;
       color: #000;
     }
