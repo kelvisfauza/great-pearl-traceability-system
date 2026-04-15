@@ -279,13 +279,30 @@ const ServiceProviderPayments = () => {
             </DialogHeader>
 
             <div className="space-y-4 py-2">
+              {savedProviders.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> Select Saved Provider</Label>
+                  <Select onValueChange={handleSelectProvider}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a saved provider or enter new..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {savedProviders.map((p: any) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name} {p.phone ? `(${p.phone})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="sp-receiverName">Provider Name *</Label>
                 <Input
                   id="sp-receiverName"
                   placeholder="e.g. John's Transport Services"
                   value={form.receiverName}
-                  onChange={(e) => setForm(f => ({ ...f, receiverName: e.target.value }))}
+                  onChange={(e) => { setForm(f => ({ ...f, receiverName: e.target.value })); setSaveProvider(true); }}
                 />
               </div>
               <div className="space-y-2">
