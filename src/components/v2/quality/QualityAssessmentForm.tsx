@@ -116,7 +116,7 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
   });
 
   const rejectLot = useMutation({
-    mutationFn: async (comments: string) => {
+    mutationFn: async (data: AssessmentForm) => {
       // Update coffee_records status
       const { error } = await supabase
         .from('coffee_records')
@@ -125,7 +125,8 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
 
       if (error) throw error;
 
-      // Create a quality assessment record with rejection
+      // Create a quality assessment record with rejection — include all quality data and suggested price
+      // Status is 'pending_admin_pricing' so admin can review the price, but reject_final stays true
       await supabase
         .from('quality_assessments')
         .insert({
@@ -133,18 +134,24 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
           batch_number: lot.batch_number,
           assessed_by: employee?.email || '',
           date_assessed: new Date().toISOString().split('T')[0],
-          moisture: 0,
-          suggested_price: 0,
-          comments: comments,
-          status: 'rejected',
+          moisture: data.moisture_content,
+          group1_defects: data.group1_percentage,
+          group2_defects: data.group2_percentage,
+          pods: data.pods_percentage,
+          husks: data.husks_percentage,
+          fm: data.fm_percentage,
+          outturn: data.outturn_percentage,
+          suggested_price: data.unit_price_ugx,
+          comments: data.comments,
+          status: 'pending_admin_pricing',
           reject_final: true
         });
     },
     onSuccess: () => {
       trackTaskCompletion('quality rejection');
       toast({
-        title: "Lot Rejected",
-        description: "Lot has been rejected and will not proceed to finance"
+        title: "Lot Rejected — Sent to Admin",
+        description: "Lot rejected with quality data and suggested price sent to admin for review"
       });
       queryClient.invalidateQueries({ queryKey: ['v2-pending-quality'] });
       navigate('/v2/quality');
