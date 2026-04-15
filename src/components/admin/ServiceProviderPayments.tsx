@@ -152,7 +152,7 @@ const ServiceProviderPayments = () => {
     try {
       await supabase
         .from('service_provider_payments')
-        .update({ yo_status: 'success', completed_at: new Date().toISOString() } as any)
+        .update({ yo_status: 'paid', completed_at: new Date().toISOString() } as any)
         .eq('id', payment.id);
 
       await supabase.from('audit_logs').insert({
