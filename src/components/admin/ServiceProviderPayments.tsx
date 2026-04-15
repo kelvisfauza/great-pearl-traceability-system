@@ -177,6 +177,7 @@ const ServiceProviderPayments = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'success': return <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Sent</Badge>;
+      case 'paid': return <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">Paid</Badge>;
       case 'pending_approval': return <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Pending Yo</Badge>;
       case 'pending': return <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">Processing</Badge>;
       default: return <Badge variant="destructive">Failed</Badge>;
@@ -357,20 +358,20 @@ const ServiceProviderPayments = () => {
                     <TableCell>{getStatusBadge(d.yo_status)}</TableCell>
                     <TableCell className="text-sm">{d.initiated_by_name}</TableCell>
                     <TableCell>
-                      <div className="flex gap-1">
-                        {(d.yo_status === 'failed' || d.yo_status === 'pending_approval') && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleRetry(d)}
-                            disabled={retryingId === d.id}
-                            className="gap-1 text-xs"
-                          >
-                            {retryingId === d.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
-                            Retry
-                          </Button>
-                        )}
-                        {d.yo_status !== 'success' && (
+                      {d.yo_status !== 'success' && d.yo_status !== 'paid' && (
+                        <div className="flex gap-1">
+                          {(d.yo_status === 'failed' || d.yo_status === 'pending_approval') && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleRetry(d)}
+                              disabled={retryingId === d.id}
+                              className="gap-1 text-xs"
+                            >
+                              {retryingId === d.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
+                              Retry
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"
@@ -381,8 +382,8 @@ const ServiceProviderPayments = () => {
                             {markingId === d.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCheck className="h-3 w-3" />}
                             Mark Paid
                           </Button>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
