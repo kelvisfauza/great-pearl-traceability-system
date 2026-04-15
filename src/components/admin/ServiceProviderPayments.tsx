@@ -10,10 +10,11 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Truck, Send, Loader2, Phone, DollarSign, RefreshCw, RotateCcw, CheckCheck } from 'lucide-react';
+import { Truck, Send, Loader2, Phone, DollarSign, RefreshCw, RotateCcw, CheckCheck, UserPlus, Users } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const ServiceProviderPayments = () => {
   const { employee } = useAuth();
@@ -35,6 +36,20 @@ const ServiceProviderPayments = () => {
     invoiceNumber: '',
     email: '',
   });
+  const [saveProvider, setSaveProvider] = useState(true);
+
+  // Fetch saved service providers
+  const { data: savedProviders = [] } = useQuery({
+    queryKey: ['saved-service-providers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('service_providers')
+        .select('*')
+        .order('name', { ascending: true }) as any;
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   const { data: payments = [], isLoading } = useQuery({
     queryKey: ['service-provider-payments'],
@@ -48,6 +63,20 @@ const ServiceProviderPayments = () => {
       return data || [];
     },
   });
+
+  const handleSelectProvider = (providerId: string) => {
+    const provider = savedProviders.find((p: any) => p.id === providerId);
+    if (provider) {
+      setForm(f => ({
+        ...f,
+        receiverName: provider.name || '',
+        receiverPhone: provider.phone || '',
+        email: provider.email || '',
+      }));
+      setSaveProvider(false); // Already saved
+    }
+  };
+
 
   const handleSubmit = async () => {
     if (!form.receiverPhone || !form.amount || !form.description) {
@@ -85,7 +114,25 @@ const ServiceProviderPayments = () => {
           title: 'Payment initiated',
           description: data.message || 'Payment sent successfully',
         });
+
+        // Auto-save provider if checkbox is checked
+        if (saveProvider && form.receiverName) {
+          const exists = savedProviders.some((p: any) =>
+            p.name?.toLowerCase() === form.receiverName.toLowerCase() ||
+            p.phone === form.receiverPhone
+          );
+          if (!exists) {
+            await (supabase.from('service_providers') as any).insert({
+              name: form.receiverName,
+              phone: form.receiverPhone || null,
+              email: form.email || null,
+            });
+            queryClient.invalidateQueries({ queryKey: ['saved-service-providers'] });
+          }
+        }
+
         setForm({ receiverPhone: '', receiverName: '', description: '', amount: '', withdrawCharge: '', notes: '', invoiceNumber: '', email: '' });
+        setSaveProvider(true);
         setOpen(false);
         queryClient.invalidateQueries({ queryKey: ['service-provider-payments'] });
       } else {
@@ -98,6 +145,7 @@ const ServiceProviderPayments = () => {
         if (data?.status === 'pending_approval') {
           setOpen(false);
           setForm({ receiverPhone: '', receiverName: '', description: '', amount: '', withdrawCharge: '', notes: '', invoiceNumber: '', email: '' });
+          setSaveProvider(true);
         }
       }
     } catch (err: any) {
@@ -231,13 +279,30 @@ const ServiceProviderPayments = () => {
             </DialogHeader>
 
             <div className="space-y-4 py-2">
+              {savedProviders.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> Select Saved Provider</Label>
+                  <Select onValueChange={handleSelectProvider}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a saved provider or enter new..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {savedProviders.map((p: any) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name} {p.phone ? `(${p.phone})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="sp-receiverName">Provider Name *</Label>
                 <Input
                   id="sp-receiverName"
                   placeholder="e.g. John's Transport Services"
                   value={form.receiverName}
-                  onChange={(e) => setForm(f => ({ ...f, receiverName: e.target.value }))}
+                  onChange={(e) => { setForm(f => ({ ...f, receiverName: e.target.value })); setSaveProvider(true); }}
                 />
               </div>
               <div className="space-y-2">
@@ -334,6 +399,10 @@ const ServiceProviderPayments = () => {
                   </div>
                 </div>
               )}
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={saveProvider} onChange={(e) => setSaveProvider(e.target.checked)} className="rounded" />
+                <UserPlus className="w-3.5 h-3.5" /> Save this provider for future payments
+              </label>
             </div>
 
             <DialogFooter>

@@ -7319,6 +7319,48 @@ export type Database = {
         }
         Relationships: []
       }
+      service_providers: {
+        Row: {
+          account_name: string | null
+          account_number: string | null
+          alternative_phone: string | null
+          bank_name: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_name?: string | null
+          account_number?: string | null
+          alternative_phone?: string | null
+          bank_name?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_name?: string | null
+          account_number?: string | null
+          alternative_phone?: string | null
+          bank_name?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       shipments: {
         Row: {
           bags: number
