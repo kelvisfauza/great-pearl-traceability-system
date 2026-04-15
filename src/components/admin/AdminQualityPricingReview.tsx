@@ -463,7 +463,7 @@ const AdminQualityPricingReview = () => {
             assessed_by: selectedAssessment.assessed_by,
             assessed_at: new Date().toISOString(),
             quality_json: qualityJson,
-            unit_price_ugx: finalPrice,
+            unit_price_ugx: effectivePrice,
             quantity_kg: selectedAssessment.coffee_record.kilograms,
             finance_status: 'READY_FOR_FINANCE'
           });
