@@ -143,7 +143,7 @@ Deno.serve(async (req) => {
       { data: activeContracts }, { data: allEmployees },
     ] = await Promise.all([
       supabase.from('coffee_records').select('batch_number, supplier_name, coffee_type, kilograms, date').eq('status', 'pending').order('date', { ascending: false }),
-      supabase.from('coffee_records').select('batch_number, supplier_name, coffee_type, kilograms, date').eq('status', 'assessed').gte('updated_at', `${today}T00:00:00`).lte('updated_at', `${today}T23:59:59`),
+      supabase.from('quality_assessments').select('batch_number, store_record_id').eq('date_assessed', today),
       supabase.from('coffee_records').select('kilograms').eq('status', 'inventory'),
       supabase.from('coffee_records').select('id').eq('status', 'rejected'),
       supabase.from('coffee_records').select('kilograms').not('status', 'in', '("sold_out","rejected")'),
