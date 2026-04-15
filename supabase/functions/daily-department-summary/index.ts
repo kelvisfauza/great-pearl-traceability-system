@@ -167,9 +167,19 @@ Deno.serve(async (req) => {
       supabase.from('employees').select('name, email, department').eq('status', 'Active'),
     ])
 
+    // ─── Enrich assessed records from quality_assessments with coffee_records data ───
+    const assessedQA = assessedRecords || []
+    const assessedBatchNumbers = assessedQA.map((a:any) => a.batch_number)
+    let assessed: any[] = []
+    if (assessedBatchNumbers.length > 0) {
+      const { data: assessedCoffee } = await supabase.from('coffee_records')
+        .select('batch_number, supplier_name, coffee_type, kilograms, date')
+        .in('batch_number', assessedBatchNumbers)
+      assessed = assessedCoffee || []
+    }
+
     // ─── Computed values ───
     const pending = pendingRecords || []
-    const assessed = assessedRecords || []
     const totalPendingKg = pending.reduce((s:number, r:any) => s + r.kilograms, 0)
     const totalAssessedKg = assessed.reduce((s:number, r:any) => s + r.kilograms, 0)
     const inventoryKg = (inventoryRecords||[]).reduce((s:number, r:any) => s + r.kilograms, 0)
