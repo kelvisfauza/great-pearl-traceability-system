@@ -147,10 +147,12 @@ const MealDisbursementSection = () => {
     if (!confirm(`Mark UGX ${Number(payment.amount).toLocaleString()} to ${payment.receiver_name || payment.receiver_phone} as successfully paid?`)) return;
     setMarkingId(payment.id);
     try {
-      await supabase
+      const { error: updateError } = await supabase
         .from('meal_disbursements')
-        .update({ yo_status: 'paid', completed_at: new Date().toISOString() } as any)
+        .update({ yo_status: 'paid', updated_at: new Date().toISOString() } as any)
         .eq('id', payment.id);
+
+      if (updateError) throw updateError;
 
       await supabase.from('audit_logs').insert({
         action: 'MEAL_DISBURSEMENT_MARK_PAID',
