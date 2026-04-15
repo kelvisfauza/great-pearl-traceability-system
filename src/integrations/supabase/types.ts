@@ -9744,6 +9744,14 @@ export type Database = {
       cleanup_expired_verification_codes: { Args: never; Returns: undefined }
       cleanup_inactive_sessions: { Args: never; Returns: undefined }
       cleanup_old_price_calculations: { Args: never; Returns: undefined }
+      confirm_cash_transaction: {
+        Args: {
+          p_approval_role: string
+          p_confirmed_by: string
+          p_transaction_id: string
+        }
+        Returns: Json
+      }
       create_timothy_auth_account: { Args: never; Returns: Json }
       create_withdrawal_verification_code: {
         Args: {
