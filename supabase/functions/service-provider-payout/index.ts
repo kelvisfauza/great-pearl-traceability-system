@@ -116,7 +116,8 @@ serve(async (req) => {
     if ((result.success || yoStatus === "pending_approval") && cleanPhone) {
       try {
         const invoiceRef = invoiceNumber ? `Invoice: ${invoiceNumber}. ` : '';
-        const smsMessage = `Dear ${receiverName || "Service Provider"}, you have received UGX ${totalAmount.toLocaleString()} from Great Agro Coffee. ${invoiceRef}Ref: ${result.transactionRef || record.id}. Thank you for your service.`;
+        const shortRef = (result.transactionRef || record.id || '').slice(-8).toUpperCase();
+        const smsMessage = `Dear ${receiverName || "Service Provider"}, you have received UGX ${totalAmount.toLocaleString()} from Great Agro Coffee. ${invoiceRef}Ref: ${shortRef}. Thank you for your service.`;
         
         await supabase.functions.invoke("send-sms", {
           body: {
