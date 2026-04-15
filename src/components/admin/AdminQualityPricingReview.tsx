@@ -420,13 +420,16 @@ const AdminQualityPricingReview = () => {
       return;
     }
     setProcessingId(selectedAssessment.id);
+    // Use either the admin-set final price or the calculator result
+    const effectivePrice = finalPrice || adminCalculation.finalPrice || 0;
     try {
       const { error: updateError } = await supabase
         .from('quality_assessments')
         .update({
           status: 'rejected',
           quality_note: adminComments,
-          reject_final: true
+          reject_final: true,
+          final_price: effectivePrice > 0 ? effectivePrice : undefined
         })
         .eq('id', selectedAssessment.id);
       if (updateError) throw updateError;
