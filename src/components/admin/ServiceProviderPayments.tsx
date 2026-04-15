@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Truck, Send, Loader2, Phone, DollarSign, RefreshCw } from 'lucide-react';
+import { Truck, Send, Loader2, Phone, DollarSign, RefreshCw, RotateCcw, CheckCheck } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
@@ -22,6 +22,8 @@ const ServiceProviderPayments = () => {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [rechecking, setRechecking] = useState(false);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [markingId, setMarkingId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     receiverPhone: '',
@@ -115,6 +117,60 @@ const ServiceProviderPayments = () => {
       toast({ title: 'Error', description: 'Failed to check statuses', variant: 'destructive' });
     } finally {
       setRechecking(false);
+    }
+  };
+
+  const handleRetry = async (payment: any) => {
+    if (!confirm(`Retry sending UGX ${Number(payment.amount).toLocaleString()} to ${payment.receiver_name || payment.receiver_phone}?`)) return;
+    setRetryingId(payment.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('service-provider-payout', {
+        body: {
+          phone: payment.receiver_phone,
+          amount: payment.amount,
+          withdrawCharge: payment.withdraw_charge || 0,
+          description: payment.service_description,
+          receiverName: payment.receiver_name,
+          initiatedBy: employee?.email || '',
+          initiatedByName: employee?.name || '',
+          notes: `Retry of failed payment ${payment.id}`,
+        },
+      });
+      if (error) throw error;
+      toast({ title: data?.success ? 'Retry sent' : 'Retry issue', description: data?.message || 'Check status', variant: data?.success ? 'default' : 'destructive' });
+      queryClient.invalidateQueries({ queryKey: ['service-provider-payments'] });
+    } catch (err: any) {
+      toast({ title: 'Retry failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setRetryingId(null);
+    }
+  };
+
+  const handleMarkAsPaid = async (payment: any) => {
+    if (!confirm(`Mark UGX ${Number(payment.amount).toLocaleString()} to ${payment.receiver_name || payment.receiver_phone} as successfully paid?`)) return;
+    setMarkingId(payment.id);
+    try {
+      await supabase
+        .from('service_provider_payments')
+        .update({ yo_status: 'success', completed_at: new Date().toISOString() } as any)
+        .eq('id', payment.id);
+
+      await supabase.from('audit_logs').insert({
+        action: 'SERVICE_PROVIDER_MARK_PAID',
+        table_name: 'service_provider_payments',
+        record_id: payment.id,
+        performed_by: employee?.email || 'admin',
+        department: 'Admin',
+        reason: `Manually marked service provider payment as paid - ${payment.receiver_name} UGX ${Number(payment.amount).toLocaleString()}`,
+        record_data: { payment_id: payment.id, amount: payment.amount, receiver: payment.receiver_name, phone: payment.receiver_phone },
+      });
+
+      toast({ title: 'Marked as paid', description: `Payment to ${payment.receiver_name} marked as successful` });
+      queryClient.invalidateQueries({ queryKey: ['service-provider-payments'] });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setMarkingId(null);
     }
   };
 
@@ -283,6 +339,7 @@ const ServiceProviderPayments = () => {
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Initiated By</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -299,6 +356,34 @@ const ServiceProviderPayments = () => {
                     <TableCell className="text-right text-sm font-medium">{formatAmount(d.total_amount)}</TableCell>
                     <TableCell>{getStatusBadge(d.yo_status)}</TableCell>
                     <TableCell className="text-sm">{d.initiated_by_name}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        {(d.yo_status === 'failed' || d.yo_status === 'pending_approval') && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRetry(d)}
+                            disabled={retryingId === d.id}
+                            className="gap-1 text-xs"
+                          >
+                            {retryingId === d.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
+                            Retry
+                          </Button>
+                        )}
+                        {d.yo_status !== 'success' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleMarkAsPaid(d)}
+                            disabled={markingId === d.id}
+                            className="gap-1 text-xs text-green-700 border-green-300 hover:bg-green-50"
+                          >
+                            {markingId === d.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCheck className="h-3 w-3" />}
+                            Mark Paid
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
