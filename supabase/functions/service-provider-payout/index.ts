@@ -21,7 +21,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { phone, amount, withdrawCharge, description, receiverName, initiatedBy, initiatedByName, notes } = await req.json();
+    const { phone, amount, withdrawCharge, description, receiverName, initiatedBy, initiatedByName, notes, invoiceNumber, providerEmail } = await req.json();
 
     if (!phone || !amount || !description) {
       return new Response(
@@ -115,7 +115,8 @@ serve(async (req) => {
     // Send SMS notification to service provider
     if ((result.success || yoStatus === "pending_approval") && cleanPhone) {
       try {
-        const smsMessage = `Dear ${receiverName || "Service Provider"}, you have received UGX ${totalAmount.toLocaleString()} from Great Agro Coffee. Invoice: ${description}. Ref: ${result.transactionRef || record.id}. Thank you for your service.`;
+        const invoiceRef = invoiceNumber ? `Invoice: ${invoiceNumber}. ` : '';
+        const smsMessage = `Dear ${receiverName || "Service Provider"}, you have received UGX ${totalAmount.toLocaleString()} from Great Agro Coffee. ${invoiceRef}Ref: ${result.transactionRef || record.id}. Thank you for your service.`;
         
         await supabase.functions.invoke("send-sms", {
           body: {
@@ -130,6 +131,27 @@ serve(async (req) => {
         console.log(`[Service Provider Payout] SMS sent to ${cleanPhone}`);
       } catch (smsErr) {
         console.error(`[Service Provider Payout] SMS failed:`, smsErr);
+      }
+    }
+
+    // Send email to service provider if email provided
+    if ((result.success || yoStatus === "pending_approval") && providerEmail) {
+      try {
+        const invoiceRef = invoiceNumber ? `Invoice: ${invoiceNumber}` : '';
+        await supabase.functions.invoke("send-transactional-email", {
+          body: {
+            templateName: "general-notification",
+            recipientEmail: providerEmail,
+            idempotencyKey: `sp-payout-provider-${record.id}`,
+            templateData: {
+              title: "Payment Received from Great Agro Coffee",
+              message: `Dear ${receiverName || "Service Provider"},\n\nYou have received a payment of UGX ${totalAmount.toLocaleString()} from Great Agro Coffee.\n\nService: ${description}\n${invoiceRef}\nReference: ${result.transactionRef || record.id}\n\nThank you for your service.`,
+            },
+          },
+        });
+        console.log(`[Service Provider Payout] Email sent to ${providerEmail}`);
+      } catch (emailErr) {
+        console.error(`[Service Provider Payout] Email to provider failed:`, emailErr);
       }
     }
 

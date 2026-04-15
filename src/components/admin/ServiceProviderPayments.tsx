@@ -32,6 +32,8 @@ const ServiceProviderPayments = () => {
     amount: '',
     withdrawCharge: '',
     notes: '',
+    invoiceNumber: '',
+    email: '',
   });
 
   const { data: payments = [], isLoading } = useQuery({
@@ -71,6 +73,8 @@ const ServiceProviderPayments = () => {
           initiatedBy: employee?.email || '',
           initiatedByName: employee?.name || '',
           notes: form.notes,
+          invoiceNumber: form.invoiceNumber,
+          providerEmail: form.email,
         },
       });
 
@@ -81,7 +85,7 @@ const ServiceProviderPayments = () => {
           title: 'Payment initiated',
           description: data.message || 'Payment sent successfully',
         });
-        setForm({ receiverPhone: '', receiverName: '', description: '', amount: '', withdrawCharge: '', notes: '' });
+        setForm({ receiverPhone: '', receiverName: '', description: '', amount: '', withdrawCharge: '', notes: '', invoiceNumber: '', email: '' });
         setOpen(false);
         queryClient.invalidateQueries({ queryKey: ['service-provider-payments'] });
       } else {
@@ -93,7 +97,7 @@ const ServiceProviderPayments = () => {
         queryClient.invalidateQueries({ queryKey: ['service-provider-payments'] });
         if (data?.status === 'pending_approval') {
           setOpen(false);
-          setForm({ receiverPhone: '', receiverName: '', description: '', amount: '', withdrawCharge: '', notes: '' });
+          setForm({ receiverPhone: '', receiverName: '', description: '', amount: '', withdrawCharge: '', notes: '', invoiceNumber: '', email: '' });
         }
       }
     } catch (err: any) {
@@ -284,11 +288,32 @@ const ServiceProviderPayments = () => {
                   />
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="sp-invoiceNumber">Invoice Number</Label>
+                  <Input
+                    id="sp-invoiceNumber"
+                    placeholder="e.g. INV-2026-001"
+                    value={form.invoiceNumber}
+                    onChange={(e) => setForm(f => ({ ...f, invoiceNumber: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sp-email">Provider Email</Label>
+                  <Input
+                    id="sp-email"
+                    type="email"
+                    placeholder="e.g. provider@example.com"
+                    value={form.email}
+                    onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))}
+                  />
+                </div>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="sp-notes">Additional Notes</Label>
                 <Input
                   id="sp-notes"
-                  placeholder="Invoice number, reference, etc."
+                  placeholder="Any additional notes"
                   value={form.notes}
                   onChange={(e) => setForm(f => ({ ...f, notes: e.target.value }))}
                 />
