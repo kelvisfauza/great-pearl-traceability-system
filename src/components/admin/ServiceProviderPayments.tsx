@@ -120,6 +120,60 @@ const ServiceProviderPayments = () => {
     }
   };
 
+  const handleRetry = async (payment: any) => {
+    if (!confirm(`Retry sending UGX ${Number(payment.amount).toLocaleString()} to ${payment.receiver_name || payment.receiver_phone}?`)) return;
+    setRetryingId(payment.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('service-provider-payout', {
+        body: {
+          phone: payment.receiver_phone,
+          amount: payment.amount,
+          withdrawCharge: payment.withdraw_charge || 0,
+          description: payment.service_description,
+          receiverName: payment.receiver_name,
+          initiatedBy: employee?.email || '',
+          initiatedByName: employee?.name || '',
+          notes: `Retry of failed payment ${payment.id}`,
+        },
+      });
+      if (error) throw error;
+      toast({ title: data?.success ? 'Retry sent' : 'Retry issue', description: data?.message || 'Check status', variant: data?.success ? 'default' : 'destructive' });
+      queryClient.invalidateQueries({ queryKey: ['service-provider-payments'] });
+    } catch (err: any) {
+      toast({ title: 'Retry failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setRetryingId(null);
+    }
+  };
+
+  const handleMarkAsPaid = async (payment: any) => {
+    if (!confirm(`Mark UGX ${Number(payment.amount).toLocaleString()} to ${payment.receiver_name || payment.receiver_phone} as successfully paid?`)) return;
+    setMarkingId(payment.id);
+    try {
+      await supabase
+        .from('service_provider_payments')
+        .update({ yo_status: 'success', completed_at: new Date().toISOString() } as any)
+        .eq('id', payment.id);
+
+      await supabase.from('audit_logs').insert({
+        action: 'SERVICE_PROVIDER_MARK_PAID',
+        table_name: 'service_provider_payments',
+        record_id: payment.id,
+        performed_by: employee?.email || 'admin',
+        department: 'Admin',
+        reason: `Manually marked service provider payment as paid - ${payment.receiver_name} UGX ${Number(payment.amount).toLocaleString()}`,
+        record_data: { payment_id: payment.id, amount: payment.amount, receiver: payment.receiver_name, phone: payment.receiver_phone },
+      });
+
+      toast({ title: 'Marked as paid', description: `Payment to ${payment.receiver_name} marked as successful` });
+      queryClient.invalidateQueries({ queryKey: ['service-provider-payments'] });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setMarkingId(null);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'success': return <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Sent</Badge>;
