@@ -442,7 +442,7 @@ const AdminQualityPricingReview = () => {
       }
 
       // If admin set a price before rejecting, still create finance lot for payment
-      if (finalPrice > 0 && selectedAssessment.store_record_id && selectedAssessment.coffee_record) {
+      if (effectivePrice > 0 && selectedAssessment.store_record_id && selectedAssessment.coffee_record) {
         const qualityJson = {
           moisture_content: selectedAssessment.moisture,
           group1_percentage: selectedAssessment.group1_defects,
