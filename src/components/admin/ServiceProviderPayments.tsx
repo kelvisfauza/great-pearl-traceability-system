@@ -22,6 +22,8 @@ const ServiceProviderPayments = () => {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [rechecking, setRechecking] = useState(false);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [markingId, setMarkingId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     receiverPhone: '',
