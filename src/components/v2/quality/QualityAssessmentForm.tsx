@@ -169,9 +169,8 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
     submitForPricing.mutate(data);
   };
 
-  const handleReject = () => {
-    const comments = watch('comments');
-    if (!comments) {
+  const handleReject = handleSubmit((data: AssessmentForm) => {
+    if (!data.comments) {
       toast({
         title: "Comments Required",
         description: "Please provide rejection comments",
@@ -179,8 +178,8 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
       });
       return;
     }
-    rejectLot.mutate(comments);
-  };
+    rejectLot.mutate(data);
+  });
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
