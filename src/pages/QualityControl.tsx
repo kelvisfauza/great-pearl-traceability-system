@@ -191,6 +191,7 @@ const QualityControl = () => {
       pods?: number;
       husks?: number;
       stones?: number;
+      printedBy?: string;
     } | null;
   }>({
     open: false,
@@ -732,7 +733,8 @@ const QualityControl = () => {
         husks: assessment.husks,
         stones: assessment.stones,
         outturn: Number(assessmentForm.outturn) || undefined,
-        calculatorComments: assessmentForm.quality_note || undefined
+        calculatorComments: assessmentForm.quality_note || undefined,
+        printedBy: employee?.name || employee?.email || 'Unknown'
       };
       
       setGrnPrintModal({
@@ -954,7 +956,8 @@ const QualityControl = () => {
           below12: assessment.below12,
           pods: assessment.pods,
           husks: assessment.husks,
-          stones: assessment.stones
+          stones: assessment.stones,
+          printedBy: employee?.name || employee?.email || 'Unknown'
         }
       });
     } else {
