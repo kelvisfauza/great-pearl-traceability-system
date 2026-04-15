@@ -36,6 +36,20 @@ const ServiceProviderPayments = () => {
     invoiceNumber: '',
     email: '',
   });
+  const [saveProvider, setSaveProvider] = useState(true);
+
+  // Fetch saved service providers
+  const { data: savedProviders = [] } = useQuery({
+    queryKey: ['saved-service-providers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('service_providers')
+        .select('*')
+        .order('name', { ascending: true }) as any;
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   const { data: payments = [], isLoading } = useQuery({
     queryKey: ['service-provider-payments'],
@@ -49,6 +63,20 @@ const ServiceProviderPayments = () => {
       return data || [];
     },
   });
+
+  const handleSelectProvider = (providerId: string) => {
+    const provider = savedProviders.find((p: any) => p.id === providerId);
+    if (provider) {
+      setForm(f => ({
+        ...f,
+        receiverName: provider.name || '',
+        receiverPhone: provider.phone || '',
+        email: provider.email || '',
+      }));
+      setSaveProvider(false); // Already saved
+    }
+  };
+
 
   const handleSubmit = async () => {
     if (!form.receiverPhone || !form.amount || !form.description) {
