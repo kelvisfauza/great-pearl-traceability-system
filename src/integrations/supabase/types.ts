@@ -3099,7 +3099,7 @@ export type Database = {
         Insert: {
           amount: number
           approval_role?: string | null
-          balance_after: number
+          balance_after?: number
           confirmed_at?: string | null
           confirmed_by?: string | null
           created_at?: string
