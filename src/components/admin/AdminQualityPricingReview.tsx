@@ -420,13 +420,16 @@ const AdminQualityPricingReview = () => {
       return;
     }
     setProcessingId(selectedAssessment.id);
+    // Use either the admin-set final price or the calculator result
+    const effectivePrice = finalPrice || adminCalculation.finalPrice || 0;
     try {
       const { error: updateError } = await supabase
         .from('quality_assessments')
         .update({
           status: 'rejected',
           quality_note: adminComments,
-          reject_final: true
+          reject_final: true,
+          final_price: effectivePrice > 0 ? effectivePrice : undefined
         })
         .eq('id', selectedAssessment.id);
       if (updateError) throw updateError;
@@ -439,7 +442,7 @@ const AdminQualityPricingReview = () => {
       }
 
       // If admin set a price before rejecting, still create finance lot for payment
-      if (finalPrice > 0 && selectedAssessment.store_record_id && selectedAssessment.coffee_record) {
+      if (effectivePrice > 0 && selectedAssessment.store_record_id && selectedAssessment.coffee_record) {
         const qualityJson = {
           moisture_content: selectedAssessment.moisture,
           group1_percentage: selectedAssessment.group1_defects,
@@ -460,7 +463,7 @@ const AdminQualityPricingReview = () => {
             assessed_by: selectedAssessment.assessed_by,
             assessed_at: new Date().toISOString(),
             quality_json: qualityJson,
-            unit_price_ugx: finalPrice,
+            unit_price_ugx: effectivePrice,
             quantity_kg: selectedAssessment.coffee_record.kilograms,
             finance_status: 'READY_FOR_FINANCE'
           });
