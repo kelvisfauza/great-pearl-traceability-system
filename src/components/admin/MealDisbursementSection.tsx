@@ -328,6 +328,7 @@ const MealDisbursementSection = () => {
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Initiated By</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -344,6 +345,34 @@ const MealDisbursementSection = () => {
                     <TableCell className="text-right text-sm font-medium">{formatAmount(d.total_amount)}</TableCell>
                     <TableCell>{getStatusBadge(d.yo_status)}</TableCell>
                     <TableCell className="text-sm">{d.initiated_by_name}</TableCell>
+                    <TableCell>
+                      {d.yo_status !== 'success' && d.yo_status !== 'paid' && (
+                        <div className="flex gap-1">
+                          {(d.yo_status === 'failed' || d.yo_status === 'pending_approval') && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleRetry(d)}
+                              disabled={retryingId === d.id}
+                              className="gap-1 text-xs"
+                            >
+                              {retryingId === d.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
+                              Retry
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleMarkAsPaid(d)}
+                            disabled={markingId === d.id}
+                            className="gap-1 text-xs text-green-700 border-green-300 hover:bg-green-50"
+                          >
+                            {markingId === d.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCheck className="h-3 w-3" />}
+                            Mark Paid
+                          </Button>
+                        </div>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
