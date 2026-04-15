@@ -58,11 +58,16 @@ serve(async (req) => {
 
       const txStatus = (params.get("transaction_status") || params.get("TransactionStatus") || "").toUpperCase();
       const yoStatus = (params.get("status") || params.get("Status") || "").toUpperCase();
+      const networkRef = params.get("network_ref") || params.get("NetworkRef") || "";
 
       if (txStatus === "SUCCEEDED" || yoStatus === "OK" || yoStatus === "SUCCESSFUL") {
         status = "successful";
       } else if (txStatus === "FAILED" || yoStatus === "FAILED") {
         status = "failed";
+      } else if (networkRef) {
+        // Yo deposit IPN: presence of network_ref without explicit failure means telco processed successfully
+        status = "successful";
+        console.log(`No explicit status field but network_ref=${networkRef} present — treating as successful`);
       } else {
         status = "failed";
       }
