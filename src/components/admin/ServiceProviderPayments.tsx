@@ -399,7 +399,10 @@ const ServiceProviderPayments = () => {
                   </div>
                 </div>
               )}
-            </div>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={saveProvider} onChange={(e) => setSaveProvider(e.target.checked)} className="rounded" />
+                <UserPlus className="w-3.5 h-3.5" /> Save this provider for future payments
+              </label>
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
