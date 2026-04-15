@@ -334,6 +334,7 @@ const PendingPaymentsTab = () => {
                   <TableHead className="text-right">Qty (kg)</TableHead>
                   <TableHead className="text-right">Price/kg</TableHead>
                   <TableHead className="text-right">Total (UGX)</TableHead>
+                  <TableHead>Quality</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Action</TableHead>
                 </TableRow>
@@ -363,6 +364,30 @@ const PendingPaymentsTab = () => {
                     <TableCell className="text-right font-semibold">
                       {(lot.total_amount_ugx || 0).toLocaleString()}
                     </TableCell>
+                    <TableCell className="text-xs">
+                      {lot.quality_json ? (
+                        <div className="space-y-0.5">
+                          {lot.quality_json.moisture_content != null && (
+                            <span className="block">M: {lot.quality_json.moisture_content}%</span>
+                          )}
+                          {lot.quality_json.outturn_percentage != null && (
+                            <span className="block">OT: {lot.quality_json.outturn_percentage}%</span>
+                          )}
+                          {(lot.quality_json.group1_percentage != null || lot.quality_json.group2_percentage != null) && (
+                            <span className="block text-muted-foreground">
+                              G1: {lot.quality_json.group1_percentage ?? '-'}% G2: {lot.quality_json.group2_percentage ?? '-'}%
+                            </span>
+                          )}
+                          {lot.quality_json.comments && (
+                            <span className="block text-muted-foreground truncate max-w-[120px]" title={lot.quality_json.comments}>
+                              {lot.quality_json.comments}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {new Date(lot.created_at).toLocaleDateString()}
                     </TableCell>
@@ -380,7 +405,7 @@ const PendingPaymentsTab = () => {
                 ))}
                 {filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                       {search ? "No matching lots found" : "All lots have been paid ✓"}
                     </TableCell>
                   </TableRow>
@@ -417,6 +442,60 @@ const PendingPaymentsTab = () => {
                   <p className="font-bold text-lg">UGX {(payDialog.total_amount_ugx || 0).toLocaleString()}</p>
                 </div>
               </div>
+
+              {/* Quality Analysis Section */}
+              {payDialog.quality_json && (
+                <div className="border rounded-lg p-3 bg-muted/30 space-y-2">
+                  <p className="text-sm font-semibold">Quality Analysis</p>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    {payDialog.quality_json.moisture_content != null && (
+                      <div>
+                        <p className="text-muted-foreground">Moisture</p>
+                        <p className="font-medium">{payDialog.quality_json.moisture_content}%</p>
+                      </div>
+                    )}
+                    {payDialog.quality_json.outturn_percentage != null && (
+                      <div>
+                        <p className="text-muted-foreground">Outturn</p>
+                        <p className="font-medium">{payDialog.quality_json.outturn_percentage}%</p>
+                      </div>
+                    )}
+                    {payDialog.quality_json.group1_percentage != null && (
+                      <div>
+                        <p className="text-muted-foreground">Group 1 Defects</p>
+                        <p className="font-medium">{payDialog.quality_json.group1_percentage}%</p>
+                      </div>
+                    )}
+                    {payDialog.quality_json.group2_percentage != null && (
+                      <div>
+                        <p className="text-muted-foreground">Group 2 Defects</p>
+                        <p className="font-medium">{payDialog.quality_json.group2_percentage}%</p>
+                      </div>
+                    )}
+                    {payDialog.quality_json.pods_percentage != null && (
+                      <div>
+                        <p className="text-muted-foreground">Pods</p>
+                        <p className="font-medium">{payDialog.quality_json.pods_percentage}%</p>
+                      </div>
+                    )}
+                    {payDialog.quality_json.husks_percentage != null && (
+                      <div>
+                        <p className="text-muted-foreground">Husks</p>
+                        <p className="font-medium">{payDialog.quality_json.husks_percentage}%</p>
+                      </div>
+                    )}
+                    {payDialog.quality_json.fm_percentage != null && (
+                      <div>
+                        <p className="text-muted-foreground">Foreign Matter</p>
+                        <p className="font-medium">{payDialog.quality_json.fm_percentage}%</p>
+                      </div>
+                    )}
+                  </div>
+                  {payDialog.quality_json.comments && (
+                    <p className="text-xs text-muted-foreground mt-1 italic">{payDialog.quality_json.comments}</p>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className="text-sm font-medium">Payment Method</label>
