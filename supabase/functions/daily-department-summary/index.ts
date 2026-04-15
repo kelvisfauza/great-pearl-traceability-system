@@ -143,7 +143,7 @@ Deno.serve(async (req) => {
       { data: activeContracts }, { data: allEmployees },
     ] = await Promise.all([
       supabase.from('coffee_records').select('batch_number, supplier_name, coffee_type, kilograms, date').eq('status', 'pending').order('date', { ascending: false }),
-      supabase.from('coffee_records').select('batch_number, supplier_name, coffee_type, kilograms, date').eq('status', 'assessed').gte('updated_at', `${today}T00:00:00`).lte('updated_at', `${today}T23:59:59`),
+      supabase.from('quality_assessments').select('batch_number, store_record_id').eq('date_assessed', today),
       supabase.from('coffee_records').select('kilograms').eq('status', 'inventory'),
       supabase.from('coffee_records').select('id').eq('status', 'rejected'),
       supabase.from('coffee_records').select('kilograms').not('status', 'in', '("sold_out","rejected")'),
@@ -167,9 +167,19 @@ Deno.serve(async (req) => {
       supabase.from('employees').select('name, email, department').eq('status', 'Active'),
     ])
 
+    // ─── Enrich assessed records from quality_assessments with coffee_records data ───
+    const assessedQA = assessedRecords || []
+    const assessedBatchNumbers = assessedQA.map((a:any) => a.batch_number)
+    let assessed: any[] = []
+    if (assessedBatchNumbers.length > 0) {
+      const { data: assessedCoffee } = await supabase.from('coffee_records')
+        .select('batch_number, supplier_name, coffee_type, kilograms, date')
+        .in('batch_number', assessedBatchNumbers)
+      assessed = assessedCoffee || []
+    }
+
     // ─── Computed values ───
     const pending = pendingRecords || []
-    const assessed = assessedRecords || []
     const totalPendingKg = pending.reduce((s:number, r:any) => s + r.kilograms, 0)
     const totalAssessedKg = assessed.reduce((s:number, r:any) => s + r.kilograms, 0)
     const inventoryKg = (inventoryRecords||[]).reduce((s:number, r:any) => s + r.kilograms, 0)
