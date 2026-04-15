@@ -112,6 +112,27 @@ serve(async (req) => {
       })
       .eq("id", record.id);
 
+    // Send SMS notification to service provider
+    if ((result.success || yoStatus === "pending_approval") && cleanPhone) {
+      try {
+        const smsMessage = `Dear ${receiverName || "Service Provider"}, you have received UGX ${totalAmount.toLocaleString()} from Great Agro Coffee. Invoice: ${description}. Ref: ${result.transactionRef || record.id}. Thank you for your service.`;
+        
+        await supabase.functions.invoke("send-sms", {
+          body: {
+            phone: cleanPhone,
+            message: smsMessage,
+            userName: receiverName || "Service Provider",
+            messageType: "payout_confirmation",
+            department: "Finance",
+            triggeredBy: initiatedBy,
+          },
+        });
+        console.log(`[Service Provider Payout] SMS sent to ${cleanPhone}`);
+      } catch (smsErr) {
+        console.error(`[Service Provider Payout] SMS failed:`, smsErr);
+      }
+    }
+
     // Send email notification to all admins
     const { data: admins } = await supabase
       .from("employees")
