@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UtensilsCrossed, Send, Loader2, Phone, DollarSign, RefreshCw } from 'lucide-react';
+import { UtensilsCrossed, Send, Loader2, Phone, DollarSign, RefreshCw, RotateCcw, CheckCheck } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
@@ -22,6 +22,8 @@ const MealDisbursementSection = () => {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [rechecking, setRechecking] = useState(false);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [markingId, setMarkingId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     receiverPhone: '',
@@ -116,9 +118,63 @@ const MealDisbursementSection = () => {
     }
   };
 
+  const handleRetry = async (payment: any) => {
+    if (!confirm(`Retry sending UGX ${Number(payment.amount).toLocaleString()} to ${payment.receiver_name || payment.receiver_phone}?`)) return;
+    setRetryingId(payment.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('meal-disbursement', {
+        body: {
+          phone: payment.receiver_phone,
+          amount: payment.amount,
+          withdrawCharge: payment.withdraw_charge || 0,
+          description: payment.description,
+          receiverName: payment.receiver_name,
+          initiatedBy: employee?.email || '',
+          initiatedByName: employee?.name || '',
+        },
+      });
+      if (error) throw error;
+      toast({ title: data?.success ? 'Retry sent' : 'Retry issue', description: data?.message || 'Check status', variant: data?.success ? 'default' : 'destructive' });
+      queryClient.invalidateQueries({ queryKey: ['meal-disbursements'] });
+    } catch (err: any) {
+      toast({ title: 'Retry failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setRetryingId(null);
+    }
+  };
+
+  const handleMarkAsPaid = async (payment: any) => {
+    if (!confirm(`Mark UGX ${Number(payment.amount).toLocaleString()} to ${payment.receiver_name || payment.receiver_phone} as successfully paid?`)) return;
+    setMarkingId(payment.id);
+    try {
+      await supabase
+        .from('meal_disbursements')
+        .update({ yo_status: 'paid', completed_at: new Date().toISOString() } as any)
+        .eq('id', payment.id);
+
+      await supabase.from('audit_logs').insert({
+        action: 'MEAL_DISBURSEMENT_MARK_PAID',
+        table_name: 'meal_disbursements',
+        record_id: payment.id,
+        performed_by: employee?.email || 'admin',
+        department: 'Admin',
+        reason: `Manually marked meal disbursement as paid - ${payment.receiver_name} UGX ${Number(payment.amount).toLocaleString()}`,
+        record_data: { payment_id: payment.id, amount: payment.amount, receiver: payment.receiver_name, phone: payment.receiver_phone },
+      });
+
+      toast({ title: 'Marked as paid', description: `Payment to ${payment.receiver_name} marked as successful` });
+      queryClient.invalidateQueries({ queryKey: ['meal-disbursements'] });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setMarkingId(null);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'success': return <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Sent</Badge>;
+      case 'paid': return <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">Paid</Badge>;
       case 'pending_approval': return <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Pending Yo</Badge>;
       case 'pending': return <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">Processing</Badge>;
       default: return <Badge variant="destructive">Failed</Badge>;
