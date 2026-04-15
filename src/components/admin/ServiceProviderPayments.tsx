@@ -114,7 +114,25 @@ const ServiceProviderPayments = () => {
           title: 'Payment initiated',
           description: data.message || 'Payment sent successfully',
         });
+
+        // Auto-save provider if checkbox is checked
+        if (saveProvider && form.receiverName) {
+          const exists = savedProviders.some((p: any) =>
+            p.name?.toLowerCase() === form.receiverName.toLowerCase() ||
+            p.phone === form.receiverPhone
+          );
+          if (!exists) {
+            await (supabase.from('service_providers') as any).insert({
+              name: form.receiverName,
+              phone: form.receiverPhone || null,
+              email: form.email || null,
+            });
+            queryClient.invalidateQueries({ queryKey: ['saved-service-providers'] });
+          }
+        }
+
         setForm({ receiverPhone: '', receiverName: '', description: '', amount: '', withdrawCharge: '', notes: '', invoiceNumber: '', email: '' });
+        setSaveProvider(true);
         setOpen(false);
         queryClient.invalidateQueries({ queryKey: ['service-provider-payments'] });
       } else {
@@ -127,6 +145,7 @@ const ServiceProviderPayments = () => {
         if (data?.status === 'pending_approval') {
           setOpen(false);
           setForm({ receiverPhone: '', receiverName: '', description: '', amount: '', withdrawCharge: '', notes: '', invoiceNumber: '', email: '' });
+          setSaveProvider(true);
         }
       }
     } catch (err: any) {
