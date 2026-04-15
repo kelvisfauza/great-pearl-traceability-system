@@ -349,7 +349,7 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
         >
           {rejectLot.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           <XCircle className="mr-2 h-4 w-4" />
-          Reject Lot
+          Reject & Send to Admin
         </Button>
         <Button
           type="submit"
