@@ -22,6 +22,7 @@ const DueInstallmentsCard = () => {
         `)
         .in('status', ['pending', 'partial', 'overdue'])
         .lte('due_date', today)
+        .in('loans.status', ['active', 'approved'])
         .order('due_date', { ascending: true })
         .limit(10);
       
