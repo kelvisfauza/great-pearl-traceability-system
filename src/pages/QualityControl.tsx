@@ -1345,6 +1345,24 @@ const QualityControl = () => {
                             }
                             if (grnDataList.length > 0) {
                               openBulkGRNPrintWindow(grnDataList);
+                              // Mark all as printed in quality_assessments and coffee_records
+                              for (const id of selectedForBulkPrint) {
+                                const assessment = filteredAssessments.find((a: any) => a.id === id);
+                                if (!assessment) continue;
+                                await supabase.from('quality_assessments').update({
+                                  grn_printed: true,
+                                  grn_printed_by: employee?.name || employee?.email || 'Unknown',
+                                  grn_printed_at: new Date().toISOString()
+                                }).eq('id', assessment.id);
+                                if (assessment.store_record_id) {
+                                  await (supabase.from('coffee_records') as any).update({
+                                    grn_printed_at: new Date().toISOString(),
+                                    grn_printed_by: employee?.email || 'unknown',
+                                  }).eq('id', assessment.store_record_id);
+                                }
+                              }
+                              refreshData();
+                              toast({ title: "Bulk GRN Printed", description: `${grnDataList.length} GRN documents printed and marked.` });
                             }
                             setSelectedForBulkPrint([]);
                           }}

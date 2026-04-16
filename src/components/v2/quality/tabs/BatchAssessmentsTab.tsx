@@ -20,7 +20,7 @@ const BatchAssessmentsTab = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [grnModal, setGrnModal] = useState<{ open: boolean; grnData: any; assessmentId: string | null }>({ open: false, grnData: null, assessmentId: null });
+  const [grnModal, setGrnModal] = useState<{ open: boolean; grnData: any; assessmentId: string | null; coffeeRecordId: string | null }>({ open: false, grnData: null, assessmentId: null, coffeeRecordId: null });
   const [bulkPrinting, setBulkPrinting] = useState(false);
 
   const { data: lots, isLoading } = useQuery({
@@ -68,7 +68,7 @@ const BatchAssessmentsTab = () => {
   const currentUserName = employee?.name || employee?.email || 'Unknown';
   const isAdmin = isSuperAdmin();
 
-  const markGRNPrinted = async (assessmentId: string) => {
+  const markGRNPrinted = async (assessmentId: string, coffeeRecordId?: string) => {
     await supabase
       .from('quality_assessments')
       .update({
@@ -77,6 +77,12 @@ const BatchAssessmentsTab = () => {
         grn_printed_at: new Date().toISOString()
       })
       .eq('id', assessmentId);
+    if (coffeeRecordId) {
+      await (supabase.from('coffee_records') as any).update({
+        grn_printed_at: new Date().toISOString(),
+        grn_printed_by: currentUserName,
+      }).eq('id', coffeeRecordId);
+    }
     queryClient.invalidateQueries({ queryKey: ['quality-all-assessments'] });
   };
 
@@ -103,14 +109,14 @@ const BatchAssessmentsTab = () => {
       isDiscretionBuy: assessment.admin_discretion_buy,
       printedBy: currentUserName,
     };
-    setGrnModal({ open: true, grnData, assessmentId: assessment.id });
+    setGrnModal({ open: true, grnData, assessmentId: assessment.id, coffeeRecordId: lot.id });
   };
 
   const handlePrinted = async () => {
     if (grnModal.assessmentId) {
-      await markGRNPrinted(grnModal.assessmentId);
+      await markGRNPrinted(grnModal.assessmentId, grnModal.coffeeRecordId || undefined);
     }
-    setGrnModal({ open: false, grnData: null, assessmentId: null });
+    setGrnModal({ open: false, grnData: null, assessmentId: null, coffeeRecordId: null });
     toast({ title: "GRN Printed", description: "GRN print status has been recorded." });
   };
 
@@ -161,7 +167,7 @@ const BatchAssessmentsTab = () => {
     // Mark all as printed
     for (const lot of printableLots) {
       const assessment = getAssessmentForLot(lot.batch_number)!;
-      await markGRNPrinted(assessment.id);
+      await markGRNPrinted(assessment.id, lot.id);
     }
 
     setBulkPrinting(false);
@@ -336,7 +342,7 @@ const BatchAssessmentsTab = () => {
 
       <GRNPrintModal
         open={grnModal.open}
-        onClose={() => setGrnModal({ open: false, grnData: null, assessmentId: null })}
+        onClose={() => setGrnModal({ open: false, grnData: null, assessmentId: null, coffeeRecordId: null })}
         grnData={grnModal.grnData}
         onPrinted={handlePrinted}
       />
