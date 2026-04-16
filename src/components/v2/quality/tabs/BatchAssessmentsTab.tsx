@@ -167,7 +167,7 @@ const BatchAssessmentsTab = () => {
     // Mark all as printed
     for (const lot of printableLots) {
       const assessment = getAssessmentForLot(lot.batch_number)!;
-      await markGRNPrinted(assessment.id);
+      await markGRNPrinted(assessment.id, lot.id);
     }
 
     setBulkPrinting(false);
