@@ -3,10 +3,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { useStoreManagement } from '@/hooks/useStoreManagement';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useDocumentVerification } from '@/hooks/useDocumentVerification';
 import { generateVerificationCode, getVerificationQRUrl } from '@/utils/verificationCode';
+import { supabase } from '@/integrations/supabase/client';
+import { Printer, CheckCircle2, Filter } from 'lucide-react';
 
 interface GRNGeneratorProps {
   open: boolean;
@@ -14,10 +18,18 @@ interface GRNGeneratorProps {
 }
 
 const GRNGenerator: React.FC<GRNGeneratorProps> = ({ open, onClose }) => {
-  const { storeRecords, loading } = useStoreManagement();
+  const { storeRecords, loading, fetchStoreData } = useStoreManagement();
+  const { employee } = useAuth();
   const [selectedRecord, setSelectedRecord] = useState<string>('');
+  const [filterPrinted, setFilterPrinted] = useState<'all' | 'printed' | 'not_printed'>('all');
   const { toast } = useToast();
   const { createVerification } = useDocumentVerification();
+
+  const filteredRecords = storeRecords.filter(r => {
+    if (filterPrinted === 'printed') return !!r.grnPrintedAt;
+    if (filterPrinted === 'not_printed') return !r.grnPrintedAt;
+    return true;
+  });
 
   const handleGenerateGRN = async () => {
     const record = storeRecords.find(r => r.id === selectedRecord);
@@ -125,20 +137,69 @@ const GRNGenerator: React.FC<GRNGeneratorProps> = ({ open, onClose }) => {
       printWindow.document.close();
     }
 
+    // Mark the record as printed
+    try {
+      await (supabase.from('coffee_records') as any)
+        .update({
+          grn_printed_at: new Date().toISOString(),
+          grn_printed_by: employee?.email || 'unknown',
+        })
+        .eq('id', record.id);
+      
+      // Refresh data to update UI
+      fetchStoreData(true);
+    } catch (err) {
+      console.error('Failed to mark GRN as printed:', err);
+    }
+
     toast({
-      title: "GRN Generated",
-      description: "Goods Received Note has been generated successfully"
+      title: "GRN Generated & Marked",
+      description: `GRN for ${record.batchNumber} printed and tracked successfully`
     });
   };
 
+  const selectedRecordData = storeRecords.find(r => r.id === selectedRecord);
+  const printedCount = storeRecords.filter(r => r.grnPrintedAt).length;
+  const unprintedCount = storeRecords.filter(r => !r.grnPrintedAt).length;
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Generate GRN / Delivery Note</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Printer className="h-5 w-5" />
+            Generate GRN / Delivery Note
+          </DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
+          {/* Print status summary */}
+          <div className="flex items-center gap-3 text-sm">
+            <Badge variant="outline" className="gap-1">
+              <CheckCircle2 className="h-3 w-3 text-green-600" />
+              {printedCount} Printed
+            </Badge>
+            <Badge variant="outline" className="gap-1 border-orange-300 text-orange-700">
+              {unprintedCount} Not Printed
+            </Badge>
+          </div>
+
+          {/* Filter */}
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <Select value={filterPrinted} onValueChange={(v: any) => setFilterPrinted(v)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Records</SelectItem>
+                <SelectItem value="not_printed">Not Printed</SelectItem>
+                <SelectItem value="printed">Already Printed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Record selector */}
           <div>
             <label className="block text-sm font-medium mb-2">Select Coffee Record</label>
             <Select value={selectedRecord} onValueChange={setSelectedRecord}>
@@ -146,36 +207,47 @@ const GRNGenerator: React.FC<GRNGeneratorProps> = ({ open, onClose }) => {
                 <SelectValue placeholder="Select a coffee record" />
               </SelectTrigger>
               <SelectContent>
-                {storeRecords.map((record) => (
+                {filteredRecords.map((record) => (
                   <SelectItem key={record.id} value={record.id}>
-                    {record.supplierName} - {record.coffeeType} - {record.batchNumber}
+                    <span className="flex items-center gap-2">
+                      {record.grnPrintedAt && <CheckCircle2 className="h-3 w-3 text-green-600 inline" />}
+                      {record.supplierName} - {record.coffeeType} - {record.batchNumber}
+                      {record.grnPrintedAt && <span className="text-xs text-muted-foreground">(printed)</span>}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          {selectedRecord && (
+          {selectedRecordData && (
             <div className="border rounded p-4">
-              <h3 className="font-medium mb-2">Record Details</h3>
-              {(() => {
-                const record = storeRecords.find(r => r.id === selectedRecord);
-                if (!record) return null;
-                return (
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p><strong>Supplier:</strong> {record.supplierName}</p>
-                      <p><strong>Coffee Type:</strong> {record.coffeeType}</p>
-                      <p><strong>Date:</strong> {new Date(record.date).toLocaleDateString()}</p>
-                    </div>
-                    <div>
-                      <p><strong>Bags:</strong> {record.bags}</p>
-                      <p><strong>Kilograms:</strong> {record.kilograms}</p>
-                      <p><strong>Batch:</strong> {record.batchNumber}</p>
-                    </div>
-                  </div>
-                );
-              })()}
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">Record Details</h3>
+                {selectedRecordData.grnPrintedAt ? (
+                  <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Printed {new Date(selectedRecordData.grnPrintedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    {selectedRecordData.grnPrintedBy && ` by ${selectedRecordData.grnPrintedBy.split('@')[0]}`}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="border-orange-300 text-orange-700">
+                    Not Printed
+                  </Badge>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p><strong>Supplier:</strong> {selectedRecordData.supplierName}</p>
+                  <p><strong>Coffee Type:</strong> {selectedRecordData.coffeeType}</p>
+                  <p><strong>Date:</strong> {new Date(selectedRecordData.date).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <p><strong>Bags:</strong> {selectedRecordData.bags}</p>
+                  <p><strong>Kilograms:</strong> {selectedRecordData.kilograms}</p>
+                  <p><strong>Batch:</strong> {selectedRecordData.batchNumber}</p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -185,7 +257,8 @@ const GRNGenerator: React.FC<GRNGeneratorProps> = ({ open, onClose }) => {
               onClick={handleGenerateGRN} 
               disabled={!selectedRecord}
             >
-              Generate & Print GRN
+              <Printer className="h-4 w-4 mr-1" />
+              {selectedRecordData?.grnPrintedAt ? 'Re-Print GRN' : 'Generate & Print GRN'}
             </Button>
           </div>
         </div>
