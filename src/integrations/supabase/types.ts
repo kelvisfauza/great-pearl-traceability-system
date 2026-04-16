@@ -979,6 +979,8 @@ export type Database = {
           created_by: string | null
           date: string
           discretion_bought: boolean | null
+          grn_printed_at: string | null
+          grn_printed_by: string | null
           id: string
           kilograms: number
           status: string
@@ -994,6 +996,8 @@ export type Database = {
           created_by?: string | null
           date: string
           discretion_bought?: boolean | null
+          grn_printed_at?: string | null
+          grn_printed_by?: string | null
           id?: string
           kilograms: number
           status?: string
@@ -1009,6 +1013,8 @@ export type Database = {
           created_by?: string | null
           date?: string
           discretion_bought?: boolean | null
+          grn_printed_at?: string | null
+          grn_printed_by?: string | null
           id?: string
           kilograms?: number
           status?: string
