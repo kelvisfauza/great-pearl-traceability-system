@@ -13,6 +13,8 @@ export interface StoreRecord {
   date: string;
   batchNumber: string;
   status: string;
+  grnPrintedAt?: string | null;
+  grnPrintedBy?: string | null;
 }
 
 export interface Supplier {
@@ -53,7 +55,7 @@ export const useStoreManagement = () => {
 
       console.log('Supabase records:', supabaseRecords?.length || 0);
       
-      const transformedRecords: StoreRecord[] = (supabaseRecords || []).map(record => ({
+      const transformedRecords: StoreRecord[] = (supabaseRecords || []).map((record: any) => ({
         id: record.id,
         supplierName: record.supplier_name || '',
         coffeeType: record.coffee_type || '',
@@ -61,7 +63,9 @@ export const useStoreManagement = () => {
         kilograms: Number(record.kilograms) || 0,
         date: record.date || '',
         batchNumber: record.batch_number || '',
-        status: record.status || 'pending'
+        status: record.status || 'pending',
+        grnPrintedAt: record.grn_printed_at || null,
+        grnPrintedBy: record.grn_printed_by || null,
       }));
       
       // Get quality assessments status
