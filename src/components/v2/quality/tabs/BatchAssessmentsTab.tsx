@@ -68,7 +68,7 @@ const BatchAssessmentsTab = () => {
   const currentUserName = employee?.name || employee?.email || 'Unknown';
   const isAdmin = isSuperAdmin();
 
-  const markGRNPrinted = async (assessmentId: string) => {
+  const markGRNPrinted = async (assessmentId: string, coffeeRecordId?: string) => {
     await supabase
       .from('quality_assessments')
       .update({
@@ -77,6 +77,12 @@ const BatchAssessmentsTab = () => {
         grn_printed_at: new Date().toISOString()
       })
       .eq('id', assessmentId);
+    if (coffeeRecordId) {
+      await (supabase.from('coffee_records') as any).update({
+        grn_printed_at: new Date().toISOString(),
+        grn_printed_by: currentUserName,
+      }).eq('id', coffeeRecordId);
+    }
     queryClient.invalidateQueries({ queryKey: ['quality-all-assessments'] });
   };
 
