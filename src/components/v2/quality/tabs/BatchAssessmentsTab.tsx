@@ -109,14 +109,14 @@ const BatchAssessmentsTab = () => {
       isDiscretionBuy: assessment.admin_discretion_buy,
       printedBy: currentUserName,
     };
-    setGrnModal({ open: true, grnData, assessmentId: assessment.id });
+    setGrnModal({ open: true, grnData, assessmentId: assessment.id, coffeeRecordId: lot.id });
   };
 
   const handlePrinted = async () => {
     if (grnModal.assessmentId) {
-      await markGRNPrinted(grnModal.assessmentId);
+      await markGRNPrinted(grnModal.assessmentId, grnModal.coffeeRecordId || undefined);
     }
-    setGrnModal({ open: false, grnData: null, assessmentId: null });
+    setGrnModal({ open: false, grnData: null, assessmentId: null, coffeeRecordId: null });
     toast({ title: "GRN Printed", description: "GRN print status has been recorded." });
   };
 
@@ -342,7 +342,7 @@ const BatchAssessmentsTab = () => {
 
       <GRNPrintModal
         open={grnModal.open}
-        onClose={() => setGrnModal({ open: false, grnData: null, assessmentId: null })}
+        onClose={() => setGrnModal({ open: false, grnData: null, assessmentId: null, coffeeRecordId: null })}
         grnData={grnModal.grnData}
         onPrinted={handlePrinted}
       />
