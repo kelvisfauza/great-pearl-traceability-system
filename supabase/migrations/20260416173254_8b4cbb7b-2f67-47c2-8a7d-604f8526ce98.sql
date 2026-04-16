@@ -1,0 +1,1 @@
+UPDATE public.service_providers SET email = 'geogeomh@gmail.com', updated_at = now() WHERE id = 'cd5bb99c-7a7f-436f-a6fe-432e6a107769';
