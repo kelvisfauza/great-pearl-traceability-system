@@ -35,40 +35,54 @@ const LoyaltyBalances = () => {
       if (empError) throw empError;
       if (!empData) return [];
 
-      // For each employee with auth_user_id, get their loyalty ledger entries
+      // Use the DB function to get accurate balances (avoids 1000-row limit)
+      // Also fetch aggregated earned/withdrawn totals using RPC
       const results: EmployeeLoyalty[] = [];
 
+      // Batch: get all wallet balances at once
+      const { data: allBalances } = await supabase.rpc('get_all_wallet_balances') as { data: { user_id: string; wallet_balance: number }[] | null };
+      const balanceMap = new Map<string, number>();
+      (allBalances || []).forEach((b: any) => balanceMap.set(b.user_id, Number(b.wallet_balance)));
+
+      // For earned/withdrawn breakdown, query aggregated sums per user
+      // Using a single query with aggregation to avoid N+1 and row limits
+      const authUserIds = empData.filter(e => e.auth_user_id).map(e => e.auth_user_id!);
+      
+      // Fetch earned (positive amounts) and withdrawn (negative amounts) in two queries
+      const { data: earnedData } = await supabase
+        .from("ledger_entries")
+        .select("user_id, amount")
+        .in("user_id", authUserIds)
+        .in("entry_type", ["LOYALTY_REWARD", "BONUS", "DEPOSIT", "WITHDRAWAL", "ADJUSTMENT"])
+        .gt("amount", 0)
+        .limit(10000) as any;
+
+      const { data: withdrawnData } = await supabase
+        .from("ledger_entries")
+        .select("user_id, amount")
+        .in("user_id", authUserIds)
+        .in("entry_type", ["LOYALTY_REWARD", "BONUS", "DEPOSIT", "WITHDRAWAL", "ADJUSTMENT"])
+        .lt("amount", 0)
+        .limit(10000) as any;
+
+      // Aggregate earned per user
+      const earnedMap = new Map<string, number>();
+      (earnedData || []).forEach((e: any) => {
+        earnedMap.set(e.user_id, (earnedMap.get(e.user_id) || 0) + Number(e.amount));
+      });
+
+      // Aggregate withdrawn per user
+      const withdrawnMap = new Map<string, number>();
+      (withdrawnData || []).forEach((e: any) => {
+        withdrawnMap.set(e.user_id, (withdrawnMap.get(e.user_id) || 0) + Math.abs(Number(e.amount)));
+      });
+
       for (const emp of empData) {
-        if (!emp.auth_user_id) {
-          results.push({
-            id: emp.id,
-            name: emp.name,
-            email: emp.email,
-            department: emp.department,
-            totalEarned: 0,
-            totalWithdrawn: 0,
-            currentBalance: 0,
-          });
-          continue;
-        }
-
-        const { data: ledger } = await supabase
-          .from("ledger_entries")
-          .select("entry_type, amount")
-          .eq("user_id", emp.auth_user_id)
-          .in("entry_type", ["LOYALTY_REWARD", "BONUS", "DEPOSIT", "WITHDRAWAL", "ADJUSTMENT"]);
-
-        let totalEarned = 0;
-        let totalWithdrawn = 0;
-
-        (ledger || []).forEach((entry: any) => {
-          const amt = Number(entry.amount);
-          if (amt > 0) {
-            totalEarned += amt;
-          } else if (amt < 0) {
-            totalWithdrawn += Math.abs(amt);
-          }
-        });
+        const uid = emp.auth_user_id;
+        // Use the DB-computed balance (accurate, no row limit issues)
+        const currentBalance = uid ? (balanceMap.get(uid) || 0) : 0;
+        const totalEarned = uid ? (earnedMap.get(uid) || 0) : 0;
+        const totalWithdrawn = uid ? (withdrawnMap.get(uid) || 0) : 0;
 
         results.push({
           id: emp.id,
@@ -77,7 +91,7 @@ const LoyaltyBalances = () => {
           department: emp.department,
           totalEarned,
           totalWithdrawn,
-          currentBalance: totalEarned - totalWithdrawn,
+          currentBalance,
         });
       }
 
