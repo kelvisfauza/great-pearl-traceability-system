@@ -20,7 +20,7 @@ const BatchAssessmentsTab = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [grnModal, setGrnModal] = useState<{ open: boolean; grnData: any; assessmentId: string | null }>({ open: false, grnData: null, assessmentId: null });
+  const [grnModal, setGrnModal] = useState<{ open: boolean; grnData: any; assessmentId: string | null; coffeeRecordId: string | null }>({ open: false, grnData: null, assessmentId: null, coffeeRecordId: null });
   const [bulkPrinting, setBulkPrinting] = useState(false);
 
   const { data: lots, isLoading } = useQuery({
