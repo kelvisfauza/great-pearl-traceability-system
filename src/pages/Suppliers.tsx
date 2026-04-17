@@ -222,20 +222,37 @@ const Suppliers = () => {
         console.log('Sample record:', uniqueRecords[0]);
       }
 
-      // Get payment records from both sources
-      const batchNumbers = uniqueRecords.map(r => r.batch_number);
-      
-      // Get payment records from Supabase only (Firebase has been migrated)
-      const { data: supabasePayments } = await supabase
-        .from('supplier_payments' as any)
-        .select('*')
-        .in('batch_number', batchNumbers);
+      // Get payment records for this supplier (linked via supplier_id + lot_id → coffee_records.id)
+      const { data: supabasePayments, error: paymentsError } = await supabase
+        .from('supplier_payments')
+        .select('id, lot_id, supplier_id, status, amount_paid_ugx, created_at')
+        .eq('supplier_id', supplierId);
 
-      const allPayments = supabasePayments || [];
+      if (paymentsError) {
+        console.error('❌ Error loading supplier_payments:', paymentsError);
+      }
+      console.log(`💰 Found ${supabasePayments?.length || 0} payment records for supplier`);
+
+      const allPayments = (supabasePayments || []) as any[];
+
+      // Aggregate payments per coffee record (lot_id) — supports multiple/partial payments per lot
+      const paymentsByLot = new Map<string, { amount: number; status: string }>();
+      allPayments.forEach((p: any) => {
+        if (!p.lot_id) return;
+        const existing = paymentsByLot.get(p.lot_id);
+        const amount = Number(p.amount_paid_ugx || 0);
+        if (existing) {
+          existing.amount += amount;
+          // POSTED outranks PENDING for display
+          if (p.status === 'POSTED') existing.status = 'POSTED';
+        } else {
+          paymentsByLot.set(p.lot_id, { amount, status: p.status });
+        }
+      });
 
       // Merge the data
       const transactionsData: SupplierTransaction[] = uniqueRecords.map(record => {
-        const payment = allPayments.find((p: any) => p.batch_number === record.batch_number);
+        const payment = paymentsByLot.get(record.id);
         return {
           id: record.id,
           date: record.date,
@@ -244,8 +261,8 @@ const Suppliers = () => {
           kilograms: record.kilograms,
           bags: record.bags,
           status: record.status,
-          payment_amount: (payment as any)?.amount_paid_ugx,
-          payment_status: (payment as any)?.status
+          payment_amount: payment?.amount,
+          payment_status: payment?.status,
         };
       });
 
