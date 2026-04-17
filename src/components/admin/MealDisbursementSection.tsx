@@ -213,7 +213,7 @@ const MealDisbursementSection = () => {
                 <Send className="w-4 h-4" /> Send Meal Money
               </Button>
             </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto w-[calc(100vw-2rem)]">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <UtensilsCrossed className="w-5 h-5" /> Send Meal Allowance
@@ -299,9 +299,9 @@ const MealDisbursementSection = () => {
               )}
             </div>
 
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button onClick={handleSubmit} disabled={submitting} className="gap-2">
+            <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
+              <Button variant="outline" onClick={() => setOpen(false)} className="w-full sm:w-auto">Cancel</Button>
+              <Button onClick={handleSubmit} disabled={submitting} className="gap-2 w-full sm:w-auto">
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 {submitting ? 'Sending...' : 'Send Money'}
               </Button>
