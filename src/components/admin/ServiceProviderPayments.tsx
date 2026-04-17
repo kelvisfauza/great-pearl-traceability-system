@@ -268,7 +268,7 @@ const ServiceProviderPayments = () => {
                 <Send className="w-4 h-4" /> Pay Service Provider
               </Button>
             </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto w-[calc(100vw-2rem)]">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Truck className="w-5 h-5" /> Pay Service Provider
