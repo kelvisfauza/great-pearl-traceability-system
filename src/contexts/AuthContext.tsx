@@ -192,6 +192,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       if (employeeData) {
+        // CRITICAL: Block disabled / inactive accounts at session-restore time too
+        // (covers mobile biometric, saved sessions, OTP flows that bypass signIn())
+        const isDisabled = employeeData.disabled === true;
+        const isInactive = employeeData.status && String(employeeData.status).toLowerCase() !== 'active';
+        if (isDisabled || isInactive) {
+          console.log('🚫 Disabled/inactive account detected on session load — forcing signout:', normalizedEmail);
+          try {
+            toast({
+              title: 'Account Disabled',
+              description: 'Your account has been disabled. Please contact an administrator.',
+              variant: 'destructive',
+              duration: 8000,
+            });
+          } catch {}
+          try {
+            await supabase.auth.signOut();
+          } catch (e) {
+            console.error('Error signing out disabled account:', e);
+          }
+          return null;
+        }
+
         const employee: Employee = {
           id: employeeData.id,
           name: employeeData.name,
