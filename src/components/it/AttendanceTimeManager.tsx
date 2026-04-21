@@ -285,6 +285,99 @@ const AttendanceTimeManager = () => {
   };
 
   const computeRankings = () => {
+    return computeRankingsImpl();
+  };
+
+  const downloadCsvTemplate = () => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const sample = allAttendanceList.slice(0, 3);
+    const header = 'employee_name,record_date,arrival_time,departure_time,status,notes';
+    const rows = sample.length > 0
+      ? sample.map(p => `${p.name},${today},08:00,17:30,present,`).join('\n')
+      : `John Doe,${today},08:00,17:30,present,\nJane Smith,${today},08:15,17:30,present,Late by 15 min`;
+    const csv = `${header}\n${rows}\n`;
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `attendance_template_${today}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Template downloaded. Fill in and re-upload.');
+  };
+
+  const parseCsv = (text: string): Record<string, string>[] => {
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) return [];
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    return lines.slice(1).map(line => {
+      // simple CSV split (no quoted-comma support beyond basics)
+      const cols: string[] = [];
+      let cur = '', inQ = false;
+      for (const ch of line) {
+        if (ch === '"') inQ = !inQ;
+        else if (ch === ',' && !inQ) { cols.push(cur); cur = ''; }
+        else cur += ch;
+      }
+      cols.push(cur);
+      const obj: Record<string, string> = {};
+      headers.forEach((h, i) => { obj[h] = (cols[i] || '').trim(); });
+      return obj;
+    });
+  };
+
+  const handleCsvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    let success = 0, failed = 0, skipped = 0;
+    const errors: string[] = [];
+    try {
+      const text = await file.text();
+      const rows = parseCsv(text);
+      if (rows.length === 0) {
+        toast.error('CSV is empty or invalid');
+        return;
+      }
+      for (const row of rows) {
+        const name = row['employee_name'];
+        const date = row['record_date'];
+        if (!name || !date) { skipped++; continue; }
+        const person = allAttendanceList.find(p => p.name.toLowerCase().trim() === name.toLowerCase().trim());
+        if (!person) {
+          failed++;
+          errors.push(`${name}: not found`);
+          continue;
+        }
+        const payload: any = {
+          employee_id: person.id,
+          employee_name: person.name,
+          employee_email: person.email,
+          record_date: date,
+          arrival_time: row['arrival_time'] || null,
+          departure_time: row['departure_time'] || null,
+          status: row['status'] || 'present',
+          notes: row['notes'] || null,
+          recorded_by: employee?.email || 'IT-CSV',
+        };
+        const { error } = await supabase
+          .from('attendance_time_records')
+          .upsert(payload, { onConflict: 'employee_id,record_date' });
+        if (error) { failed++; errors.push(`${name}: ${error.message}`); }
+        else success++;
+      }
+      toast.success(`CSV import: ${success} saved, ${failed} failed, ${skipped} skipped`);
+      if (errors.length > 0) console.warn('CSV import errors:', errors);
+      fetchRecords();
+    } catch (err: any) {
+      toast.error('CSV import failed: ' + err.message);
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const computeRankingsImpl = () => {
     const now = new Date();
     let start: Date, end: Date;
     if (reportPeriod === 'week') {
