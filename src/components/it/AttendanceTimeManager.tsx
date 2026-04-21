@@ -290,11 +290,13 @@ const AttendanceTimeManager = () => {
 
   const downloadCsvTemplate = () => {
     const today = format(new Date(), 'yyyy-MM-dd');
-    const sample = allAttendanceList.slice(0, 3);
     const header = 'employee_name,record_date,arrival_time,departure_time,status,notes';
-    const rows = sample.length > 0
-      ? sample.map(p => `${p.name},${today},08:00,17:30,present,`).join('\n')
+    
+    // Include all employees in the template
+    const rows = allAttendanceList.length > 0
+      ? allAttendanceList.map(p => `${p.name},${today},08:00,17:30,present,`).join('\n')
       : `John Doe,${today},08:00,17:30,present,\nJane Smith,${today},08:15,17:30,present,Late by 15 min`;
+    
     const csv = `${header}\n${rows}\n`;
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -303,7 +305,7 @@ const AttendanceTimeManager = () => {
     a.download = `attendance_template_${today}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success('Template downloaded. Fill in and re-upload.');
+    toast.success(`Template downloaded with ${allAttendanceList.length} employees. Fill in and re-upload.`);
   };
 
   const parseCsv = (text: string): Record<string, string>[] => {
