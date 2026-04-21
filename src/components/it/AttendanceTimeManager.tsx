@@ -696,6 +696,27 @@ const AttendanceTimeManager = () => {
                     onChange={handleDocumentUpload}
                   />
                 </div>
+
+                <Button variant="outline" onClick={downloadCsvTemplate} className="gap-2">
+                  <FileSpreadsheet className="h-4 w-4" /> Download CSV Template
+                </Button>
+
+                <div className="relative">
+                  <Button variant="outline" disabled={uploading} className="gap-2 border-sky-300 text-sky-700 hover:bg-sky-50">
+                    <Upload className="h-4 w-4" />
+                    {uploading ? 'Importing...' : 'Bulk Import CSV'}
+                  </Button>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                    onChange={handleCsvUpload}
+                  />
+                </div>
+              </div>
+
+              <div className="text-xs text-muted-foreground p-2 rounded border bg-muted/20">
+                <strong>CSV Bulk Import:</strong> Download the template, fill in attendance for multiple employees/dates, then upload. Columns: <code>employee_name, record_date (YYYY-MM-DD), arrival_time (HH:MM), departure_time (HH:MM), status, notes</code>. Existing records for the same employee+date will be updated.
               </div>
 
               {/* Today's sign-in summary */}
