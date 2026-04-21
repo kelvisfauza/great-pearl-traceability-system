@@ -347,12 +347,23 @@ const AttendanceTimeManager = () => {
       }
       for (const row of rows) {
         const name = row['employee_name'];
+        const empId = row['employee_id'];
         const date = row['record_date'];
-        if (!name || !date) { skipped++; continue; }
-        const person = allAttendanceList.find(p => p.name.toLowerCase().trim() === name.toLowerCase().trim());
+        if ((!name && !empId) || !date) { skipped++; continue; }
+        const person = allAttendanceList.find(p =>
+          (empId && p.id === empId.trim()) ||
+          (name && p.name.toLowerCase().trim() === name.toLowerCase().trim())
+        );
         if (!person) {
           failed++;
-          errors.push(`${name}: not found`);
+          errors.push(`${name || empId}: not found`);
+          continue;
+        }
+        const status = (row['status'] || 'present').toLowerCase();
+        const validStatuses = ['present', 'absent', 'half_day', 'leave'];
+        if (!validStatuses.includes(status)) {
+          failed++;
+          errors.push(`${person.name}: invalid status "${status}"`);
           continue;
         }
         const payload: any = {
@@ -362,7 +373,9 @@ const AttendanceTimeManager = () => {
           record_date: date,
           arrival_time: row['arrival_time'] || null,
           departure_time: row['departure_time'] || null,
-          status: row['status'] || 'present',
+          standard_start: row['standard_start'] || '08:00',
+          standard_end: row['standard_end'] || '17:30',
+          status,
           notes: row['notes'] || null,
           recorded_by: employee?.email || 'IT-CSV',
         };
