@@ -1,5 +1,6 @@
 import { generateVerificationCode, getVerificationQRUrl } from './verificationCode';
 import { supabase } from '@/integrations/supabase/client';
+import { buildPublicUrl, getPublicAppOrigin } from './publicUrl';
 
 export interface PrintVerificationOptions {
   type: 'report' | 'document' | 'receipt' | 'grn' | 'assessment' | 'employee_id';
@@ -39,7 +40,8 @@ export const createPrintVerification = async (options: PrintVerificationOptions)
 };
 
 export const getVerificationHtml = (code: string, qrUrl: string): string => {
-  const verifyUrl = `${window.location.origin}/verify/${code}`;
+  const verifyUrl = buildPublicUrl(`/verify/${code}`);
+  const publicOrigin = getPublicAppOrigin();
   
   return `
     <div class="verification-section" style="margin-top: 30px; padding-top: 20px; border-top: 1px dashed #999;">
@@ -51,7 +53,7 @@ export const getVerificationHtml = (code: string, qrUrl: string): string => {
         <div style="text-align: left; font-size: 11px;">
           <p style="margin: 0; font-weight: bold;">Document Verification</p>
           <p style="margin: 3px 0; color: #666;">Code: <strong>${code}</strong></p>
-          <p style="margin: 3px 0; color: #666;">Verify at: <a href="${verifyUrl}" style="color: #0066cc;">${window.location.origin}/verify</a></p>
+          <p style="margin: 3px 0; color: #666;">Verify at: <a href="${verifyUrl}" style="color: #0066cc;">${publicOrigin}/verify</a></p>
         </div>
       </div>
     </div>
