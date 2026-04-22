@@ -1,5 +1,7 @@
 // Verification Code Generator Utility
 
+import { buildPublicUrl } from './publicUrl';
+
 type DocumentType = 'document' | 'employee_id' | 'receipt' | 'report' | 'contract' | 'assessment' | 'grn';
 
 const TYPE_PREFIXES: Record<DocumentType, string> = {
