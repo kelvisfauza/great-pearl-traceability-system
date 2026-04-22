@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { QrCode, Download, Printer } from 'lucide-react';
+import { buildPublicUrl } from '@/utils/publicUrl';
 
 interface Employee {
   id: string;
@@ -16,7 +17,7 @@ interface EmployeeQRCodesProps {
 }
 
 const getQRUrl = (employeeId: string, size = 200) => {
-  const profileUrl = `${window.location.origin}/employee/${employeeId}`;
+  const profileUrl = buildPublicUrl(`/employee/${employeeId}`);
   return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(profileUrl)}&format=svg`;
 };
 
