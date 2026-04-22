@@ -42,7 +42,7 @@ function generateRandomString(length: number): string {
  * Generates QR code URL for verification
  */
 export function getVerificationQRUrl(code: string, size: number = 150): string {
-  const verifyUrl = `${window.location.origin}/verify/${code}`;
+  const verifyUrl = buildPublicUrl(`/verify/${code}`);
   return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(verifyUrl)}&format=svg`;
 }
 
@@ -50,7 +50,7 @@ export function getVerificationQRUrl(code: string, size: number = 150): string {
  * Gets the full verification URL
  */
 export function getVerificationUrl(code: string): string {
-  return `${window.location.origin}/verify/${code}`;
+  return buildPublicUrl(`/verify/${code}`);
 }
 
 /**
