@@ -20,28 +20,26 @@ const EmployeeProfile = () => {
       }
 
       try {
-        // Try by UUID first, then by employee_id
-        let { data, error: err } = await supabase
-          .from('employees')
-          .select('name, position, department, employee_id, phone, email, join_date, status, avatar_url')
-          .eq('id', id)
-          .maybeSingle();
-
-        if (!data) {
-          const res = await supabase
-            .from('employees')
-            .select('name, position, department, employee_id, phone, email, join_date, status, avatar_url')
-            .eq('employee_id', id)
-            .maybeSingle();
-          data = res.data;
-          err = res.error;
-        }
+        // Public RPC — works without authentication (QR scan destination).
+        const { data, error: err } = await supabase
+          .rpc('get_public_employee_profile' as any, { _lookup: id });
 
         if (err) throw err;
-        if (!data) {
+        const row = Array.isArray(data) ? data[0] : data;
+        if (!row) {
           setError('Employee not found');
         } else {
-          setEmployee(data);
+          setEmployee({
+            name: row.emp_name,
+            position: row.emp_position,
+            department: row.emp_department,
+            employee_id: row.emp_employee_id,
+            phone: row.emp_phone,
+            email: row.emp_email,
+            join_date: row.emp_join_date,
+            status: row.emp_status,
+            avatar_url: row.emp_avatar_url,
+          });
         }
       } catch (e: any) {
         setError(e.message || 'Failed to load employee');
