@@ -9892,6 +9892,20 @@ export type Database = {
         Args: { user_uuid: string }
         Returns: number
       }
+      get_public_employee_profile: {
+        Args: { _lookup: string }
+        Returns: {
+          emp_avatar_url: string
+          emp_department: string
+          emp_email: string
+          emp_employee_id: string
+          emp_join_date: string
+          emp_name: string
+          emp_phone: string
+          emp_position: string
+          emp_status: string
+        }[]
+      }
       get_unified_user_id: { Args: { input_email: string }; Returns: string }
       get_user_balance_data: {
         Args: { user_email: string }
