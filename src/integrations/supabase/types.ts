@@ -8945,6 +8945,39 @@ export type Database = {
         }
         Relationships: []
       }
+      ussd_services: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          service_key: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          service_key: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          service_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       vehicle_trips: {
         Row: {
           arrival_time: string | null
