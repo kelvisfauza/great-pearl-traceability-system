@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Loader2, History, Search, X } from 'lucide-react';
+import { Loader2, History, Search, X, Download } from 'lucide-react';
 import { usePriceHistory } from '@/hooks/usePriceHistory';
 import { format, parseISO } from 'date-fns';
 
@@ -24,6 +24,50 @@ const PriceHistoryViewer: React.FC = () => {
 
   const fmt = (n: number | null | undefined) =>
     n == null ? '—' : `UGX ${Number(n).toLocaleString()}`;
+
+  const handleExportCSV = () => {
+    if (displayed.length === 0) return;
+    const headers = [
+      'Date',
+      'Drugar (Local)',
+      'Wugar (Local)',
+      'Robusta FAQ',
+      'Arabica Buying',
+      'Robusta Buying',
+      'ICE Arabica',
+      'Robusta Intl',
+      'FX Rate',
+    ];
+    const escape = (v: any) => {
+      if (v == null) return '';
+      const s = String(v).replace(/"/g, '""');
+      return /[",\n]/.test(s) ? `"${s}"` : s;
+    };
+    const rows = displayed.map((r) => [
+      r.price_date,
+      r.drugar_local ?? '',
+      r.wugar_local ?? '',
+      r.robusta_faq_local ?? '',
+      r.arabica_buying_price ?? '',
+      r.robusta_buying_price ?? '',
+      r.ice_arabica ?? '',
+      r.robusta_international ?? '',
+      r.exchange_rate ?? '',
+    ]);
+    const csv = [headers, ...rows]
+      .map((row) => row.map(escape).join(','))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const suffix = selectedDate ? selectedDate : `latest-10-${format(new Date(), 'yyyy-MM-dd')}`;
+    a.download = `price-history-${suffix}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <Card>
@@ -59,6 +103,15 @@ const PriceHistoryViewer: React.FC = () => {
             <Search className="h-4 w-4" />
             {selectedDate ? `Filtered: ${selectedDate}` : 'Latest 10 entries'}
           </div>
+          <Button
+            variant="default"
+            onClick={handleExportCSV}
+            disabled={loading || displayed.length === 0}
+            className="gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </Button>
         </div>
 
         {loading ? (
