@@ -15,6 +15,7 @@ import MarketIntelligencePanel from '@/components/analyst/MarketIntelligencePane
 import PriceCalculator from '@/components/analyst/PriceCalculator';
 import BulkAverageCalculator from '@/components/analyst/BulkAverageCalculator';
 import PriceGateOverlay from '@/components/analyst/PriceGateOverlay';
+import PriceHistoryViewer from '@/components/analyst/PriceHistoryViewer';
 
 const DataAnalyst = () => {
   const [activeTab, setActiveTab] = useState('price-overview');
@@ -38,6 +39,7 @@ const DataAnalyst = () => {
               <TabsTrigger value="price-overview" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Overview</TabsTrigger>
               <TabsTrigger value="price-calc" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Calculator</TabsTrigger>
               <TabsTrigger value="set-prices" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Set Prices</TabsTrigger>
+              <TabsTrigger value="price-history" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">History</TabsTrigger>
               <TabsTrigger value="market-intel" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Market Intel</TabsTrigger>
               <TabsTrigger value="price-trends" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Trends</TabsTrigger>
               <TabsTrigger value="market-monitor" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Market</TabsTrigger>
@@ -57,6 +59,10 @@ const DataAnalyst = () => {
 
           <TabsContent value="set-prices">
             <ReferencePriceInput />
+          </TabsContent>
+
+          <TabsContent value="price-history">
+            <PriceHistoryViewer />
           </TabsContent>
 
           <TabsContent value="market-intel">
