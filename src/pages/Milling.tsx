@@ -19,6 +19,7 @@ import MillingExpenses from '@/components/milling/MillingExpenses';
 import MillingPrintReportModal from '@/components/milling/MillingPrintReportModal';
 import MillingMoMoCollectModal from '@/components/milling/MillingMoMoCollectModal';
 import MillingMoMoTransactions from '@/components/milling/MillingMoMoTransactions';
+import { UssdServicesManager } from '@/components/milling/UssdServicesManager';
 
 const Milling = () => {
   const { stats, loading, customers, transactions, getReportData, clearAllData, clearAllDebts } = useMillingData();
@@ -153,13 +154,14 @@ const Milling = () => {
 
         {/* Main Tabs */}
         <Tabs defaultValue="transactions" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="transactions" className="font-bold">Transactions</TabsTrigger>
             <TabsTrigger value="customers" className="font-bold">Customers</TabsTrigger>
             <TabsTrigger value="ledger" className="font-bold">Customer Ledger</TabsTrigger>
             <TabsTrigger value="payments" className="font-bold">Payments</TabsTrigger>
             <TabsTrigger value="expenses" className="font-bold">Expenses</TabsTrigger>
             <TabsTrigger value="reports" className="font-bold">Reports</TabsTrigger>
+            <TabsTrigger value="ussd" className="font-bold">USSD Menu</TabsTrigger>
           </TabsList>
 
           <TabsContent value="transactions" className="space-y-4">
@@ -252,6 +254,10 @@ const Milling = () => {
               </div>
             </div>
             <MillingReports />
+          </TabsContent>
+
+          <TabsContent value="ussd" className="space-y-4">
+            <UssdServicesManager />
           </TabsContent>
         </Tabs>
 

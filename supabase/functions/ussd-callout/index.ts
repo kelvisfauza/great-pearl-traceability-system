@@ -115,11 +115,26 @@ serve(async (req) => {
     if (product_key === "2" || product_key === 2) {
       const paymentRef = `USSD-SVC-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
+      // Load active services from DB so admins can manage the menu
+      const { data: services, error: svcError } = await supabase
+        .from("ussd_services")
+        .select("service_key, name")
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+
+      if (svcError) {
+        console.error(`[USSD Callout] Failed to load services:`, svcError);
+      }
+
+      const serviceList = (services && services.length > 0)
+        ? services.map((s) => `${s.service_key}.${s.name}`).join("\n")
+        : "1.Transport Recovery\n2.Pay Loaders\n3.Advance Recovery";
+
       return new Response(JSON.stringify({
         validated: true,
         message: "Select 1 to proceed to available services",
         ussd_processor_params: {
-          other_services: "1.Transport Recovery\n2.Pay Loaders\n3.Advance Recovery",
+          other_services: serviceList,
           payment_external_reference: paymentRef,
         },
         success_ipn_url: successIpnUrl,
