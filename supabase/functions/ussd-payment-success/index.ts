@@ -175,14 +175,16 @@ async function processServicePayment(
 ) {
   const { externalRef, amount, phone, transactionId, selectedProduct, selectedServiceKey, narrative } = params;
 
-  // Map service keys to descriptions
-  const serviceMap: Record<string, string> = {
-    "1": "Transport Recovery",
-    "2": "Pay Loaders",
-    "3": "Advance Recovery",
-  };
-
-  const serviceName = serviceMap[selectedServiceKey] || selectedProduct || "Other Service";
+  // Resolve service name from DB (admin-managed list)
+  let serviceName = selectedProduct || "Other Service";
+  if (selectedServiceKey) {
+    const { data: svc } = await supabase
+      .from("ussd_services")
+      .select("name")
+      .eq("service_key", selectedServiceKey)
+      .maybeSingle();
+    if (svc?.name) serviceName = svc.name;
+  }
 
   // Record as a milling cash transaction for tracking
   const cleanPhone = phone.replace(/\D/g, "");
