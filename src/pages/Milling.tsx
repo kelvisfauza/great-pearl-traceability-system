@@ -255,6 +255,10 @@ const Milling = () => {
             </div>
             <MillingReports />
           </TabsContent>
+
+          <TabsContent value="ussd" className="space-y-4">
+            <UssdServicesManager />
+          </TabsContent>
         </Tabs>
 
         {/* Modals */}
