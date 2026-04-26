@@ -9792,10 +9792,12 @@ export type Database = {
       approve_transfer_reversal:
         | { Args: { p_notes?: string; p_request_id: string }; Returns: Json }
         | { Args: { p_notes?: string; p_request_id: string }; Returns: Json }
-      award_activity_reward: {
-        Args: { activity_name: string; user_uuid: string }
-        Returns: Json
-      }
+      award_activity_reward:
+        | { Args: { activity_name: string; user_uuid: string }; Returns: Json }
+        | {
+            Args: { activity_name: string; context?: Json; user_uuid: string }
+            Returns: Json
+          }
       backfill_missing_inventory_batch_sources: { Args: never; Returns: Json }
       bulk_deduct_unprocessed_sales: {
         Args: { p_coffee_type?: string }

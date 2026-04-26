@@ -7,7 +7,11 @@ export const useActivityTracker = () => {
   
   const user = authContext?.user;
 
-  const trackActivity = useCallback(async (activityType: string, description?: string) => {
+  const trackActivity = useCallback(async (
+    activityType: string,
+    description?: string,
+    context?: Record<string, any>
+  ) => {
     if (!user?.id) {
       console.log('No user found for activity tracking');
       return;
@@ -32,11 +36,16 @@ export const useActivityTracker = () => {
 
       console.log('Activity recorded successfully, awarding loyalty reward...');
 
-      // Award loyalty reward points
-      const { data, error } = await supabase.rpc('award_activity_reward' as any, {
+      // Award loyalty reward points (with optional context like form_name)
+      const rpcArgs: Record<string, any> = {
         user_uuid: user.id,
-        activity_name: activityType
-      });
+        activity_name: activityType,
+      };
+      const ctx: Record<string, any> = { ...(context || {}) };
+      if (description && !ctx.description) ctx.description = description;
+      if (Object.keys(ctx).length > 0) rpcArgs.context = ctx;
+
+      const { data, error } = await supabase.rpc('award_activity_reward' as any, rpcArgs);
 
       if (error) {
         console.error('Error awarding activity reward:', error);
@@ -54,7 +63,7 @@ export const useActivityTracker = () => {
   }, [trackActivity]);
 
   const trackFormSubmission = useCallback((formName: string) => {
-    trackActivity('form_submission', `submitting ${formName}`);
+    trackActivity('form_submission', `submitting ${formName}`, { form_name: formName });
   }, [trackActivity]);
 
   const trackReportGeneration = useCallback(() => {
