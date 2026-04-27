@@ -495,14 +495,16 @@ const QuickLoans = () => {
         const endDate = new Date();
         endDate.setMonth(endDate.getMonth() + loan.duration_months);
 
-        // For weekly loans, next deduction is 7 days from now; for monthly, 1st of next month
+        // For weekly loans, next deduction is 7 days from now; for monthly, the next 27th (payroll date)
         const nextDeduction = new Date();
         if (isWeekly) {
           nextDeduction.setDate(nextDeduction.getDate() + 7);
         } else {
-          // Align to the 1st of the next calendar month
-          nextDeduction.setMonth(nextDeduction.getMonth() + 1);
-          nextDeduction.setDate(1);
+          // Align to the next payroll date (27th). If today is on/after the 27th, jump to next month's 27th.
+          if (nextDeduction.getDate() >= 27) {
+            nextDeduction.setMonth(nextDeduction.getMonth() + 1);
+          }
+          nextDeduction.setDate(27);
         }
 
         // Update loan status
@@ -541,16 +543,17 @@ const QuickLoans = () => {
           const isBullet = loan.repayment_frequency === 'bullet';
           const numInstallments = isBullet ? 1 : loan.duration_months;
           for (let i = 1; i <= numInstallments; i++) {
+            // Anchor first installment on the next 27th payroll date
             const dueDate = new Date(startDate);
+            const baseMonthOffset = dueDate.getDate() >= 27 ? 1 : 0;
             if (isBullet) {
-              // Bullet: due at end of term (1st of the month after duration_months)
-              dueDate.setMonth(dueDate.getMonth() + loan.duration_months);
-              dueDate.setDate(1);
+              // Bullet: due on the 27th after duration_months
+              dueDate.setMonth(dueDate.getMonth() + baseMonthOffset + (loan.duration_months - 1));
             } else {
-              // Monthly installments fall on the 1st of each subsequent month
-              dueDate.setMonth(dueDate.getMonth() + i);
-              dueDate.setDate(1);
+              // Monthly installments fall on the 27th of each subsequent month
+              dueDate.setMonth(dueDate.getMonth() + baseMonthOffset + (i - 1));
             }
+            dueDate.setDate(27);
             repayments.push({
               loan_id: loanId,
               installment_number: i,
@@ -605,8 +608,10 @@ const QuickLoans = () => {
         if (isWeekly) {
           firstRepaymentDate.setDate(firstRepaymentDate.getDate() + 7);
         } else {
-          firstRepaymentDate.setMonth(firstRepaymentDate.getMonth() + 1);
-          firstRepaymentDate.setDate(1);
+          if (firstRepaymentDate.getDate() >= 27) {
+            firstRepaymentDate.setMonth(firstRepaymentDate.getMonth() + 1);
+          }
+          firstRepaymentDate.setDate(27);
         }
         const repaymentDateStr = firstRepaymentDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
         const installmentAmount = isWeekly
