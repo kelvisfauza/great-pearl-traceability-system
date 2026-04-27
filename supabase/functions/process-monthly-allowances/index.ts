@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
         let smsSuccess = false
         if (employee.phone) {
           try {
-            const smsMessage = `Dear ${allowance.employee_name}, your monthly ${typeLabel} of UGX ${allowance.amount.toLocaleString()} has been credited to your wallet. - Great Agro Coffee`
+            const smsMessage = `Dear ${allowance.employee_name}, your monthly ${typeLabel} of UGX ${allowance.amount.toLocaleString()} has been sent as airtime to ${cleanPhone}. - Great Agro Coffee`
 
             const { error: smsErr } = await supabase.functions.invoke('send-sms', {
               body: {
@@ -160,6 +160,9 @@ Deno.serve(async (req) => {
                 allowanceType: typeLabel,
                 amount: allowance.amount.toLocaleString(),
                 month: monthYear,
+                disbursementMethod: 'Airtime to phone',
+                phone: cleanPhone,
+                yoReference: yoResult.transactionRef || 'N/A',
               },
             },
           })
@@ -171,8 +174,8 @@ Deno.serve(async (req) => {
         try {
           await supabase.from('notifications').insert({
             type: 'system',
-            title: `${typeLabel} Credited`,
-            message: `Your monthly ${typeLabel} of UGX ${allowance.amount.toLocaleString()} has been credited to your wallet for ${monthYear}.`,
+            title: `${typeLabel} Sent`,
+            message: `Your monthly ${typeLabel} of UGX ${allowance.amount.toLocaleString()} has been sent as airtime to ${cleanPhone} for ${monthYear}.`,
             priority: 'medium',
             target_user_id: employee.id,
             target_department: null,
@@ -188,13 +191,13 @@ Deno.serve(async (req) => {
           employee_name: allowance.employee_name,
           allowance_type: allowance.allowance_type,
           amount: allowance.amount,
-          ledger_reference: reference,
+          ledger_reference: yoResult.transactionRef || reference,
           sms_sent: smsSuccess,
           month_year: monthYear
         })
 
         processed++
-        console.log(`Processed ${typeLabel} of UGX ${allowance.amount} for ${allowance.employee_name}`)
+        console.log(`Sent ${typeLabel} airtime UGX ${allowance.amount} to ${allowance.employee_name} (${cleanPhone}) ref=${yoResult.transactionRef}`)
       } catch (err) {
         errors.push(`Error for ${allowance.employee_name}: ${err.message}`)
       }
@@ -206,6 +209,8 @@ Deno.serve(async (req) => {
       total_configs: allowances?.length || 0,
       processed,
       sms_sent: smsSent,
+      yo_sent: yoSent,
+      yo_failed: yoFailed,
       errors: errors.length > 0 ? errors : undefined
     }
 
