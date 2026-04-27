@@ -9871,6 +9871,7 @@ export type Database = {
             Returns: Json
           }
       backfill_missing_inventory_batch_sources: { Args: never; Returns: Json }
+      backfill_treasury_from_ledger: { Args: never; Returns: Json }
       bulk_deduct_unprocessed_sales: {
         Args: { p_coffee_type?: string }
         Returns: {
