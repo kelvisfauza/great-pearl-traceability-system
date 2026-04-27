@@ -62,20 +62,20 @@ const ReferencePriceInput: React.FC = () => {
   const [targetInfo, setTargetInfo] = useState(getTargetDate);
   
 const [prices, setPrices] = useState<ReferencePrices>({
-    iceArabica: 185.50,
-    robusta: 2450,
-    exchangeRate: 3750,
-    drugarLocal: 8500,
-    wugarLocal: 8200,
-    robustaFaqLocal: 7800,
-    arabicaOutturn: 70,
-    arabicaMoisture: 12.5,
-    arabicaFm: 5,
-    arabicaBuyingPrice: 8500,
-    robustaOutturn: 80,
-    robustaMoisture: 13,
-    robustaFm: 3,
-    robustaBuyingPrice: 7800,
+    iceArabica: 0,
+    robusta: 0,
+    exchangeRate: 0,
+    drugarLocal: 0,
+    wugarLocal: 0,
+    robustaFaqLocal: 0,
+    arabicaOutturn: 0,
+    arabicaMoisture: 0,
+    arabicaFm: 0,
+    arabicaBuyingPrice: 0,
+    robustaOutturn: 0,
+    robustaMoisture: 0,
+    robustaFm: 0,
+    robustaBuyingPrice: 0,
     sortedPrice: 0
   });
   const [loading, setLoading] = useState(false);
@@ -97,25 +97,11 @@ const [prices, setPrices] = useState<ReferencePrices>({
     }
   }, [employee?.email, fetchMyRequests]);
 
-  useEffect(() => {
-setPrices({
-      iceArabica: currentPrices.iceArabica,
-      robusta: currentPrices.robusta,
-      exchangeRate: currentPrices.exchangeRate,
-      drugarLocal: currentPrices.drugarLocal,
-      wugarLocal: currentPrices.wugarLocal,
-      robustaFaqLocal: currentPrices.robustaFaqLocal,
-      arabicaOutturn: currentPrices.arabicaOutturn,
-      arabicaMoisture: currentPrices.arabicaMoisture,
-      arabicaFm: currentPrices.arabicaFm,
-      arabicaBuyingPrice: currentPrices.arabicaBuyingPrice,
-      robustaOutturn: currentPrices.robustaOutturn,
-      robustaMoisture: currentPrices.robustaMoisture,
-      robustaFm: currentPrices.robustaFm,
-      robustaBuyingPrice: currentPrices.robustaBuyingPrice,
-      sortedPrice: currentPrices.sortedPrice
-    });
-  }, [currentPrices]);
+  // Form intentionally starts blank — analysts must enter today's prices fresh.
+  // (Previous values are still visible in the Price History viewer.)
+
+  // Render 0 as empty string so fields appear blank until typed.
+  const v = (n: number) => (n === 0 ? '' : n);
 
   const handleInputChange = (field: keyof ReferencePrices, value: string) => {
     const numValue = parseFloat(value) || 0;
@@ -357,7 +343,8 @@ const handleTestSMS = async (phoneNumber: string) => {
                 id="arabicaOutturn"
                 type="number"
                 step="0.1"
-                value={prices.arabicaOutturn}
+                value={v(prices.arabicaOutturn)}
+                placeholder="e.g. 70"
                 onChange={(e) => handleInputChange('arabicaOutturn', e.target.value)}
               />
             </div>
@@ -367,7 +354,8 @@ const handleTestSMS = async (phoneNumber: string) => {
                 id="arabicaMoisture"
                 type="number"
                 step="0.1"
-                value={prices.arabicaMoisture}
+                value={v(prices.arabicaMoisture)}
+                placeholder="e.g. 12.5"
                 onChange={(e) => handleInputChange('arabicaMoisture', e.target.value)}
               />
             </div>
@@ -377,7 +365,8 @@ const handleTestSMS = async (phoneNumber: string) => {
                 id="arabicaFm"
                 type="number"
                 step="0.1"
-                value={prices.arabicaFm}
+                value={v(prices.arabicaFm)}
+                placeholder="e.g. 5"
                 onChange={(e) => handleInputChange('arabicaFm', e.target.value)}
               />
             </div>
@@ -387,7 +376,8 @@ const handleTestSMS = async (phoneNumber: string) => {
                 id="arabicaBuyingPrice"
                 type="number"
                 step="50"
-                value={prices.arabicaBuyingPrice}
+                value={v(prices.arabicaBuyingPrice)}
+                placeholder="Enter price"
                 onChange={(e) => handleInputChange('arabicaBuyingPrice', e.target.value)}
               />
             </div>
@@ -407,7 +397,8 @@ const handleTestSMS = async (phoneNumber: string) => {
                 id="robustaOutturn"
                 type="number"
                 step="0.1"
-                value={prices.robustaOutturn}
+                value={v(prices.robustaOutturn)}
+                placeholder="e.g. 80"
                 onChange={(e) => handleInputChange('robustaOutturn', e.target.value)}
               />
             </div>
@@ -417,7 +408,8 @@ const handleTestSMS = async (phoneNumber: string) => {
                 id="robustaMoisture"
                 type="number"
                 step="0.1"
-                value={prices.robustaMoisture}
+                value={v(prices.robustaMoisture)}
+                placeholder="e.g. 13"
                 onChange={(e) => handleInputChange('robustaMoisture', e.target.value)}
               />
             </div>
@@ -427,7 +419,8 @@ const handleTestSMS = async (phoneNumber: string) => {
                 id="robustaFm"
                 type="number"
                 step="0.1"
-                value={prices.robustaFm}
+                value={v(prices.robustaFm)}
+                placeholder="e.g. 3"
                 onChange={(e) => handleInputChange('robustaFm', e.target.value)}
               />
             </div>
@@ -437,7 +430,8 @@ const handleTestSMS = async (phoneNumber: string) => {
                 id="robustaBuyingPrice"
                 type="number"
                 step="50"
-                value={prices.robustaBuyingPrice}
+                value={v(prices.robustaBuyingPrice)}
+                placeholder="Enter price"
                 onChange={(e) => handleInputChange('robustaBuyingPrice', e.target.value)}
               />
             </div>
@@ -457,7 +451,8 @@ const handleTestSMS = async (phoneNumber: string) => {
                 id="sortedPrice"
                 type="number"
                 step="50"
-                value={prices.sortedPrice}
+                value={v(prices.sortedPrice)}
+                placeholder="Enter price"
                 onChange={(e) => handleInputChange('sortedPrice', e.target.value)}
               />
             </div>
@@ -489,7 +484,8 @@ const handleTestSMS = async (phoneNumber: string) => {
                 id="iceArabica"
                 type="number"
                 step="0.01"
-                value={prices.iceArabica}
+                value={v(prices.iceArabica)}
+                placeholder="ICE Arabica"
                 onChange={(e) => handleInputChange('iceArabica', e.target.value)}
               />
             </div>
@@ -499,7 +495,8 @@ const handleTestSMS = async (phoneNumber: string) => {
                 id="robusta"
                 type="number"
                 step="1"
-                value={prices.robusta}
+                value={v(prices.robusta)}
+                placeholder="Robusta"
                 onChange={(e) => handleInputChange('robusta', e.target.value)}
               />
             </div>
@@ -509,7 +506,8 @@ const handleTestSMS = async (phoneNumber: string) => {
                 id="exchangeRate"
                 type="number"
                 step="1"
-                value={prices.exchangeRate}
+                value={v(prices.exchangeRate)}
+                placeholder="USD/UGX"
                 onChange={(e) => handleInputChange('exchangeRate', e.target.value)}
               />
             </div>
@@ -526,7 +524,8 @@ const handleTestSMS = async (phoneNumber: string) => {
                 id="drugarLocal"
                 type="number"
                 step="50"
-                value={prices.drugarLocal}
+                value={v(prices.drugarLocal)}
+                placeholder="Enter price"
                 onChange={(e) => handleInputChange('drugarLocal', e.target.value)}
               />
             </div>
@@ -536,7 +535,8 @@ const handleTestSMS = async (phoneNumber: string) => {
                 id="wugarLocal"
                 type="number"
                 step="50"
-                value={prices.wugarLocal}
+                value={v(prices.wugarLocal)}
+                placeholder="Enter price"
                 onChange={(e) => handleInputChange('wugarLocal', e.target.value)}
               />
             </div>
@@ -546,7 +546,8 @@ const handleTestSMS = async (phoneNumber: string) => {
                 id="robustaFaqLocal"
                 type="number"
                 step="50"
-                value={prices.robustaFaqLocal}
+                value={v(prices.robustaFaqLocal)}
+                placeholder="Enter price"
                 onChange={(e) => handleInputChange('robustaFaqLocal', e.target.value)}
               />
             </div>
