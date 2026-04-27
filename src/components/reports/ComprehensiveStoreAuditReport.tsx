@@ -358,11 +358,13 @@ const ComprehensiveStoreAuditReport = () => {
                     <th className="p-2 text-right">Kg</th>
                     <th className="p-2 text-right">Price/kg</th>
                     <th className="p-2 text-right">Value</th>
+                    <th className="p-2 text-left">Assessed By</th>
+                    <th className="p-2 text-left">Flag</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map(r => (
-                    <tr key={r.id} className="border-t">
+                    <tr key={r.id} className={`border-t ${r.is_discretion ? 'bg-orange-50' : ''}`}>
                       <td className="p-2">{r.date}</td>
                       <td className="p-2 font-mono text-xs">{r.batch_number}</td>
                       <td className="p-2">{r.supplier_name}</td>
@@ -371,10 +373,12 @@ const ComprehensiveStoreAuditReport = () => {
                       <td className="p-2 text-right">{r.kilograms.toLocaleString()}</td>
                       <td className="p-2 text-right">{r.final_price ? r.final_price.toLocaleString() : "—"}</td>
                       <td className="p-2 text-right">{r.total_value ? Math.round(r.total_value).toLocaleString() : "—"}</td>
+                      <td className="p-2 text-xs">{r.assessed_by || "—"}</td>
+                      <td className="p-2 text-xs">{r.is_discretion ? <span className="px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] font-bold">DISCRETION</span> : (r.quality_status || "")}</td>
                     </tr>
                   ))}
                   {rows.length === 0 && (
-                    <tr><td colSpan={8} className="p-4 text-center text-muted-foreground">No deliveries in this period.</td></tr>
+                    <tr><td colSpan={10} className="p-4 text-center text-muted-foreground">No deliveries in this period.</td></tr>
                   )}
                 </tbody>
               </table>
