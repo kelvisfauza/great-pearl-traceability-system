@@ -968,7 +968,11 @@ const QuickLoans = () => {
   const calculateEarlyPayoff = (loan: any) => {
     if (!loan?.start_date || !loan?.loan_amount) return loan?.remaining_balance || 0;
     const daysHeld = Math.max(1, Math.floor((Date.now() - new Date(loan.start_date).getTime()) / (1000 * 60 * 60 * 24)));
-    const dailyRate = 0.3 / 100; // Fixed 0.3% daily interest for early payoff
+    // Use the loan's own monthly rate to derive daily interest (e.g. 15%/mo Quick = 0.5%/day)
+    const monthlyRate = LOAN_TYPE_CONFIG[(loan.loan_type || 'quick') as LoanType]?.monthlyRate
+      ?? Number(loan.interest_rate)
+      ?? 15;
+    const dailyRate = monthlyRate / 30 / 100;
     const interestForDaysHeld = Math.ceil(loan.loan_amount * dailyRate * daysHeld);
     const principalOwed = loan.loan_amount - (loan.paid_amount || 0);
     return Math.max(0, Math.ceil(principalOwed + interestForDaysHeld));
