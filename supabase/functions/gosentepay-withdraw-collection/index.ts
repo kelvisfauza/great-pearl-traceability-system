@@ -104,7 +104,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("GosentePay withdraw collection error:", error);
 
-    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    const errorMsg = error instanceof Error ? (error as Error).message : "Unknown error";
     const isConnectionError = errorMsg.includes("Connection refused") || errorMsg.includes("ECONNREFUSED") || errorMsg.includes("tcp connect error");
 
     const userMessage = isConnectionError

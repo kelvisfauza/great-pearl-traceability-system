@@ -471,7 +471,7 @@ serve(async (req) => {
         }
 
       } catch (error) {
-        console.error(`YoolaSMS request failed (attempt ${attempt}/${maxRetries}):`, error.message);
+        console.error(`YoolaSMS request failed (attempt ${attempt}/${maxRetries}):`, (error as Error).message);
         lastError = error;
         
         if (attempt < maxRetries) {

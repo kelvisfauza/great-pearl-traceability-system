@@ -53,7 +53,7 @@ async function sendEmailViaSendGrid(to: string, subject: string, message: string
     return { success: false, error: `SendGrid error: ${response.status}` }
   } catch (error) {
     console.error('❌ SendGrid exception:', error)
-    return { success: false, error: error.message }
+    return { success: false, error: (error as Error).message }
   }
 }
 
@@ -97,7 +97,7 @@ async function sendSMSViaTwilio(to: string, message: string): Promise<{ success:
     return { success: false, error: data.message || 'Twilio error' }
   } catch (error) {
     console.error('❌ Twilio exception:', error)
-    return { success: false, error: error.message }
+    return { success: false, error: (error as Error).message }
   }
 }
 
@@ -147,7 +147,7 @@ async function sendWhatsAppViaTwilio(to: string, message: string): Promise<{ suc
     return { success: false, error: data.message || 'Twilio WhatsApp error' }
   } catch (error) {
     console.error('❌ Twilio WhatsApp exception:', error)
-    return { success: false, error: error.message }
+    return { success: false, error: (error as Error).message }
   }
 }
 
@@ -190,7 +190,7 @@ async function sendSMSViaYoola(to: string, message: string): Promise<{ success: 
     return { success: false, error: `Yoola error: ${response.status}` }
   } catch (error) {
     console.error('❌ Yoola exception:', error)
-    return { success: false, error: error.message }
+    return { success: false, error: (error as Error).message }
   }
 }
 
@@ -271,7 +271,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('❌ Error:', error)
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: (error as Error).message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     )
   }

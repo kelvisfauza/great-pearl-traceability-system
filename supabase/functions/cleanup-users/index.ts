@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
 
       } catch (error) {
         console.error(`❌ Unexpected error deleting user ${user.email}:`, error);
-        errors.push(`Unexpected error for ${user.email}: ${error.message}`);
+        errors.push(`Unexpected error for ${user.email}: ${(error as Error).message}`);
       }
     }
 
@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({
       success: false,
       message: 'Failed to cleanup users',
-      error: error.message
+      error: (error as Error).message
     }), {
       status: 500,
       headers: { 

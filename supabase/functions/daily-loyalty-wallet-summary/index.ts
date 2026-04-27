@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
         sent += 1;
       } catch (error) {
         failed += 1;
-        const message = error instanceof Error ? error.message : 'Unknown error';
+        const message = error instanceof Error ? (error as Error).message : 'Unknown error';
         errors.push({ employee: employee.name, error: message });
       }
     }
@@ -174,7 +174,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = error instanceof Error ? (error as Error).message : 'Unknown error';
     console.error('daily-loyalty-wallet-summary error:', message);
 
     return new Response(

@@ -27,7 +27,7 @@ serve(async (req) => {
     console.error('Test function error:', error);
     return new Response(JSON.stringify({ 
       error: 'Test function failed',
-      details: error.message 
+      details: (error as Error).message 
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

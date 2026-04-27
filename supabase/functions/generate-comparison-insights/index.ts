@@ -83,7 +83,7 @@ Provide a detailed breakdown with business insights, observations, and recommend
   } catch (error) {
     console.error("Error generating insights:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: error instanceof Error ? (error as Error).message : "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

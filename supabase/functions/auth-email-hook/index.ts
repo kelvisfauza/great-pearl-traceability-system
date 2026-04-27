@@ -159,14 +159,14 @@ async function handleWebhook(req: Request): Promise<Response> {
         case 'missing_timestamp':
         case 'invalid_timestamp':
         case 'stale_timestamp':
-          console.error('Invalid webhook signature', { error: error.message })
+          console.error('Invalid webhook signature', { error: (error as Error).message })
           return new Response(JSON.stringify({ error: 'Invalid signature' }), {
             status: 401,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           })
         case 'invalid_payload':
         case 'invalid_json':
-          console.error('Invalid webhook payload', { error: error.message })
+          console.error('Invalid webhook payload', { error: (error as Error).message })
           return new Response(
             JSON.stringify({ error: 'Invalid webhook payload' }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -308,7 +308,7 @@ Deno.serve(async (req) => {
     return await handleWebhook(req)
   } catch (error) {
     console.error('Webhook handler error:', error)
-    const message = error instanceof Error ? error.message : 'Unknown error'
+    const message = error instanceof Error ? (error as Error).message : 'Unknown error'
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

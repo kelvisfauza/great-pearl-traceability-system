@@ -134,7 +134,7 @@ serve(async (req) => {
             retry_count: newRetryCount,
             last_retry_at: new Date().toISOString(),
             next_retry_at: newRetryCount >= 10 ? null : nextRetry.toISOString(),
-            failure_reason: error.message
+            failure_reason: (error as Error).message
           })
           .eq('id', msg.id)
 
@@ -161,7 +161,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in retry-failed-sms:', error)
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: error.message }),
+      JSON.stringify({ error: 'Internal server error', details: (error as Error).message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

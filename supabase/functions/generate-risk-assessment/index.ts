@@ -623,7 +623,7 @@ Make this report COMPREHENSIVE, DATA-DRIVEN, and ACTIONABLE. Use specific number
     console.error('Error generating risk assessment:', error);
     return new Response(
       JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Failed to generate risk assessment' 
+        error: error instanceof Error ? (error as Error).message : 'Failed to generate risk assessment' 
       }),
       { 
         status: 500,
