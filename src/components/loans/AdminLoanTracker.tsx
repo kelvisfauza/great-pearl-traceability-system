@@ -14,8 +14,9 @@ import { toast } from 'sonner';
 import { 
   Search, AlertTriangle, CalendarDays, Users, History, 
   Send, ChevronDown, ChevronUp, Clock, CheckCircle, XCircle,
-  Banknote, TrendingDown, Calendar, User, Shield, Phone, Mail, MapPin, Briefcase
+  Banknote, TrendingDown, Calendar, User, Shield, Phone, Mail, MapPin, Briefcase, Printer
 } from 'lucide-react';
+import LoanRepaymentSlip from './LoanRepaymentSlip';
 
 const AdminLoanTracker = () => {
   const [search, setSearch] = useState('');
