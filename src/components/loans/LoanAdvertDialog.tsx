@@ -189,7 +189,7 @@ const LoanAdvertDialog = () => {
                 tenureMonths: tenure,
                 salary: emp.salary,
                 multiplier,
-                interestRate: 10,
+                interestRate: 15,
                 maxRepaymentMonths: 6,
                 loginUrl: "https://www.greatagrocoffeesystem.site",
               },
