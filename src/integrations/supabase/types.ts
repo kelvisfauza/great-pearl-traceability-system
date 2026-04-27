@@ -8572,25 +8572,34 @@ export type Database = {
       }
       treasury_pool_balance: {
         Row: {
+          bank_balance: number
+          cash_balance: number
           current_balance: number
           id: number
           last_yo_synced_at: string | null
           last_yo_synced_balance: number | null
           updated_at: string
+          yo_balance: number
         }
         Insert: {
+          bank_balance?: number
+          cash_balance?: number
           current_balance?: number
           id?: number
           last_yo_synced_at?: string | null
           last_yo_synced_balance?: number | null
           updated_at?: string
+          yo_balance?: number
         }
         Update: {
+          bank_balance?: number
+          cash_balance?: number
           current_balance?: number
           id?: number
           last_yo_synced_at?: string | null
           last_yo_synced_balance?: number | null
           updated_at?: string
+          yo_balance?: number
         }
         Relationships: []
       }
@@ -10111,13 +10120,13 @@ export type Database = {
           p_amount: number
           p_category: Database["public"]["Enums"]["treasury_category"]
           p_channel: Database["public"]["Enums"]["treasury_channel"]
-          p_description?: string
+          p_description: string
           p_direction: Database["public"]["Enums"]["treasury_direction"]
-          p_metadata?: Json
-          p_performed_by?: string
-          p_reference?: string
-          p_related_user_email?: string
-          p_related_user_name?: string
+          p_metadata: Json
+          p_performed_by: string
+          p_reference: string
+          p_related_user_email: string
+          p_related_user_name: string
         }
         Returns: string
       }
