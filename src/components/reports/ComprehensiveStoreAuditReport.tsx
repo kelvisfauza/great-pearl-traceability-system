@@ -19,6 +19,12 @@ interface DeliveryRow {
   status: string;
   final_price: number | null;
   total_value: number;
+  assessed_by: string | null;
+  date_assessed: string | null;
+  is_discretion: boolean;
+  discretion_by: string | null;
+  discretion_notes: string | null;
+  quality_status: string | null;
 }
 
 const ComprehensiveStoreAuditReport = () => {
@@ -44,7 +50,7 @@ const ComprehensiveStoreAuditReport = () => {
       // Fetch deliveries
       let q = supabase
         .from("coffee_records")
-        .select("id, date, batch_number, supplier_name, coffee_type, bags, kilograms, status")
+        .select("id, date, batch_number, supplier_name, coffee_type, bags, kilograms, status, discretion_bought")
         .gte("date", startDate)
         .lte("date", endDate)
         .order("date", { ascending: true });
@@ -57,20 +63,21 @@ const ComprehensiveStoreAuditReport = () => {
 
       // Fetch matching quality assessment final prices in one go
       const batches = (records || []).map(r => r.batch_number).filter(Boolean);
-      let priceMap = new Map<string, number>();
+      let qaMap = new Map<string, any>();
       if (batches.length) {
         const { data: qa } = await supabase
           .from("quality_assessments")
-          .select("batch_number, final_price, suggested_price")
+          .select("batch_number, final_price, suggested_price, admin_discretion_price, admin_discretion_buy, admin_discretion_by, admin_discretion_notes, assessed_by, date_assessed, status")
           .in("batch_number", batches);
-        (qa || []).forEach((a: any) => {
-          const p = a.final_price ?? a.suggested_price ?? 0;
-          if (p) priceMap.set(a.batch_number, Number(p));
-        });
+        (qa || []).forEach((a: any) => qaMap.set(a.batch_number, a));
       }
 
       const enriched: DeliveryRow[] = (records || []).map((r: any) => {
-        const price = priceMap.get(r.batch_number) ?? null;
+        const a = qaMap.get(r.batch_number);
+        const isDiscretion = !!(r.discretion_bought || a?.admin_discretion_buy);
+        const price = isDiscretion
+          ? (a?.admin_discretion_price ?? a?.final_price ?? a?.suggested_price ?? null)
+          : (a?.final_price ?? a?.suggested_price ?? null);
         const kg = Number(r.kilograms || 0);
         return {
           id: r.id,
@@ -81,8 +88,14 @@ const ComprehensiveStoreAuditReport = () => {
           bags: Number(r.bags || 0),
           kilograms: kg,
           status: r.status,
-          final_price: price,
+          final_price: price ? Number(price) : null,
           total_value: price ? price * kg : 0,
+          assessed_by: a?.assessed_by ?? null,
+          date_assessed: a?.date_assessed ?? null,
+          is_discretion: isDiscretion,
+          discretion_by: a?.admin_discretion_by ?? null,
+          discretion_notes: a?.admin_discretion_notes ?? null,
+          quality_status: a?.status ?? null,
         };
       });
 
@@ -104,6 +117,9 @@ const ComprehensiveStoreAuditReport = () => {
     const pricedKg = rows.filter(r => r.final_price).reduce((s, r) => s + r.kilograms, 0);
     const avgPrice = pricedKg > 0 ? totalValue / pricedKg : 0;
     const uniqueSuppliers = new Set(rows.map(r => r.supplier_name)).size;
+    const discretionRows = rows.filter(r => r.is_discretion);
+    const discretionKg = discretionRows.reduce((s, r) => s + r.kilograms, 0);
+    const discretionValue = discretionRows.reduce((s, r) => s + r.total_value, 0);
     const byType = rows.reduce((acc: Record<string, { kg: number; value: number; bags: number }>, r) => {
       const k = r.coffee_type || "Unknown";
       acc[k] = acc[k] || { kg: 0, value: 0, bags: 0 };
@@ -112,7 +128,16 @@ const ComprehensiveStoreAuditReport = () => {
       acc[k].bags += r.bags;
       return acc;
     }, {});
-    return { totalKg, totalBags, totalValue, avgPrice, uniqueSuppliers, byType };
+    const byAssessor = rows.reduce((acc: Record<string, { kg: number; value: number; lots: number }>, r) => {
+      const k = r.assessed_by || "Not Assessed";
+      acc[k] = acc[k] || { kg: 0, value: 0, lots: 0 };
+      acc[k].kg += r.kilograms;
+      acc[k].value += r.total_value;
+      acc[k].lots += 1;
+      return acc;
+    }, {});
+    return { totalKg, totalBags, totalValue, avgPrice, uniqueSuppliers, byType, byAssessor,
+      discretionCount: discretionRows.length, discretionKg, discretionValue };
   }, [rows]);
 
   const handlePrint = () => {
@@ -123,39 +148,51 @@ const ComprehensiveStoreAuditReport = () => {
       <style>
         @page { size: A4; margin: 14mm; }
         body { font-family: Arial, sans-serif; color: #111; font-size: 11px; }
-        .header { display:flex; align-items:center; justify-content:space-between; border-bottom:3px solid #166534; padding-bottom:10px; margin-bottom:14px;}
-        .brand h1 { margin:0; font-size:20px; color:#166534;}
-        .brand p { margin:2px 0; font-size:10px; color:#555;}
-        .meta { text-align:right; font-size:10px;}
-        h2 { font-size:14px; color:#166534; border-bottom:1px solid #d1d5db; padding-bottom:4px; margin-top:18px;}
+        .header-row { display:flex; align-items:center; justify-content:space-between; padding-bottom:8px; border-bottom:3px double #000; }
+        .logo-block { background:#0d3d1f; padding:6px 12px; border-radius:4px; flex-shrink:0; }
+        .logo-block img { height:42px; width:auto; display:block; }
+        .company-block { text-align:center; flex:1; padding:0 12px; }
+        .company-name { font-size:18px; font-weight:900; letter-spacing:1.5px; margin:0; }
+        .company-sub { font-size:9px; margin:1px 0; }
+        .doc-meta { text-align:right; font-size:9px; flex-shrink:0; }
+        .title-bar { background:#0d3d1f; color:#fff; text-align:center; padding:6px 0; margin-top:8px; border-radius:3px; font-weight:bold; letter-spacing:1px; }
+        h2 { font-size:13px; color:#0d3d1f; border-bottom:1px solid #d1d5db; padding-bottom:4px; margin-top:14px;}
         .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:10px 0;}
         .stat { border:1px solid #e5e7eb; border-radius:6px; padding:8px;}
         .stat .label { font-size:9px; color:#6b7280; text-transform:uppercase;}
         .stat .val { font-size:14px; font-weight:bold; color:#111;}
         table { width:100%; border-collapse:collapse; margin-top:8px;}
         th, td { border:1px solid #d1d5db; padding:5px 6px; text-align:left;}
-        th { background:#166534; color:#fff; font-size:10px;}
+        th { background:#0d3d1f; color:#fff; font-size:10px;}
         tbody tr:nth-child(even){ background:#f9fafb;}
+        tr.discretion { background:#fff7ed !important; }
+        .badge { display:inline-block; padding:1px 5px; border-radius:3px; font-size:8px; font-weight:bold; }
+        .badge-disc { background:#dc2626; color:#fff; }
         tfoot td { font-weight:bold; background:#f3f4f6;}
         .right { text-align:right;}
         .footer { margin-top:24px; border-top:1px solid #d1d5db; padding-top:8px; font-size:9px; color:#6b7280; display:flex; justify-content:space-between;}
         .sig { margin-top:30px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:30px;}
         .sig div { border-top:1px solid #111; padding-top:4px; text-align:center; font-size:10px;}
       </style></head><body>
-      <div class="header">
-        <div class="brand">
-          <h1>GREAT PEARL COFFEE FACTORY</h1>
-          <p>Plot 123, Industrial Area, Kampala — Uganda</p>
-          <p>Tel: +256 781 121 639 · info@greatpearlcoffee.com</p>
+      <div class="header-row">
+        <div class="logo-block">
+          <img src="${window.location.origin}/lovable-uploads/great-agro-coffee-logo.png" alt="Logo" />
         </div>
-        <div class="meta">
-          <strong>COMPREHENSIVE STORE AUDIT REPORT</strong><br/>
+        <div class="company-block">
+          <h1 class="company-name">GREAT AGRO COFFEE LTD</h1>
+          <p class="company-sub">Kasese, Uganda.</p>
+          <p class="company-sub">Tel: +256 393 001 626 | Email: info@greatpearlcoffee.com</p>
+          <p class="company-sub">UCDA Licensed</p>
+        </div>
+        <div class="doc-meta">
+          <strong>STORE AUDIT</strong><br/>
           Period: <b>${startDate}</b> to <b>${endDate}</b><br/>
           Generated: ${format(new Date(), "PPpp")}<br/>
           ${coffeeType !== "all" ? `Type filter: ${coffeeType}<br/>` : ""}
           ${supplierFilter ? `Supplier: ${supplierFilter}<br/>` : ""}
         </div>
       </div>
+      <div class="title-bar">COMPREHENSIVE STORE AUDIT REPORT</div>
 
       <h2>Summary</h2>
       <div class="grid">
@@ -165,8 +202,8 @@ const ComprehensiveStoreAuditReport = () => {
         <div class="stat"><div class="label">Unique Suppliers</div><div class="val">${stats.uniqueSuppliers}</div></div>
         <div class="stat"><div class="label">Avg Buying Price (UGX/kg)</div><div class="val">${fmt(stats.avgPrice)}</div></div>
         <div class="stat"><div class="label">Total Procurement Value (UGX)</div><div class="val">${fmt(stats.totalValue)}</div></div>
-        <div class="stat"><div class="label">Coffee Types</div><div class="val">${Object.keys(stats.byType).length}</div></div>
-        <div class="stat"><div class="label">Period (days)</div><div class="val">${Math.max(1, Math.ceil((+new Date(endDate) - +new Date(startDate))/86400000)+1)}</div></div>
+        <div class="stat"><div class="label">Discretionary Lots</div><div class="val">${stats.discretionCount}</div></div>
+        <div class="stat"><div class="label">Discretionary Value (UGX)</div><div class="val">${fmt(stats.discretionValue)}</div></div>
       </div>
 
       <h2>Breakdown by Coffee Type</h2>
@@ -177,22 +214,32 @@ const ComprehensiveStoreAuditReport = () => {
         `).join("")}
       </tbody></table>
 
+      <h2>Quality Assessment Accountability (by Assessor)</h2>
+      <table><thead><tr><th>Assessed By</th><th class="right">Lots</th><th class="right">Kilograms</th><th class="right">Total Value (UGX)</th></tr></thead>
+      <tbody>
+        ${Object.entries(stats.byAssessor).map(([k, v]) => `
+          <tr><td>${k}</td><td class="right">${v.lots}</td><td class="right">${fmt(v.kg)}</td><td class="right">${fmt(v.value)}</td></tr>
+        `).join("")}
+      </tbody></table>
+
       <h2>Detailed Delivery Records</h2>
       <table>
         <thead><tr>
           <th>#</th><th>Date</th><th>Batch</th><th>Supplier</th><th>Type</th>
-          <th class="right">Bags</th><th class="right">Kg</th><th class="right">Price/kg</th><th class="right">Value (UGX)</th><th>Status</th>
+          <th class="right">Bags</th><th class="right">Kg</th><th class="right">Price/kg</th><th class="right">Value (UGX)</th>
+          <th>Assessed By</th><th>Notes</th>
         </tr></thead>
         <tbody>
           ${rows.map((r, i) => `
-            <tr>
+            <tr class="${r.is_discretion ? 'discretion' : ''}">
               <td>${i+1}</td><td>${r.date}</td><td>${r.batch_number}</td>
               <td>${r.supplier_name}</td><td>${r.coffee_type}</td>
               <td class="right">${fmt(r.bags)}</td>
               <td class="right">${fmt(r.kilograms)}</td>
               <td class="right">${r.final_price ? fmt(r.final_price) : "—"}</td>
               <td class="right">${r.total_value ? fmt(r.total_value) : "—"}</td>
-              <td>${r.status}</td>
+              <td>${r.assessed_by || "—"}</td>
+              <td>${r.is_discretion ? `<span class="badge badge-disc">DISCRETION</span> ${r.discretion_by ? 'by ' + r.discretion_by : ''}${r.discretion_notes ? ' — ' + r.discretion_notes : ''}` : (r.status || '')}</td>
             </tr>
           `).join("")}
         </tbody>
@@ -202,9 +249,27 @@ const ComprehensiveStoreAuditReport = () => {
           <td class="right">${fmt(stats.totalKg)}</td>
           <td class="right">${fmt(stats.avgPrice)}</td>
           <td class="right">${fmt(stats.totalValue)}</td>
-          <td></td>
+          <td colspan="2"></td>
         </tr></tfoot>
       </table>
+
+      ${stats.discretionCount > 0 ? `
+      <h2>Discretionary Purchases (Rejected Lots Bought at Admin Discretion)</h2>
+      <table>
+        <thead><tr><th>Date</th><th>Batch</th><th>Supplier</th><th>Type</th><th class="right">Kg</th><th class="right">Disc. Price</th><th class="right">Value</th><th>Approved By</th><th>Reason / Notes</th></tr></thead>
+        <tbody>
+          ${rows.filter(r => r.is_discretion).map(r => `
+            <tr class="discretion">
+              <td>${r.date}</td><td>${r.batch_number}</td><td>${r.supplier_name}</td><td>${r.coffee_type}</td>
+              <td class="right">${fmt(r.kilograms)}</td>
+              <td class="right">${r.final_price ? fmt(r.final_price) : '—'}</td>
+              <td class="right">${fmt(r.total_value)}</td>
+              <td>${r.discretion_by || '—'}</td>
+              <td>${r.discretion_notes || '—'}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>` : ''}
 
       <div class="sig">
         <div>Prepared By (Store)</div>
@@ -213,7 +278,7 @@ const ComprehensiveStoreAuditReport = () => {
       </div>
 
       <div class="footer">
-        <span>Great Pearl Coffee Factory · Confidential Audit Document</span>
+        <span>Great Agro Coffee Ltd · Confidential Audit Document</span>
         <span>Page 1 · Generated by System</span>
       </div>
       <script>window.onload = () => { window.print(); }</script>
@@ -293,11 +358,13 @@ const ComprehensiveStoreAuditReport = () => {
                     <th className="p-2 text-right">Kg</th>
                     <th className="p-2 text-right">Price/kg</th>
                     <th className="p-2 text-right">Value</th>
+                    <th className="p-2 text-left">Assessed By</th>
+                    <th className="p-2 text-left">Flag</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map(r => (
-                    <tr key={r.id} className="border-t">
+                    <tr key={r.id} className={`border-t ${r.is_discretion ? 'bg-orange-50' : ''}`}>
                       <td className="p-2">{r.date}</td>
                       <td className="p-2 font-mono text-xs">{r.batch_number}</td>
                       <td className="p-2">{r.supplier_name}</td>
@@ -306,10 +373,12 @@ const ComprehensiveStoreAuditReport = () => {
                       <td className="p-2 text-right">{r.kilograms.toLocaleString()}</td>
                       <td className="p-2 text-right">{r.final_price ? r.final_price.toLocaleString() : "—"}</td>
                       <td className="p-2 text-right">{r.total_value ? Math.round(r.total_value).toLocaleString() : "—"}</td>
+                      <td className="p-2 text-xs">{r.assessed_by || "—"}</td>
+                      <td className="p-2 text-xs">{r.is_discretion ? <span className="px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] font-bold">DISCRETION</span> : (r.quality_status || "")}</td>
                     </tr>
                   ))}
                   {rows.length === 0 && (
-                    <tr><td colSpan={8} className="p-4 text-center text-muted-foreground">No deliveries in this period.</td></tr>
+                    <tr><td colSpan={10} className="p-4 text-center text-muted-foreground">No deliveries in this period.</td></tr>
                   )}
                 </tbody>
               </table>
