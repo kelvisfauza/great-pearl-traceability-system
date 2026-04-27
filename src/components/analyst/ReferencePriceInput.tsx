@@ -62,20 +62,20 @@ const ReferencePriceInput: React.FC = () => {
   const [targetInfo, setTargetInfo] = useState(getTargetDate);
   
 const [prices, setPrices] = useState<ReferencePrices>({
-    iceArabica: 185.50,
-    robusta: 2450,
-    exchangeRate: 3750,
-    drugarLocal: 8500,
-    wugarLocal: 8200,
-    robustaFaqLocal: 7800,
-    arabicaOutturn: 70,
-    arabicaMoisture: 12.5,
-    arabicaFm: 5,
-    arabicaBuyingPrice: 8500,
-    robustaOutturn: 80,
-    robustaMoisture: 13,
-    robustaFm: 3,
-    robustaBuyingPrice: 7800,
+    iceArabica: 0,
+    robusta: 0,
+    exchangeRate: 0,
+    drugarLocal: 0,
+    wugarLocal: 0,
+    robustaFaqLocal: 0,
+    arabicaOutturn: 0,
+    arabicaMoisture: 0,
+    arabicaFm: 0,
+    arabicaBuyingPrice: 0,
+    robustaOutturn: 0,
+    robustaMoisture: 0,
+    robustaFm: 0,
+    robustaBuyingPrice: 0,
     sortedPrice: 0
   });
   const [loading, setLoading] = useState(false);
@@ -97,25 +97,8 @@ const [prices, setPrices] = useState<ReferencePrices>({
     }
   }, [employee?.email, fetchMyRequests]);
 
-  useEffect(() => {
-setPrices({
-      iceArabica: currentPrices.iceArabica,
-      robusta: currentPrices.robusta,
-      exchangeRate: currentPrices.exchangeRate,
-      drugarLocal: currentPrices.drugarLocal,
-      wugarLocal: currentPrices.wugarLocal,
-      robustaFaqLocal: currentPrices.robustaFaqLocal,
-      arabicaOutturn: currentPrices.arabicaOutturn,
-      arabicaMoisture: currentPrices.arabicaMoisture,
-      arabicaFm: currentPrices.arabicaFm,
-      arabicaBuyingPrice: currentPrices.arabicaBuyingPrice,
-      robustaOutturn: currentPrices.robustaOutturn,
-      robustaMoisture: currentPrices.robustaMoisture,
-      robustaFm: currentPrices.robustaFm,
-      robustaBuyingPrice: currentPrices.robustaBuyingPrice,
-      sortedPrice: currentPrices.sortedPrice
-    });
-  }, [currentPrices]);
+  // Form intentionally starts blank — analysts must enter today's prices fresh.
+  // (Previous values are still visible in the Price History viewer.)
 
   const handleInputChange = (field: keyof ReferencePrices, value: string) => {
     const numValue = parseFloat(value) || 0;
