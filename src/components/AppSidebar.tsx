@@ -22,7 +22,8 @@ import {
   PanelLeft,
   CheckSquare,
   BookMarked,
-  Banknote
+  Banknote,
+  Wallet
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRoleBasedData } from "@/hooks/useRoleBasedData";
@@ -66,6 +67,7 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
       title: "Management",
       items: [
         { name: "Approvals", icon: CheckSquare, path: "/approvals", permission: null, requiresAdmin: true },
+        { name: "Treasury Pool", icon: Wallet, path: "/admin/treasury", permission: null, requiresAdmin: true },
         { name: "Coffee Bookings", icon: BookMarked, path: "/coffee-bookings", permission: null, requiresAdmin: true },
         { name: "Suppliers", icon: UserCheck, path: "/suppliers", permission: null },
         { name: "Sales & Marketing", icon: TrendingUp, path: "/sales-marketing", permission: "Sales Marketing" },
