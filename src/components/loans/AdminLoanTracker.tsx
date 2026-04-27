@@ -399,6 +399,7 @@ const BorrowerDetailDialog = ({ selectedBorrower, onClose, today, getStatusBadge
   const [borrowerWalletBalance, setBorrowerWalletBalance] = useState(0);
   const [guarantorWalletBalance, setGuarantorWalletBalance] = useState(0);
   const [detailsLoading, setDetailsLoading] = useState(false);
+  const [showStatement, setShowStatement] = useState(false);
 
   useEffect(() => {
     if (!selectedBorrower) return;
@@ -467,11 +468,44 @@ const BorrowerDetailDialog = ({ selectedBorrower, onClose, today, getStatusBadge
     <Dialog open={!!selectedBorrower} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] p-0">
         <DialogHeader className="p-6 pb-2">
-          <DialogTitle className="flex items-center gap-2 text-lg">
-            <Banknote className="h-5 w-5 text-primary" />
-            {selectedBorrower?.employee_name} — Loan Detail
+          <DialogTitle className="flex items-center justify-between gap-2 text-lg">
+            <span className="flex items-center gap-2">
+              <Banknote className="h-5 w-5 text-primary" />
+              {selectedBorrower?.employee_name} — Loan Detail
+            </span>
+            {selectedBorrower && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowStatement(true)}
+                className="mr-6"
+              >
+                <Printer className="h-4 w-4 mr-1" /> Repayment Statement
+              </Button>
+            )}
           </DialogTitle>
         </DialogHeader>
+        {selectedBorrower && (
+          <LoanRepaymentSlip
+            open={showStatement}
+            onClose={() => setShowStatement(false)}
+            loanData={{
+              employeeName: selectedBorrower.employee_name,
+              employeeEmail: selectedBorrower.employee_email,
+              guarantorName: selectedBorrower.guarantor_name || 'N/A',
+              loanAmount: Number(selectedBorrower.loan_amount || 0),
+              interestRate: Number(selectedBorrower.interest_rate || 0),
+              dailyRate: Number(selectedBorrower.interest_rate || 0) / 30,
+              durationMonths: Number(selectedBorrower.duration_months || 1),
+              totalWeeks: Number(selectedBorrower.total_weeks || (selectedBorrower.duration_months || 1) * 4),
+              weeklyInstallment: Number(selectedBorrower.weekly_installment || selectedBorrower.installment_amount || 0),
+              totalRepayable: Number(selectedBorrower.total_repayable || 0),
+              totalInterest: Number(selectedBorrower.total_interest || (Number(selectedBorrower.total_repayable || 0) - Number(selectedBorrower.loan_amount || 0))),
+              loanType: selectedBorrower.loan_type,
+              repaymentFrequency: selectedBorrower.repayment_frequency,
+            }}
+          />
+        )}
         {selectedBorrower && (
           <ScrollArea className="max-h-[78vh] px-6 pb-6">
             {detailsLoading ? (
