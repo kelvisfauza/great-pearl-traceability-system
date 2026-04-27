@@ -500,7 +500,9 @@ const QuickLoans = () => {
         if (isWeekly) {
           nextDeduction.setDate(nextDeduction.getDate() + 7);
         } else {
-          nextDeduction.setDate(nextDeduction.getDate() + 30);
+          // Align to the 1st of the next calendar month
+          nextDeduction.setMonth(nextDeduction.getMonth() + 1);
+          nextDeduction.setDate(1);
         }
 
         // Update loan status
@@ -540,7 +542,15 @@ const QuickLoans = () => {
           const numInstallments = isBullet ? 1 : loan.duration_months;
           for (let i = 1; i <= numInstallments; i++) {
             const dueDate = new Date(startDate);
-            dueDate.setDate(dueDate.getDate() + (isBullet ? loan.duration_months * 30 : i * 30));
+            if (isBullet) {
+              // Bullet: due at end of term (1st of the month after duration_months)
+              dueDate.setMonth(dueDate.getMonth() + loan.duration_months);
+              dueDate.setDate(1);
+            } else {
+              // Monthly installments fall on the 1st of each subsequent month
+              dueDate.setMonth(dueDate.getMonth() + i);
+              dueDate.setDate(1);
+            }
             repayments.push({
               loan_id: loanId,
               installment_number: i,
