@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { yoSendAirtime, normalizePhone } from '../_shared/yo-payments.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -34,6 +35,8 @@ Deno.serve(async (req) => {
 
     let processed = 0
     let smsSent = 0
+    let yoSent = 0
+    let yoFailed = 0
     const errors: string[] = []
 
     for (const allowance of (allowances || [])) {
@@ -74,27 +77,49 @@ Deno.serve(async (req) => {
         const typeLabel = allowance.allowance_type === 'data_allowance' ? 'Data Allowance' : 'Airtime Allowance'
         const reference = `${allowance.allowance_type.toUpperCase()}-${monthYear}-${employee.id}`
 
-        // Credit the wallet via ledger
-        const { error: ledgerErr } = await supabase
-          .from('ledger_entries')
-          .insert({
-            user_id: String(userId),
-            entry_type: 'DEPOSIT',
-            amount: allowance.amount,
-            reference,
-            metadata: {
-              allowance_type: allowance.allowance_type,
-              employee_name: allowance.employee_name,
-              month_year: monthYear,
-              description: `Monthly ${typeLabel}`
-            },
-            created_at: new Date().toISOString()
-          })
-
-        if (ledgerErr) {
-          errors.push(`Ledger error for ${allowance.employee_name}: ${ledgerErr.message}`)
+        // Push allowance directly to phone via Yo Payments (acsendairtimemobile)
+        if (!employee.phone) {
+          errors.push(`No phone for ${allowance.employee_name} — skipped Yo airtime payout`)
           continue
         }
+
+        const cleanPhone = normalizePhone(employee.phone)
+        const yoResult = await yoSendAirtime({
+          phone: cleanPhone,
+          amount: Number(allowance.amount),
+          narrative: `Monthly ${typeLabel} ${monthYear} - Great Agro Coffee`,
+        })
+
+        const isPending22 = yoResult.statusMessage?.includes('-22') ||
+          (yoResult.rawResponse || '').includes('<StatusCode>-22</StatusCode>')
+        const yoOk = yoResult.success || isPending22
+
+        if (yoOk) {
+          yoSent++
+        } else {
+          yoFailed++
+          errors.push(`Yo airtime failed for ${allowance.employee_name}: ${yoResult.errorMessage || 'unknown'}`)
+          continue
+        }
+
+        // Audit trail in ledger (no wallet effect — recorded as PAYOUT)
+        await supabase.from('ledger_entries').insert({
+          user_id: String(userId),
+          entry_type: 'PAYOUT',
+          amount: allowance.amount,
+          reference,
+          metadata: {
+            allowance_type: allowance.allowance_type,
+            employee_name: allowance.employee_name,
+            month_year: monthYear,
+            yo_reference: yoResult.transactionRef || null,
+            yo_status: isPending22 ? 'pending_approval' : 'success',
+            disbursement_method: 'yo_airtime',
+            phone: cleanPhone,
+            description: `Monthly ${typeLabel} sent as airtime to ${cleanPhone}`,
+          },
+          created_at: new Date().toISOString(),
+        })
 
         // Send SMS notification
         let smsSuccess = false
