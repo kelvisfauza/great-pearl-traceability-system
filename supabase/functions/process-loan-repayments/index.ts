@@ -388,8 +388,11 @@ Deno.serve(async (req) => {
           if (isWeekly) {
             nextDate.setDate(nextDate.getDate() + 7)
           } else {
-            nextDate.setMonth(nextDate.getMonth() + 1)
-            nextDate.setDate(1)
+            // Next payroll date (27th). If we're on/after the 27th, jump to next month.
+            if (nextDate.getDate() >= 27) {
+              nextDate.setMonth(nextDate.getMonth() + 1)
+            }
+            nextDate.setDate(27)
           }
           loanUpdate.next_deduction_date = nextDate.toISOString().split('T')[0]
         }
