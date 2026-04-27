@@ -8570,6 +8570,78 @@ export type Database = {
         }
         Relationships: []
       }
+      treasury_pool_balance: {
+        Row: {
+          current_balance: number
+          id: number
+          last_yo_synced_at: string | null
+          last_yo_synced_balance: number | null
+          updated_at: string
+        }
+        Insert: {
+          current_balance?: number
+          id?: number
+          last_yo_synced_at?: string | null
+          last_yo_synced_balance?: number | null
+          updated_at?: string
+        }
+        Update: {
+          current_balance?: number
+          id?: number
+          last_yo_synced_at?: string | null
+          last_yo_synced_balance?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      treasury_pool_entries: {
+        Row: {
+          amount: number
+          balance_after: number | null
+          category: Database["public"]["Enums"]["treasury_category"]
+          channel: Database["public"]["Enums"]["treasury_channel"]
+          created_at: string
+          description: string | null
+          direction: Database["public"]["Enums"]["treasury_direction"]
+          id: string
+          metadata: Json | null
+          performed_by: string | null
+          reference: string | null
+          related_user_email: string | null
+          related_user_name: string | null
+        }
+        Insert: {
+          amount: number
+          balance_after?: number | null
+          category: Database["public"]["Enums"]["treasury_category"]
+          channel?: Database["public"]["Enums"]["treasury_channel"]
+          created_at?: string
+          description?: string | null
+          direction: Database["public"]["Enums"]["treasury_direction"]
+          id?: string
+          metadata?: Json | null
+          performed_by?: string | null
+          reference?: string | null
+          related_user_email?: string | null
+          related_user_name?: string | null
+        }
+        Update: {
+          amount?: number
+          balance_after?: number | null
+          category?: Database["public"]["Enums"]["treasury_category"]
+          channel?: Database["public"]["Enums"]["treasury_channel"]
+          created_at?: string
+          description?: string | null
+          direction?: Database["public"]["Enums"]["treasury_direction"]
+          id?: string
+          metadata?: Json | null
+          performed_by?: string | null
+          reference?: string | null
+          related_user_email?: string | null
+          related_user_name?: string | null
+        }
+        Relationships: []
+      }
       user_accounts: {
         Row: {
           created_at: string
@@ -10033,6 +10105,21 @@ export type Database = {
           total_kg: number
         }[]
       }
+      record_treasury_entry: {
+        Args: {
+          p_amount: number
+          p_category: Database["public"]["Enums"]["treasury_category"]
+          p_channel: Database["public"]["Enums"]["treasury_channel"]
+          p_description?: string
+          p_direction: Database["public"]["Enums"]["treasury_direction"]
+          p_metadata?: Json
+          p_performed_by?: string
+          p_reference?: string
+          p_related_user_email?: string
+          p_related_user_name?: string
+        }
+        Returns: string
+      }
       refresh_current_week_allowances: { Args: never; Returns: Json }
       refresh_monthly_payment_summary: { Args: never; Returns: undefined }
       reject_transfer_reversal: {
@@ -10140,6 +10227,19 @@ export type Database = {
       lot_finance_status: "READY_FOR_FINANCE" | "APPROVED_FOR_PAYMENT" | "PAID"
       payment_method: "CASH" | "CHEQUE" | "BANK_TRANSFER"
       payment_status: "PENDING_ADMIN_APPROVAL" | "POSTED" | "VOID"
+      treasury_category:
+        | "withdrawal"
+        | "deposit"
+        | "transfer"
+        | "provider_payout"
+        | "meal_plan"
+        | "topup"
+        | "reconciliation"
+        | "adjustment"
+        | "refund"
+        | "fee"
+      treasury_channel: "yo_payments" | "cash" | "bank" | "internal" | "other"
+      treasury_direction: "credit" | "debit"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -10282,6 +10382,20 @@ export const Constants = {
       lot_finance_status: ["READY_FOR_FINANCE", "APPROVED_FOR_PAYMENT", "PAID"],
       payment_method: ["CASH", "CHEQUE", "BANK_TRANSFER"],
       payment_status: ["PENDING_ADMIN_APPROVAL", "POSTED", "VOID"],
+      treasury_category: [
+        "withdrawal",
+        "deposit",
+        "transfer",
+        "provider_payout",
+        "meal_plan",
+        "topup",
+        "reconciliation",
+        "adjustment",
+        "refund",
+        "fee",
+      ],
+      treasury_channel: ["yo_payments", "cash", "bank", "internal", "other"],
+      treasury_direction: ["credit", "debit"],
     },
   },
 } as const
