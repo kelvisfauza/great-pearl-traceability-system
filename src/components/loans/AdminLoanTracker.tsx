@@ -17,6 +17,7 @@ import {
   Banknote, TrendingDown, Calendar, User, Shield, Phone, Mail, MapPin, Briefcase, Printer
 } from 'lucide-react';
 import LoanRepaymentSlip from './LoanRepaymentSlip';
+import LoanRepaymentHistorySlip from './LoanRepaymentHistorySlip';
 
 const AdminLoanTracker = () => {
   const [search, setSearch] = useState('');
@@ -400,6 +401,7 @@ const BorrowerDetailDialog = ({ selectedBorrower, onClose, today, getStatusBadge
   const [guarantorWalletBalance, setGuarantorWalletBalance] = useState(0);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [showStatement, setShowStatement] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     if (!selectedBorrower) return;
@@ -483,8 +485,35 @@ const BorrowerDetailDialog = ({ selectedBorrower, onClose, today, getStatusBadge
                 <Printer className="h-4 w-4 mr-1" /> Repayment Statement
               </Button>
             )}
+            {selectedBorrower && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => setShowHistory(true)}
+                className="mr-6"
+              >
+                <History className="h-4 w-4 mr-1" /> Payment History
+              </Button>
+            )}
           </DialogTitle>
         </DialogHeader>
+        {selectedBorrower && (
+          <LoanRepaymentHistorySlip
+            open={showHistory}
+            onClose={() => setShowHistory(false)}
+            loanInfo={{
+              employeeName: selectedBorrower.employee_name,
+              employeeEmail: selectedBorrower.employee_email,
+              loanAmount: Number(selectedBorrower.loan_amount || 0),
+              totalRepayable: Number(selectedBorrower.total_repayable || 0),
+              remainingBalance: Number(selectedBorrower.remaining_balance || 0),
+              loanType: selectedBorrower.loan_type,
+              repaymentFrequency: selectedBorrower.repayment_frequency,
+              startDate: selectedBorrower.start_date,
+            }}
+            repayments={selectedBorrower.repayments || []}
+          />
+        )}
         {selectedBorrower && (
           <LoanRepaymentSlip
             open={showStatement}
