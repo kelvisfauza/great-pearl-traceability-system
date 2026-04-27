@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { yoSendAirtime, normalizePhone } from '../_shared/yo-payments.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -34,6 +35,8 @@ Deno.serve(async (req) => {
 
     let processed = 0
     let smsSent = 0
+    let yoSent = 0
+    let yoFailed = 0
     const errors: string[] = []
 
     for (const allowance of (allowances || [])) {
@@ -74,33 +77,55 @@ Deno.serve(async (req) => {
         const typeLabel = allowance.allowance_type === 'data_allowance' ? 'Data Allowance' : 'Airtime Allowance'
         const reference = `${allowance.allowance_type.toUpperCase()}-${monthYear}-${employee.id}`
 
-        // Credit the wallet via ledger
-        const { error: ledgerErr } = await supabase
-          .from('ledger_entries')
-          .insert({
-            user_id: String(userId),
-            entry_type: 'DEPOSIT',
-            amount: allowance.amount,
-            reference,
-            metadata: {
-              allowance_type: allowance.allowance_type,
-              employee_name: allowance.employee_name,
-              month_year: monthYear,
-              description: `Monthly ${typeLabel}`
-            },
-            created_at: new Date().toISOString()
-          })
-
-        if (ledgerErr) {
-          errors.push(`Ledger error for ${allowance.employee_name}: ${ledgerErr.message}`)
+        // Push allowance directly to phone via Yo Payments (acsendairtimemobile)
+        if (!employee.phone) {
+          errors.push(`No phone for ${allowance.employee_name} — skipped Yo airtime payout`)
           continue
         }
+
+        const cleanPhone = normalizePhone(employee.phone)
+        const yoResult = await yoSendAirtime({
+          phone: cleanPhone,
+          amount: Number(allowance.amount),
+          narrative: `Monthly ${typeLabel} ${monthYear} - Great Agro Coffee`,
+        })
+
+        const isPending22 = yoResult.statusMessage?.includes('-22') ||
+          (yoResult.rawResponse || '').includes('<StatusCode>-22</StatusCode>')
+        const yoOk = yoResult.success || isPending22
+
+        if (yoOk) {
+          yoSent++
+        } else {
+          yoFailed++
+          errors.push(`Yo airtime failed for ${allowance.employee_name}: ${yoResult.errorMessage || 'unknown'}`)
+          continue
+        }
+
+        // Audit trail in ledger (no wallet effect — recorded as PAYOUT)
+        await supabase.from('ledger_entries').insert({
+          user_id: String(userId),
+          entry_type: 'PAYOUT',
+          amount: allowance.amount,
+          reference,
+          metadata: {
+            allowance_type: allowance.allowance_type,
+            employee_name: allowance.employee_name,
+            month_year: monthYear,
+            yo_reference: yoResult.transactionRef || null,
+            yo_status: isPending22 ? 'pending_approval' : 'success',
+            disbursement_method: 'yo_airtime',
+            phone: cleanPhone,
+            description: `Monthly ${typeLabel} sent as airtime to ${cleanPhone}`,
+          },
+          created_at: new Date().toISOString(),
+        })
 
         // Send SMS notification
         let smsSuccess = false
         if (employee.phone) {
           try {
-            const smsMessage = `Dear ${allowance.employee_name}, your monthly ${typeLabel} of UGX ${allowance.amount.toLocaleString()} has been credited to your wallet. - Great Agro Coffee`
+            const smsMessage = `Dear ${allowance.employee_name}, your monthly ${typeLabel} of UGX ${allowance.amount.toLocaleString()} has been sent as airtime to ${cleanPhone}. - Great Agro Coffee`
 
             const { error: smsErr } = await supabase.functions.invoke('send-sms', {
               body: {
@@ -135,6 +160,9 @@ Deno.serve(async (req) => {
                 allowanceType: typeLabel,
                 amount: allowance.amount.toLocaleString(),
                 month: monthYear,
+                disbursementMethod: 'Airtime to phone',
+                phone: cleanPhone,
+                yoReference: yoResult.transactionRef || 'N/A',
               },
             },
           })
@@ -146,8 +174,8 @@ Deno.serve(async (req) => {
         try {
           await supabase.from('notifications').insert({
             type: 'system',
-            title: `${typeLabel} Credited`,
-            message: `Your monthly ${typeLabel} of UGX ${allowance.amount.toLocaleString()} has been credited to your wallet for ${monthYear}.`,
+            title: `${typeLabel} Sent`,
+            message: `Your monthly ${typeLabel} of UGX ${allowance.amount.toLocaleString()} has been sent as airtime to ${cleanPhone} for ${monthYear}.`,
             priority: 'medium',
             target_user_id: employee.id,
             target_department: null,
@@ -163,13 +191,13 @@ Deno.serve(async (req) => {
           employee_name: allowance.employee_name,
           allowance_type: allowance.allowance_type,
           amount: allowance.amount,
-          ledger_reference: reference,
+          ledger_reference: yoResult.transactionRef || reference,
           sms_sent: smsSuccess,
           month_year: monthYear
         })
 
         processed++
-        console.log(`Processed ${typeLabel} of UGX ${allowance.amount} for ${allowance.employee_name}`)
+        console.log(`Sent ${typeLabel} airtime UGX ${allowance.amount} to ${allowance.employee_name} (${cleanPhone}) ref=${yoResult.transactionRef}`)
       } catch (err) {
         errors.push(`Error for ${allowance.employee_name}: ${err.message}`)
       }
@@ -181,6 +209,8 @@ Deno.serve(async (req) => {
       total_configs: allowances?.length || 0,
       processed,
       sms_sent: smsSent,
+      yo_sent: yoSent,
+      yo_failed: yoFailed,
       errors: errors.length > 0 ? errors : undefined
     }
 

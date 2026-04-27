@@ -149,6 +149,58 @@ export async function yoPayout(params: YoPayoutParams): Promise<YoPayoutResult> 
 }
 
 /**
+ * Send AIRTIME directly to a mobile subscriber via Yo Payments
+ * (Method: acsendairtimemobile). Network is auto-detected from MSISDN.
+ * Requires that your Yo account holds airtime stock (UGX-MTNAT / UGX-AIRAT).
+ */
+export async function yoSendAirtime(params: YoPayoutParams): Promise<YoPayoutResult> {
+  const username = Deno.env.get("YO_API_USERNAME");
+  const password = Deno.env.get("YO_API_PASSWORD");
+
+  if (!username || !password) {
+    return { success: false, errorMessage: "Yo Payments API credentials not configured" };
+  }
+
+  const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
+<AutoCreate>
+  <Request>
+    <APIUsername>${username}</APIUsername>
+    <APIPassword>${password}</APIPassword>
+    <Method>acsendairtimemobile</Method>
+    <NonBlocking>TRUE</NonBlocking>
+    <Amount>${params.amount}</Amount>
+    <Account>${params.phone}</Account>
+    <Narrative>${escapeXml(params.narrative)}</Narrative>
+  </Request>
+</AutoCreate>`;
+
+  console.log(`[Yo Airtime] Sending UGX ${params.amount} airtime to ${params.phone}`);
+
+  try {
+    const response = await fetch(YO_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/xml", "Content-Transfer-Encoding": "text" },
+      body: xmlBody,
+    });
+    const responseText = await response.text();
+    console.log(`[Yo Airtime] HTTP ${response.status}, Response: ${responseText}`);
+
+    if (!response.ok) {
+      return {
+        success: false,
+        errorMessage: `Yo Payments HTTP error: ${response.status}`,
+        rawResponse: responseText,
+      };
+    }
+    return parseYoResponse(responseText);
+  } catch (error) {
+    const errMsg = error instanceof Error ? (error as Error).message : "Unknown error";
+    console.error(`[Yo Airtime] Error: ${errMsg}`);
+    return { success: false, errorMessage: errMsg };
+  }
+}
+
+/**
  * Normalize phone number to 256XXXXXXXXX format
  */
 export function normalizePhone(phone: string): string {
