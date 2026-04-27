@@ -15,7 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Wallet, ArrowDownCircle, ArrowUpCircle, RefreshCw, Plus, Banknote,
+  Wallet, ArrowDownCircle, ArrowUpCircle, RefreshCw, Plus, Banknote, AlertTriangle, History,
 } from "lucide-react";
 
 type Direction = "credit" | "debit";
@@ -56,6 +56,7 @@ export default function Treasury() {
   const [entries, setEntries] = useState<PoolEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
 
   // Filters
   const [filterCategory, setFilterCategory] = useState<string>("all");
@@ -101,6 +102,25 @@ export default function Treasury() {
       toast({ title: "Sync failed", description: err.message, variant: "destructive" });
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleBackfill = async () => {
+    if (!confirm("Replay the entire ledger history into the treasury pool? This resets the auto-tracked balance to reflect all historical movements.")) return;
+    setBackfilling(true);
+    try {
+      const { data, error } = await supabase.rpc("backfill_treasury_from_ledger" as any);
+      if (error) throw error;
+      const r = data as any;
+      toast({
+        title: "Backfill complete",
+        description: `${r?.processed} entries replayed. Net: ${fmt((r?.total_credit || 0) - (r?.total_debit || 0))}`,
+      });
+      await load();
+    } catch (err: any) {
+      toast({ title: "Backfill failed", description: err.message, variant: "destructive" });
+    } finally {
+      setBackfilling(false);
     }
   };
 
@@ -175,7 +195,28 @@ export default function Treasury() {
           <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
           {syncing ? "Syncing..." : "Sync Yo Balance"}
         </Button>
+        <Button onClick={handleBackfill} disabled={backfilling} variant="outline">
+          <History className={`h-4 w-4 mr-2 ${backfilling ? "animate-spin" : ""}`} />
+          {backfilling ? "Replaying..." : "Backfill from Ledger"}
+        </Button>
       </div>
+
+      {/* Insufficient funds banner */}
+      {!loading && balance && Number(balance.current_balance) <= 0 && (
+        <Card className="border-destructive bg-destructive/5">
+          <CardContent className="p-4 flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <div className="font-semibold text-destructive">Treasury pool is underfunded</div>
+              <div className="text-muted-foreground mt-1">
+                Pool balance: <span className="font-mono font-semibold">{fmt(balance.current_balance)}</span>.
+                All system payouts (salaries, loans, bonuses, overtime, allowances, withdrawals, transfers) are currently <strong>BLOCKED</strong> until the pool is funded.
+                Post a "Top up" entry below to restore operations.
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
