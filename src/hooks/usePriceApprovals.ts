@@ -72,14 +72,17 @@ export const usePriceApprovals = () => {
       if (pendingError) throw pendingError;
       setMyPendingRequest((pending as PriceApprovalRequest) || null);
 
-      // Fetch my rejected requests (to show feedback)
+      // Fetch my recently rejected requests (only the last 48h, max 3)
+      // Older rejections auto-hide so the analyst isn't drowned in stale feedback.
+      const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
       const { data: rejected, error: rejectedError } = await supabase
         .from('price_approval_requests')
         .select('*')
         .eq('submitted_by_email', userEmail)
         .eq('status', 'rejected')
+        .gte('reviewed_at', cutoff)
         .order('reviewed_at', { ascending: false })
-        .limit(5);
+        .limit(3);
 
       if (rejectedError) throw rejectedError;
       setMyRejectedRequests((rejected || []) as PriceApprovalRequest[]);
