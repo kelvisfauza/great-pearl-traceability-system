@@ -42,6 +42,9 @@ interface PoolEntry {
 
 interface PoolBalance {
   current_balance: number;
+  cash_balance: number | null;
+  yo_balance: number | null;
+  bank_balance: number | null;
   last_yo_synced_balance: number | null;
   last_yo_synced_at: string | null;
   updated_at: string;
@@ -219,13 +222,32 @@ export default function Treasury() {
       )}
 
       {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Pool Balance</CardTitle></CardHeader>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <Card className="border-primary/40">
+          <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Total Pool</CardTitle></CardHeader>
           <CardContent>
             {loading ? <Skeleton className="h-8 w-32" /> : (
               <div className="text-2xl font-bold">{fmt(balance?.current_balance)}</div>
             )}
+            <div className="text-[10px] text-muted-foreground mt-1">Cash + Yo + Bank</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground flex items-center gap-1"><Banknote className="h-3 w-3" /> Cash Bucket</CardTitle></CardHeader>
+          <CardContent>
+            {loading ? <Skeleton className="h-8 w-32" /> : (
+              <div className="text-2xl font-bold">{fmt(balance?.cash_balance)}</div>
+            )}
+            <div className="text-[10px] text-muted-foreground mt-1">Funds cash requisitions</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground flex items-center gap-1"><Wallet className="h-3 w-3" /> Yo Float</CardTitle></CardHeader>
+          <CardContent>
+            {loading ? <Skeleton className="h-8 w-32" /> : (
+              <div className="text-2xl font-bold">{fmt(balance?.yo_balance)}</div>
+            )}
+            <div className="text-[10px] text-muted-foreground mt-1">Funds all MoMo payouts</div>
           </CardContent>
         </Card>
         <Card>
@@ -236,23 +258,24 @@ export default function Treasury() {
           <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground flex items-center gap-1"><ArrowUpCircle className="h-3 w-3 text-red-600" /> Total Out</CardTitle></CardHeader>
           <CardContent><div className="text-2xl font-bold text-red-600">{fmt(totalDebits)}</div></CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground flex items-center gap-1"><Banknote className="h-3 w-3" /> Yo Float</CardTitle></CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{fmt(balance?.last_yo_synced_balance)}</div>
+      </div>
+
+      {/* Yo gateway sync info */}
+      {balance?.last_yo_synced_balance != null && (
+        <Card className="bg-muted/30">
+          <CardContent className="p-3 text-xs flex flex-wrap items-center gap-4">
+            <span><strong>Yo gateway reports:</strong> {fmt(balance.last_yo_synced_balance)}</span>
             {drift !== null && (
-              <div className={`text-xs mt-1 ${Math.abs(drift) < 1 ? "text-muted-foreground" : "text-amber-600"}`}>
-                Drift: {drift >= 0 ? "+" : ""}{fmt(drift)}
-              </div>
+              <span className={Math.abs(drift) < 1 ? "text-muted-foreground" : "text-amber-600"}>
+                Drift vs internal Yo bucket: {drift >= 0 ? "+" : ""}{fmt(drift)}
+              </span>
             )}
-            {balance?.last_yo_synced_at && (
-              <div className="text-[10px] text-muted-foreground mt-1">
-                Last sync: {new Date(balance.last_yo_synced_at).toLocaleString()}
-              </div>
+            {balance.last_yo_synced_at && (
+              <span className="text-muted-foreground">Last sync: {new Date(balance.last_yo_synced_at).toLocaleString()}</span>
             )}
           </CardContent>
         </Card>
-      </div>
+      )}
 
       {/* Manual entry */}
       <Card>
