@@ -119,9 +119,18 @@ serve(async (req) => {
     // Fetch employee name early for narrative
     const { data: empData } = await supabase
       .from('employees')
-      .select('name, phone')
+      .select('name, phone, wallet_frozen, wallet_frozen_reason')
       .eq('email', userEmail)
       .maybeSingle();
+
+    // Block frozen wallets server-side (do not trust client UI)
+    if (empData?.wallet_frozen) {
+      console.warn(`[instant-withdrawal] Blocked frozen wallet for ${userEmail}`);
+      return respond(false, {
+        error: `Your wallet has been frozen by an administrator${empData.wallet_frozen_reason ? `: ${empData.wallet_frozen_reason}` : '.'} Please contact support.`,
+      });
+    }
+
     const employeeName = empData?.name || 'User';
 
     const cleanPhone = normalizePhone(depositPhone);
