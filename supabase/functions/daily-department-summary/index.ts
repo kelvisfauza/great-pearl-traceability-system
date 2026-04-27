@@ -118,8 +118,8 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: true, template: broadcastTemplate, sent: broadcastResults.length, results: broadcastResults }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     } catch (error) {
-      console.error('❌ Broadcast failed:', error.message)
-      return new Response(JSON.stringify({ error: error.message }),
+      console.error('❌ Broadcast failed:', (error as Error).message)
+      return new Response(JSON.stringify({ error: (error as Error).message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
   }
@@ -559,8 +559,8 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ success: true, date: today, results }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } catch (error) {
-    console.error('❌ Daily department summary failed:', error.message)
-    return new Response(JSON.stringify({ error: error.message }),
+    console.error('❌ Daily department summary failed:', (error as Error).message)
+    return new Response(JSON.stringify({ error: (error as Error).message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 })

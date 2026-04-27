@@ -179,7 +179,7 @@ serve(async (req) => {
     console.error('Error in send-company-announcement:', error);
     return new Response(
       JSON.stringify({ 
-        error: error.message,
+        error: (error as Error).message,
         success: false 
       }),
       {

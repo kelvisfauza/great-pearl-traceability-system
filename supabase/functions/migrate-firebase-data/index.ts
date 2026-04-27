@@ -92,7 +92,7 @@ serve(async (req) => {
 
         if (error) {
           console.error(`Error inserting record:`, error)
-          result.errors.push(`${checkValue}: ${error.message}`)
+          result.errors.push(`${checkValue}: ${(error as Error).message}`)
         } else {
           result.migrated++
           console.log(`Migrated record ${checkValue}`)
@@ -118,7 +118,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? (error as Error).message : String(error)
       }),
       { 
         status: 400,

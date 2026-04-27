@@ -363,7 +363,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("[instant-withdrawal] Unhandled error:", error);
     return respond(false, {
-      error: error instanceof Error ? error.message : "Unknown error",
+      error: error instanceof Error ? (error as Error).message : "Unknown error",
     });
   }
 });

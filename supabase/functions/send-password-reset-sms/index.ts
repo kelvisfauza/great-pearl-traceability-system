@@ -109,7 +109,7 @@ serve(async (req) => {
         }
       } catch (error) {
         console.error('❌ SMS error:', error);
-        smsError = error.message || 'Failed to send SMS';
+        smsError = (error as Error).message || 'Failed to send SMS';
       }
     } else {
       console.warn('⚠️ No SMS API key configured');
@@ -153,7 +153,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('❌ Error in send-password-reset-sms:', error);
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: (error as Error).message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     )
   }

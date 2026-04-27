@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
 
         if (error) {
           console.error(`Error fetching ${source}:`, error);
-          reportData.data[source] = { error: error.message };
+          reportData.data[source] = { error: (error as Error).message };
         } else {
           reportData.data[source] = data;
           console.log(`✅ Fetched ${data?.length || 0} records from ${source}`);
@@ -227,7 +227,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message || 'Failed to generate report'
+        error: (error as Error).message || 'Failed to generate report'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

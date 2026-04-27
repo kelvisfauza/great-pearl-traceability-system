@@ -187,7 +187,7 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
-    console.error('❌ Failed to send transactional email', { error: error.message, templateName, effectiveRecipient })
+    console.error('❌ Failed to send transactional email', { error: (error as Error).message, templateName, effectiveRecipient })
 
     // Log failure
     try {
@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
         recipient_email: effectiveRecipient,
         subject: typeof template.subject === 'function' ? template.subject(templateData) : template.subject,
         status: 'failed',
-        error_message: error.message,
+        error_message: (error as Error).message,
         idempotency_key: idempotencyKey,
         metadata: templateData,
       })
@@ -209,7 +209,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ error: error.message || 'Failed to send email' }),
+      JSON.stringify({ error: (error as Error).message || 'Failed to send email' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

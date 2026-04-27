@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('❌ Archive error:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: (error as Error).message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     )
   }

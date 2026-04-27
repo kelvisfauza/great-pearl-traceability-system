@@ -142,7 +142,7 @@ export async function yoPayout(params: YoPayoutParams): Promise<YoPayoutResult> 
 
     return parseYoResponse(responseText);
   } catch (error) {
-    const errMsg = error instanceof Error ? error.message : "Unknown error";
+    const errMsg = error instanceof Error ? (error as Error).message : "Unknown error";
     console.error(`[Yo Payments] Error: ${errMsg}`);
     return { success: false, errorMessage: errMsg };
   }

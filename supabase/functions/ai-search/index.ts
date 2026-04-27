@@ -76,7 +76,7 @@ serve(async (req) => {
     const hasEUDR = hasFullAccess || userPermissions.some(p => p.includes('EUDR') || p.includes('Store'));
 
     // Run parallel searches based on permissions
-    const searchPromises: Promise<void>[] = [];
+    const searchPromises: PromiseLike<void>[] = [];
 
     // Suppliers - everyone can see
     searchPromises.push(

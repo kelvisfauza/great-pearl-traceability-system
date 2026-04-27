@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
             admin: admin.name, 
             status: 'failed', 
             phone: admin.phone,
-            error: error.message 
+            error: (error as Error).message 
           })
           console.error(`❌ Failed to send SMS to ${admin.name}:`, error)
         }
@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('❌ Error:', error)
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: (error as Error).message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     )
   }
