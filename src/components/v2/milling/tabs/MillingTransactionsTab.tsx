@@ -11,14 +11,18 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, Cog, Plus } from "lucide-react";
+import { Loader2, Cog, Plus, UserPlus, Phone } from "lucide-react";
 import { format } from "date-fns";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const MillingTransactionsTab = () => {
   const { employee } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
+  const [customerForm, setCustomerForm] = useState({ full_name: '', phone: '', opening_balance: 0 });
   const [form, setForm] = useState({
     job_number: '', customer_name: '', customer_phone: '', coffee_type: 'Robusta',
     input_weight_kg: 0, price_per_kg: 150, total_cost: 0, amount_paid: 0, notes: ''
@@ -52,23 +56,94 @@ const MillingTransactionsTab = () => {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" })
   });
 
+  const addCustomer = useMutation({
+    mutationFn: async () => {
+      if (!customerForm.full_name.trim() || !customerForm.phone.trim()) {
+        throw new Error("Name and phone are required");
+      }
+      const { error } = await supabase.from('milling_customers').insert({
+        full_name: customerForm.full_name.trim(),
+        phone: customerForm.phone.trim(),
+        opening_balance: customerForm.opening_balance,
+        current_balance: customerForm.opening_balance,
+        status: 'active',
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Customer added" });
+      queryClient.invalidateQueries({ queryKey: ['milling-customer-accounts'] });
+      setCustomerDialogOpen(false);
+      setCustomerForm({ full_name: '', phone: '', opening_balance: 0 });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" })
+  });
+
   if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>;
 
   const totalRevenue = jobs?.reduce((s, j: any) => s + Number(j.total_cost || 0), 0) || 0;
 
   return (
     <div className="space-y-4 mt-4">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
         <h3 className="text-lg font-semibold flex items-center gap-2"><Cog className="h-5 w-5" />Milling Transactions</h3>
-        <Button onClick={() => setDialogOpen(true)}><Plus className="mr-1 h-4 w-4" />New Job</Button>
+        <div className="grid grid-cols-2 sm:flex gap-2">
+          <Button variant="outline" onClick={() => setCustomerDialogOpen(true)} className="w-full sm:w-auto">
+            <UserPlus className="mr-1 h-4 w-4" />Add Customer
+          </Button>
+          <Button onClick={() => setDialogOpen(true)} className="w-full sm:w-auto">
+            <Plus className="mr-1 h-4 w-4" />New Job
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Total Jobs</p><p className="text-2xl font-bold">{jobs?.length || 0}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Revenue</p><p className="text-2xl font-bold">UGX {totalRevenue.toLocaleString()}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Pending</p><p className="text-2xl font-bold text-orange-600">{jobs?.filter((j: any) => j.status === 'pending').length || 0}</p></CardContent></Card>
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <Card><CardContent className="p-3 sm:p-4"><p className="text-xs sm:text-sm text-muted-foreground">Jobs</p><p className="text-lg sm:text-2xl font-bold">{jobs?.length || 0}</p></CardContent></Card>
+        <Card><CardContent className="p-3 sm:p-4"><p className="text-xs sm:text-sm text-muted-foreground">Revenue</p><p className="text-base sm:text-2xl font-bold">UGX {totalRevenue.toLocaleString()}</p></CardContent></Card>
+        <Card><CardContent className="p-3 sm:p-4"><p className="text-xs sm:text-sm text-muted-foreground">Pending</p><p className="text-lg sm:text-2xl font-bold text-orange-600">{jobs?.filter((j: any) => j.status === 'pending').length || 0}</p></CardContent></Card>
       </div>
 
+      {/* Mobile: stacked cards */}
+      {isMobile ? (
+        <div className="space-y-2">
+          {jobs?.map((j: any) => {
+            const balance = Number(j.total_cost) - Number(j.amount_paid);
+            return (
+              <Card key={j.id}>
+                <CardContent className="p-3 space-y-2">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="min-w-0">
+                      <p className="font-semibold truncate">{j.customer_name}</p>
+                      <p className="text-xs text-muted-foreground font-mono">{j.job_number}</p>
+                    </div>
+                    <Badge variant={j.status === 'completed' ? 'secondary' : 'outline'} className="shrink-0">
+                      {j.status}
+                    </Badge>
+                  </div>
+                  {j.customer_phone && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Phone className="h-3 w-3" />{j.customer_phone}
+                    </p>
+                  )}
+                  <div className="grid grid-cols-3 gap-2 text-xs pt-1 border-t">
+                    <div><p className="text-muted-foreground">Input</p><p className="font-medium">{Number(j.input_weight_kg).toLocaleString()} kg</p></div>
+                    <div><p className="text-muted-foreground">Cost</p><p className="font-medium">UGX {Number(j.total_cost).toLocaleString()}</p></div>
+                    <div>
+                      <p className="text-muted-foreground">Balance</p>
+                      <p className={`font-medium ${balance > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                        UGX {balance.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+          {(!jobs || jobs.length === 0) && (
+            <Card><CardContent className="p-6 text-center text-muted-foreground text-sm">No milling jobs yet</CardContent></Card>
+          )}
+        </div>
+      ) : (
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -92,9 +167,10 @@ const MillingTransactionsTab = () => {
           </Table>
         </CardContent>
       </Card>
+      )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>New Milling Job</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div><Label>Customer Name</Label><Input value={form.customer_name} onChange={e => setForm(p => ({ ...p, customer_name: e.target.value }))} /></div>
@@ -113,6 +189,29 @@ const MillingTransactionsTab = () => {
             <p className="text-sm text-muted-foreground">Total: UGX {(form.input_weight_kg * form.price_per_kg).toLocaleString()}</p>
             <Button onClick={() => submit.mutate()} disabled={submit.isPending} className="w-full">
               {submit.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Create Job
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={customerDialogOpen} onOpenChange={setCustomerDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Add Milling Customer</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Full Name</Label>
+              <Input value={customerForm.full_name} onChange={e => setCustomerForm(p => ({ ...p, full_name: e.target.value }))} placeholder="e.g. John Mukasa" />
+            </div>
+            <div>
+              <Label>Phone</Label>
+              <Input value={customerForm.phone} onChange={e => setCustomerForm(p => ({ ...p, phone: e.target.value }))} placeholder="07XXXXXXXX" inputMode="tel" />
+            </div>
+            <div>
+              <Label>Opening Balance (UGX)</Label>
+              <Input type="number" value={customerForm.opening_balance} onChange={e => setCustomerForm(p => ({ ...p, opening_balance: parseFloat(e.target.value) || 0 }))} inputMode="numeric" />
+            </div>
+            <Button onClick={() => addCustomer.mutate()} disabled={addCustomer.isPending} className="w-full">
+              {addCustomer.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save Customer
             </Button>
           </div>
         </DialogContent>
