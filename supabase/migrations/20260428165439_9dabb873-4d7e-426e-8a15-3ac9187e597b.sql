@@ -1,0 +1,1 @@
+UPDATE public.milling_customers SET status = 'active' WHERE id = 'ff540425-4681-42f3-816a-2d567d8147fc';
