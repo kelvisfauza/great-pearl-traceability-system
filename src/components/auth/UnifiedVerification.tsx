@@ -257,6 +257,9 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
             <Button variant="outline" onClick={sendEmailCode} disabled={!canResend || isSending} className="w-full text-xs">
               {isSending ? 'Sending...' : canResend ? 'Resend Code' : `Resend in ${countdown}s`}
             </Button>
+            <div className="rounded-md border border-dashed border-primary/30 bg-primary/5 p-2.5 text-center text-[11px] text-muted-foreground leading-snug">
+              📱 No access to email? Scan the QR code on your <strong>ID card</strong> or <strong>business card</strong> with your phone, then tap <strong>"Login Code"</strong> to view your latest code.
+            </div>
           </>
         )}
 
