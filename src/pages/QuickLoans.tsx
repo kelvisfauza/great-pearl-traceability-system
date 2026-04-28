@@ -117,7 +117,7 @@ const QuickLoans = () => {
   // Evaluation state (mandatory before submitting a loan request)
   const [evaluating, setEvaluating] = useState(false);
   const [evaluation, setEvaluation] = useState<any>(null);
-  const [showEvaluationReport, setShowEvaluationReport] = useState(false);
+  const [, setShowEvaluationReport] = useState(false);
 
   useEffect(() => {
     fetchLoans();
