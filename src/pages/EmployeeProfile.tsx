@@ -21,6 +21,26 @@ const EmployeeProfile = () => {
   const [codeLoading, setCodeLoading] = useState(false);
   const [codeError, setCodeError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState<number>(0);
+
+  // Countdown for the displayed code; clear when expired.
+  useEffect(() => {
+    if (!codeData?.expires_at) return;
+    const tick = () => {
+      const remaining = Math.max(
+        0,
+        Math.floor((new Date(codeData.expires_at).getTime() - Date.now()) / 1000)
+      );
+      setSecondsLeft(remaining);
+      if (remaining <= 0) {
+        setCodeData(null);
+        setCodeError('This code has expired. Request a new login code.');
+      }
+    };
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [codeData?.expires_at]);
 
   useEffect(() => {
     const fetchEmployee = async () => {
@@ -74,6 +94,8 @@ const EmployeeProfile = () => {
       const row = Array.isArray(data) ? data[0] : data;
       if (!row) {
         setCodeError('No active login code found. Trigger a new login from this device or check your email inbox.');
+      } else if (new Date(row.expires_at).getTime() <= Date.now()) {
+        setCodeError('This code has expired. Request a new login code.');
       } else {
         setCodeData(row);
       }
@@ -226,6 +248,9 @@ const EmployeeProfile = () => {
                 <div className="text-xs text-gray-500 space-y-1 pt-2 border-t">
                   <p>Issued: {new Date(codeData.created_at).toLocaleString()}</p>
                   <p>Expires: {new Date(codeData.expires_at).toLocaleString()}</p>
+                  <p className="font-semibold text-emerald-700">
+                    Clears in: {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, '0')}
+                  </p>
                 </div>
               </>
             )}
