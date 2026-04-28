@@ -135,15 +135,39 @@ serve(async (req) => {
       let loanSummary = "";
       try {
         const phoneVariants = [cleanPhone, `0${cleanPhone.slice(3)}`];
-        const { data: loans } = await supabase
+
+        // 1) Match loans directly by employee_phone
+        const { data: directLoans } = await supabase
           .from("loans")
-          .select("id, remaining_balance, status")
+          .select("id, remaining_balance, status, employee_id")
           .in("employee_phone", phoneVariants)
           .in("status", ["disbursed", "active"])
           .gt("remaining_balance", 0);
 
-        const total = (loans || []).reduce((s: number, l: any) => s + Number(l.remaining_balance || 0), 0);
-        const count = loans?.length || 0;
+        // 2) Fallback: resolve employee by phone, then find loans by employee_id
+        let employeeLoans: any[] = [];
+        const { data: emp } = await supabase
+          .from("employees")
+          .select("id")
+          .or(phoneVariants.map((p) => `phone.eq.${p}`).join(","))
+          .maybeSingle();
+        if (emp?.id) {
+          const { data: byEmp } = await supabase
+            .from("loans")
+            .select("id, remaining_balance, status")
+            .eq("employee_id", emp.id)
+            .in("status", ["disbursed", "active"])
+            .gt("remaining_balance", 0);
+          employeeLoans = byEmp || [];
+        }
+
+        // De-duplicate by id
+        const map = new Map<string, any>();
+        [...(directLoans || []), ...employeeLoans].forEach((l) => map.set(l.id, l));
+        const allLoans = Array.from(map.values());
+
+        const total = allLoans.reduce((s: number, l: any) => s + Number(l.remaining_balance || 0), 0);
+        const count = allLoans.length;
         if (total > 0) {
           loanSummary = `\nYour open loans: UGX ${total.toLocaleString()} (${count} loan${count > 1 ? "s" : ""}). Pick 3 to repay.`;
         }
