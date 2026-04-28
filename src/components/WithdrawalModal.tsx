@@ -367,6 +367,24 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     e.preventDefault();
     if (!amount) return;
 
+    if (withdrawalStatus.disabled) {
+      toast({
+        title: 'Withdrawals Disabled',
+        description: withdrawalStatus.reason || 'Withdrawals are temporarily paused. Please try again later.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (isWalletFrozen) {
+      toast({
+        title: 'Wallet Frozen',
+        description: 'Your wallet is currently frozen. Withdrawals are not allowed.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const withdrawalAmount = parseFloat(amount);
     if (withdrawalAmount > availableAmount || withdrawalAmount < 2000) return;
 
@@ -389,6 +407,24 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
         title: "Invalid Code",
         description: "The verification code you entered is incorrect. Please try again.",
         variant: "destructive",
+      });
+      return;
+    }
+
+    if (withdrawalStatus.disabled) {
+      toast({
+        title: 'Withdrawals Disabled',
+        description: withdrawalStatus.reason || 'Withdrawals are temporarily paused. Please try again later.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (isWalletFrozen) {
+      toast({
+        title: 'Wallet Frozen',
+        description: 'Your wallet is currently frozen. Withdrawals are not allowed.',
+        variant: 'destructive',
       });
       return;
     }
@@ -638,7 +674,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                     <Button
                       type="button"
                       onClick={handleInstantWithdraw}
-                      disabled={instantLoading || !amount || parsedAmount < 2000 || parsedAmount > instantMaxAmount || (needsInstantPhoneInput && !isValidMobileNumber)}
+                      disabled={instantLoading || withdrawalStatus.disabled || isWalletFrozen || !amount || parsedAmount < 2000 || parsedAmount > instantMaxAmount || (needsInstantPhoneInput && !isValidMobileNumber)}
                       className="bg-green-600 hover:bg-green-700 text-white"
                     >
                       {instantLoading ? (
