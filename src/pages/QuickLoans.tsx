@@ -114,6 +114,11 @@ const QuickLoans = () => {
   const [guarantorId, setGuarantorId] = useState('');
   const [loanPurpose, setLoanPurpose] = useState('');
 
+  // Evaluation state (mandatory before submitting a loan request)
+  const [evaluating, setEvaluating] = useState(false);
+  const [evaluation, setEvaluation] = useState<any>(null);
+  const [showEvaluationReport, setShowEvaluationReport] = useState(false);
+
   useEffect(() => {
     fetchLoans();
     fetchEmployees();
