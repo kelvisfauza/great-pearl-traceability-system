@@ -52,7 +52,9 @@ serve(async (req) => {
       .order("created_at", { ascending: false });
     const loans = loanHistory || [];
     const completed = loans.filter((l: any) => l.status === "completed").length;
-    const defaulted = loans.filter((l: any) => l.is_defaulted === true || ["defaulted", "overdue"].includes(l.status)).length;
+    // Only TRUE defaults count as hard denials. "overdue" is treated as a risk factor, not an auto-deny.
+    const defaulted = loans.filter((l: any) => l.is_defaulted === true || l.status === "defaulted").length;
+    const overdue = loans.filter((l: any) => l.status === "overdue").length;
     const active = loans.filter((l: any) => ["active", "pending_guarantor", "pending_admin"].includes(l.status));
     const outstanding = active.reduce((s: number, l: any) => s + Number(l.remaining_balance || l.loan_amount || 0), 0);
 
@@ -104,12 +106,28 @@ serve(async (req) => {
     let fallbackAmount = Math.min(requested || maxLimit, maxLimit);
     const fallbackFactors: string[] = [];
 
-    if (defaulted > 0) { fallbackDecision = "deny"; fallbackAmount = 0; fallbackFactors.push(`${defaulted} prior default(s)`); }
-    else if (tenureMonths < 3) { fallbackAmount = Math.min(fallbackAmount, salary); fallbackFactors.push("New employee (< 3 months) – limit capped at 1× salary"); }
-    if (guarantorDefaultCount > 0) {
+    if (defaulted > 0) {
       fallbackDecision = "deny";
       fallbackAmount = 0;
-      fallbackFactors.push(`${guarantorDefaultCount} loan(s) recovered from guarantor – UGX ${guarantorDefaultAmount.toLocaleString()} debited from guarantor wallet`);
+      fallbackFactors.push(`${defaulted} prior default(s)`);
+    } else if (tenureMonths < 2) {
+      fallbackAmount = Math.min(fallbackAmount, Math.round(salary * 1.5));
+      fallbackFactors.push("New employee (< 2 months) – limit capped at 1.5× salary");
+    }
+    if (overdue > 0) {
+      fallbackAmount = Math.round(fallbackAmount * 0.6);
+      fallbackFactors.push(`${overdue} overdue loan(s) – limit reduced by 40%`);
+    }
+    if (guarantorDefaultCount > 0) {
+      // Reduce limit heavily but do not auto-deny unless severe (2+ recoveries)
+      if (guarantorDefaultCount >= 2) {
+        fallbackDecision = "deny";
+        fallbackAmount = 0;
+        fallbackFactors.push(`${guarantorDefaultCount} loans recovered from guarantor – UGX ${guarantorDefaultAmount.toLocaleString()} debited`);
+      } else {
+        fallbackAmount = Math.round(fallbackAmount * 0.5);
+        fallbackFactors.push(`1 prior guarantor recovery – limit reduced by 50%`);
+      }
     }
     if (hasActive && fallbackDecision !== "deny") {
       fallbackDecision = "top_up";
@@ -148,13 +166,16 @@ REQUEST
 - Requested type: ${requested_loan_type || "unspecified"}
 - Requested duration (months): ${requested_duration || "unspecified"}
 
-RULES
+RULES (be fair — approve when reasonable; only deny on clear red flags)
 - Hard cap: recommended_amount must NEVER exceed 3× salary (UGX ${maxLimit}).
 - Subtract outstanding from any new approval.
-- If any defaulted/overdue loans → decision must be "deny".
-- If borrower has EVER had funds recovered from a guarantor → this is a SEVERE red flag. Decision MUST be "deny" unless there is overwhelming positive history (5+ later cleanly completed loans). Mention guarantor recovery explicitly in factors.
-- If active loan exists and clean repayments → decision should be "top_up".
-- New employee (<3 months) → cap at 1× salary.
+- "deny" ONLY if: 1+ true defaults (is_defaulted), OR 2+ guarantor recoveries, OR salary is 0.
+- 1 guarantor recovery = reduce limit by ~50% but still approve/top_up.
+- Overdue loans (not yet defaulted) = reduce limit ~40%, do NOT deny.
+- Clean history with completed loans = approve generously up to the cap.
+- Active loan + clean repayments → "top_up" (cap minus outstanding).
+- New employee (<2 months) → cap at 1.5× salary.
+- No history at all → approve modestly (1× to 2× salary depending on tenure).
 - Choose recommended_loan_type: "quick" (≤1 month, weekly) or "long_term" (>1 month).
 
 Return only JSON via the tool call.`;
