@@ -6114,6 +6114,117 @@ export type Database = {
           },
         ]
       }
+      qr_access_otps: {
+        Row: {
+          attempts: number
+          code_hash: string
+          consumed_at: string | null
+          created_at: string
+          employee_id: string
+          expires_at: string
+          id: string
+          purpose: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          consumed_at?: string | null
+          created_at?: string
+          employee_id: string
+          expires_at: string
+          id?: string
+          purpose: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          consumed_at?: string | null
+          created_at?: string
+          employee_id?: string
+          expires_at?: string
+          id?: string
+          purpose?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qr_access_otps_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qr_access_pins: {
+        Row: {
+          created_at: string
+          employee_id: string
+          failed_attempts: number
+          locked_until: string | null
+          pin_hash: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          failed_attempts?: number
+          locked_until?: string | null
+          pin_hash: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          failed_attempts?: number
+          locked_until?: string | null
+          pin_hash?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qr_access_pins_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: true
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qr_trusted_devices: {
+        Row: {
+          created_at: string
+          device_label: string | null
+          device_token_hash: string
+          employee_id: string
+          id: string
+          last_used_at: string
+        }
+        Insert: {
+          created_at?: string
+          device_label?: string | null
+          device_token_hash: string
+          employee_id: string
+          id?: string
+          last_used_at?: string
+        }
+        Update: {
+          created_at?: string
+          device_label?: string | null
+          device_token_hash?: string
+          employee_id?: string
+          id?: string
+          last_used_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qr_trusted_devices_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quality_assessments: {
         Row: {
           admin_discretion_at: string | null
@@ -9956,6 +10067,65 @@ export type Database = {
       }
     }
     Functions: {
+      _qr_hash: { Args: { _value: string }; Returns: string }
+      _qr_lookup_employee: {
+        Args: { _lookup: string }
+        Returns: {
+          account_name: string | null
+          account_number: string | null
+          address: string | null
+          alternative_bank: string | null
+          auth_user_id: string | null
+          avatar_url: string | null
+          bank_email: string | null
+          bank_name: string | null
+          bank_phone: string | null
+          bypass_sms_verification: boolean | null
+          created_at: string
+          date_of_birth: string | null
+          department: string
+          disabled: boolean | null
+          disabled_at: string | null
+          disabled_reason: string | null
+          district: string | null
+          email: string
+          emergency_contact: string | null
+          employee_id: string | null
+          gender: string | null
+          id: string
+          is_training_account: boolean | null
+          join_date: string
+          last_notified_role: string | null
+          marital_status: string | null
+          name: string
+          national_id_name: string | null
+          national_id_number: string | null
+          next_of_kin_name: string | null
+          next_of_kin_phone: string | null
+          next_of_kin_relationship: string | null
+          permissions: string[]
+          phone: string | null
+          position: string
+          profile_completed: boolean | null
+          role: string
+          role_notification_shown_at: string | null
+          salary: number
+          status: string
+          training_progress: number | null
+          tribe: string | null
+          updated_at: string
+          wallet_frozen: boolean | null
+          wallet_frozen_at: string | null
+          wallet_frozen_by: string | null
+          wallet_frozen_reason: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "employees"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_delete_all_system_data: { Args: never; Returns: Json }
       approve_transfer_reversal:
         | { Args: { p_notes?: string; p_request_id: string }; Returns: Json }
@@ -10033,6 +10203,17 @@ export type Database = {
       expire_old_bookings: { Args: never; Returns: undefined }
       fix_denis_auth_final: { Args: never; Returns: Json }
       generate_verification_code: { Args: never; Returns: string }
+      get_all_active_codes: {
+        Args: { _lookup: string }
+        Returns: {
+          category: string
+          code: string
+          created_at: string
+          expires_at: string
+          label: string
+          recipient_email: string
+        }[]
+      }
       get_all_wallet_balances: {
         Args: never
         Returns: {
@@ -10204,6 +10385,35 @@ export type Database = {
           records_updated: number
           total_kg: number
         }[]
+      }
+      qr_access_enroll_device: {
+        Args: {
+          _device_label?: string
+          _lookup: string
+          _otp: string
+          _pin: string
+        }
+        Returns: Json
+      }
+      qr_access_get_codes: {
+        Args: { _device_token: string; _lookup: string; _pin: string }
+        Returns: Json
+      }
+      qr_access_request_otp: {
+        Args: { _lookup: string; _purpose: string }
+        Returns: Json
+      }
+      qr_access_set_pin: {
+        Args: { _lookup: string; _new_pin: string; _otp: string }
+        Returns: Json
+      }
+      qr_access_status: {
+        Args: { _device_token?: string; _lookup: string }
+        Returns: Json
+      }
+      qr_access_verify_pin: {
+        Args: { _device_token: string; _lookup: string; _pin: string }
+        Returns: Json
       }
       rebuild_inventory_batches: {
         Args: never
