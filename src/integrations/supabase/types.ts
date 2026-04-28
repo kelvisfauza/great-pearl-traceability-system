@@ -8382,6 +8382,27 @@ export type Database = {
         }
         Relationships: []
       }
+      system_settings: {
+        Row: {
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          setting_key: string
+          setting_value?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       time_deductions: {
         Row: {
           created_at: string
