@@ -10094,6 +10094,7 @@ export type Database = {
       migrate_approved_assessments_to_finance: { Args: never; Returns: number }
       migrate_batch_numbers_to_new_format: { Args: never; Returns: Json }
       process_daily_salary_credits: { Args: never; Returns: Json }
+      process_monthly_payroll: { Args: { p_month?: string }; Returns: Json }
       process_salary_credits_for_date: {
         Args: { target_date: string }
         Returns: Json
