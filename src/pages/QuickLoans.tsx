@@ -2679,7 +2679,7 @@ const QuickLoans = () => {
                               <Button size="sm" variant="ghost" onClick={() => printLoanStatement(loan)}>
                                 <FileText className="mr-1 h-3 w-3" /> Statement
                               </Button>
-                              {loan.status === 'active' && (loan.remaining_balance || 0) > 0 && (
+                              {(loan.status === 'active' || loan.status === 'disbursed') && (loan.remaining_balance || 0) > 0 && (
                                 <>
                                   <Button size="sm" variant="outline" onClick={() => {
                                     setSelectedLoanForPayment(loan);
