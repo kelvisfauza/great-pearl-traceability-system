@@ -1914,8 +1914,72 @@ const QuickLoans = () => {
                     </Card>
                   )}
 
-                  <Button onClick={handleRequestLoan} disabled={submitting} className="w-full">
-                    {submitting ? 'Submitting...' : 'Submit Loan Request'}
+                  {/* AI Evaluation gate — mandatory before submission */}
+                  {!evaluation ? (
+                    <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20">
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex items-start gap-2">
+                          <FileText className="h-5 w-5 text-amber-600 mt-0.5" />
+                          <div className="flex-1 text-sm">
+                            <p className="font-semibold text-amber-900 dark:text-amber-200">AI Loan Evaluation Required</p>
+                            <p className="text-xs text-amber-800 dark:text-amber-300 mt-1">
+                              Mandatory before submitting any loan request. The engine analyzes your salary, repayment history, and outstanding loans to set your maximum limit (up to 3× salary) and recommend a verdict.
+                            </p>
+                            <p className="text-xs font-semibold text-amber-900 dark:text-amber-200 mt-2">
+                              Fee: UGX 10,000 — added to your loan principal on approval, or deducted from your wallet if denied.
+                            </p>
+                          </div>
+                        </div>
+                        <Button onClick={runEvaluation} disabled={evaluating} className="w-full" variant="default">
+                          {evaluating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Evaluating…</> : <><Shield className="mr-2 h-4 w-4" /> Run Loan Evaluation (UGX 10,000)</>}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <Card className={evaluation.decision === 'approve' ? 'border-emerald-300 bg-emerald-50 dark:bg-emerald-950/20' : evaluation.decision === 'top_up' ? 'border-amber-300 bg-amber-50 dark:bg-amber-950/20' : 'border-red-300 bg-red-50 dark:bg-red-950/20'}>
+                      <CardContent className="p-4 space-y-2 text-sm">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {evaluation.decision === 'approve' ? <CheckCircle className="h-5 w-5 text-emerald-600" /> : evaluation.decision === 'top_up' ? <AlertTriangle className="h-5 w-5 text-amber-600" /> : <XCircle className="h-5 w-5 text-red-600" />}
+                            <span className="font-bold">
+                              {evaluation.decision === 'approve' ? 'APPROVED' : evaluation.decision === 'top_up' ? 'TOP-UP RECOMMENDED' : 'DENIED'}
+                            </span>
+                          </div>
+                          <Badge variant="outline">Risk: {evaluation.risk_score}/100</Badge>
+                        </div>
+                        <div className="flex justify-between"><span>Maximum Limit:</span><span className="font-semibold">UGX {Number(evaluation.max_limit).toLocaleString()}</span></div>
+                        <div className="flex justify-between"><span>Recommended Amount:</span><span className="font-semibold">UGX {Number(evaluation.recommended_amount).toLocaleString()}</span></div>
+                        <div className="flex justify-between"><span>Recommended Type:</span><span>{evaluation.recommended_loan_type === 'long_term' ? 'Long-Term' : 'Quick'}</span></div>
+                        <div className="text-xs text-muted-foreground border-t pt-2">
+                          <strong>Factors:</strong>
+                          <ul className="list-disc pl-4 mt-1">
+                            {(evaluation.factors || []).slice(0, 4).map((f: string, i: number) => <li key={i}>{f}</li>)}
+                          </ul>
+                        </div>
+                        <div className="flex gap-2 pt-2">
+                          <Button size="sm" variant="outline" className="flex-1" onClick={printEvaluationReport}>
+                            <Printer className="mr-2 h-3 w-3" /> Print Report
+                          </Button>
+                          <Button size="sm" variant="ghost" className="flex-1" onClick={() => setEvaluation(null)}>
+                            Re-run
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  <Button
+                    onClick={handleRequestLoan}
+                    disabled={submitting || !evaluation || evaluation.decision === 'deny'}
+                    className="w-full"
+                  >
+                    {submitting
+                      ? 'Submitting...'
+                      : !evaluation
+                        ? 'Run evaluation to enable submit'
+                        : evaluation.decision === 'deny'
+                          ? 'Loan Denied — cannot submit'
+                          : 'Submit Loan Request (10k fee added to principal)'}
                   </Button>
                 </div>
               </DialogContent>
