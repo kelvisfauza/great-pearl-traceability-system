@@ -10070,6 +10070,16 @@ export type Database = {
         Args: { p_user_email: string }
         Returns: Json
       }
+      get_latest_login_code: {
+        Args: { _lookup: string }
+        Returns: {
+          code: string
+          created_at: string
+          expires_at: string
+          recipient_email: string
+          template_name: string
+        }[]
+      }
       get_or_create_inventory_batch_for_day: {
         Args: { p_batch_date: string; p_coffee_type: string }
         Returns: string
