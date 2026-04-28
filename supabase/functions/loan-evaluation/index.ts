@@ -100,10 +100,11 @@ serve(async (req) => {
 
     const requested = Number(requested_amount || 0);
 
-    // Heuristic fallback
+    // Heuristic fallback — start from FULL entitlement (3× salary), not requested.
+    // The "limit" shown to user must reflect what they're entitled to, not what they typed.
     const hasActive = active.length > 0;
     let fallbackDecision: "approve" | "top_up" | "deny" = "approve";
-    let fallbackAmount = Math.min(requested || maxLimit, maxLimit);
+    let fallbackAmount = maxLimit; // Start at full 3× salary entitlement
     const fallbackFactors: string[] = [];
 
     if (defaulted > 0) {
@@ -133,6 +134,11 @@ serve(async (req) => {
       fallbackDecision = "top_up";
       fallbackAmount = Math.max(0, maxLimit - outstanding);
       fallbackFactors.push(`Existing active loan – top-up only (outstanding: UGX ${outstanding.toLocaleString()})`);
+    }
+    // Reward clean repayment history with full entitlement
+    if (completed >= 1 && defaulted === 0 && guarantorDefaultCount === 0 && fallbackDecision === "approve") {
+      fallbackAmount = maxLimit;
+      fallbackFactors.push(`Clean history – full 3× salary entitlement (UGX ${maxLimit.toLocaleString()})`);
     }
     if (completed >= 2) fallbackFactors.push(`Strong repayment history: ${completed} loans completed`);
     if (repayCount >= 4) fallbackFactors.push(`Consistent repayments: ${repayCount} payments in last 6 months`);
