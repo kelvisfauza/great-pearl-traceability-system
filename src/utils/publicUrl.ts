@@ -5,25 +5,17 @@
  * NOT to the ephemeral Lovable preview/sandbox host (which 404s once
  * the preview session expires).
  */
-const PUBLIC_HOSTS = [
-  'greatpearlcoffeesystem.site',
-  'great-pearl-traceability-system.lovable.app',
-];
-
 const CANONICAL_PUBLIC_URL = 'https://greatpearlcoffeesystem.site';
 
+/**
+ * ALWAYS returns the canonical public domain.
+ *
+ * QR codes scanned by external users (suppliers, casual staff, anyone
+ * without a Lovable account) must never land on the preview host
+ * (`*.lovable.app` / `*.lovableproject.com`) — those require a Lovable
+ * workspace login and will block the visitor.
+ */
 export function getPublicAppOrigin(): string {
-  if (typeof window === 'undefined') return CANONICAL_PUBLIC_URL;
-  try {
-    const host = window.location.hostname;
-    // If we're already on a known public host, use the current origin
-    // (preserves http vs https and exact domain the user is browsing).
-    if (PUBLIC_HOSTS.some(h => host === h || host.endsWith('.' + h))) {
-      return window.location.origin;
-    }
-  } catch {
-    // ignore and fall through to canonical
-  }
   return CANONICAL_PUBLIC_URL;
 }
 
