@@ -93,6 +93,20 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, serviceKey);
 
+    // Determine if the requester is an administrator (exempt from throttle)
+    let isAdmin = false;
+    try {
+      const { data: empRole } = await supabase
+        .from('employees')
+        .select('role')
+        .eq('email', userEmail)
+        .maybeSingle();
+      const role = (empRole?.role || '').toString();
+      isAdmin = role === 'Administrator' || role === 'Super Admin';
+    } catch (e) {
+      console.warn('[instant-withdrawal] role lookup failed:', (e as Error).message);
+    }
+
     // Kill-switch: respect global withdrawal_control toggle
     try {
       const { data: ctrlRow } = await supabase
@@ -101,7 +115,7 @@ serve(async (req) => {
         .eq("setting_key", "withdrawal_control")
         .maybeSingle();
       const ctrl: any = ctrlRow?.setting_value || {};
-      if (ctrl?.disabled === true) {
+      if (ctrl?.disabled === true && !isAdmin) {
         const until = ctrl?.disabled_until ? new Date(ctrl.disabled_until) : null;
         const stillDisabled = !until || until > new Date();
         if (stillDisabled) {
@@ -130,6 +144,45 @@ serve(async (req) => {
     // Get unified user ID
     const { data: unifiedId } = await supabase.rpc('get_unified_user_id', { input_email: userEmail });
     const resolvedUserId = unifiedId || userId;
+
+    // 24-hour rolling throttle (non-admins only)
+    if (!isAdmin) {
+      try {
+        const { data: throttleRow } = await supabase
+          .from('system_settings')
+          .select('setting_value')
+          .eq('setting_key', 'instant_withdrawal_throttle')
+          .maybeSingle();
+        const t: any = throttleRow?.setting_value || {};
+        const activeUntil = t?.active_until ? new Date(t.active_until) : null;
+        const throttleActive = t?.enabled === true && (!activeUntil || activeUntil > new Date());
+        if (throttleActive) {
+          const cap = Number(t?.daily_cap || 100000);
+          const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+          // Sum prior instant withdrawals in last 24h (exclude failed/rejected)
+          const { data: recent } = await supabase
+            .from('instant_withdrawals')
+            .select('amount, payout_status, created_at')
+            .eq('user_id', resolvedUserId)
+            .gte('created_at', since);
+          const used = (recent || [])
+            .filter((r: any) => !['failed', 'rejected'].includes(String(r.payout_status || '').toLowerCase()))
+            .reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
+          const remaining = Math.max(0, cap - used);
+          if (numAmount > remaining) {
+            return respond(false, {
+              error: `Instant withdrawals are capped at UGX ${cap.toLocaleString()} per 24 hours during this period. You have already used UGX ${used.toLocaleString()}; remaining today: UGX ${remaining.toLocaleString()}.`,
+              code: 'INSTANT_WD_THROTTLED',
+              cap,
+              used_24h: used,
+              remaining_24h: remaining,
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('[instant-withdrawal] throttle check failed:', (e as Error).message);
+      }
+    }
 
     // Verify wallet balance
     const { data: balanceData } = await supabase.rpc('get_user_balance_safe', { user_email: userEmail });
