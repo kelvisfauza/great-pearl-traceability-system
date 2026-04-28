@@ -527,7 +527,6 @@ export const useQualityControl = () => {
                 quality_json: qualityJson,
                 unit_price_ugx: finalPrice,
                 quantity_kg: kilograms,
-                total_amount_ugx: totalPaymentAmount,
                 batch_number: batchNumber,
                 finance_status: 'READY_FOR_FINANCE',
               },
