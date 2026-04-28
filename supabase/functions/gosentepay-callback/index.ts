@@ -274,19 +274,74 @@ serve(async (req) => {
             remaining -= payable;
           }
 
-          await supabaseClient.from("ledger_entries").insert({
-            user_id: transaction.user_id,
-            entry_type: "LOAN_REPAYMENT",
-            amount: -depositAmount,
-            reference: `LOAN-MOMO-REPAY-${loanId}-${Date.now()}`,
-            metadata: JSON.stringify({
-              loan_id: loanId,
-              method: "mobile_money",
-              phone: phone,
-              transaction_ref: ref,
-              loan_remaining_balance: newBalance,
-            }),
-          });
+          // Resolve unified user id for ledger entries (so wallet/statement match by email)
+          let ledgerUserId = transaction.user_id;
+          try {
+            const { data: emp } = await supabaseClient
+              .from("employees")
+              .select("email")
+              .eq("auth_user_id", transaction.user_id)
+              .maybeSingle();
+            if (emp?.email) {
+              const { data: unifiedId } = await supabaseClient.rpc("get_unified_user_id", {
+                input_email: emp.email,
+              });
+              if (unifiedId) ledgerUserId = unifiedId;
+            }
+          } catch (e) {
+            console.error("Could not resolve unified user ID for loan repayment ledger:", e);
+          }
+
+          // Post PAIRED ledger entries so wallet impact is net-zero but statement shows
+          // both the MoMo inflow and the loan deduction.
+          // Idempotency: skip if a refund/repayment pair for this transaction_ref already exists.
+          const { data: existingPair } = await supabaseClient
+            .from("ledger_entries")
+            .select("id")
+            .eq("user_id", ledgerUserId)
+            .eq("entry_type", "LOAN_REPAYMENT")
+            .filter("metadata->>transaction_ref", "eq", ref)
+            .maybeSingle();
+
+          if (existingPair) {
+            console.log(`Ledger pair already posted for ${ref} — skipping double-post`);
+          } else {
+            const ts = Date.now();
+            // 1) DEPOSIT — money received from user's MoMo phone
+            await supabaseClient.from("ledger_entries").insert({
+              user_id: ledgerUserId,
+              entry_type: "DEPOSIT",
+              amount: depositAmount,
+              reference: `LOAN-MOMO-IN-${loanId}-${ts}`,
+              metadata: {
+                description: `MoMo received from ${phone || "your phone"} for loan repayment`,
+                source: "momo_loan_repayment_in",
+                loan_id: loanId,
+                method: "mobile_money",
+                phone: phone,
+                transaction_ref: ref,
+                pair: "loan_repayment_in",
+              },
+            });
+
+            // 2) LOAN_REPAYMENT — applied to the loan (negative)
+            await supabaseClient.from("ledger_entries").insert({
+              user_id: ledgerUserId,
+              entry_type: "LOAN_REPAYMENT",
+              amount: -depositAmount,
+              reference: `LOAN-MOMO-REPAY-${loanId}-${ts}`,
+              metadata: {
+                description: `Applied to Loan ${loanId.substring(0, 8)} via MoMo`,
+                source: "momo_loan_repayment_out",
+                loan_id: loanId,
+                method: "mobile_money",
+                phone: phone,
+                transaction_ref: ref,
+                loan_remaining_balance: newBalance,
+                pair: "loan_repayment_out",
+              },
+            });
+          }
 
           console.log(`Loan repayment processed successfully for loan ${loanId}`);
 
