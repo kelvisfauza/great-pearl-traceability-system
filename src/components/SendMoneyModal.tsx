@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, Send, CheckCircle, Smartphone, Users } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useWithdrawalControl } from '@/hooks/useWithdrawalControl';
+import { AlertTriangle } from 'lucide-react';
 
 interface SendMoneyModalProps {
   open: boolean;
@@ -22,8 +24,13 @@ interface SendMoneyModalProps {
 export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
   open, onOpenChange, availableBalance,
 }) => {
-  const { user, employee } = useAuth();
+  const { user, employee, isAdmin } = useAuth();
   const { toast } = useToast();
+  const { isWithdrawalDisabled } = useWithdrawalControl();
+  const wdState = isWithdrawalDisabled();
+  const adminUser = isAdmin();
+  const restricted = wdState.disabled && !adminUser;
+  const EMPLOYEE_CAP_RESTRICTED = 50000;
   const [tab, setTab] = useState<'employee' | 'mobile'>('employee');
   // Employee transfer state
   const [employees, setEmployees] = useState<any[]>([]);
@@ -48,13 +55,13 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
     setSuccess(false);
     setTxRef('');
     setSuccessMessage('');
-    setTab('employee');
+    setTab(restricted ? 'employee' : 'employee');
     const fetchEmployees = async () => {
       const { data } = await supabase.rpc('get_guarantor_candidates');
       setEmployees((data || []).filter(e => e.email !== (employee?.email || user?.email)));
     };
     fetchEmployees();
-  }, [open, employee?.email, user?.email]);
+  }, [open, employee?.email, user?.email, restricted]);
 
   const parsedAmount = parseFloat(amount) || 0;
   const selectedRecipient = employees.find(e => e.id === recipientId);
@@ -69,6 +76,14 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
     }
     if (parsedAmount > availableBalance) {
       toast({ title: 'Insufficient balance', description: `Available: UGX ${availableBalance.toLocaleString()}`, variant: 'destructive' });
+      return;
+    }
+    if (restricted && parsedAmount > EMPLOYEE_CAP_RESTRICTED) {
+      toast({
+        title: 'Transfer cap active',
+        description: `Withdrawals are paused. While paused, employee-to-employee transfers are capped at UGX ${EMPLOYEE_CAP_RESTRICTED.toLocaleString()}.`,
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -168,6 +183,15 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
 
   const handleSendToMobile = async () => {
     if (!mobilePhone || parsedMobileAmount <= 0) return;
+
+    if (restricted) {
+      toast({
+        title: 'Mobile money disabled',
+        description: 'Sending to a phone number is disabled while withdrawals are paused. Use employee-to-employee transfers (max UGX 50,000).',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     if (parsedMobileAmount < 2000) {
       toast({ title: 'Minimum is UGX 2,000', variant: 'destructive' });
