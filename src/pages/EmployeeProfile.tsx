@@ -17,30 +17,26 @@ const EmployeeProfile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>('menu');
-  const [codeData, setCodeData] = useState<any>(null);
+  const [codes, setCodes] = useState<any[]>([]);
   const [codeLoading, setCodeLoading] = useState(false);
   const [codeError, setCodeError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState<number>(0);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [now, setNow] = useState<number>(Date.now());
 
-  // Countdown for the displayed code; clear when expired.
+  // Tick every second to drive countdowns and auto-clear expired codes.
   useEffect(() => {
-    if (!codeData?.expires_at) return;
-    const tick = () => {
-      const remaining = Math.max(
-        0,
-        Math.floor((new Date(codeData.expires_at).getTime() - Date.now()) / 1000)
-      );
-      setSecondsLeft(remaining);
-      if (remaining <= 0) {
-        setCodeData(null);
-        setCodeError('This code has expired. Request a new login code.');
-      }
-    };
-    tick();
-    const timer = setInterval(tick, 1000);
-    return () => clearInterval(timer);
-  }, [codeData?.expires_at]);
+    if (view !== 'code') return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [view]);
+
+  // Drop expired codes from the visible list as time advances.
+  useEffect(() => {
+    setCodes((prev) => {
+      const next = prev.filter((c) => new Date(c.expires_at).getTime() > now);
+      return next.length === prev.length ? prev : next;
+    });
+  }, [now]);
 
   useEffect(() => {
     const fetchEmployee = async () => {
@@ -86,18 +82,17 @@ const EmployeeProfile = () => {
     if (!id) return;
     setCodeLoading(true);
     setCodeError(null);
-    setCodeData(null);
+    setCodes([]);
     try {
       const { data, error: err } = await supabase
-        .rpc('get_latest_login_code' as any, { _lookup: id });
+        .rpc('get_all_active_codes' as any, { _lookup: id });
       if (err) throw err;
-      const row = Array.isArray(data) ? data[0] : data;
-      if (!row) {
-        setCodeError('No active login code found. Trigger a new login from this device or check your email inbox.');
-      } else if (new Date(row.expires_at).getTime() <= Date.now()) {
-        setCodeError('This code has expired. Request a new login code.');
+      const rows = (Array.isArray(data) ? data : data ? [data] : [])
+        .filter((r: any) => new Date(r.expires_at).getTime() > Date.now());
+      if (rows.length === 0) {
+        setCodeError('No active codes found. Trigger a new login or approval and check your email inbox.');
       } else {
-        setCodeData(row);
+        setCodes(rows);
       }
     } catch (e: any) {
       setCodeError(e.message || 'Failed to fetch login code');
@@ -106,12 +101,11 @@ const EmployeeProfile = () => {
     }
   };
 
-  const handleCopy = async () => {
-    if (!codeData?.code) return;
+  const handleCopy = async (code: string, key: string) => {
     try {
-      await navigator.clipboard.writeText(codeData.code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(code);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey((k) => (k === key ? null : k)), 2000);
     } catch {/* ignore */}
   };
 
