@@ -502,7 +502,45 @@ export const useQualityControl = () => {
         // Calculate total payment amount: kilograms × price per kg
         const kilograms = coffeeRecord?.kilograms || 0;
         const totalPaymentAmount = kilograms * finalPrice;
-        
+
+        // Create finance_coffee_lots row so it shows in Ready for Payment
+        try {
+          const qualityJson = {
+            moisture_content: assessment.moisture,
+            group1_percentage: assessment.group1_defects,
+            group2_percentage: assessment.group2_defects,
+            pods_percentage: assessment.pods,
+            husks_percentage: assessment.husks,
+            fm_percentage: assessment.fm,
+            outturn_percentage: assessment.outturn,
+            comments: assessment.comments,
+          };
+          const { error: fclError } = await (supabase as any)
+            .from('finance_coffee_lots')
+            .upsert(
+              {
+                quality_assessment_id: newAssessment.id,
+                coffee_record_id: coffeeRecordId,
+                supplier_id: coffeeRecord.supplier_id,
+                assessed_by: assessment.assessed_by || null,
+                assessed_at: new Date().toISOString(),
+                quality_json: qualityJson,
+                unit_price_ugx: finalPrice,
+                quantity_kg: kilograms,
+                batch_number: batchNumber,
+                finance_status: 'READY_FOR_FINANCE',
+              },
+              { onConflict: 'quality_assessment_id' }
+            );
+          if (fclError) {
+            console.error('❌ Failed to create finance_coffee_lots row:', fclError);
+          } else {
+            console.log('✅ finance_coffee_lots row created (READY_FOR_FINANCE)');
+          }
+        } catch (fclEx) {
+          console.error('❌ Exception creating finance_coffee_lots row:', fclEx);
+        }
+
         // Send notification to Finance department
         try {
           await supabase.from('notifications').insert({
