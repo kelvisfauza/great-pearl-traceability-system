@@ -59,37 +59,6 @@ const EmployeeProfile = () => {
     fetchEmployee();
   }, [id]);
 
-  const fetchLatestCode = async () => {
-    if (!id) return;
-    setCodeLoading(true);
-    setCodeError(null);
-    setCodes([]);
-    try {
-      const { data, error: err } = await supabase
-        .rpc('get_all_active_codes' as any, { _lookup: id });
-      if (err) throw err;
-      const rows = (Array.isArray(data) ? data : data ? [data] : [])
-        .filter((r: any) => new Date(r.expires_at).getTime() > Date.now());
-      if (rows.length === 0) {
-        setCodeError('No active codes found. Trigger a new login or approval and check your email inbox.');
-      } else {
-        setCodes(rows);
-      }
-    } catch (e: any) {
-      setCodeError(e.message || 'Failed to fetch login code');
-    } finally {
-      setCodeLoading(false);
-    }
-  };
-
-  const handleCopy = async (code: string, key: string) => {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopiedKey(key);
-      setTimeout(() => setCopiedKey((k) => (k === key ? null : k)), 2000);
-    } catch {/* ignore */}
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">
