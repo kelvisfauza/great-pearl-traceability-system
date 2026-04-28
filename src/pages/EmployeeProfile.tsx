@@ -6,8 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   User, Building2, Briefcase, Phone, Mail, Calendar, ShieldCheck, Loader2,
-  KeyRound, ArrowLeft, Copy, Check,
+  KeyRound, ArrowLeft,
 } from 'lucide-react';
+import QRCodeAccess from '@/components/qr/QRCodeAccess';
 
 type View = 'menu' | 'identity' | 'code';
 
@@ -17,26 +18,6 @@ const EmployeeProfile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>('menu');
-  const [codes, setCodes] = useState<any[]>([]);
-  const [codeLoading, setCodeLoading] = useState(false);
-  const [codeError, setCodeError] = useState<string | null>(null);
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [now, setNow] = useState<number>(Date.now());
-
-  // Tick every second to drive countdowns and auto-clear expired codes.
-  useEffect(() => {
-    if (view !== 'code') return;
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, [view]);
-
-  // Drop expired codes from the visible list as time advances.
-  useEffect(() => {
-    setCodes((prev) => {
-      const next = prev.filter((c) => new Date(c.expires_at).getTime() > now);
-      return next.length === prev.length ? prev : next;
-    });
-  }, [now]);
 
   useEffect(() => {
     const fetchEmployee = async () => {
@@ -77,37 +58,6 @@ const EmployeeProfile = () => {
 
     fetchEmployee();
   }, [id]);
-
-  const fetchLatestCode = async () => {
-    if (!id) return;
-    setCodeLoading(true);
-    setCodeError(null);
-    setCodes([]);
-    try {
-      const { data, error: err } = await supabase
-        .rpc('get_all_active_codes' as any, { _lookup: id });
-      if (err) throw err;
-      const rows = (Array.isArray(data) ? data : data ? [data] : [])
-        .filter((r: any) => new Date(r.expires_at).getTime() > Date.now());
-      if (rows.length === 0) {
-        setCodeError('No active codes found. Trigger a new login or approval and check your email inbox.');
-      } else {
-        setCodes(rows);
-      }
-    } catch (e: any) {
-      setCodeError(e.message || 'Failed to fetch login code');
-    } finally {
-      setCodeLoading(false);
-    }
-  };
-
-  const handleCopy = async (code: string, key: string) => {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopiedKey(key);
-      setTimeout(() => setCopiedKey((k) => (k === key ? null : k)), 2000);
-    } catch {/* ignore */}
-  };
 
   if (loading) {
     return (
@@ -159,7 +109,7 @@ const EmployeeProfile = () => {
               Verify Identity
             </Button>
             <Button
-              onClick={() => { setView('code'); fetchLatestCode(); }}
+              onClick={() => setView('code')}
               variant="outline"
               className="w-full h-14 border-2 border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-base"
             >
@@ -177,95 +127,7 @@ const EmployeeProfile = () => {
 
   // ============ CODE VIEW ============
   if (view === 'code') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 flex items-center justify-center p-4">
-        <Card className="max-w-md w-full shadow-2xl border-0 overflow-hidden">
-          <div className="bg-gradient-to-r from-emerald-700 to-teal-600 p-6 text-white">
-            <button
-              onClick={() => setView('menu')}
-              className="flex items-center gap-1 text-emerald-100 hover:text-white text-sm mb-3"
-            >
-              <ArrowLeft className="w-4 h-4" /> Back
-            </button>
-            <div className="flex items-center gap-3">
-              <KeyRound className="w-8 h-8" />
-              <div>
-                <h1 className="text-lg font-bold">Latest Login Code</h1>
-                <p className="text-emerald-100 text-xs">{employee.name}</p>
-              </div>
-            </div>
-          </div>
-          <CardContent className="p-6 space-y-4">
-            {codeLoading && (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
-              </div>
-            )}
-
-            {!codeLoading && codeError && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
-                <p className="text-sm text-amber-800">{codeError}</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={fetchLatestCode}
-                  className="mt-3"
-                >
-                  Try again
-                </Button>
-              </div>
-            )}
-
-            {!codeLoading && codes.length > 0 && (
-              <div className="space-y-4">
-                <p className="text-xs text-center text-gray-500">
-                  {codes.length} active code{codes.length === 1 ? '' : 's'} — auto-clears when expired
-                </p>
-                {codes.map((c, i) => {
-                  const key = `${c.category}-${c.created_at}-${i}`;
-                  const remaining = Math.max(0, Math.floor((new Date(c.expires_at).getTime() - now) / 1000));
-                  return (
-                    <div key={key} className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-2xl p-5">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] uppercase tracking-widest text-emerald-700 font-semibold">
-                          {c.label || c.category}
-                        </span>
-                        <span className="text-[10px] font-mono text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                          {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}
-                        </span>
-                      </div>
-                      <p className="text-4xl font-bold font-mono text-emerald-900 tracking-[0.25em] text-center my-3">
-                        {c.code}
-                      </p>
-                      <p className="text-[10px] text-emerald-600 text-center">
-                        Sent to {c.recipient_email}
-                      </p>
-                      <Button
-                        onClick={() => handleCopy(c.code, key)}
-                        size="sm"
-                        className="w-full mt-3 bg-emerald-600 hover:bg-emerald-700 text-white"
-                      >
-                        {copiedKey === key ? (
-                          <><Check className="w-4 h-4 mr-2" /> Copied</>
-                        ) : (
-                          <><Copy className="w-4 h-4 mr-2" /> Copy</>
-                        )}
-                      </Button>
-                      <div className="text-[10px] text-gray-400 text-center mt-2">
-                        Issued {new Date(c.created_at).toLocaleTimeString()}
-                      </div>
-                    </div>
-                  );
-                })}
-                <Button variant="ghost" size="sm" onClick={fetchLatestCode} className="w-full">
-                  Refresh
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <QRCodeAccess employeeId={id!} onBack={() => setView('menu')} />;
   }
 
   // ============ IDENTITY VIEW (full profile card) ============
