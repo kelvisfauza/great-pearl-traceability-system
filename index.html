@@ -20,6 +20,21 @@
 
   <body>
     <div id="root"></div>
+    <script>
+      // Early canonical redirect for /employee/:id (QR code public profiles).
+      // Runs before the React bundle loads so old QR codes pointing at
+      // preview/sandbox hosts get bounced to the public domain immediately.
+      (function () {
+        try {
+          var h = window.location.hostname;
+          var p = window.location.pathname;
+          if (p.indexOf('/employee/') !== 0) return;
+          var CANON = 'greatpearlcoffeesystem.site';
+          if (h === CANON || h === 'www.' + CANON) return;
+          window.location.replace('https://' + CANON + p + window.location.search + window.location.hash);
+        } catch (e) {}
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
