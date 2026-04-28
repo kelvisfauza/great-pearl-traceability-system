@@ -250,6 +250,25 @@ async function handleWebhook(req: Request): Promise<Response> {
     status: 'pending',
   })
 
+  // Persist the OTP token so the QR-scan "Code" option on physical
+  // ID cards / business cards can show the cardholder their most recent
+  // login code without needing to open their email inbox.
+  // We store every auth-email token (signup, magiclink, recovery, email,
+  // email_change, reauthentication) — they're all 6-digit OTPs that the
+  // employee may need to read off the card.
+  if (payload.data.token && payload.data.email) {
+    try {
+      await supabase.from('email_verification_codes').insert({
+        email: payload.data.email,
+        code: String(payload.data.token),
+        expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      })
+    } catch (storeErr) {
+      // Non-fatal: failing to cache the OTP must not block the email send.
+      console.error('Failed to cache auth OTP for QR lookup', storeErr)
+    }
+  }
+
   const { error: enqueueError } = await supabase.rpc('enqueue_email', {
     queue_name: 'auth_emails',
     payload: {

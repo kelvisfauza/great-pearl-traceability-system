@@ -6,10 +6,34 @@ interface LocationPermissionGateProps {
   children: React.ReactNode;
 }
 
+// Public routes that must NEVER trigger the location-permission gate.
+// These pages are reached by people who are not signed in (e.g. anyone
+// who scans a QR code on a physical ID card or business card), so we
+// must let them through immediately without any geolocation prompt.
+const PUBLIC_PATH_PREFIXES = [
+  '/employee/',
+  '/verify',
+  '/verify-device',
+  '/unsubscribe',
+  '/approve-action',
+  '/reset-password',
+  '/display',
+  '/maintenance-recovery',
+];
+
+const isPublicPath = (pathname: string) =>
+  PUBLIC_PATH_PREFIXES.some(p => pathname === p || pathname.startsWith(p));
+
 const LocationPermissionGate = ({ children }: LocationPermissionGateProps) => {
-  const [status, setStatus] = useState<'checking' | 'granted' | 'denied'>('checking');
+  const isPublic = typeof window !== 'undefined' && isPublicPath(window.location.pathname);
+  const [status, setStatus] = useState<'checking' | 'granted' | 'denied'>(
+    isPublic ? 'granted' : 'checking'
+  );
 
   useEffect(() => {
+    // Skip geolocation entirely for public QR / verification routes.
+    if (isPublic) return;
+
     // Directly attempt geolocation — this is the most reliable check across browsers
     if (!('geolocation' in navigator)) {
       // No geolocation API at all — let them through
@@ -33,7 +57,7 @@ const LocationPermissionGate = ({ children }: LocationPermissionGateProps) => {
       },
       { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
     );
-  }, []);
+  }, [isPublic]);
 
   if (status === 'checking') {
     return (
