@@ -142,19 +142,10 @@ serve(async (req) => {
           .in("status", ["disbursed", "active"])
           .gt("remaining_balance", 0);
 
-        const { data: sAdvances } = await supabase
-          .from("supplier_advances")
-          .select(`id, outstanding_ugx, suppliers!inner(phone)`)
-          .in("suppliers.phone", phoneVariants)
-          .eq("is_closed", false)
-          .gt("outstanding_ugx", 0);
-
-        const loanTotal = (loans || []).reduce((s: number, l: any) => s + Number(l.remaining_balance || 0), 0);
-        const advTotal = (sAdvances || []).reduce((s: number, a: any) => s + Number(a.outstanding_ugx || 0), 0);
-        const total = loanTotal + advTotal;
-        const count = (loans?.length || 0) + (sAdvances?.length || 0);
+        const total = (loans || []).reduce((s: number, l: any) => s + Number(l.remaining_balance || 0), 0);
+        const count = loans?.length || 0;
         if (total > 0) {
-          loanSummary = `\nYour open advances: UGX ${total.toLocaleString()} (${count} item${count > 1 ? "s" : ""})`;
+          loanSummary = `\nYour open loans: UGX ${total.toLocaleString()} (${count} loan${count > 1 ? "s" : ""}). Pick 3 to repay.`;
         }
       } catch (e) {
         console.error(`[USSD Callout] Loan lookup failed:`, e);
