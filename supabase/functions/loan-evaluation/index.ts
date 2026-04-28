@@ -100,10 +100,11 @@ serve(async (req) => {
 
     const requested = Number(requested_amount || 0);
 
-    // Heuristic fallback
+    // Heuristic fallback — start from FULL entitlement (3× salary), not requested.
+    // The "limit" shown to user must reflect what they're entitled to, not what they typed.
     const hasActive = active.length > 0;
     let fallbackDecision: "approve" | "top_up" | "deny" = "approve";
-    let fallbackAmount = Math.min(requested || maxLimit, maxLimit);
+    let fallbackAmount = maxLimit; // Start at full 3× salary entitlement
     const fallbackFactors: string[] = [];
 
     if (defaulted > 0) {
@@ -133,6 +134,11 @@ serve(async (req) => {
       fallbackDecision = "top_up";
       fallbackAmount = Math.max(0, maxLimit - outstanding);
       fallbackFactors.push(`Existing active loan – top-up only (outstanding: UGX ${outstanding.toLocaleString()})`);
+    }
+    // Reward clean repayment history with full entitlement
+    if (completed >= 1 && defaulted === 0 && guarantorDefaultCount === 0 && fallbackDecision === "approve") {
+      fallbackAmount = maxLimit;
+      fallbackFactors.push(`Clean history – full 3× salary entitlement (UGX ${maxLimit.toLocaleString()})`);
     }
     if (completed >= 2) fallbackFactors.push(`Strong repayment history: ${completed} loans completed`);
     if (repayCount >= 4) fallbackFactors.push(`Consistent repayments: ${repayCount} payments in last 6 months`);
@@ -167,15 +173,18 @@ REQUEST
 - Requested duration (months): ${requested_duration || "unspecified"}
 
 RULES (be fair — approve when reasonable; only deny on clear red flags)
+- IMPORTANT: recommended_amount = the user's ENTITLEMENT/LIMIT, NOT the requested amount.
+  Always award the maximum the borrower qualifies for, ignoring what they typed in "Requested".
 - Hard cap: recommended_amount must NEVER exceed 3× salary (UGX ${maxLimit}).
+- Default for clean borrowers = the full ${maxLimit} (3× salary). Do not award less unless a rule below reduces it.
 - Subtract outstanding from any new approval.
 - "deny" ONLY if: 1+ true defaults (is_defaulted), OR 2+ guarantor recoveries, OR salary is 0.
 - 1 guarantor recovery = reduce limit by ~50% but still approve/top_up.
 - Overdue loans (not yet defaulted) = reduce limit ~40%, do NOT deny.
-- Clean history with completed loans = approve generously up to the cap.
+- Clean history with completed loans = ALWAYS award the full ${maxLimit} cap.
 - Active loan + clean repayments → "top_up" (cap minus outstanding).
 - New employee (<2 months) → cap at 1.5× salary.
-- No history at all → approve modestly (1× to 2× salary depending on tenure).
+- No history but tenure ≥ 2 months → award 2× to 3× salary (lean generous).
 - Choose recommended_loan_type: "quick" (≤1 month, weekly) or "long_term" (>1 month).
 
 Return only JSON via the tool call.`;
