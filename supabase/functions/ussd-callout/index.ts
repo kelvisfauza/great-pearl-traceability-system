@@ -130,9 +130,30 @@ serve(async (req) => {
         ? services.map((s) => `${s.service_key}.${s.name}`).join("\n")
         : "1.Transport Recovery\n2.Pay Loaders\n3.Advance Recovery";
 
+      // Look up active loans + supplier advances by caller phone so the
+      // user can see what they owe before entering an amount.
+      let loanSummary = "";
+      try {
+        const phoneVariants = [cleanPhone, `0${cleanPhone.slice(3)}`];
+        const { data: loans } = await supabase
+          .from("loans")
+          .select("id, remaining_balance, status")
+          .in("employee_phone", phoneVariants)
+          .in("status", ["disbursed", "active"])
+          .gt("remaining_balance", 0);
+
+        const total = (loans || []).reduce((s: number, l: any) => s + Number(l.remaining_balance || 0), 0);
+        const count = loans?.length || 0;
+        if (total > 0) {
+          loanSummary = `\nYour open loans: UGX ${total.toLocaleString()} (${count} loan${count > 1 ? "s" : ""}). Pick 3 to repay.`;
+        }
+      } catch (e) {
+        console.error(`[USSD Callout] Loan lookup failed:`, e);
+      }
+
       return new Response(JSON.stringify({
         validated: true,
-        message: "Select 1 to proceed to available services",
+        message: `Select 1 to proceed to available services${loanSummary}`,
         ussd_processor_params: {
           other_services: serviceList,
           payment_external_reference: paymentRef,
