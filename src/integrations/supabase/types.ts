@@ -3902,6 +3902,72 @@ export type Database = {
         }
         Relationships: []
       }
+      loan_evaluations: {
+        Row: {
+          applied_loan_id: string | null
+          created_at: string
+          decision: string
+          employee_email: string
+          employee_name: string | null
+          factors: Json
+          fee_amount: number
+          fee_charge_method: string | null
+          fee_charged: boolean
+          fee_charged_at: string | null
+          history_summary: Json
+          id: string
+          max_limit: number
+          recommended_amount: number
+          recommended_duration_months: number | null
+          recommended_loan_type: string | null
+          risk_score: number
+          salary: number
+          valid_until: string
+        }
+        Insert: {
+          applied_loan_id?: string | null
+          created_at?: string
+          decision: string
+          employee_email: string
+          employee_name?: string | null
+          factors?: Json
+          fee_amount?: number
+          fee_charge_method?: string | null
+          fee_charged?: boolean
+          fee_charged_at?: string | null
+          history_summary?: Json
+          id?: string
+          max_limit?: number
+          recommended_amount?: number
+          recommended_duration_months?: number | null
+          recommended_loan_type?: string | null
+          risk_score?: number
+          salary?: number
+          valid_until?: string
+        }
+        Update: {
+          applied_loan_id?: string | null
+          created_at?: string
+          decision?: string
+          employee_email?: string
+          employee_name?: string | null
+          factors?: Json
+          fee_amount?: number
+          fee_charge_method?: string | null
+          fee_charged?: boolean
+          fee_charged_at?: string | null
+          history_summary?: Json
+          id?: string
+          max_limit?: number
+          recommended_amount?: number
+          recommended_duration_months?: number | null
+          recommended_loan_type?: string | null
+          risk_score?: number
+          salary?: number
+          valid_until?: string
+        }
+        Relationships: []
+      }
       loan_repayments: {
         Row: {
           amount_due: number
