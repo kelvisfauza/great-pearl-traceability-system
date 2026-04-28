@@ -47,14 +47,29 @@ serve(async (req) => {
     // Loan history
     const { data: loanHistory } = await supabase
       .from("loans")
-      .select("loan_amount, remaining_balance, status, duration_months, paid_amount, total_repayable, created_at")
+      .select("id, loan_amount, remaining_balance, status, duration_months, paid_amount, total_repayable, created_at, is_defaulted, guarantor_email")
       .eq("employee_email", employee_email)
       .order("created_at", { ascending: false });
     const loans = loanHistory || [];
     const completed = loans.filter((l: any) => l.status === "completed").length;
-    const defaulted = loans.filter((l: any) => ["defaulted", "overdue"].includes(l.status)).length;
+    const defaulted = loans.filter((l: any) => l.is_defaulted === true || ["defaulted", "overdue"].includes(l.status)).length;
     const active = loans.filter((l: any) => ["active", "pending_guarantor", "pending_admin"].includes(l.status));
     const outstanding = active.reduce((s: number, l: any) => s + Number(l.remaining_balance || l.loan_amount || 0), 0);
+
+    // Guarantor defaults — instances where THIS user's loan caused their guarantor's wallet to be debited
+    const { data: guarantorDeducts } = await supabase
+      .from("ledger_entries")
+      .select("amount, reference, metadata, created_at")
+      .like("reference", "LOAN-GUARANTOR-%")
+      .lt("amount", 0);
+    const myLoanIds = new Set(loans.map((l: any) => String(l.id)));
+    const guarantorHits = (guarantorDeducts || []).filter((e: any) => {
+      // reference format: LOAN-GUARANTOR-<loanId>-<n>
+      const m = String(e.reference || "").match(/^LOAN-GUARANTOR-([0-9a-f-]+)-/i);
+      return m && myLoanIds.has(m[1]);
+    });
+    const guarantorDefaultCount = new Set(guarantorHits.map((e: any) => String(e.reference).match(/^LOAN-GUARANTOR-([0-9a-f-]+)-/i)?.[1])).size;
+    const guarantorDefaultAmount = guarantorHits.reduce((s: number, e: any) => s + Math.abs(Number(e.amount)), 0);
 
     // Wallet snapshot
     const walletTypes = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT'];
@@ -91,6 +106,11 @@ serve(async (req) => {
 
     if (defaulted > 0) { fallbackDecision = "deny"; fallbackAmount = 0; fallbackFactors.push(`${defaulted} prior default(s)`); }
     else if (tenureMonths < 3) { fallbackAmount = Math.min(fallbackAmount, salary); fallbackFactors.push("New employee (< 3 months) – limit capped at 1× salary"); }
+    if (guarantorDefaultCount > 0) {
+      fallbackDecision = "deny";
+      fallbackAmount = 0;
+      fallbackFactors.push(`${guarantorDefaultCount} loan(s) recovered from guarantor – UGX ${guarantorDefaultAmount.toLocaleString()} debited from guarantor wallet`);
+    }
     if (hasActive && fallbackDecision !== "deny") {
       fallbackDecision = "top_up";
       fallbackAmount = Math.max(0, maxLimit - outstanding);
@@ -103,7 +123,7 @@ serve(async (req) => {
     let recommendedAmount = fallbackAmount;
     let recommendedType = requested_loan_type || (recommendedAmount > salary ? "long_term" : "quick");
     let recommendedDuration = Number(requested_duration) || (recommendedAmount > salary ? 3 : 1);
-    let riskScore = Math.max(10, 80 - defaulted * 30 + completed * 5 - (hasActive ? 10 : 0));
+    let riskScore = Math.max(5, 80 - defaulted * 30 - guarantorDefaultCount * 35 + completed * 5 - (hasActive ? 10 : 0));
     let factors = fallbackFactors.length ? fallbackFactors : ["Standard evaluation applied"];
 
     if (LOVABLE_API_KEY) {
@@ -121,6 +141,7 @@ LOAN HISTORY
 - Active/Pending: ${active.length}
 - Total outstanding (UGX): ${outstanding}
 - Repayments last 6 months: ${repayCount} totaling UGX ${repayTotal}
+- Loans recovered from GUARANTOR (borrower failed, guarantor wallet debited): ${guarantorDefaultCount} occurrence(s), total UGX ${guarantorDefaultAmount}
 
 REQUEST
 - Requested amount (UGX): ${requested}
@@ -131,6 +152,7 @@ RULES
 - Hard cap: recommended_amount must NEVER exceed 3× salary (UGX ${maxLimit}).
 - Subtract outstanding from any new approval.
 - If any defaulted/overdue loans → decision must be "deny".
+- If borrower has EVER had funds recovered from a guarantor → this is a SEVERE red flag. Decision MUST be "deny" unless there is overwhelming positive history (5+ later cleanly completed loans). Mention guarantor recovery explicitly in factors.
 - If active loan exists and clean repayments → decision should be "top_up".
 - New employee (<3 months) → cap at 1× salary.
 - Choose recommended_loan_type: "quick" (≤1 month, weekly) or "long_term" (>1 month).
@@ -219,6 +241,8 @@ Return only JSON via the tool call.`;
           wallet_balance: walletBalance,
           repayments_6mo_count: repayCount,
           repayments_6mo_total: repayTotal,
+          guarantor_default_count: guarantorDefaultCount,
+          guarantor_default_amount: guarantorDefaultAmount,
         },
         fee_amount: FEE,
       })
