@@ -1,0 +1,1 @@
+INSERT INTO public.milling_customers (full_name, phone, opening_balance, current_balance, status) VALUES ('Kusa Fauza', '0781121639', 20000, 20000, 'Active');
