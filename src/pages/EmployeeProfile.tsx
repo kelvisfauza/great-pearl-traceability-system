@@ -6,8 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   User, Building2, Briefcase, Phone, Mail, Calendar, ShieldCheck, Loader2,
-  KeyRound, ArrowLeft, Copy, Check,
+  KeyRound, ArrowLeft,
 } from 'lucide-react';
+import QRCodeAccess from '@/components/qr/QRCodeAccess';
 
 type View = 'menu' | 'identity' | 'code';
 
@@ -17,26 +18,6 @@ const EmployeeProfile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>('menu');
-  const [codes, setCodes] = useState<any[]>([]);
-  const [codeLoading, setCodeLoading] = useState(false);
-  const [codeError, setCodeError] = useState<string | null>(null);
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [now, setNow] = useState<number>(Date.now());
-
-  // Tick every second to drive countdowns and auto-clear expired codes.
-  useEffect(() => {
-    if (view !== 'code') return;
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, [view]);
-
-  // Drop expired codes from the visible list as time advances.
-  useEffect(() => {
-    setCodes((prev) => {
-      const next = prev.filter((c) => new Date(c.expires_at).getTime() > now);
-      return next.length === prev.length ? prev : next;
-    });
-  }, [now]);
 
   useEffect(() => {
     const fetchEmployee = async () => {
