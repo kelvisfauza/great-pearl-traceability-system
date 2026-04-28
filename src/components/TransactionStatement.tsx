@@ -154,7 +154,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         .from('ledger_entries')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', unifiedUserId)
-        .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY']);
+        .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY']);
       
       setTotalCount(count || 0);
 
@@ -162,7 +162,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         .from('ledger_entries')
         .select('*')
         .eq('user_id', unifiedUserId)
-        .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY'])
+        .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY'])
         .order('created_at', { ascending: false })
         .limit(DISPLAY_LIMIT);
 
@@ -205,7 +205,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         .from('ledger_entries')
         .select('*')
         .eq('user_id', unifiedUserId)
-        .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY'])
+        .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY'])
         .gte('created_at', `${dateFrom}T00:00:00`)
         .lte('created_at', `${dateTo}T23:59:59`)
         .order('created_at', { ascending: true });
