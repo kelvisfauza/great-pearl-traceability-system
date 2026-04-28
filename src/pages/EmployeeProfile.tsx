@@ -9,7 +9,6 @@ import {
   KeyRound, ArrowLeft,
 } from 'lucide-react';
 import QRCodeAccess from '@/components/qr/QRCodeAccess';
-import { buildPublicUrl } from '@/utils/publicUrl';
 
 type View = 'menu' | 'identity' | 'code';
 
@@ -19,21 +18,6 @@ const EmployeeProfile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>('menu');
-
-  // Force redirect to canonical public domain if accessed via preview/sandbox host.
-  // QR codes must always land on greatpearlcoffeesystem.site.
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const host = window.location.hostname;
-    const isPreview =
-      host.endsWith('.lovableproject.com') ||
-      host.endsWith('.lovable.app') ||
-      host === 'localhost' ||
-      host === '127.0.0.1';
-    if (isPreview && id) {
-      window.location.replace(buildPublicUrl(`/employee/${id}`));
-    }
-  }, [id]);
 
   useEffect(() => {
     const fetchEmployee = async () => {
