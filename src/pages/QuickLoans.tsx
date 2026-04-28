@@ -316,10 +316,37 @@ const QuickLoans = () => {
 
   const handleRequestLoan = async () => {
     if (!employee) return;
-    const { amount, months, dailyRate, monthlyRate, totalDays, totalWeeks, interest, total, weekly } = calculateLoanDetails();
+    if (!evaluation || evaluation.decision === 'deny') {
+      toast({ title: 'Evaluation required', description: 'Run the loan evaluation first. Denied applications cannot be submitted.', variant: 'destructive' });
+      return;
+    }
+    if (new Date(evaluation.valid_until).getTime() < Date.now()) {
+      toast({ title: 'Evaluation expired', description: 'Please run a new evaluation report.', variant: 'destructive' });
+      return;
+    }
 
-    if (amount <= 0 || months <= 0 || !guarantorId) {
+    // Recalculate including 10k evaluation fee added to principal
+    const requested = parseFloat(loanAmount) || 0;
+    const months = parseInt(durationMonths) || 0;
+    if (requested <= 0 || months <= 0 || !guarantorId) {
       toast({ title: "Error", description: "Please fill all fields", variant: "destructive" });
+      return;
+    }
+    const FEE = 10000;
+    const amount = requested + FEE; // fee added to principal
+    const dailyRate = getDailyRate(loanType);
+    const monthlyRate = LOAN_TYPE_CONFIG[loanType].monthlyRate;
+    const maxRate = LOAN_TYPE_CONFIG[loanType].maxRate;
+    const { totalWeeks } = getLoanSchedule(months);
+    const freq = repaymentFrequency;
+    const interest = freq === 'bullet' ? amount * 0.30 : getCappedInterest(amount, monthlyRate, months, maxRate);
+    const total = Math.ceil(amount + interest);
+    const numInstallments = freq === 'bullet' ? 1 : freq === 'monthly' ? months : totalWeeks;
+    const weekly = numInstallments > 0 ? Math.ceil(total / numInstallments) : 0;
+
+    // Enforce evaluation limit (3× salary already capped)
+    if (amount > Number(evaluation.recommended_amount || 0) + FEE + 1) {
+      toast({ title: 'Above evaluated limit', description: `Evaluation approved up to UGX ${Number(evaluation.recommended_amount).toLocaleString()}.`, variant: 'destructive' });
       return;
     }
 
@@ -343,19 +370,6 @@ const QuickLoans = () => {
       return;
     }
 
-    // Check against 2x salary limit minus outstanding debt
-    const salary = employee.salary || 0;
-    const maxLoan = salary * 2;
-    const outstanding = myLoans
-      .filter(l => ['active', 'pending_guarantor', 'pending_admin'].includes(l.status))
-      .reduce((s: number, l: any) => s + (l.remaining_balance || l.loan_amount || 0), 0);
-    const availableLimit = Math.max(0, maxLoan - outstanding);
-
-    if (amount > availableLimit) {
-      toast({ title: "Error", description: `Your available loan limit is UGX ${availableLimit.toLocaleString()} (2x salary: UGX ${maxLoan.toLocaleString()} minus outstanding: UGX ${outstanding.toLocaleString()})`, variant: "destructive" });
-      return;
-    }
-
     const guarantor = employees.find(e => e.id === guarantorId);
     if (!guarantor) return;
 
@@ -368,8 +382,7 @@ const QuickLoans = () => {
     try {
       const approvalCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-      const freq = repaymentFrequency;
-      const { error } = await supabase.from('loans').insert({
+      const { data: insertedLoan, error } = await supabase.from('loans').insert({
         employee_id: employee.id,
         employee_email: employee.email,
         employee_name: employee.name,
@@ -391,9 +404,19 @@ const QuickLoans = () => {
         guarantor_phone: guarantor.phone || '',
         guarantor_approval_code: approvalCode,
         loan_type: loanType,
-      } as any);
+      } as any).select().single();
 
       if (error) throw error;
+
+      // Mark evaluation as used (fee charged via loan principal)
+      try {
+        await (supabase as any).from('loan_evaluations').update({
+          fee_charged: true,
+          fee_charged_at: new Date().toISOString(),
+          fee_charge_method: 'loan_principal',
+          applied_loan_id: (insertedLoan as any)?.id,
+        }).eq('id', evaluation.id);
+      } catch (e) { console.warn('eval update', e); }
 
       // Send email to guarantor with approval code
       await supabase.functions.invoke('send-transactional-email', {
@@ -411,8 +434,9 @@ const QuickLoans = () => {
         }
       });
 
-      toast({ title: "Loan Requested", description: "Guarantor has been notified via email" });
+      toast({ title: "Loan Requested", description: `Guarantor notified. UGX ${FEE.toLocaleString()} evaluation fee added to principal.` });
       setShowRequestDialog(false);
+      setEvaluation(null);
 
       // Trigger repayment statement slip
       const slipGuarantor = employees.find(e => e.id === guarantorId);
@@ -442,6 +466,109 @@ const QuickLoans = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const runEvaluation = async () => {
+    if (!employee) return;
+    const requested = parseFloat(loanAmount) || 0;
+    const months = parseInt(durationMonths) || 0;
+    if (requested <= 0 || months <= 0) {
+      toast({ title: 'Fill amount & duration first', description: 'Enter the loan amount and duration before evaluation.', variant: 'destructive' });
+      return;
+    }
+    setEvaluating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('loan-evaluation', {
+        body: {
+          employee_email: employee.email,
+          requested_amount: requested,
+          requested_loan_type: loanType,
+          requested_duration: months,
+        },
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error || 'Evaluation failed');
+      setEvaluation(data.report);
+      setShowEvaluationReport(true);
+      const verdict = data.report.decision === 'approve' ? 'Approved ✅' : data.report.decision === 'top_up' ? 'Top-up only ⚠️' : 'Denied ❌';
+      toast({ title: `Evaluation: ${verdict}`, description: `Recommended: UGX ${Number(data.report.recommended_amount).toLocaleString()}` });
+    } catch (e: any) {
+      toast({ title: 'Evaluation error', description: e.message, variant: 'destructive' });
+    } finally {
+      setEvaluating(false);
+    }
+  };
+
+  const printEvaluationReport = () => {
+    if (!evaluation) return;
+    const r = evaluation;
+    const h = r.history_summary || {};
+    const html = `<!doctype html><html><head><title>Loan Evaluation Report</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 32px; color: #111; max-width: 800px; margin: auto; }
+        h1 { color: #047857; border-bottom: 3px solid #047857; padding-bottom: 8px; }
+        h2 { color: #064e3b; margin-top: 24px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        td, th { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 13px; }
+        th { background: #f3f4f6; }
+        .verdict { padding: 12px; border-radius: 6px; font-size: 18px; font-weight: bold; text-align: center; margin: 16px 0; }
+        .approve { background: #d1fae5; color: #065f46; }
+        .top_up { background: #fef3c7; color: #92400e; }
+        .deny { background: #fee2e2; color: #991b1b; }
+        .factors li { margin: 4px 0; font-size: 13px; }
+        .footer { margin-top: 32px; font-size: 11px; color: #666; border-top: 1px solid #ddd; padding-top: 12px; }
+      </style></head><body>
+      <h1>Great Agro Coffee — Loan Evaluation Report</h1>
+      <p><strong>Report ID:</strong> ${r.id}<br/>
+      <strong>Date:</strong> ${new Date(r.created_at).toLocaleString()}<br/>
+      <strong>Valid Until:</strong> ${new Date(r.valid_until).toLocaleString()}</p>
+
+      <h2>Applicant</h2>
+      <table>
+        <tr><th>Name</th><td>${r.employee_name || ''}</td></tr>
+        <tr><th>Email</th><td>${r.employee_email}</td></tr>
+        <tr><th>Monthly Salary</th><td>UGX ${Number(r.salary).toLocaleString()}</td></tr>
+        <tr><th>Tenure</th><td>${h.tenure_months || 0} month(s)</td></tr>
+      </table>
+
+      <div class="verdict ${r.decision}">VERDICT: ${r.decision === 'approve' ? 'APPROVED' : r.decision === 'top_up' ? 'TOP-UP RECOMMENDED' : 'DENIED'}</div>
+
+      <h2>Evaluation Result</h2>
+      <table>
+        <tr><th>Maximum Limit (3× salary)</th><td>UGX ${Number(r.max_limit).toLocaleString()}</td></tr>
+        <tr><th>Recommended Amount</th><td><strong>UGX ${Number(r.recommended_amount).toLocaleString()}</strong></td></tr>
+        <tr><th>Recommended Loan Type</th><td>${r.recommended_loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan'}</td></tr>
+        <tr><th>Recommended Duration</th><td>${r.recommended_duration_months} month(s)</td></tr>
+        <tr><th>Risk Score</th><td>${r.risk_score}/100</td></tr>
+      </table>
+
+      <h2>Borrower History</h2>
+      <table>
+        <tr><th>Completed Loans</th><td>${h.completed_loans || 0}</td></tr>
+        <tr><th>Defaulted / Overdue</th><td>${h.defaulted_loans || 0}</td></tr>
+        <tr><th>Active / Pending</th><td>${h.active_loans || 0}</td></tr>
+        <tr><th>Outstanding Balance</th><td>UGX ${Number(h.outstanding || 0).toLocaleString()}</td></tr>
+        <tr><th>Repayments (last 6 months)</th><td>${h.repayments_6mo_count || 0} totaling UGX ${Number(h.repayments_6mo_total || 0).toLocaleString()}</td></tr>
+        <tr><th>Wallet Balance</th><td>UGX ${Number(h.wallet_balance || 0).toLocaleString()}</td></tr>
+      </table>
+
+      <h2>Factors Considered</h2>
+      <ul class="factors">${(r.factors || []).map((f: string) => `<li>${f}</li>`).join('')}</ul>
+
+      <h2>Evaluation Fee</h2>
+      <table>
+        <tr><th>Fee Amount</th><td>UGX ${Number(r.fee_amount).toLocaleString()}</td></tr>
+        <tr><th>Charge Method</th><td>${r.fee_charged ? (r.fee_charge_method === 'loan_principal' ? 'Added to loan principal' : 'Deducted from wallet') : 'Pending — added to principal upon submission, or deducted from wallet on denial'}</td></tr>
+      </table>
+
+      <div class="footer">
+        This report is generated by the Great Agro Coffee AI loan evaluation engine and is valid for 7 days.
+        The recommendation is binding for system enforcement; the requested amount cannot exceed the recommended limit.
+      </div>
+      <script>window.onload = () => window.print();</script>
+      </body></html>`;
+    const w = window.open('', '_blank');
+    if (w) { w.document.write(html); w.document.close(); }
   };
 
   const handleGuarantorApproval = async (approve: boolean) => {
