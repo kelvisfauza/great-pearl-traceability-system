@@ -216,37 +216,51 @@ const EmployeeProfile = () => {
               </div>
             )}
 
-            {!codeLoading && codeData && (
-              <>
-                <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-2xl p-6 text-center">
-                  <p className="text-xs uppercase tracking-widest text-emerald-700 mb-2">Your Code</p>
-                  <p className="text-5xl font-bold font-mono text-emerald-900 tracking-[0.3em]">
-                    {codeData.code}
-                  </p>
-                  <p className="text-[11px] text-emerald-600 mt-3">
-                    Sent to {codeData.recipient_email}
-                  </p>
-                </div>
-
-                <Button
-                  onClick={handleCopy}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-                >
-                  {copied ? (
-                    <><Check className="w-4 h-4 mr-2" /> Copied</>
-                  ) : (
-                    <><Copy className="w-4 h-4 mr-2" /> Copy Code</>
-                  )}
+            {!codeLoading && codes.length > 0 && (
+              <div className="space-y-4">
+                <p className="text-xs text-center text-gray-500">
+                  {codes.length} active code{codes.length === 1 ? '' : 's'} — auto-clears when expired
+                </p>
+                {codes.map((c, i) => {
+                  const key = `${c.category}-${c.created_at}-${i}`;
+                  const remaining = Math.max(0, Math.floor((new Date(c.expires_at).getTime() - now) / 1000));
+                  return (
+                    <div key={key} className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-2xl p-5">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] uppercase tracking-widest text-emerald-700 font-semibold">
+                          {c.label || c.category}
+                        </span>
+                        <span className="text-[10px] font-mono text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                          {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}
+                        </span>
+                      </div>
+                      <p className="text-4xl font-bold font-mono text-emerald-900 tracking-[0.25em] text-center my-3">
+                        {c.code}
+                      </p>
+                      <p className="text-[10px] text-emerald-600 text-center">
+                        Sent to {c.recipient_email}
+                      </p>
+                      <Button
+                        onClick={() => handleCopy(c.code, key)}
+                        size="sm"
+                        className="w-full mt-3 bg-emerald-600 hover:bg-emerald-700 text-white"
+                      >
+                        {copiedKey === key ? (
+                          <><Check className="w-4 h-4 mr-2" /> Copied</>
+                        ) : (
+                          <><Copy className="w-4 h-4 mr-2" /> Copy</>
+                        )}
+                      </Button>
+                      <div className="text-[10px] text-gray-400 text-center mt-2">
+                        Issued {new Date(c.created_at).toLocaleTimeString()}
+                      </div>
+                    </div>
+                  );
+                })}
+                <Button variant="ghost" size="sm" onClick={fetchLatestCode} className="w-full">
+                  Refresh
                 </Button>
-
-                <div className="text-xs text-gray-500 space-y-1 pt-2 border-t">
-                  <p>Issued: {new Date(codeData.created_at).toLocaleString()}</p>
-                  <p>Expires: {new Date(codeData.expires_at).toLocaleString()}</p>
-                  <p className="font-semibold text-emerald-700">
-                    Clears in: {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, '0')}
-                  </p>
-                </div>
-              </>
+              </div>
             )}
           </CardContent>
         </Card>
