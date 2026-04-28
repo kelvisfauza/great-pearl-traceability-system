@@ -237,40 +237,6 @@ async function processServicePayment(
       console.log(`[USSD Payment Success] Loan ${loan.id} repaid UGX ${apply}, balance ${bal} → ${newBal}`);
     }
 
-    // 2) Supplier advances (oldest first)
-    if (remaining > 0) {
-      const { data: advances } = await supabase
-        .from("supplier_advances")
-        .select(`id, outstanding_ugx, supplier_id, suppliers!inner(name, phone)`)
-        .in("suppliers.phone", phoneVariants)
-        .eq("is_closed", false)
-        .gt("outstanding_ugx", 0)
-        .order("created_at", { ascending: true });
-
-      for (const adv of (advances as any[]) || []) {
-        if (remaining <= 0) break;
-        const outstanding = Number(adv.outstanding_ugx || 0);
-        const apply = Math.min(remaining, outstanding);
-        const newOutstanding = outstanding - apply;
-
-        await supabase.from("advance_recoveries").insert({
-          advance_id: adv.id,
-          recovered_ugx: apply,
-          recovered_at: new Date().toISOString(),
-          recovered_by: "USSD",
-          notes: `USSD Advance Recovery - Ref: ${externalRef}`,
-        });
-
-        await supabase.from("supplier_advances").update({
-          outstanding_ugx: newOutstanding,
-          is_closed: newOutstanding <= 0,
-        }).eq("id", adv.id);
-
-        remaining -= apply;
-        console.log(`[USSD Payment Success] Supplier advance ${adv.id} recovered UGX ${apply}, outstanding ${outstanding} → ${newOutstanding}`);
-      }
-    }
-
     if (remaining > 0) {
       console.log(`[USSD Payment Success] ⚠ Advance Recovery overpayment: UGX ${remaining} unallocated for ${phone}`);
     }
