@@ -469,6 +469,9 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       return meta?.title || meta?.description || '';
     }
     if (entry.entry_type === 'LOAN_REPAYMENT' && meta) {
+      if (meta.source === 'momo_loan_repayment_out') {
+        return `Applied to loan via MoMo${meta.phone ? ` (${meta.phone})` : ''}`;
+      }
       return meta.method === 'mobile_money' ? 'via MoMo' : meta.method || '';
     }
     if ((entry.entry_type === 'WITHDRAWAL' || entry.entry_type === 'ADJUSTMENT') && meta?.loan_id) {
@@ -501,6 +504,8 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     if (entry.entry_type === 'DEPOSIT' && (entry.reference?.startsWith('BONUS') || meta?.source === 'bonus')) return '🏆 Bonus Award';
     if (entry.entry_type === 'DEPOSIT' && (entry.reference?.includes('BIRTHDAY') || meta?.source === 'birthday_reward')) return '🎂 Birthday Reward';
     if (entry.entry_type === 'DEPOSIT' && (entry.reference?.startsWith('MOMO') || entry.reference?.startsWith('MM-') || meta?.source === 'mobile_money')) return '📲 Mobile Money Deposit';
+    if (entry.entry_type === 'DEPOSIT' && (meta?.source === 'momo_loan_repayment_in' || entry.reference?.startsWith('LOAN-MOMO-IN'))) return '📲 MoMo Received (for loan)';
+    if (entry.entry_type === 'LOAN_REPAYMENT' && meta?.source === 'momo_loan_repayment_out') return '🏦 Loan Paid (via MoMo)';
     if ((entry.entry_type === 'WITHDRAWAL' || entry.entry_type === 'ADJUSTMENT') && meta?.loan_id) {
       if (meta.source === 'guarantor' && meta.borrower) {
         const borrowerName = meta.description?.match(/for (.+?)['']s loan/)?.[1] || meta.borrower;
