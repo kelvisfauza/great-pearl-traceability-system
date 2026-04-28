@@ -171,6 +171,24 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     const withdrawalAmount = parseFloat(amount);
     if (withdrawalAmount < 2000 || withdrawalAmount > (instantEligibility.max_instant_amount || 0)) return;
 
+    if (withdrawalStatus.disabled) {
+      toast({
+        title: '🚫 Withdrawals Disabled',
+        description: withdrawalStatus.reason || 'Withdrawals are temporarily paused. Please try again later.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (isWalletFrozen) {
+      toast({
+        title: '🧊 Wallet Frozen',
+        description: 'Your wallet is currently frozen. Withdrawals are not allowed.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setInstantLoading(true);
     try {
       const { data: sessionData } = await supabase.auth.getSession();

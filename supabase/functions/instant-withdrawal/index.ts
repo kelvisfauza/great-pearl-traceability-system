@@ -93,6 +93,28 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, serviceKey);
 
+    // Kill-switch: respect global withdrawal_control toggle
+    try {
+      const { data: ctrlRow } = await supabase
+        .from("system_settings")
+        .select("setting_value")
+        .eq("setting_key", "withdrawal_control")
+        .maybeSingle();
+      const ctrl: any = ctrlRow?.setting_value || {};
+      if (ctrl?.disabled === true) {
+        const until = ctrl?.disabled_until ? new Date(ctrl.disabled_until) : null;
+        const stillDisabled = !until || until > new Date();
+        if (stillDisabled) {
+          return respond(false, {
+            error: ctrl?.disabled_reason || "Withdrawals are temporarily paused by the administrator.",
+            code: "WITHDRAWALS_DISABLED",
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("[instant-withdrawal] kill-switch check failed:", (e as Error).message);
+    }
+
     const { amount, depositPhone } = await req.json();
     console.log(`[instant-withdrawal] amount=${amount}, depositPhone=${depositPhone}`);
 
