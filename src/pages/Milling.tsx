@@ -84,15 +84,15 @@ const Milling = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
           <div>
-            <h1 className="text-3xl font-bold">Milling Department</h1>
-            <p className="text-muted-foreground">Manage customers, transactions, and operations</p>
+            <h1 className="text-2xl md:text-3xl font-bold">Milling Department</h1>
+            <p className="text-sm md:text-base text-muted-foreground">Manage customers, transactions, and operations</p>
           </div>
           <div className="flex gap-2">
-            <Button onClick={() => setShowCustomerForm(true)} className="flex items-center gap-2">
+            <Button onClick={() => setShowCustomerForm(true)} className="flex items-center gap-2 w-full sm:w-auto">
               <Plus className="h-4 w-4" />
               Add Customer
             </Button>
@@ -100,69 +100,71 @@ const Milling = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-6">
           {statsCards.map((stat, index) => (
             <Card key={index}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-                <stat.icon className={`h-4 w-4 ${stat.color}`} />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
+                <CardTitle className="text-xs md:text-sm font-medium leading-tight">{stat.title}</CardTitle>
+                <stat.icon className={`h-4 w-4 shrink-0 ${stat.color}`} />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="text-xs text-muted-foreground">{stat.description}</p>
+              <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+                <div className="text-base md:text-2xl font-bold break-words">{stat.value}</div>
+                <p className="text-[10px] md:text-xs text-muted-foreground">{stat.description}</p>
               </CardContent>
             </Card>
           ))}
 
           {/* Additional Revenue and Expenses Cards */}
-          <Card className="p-6 bg-gradient-to-br from-green-50 to-emerald-100 border-green-200">
+          <Card className="p-3 md:p-6 bg-gradient-to-br from-green-50 to-emerald-100 border-green-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-700">Monthly Revenue</p>
-                <p className="text-2xl font-bold text-green-900">
+                <p className="text-xs md:text-sm font-medium text-green-700">Monthly Revenue</p>
+                <p className="text-base md:text-2xl font-bold text-green-900 break-words">
                   UGX {stats.monthlyRevenue.toLocaleString()}
                 </p>
               </div>
-              <TrendingUp className="h-12 w-12 text-green-600" />
+              <TrendingUp className="h-6 w-6 md:h-12 md:w-12 text-green-600 shrink-0" />
             </div>
           </Card>
 
-          <Card className="p-6 bg-gradient-to-br from-red-50 to-rose-100 border-red-200">
+          <Card className="p-3 md:p-6 bg-gradient-to-br from-red-50 to-rose-100 border-red-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-red-700">Monthly Expenses</p>
-                <p className="text-2xl font-bold text-red-900">
+                <p className="text-xs md:text-sm font-medium text-red-700">Monthly Expenses</p>
+                <p className="text-base md:text-2xl font-bold text-red-900 break-words">
                   UGX {stats.totalExpenses.toLocaleString()}
                 </p>
               </div>
-              <TrendingDown className="h-12 w-12 text-red-600" />
+              <TrendingDown className="h-6 w-6 md:h-12 md:w-12 text-red-600 shrink-0" />
             </div>
           </Card>
 
-          <Card className="p-6 bg-gradient-to-br from-blue-50 to-cyan-100 border-blue-200">
+          <Card className="p-3 md:p-6 bg-gradient-to-br from-blue-50 to-cyan-100 border-blue-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-700">Net Revenue</p>
-                <p className="text-2xl font-bold text-blue-900">
+                <p className="text-xs md:text-sm font-medium text-blue-700">Net Revenue</p>
+                <p className="text-base md:text-2xl font-bold text-blue-900 break-words">
                   UGX {stats.netRevenue.toLocaleString()}
                 </p>
               </div>
-              <TrendingUp className="h-12 w-12 text-blue-600" />
+              <TrendingUp className="h-6 w-6 md:h-12 md:w-12 text-blue-600 shrink-0" />
             </div>
           </Card>
         </div>
 
         {/* Main Tabs */}
         <Tabs defaultValue="transactions" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-7">
-            <TabsTrigger value="transactions" className="font-bold">Transactions</TabsTrigger>
-            <TabsTrigger value="customers" className="font-bold">Customers</TabsTrigger>
-            <TabsTrigger value="ledger" className="font-bold">Customer Ledger</TabsTrigger>
-            <TabsTrigger value="payments" className="font-bold">Payments</TabsTrigger>
-            <TabsTrigger value="expenses" className="font-bold">Expenses</TabsTrigger>
-            <TabsTrigger value="reports" className="font-bold">Reports</TabsTrigger>
-            <TabsTrigger value="ussd" className="font-bold">USSD Menu</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-2 px-2">
+            <TabsList className="inline-flex w-max md:grid md:w-full md:grid-cols-7 gap-1">
+              <TabsTrigger value="transactions" className="font-bold text-xs md:text-sm whitespace-nowrap">Transactions</TabsTrigger>
+              <TabsTrigger value="customers" className="font-bold text-xs md:text-sm whitespace-nowrap">Customers</TabsTrigger>
+              <TabsTrigger value="ledger" className="font-bold text-xs md:text-sm whitespace-nowrap">Ledger</TabsTrigger>
+              <TabsTrigger value="payments" className="font-bold text-xs md:text-sm whitespace-nowrap">Payments</TabsTrigger>
+              <TabsTrigger value="expenses" className="font-bold text-xs md:text-sm whitespace-nowrap">Expenses</TabsTrigger>
+              <TabsTrigger value="reports" className="font-bold text-xs md:text-sm whitespace-nowrap">Reports</TabsTrigger>
+              <TabsTrigger value="ussd" className="font-bold text-xs md:text-sm whitespace-nowrap">USSD</TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="transactions" className="space-y-4">
             <div className="flex justify-between items-center">
