@@ -173,15 +173,18 @@ REQUEST
 - Requested duration (months): ${requested_duration || "unspecified"}
 
 RULES (be fair — approve when reasonable; only deny on clear red flags)
+- IMPORTANT: recommended_amount = the user's ENTITLEMENT/LIMIT, NOT the requested amount.
+  Always award the maximum the borrower qualifies for, ignoring what they typed in "Requested".
 - Hard cap: recommended_amount must NEVER exceed 3× salary (UGX ${maxLimit}).
+- Default for clean borrowers = the full ${maxLimit} (3× salary). Do not award less unless a rule below reduces it.
 - Subtract outstanding from any new approval.
 - "deny" ONLY if: 1+ true defaults (is_defaulted), OR 2+ guarantor recoveries, OR salary is 0.
 - 1 guarantor recovery = reduce limit by ~50% but still approve/top_up.
 - Overdue loans (not yet defaulted) = reduce limit ~40%, do NOT deny.
-- Clean history with completed loans = approve generously up to the cap.
+- Clean history with completed loans = ALWAYS award the full ${maxLimit} cap.
 - Active loan + clean repayments → "top_up" (cap minus outstanding).
 - New employee (<2 months) → cap at 1.5× salary.
-- No history at all → approve modestly (1× to 2× salary depending on tenure).
+- No history but tenure ≥ 2 months → award 2× to 3× salary (lean generous).
 - Choose recommended_loan_type: "quick" (≤1 month, weekly) or "long_term" (>1 month).
 
 Return only JSON via the tool call.`;
