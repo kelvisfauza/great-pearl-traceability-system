@@ -191,6 +191,91 @@ async function processServicePayment(
   const normalizedPhone = cleanPhone.startsWith("0") ? "256" + cleanPhone.slice(1) :
     cleanPhone.startsWith("256") ? cleanPhone : "256" + cleanPhone;
 
+  // ── Advance Recovery: apply FIFO across employee loans then supplier advances ──
+  const isAdvanceRecovery =
+    selectedServiceKey === "3" ||
+    /advance\s*recovery/i.test(serviceName);
+
+  if (isAdvanceRecovery && amount > 0) {
+    const phoneVariants = [normalizedPhone, `0${normalizedPhone.slice(3)}`];
+    let remaining = amount;
+
+    // 1) Employee loans (oldest first)
+    const { data: loans } = await supabase
+      .from("loans")
+      .select("id, employee_id, employee_name, remaining_balance, paid_amount, total_repayable")
+      .in("employee_phone", phoneVariants)
+      .in("status", ["disbursed", "active"])
+      .gt("remaining_balance", 0)
+      .order("created_at", { ascending: true });
+
+    for (const loan of loans || []) {
+      if (remaining <= 0) break;
+      const bal = Number(loan.remaining_balance || 0);
+      const apply = Math.min(remaining, bal);
+      const newBal = bal - apply;
+      const newPaid = Number(loan.paid_amount || 0) + apply;
+
+      await supabase.from("loan_repayments").insert({
+        loan_id: loan.id,
+        amount_due: apply,
+        amount_paid: apply,
+        due_date: new Date().toISOString().split("T")[0],
+        paid_date: new Date().toISOString().split("T")[0],
+        status: "paid",
+        deducted_from: "ussd_momo",
+        payment_reference: externalRef,
+      });
+
+      await supabase.from("loans").update({
+        paid_amount: newPaid,
+        remaining_balance: newBal,
+        status: newBal <= 0 ? "completed" : "disbursed",
+      }).eq("id", loan.id);
+
+      remaining -= apply;
+      console.log(`[USSD Payment Success] Loan ${loan.id} repaid UGX ${apply}, balance ${bal} → ${newBal}`);
+    }
+
+    // 2) Supplier advances (oldest first)
+    if (remaining > 0) {
+      const { data: advances } = await supabase
+        .from("supplier_advances")
+        .select(`id, outstanding_ugx, supplier_id, suppliers!inner(name, phone)`)
+        .in("suppliers.phone", phoneVariants)
+        .eq("is_closed", false)
+        .gt("outstanding_ugx", 0)
+        .order("created_at", { ascending: true });
+
+      for (const adv of (advances as any[]) || []) {
+        if (remaining <= 0) break;
+        const outstanding = Number(adv.outstanding_ugx || 0);
+        const apply = Math.min(remaining, outstanding);
+        const newOutstanding = outstanding - apply;
+
+        await supabase.from("advance_recoveries").insert({
+          advance_id: adv.id,
+          recovered_ugx: apply,
+          recovered_at: new Date().toISOString(),
+          recovered_by: "USSD",
+          notes: `USSD Advance Recovery - Ref: ${externalRef}`,
+        });
+
+        await supabase.from("supplier_advances").update({
+          outstanding_ugx: newOutstanding,
+          is_closed: newOutstanding <= 0,
+        }).eq("id", adv.id);
+
+        remaining -= apply;
+        console.log(`[USSD Payment Success] Supplier advance ${adv.id} recovered UGX ${apply}, outstanding ${outstanding} → ${newOutstanding}`);
+      }
+    }
+
+    if (remaining > 0) {
+      console.log(`[USSD Payment Success] ⚠ Advance Recovery overpayment: UGX ${remaining} unallocated for ${phone}`);
+    }
+  }
+
   // Find customer by phone
   const { data: customer } = await supabase
     .from("milling_customers")
