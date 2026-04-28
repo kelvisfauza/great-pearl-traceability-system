@@ -109,7 +109,7 @@ const EmployeeProfile = () => {
               Verify Identity
             </Button>
             <Button
-              onClick={() => { setView('code'); fetchLatestCode(); }}
+              onClick={() => setView('code')}
               variant="outline"
               className="w-full h-14 border-2 border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-base"
             >
@@ -127,95 +127,7 @@ const EmployeeProfile = () => {
 
   // ============ CODE VIEW ============
   if (view === 'code') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 flex items-center justify-center p-4">
-        <Card className="max-w-md w-full shadow-2xl border-0 overflow-hidden">
-          <div className="bg-gradient-to-r from-emerald-700 to-teal-600 p-6 text-white">
-            <button
-              onClick={() => setView('menu')}
-              className="flex items-center gap-1 text-emerald-100 hover:text-white text-sm mb-3"
-            >
-              <ArrowLeft className="w-4 h-4" /> Back
-            </button>
-            <div className="flex items-center gap-3">
-              <KeyRound className="w-8 h-8" />
-              <div>
-                <h1 className="text-lg font-bold">Latest Login Code</h1>
-                <p className="text-emerald-100 text-xs">{employee.name}</p>
-              </div>
-            </div>
-          </div>
-          <CardContent className="p-6 space-y-4">
-            {codeLoading && (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
-              </div>
-            )}
-
-            {!codeLoading && codeError && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
-                <p className="text-sm text-amber-800">{codeError}</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={fetchLatestCode}
-                  className="mt-3"
-                >
-                  Try again
-                </Button>
-              </div>
-            )}
-
-            {!codeLoading && codes.length > 0 && (
-              <div className="space-y-4">
-                <p className="text-xs text-center text-gray-500">
-                  {codes.length} active code{codes.length === 1 ? '' : 's'} — auto-clears when expired
-                </p>
-                {codes.map((c, i) => {
-                  const key = `${c.category}-${c.created_at}-${i}`;
-                  const remaining = Math.max(0, Math.floor((new Date(c.expires_at).getTime() - now) / 1000));
-                  return (
-                    <div key={key} className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-2xl p-5">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] uppercase tracking-widest text-emerald-700 font-semibold">
-                          {c.label || c.category}
-                        </span>
-                        <span className="text-[10px] font-mono text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                          {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}
-                        </span>
-                      </div>
-                      <p className="text-4xl font-bold font-mono text-emerald-900 tracking-[0.25em] text-center my-3">
-                        {c.code}
-                      </p>
-                      <p className="text-[10px] text-emerald-600 text-center">
-                        Sent to {c.recipient_email}
-                      </p>
-                      <Button
-                        onClick={() => handleCopy(c.code, key)}
-                        size="sm"
-                        className="w-full mt-3 bg-emerald-600 hover:bg-emerald-700 text-white"
-                      >
-                        {copiedKey === key ? (
-                          <><Check className="w-4 h-4 mr-2" /> Copied</>
-                        ) : (
-                          <><Copy className="w-4 h-4 mr-2" /> Copy</>
-                        )}
-                      </Button>
-                      <div className="text-[10px] text-gray-400 text-center mt-2">
-                        Issued {new Date(c.created_at).toLocaleTimeString()}
-                      </div>
-                    </div>
-                  );
-                })}
-                <Button variant="ghost" size="sm" onClick={fetchLatestCode} className="w-full">
-                  Refresh
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <QRCodeAccess employeeId={id!} onBack={() => setView('menu')} />;
   }
 
   // ============ IDENTITY VIEW (full profile card) ============
