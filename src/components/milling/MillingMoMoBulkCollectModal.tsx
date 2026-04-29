@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Smartphone, Loader2, CheckCircle, XCircle, Users } from 'lucide-react';
+import { Smartphone, Loader2, CheckCircle, Users } from 'lucide-react';
 import { useMillingData } from '@/hooks/useMillingData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -17,14 +17,6 @@ interface Props {
   onClose: () => void;
 }
 
-interface Result {
-  customerId: string;
-  customerName: string;
-  amount: number;
-  ok: boolean;
-  message: string;
-}
-
 const MillingMoMoBulkCollectModal = ({ open, onClose }: Props) => {
   const { customers, loading } = useMillingData();
   const { employee } = useAuth();
@@ -33,7 +25,7 @@ const MillingMoMoBulkCollectModal = ({ open, onClose }: Props) => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [phone, setPhone] = useState('');
   const [sending, setSending] = useState(false);
-  const [results, setResults] = useState<Result[] | null>(null);
+  const [success, setSuccess] = useState<{ ref: string; total: number; count: number } | null>(null);
   const [search, setSearch] = useState('');
 
   const debtors = useMemo(
@@ -81,50 +73,44 @@ const MillingMoMoBulkCollectModal = ({ open, onClose }: Props) => {
     }
 
     setSending(true);
-    const out: Result[] = [];
     const targets = debtors.filter(c => selected.has(c.id));
+    const allocations = targets.map(c => ({
+      customer_id: c.id,
+      customer_name: c.full_name,
+      amount: Math.floor(Number(c.current_balance)),
+    }));
+    const total = allocations.reduce((s, a) => s + a.amount, 0);
 
-    for (const c of targets) {
-      const amount = Math.floor(Number(c.current_balance));
-      if (amount < 500) {
-        out.push({ customerId: c.id, customerName: c.full_name, amount, ok: false, message: 'Below 500 UGX minimum' });
-        continue;
-      }
-      try {
-        const { data, error } = await supabase.functions.invoke('milling-momo-collect', {
-          body: {
-            phone,
-            amount,
-            customer_id: c.id,
-            customer_name: c.full_name,
-            initiated_by: employee?.name || employee?.email || 'bulk',
-          },
+    try {
+      const { data, error } = await supabase.functions.invoke('milling-momo-collect', {
+        body: {
+          phone,
+          amount: total,
+          allocations,
+          initiated_by: employee?.name || employee?.email || 'bulk',
+        },
+      });
+      if (error) throw error;
+      if (data?.status === 'success') {
+        setSuccess({ ref: data.ref, total, count: targets.length });
+        toast({
+          title: 'Prompt sent',
+          description: `Single prompt for UGX ${total.toLocaleString()} sent to ${phone}. Once paid, ${targets.length} customer balance${targets.length === 1 ? '' : 's'} will be cleared.`,
         });
-        if (error) throw error;
-        if (data?.status === 'success') {
-          out.push({ customerId: c.id, customerName: c.full_name, amount, ok: true, message: 'Prompt sent' });
-        } else {
-          out.push({ customerId: c.id, customerName: c.full_name, amount, ok: false, message: data?.message || 'Failed' });
-        }
-      } catch (e: any) {
-        out.push({ customerId: c.id, customerName: c.full_name, amount, ok: false, message: e?.message || 'Error' });
+      } else {
+        toast({ title: 'Failed', description: data?.message || data?.error || 'Failed to send prompt', variant: 'destructive' });
       }
+    } catch (e: any) {
+      toast({ title: 'Error', description: e?.message || 'Something went wrong', variant: 'destructive' });
+    } finally {
+      setSending(false);
     }
-
-    setResults(out);
-    setSending(false);
-
-    const okCount = out.filter(r => r.ok).length;
-    toast({
-      title: 'Bulk collection complete',
-      description: `${okCount} of ${out.length} prompts sent to ${phone}.`,
-    });
   };
 
   const handleClose = () => {
     setSelected(new Set());
     setPhone('');
-    setResults(null);
+    setSuccess(null);
     setSearch('');
     onClose();
   };
@@ -142,22 +128,18 @@ const MillingMoMoBulkCollectModal = ({ open, onClose }: Props) => {
           </DialogDescription>
         </DialogHeader>
 
-        {results ? (
-          <div className="space-y-3">
-            <h4 className="font-semibold">Results</h4>
-            <div className="border rounded-md divide-y">
-              {results.map(r => (
-                <div key={r.customerId} className="flex items-center justify-between p-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    {r.ok ? <CheckCircle className="h-4 w-4 text-green-600" /> : <XCircle className="h-4 w-4 text-destructive" />}
-                    <span className="font-medium">{r.customerName}</span>
-                  </div>
-                  <div className="text-right">
-                    <div>UGX {r.amount.toLocaleString()}</div>
-                    <div className="text-xs text-muted-foreground">{r.message}</div>
-                  </div>
-                </div>
-              ))}
+        {success ? (
+          <div className="py-6 text-center space-y-4">
+            <CheckCircle className="h-16 w-16 text-green-600 mx-auto" />
+            <div>
+              <h3 className="text-lg font-semibold">Prompt Sent!</h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                A single MoMo prompt for <strong>UGX {success.total.toLocaleString()}</strong> was sent to <strong>{phone}</strong>.
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                Once the PIN is entered and payment confirms, {success.count} customer balance{success.count === 1 ? '' : 's'} will be cleared automatically.
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 font-mono">Ref: {success.ref}</p>
             </div>
             <Button onClick={handleClose} className="w-full">Done</Button>
           </div>
@@ -171,7 +153,7 @@ const MillingMoMoBulkCollectModal = ({ open, onClose }: Props) => {
                 onChange={(e) => setPhone(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                A separate MoMo prompt is sent to this number for each selected customer.
+                A single MoMo prompt for the total of all selected customers will be sent to this number. Use your own number or any agent/collector number.
               </p>
             </div>
 
@@ -220,7 +202,7 @@ const MillingMoMoBulkCollectModal = ({ open, onClose }: Props) => {
             <div className="p-3 bg-muted rounded-lg flex justify-between items-center">
               <div className="text-sm">
                 <div className="font-medium">{selected.size} customer{selected.size === 1 ? '' : 's'} selected</div>
-                <div className="text-xs text-muted-foreground">{selected.size} prompt{selected.size === 1 ? '' : 's'} will be sent to {phone || '—'}</div>
+                <div className="text-xs text-muted-foreground">1 prompt will be sent to {phone || '—'}</div>
               </div>
               <div className="text-right">
                 <div className="text-xs text-muted-foreground">Total</div>
@@ -238,9 +220,9 @@ const MillingMoMoBulkCollectModal = ({ open, onClose }: Props) => {
                 disabled={sending || selected.size === 0 || !phone}
               >
                 {sending ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending {selected.size}...</>
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending...</>
                 ) : (
-                  <><Smartphone className="h-4 w-4 mr-2" />Send {selected.size} Prompt{selected.size === 1 ? '' : 's'}</>
+                  <><Smartphone className="h-4 w-4 mr-2" />Send Prompt (UGX {totalAmount.toLocaleString()})</>
                 )}
               </Button>
             </div>

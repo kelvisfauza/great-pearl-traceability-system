@@ -172,6 +172,43 @@ async function processSuccess(supabase: any, txn: any) {
     .update({ status: "completed", completed_at: new Date().toISOString() })
     .eq("id", txn.id);
 
+  // Bulk collection: split payment across multiple customers per allocations metadata
+  const allocations = txn?.metadata?.allocations;
+  if (Array.isArray(allocations) && allocations.length > 0) {
+    for (const alloc of allocations) {
+      const { data: cust } = await supabase
+        .from("milling_customers")
+        .select("current_balance")
+        .eq("id", alloc.customer_id)
+        .single();
+      if (!cust) continue;
+
+      const prev = Number(cust.current_balance);
+      const pay = Number(alloc.amount);
+      const next = Math.max(0, prev - pay);
+
+      await supabase.from("milling_cash_transactions").insert({
+        customer_id: alloc.customer_id,
+        customer_name: alloc.customer_name,
+        amount_paid: pay,
+        previous_balance: prev,
+        new_balance: next,
+        payment_method: "Mobile Money",
+        notes: `Bulk MoMo collection - Ref: ${txn.reference} (paid by ${txn.phone})`,
+        date: new Date().toISOString().split("T")[0],
+        created_by: txn.initiated_by,
+      });
+
+      await supabase
+        .from("milling_customers")
+        .update({ current_balance: next })
+        .eq("id", alloc.customer_id);
+
+      console.log(`[Milling MoMo Callback] ✅ Bulk allocation: ${alloc.customer_name} ${prev} → ${next} (paid ${pay})`);
+    }
+    return;
+  }
+
   const { data: customer } = await supabase
     .from("milling_customers")
     .select("current_balance")

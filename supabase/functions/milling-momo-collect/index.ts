@@ -34,13 +34,41 @@ serve(async (req) => {
       throw new Error("Yo Payments API credentials not configured");
     }
 
-    const { phone, amount, customer_id, customer_name, initiated_by } = await req.json();
+    const { phone, amount, customer_id, customer_name, initiated_by, allocations } = await req.json();
 
-    if (!phone || !amount || !customer_id || !customer_name) {
+    // Two modes:
+    // 1) Single: requires customer_id + customer_name
+    // 2) Bulk: requires `allocations` = [{ customer_id, customer_name, amount }, ...]
+    const isBulk = Array.isArray(allocations) && allocations.length > 0;
+
+    if (!phone || !amount) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: phone, amount, customer_id, customer_name" }),
+        JSON.stringify({ error: "Missing required fields: phone, amount" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+    if (!isBulk && (!customer_id || !customer_name)) {
+      return new Response(
+        JSON.stringify({ error: "Missing required fields: customer_id, customer_name" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (isBulk) {
+      const allocSum = allocations.reduce((s: number, a: any) => s + Number(a.amount || 0), 0);
+      if (Math.round(allocSum) !== Math.round(Number(amount))) {
+        return new Response(
+          JSON.stringify({ error: `Allocations sum (${allocSum}) must equal amount (${amount})` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      for (const a of allocations) {
+        if (!a.customer_id || !a.customer_name || !a.amount) {
+          return new Response(
+            JSON.stringify({ error: "Each allocation needs customer_id, customer_name, amount" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
     }
 
     const cleanPhone = normalizePhone(phone);
@@ -60,11 +88,19 @@ serve(async (req) => {
     }
 
     // Generate a unique reference
-    const ref = `MILL-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const refPrefix = isBulk ? "MILLBULK" : "MILL";
+    const ref = `${refPrefix}-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
     // Build callback URL
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const callbackUrl = `${supabaseUrl}/functions/v1/milling-momo-callback`;
+
+    const narrative = isBulk
+      ? `Bulk milling collection (${allocations.length} customers)`
+      : `Milling payment from ${customer_name}`;
+    const providerRefText = isBulk
+      ? `Bulk Milling UGX ${numAmount.toLocaleString()}`
+      : `Milling UGX ${numAmount.toLocaleString()}`;
 
     // Build XML for acdepositfunds (collect money FROM customer's mobile money)
     const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
@@ -77,9 +113,9 @@ serve(async (req) => {
     <Amount>${numAmount}</Amount>
     <Account>${cleanPhone}</Account>
     <AccountProviderCode>${getProviderCode(cleanPhone)}</AccountProviderCode>
-    <Narrative>${escapeXml(`Milling payment from ${customer_name}`)}</Narrative>
+    <Narrative>${escapeXml(narrative)}</Narrative>
     <ExternalReference>${escapeXml(ref)}</ExternalReference>
-    <ProviderReferenceText>${escapeXml(`Milling UGX ${numAmount.toLocaleString()}`)}</ProviderReferenceText>
+    <ProviderReferenceText>${escapeXml(providerRefText)}</ProviderReferenceText>
     <InstantNotificationUrl>${escapeXml(callbackUrl)}</InstantNotificationUrl>
     <FailureNotificationUrl>${escapeXml(callbackUrl)}</FailureNotificationUrl>
   </Request>
@@ -108,16 +144,26 @@ serve(async (req) => {
       const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
       const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
-      await supabaseClient.from("milling_momo_transactions").insert({
+      const insertRow: any = {
         reference: ref,
         yo_reference: txRefMatch?.[1]?.trim() || null,
-        customer_id,
-        customer_name,
+        customer_id: isBulk ? allocations[0].customer_id : customer_id,
+        customer_name: isBulk
+          ? `Bulk (${allocations.length} customers)`
+          : customer_name,
         phone: cleanPhone,
         amount: numAmount,
         status: "pending",
         initiated_by: initiated_by || "unknown",
-      });
+        metadata: isBulk
+          ? { type: "bulk", allocations: allocations.map((a: any) => ({
+              customer_id: a.customer_id,
+              customer_name: a.customer_name,
+              amount: Number(a.amount),
+            })) }
+          : {},
+      };
+      await supabaseClient.from("milling_momo_transactions").insert(insertRow);
 
       return new Response(
         JSON.stringify({

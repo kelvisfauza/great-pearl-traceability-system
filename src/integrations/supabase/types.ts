@@ -5096,6 +5096,7 @@ export type Database = {
           customer_name: string
           id: string
           initiated_by: string
+          metadata: Json
           phone: string
           reference: string
           status: string
@@ -5110,6 +5111,7 @@ export type Database = {
           customer_name: string
           id?: string
           initiated_by: string
+          metadata?: Json
           phone: string
           reference: string
           status?: string
@@ -5124,6 +5126,7 @@ export type Database = {
           customer_name?: string
           id?: string
           initiated_by?: string
+          metadata?: Json
           phone?: string
           reference?: string
           status?: string
