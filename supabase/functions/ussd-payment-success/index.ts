@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { yoPayout, normalizePhone } from "../_shared/yo-payments.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -239,6 +240,91 @@ async function processServicePayment(
 
     if (remaining > 0) {
       console.log(`[USSD Payment Success] ⚠ Advance Recovery overpayment: UGX ${remaining} unallocated for ${phone}`);
+    }
+  }
+
+  // ── Request Advance (service 4): create approval request + refund inbound payment ──
+  const isRequestAdvance =
+    selectedServiceKey === "4" ||
+    /request\s*advance/i.test(serviceName);
+
+  if (isRequestAdvance && amount > 0) {
+    try {
+      const phoneVariants = [normalizedPhone, `0${normalizedPhone.slice(3)}`];
+
+      // Try to resolve employee for richer request context
+      const { data: emp } = await supabase
+        .from("employees")
+        .select("id, name, email, department, position")
+        .or(phoneVariants.map((p) => `phone.eq.${p}`).join(","))
+        .maybeSingle();
+
+      const requesterName = emp?.name || `USSD Caller (${normalizedPhone})`;
+      const department = emp?.department || "Field";
+
+      // Create approval request: Admin First -> Finance Last
+      const { data: approval, error: approvalError } = await supabase
+        .from("approval_requests")
+        .insert({
+          type: "USSD Advance Request",
+          title: `USSD Advance Request - ${requesterName}`,
+          description: `Advance of UGX ${amount.toLocaleString()} requested via USSD by ${requesterName} (${normalizedPhone}). On approval, funds will be sent to this mobile number.`,
+          amount,
+          requestedby: emp?.email || normalizedPhone,
+          requestedby_name: requesterName,
+          requestedby_position: emp?.position || "USSD Caller",
+          department,
+          daterequested: new Date().toISOString().split("T")[0],
+          priority: "Medium",
+          status: "Pending Admin",
+          approval_stage: "pending_admin",
+          disbursement_method: "MOBILE_MONEY",
+          disbursement_phone: normalizedPhone,
+          details: JSON.stringify({
+            advance_type: "ussd_advance",
+            phone: normalizedPhone,
+            employee_id: emp?.id || null,
+            employee_email: emp?.email || null,
+            requested_amount: amount,
+            ussd_reference: externalRef,
+            ussd_inbound_amount: amount,
+            ussd_inbound_transaction_id: transactionId,
+          }),
+        })
+        .select()
+        .single();
+
+      if (approvalError) {
+        console.error("[USSD Payment Success] Failed to create approval request:", approvalError);
+      } else {
+        console.log(`[USSD Payment Success] ✅ Created USSD Advance approval request ${approval.id}`);
+      }
+
+      // Track the request for the disburser cron
+      await supabase.from("ussd_advance_requests").insert({
+        phone: normalizedPhone,
+        amount,
+        requester_name: requesterName,
+        employee_id: emp?.id || null,
+        approval_request_id: approval?.id || null,
+        status: "pending",
+        disbursement_status: "pending",
+        ussd_reference: externalRef,
+      });
+
+      // Refund the inbound payment so the caller is not charged for requesting
+      try {
+        const refund = await yoPayout({
+          phone: normalizedPhone,
+          amount,
+          narrative: `Refund USSD advance request fee - Ref ${externalRef}`,
+        });
+        console.log(`[USSD Payment Success] Refund attempted: success=${refund.success} ref=${refund.transactionRef || ""} err=${refund.errorMessage || ""}`);
+      } catch (refundErr) {
+        console.error("[USSD Payment Success] Refund failed:", refundErr);
+      }
+    } catch (e) {
+      console.error("[USSD Payment Success] Request Advance handling failed:", e);
     }
   }
 
