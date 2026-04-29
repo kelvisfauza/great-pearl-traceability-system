@@ -130,9 +130,9 @@ serve(async (req) => {
         ? services.map((s) => `${s.service_key}.${s.name}`).join("\n")
         : "1.Transport Recovery\n2.Pay Loaders\n3.Advance Recovery";
 
-      // Look up active loans by caller phone. The summary is appended ONLY
-      // to the "Advance Recovery" service entry so it stays hidden from
-      // the generic Yo Payments service list and the top-level message.
+      // Look up active loans by caller phone so the user sees their
+      // outstanding balance before entering an amount.
+      let loanLine = "";
       try {
         const phoneVariants = [cleanPhone, `0${cleanPhone.slice(3)}`];
 
@@ -169,14 +169,7 @@ serve(async (req) => {
         const total = allLoans.reduce((s: number, l: any) => s + Number(l.remaining_balance || 0), 0);
         const count = allLoans.length;
         if (total > 0) {
-          const adv = `Advance Recovery (Open: UGX ${total.toLocaleString()}, ${count} loan${count > 1 ? "s" : ""})`;
-          serviceList = serviceList.split("\n").map((line) => {
-            if (/advance\s*recovery/i.test(line)) {
-              const key = line.split(".")[0];
-              return `${key}.${adv}`;
-            }
-            return line;
-          }).join("\n");
+          loanLine = `\nOutstanding: UGX ${total.toLocaleString()} (${count} loan${count > 1 ? "s" : ""})`;
         }
       } catch (e) {
         console.error(`[USSD Callout] Loan lookup failed:`, e);
@@ -184,7 +177,7 @@ serve(async (req) => {
 
       return new Response(JSON.stringify({
         validated: true,
-        message: `Select 1 to proceed to available services`,
+        message: `Select 1 to proceed to available services${loanLine}`,
         ussd_processor_params: {
           other_services: serviceList,
           payment_external_reference: paymentRef,
