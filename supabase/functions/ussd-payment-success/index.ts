@@ -71,9 +71,10 @@ serve(async (req) => {
     const isMillingPayment = externalRef.startsWith("USSD-MILL-");
     const isServicePayment = externalRef.startsWith("USSD-SVC-");
 
+    let userMessage = "";
     if (isMillingPayment) {
       await processMillingPayment(supabase, { externalRef, amount, phone, transactionId });
-    let userMessage = "";
+    }
     if (isServicePayment) {
       const result = await processServicePayment(supabase, {
         externalRef, amount, phone, transactionId,
