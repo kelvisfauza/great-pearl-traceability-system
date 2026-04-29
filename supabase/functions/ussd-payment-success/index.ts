@@ -328,6 +328,62 @@ async function processServicePayment(
     }
   }
 
+  // ── Deposit to Wallet (service 5): credit user wallet via ledger_entries ──
+  const isWalletDeposit =
+    selectedServiceKey === "5" ||
+    /deposit\s*to\s*wallet/i.test(serviceName);
+
+  if (isWalletDeposit && amount > 0) {
+    try {
+      const phoneVariants = [normalizedPhone, `0${normalizedPhone.slice(3)}`];
+
+      // Resolve employee by phone
+      const { data: emp } = await supabase
+        .from("employees")
+        .select("id, name, email")
+        .or(phoneVariants.map((p) => `phone.eq.${p}`).join(","))
+        .maybeSingle();
+
+      if (!emp?.email) {
+        console.error(`[USSD Payment Success] Wallet deposit: no employee for phone ${normalizedPhone}`);
+      } else {
+        // Resolve unified user_id from employee email
+        const { data: resolvedUserId } = await supabase
+          .rpc("get_unified_user_id", { p_email: emp.email });
+
+        if (!resolvedUserId) {
+          console.error(`[USSD Payment Success] Wallet deposit: cannot resolve user_id for ${emp.email}`);
+        } else {
+          const ledgerRef = `USSD-DEPOSIT-${externalRef}`;
+          const { error: ledgerErr } = await supabase.from("ledger_entries").insert({
+            user_id: resolvedUserId,
+            entry_type: "DEPOSIT",
+            amount: amount,
+            reference: ledgerRef,
+            source_category: "DEPOSIT",
+            metadata: {
+              type: "ussd_wallet_deposit",
+              description: `USSD wallet deposit from ${normalizedPhone}`,
+              phone: normalizedPhone,
+              employee_id: emp.id,
+              employee_email: emp.email,
+              ussd_reference: externalRef,
+              yo_transaction_id: transactionId,
+            },
+          });
+
+          if (ledgerErr) {
+            console.error("[USSD Payment Success] Wallet credit failed:", ledgerErr);
+          } else {
+            console.log(`[USSD Payment Success] ✅ Wallet credited: ${emp.name} (+UGX ${amount}) ref ${ledgerRef}`);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("[USSD Payment Success] Wallet deposit handling failed:", e);
+    }
+  }
+
   // Find customer by phone
   const { data: customer } = await supabase
     .from("milling_customers")
