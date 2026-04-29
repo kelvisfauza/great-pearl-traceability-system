@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Smartphone, Loader2, CheckCircle, XCircle, Users } from 'lucide-react';
+import { Smartphone, Loader2, CheckCircle, Users } from 'lucide-react';
 import { useMillingData } from '@/hooks/useMillingData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
