@@ -169,17 +169,35 @@ serve(async (req) => {
         const total = allLoans.reduce((s: number, l: any) => s + Number(l.remaining_balance || 0), 0);
         const count = allLoans.length;
         if (total > 0) {
-          loanSummary = `\nYour open loans: UGX ${total.toLocaleString()} (${count} loan${count > 1 ? "s" : ""}). Pick 3 to repay.`;
+          // Append loan info ONLY to the Advance Recovery line so it's
+          // hidden from the generic Yo Payments service list view.
+          const adv = `Advance Recovery (Open: UGX ${total.toLocaleString()}, ${count} loan${count > 1 ? "s" : ""})`;
+          // Replace the Advance Recovery entry in serviceList
+          const lines = serviceList.split("\n").map((line) => {
+            if (/advance\s*recovery/i.test(line)) {
+              const key = line.split(".")[0];
+              return `${key}.${adv}`;
+            }
+            return line;
+          });
+          // Mutate serviceList in place via closure
+          (loanSummary as any) = "";
+          // Reassign the outer serviceList by returning new value through hack:
+          // simpler — just store updated list and use below
+          (globalThis as any).__updatedServiceList = lines.join("\n");
         }
       } catch (e) {
         console.error(`[USSD Callout] Loan lookup failed:`, e);
       }
 
+      const finalServiceList = (globalThis as any).__updatedServiceList || serviceList;
+      (globalThis as any).__updatedServiceList = undefined;
+
       return new Response(JSON.stringify({
         validated: true,
-        message: `Select 1 to proceed to available services${loanSummary}`,
+        message: `Select 1 to proceed to available services`,
         ussd_processor_params: {
-          other_services: serviceList,
+          other_services: finalServiceList,
           payment_external_reference: paymentRef,
         },
         success_ipn_url: successIpnUrl,
