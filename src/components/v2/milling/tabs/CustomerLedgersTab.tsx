@@ -1,11 +1,15 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, BookOpen } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, BookOpen, Smartphone } from "lucide-react";
+import MillingMoMoBulkCollectModal from "@/components/milling/MillingMoMoBulkCollectModal";
 
 const CustomerLedgersTab = () => {
+  const [bulkOpen, setBulkOpen] = useState(false);
   const { data: accounts, isLoading } = useQuery({
     queryKey: ['milling-customer-accounts'],
     queryFn: async () => {
@@ -21,7 +25,12 @@ const CustomerLedgersTab = () => {
 
   return (
     <div className="space-y-4 mt-4">
-      <h3 className="text-lg font-semibold flex items-center gap-2"><BookOpen className="h-5 w-5" />Customer Ledgers</h3>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <h3 className="text-lg font-semibold flex items-center gap-2"><BookOpen className="h-5 w-5" />Customer Ledgers</h3>
+        <Button onClick={() => setBulkOpen(true)} size="sm" className="w-full sm:w-auto">
+          <Smartphone className="h-4 w-4 mr-2" />Bulk Collect Debts
+        </Button>
+      </div>
 
       <div className="grid grid-cols-2 gap-4">
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Total Customers</p><p className="text-2xl font-bold">{accounts?.length || 0}</p></CardContent></Card>
@@ -55,6 +64,8 @@ const CustomerLedgersTab = () => {
           </Table>
         </CardContent>
       </Card>
+
+      <MillingMoMoBulkCollectModal open={bulkOpen} onClose={() => setBulkOpen(false)} />
     </div>
   );
 };
