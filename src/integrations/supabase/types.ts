@@ -9188,6 +9188,68 @@ export type Database = {
         }
         Relationships: []
       }
+      ussd_advance_requests: {
+        Row: {
+          amount: number
+          approval_request_id: string | null
+          created_at: string
+          disbursement_attempted_at: string | null
+          disbursement_completed_at: string | null
+          disbursement_error: string | null
+          disbursement_reference: string | null
+          disbursement_status: string
+          employee_id: string | null
+          id: string
+          phone: string
+          requester_name: string | null
+          status: string
+          updated_at: string
+          ussd_reference: string | null
+        }
+        Insert: {
+          amount: number
+          approval_request_id?: string | null
+          created_at?: string
+          disbursement_attempted_at?: string | null
+          disbursement_completed_at?: string | null
+          disbursement_error?: string | null
+          disbursement_reference?: string | null
+          disbursement_status?: string
+          employee_id?: string | null
+          id?: string
+          phone: string
+          requester_name?: string | null
+          status?: string
+          updated_at?: string
+          ussd_reference?: string | null
+        }
+        Update: {
+          amount?: number
+          approval_request_id?: string | null
+          created_at?: string
+          disbursement_attempted_at?: string | null
+          disbursement_completed_at?: string | null
+          disbursement_error?: string | null
+          disbursement_reference?: string | null
+          disbursement_status?: string
+          employee_id?: string | null
+          id?: string
+          phone?: string
+          requester_name?: string | null
+          status?: string
+          updated_at?: string
+          ussd_reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ussd_advance_requests_approval_request_id_fkey"
+            columns: ["approval_request_id"]
+            isOneToOne: false
+            referencedRelation: "approval_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ussd_payment_logs: {
         Row: {
           amount: number | null

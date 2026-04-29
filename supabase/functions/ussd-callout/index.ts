@@ -128,7 +128,7 @@ serve(async (req) => {
 
       let serviceList = (services && services.length > 0)
         ? services.map((s) => `${s.service_key}.${s.name}`).join("\n")
-        : "1.Transport Recovery\n2.Pay Loaders\n3.Advance Recovery";
+        : "1.Transport Recovery\n2.Pay Loaders\n3.Advance Recovery\n4.Request Advance";
 
       // Look up active loans by caller phone so the user sees their
       // outstanding balance before entering an amount.
