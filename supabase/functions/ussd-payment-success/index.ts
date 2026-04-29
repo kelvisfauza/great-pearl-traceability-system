@@ -73,12 +73,14 @@ serve(async (req) => {
 
     if (isMillingPayment) {
       await processMillingPayment(supabase, { externalRef, amount, phone, transactionId });
-    } else if (isServicePayment) {
-      await processServicePayment(supabase, {
+    let userMessage = "";
+    if (isServicePayment) {
+      const result = await processServicePayment(supabase, {
         externalRef, amount, phone, transactionId,
         selectedProduct, selectedServiceKey, narrative,
       });
-    } else {
+      userMessage = result?.userMessage || "";
+    } else if (!isMillingPayment) {
       console.log(`[USSD Payment Success] Unknown reference format: ${externalRef}`);
     }
 
@@ -93,7 +95,7 @@ serve(async (req) => {
       raw_payload: body,
     });
 
-    return new Response(JSON.stringify({ status: "ok" }), {
+    return new Response(JSON.stringify({ status: "ok", message: userMessage || undefined }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
@@ -173,8 +175,9 @@ async function processServicePayment(
     transactionId: string; selectedProduct: string;
     selectedServiceKey: string; narrative: string;
   }
-) {
+): Promise<{ userMessage?: string }> {
   const { externalRef, amount, phone, transactionId, selectedProduct, selectedServiceKey, narrative } = params;
+  let userMessage = "";
 
   // Resolve service name from DB (admin-managed list)
   let serviceName = selectedProduct || "Other Service";
@@ -376,6 +379,12 @@ async function processServicePayment(
             console.error("[USSD Payment Success] Wallet credit failed:", ledgerErr);
           } else {
             console.log(`[USSD Payment Success] ✅ Wallet credited: ${emp.name} (+UGX ${amount}) ref ${ledgerRef}`);
+            // Short ref for the USSD confirmation message (last 6 chars of external ref)
+            const shortRef = externalRef.slice(-6).toUpperCase();
+            userMessage =
+              `Wallet credited with UGX ${Number(amount).toLocaleString()}.\n` +
+              `Ref: ${shortRef}\n` +
+              `Thank you for using Great Agro Coffee.`;
           }
         }
       }
@@ -406,4 +415,5 @@ async function processServicePayment(
   });
 
   console.log(`[USSD Payment Success] ✅ Service: ${serviceName} - UGX ${amount} from ${phone}. Ref: ${externalRef}`);
+  return { userMessage };
 }
