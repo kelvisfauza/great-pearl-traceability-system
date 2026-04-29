@@ -126,13 +126,13 @@ serve(async (req) => {
         console.error(`[USSD Callout] Failed to load services:`, svcError);
       }
 
-      const serviceList = (services && services.length > 0)
+      let serviceList = (services && services.length > 0)
         ? services.map((s) => `${s.service_key}.${s.name}`).join("\n")
         : "1.Transport Recovery\n2.Pay Loaders\n3.Advance Recovery";
 
-      // Look up active loans + supplier advances by caller phone so the
-      // user can see what they owe before entering an amount.
-      let loanSummary = "";
+      // Look up active loans by caller phone. The summary is appended ONLY
+      // to the "Advance Recovery" service entry so it stays hidden from
+      // the generic Yo Payments service list and the top-level message.
       try {
         const phoneVariants = [cleanPhone, `0${cleanPhone.slice(3)}`];
 
@@ -169,35 +169,24 @@ serve(async (req) => {
         const total = allLoans.reduce((s: number, l: any) => s + Number(l.remaining_balance || 0), 0);
         const count = allLoans.length;
         if (total > 0) {
-          // Append loan info ONLY to the Advance Recovery line so it's
-          // hidden from the generic Yo Payments service list view.
           const adv = `Advance Recovery (Open: UGX ${total.toLocaleString()}, ${count} loan${count > 1 ? "s" : ""})`;
-          // Replace the Advance Recovery entry in serviceList
-          const lines = serviceList.split("\n").map((line) => {
+          serviceList = serviceList.split("\n").map((line) => {
             if (/advance\s*recovery/i.test(line)) {
               const key = line.split(".")[0];
               return `${key}.${adv}`;
             }
             return line;
-          });
-          // Mutate serviceList in place via closure
-          (loanSummary as any) = "";
-          // Reassign the outer serviceList by returning new value through hack:
-          // simpler — just store updated list and use below
-          (globalThis as any).__updatedServiceList = lines.join("\n");
+          }).join("\n");
         }
       } catch (e) {
         console.error(`[USSD Callout] Loan lookup failed:`, e);
       }
 
-      const finalServiceList = (globalThis as any).__updatedServiceList || serviceList;
-      (globalThis as any).__updatedServiceList = undefined;
-
       return new Response(JSON.stringify({
         validated: true,
         message: `Select 1 to proceed to available services`,
         ussd_processor_params: {
-          other_services: finalServiceList,
+          other_services: serviceList,
           payment_external_reference: paymentRef,
         },
         success_ipn_url: successIpnUrl,
