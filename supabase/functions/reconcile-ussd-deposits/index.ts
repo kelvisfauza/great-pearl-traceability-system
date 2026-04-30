@@ -81,13 +81,20 @@ Deno.serve(async (req) => {
         if (serviceKey === "5") {
           const expectedRef = `USSD-DEPOSIT-${externalRef}`;
 
-          // Idempotency: skip if already credited
-          const { data: existing } = await supabase
-            .from("ledger_entries")
-            .select("id")
-            .eq("reference", expectedRef)
-            .maybeSingle();
-          if (existing) { summary.skipped++; continue; }
+          // Idempotency: skip if ANY existing ledger row references this USSD ref,
+          // either by its dedicated reference OR via metadata->>ussd_reference.
+          const [byRef, byMeta] = await Promise.all([
+            supabase.from("ledger_entries").select("id").eq("reference", expectedRef).limit(1),
+            supabase
+              .from("ledger_entries")
+              .select("id")
+              .filter("metadata->>ussd_reference", "eq", externalRef)
+              .limit(1),
+          ]);
+          if ((byRef.data?.length ?? 0) > 0 || (byMeta.data?.length ?? 0) > 0) {
+            summary.skipped++;
+            continue;
+          }
 
           // Resolve employee + unified user_id
           const { data: emp } = await supabase
