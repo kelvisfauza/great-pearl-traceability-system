@@ -255,6 +255,8 @@ Deno.serve(async (req) => {
               .from("loan_repayments")
               .insert({
                 loan_id: loan.id,
+                installment_number: 0,
+                amount_due: apply,
                 amount_paid: apply,
                 payment_reference: externalRef,
                 paid_date: new Date().toISOString().split("T")[0],
