@@ -63,6 +63,7 @@ import { template as instantWithdrawalApprovalRequest } from './instant-withdraw
 import { template as mealDisbursementNotification } from './meal-disbursement-notification.tsx'
 import { template as titleChangeConfirmation } from './title-change-confirmation.tsx'
 import { template as walletDepositCredited } from './wallet-deposit-credited.tsx'
+import { template as labourDay2026 } from './labour-day-2026.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'verification-code': verificationCode,
@@ -119,4 +120,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'instant-withdrawal-approval-request': instantWithdrawalApprovalRequest,
   'meal-disbursement-notification': mealDisbursementNotification,
   'title-change-confirmation': titleChangeConfirmation,
+  'labour-day-2026': labourDay2026,
 }
