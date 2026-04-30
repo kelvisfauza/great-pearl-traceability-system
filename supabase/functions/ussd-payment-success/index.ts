@@ -54,6 +54,16 @@ serve(async (req) => {
         phone = params.get("msisdn") || params.get("phone") || params.get("anumbermsisdn") || "";
         transactionId = params.get("transaction_id") || params.get("TransactionId") || "";
         narrative = params.get("narrative") || params.get("Narrative") || "";
+        // ── BUGFIX: parse the JSON narrative to extract selected_service_key.
+        // Yo Payments delivers narrative as a JSON string inside the form body
+        // (e.g. {"selected_product":"Other_services","selected_service_key":"3"}).
+        // Without this, the routing falls back to regex on "Other Service" and
+        // misclassifies advance-recovery / wallet-deposit / advance-request payments.
+        try {
+          const narrativeJson = JSON.parse(narrative);
+          selectedProduct = narrativeJson.selected_product || "";
+          selectedServiceKey = narrativeJson.selected_service_key || "";
+        } catch { /* narrative may not be JSON; leave empty */ }
       }
     }
 
