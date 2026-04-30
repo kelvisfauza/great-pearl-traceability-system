@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import DashboardStats from '@/components/DashboardStats';
 import QuickActions from '@/components/QuickActions';
 import RecentActivity from '@/components/RecentActivity';
+import PaymentStatusTracker from '@/components/PaymentStatusTracker';
 import PerformanceOverview from '@/components/PerformanceOverview';
 import AdminDashboard from '@/components/admin/AdminDashboard';
 import EUDRSummaryCard from '@/components/store/EUDRSummaryCard';
@@ -187,6 +188,9 @@ const Index = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Real-time USSD / Mobile Money payment tracker */}
+        <PaymentStatusTracker />
 
         <NotificationPanel isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
         <BonusClaimPopup />
