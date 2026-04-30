@@ -313,7 +313,7 @@ async function processServicePayment(
               entry_type: "DEPOSIT",
               amount: apply,
               reference: depRef,
-              source_category: "loan_repayment_in",
+              source_category: "LOAN_REPAYMENT",
               metadata: {
                 description: `MoMo received from ${normalizedPhone} for loan repayment`,
                 phone: normalizedPhone,
@@ -330,7 +330,7 @@ async function processServicePayment(
               entry_type: "LOAN_REPAYMENT",
               amount: -Math.abs(apply),
               reference: repayRef,
-              source_category: "loan_repayment_out",
+              source_category: "LOAN_REPAYMENT",
               metadata: {
                 description: `Loan repayment via USSD MoMo (loan ${loan.id})`,
                 phone: normalizedPhone,
