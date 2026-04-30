@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
           }
 
           const { data: uid } = await supabase
-            .rpc("get_unified_user_id", { p_email: emp.email });
+            .rpc("get_unified_user_id", { input_email: emp.email });
           if (!uid) {
             summary.errors.push(`${externalRef}: cannot resolve user_id for ${emp.email}`);
             continue;
@@ -235,7 +235,7 @@ Deno.serve(async (req) => {
           }
 
           const { data: uid } = await supabase
-            .rpc("get_unified_user_id", { p_email: emp.email });
+            .rpc("get_unified_user_id", { input_email: emp.email });
           if (!uid) {
             summary.errors.push(`${externalRef}: cannot resolve user_id for ${emp.email}`);
             continue;

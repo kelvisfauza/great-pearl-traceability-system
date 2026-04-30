@@ -258,7 +258,7 @@ async function processServicePayment(
     let resolvedUserId: string | null = null;
     if (emp?.email) {
       const { data: uid } = await supabase
-        .rpc("get_unified_user_id", { p_email: emp.email });
+        .rpc("get_unified_user_id", { input_email: emp.email });
       resolvedUserId = uid || null;
     }
 
@@ -559,7 +559,7 @@ async function processServicePayment(
       } else {
         // Resolve unified user_id from employee email
         const { data: resolvedUserId } = await supabase
-          .rpc("get_unified_user_id", { p_email: emp.email });
+          .rpc("get_unified_user_id", { input_email: emp.email });
 
         if (!resolvedUserId) {
           console.error(`[USSD Payment Success] Wallet deposit: cannot resolve user_id for ${emp.email}`);
