@@ -277,7 +277,6 @@ Deno.serve(async (req) => {
                 remaining_balance: newBal,
                 paid_amount: newPaid,
                 status: newBal <= 0 ? "completed" : "active",
-                last_payment_date: new Date().toISOString(),
               })
               .eq("id", loan.id);
             if (loanErr) {
