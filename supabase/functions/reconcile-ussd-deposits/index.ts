@@ -81,13 +81,20 @@ Deno.serve(async (req) => {
         if (serviceKey === "5") {
           const expectedRef = `USSD-DEPOSIT-${externalRef}`;
 
-          // Idempotency: skip if already credited
-          const { data: existing } = await supabase
-            .from("ledger_entries")
-            .select("id")
-            .eq("reference", expectedRef)
-            .maybeSingle();
-          if (existing) { summary.skipped++; continue; }
+          // Idempotency: skip if ANY existing ledger row references this USSD ref,
+          // either by its dedicated reference OR via metadata->>ussd_reference.
+          const [byRef, byMeta] = await Promise.all([
+            supabase.from("ledger_entries").select("id").eq("reference", expectedRef).limit(1),
+            supabase
+              .from("ledger_entries")
+              .select("id")
+              .filter("metadata->>ussd_reference", "eq", externalRef)
+              .limit(1),
+          ]);
+          if ((byRef.data?.length ?? 0) > 0 || (byMeta.data?.length ?? 0) > 0) {
+            summary.skipped++;
+            continue;
+          }
 
           // Resolve employee + unified user_id
           const { data: emp } = await supabase
@@ -102,7 +109,7 @@ Deno.serve(async (req) => {
           }
 
           const { data: uid } = await supabase
-            .rpc("get_unified_user_id", { p_email: emp.email });
+            .rpc("get_unified_user_id", { input_email: emp.email });
           if (!uid) {
             summary.errors.push(`${externalRef}: cannot resolve user_id for ${emp.email}`);
             continue;
@@ -186,83 +193,238 @@ Deno.serve(async (req) => {
 
         // ── Advance Recovery (service 3) — ensure paired ledger entries exist ──
         if (serviceKey === "3") {
-          // Look for an existing inbound DEPOSIT for this USSD ref
-          const { data: existingDeposit } = await supabase
-            .from("ledger_entries")
-            .select("id")
-            .eq("source_category", "loan_repayment_in")
-            .filter("metadata->>ussd_reference", "eq", externalRef)
-            .maybeSingle();
-          if (existingDeposit) { summary.skipped++; continue; }
-
-          // No paired entries — find the loan that was actually paid (most-recently-touched loan_repayments row with this ref)
-          const { data: rep } = await supabase
+          // ── STRICT IDEMPOTENCY: loan_repayments.payment_reference is the
+          // single source of truth. If a row exists with this USSD ref, the
+          // payment was already applied; skip.
+          const { data: existingRepay } = await supabase
             .from("loan_repayments")
-            .select("loan_id, amount_paid, paid_date")
+            .select("id")
             .eq("payment_reference", externalRef)
-            .order("paid_date", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (!rep) { summary.skipped++; continue; }
-
-          const { data: emp } = await supabase
-            .from("employees")
-            .select("id, name, email")
-            .or(phoneVariants.map((p) => `phone.eq.${p}`).join(","))
-            .maybeSingle();
-          if (!emp?.email) { summary.skipped++; continue; }
-
-          const { data: uid } = await supabase
-            .rpc("get_unified_user_id", { p_email: emp.email });
-          if (!uid) { summary.skipped++; continue; }
-
-          const ts = Date.now();
-          const depRef = `LOAN-MOMO-IN-${rep.loan_id}-${ts}`;
-          const repayRef = `LOAN-MOMO-REPAY-${rep.loan_id}-${ts}`;
-          const apply = Number(rep.amount_paid || amount);
-
-          const { error: pairErr } = await supabase.from("ledger_entries").insert([
-            {
-              user_id: uid,
-              entry_type: "DEPOSIT",
-              amount: apply,
-              reference: depRef,
-              source_category: "loan_repayment_in",
-              metadata: {
-                description: `MoMo received from ${normalizedPhone} for loan repayment (auto-reconciled)`,
-                phone: normalizedPhone,
-                loan_id: rep.loan_id,
-                ussd_reference: externalRef,
-                yo_transaction_id: log.transaction_id,
-                transaction_ref: depRef,
-                source: "mobile_money",
-                provider: "yo_payments",
-                reconciled_at: new Date().toISOString(),
-              },
-            },
-            {
-              user_id: uid,
-              entry_type: "LOAN_REPAYMENT",
-              amount: -Math.abs(apply),
-              reference: repayRef,
-              source_category: "loan_repayment_out",
-              metadata: {
-                description: `Loan repayment via USSD MoMo (loan ${rep.loan_id}, auto-reconciled)`,
-                phone: normalizedPhone,
-                loan_id: rep.loan_id,
-                ussd_reference: externalRef,
-                yo_transaction_id: log.transaction_id,
-                transaction_ref: repayRef,
-              },
-            },
-          ]);
-          if (pairErr) {
-            summary.errors.push(`${externalRef}: paired ledger insert failed - ${pairErr.message}`);
+            .limit(1);
+          if ((existingRepay?.length ?? 0) > 0) {
+            summary.skipped++;
             continue;
           }
+
+          // Resolve employee
+          const { data: emp } = await supabase
+            .from("employees")
+            .select("id, name, email, phone")
+            .or(phoneVariants.map((p) => `phone.eq.${p}`).join(","))
+            .maybeSingle();
+          if (!emp?.email) {
+            summary.errors.push(`${externalRef}: no employee for phone ${normalizedPhone}`);
+            continue;
+          }
+
+          const { data: uid } = await supabase
+            .rpc("get_unified_user_id", { input_email: emp.email });
+          if (!uid) {
+            summary.errors.push(`${externalRef}: cannot resolve user_id for ${emp.email}`);
+            continue;
+          }
+
+          // Find active loans (FIFO, oldest first)
+          const { data: directLoans } = await supabase
+            .from("loans")
+            .select("id, employee_id, employee_name, remaining_balance, paid_amount, total_repayable")
+            .eq("employee_id", emp.id)
+            .in("status", ["disbursed", "active"])
+            .gt("remaining_balance", 0)
+            .order("created_at", { ascending: true });
+
+          const allLoans = directLoans || [];
+          if (allLoans.length === 0) {
+            summary.skipped++;
+            console.log(`[Reconcile USSD] No active loan for ${emp.name} (ref ${externalRef})`);
+            continue;
+          }
+
+          let remaining = amount;
+          let totalApplied = 0;
+          const appliedLoanIds: { loan_id: string; apply: number }[] = [];
+
+          // ── First pass: insert loan_repayments rows up-front. These act as
+          // hard idempotency markers (UNIQUE-like) so even if subsequent
+          // ledger/loan writes fail, we never re-credit on the next cron tick.
+          for (const loan of allLoans) {
+            if (remaining <= 0) break;
+            const bal = Number(loan.remaining_balance || 0);
+            const apply = Math.min(remaining, bal);
+            const { error: repayInsertErr } = await supabase
+              .from("loan_repayments")
+              .insert({
+                loan_id: loan.id,
+                installment_number: 0,
+                amount_due: apply,
+                amount_paid: apply,
+                payment_reference: externalRef,
+                paid_date: new Date().toISOString().split("T")[0],
+                due_date: new Date().toISOString().split("T")[0],
+                deducted_from: "mobile_money_ussd",
+                status: "paid",
+              });
+            if (repayInsertErr) {
+              summary.errors.push(
+                `${externalRef}: loan_repayments insert failed (${loan.id}) - ${repayInsertErr.message}`,
+              );
+              // Bail out completely — without the dedup marker we cannot
+              // safely proceed (a retry would double-credit).
+              remaining = 0;
+              appliedLoanIds.length = 0;
+              break;
+            }
+            appliedLoanIds.push({ loan_id: loan.id, apply });
+            remaining -= apply;
+          }
+
+          // ── Second pass: update loan balances + post paired ledger entries.
+          // If any of these fail, the marker remains in loan_repayments so the
+          // cron will not retry. We surface the error for manual follow-up.
+          for (const { loan_id, apply } of appliedLoanIds) {
+            const loan = allLoans.find((l) => l.id === loan_id);
+            if (!loan) continue;
+            const bal = Number(loan.remaining_balance || 0);
+            const newBal = bal - apply;
+            const newPaid = Number(loan.paid_amount || 0) + apply;
+            const ts = Date.now();
+            const depRef = `LOAN-MOMO-IN-${loan_id}-${ts}`;
+            const repayRef = `LOAN-MOMO-REPAY-${loan_id}-${ts}`;
+
+            const { error: loanErr } = await supabase
+              .from("loans")
+              .update({
+                remaining_balance: newBal,
+                paid_amount: newPaid,
+                status: newBal <= 0 ? "completed" : "active",
+              })
+              .eq("id", loan_id);
+            if (loanErr) {
+              summary.errors.push(`${externalRef}: loan ${loan_id} update failed - ${loanErr.message}`);
+            }
+
+            const { error: ledgerErr } = await supabase.from("ledger_entries").insert([
+              {
+                user_id: uid,
+                entry_type: "DEPOSIT",
+                amount: apply,
+                reference: depRef,
+                source_category: "LOAN_REPAYMENT",
+                metadata: {
+                  description: `MoMo received from ${normalizedPhone} for loan repayment (auto-reconciled)`,
+                  phone: normalizedPhone,
+                  loan_id,
+                  ussd_reference: externalRef,
+                  yo_transaction_id: log.transaction_id,
+                  transaction_ref: depRef,
+                  source: "mobile_money",
+                  provider: "yo_payments",
+                  reconciled_at: new Date().toISOString(),
+                  reconciled_by: "reconcile-ussd-deposits",
+                },
+              },
+              {
+                user_id: uid,
+                entry_type: "LOAN_REPAYMENT",
+                amount: -Math.abs(apply),
+                reference: repayRef,
+                source_category: "LOAN_REPAYMENT",
+                metadata: {
+                  description: `Loan repayment via USSD MoMo (loan ${loan_id}, auto-reconciled)`,
+                  phone: normalizedPhone,
+                  loan_id,
+                  ussd_reference: externalRef,
+                  yo_transaction_id: log.transaction_id,
+                  transaction_ref: repayRef,
+                },
+              },
+            ]);
+            if (ledgerErr) {
+              summary.errors.push(`${externalRef}: ledger insert failed (${loan_id}) - ${ledgerErr.message}`);
+            }
+
+            totalApplied += apply;
+          }
+
+          if (totalApplied <= 0) { summary.skipped++; continue; }
+
           summary.repayments_repaired++;
-          console.log(`[Reconcile USSD] ✅ Paired loan repayment for ${emp.name}, UGX ${apply}`);
+          console.log(`[Reconcile USSD] ✅ Loan repayment for ${emp.name}: UGX ${totalApplied} (ref ${externalRef})`);
+
+          // Re-read outstanding total for accurate notification
+          const { data: postLoans } = await supabase
+            .from("loans")
+            .select("remaining_balance")
+            .eq("employee_id", emp.id)
+            .in("status", ["disbursed", "active"]);
+          const outstanding = (postLoans || []).reduce(
+            (s: number, l: any) => s + Math.max(0, Number(l.remaining_balance || 0)),
+            0,
+          );
+          const fullyPaid = outstanding <= 0;
+          const shortRef = externalRef.slice(-6).toUpperCase();
+
+          // SMS confirmation
+          try {
+            await supabase.functions.invoke("send-sms", {
+              body: {
+                phone: normalizedPhone,
+                recipientPhone: normalizedPhone,
+                recipientEmail: emp.email,
+                userName: emp.name,
+                messageType: "payout_confirmation",
+                message:
+                  `Great Pearl Coffee: Loan repayment of UGX ${totalApplied.toLocaleString()} received via USSD. ` +
+                  (fullyPaid
+                    ? `Loan fully cleared. Thank you!`
+                    : `Outstanding balance: UGX ${outstanding.toLocaleString()}.`) +
+                  ` Ref: ${shortRef}`,
+                priority: "high",
+              },
+            });
+          } catch (e) { console.error("[Reconcile USSD] Repayment SMS failed:", e); }
+
+          // Branded email confirmation
+          try {
+            await supabase.functions.invoke("send-transactional-email", {
+              body: {
+                recipientEmail: emp.email,
+                recipientName: emp.name,
+                subject: fullyPaid
+                  ? `Loan Fully Repaid - UGX ${totalApplied.toLocaleString()}`
+                  : `Loan Repayment Received - UGX ${totalApplied.toLocaleString()}`,
+                heading: fullyPaid ? "Loan Cleared" : "Loan Repayment Received",
+                body:
+                  `Hello ${emp.name},\n\n` +
+                  `We have received your loan repayment of UGX ${totalApplied.toLocaleString()} via USSD Mobile Money.\n\n` +
+                  `Reference: ${externalRef}\n` +
+                  `Phone: ${normalizedPhone}\n` +
+                  (fullyPaid
+                    ? `Your loan has been fully cleared. Thank you for completing your repayment!`
+                    : `Outstanding balance: UGX ${outstanding.toLocaleString()}`) +
+                  `\n\nThis transaction has been recorded on your statement.\n\n` +
+                  `If you did not authorize this payment, please contact administration immediately.`,
+                purpose: "transactional",
+                idempotency_key: `ussd-loan-repay-${externalRef}`,
+              },
+            });
+          } catch (e) { console.error("[Reconcile USSD] Repayment email failed:", e); }
+
+          // In-app notification
+          try {
+            await supabase.from("notifications").insert({
+              type: "system",
+              title: fullyPaid ? "Loan Fully Repaid" : "Loan Repayment Received",
+              message:
+                `UGX ${totalApplied.toLocaleString()} applied to your loan via USSD. ` +
+                (fullyPaid
+                  ? `Loan cleared.`
+                  : `Outstanding: UGX ${outstanding.toLocaleString()}.`) +
+                ` Ref: ${shortRef}`,
+              priority: "medium",
+              target_user_id: emp.id,
+            });
+          } catch (e) { console.error("[Reconcile USSD] Notification failed:", e); }
         }
       } catch (rowErr: any) {
         summary.errors.push(`${log.reference}: ${String(rowErr?.message || rowErr)}`);

@@ -54,6 +54,16 @@ serve(async (req) => {
         phone = params.get("msisdn") || params.get("phone") || params.get("anumbermsisdn") || "";
         transactionId = params.get("transaction_id") || params.get("TransactionId") || "";
         narrative = params.get("narrative") || params.get("Narrative") || "";
+        // ── BUGFIX: parse the JSON narrative to extract selected_service_key.
+        // Yo Payments delivers narrative as a JSON string inside the form body
+        // (e.g. {"selected_product":"Other_services","selected_service_key":"3"}).
+        // Without this, the routing falls back to regex on "Other Service" and
+        // misclassifies advance-recovery / wallet-deposit / advance-request payments.
+        try {
+          const narrativeJson = JSON.parse(narrative);
+          selectedProduct = narrativeJson.selected_product || "";
+          selectedServiceKey = narrativeJson.selected_service_key || "";
+        } catch { /* narrative may not be JSON; leave empty */ }
       }
     }
 
@@ -248,7 +258,7 @@ async function processServicePayment(
     let resolvedUserId: string | null = null;
     if (emp?.email) {
       const { data: uid } = await supabase
-        .rpc("get_unified_user_id", { p_email: emp.email });
+        .rpc("get_unified_user_id", { input_email: emp.email });
       resolvedUserId = uid || null;
     }
 
@@ -303,7 +313,7 @@ async function processServicePayment(
               entry_type: "DEPOSIT",
               amount: apply,
               reference: depRef,
-              source_category: "loan_repayment_in",
+              source_category: "LOAN_REPAYMENT",
               metadata: {
                 description: `MoMo received from ${normalizedPhone} for loan repayment`,
                 phone: normalizedPhone,
@@ -320,7 +330,7 @@ async function processServicePayment(
               entry_type: "LOAN_REPAYMENT",
               amount: -Math.abs(apply),
               reference: repayRef,
-              source_category: "loan_repayment_out",
+              source_category: "LOAN_REPAYMENT",
               metadata: {
                 description: `Loan repayment via USSD MoMo (loan ${loan.id})`,
                 phone: normalizedPhone,
@@ -549,7 +559,7 @@ async function processServicePayment(
       } else {
         // Resolve unified user_id from employee email
         const { data: resolvedUserId } = await supabase
-          .rpc("get_unified_user_id", { p_email: emp.email });
+          .rpc("get_unified_user_id", { input_email: emp.email });
 
         if (!resolvedUserId) {
           console.error(`[USSD Payment Success] Wallet deposit: cannot resolve user_id for ${emp.email}`);
