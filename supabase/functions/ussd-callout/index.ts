@@ -45,7 +45,7 @@ serve(async (req) => {
       const { data: customer, error: custError } = await supabase
         .from("milling_customers")
         .select("id, full_name, current_balance, phone")
-        .or(`phone.eq.${cleanPhone},phone.eq.0${cleanPhone.slice(3)}`)
+        .or(`phone.eq.${cleanPhone},phone.eq.+${cleanPhone},phone.eq.0${cleanPhone.slice(3)}`)
         .eq("status", "active")
         .maybeSingle();
 
@@ -135,7 +135,7 @@ serve(async (req) => {
       let walletOwnerLine = "";
       let walletOwnerName = "";
       try {
-        const phoneVariants = [cleanPhone, `0${cleanPhone.slice(3)}`];
+        const phoneVariants = [cleanPhone, `+${cleanPhone}`, `0${cleanPhone.slice(3)}`];
         const { data: caller } = await supabase
           .from("employees")
           .select("name")
@@ -155,7 +155,7 @@ serve(async (req) => {
       // outstanding balance before entering an amount.
       let loanLine = "";
       try {
-        const phoneVariants = [cleanPhone, `0${cleanPhone.slice(3)}`];
+        const phoneVariants = [cleanPhone, `+${cleanPhone}`, `0${cleanPhone.slice(3)}`];
 
         // 1) Match loans directly by employee_phone
         const { data: directLoans } = await supabase
