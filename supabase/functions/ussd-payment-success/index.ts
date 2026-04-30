@@ -398,26 +398,19 @@ async function processServicePayment(
           try {
             await supabase.functions.invoke("send-transactional-email", {
               body: {
+                templateName: "loan-repayment",
                 recipientEmail: emp.email,
-                recipientName,
-                subject: fullyPaid
-                  ? `Loan Fully Repaid - ${formattedAmount}`
-                  : `Loan Repayment Received - ${formattedAmount}`,
-                heading: fullyPaid
-                  ? "Loan Cleared"
-                  : "Loan Repayment Received",
-                body:
-                  `Hello ${recipientName},\n\n` +
-                  `We have received your loan repayment of ${formattedAmount} via USSD Mobile Money.\n\n` +
-                  `Reference: ${externalRef}\n` +
-                  `Phone: ${normalizedPhone}\n` +
-                  (fullyPaid
-                    ? `Your loan has been fully cleared. Thank you for completing your repayment!`
-                    : `Outstanding balance: ${formattedOutstanding}`) +
-                  `\n\nThis transaction has been recorded on your statement.\n\n` +
-                  `If you did not authorize this payment, please contact administration immediately.`,
-                purpose: "transactional",
-                idempotency_key: `ussd-loan-repay-${externalRef}`,
+                idempotencyKey: `ussd-loan-repay-${externalRef}`,
+                templateData: {
+                  employeeName: recipientName,
+                  installmentNumber: "USSD",
+                  amountDue: Number(totalApplied).toLocaleString(),
+                  amountCollected: Number(totalApplied).toLocaleString(),
+                  sources: `USSD Mobile Money (${normalizedPhone})`,
+                  remainingBalance: outstanding.toLocaleString(),
+                  isFullyPaid: fullyPaid,
+                  isVoluntaryPayment: true,
+                },
               },
             });
           } catch (emailErr) {

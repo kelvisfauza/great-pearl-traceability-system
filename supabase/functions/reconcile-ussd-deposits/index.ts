@@ -384,28 +384,23 @@ Deno.serve(async (req) => {
             });
           } catch (e) { console.error("[Reconcile USSD] Repayment SMS failed:", e); }
 
-          // Branded email confirmation
+          // Branded email confirmation (uses loan-repayment template)
           try {
             await supabase.functions.invoke("send-transactional-email", {
               body: {
+                templateName: "loan-repayment",
                 recipientEmail: emp.email,
-                recipientName: emp.name,
-                subject: fullyPaid
-                  ? `Loan Fully Repaid - UGX ${totalApplied.toLocaleString()}`
-                  : `Loan Repayment Received - UGX ${totalApplied.toLocaleString()}`,
-                heading: fullyPaid ? "Loan Cleared" : "Loan Repayment Received",
-                body:
-                  `Hello ${emp.name},\n\n` +
-                  `We have received your loan repayment of UGX ${totalApplied.toLocaleString()} via USSD Mobile Money.\n\n` +
-                  `Reference: ${externalRef}\n` +
-                  `Phone: ${normalizedPhone}\n` +
-                  (fullyPaid
-                    ? `Your loan has been fully cleared. Thank you for completing your repayment!`
-                    : `Outstanding balance: UGX ${outstanding.toLocaleString()}`) +
-                  `\n\nThis transaction has been recorded on your statement.\n\n` +
-                  `If you did not authorize this payment, please contact administration immediately.`,
-                purpose: "transactional",
-                idempotency_key: `ussd-loan-repay-${externalRef}`,
+                idempotencyKey: `ussd-loan-repay-${externalRef}`,
+                templateData: {
+                  employeeName: emp.name,
+                  installmentNumber: "USSD",
+                  amountDue: totalApplied.toLocaleString(),
+                  amountCollected: totalApplied.toLocaleString(),
+                  sources: `USSD Mobile Money (${normalizedPhone})`,
+                  remainingBalance: outstanding.toLocaleString(),
+                  isFullyPaid: fullyPaid,
+                  isVoluntaryPayment: true,
+                },
               },
             });
           } catch (e) { console.error("[Reconcile USSD] Repayment email failed:", e); }
