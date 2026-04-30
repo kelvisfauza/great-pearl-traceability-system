@@ -9,13 +9,14 @@ interface Props {
   employeeName?: string
   amount?: string
   phone?: string
+  depositorName?: string
   reference?: string
   date?: string
   newBalance?: string
 }
 
 const WalletDepositCreditedEmail = ({
-  employeeName, amount = '0', phone = '', reference = '', date = '', newBalance,
+  employeeName, amount = '0', phone = '', depositorName = '', reference = '', date = '', newBalance,
 }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
@@ -29,18 +30,25 @@ const WalletDepositCreditedEmail = ({
         <Section style={content}>
           <Text style={greeting}>Dear {employeeName || 'Employee'},</Text>
           <Text style={bodyText}>
-            Your USSD wallet deposit has been received and credited to your account.
+            {depositorName
+              ? `A USSD wallet deposit from ${depositorName} (${phone}) has been credited to your account.`
+              : 'Your USSD wallet deposit has been received and credited to your account.'}
           </Text>
 
           <Section style={amountCard}>
             <Text style={amountLabel}>Amount Deposited</Text>
             <Text style={amountValue}>UGX {amount}</Text>
-            {phone ? <Text style={amountType}>From mobile {phone}</Text> : null}
+            {phone ? (
+              <Text style={amountType}>
+                {depositorName ? `Deposited by ${depositorName} • ${phone}` : `From mobile ${phone}`}
+              </Text>
+            ) : null}
           </Section>
 
           <Section style={detailsCard}>
             <Text style={detailRow}><strong>Reference:</strong> {reference || '—'}</Text>
             <Text style={detailRow}><strong>Channel:</strong> USSD Mobile Money</Text>
+            {depositorName ? <Text style={detailRow}><strong>Depositor:</strong> {depositorName}</Text> : null}
             {newBalance ? <Text style={detailRow}><strong>New wallet balance:</strong> UGX {newBalance}</Text> : null}
           </Section>
 
