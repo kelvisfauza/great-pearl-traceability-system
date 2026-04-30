@@ -1,0 +1,22 @@
+
+UPDATE public.absence_appeals SET employee_email = 'sserunkumataufiq@greatpearlcoffee.com' WHERE employee_email = 'sserunkumataufique@greatpearlcoffee.com';
+UPDATE public.admin_initiated_withdrawals SET employee_email = 'sserunkumataufiq@greatpearlcoffee.com' WHERE employee_email = 'sserunkumataufique@greatpearlcoffee.com';
+UPDATE public.attendance SET employee_email = 'sserunkumataufiq@greatpearlcoffee.com' WHERE employee_email = 'sserunkumataufique@greatpearlcoffee.com';
+UPDATE public.attendance_time_records SET employee_email = 'sserunkumataufiq@greatpearlcoffee.com' WHERE employee_email = 'sserunkumataufique@greatpearlcoffee.com';
+UPDATE public.bonuses SET employee_email = 'sserunkumataufiq@greatpearlcoffee.com' WHERE employee_email = 'sserunkumataufique@greatpearlcoffee.com';
+UPDATE public.christmas_vouchers SET employee_email = 'sserunkumataufiq@greatpearlcoffee.com' WHERE employee_email = 'sserunkumataufique@greatpearlcoffee.com';
+UPDATE public.employee_contracts SET employee_email = 'sserunkumataufiq@greatpearlcoffee.com' WHERE employee_email = 'sserunkumataufique@greatpearlcoffee.com';
+UPDATE public.employee_daily_reports SET employee_email = 'sserunkumataufiq@greatpearlcoffee.com' WHERE employee_email = 'sserunkumataufique@greatpearlcoffee.com';
+UPDATE public.employee_login_tracker SET employee_email = 'sserunkumataufiq@greatpearlcoffee.com' WHERE employee_email = 'sserunkumataufique@greatpearlcoffee.com';
+UPDATE public.employee_of_the_month SET employee_email = 'sserunkumataufiq@greatpearlcoffee.com' WHERE employee_email = 'sserunkumataufique@greatpearlcoffee.com';
+UPDATE public.employee_salary_advances SET employee_email = 'sserunkumataufiq@greatpearlcoffee.com' WHERE employee_email = 'sserunkumataufique@greatpearlcoffee.com';
+UPDATE public.employee_salary_payments SET employee_email = 'sserunkumataufiq@greatpearlcoffee.com' WHERE employee_email = 'sserunkumataufique@greatpearlcoffee.com';
+UPDATE public.employee_salary_payments SET processed_by_email = 'sserunkumataufiq@greatpearlcoffee.com' WHERE processed_by_email = 'sserunkumataufique@greatpearlcoffee.com';
+UPDATE public.monthly_allowance_log SET employee_email = 'sserunkumataufiq@greatpearlcoffee.com' WHERE employee_email = 'sserunkumataufique@greatpearlcoffee.com';
+UPDATE public.monthly_allowances SET employee_email = 'sserunkumataufiq@greatpearlcoffee.com' WHERE employee_email = 'sserunkumataufique@greatpearlcoffee.com';
+UPDATE public.monthly_overtime_reviews SET employee_email = 'sserunkumataufiq@greatpearlcoffee.com' WHERE employee_email = 'sserunkumataufique@greatpearlcoffee.com';
+UPDATE public.overtime_awards SET employee_email = 'sserunkumataufiq@greatpearlcoffee.com' WHERE employee_email = 'sserunkumataufique@greatpearlcoffee.com';
+UPDATE public.per_diem_awards SET employee_email = 'sserunkumataufiq@greatpearlcoffee.com' WHERE employee_email = 'sserunkumataufique@greatpearlcoffee.com';
+UPDATE public.salary_advance_payments SET employee_email = 'sserunkumataufiq@greatpearlcoffee.com' WHERE employee_email = 'sserunkumataufique@greatpearlcoffee.com';
+UPDATE public.salary_auto_invest SET user_email = 'sserunkumataufiq@greatpearlcoffee.com' WHERE user_email = 'sserunkumataufique@greatpearlcoffee.com';
+UPDATE public.weekly_allowances SET employee_email = 'sserunkumataufiq@greatpearlcoffee.com' WHERE employee_email = 'sserunkumataufique@greatpearlcoffee.com';
