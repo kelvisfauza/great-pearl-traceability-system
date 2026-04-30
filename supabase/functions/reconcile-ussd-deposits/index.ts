@@ -193,32 +193,15 @@ Deno.serve(async (req) => {
 
         // ── Advance Recovery (service 3) — ensure paired ledger entries exist ──
         if (serviceKey === "3") {
-          // ── STRICT IDEMPOTENCY GUARD (must run BEFORE any write) ──
-          // Check ALL possible markers that this USSD ref was already processed.
-          // Any single match means we MUST skip — never double-credit.
-          const [byMetaIn, byMetaOut, byRepayment] = await Promise.all([
-            supabase
-              .from("ledger_entries")
-              .select("id")
-              .filter("metadata->>ussd_reference", "eq", externalRef)
-              .limit(1),
-            supabase
-              .from("ledger_entries")
-              .select("id")
-              .eq("source_category", "loan_repayment_out")
-              .filter("metadata->>ussd_reference", "eq", externalRef)
-              .limit(1),
-            supabase
-              .from("loan_repayments")
-              .select("id")
-              .eq("payment_reference", externalRef)
-              .limit(1),
-          ]);
-          if (
-            (byMetaIn.data?.length ?? 0) > 0 ||
-            (byMetaOut.data?.length ?? 0) > 0 ||
-            (byRepayment.data?.length ?? 0) > 0
-          ) {
+          // ── STRICT IDEMPOTENCY: loan_repayments.payment_reference is the
+          // single source of truth. If a row exists with this USSD ref, the
+          // payment was already applied; skip.
+          const { data: existingRepay } = await supabase
+            .from("loan_repayments")
+            .select("id")
+            .eq("payment_reference", externalRef)
+            .limit(1);
+          if ((existingRepay?.length ?? 0) > 0) {
             summary.skipped++;
             continue;
           }
@@ -259,18 +242,52 @@ Deno.serve(async (req) => {
 
           let remaining = amount;
           let totalApplied = 0;
+          const appliedLoanIds: { loan_id: string; apply: number }[] = [];
 
+          // ── First pass: insert loan_repayments rows up-front. These act as
+          // hard idempotency markers (UNIQUE-like) so even if subsequent
+          // ledger/loan writes fail, we never re-credit on the next cron tick.
           for (const loan of allLoans) {
             if (remaining <= 0) break;
             const bal = Number(loan.remaining_balance || 0);
             const apply = Math.min(remaining, bal);
+            const { error: repayInsertErr } = await supabase
+              .from("loan_repayments")
+              .insert({
+                loan_id: loan.id,
+                amount_paid: apply,
+                payment_reference: externalRef,
+                paid_date: new Date().toISOString().split("T")[0],
+                deducted_from: "mobile_money_ussd",
+                status: "paid",
+              });
+            if (repayInsertErr) {
+              summary.errors.push(
+                `${externalRef}: loan_repayments insert failed (${loan.id}) - ${repayInsertErr.message}`,
+              );
+              // Bail out completely — without the dedup marker we cannot
+              // safely proceed (a retry would double-credit).
+              remaining = 0;
+              appliedLoanIds.length = 0;
+              break;
+            }
+            appliedLoanIds.push({ loan_id: loan.id, apply });
+            remaining -= apply;
+          }
+
+          // ── Second pass: update loan balances + post paired ledger entries.
+          // If any of these fail, the marker remains in loan_repayments so the
+          // cron will not retry. We surface the error for manual follow-up.
+          for (const { loan_id, apply } of appliedLoanIds) {
+            const loan = allLoans.find((l) => l.id === loan_id);
+            if (!loan) continue;
+            const bal = Number(loan.remaining_balance || 0);
             const newBal = bal - apply;
             const newPaid = Number(loan.paid_amount || 0) + apply;
             const ts = Date.now();
-            const depRef = `LOAN-MOMO-IN-${loan.id}-${ts}`;
-            const repayRef = `LOAN-MOMO-REPAY-${loan.id}-${ts}`;
+            const depRef = `LOAN-MOMO-IN-${loan_id}-${ts}`;
+            const repayRef = `LOAN-MOMO-REPAY-${loan_id}-${ts}`;
 
-            // 1. Update loan balance
             const { error: loanErr } = await supabase
               .from("loans")
               .update({
@@ -278,24 +295,12 @@ Deno.serve(async (req) => {
                 paid_amount: newPaid,
                 status: newBal <= 0 ? "completed" : "active",
               })
-              .eq("id", loan.id);
+              .eq("id", loan_id);
             if (loanErr) {
-              summary.errors.push(`${externalRef}: loan ${loan.id} update failed - ${loanErr.message}`);
-              continue;
+              summary.errors.push(`${externalRef}: loan ${loan_id} update failed - ${loanErr.message}`);
             }
 
-            // 2. Insert loan_repayments row
-            await supabase.from("loan_repayments").insert({
-              loan_id: loan.id,
-              amount_paid: apply,
-              payment_method: "mobile_money_ussd",
-              payment_reference: externalRef,
-              paid_date: new Date().toISOString(),
-              notes: `Auto-reconciled USSD repayment from ${normalizedPhone}`,
-            });
-
-            // 3. Insert paired ledger entries
-            await supabase.from("ledger_entries").insert([
+            const { error: ledgerErr } = await supabase.from("ledger_entries").insert([
               {
                 user_id: uid,
                 entry_type: "DEPOSIT",
@@ -305,7 +310,7 @@ Deno.serve(async (req) => {
                 metadata: {
                   description: `MoMo received from ${normalizedPhone} for loan repayment (auto-reconciled)`,
                   phone: normalizedPhone,
-                  loan_id: loan.id,
+                  loan_id,
                   ussd_reference: externalRef,
                   yo_transaction_id: log.transaction_id,
                   transaction_ref: depRef,
@@ -322,18 +327,20 @@ Deno.serve(async (req) => {
                 reference: repayRef,
                 source_category: "loan_repayment_out",
                 metadata: {
-                  description: `Loan repayment via USSD MoMo (loan ${loan.id}, auto-reconciled)`,
+                  description: `Loan repayment via USSD MoMo (loan ${loan_id}, auto-reconciled)`,
                   phone: normalizedPhone,
-                  loan_id: loan.id,
+                  loan_id,
                   ussd_reference: externalRef,
                   yo_transaction_id: log.transaction_id,
                   transaction_ref: repayRef,
                 },
               },
             ]);
+            if (ledgerErr) {
+              summary.errors.push(`${externalRef}: ledger insert failed (${loan_id}) - ${ledgerErr.message}`);
+            }
 
             totalApplied += apply;
-            remaining -= apply;
           }
 
           if (totalApplied <= 0) { summary.skipped++; continue; }
