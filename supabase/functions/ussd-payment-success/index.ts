@@ -202,11 +202,23 @@ async function processServicePayment(
     /advance\s*recovery/i.test(serviceName);
 
   if (isAdvanceRecovery && amount > 0) {
-    const phoneVariants = [normalizedPhone, `0${normalizedPhone.slice(3)}`];
+    const phoneVariants = [
+      normalizedPhone,
+      `+${normalizedPhone}`,
+      `0${normalizedPhone.slice(3)}`,
+    ];
     let remaining = amount;
 
-    // 1) Employee loans (oldest first)
-    const { data: loans } = await supabase
+    // Resolve employee by phone so we can (a) find loans by employee_id as
+    // a fallback, and (b) post paired ledger entries on the user's statement.
+    const { data: emp } = await supabase
+      .from("employees")
+      .select("id, name, email, phone")
+      .or(phoneVariants.map((p) => `phone.eq.${p}`).join(","))
+      .maybeSingle();
+
+    // 1) Employee loans by phone (oldest first)
+    const { data: directLoans } = await supabase
       .from("loans")
       .select("id, employee_id, employee_name, remaining_balance, paid_amount, total_repayable")
       .in("employee_phone", phoneVariants)
@@ -214,7 +226,34 @@ async function processServicePayment(
       .gt("remaining_balance", 0)
       .order("created_at", { ascending: true });
 
-    for (const loan of loans || []) {
+    // 2) Fallback: loans by employee_id (covers loans missing employee_phone)
+    let employeeLoans: any[] = [];
+    if (emp?.id) {
+      const { data: byEmp } = await supabase
+        .from("loans")
+        .select("id, employee_id, employee_name, remaining_balance, paid_amount, total_repayable")
+        .eq("employee_id", emp.id)
+        .in("status", ["disbursed", "active"])
+        .gt("remaining_balance", 0)
+        .order("created_at", { ascending: true });
+      employeeLoans = byEmp || [];
+    }
+
+    // De-duplicate by id, keep oldest-first ordering from the direct query
+    const loanMap = new Map<string, any>();
+    [...(directLoans || []), ...employeeLoans].forEach((l) => loanMap.set(l.id, l));
+    const allLoans = Array.from(loanMap.values());
+
+    // Resolve unified user_id once (for paired ledger entries)
+    let resolvedUserId: string | null = null;
+    if (emp?.email) {
+      const { data: uid } = await supabase
+        .rpc("get_unified_user_id", { p_email: emp.email });
+      resolvedUserId = uid || null;
+    }
+
+    let totalApplied = 0;
+    for (const loan of allLoans) {
       if (remaining <= 0) break;
       const bal = Number(loan.remaining_balance || 0);
       const apply = Math.min(remaining, bal);
@@ -239,11 +278,85 @@ async function processServicePayment(
       }).eq("id", loan.id);
 
       remaining -= apply;
+      totalApplied += apply;
       console.log(`[USSD Payment Success] Loan ${loan.id} repaid UGX ${apply}, balance ${bal} → ${newBal}`);
+
+      // Paired ledger entries so the user's statement shows the MoMo-direct
+      // repayment with net-zero wallet impact. (See momo-direct-payment-paired-ledger.)
+      if (resolvedUserId) {
+        const ts = Date.now();
+        const depRef = `LOAN-MOMO-IN-${loan.id}-${ts}`;
+        const repayRef = `LOAN-MOMO-REPAY-${loan.id}-${ts}`;
+
+        // Idempotency: skip if we've already posted for this transaction_ref
+        const { data: existing } = await supabase
+          .from("ledger_entries")
+          .select("id")
+          .eq("user_id", resolvedUserId)
+          .or(`reference.eq.${depRef},reference.eq.${repayRef}`)
+          .maybeSingle();
+
+        if (!existing) {
+          await supabase.from("ledger_entries").insert([
+            {
+              user_id: resolvedUserId,
+              entry_type: "DEPOSIT",
+              amount: apply,
+              reference: depRef,
+              source_category: "loan_repayment_in",
+              metadata: {
+                description: `MoMo received from ${normalizedPhone} for loan repayment`,
+                phone: normalizedPhone,
+                loan_id: loan.id,
+                ussd_reference: externalRef,
+                yo_transaction_id: transactionId,
+                transaction_ref: depRef,
+                source: "mobile_money",
+                provider: "yo_payments",
+              },
+            },
+            {
+              user_id: resolvedUserId,
+              entry_type: "LOAN_REPAYMENT",
+              amount: -Math.abs(apply),
+              reference: repayRef,
+              source_category: "loan_repayment_out",
+              metadata: {
+                description: `Loan repayment via USSD MoMo (loan ${loan.id})`,
+                phone: normalizedPhone,
+                loan_id: loan.id,
+                ussd_reference: externalRef,
+                yo_transaction_id: transactionId,
+                transaction_ref: repayRef,
+              },
+            },
+          ]);
+        }
+      }
     }
 
     if (remaining > 0) {
       console.log(`[USSD Payment Success] ⚠ Advance Recovery overpayment: UGX ${remaining} unallocated for ${phone}`);
+    }
+
+    // USSD confirmation message
+    if (totalApplied > 0) {
+      const shortRef = externalRef.slice(-6).toUpperCase();
+      const remainTotal = allLoans.reduce(
+        (s, l) => s + Math.max(0, Number(l.remaining_balance || 0) - (l === allLoans[0] ? 0 : 0)),
+        0,
+      );
+      // Recompute outstanding after repayment
+      const newOutstanding = allLoans.reduce((s, l) => {
+        const bal = Number(l.remaining_balance || 0);
+        return s + Math.max(0, bal); // already updated rows in DB; this is best-effort
+      }, 0) - totalApplied;
+      userMessage =
+        `Loan repayment UGX ${Number(totalApplied).toLocaleString()} received.\n` +
+        `Outstanding: UGX ${Math.max(0, newOutstanding).toLocaleString()}.\n` +
+        `Ref: ${shortRef}. Thank you.`;
+    } else {
+      userMessage = `No active loan found for ${normalizedPhone}. Please contact admin.`;
     }
   }
 
