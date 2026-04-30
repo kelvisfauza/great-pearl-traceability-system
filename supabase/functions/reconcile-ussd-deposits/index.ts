@@ -260,6 +260,7 @@ Deno.serve(async (req) => {
                 amount_paid: apply,
                 payment_reference: externalRef,
                 paid_date: new Date().toISOString().split("T")[0],
+                due_date: new Date().toISOString().split("T")[0],
                 deducted_from: "mobile_money_ussd",
                 status: "paid",
               });
