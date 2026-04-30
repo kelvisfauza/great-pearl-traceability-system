@@ -339,9 +339,23 @@ async function processServicePayment(
 
   if (isWalletDeposit && amount > 0) {
     try {
-      const phoneVariants = [normalizedPhone, `0${normalizedPhone.slice(3)}`];
+      // Allow caller to deposit to a DIFFERENT employee's wallet by
+      // passing { account_phone: "256..." } in the USSD narrative.
+      // Falls back to the caller's MSISDN if not provided.
+      let targetPhone = normalizedPhone;
+      try {
+        const narrativeJson = JSON.parse(narrative || "{}");
+        const accountPhone = narrativeJson.account_phone || narrativeJson.target_phone;
+        if (accountPhone) {
+          const ap = String(accountPhone).replace(/\D/g, "");
+          targetPhone = ap.startsWith("0") ? "256" + ap.slice(1) :
+            ap.startsWith("256") ? ap : "256" + ap;
+        }
+      } catch { /* narrative may not be JSON */ }
 
-      // Resolve employee by phone
+      const phoneVariants = [targetPhone, `0${targetPhone.slice(3)}`];
+
+      // Resolve employee by target phone
       const { data: emp } = await supabase
         .from("employees")
         .select("id, name, email")
@@ -349,7 +363,10 @@ async function processServicePayment(
         .maybeSingle();
 
       if (!emp?.email) {
-        console.error(`[USSD Payment Success] Wallet deposit: no employee for phone ${normalizedPhone}`);
+        console.error(`[USSD Payment Success] Wallet deposit: no employee for phone ${targetPhone} (caller ${normalizedPhone})`);
+        userMessage =
+          `No wallet found for ${targetPhone.replace(/^256/, "0")}.\n` +
+          `Please contact admin. Your money will be refunded.`;
       } else {
         // Resolve unified user_id from employee email
         const { data: resolvedUserId } = await supabase
@@ -364,15 +381,18 @@ async function processServicePayment(
             entry_type: "DEPOSIT",
             amount: amount,
             reference: ledgerRef,
-            source_category: "DEPOSIT",
+            source_category: "SELF_DEPOSIT",
             metadata: {
               type: "ussd_wallet_deposit",
-              description: `USSD wallet deposit from ${normalizedPhone}`,
-              phone: normalizedPhone,
+              description: `USSD wallet deposit from ${normalizedPhone}${targetPhone !== normalizedPhone ? ` (credited to ${emp.name})` : ""}`,
+              phone: targetPhone,
+              caller_phone: normalizedPhone,
               employee_id: emp.id,
               employee_email: emp.email,
               ussd_reference: externalRef,
               yo_transaction_id: transactionId,
+              source: "mobile_money",
+              provider: "yo_payments",
             },
           });
 
@@ -382,10 +402,64 @@ async function processServicePayment(
             console.log(`[USSD Payment Success] ✅ Wallet credited: ${emp.name} (+UGX ${amount}) ref ${ledgerRef}`);
             // Short ref for the USSD confirmation message (last 6 chars of external ref)
             const shortRef = externalRef.slice(-6).toUpperCase();
+            const targetLine = targetPhone !== normalizedPhone ? `\nTo: ${emp.name}` : "";
             userMessage =
-              `Wallet credited with UGX ${Number(amount).toLocaleString()}.\n` +
+              `Wallet credited UGX ${Number(amount).toLocaleString()}.${targetLine}\n` +
               `Ref: ${shortRef}\n` +
               `Thank you for using Great Agro Coffee.`;
+
+            // Fire-and-forget SMS to the caller (depositor)
+            try {
+              const smsMsg =
+                `Dear ${emp.name}, UGX ${Number(amount).toLocaleString()} has been credited to your wallet via USSD. ` +
+                `Ref: ${shortRef}. - Great Agro Coffee`;
+              await supabase.functions.invoke("send-sms", {
+                body: {
+                  phone: normalizedPhone,
+                  message: smsMsg,
+                  userName: emp.name,
+                  messageType: "payout_confirmation",
+                  recipientEmail: emp.email,
+                },
+              });
+            } catch (smsErr) {
+              console.error("[USSD Payment Success] Deposit SMS failed:", smsErr);
+            }
+
+            // Branded email to the wallet owner (operations auto-CC'd)
+            try {
+              await supabase.functions.invoke("send-transactional-email", {
+                body: {
+                  templateName: "wallet-deposit-credited",
+                  recipientEmail: emp.email,
+                  idempotencyKey: `ussd-deposit-${externalRef}`,
+                  templateData: {
+                    employeeName: emp.name,
+                    amount: Number(amount).toLocaleString(),
+                    phone: normalizedPhone,
+                    reference: externalRef,
+                    date: new Date().toLocaleDateString("en-GB", {
+                      year: "numeric", month: "long", day: "numeric",
+                    }),
+                  },
+                },
+              });
+            } catch (emailErr) {
+              console.error("[USSD Payment Success] Deposit email failed:", emailErr);
+            }
+
+            // In-app notification so the deposit shows on the dashboard too
+            try {
+              await supabase.from("notifications").insert({
+                type: "system",
+                title: "Wallet Deposit Received",
+                message: `UGX ${Number(amount).toLocaleString()} credited via USSD from ${normalizedPhone}. Ref: ${shortRef}`,
+                priority: "medium",
+                target_user_id: emp.id,
+              });
+            } catch (notifErr) {
+              console.error("[USSD Payment Success] Notification insert failed:", notifErr);
+            }
           }
         }
       }

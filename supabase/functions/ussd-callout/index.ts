@@ -130,6 +130,27 @@ serve(async (req) => {
         ? services.map((s) => `${s.service_key}.${s.name}`).join("\n")
         : "1.Transport Recovery\n2.Pay Loaders\n3.Advance Recovery\n4.Request Advance\n5.Deposit to Wallet";
 
+      // Resolve the caller's employee record so we can show whose wallet
+      // any deposit will be credited to BEFORE Yo prompts for the amount.
+      let walletOwnerLine = "";
+      let walletOwnerName = "";
+      try {
+        const phoneVariants = [cleanPhone, `0${cleanPhone.slice(3)}`];
+        const { data: caller } = await supabase
+          .from("employees")
+          .select("name")
+          .or(phoneVariants.map((p) => `phone.eq.${p}`).join(","))
+          .maybeSingle();
+        if (caller?.name) {
+          walletOwnerName = caller.name;
+          walletOwnerLine = `\nWallet owner: ${caller.name}`;
+        } else {
+          walletOwnerLine = `\nNo wallet found for ${cleanPhone}. Contact admin.`;
+        }
+      } catch (e) {
+        console.error(`[USSD Callout] Wallet owner lookup failed:`, e);
+      }
+
       // Look up active loans by caller phone so the user sees their
       // outstanding balance before entering an amount.
       let loanLine = "";
@@ -177,10 +198,12 @@ serve(async (req) => {
 
       return new Response(JSON.stringify({
         validated: true,
-        message: `Select 1 to proceed to available services${loanLine}`,
+        message: `Select 1 to proceed to available services${walletOwnerLine}${loanLine}`,
         ussd_processor_params: {
           other_services: serviceList,
           payment_external_reference: paymentRef,
+          wallet_owner_name: walletOwnerName,
+          caller_phone: cleanPhone,
         },
         success_ipn_url: successIpnUrl,
         failure_ipn_url: failureIpnUrl,
