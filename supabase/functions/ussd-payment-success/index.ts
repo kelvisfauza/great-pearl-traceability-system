@@ -355,6 +355,72 @@ async function processServicePayment(
         `Loan repayment UGX ${Number(totalApplied).toLocaleString()} received.\n` +
         `Outstanding: UGX ${Math.max(0, newOutstanding).toLocaleString()}.\n` +
         `Ref: ${shortRef}. Thank you.`;
+
+      // ── Notify the user (SMS + Email). Failures are logged but never abort. ──
+      try {
+        const outstanding = Math.max(0, newOutstanding);
+        const fullyPaid = outstanding <= 0;
+        const recipientName = emp?.name || "Customer";
+        const formattedAmount = `UGX ${Number(totalApplied).toLocaleString()}`;
+        const formattedOutstanding = `UGX ${outstanding.toLocaleString()}`;
+
+        // SMS — short and direct
+        try {
+          await supabase.functions.invoke("send-sms", {
+            body: {
+              recipientPhone: normalizedPhone,
+              recipientEmail: emp?.email || null,
+              message:
+                `Great Pearl Coffee: Loan repayment of ${formattedAmount} received via USSD. ` +
+                (fullyPaid
+                  ? `Loan fully cleared. Thank you!`
+                  : `Outstanding balance: ${formattedOutstanding}.`) +
+                ` Ref: ${shortRef}`,
+              priority: "high",
+            },
+          });
+        } catch (smsErr) {
+          console.error("[USSD Payment Success] Loan repayment SMS failed:", smsErr);
+        }
+
+        // Branded email confirmation (operations auto-CC'd by send-transactional-email)
+        if (emp?.email) {
+          try {
+            await supabase.functions.invoke("send-transactional-email", {
+              body: {
+                recipientEmail: emp.email,
+                recipientName,
+                subject: fullyPaid
+                  ? `Loan Fully Repaid - ${formattedAmount}`
+                  : `Loan Repayment Received - ${formattedAmount}`,
+                heading: fullyPaid
+                  ? "Loan Cleared"
+                  : "Loan Repayment Received",
+                body:
+                  `Hello ${recipientName},\n\n` +
+                  `We have received your loan repayment of ${formattedAmount} via USSD Mobile Money.\n\n` +
+                  `Reference: ${externalRef}\n` +
+                  `Phone: ${normalizedPhone}\n` +
+                  (fullyPaid
+                    ? `Your loan has been fully cleared. Thank you for completing your repayment!`
+                    : `Outstanding balance: ${formattedOutstanding}`) +
+                  `\n\nThis transaction has been recorded on your statement.\n\n` +
+                  `If you did not authorize this payment, please contact administration immediately.`,
+                purpose: "transactional",
+                idempotency_key: `ussd-loan-repay-${externalRef}`,
+              },
+            });
+          } catch (emailErr) {
+            console.error("[USSD Payment Success] Loan repayment email failed:", emailErr);
+          }
+        } else {
+          console.warn(
+            `[USSD Payment Success] No email on file for ${normalizedPhone}; skipped repayment email.`,
+          );
+        }
+      } catch (notifyErr) {
+        console.error("[USSD Payment Success] Notification block error:", notifyErr);
+      }
     } else {
       userMessage = `No active loan found for ${normalizedPhone}. Please contact admin.`;
     }
