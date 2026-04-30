@@ -358,7 +358,7 @@ async function processServicePayment(
       // Resolve employee by target phone
       const { data: emp } = await supabase
         .from("employees")
-        .select("id, name, email")
+        .select("id, name, email, phone")
         .or(phoneVariants.map((p) => `phone.eq.${p}`).join(","))
         .maybeSingle();
 
@@ -402,28 +402,64 @@ async function processServicePayment(
             console.log(`[USSD Payment Success] ✅ Wallet credited: ${emp.name} (+UGX ${amount}) ref ${ledgerRef}`);
             // Short ref for the USSD confirmation message (last 6 chars of external ref)
             const shortRef = externalRef.slice(-6).toUpperCase();
-            const targetLine = targetPhone !== normalizedPhone ? `\nTo: ${emp.name}` : "";
+            const isThirdParty = targetPhone !== normalizedPhone;
+            const targetLine = isThirdParty ? `\nTo: ${emp.name}` : "";
             userMessage =
               `Wallet credited UGX ${Number(amount).toLocaleString()}.${targetLine}\n` +
               `Ref: ${shortRef}\n` +
               `Thank you for using Great Agro Coffee.`;
 
+            // Try to look up depositor's name (only useful for third-party)
+            let depositorName = "";
+            if (isThirdParty) {
+              const callerVariants = [normalizedPhone, `0${normalizedPhone.slice(3)}`];
+              const { data: caller } = await supabase
+                .from("employees")
+                .select("name")
+                .or(callerVariants.map((p) => `phone.eq.${p}`).join(","))
+                .maybeSingle();
+              depositorName = caller?.name || normalizedPhone;
+            }
+
             // Fire-and-forget SMS to the caller (depositor)
             try {
-              const smsMsg =
-                `Dear ${emp.name}, UGX ${Number(amount).toLocaleString()} has been credited to your wallet via USSD. ` +
-                `Ref: ${shortRef}. - Great Agro Coffee`;
+              const smsMsg = isThirdParty
+                ? `You sent UGX ${Number(amount).toLocaleString()} to ${emp.name}'s wallet via USSD. ` +
+                  `Ref: ${shortRef}. - Great Agro Coffee`
+                : `Dear ${emp.name}, UGX ${Number(amount).toLocaleString()} has been credited to your wallet via USSD. ` +
+                  `Ref: ${shortRef}. - Great Agro Coffee`;
               await supabase.functions.invoke("send-sms", {
                 body: {
                   phone: normalizedPhone,
                   message: smsMsg,
-                  userName: emp.name,
+                  userName: isThirdParty ? depositorName : emp.name,
                   messageType: "payout_confirmation",
-                  recipientEmail: emp.email,
+                  recipientEmail: isThirdParty ? null : emp.email,
                 },
               });
             } catch (smsErr) {
               console.error("[USSD Payment Success] Deposit SMS failed:", smsErr);
+            }
+
+            // SMS to the WALLET OWNER too — only when someone else deposited
+            // for them (avoid duplicate SMS when depositor == owner).
+            if (isThirdParty && emp.phone) {
+              try {
+                const ownerSms =
+                  `Dear ${emp.name}, UGX ${Number(amount).toLocaleString()} was deposited to your wallet by ` +
+                  `${depositorName} (${normalizedPhone}). Ref: ${shortRef}. - Great Agro Coffee`;
+                await supabase.functions.invoke("send-sms", {
+                  body: {
+                    phone: emp.phone,
+                    message: ownerSms,
+                    userName: emp.name,
+                    messageType: "payout_confirmation",
+                    recipientEmail: emp.email,
+                  },
+                });
+              } catch (ownerSmsErr) {
+                console.error("[USSD Payment Success] Owner SMS failed:", ownerSmsErr);
+              }
             }
 
             // Branded email to the wallet owner (operations auto-CC'd)
@@ -437,6 +473,7 @@ async function processServicePayment(
                     employeeName: emp.name,
                     amount: Number(amount).toLocaleString(),
                     phone: normalizedPhone,
+                    depositorName: isThirdParty ? depositorName : "",
                     reference: externalRef,
                     date: new Date().toLocaleDateString("en-GB", {
                       year: "numeric", month: "long", day: "numeric",
@@ -453,7 +490,9 @@ async function processServicePayment(
               await supabase.from("notifications").insert({
                 type: "system",
                 title: "Wallet Deposit Received",
-                message: `UGX ${Number(amount).toLocaleString()} credited via USSD from ${normalizedPhone}. Ref: ${shortRef}`,
+                message: isThirdParty
+                  ? `UGX ${Number(amount).toLocaleString()} deposited to your wallet by ${depositorName} (${normalizedPhone}). Ref: ${shortRef}`
+                  : `UGX ${Number(amount).toLocaleString()} credited via USSD from ${normalizedPhone}. Ref: ${shortRef}`,
                 priority: "medium",
                 target_user_id: emp.id,
               });
