@@ -143,7 +143,7 @@ const AdminRejectedLotsReview = () => {
           unitPrice: price,
           assessedBy: selectedLot.assessed_by,
           physicalAssessmentBy: (selectedLot as any).physical_assessment_by || undefined,
-          inputBy: cr.created_by || undefined,
+          inputBy: (cr as any).created_by || undefined,
           discretionBy: employee?.name || employee?.email || undefined,
           createdAt: new Date().toISOString(),
           moisture: selectedLot.moisture,
