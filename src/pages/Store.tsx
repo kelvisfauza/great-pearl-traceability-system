@@ -431,6 +431,8 @@ const Store = () => {
 
     const grnData = {
       grnNumber: record.batchNumber,
+      batchNumber: record.batchNumber,
+      inventoryBatchId: record.batchNumber,
       supplierName: record.supplierName,
       coffeeType: record.coffeeType,
       qualityAssessment: qualityAssessment ? "Assessed" : "Pending Assessment",
@@ -438,6 +440,10 @@ const Store = () => {
       totalKgs: record.kilograms,
       unitPrice: qualityAssessment?.final_price || qualityAssessment?.suggested_price || 0,
       assessedBy: qualityAssessment?.assessed_by || "N/A",
+      physicalAssessmentBy: qualityAssessment?.physical_assessment_by || undefined,
+      inputBy: record.created_by || record.createdBy || record.recordedBy || undefined,
+      discretionBy: qualityAssessment?.admin_discretion_by || undefined,
+      isDiscretionBuy: qualityAssessment?.admin_discretion_buy || undefined,
       createdAt: record.date,
       moisture: qualityAssessment?.moisture,
       group1_defects: qualityAssessment?.group1_defects,
