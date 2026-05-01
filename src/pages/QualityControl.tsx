@@ -166,7 +166,8 @@ const QualityControl = () => {
     // Manual override and comments
     manual_price: '',
     comments: '',
-    use_manual_price: false  // Toggle between calculator and manual price
+    use_manual_price: false,  // Toggle between calculator and manual price
+    physical_assessment_by: ''
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
