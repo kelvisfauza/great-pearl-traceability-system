@@ -16,6 +16,7 @@ export interface StoreRecord {
   status: string;
   grnPrintedAt?: string | null;
   grnPrintedBy?: string | null;
+  createdBy?: string | null;
 }
 
 export interface Supplier {
@@ -68,6 +69,7 @@ export const useStoreManagement = () => {
         status: record.status || 'pending',
         grnPrintedAt: record.grn_printed_at || null,
         grnPrintedBy: record.grn_printed_by || null,
+        createdBy: record.created_by || null,
       }));
       
       // Get quality assessments status
