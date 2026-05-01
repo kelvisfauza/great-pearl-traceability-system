@@ -24,7 +24,7 @@ export const sendApprovalActionEmails = async (params: ApprovalEmailParams, stag
     // Determine who to send to based on stage
     const { data: employees, error: empError } = await supabase
       .from('employees')
-      .select('name, email, phone, role, department')
+      .select('name, email, phone, role, department, disabled')
       .eq('status', 'Active');
 
     if (empError || !employees) {
@@ -32,11 +32,14 @@ export const sendApprovalActionEmails = async (params: ApprovalEmailParams, stag
       return;
     }
 
+    // Exclude disabled accounts — they should not receive any system emails.
+    const activeEmployees = employees.filter((e: any) => e.disabled !== true);
+
     let approvers: typeof employees;
     if (stage === 'finance') {
-      approvers = employees.filter(e => e.department === 'Finance');
+      approvers = activeEmployees.filter(e => e.department === 'Finance');
     } else {
-      approvers = employees.filter(e => 
+      approvers = activeEmployees.filter(e => 
         e.role === 'Administrator' || e.role === 'Super Admin'
       );
     }

@@ -218,16 +218,69 @@ serve(async (req) => {
     if (!isAllowedType && !isOtpMessage) {
       console.log(`🚫 SMS BLOCKED (non-OTP type: ${messageType}). Use email instead. Recipient: ${userName || recipientEmail || phone}`)
       
-      // Log as redirected but return success so callers don't break
+      // Actually redirect to email when we have a recipient address.
+      // Previously this was only LOGGED as redirected_to_email but no email
+      // was ever sent — callers assumed the redirect happened.
+      let emailSent = false
+      if (recipientEmail) {
+        try {
+          // Check disabled flag — never email a disabled account.
+          const { data: emp } = await supabase
+            .from('employees')
+            .select('disabled')
+            .ilike('email', recipientEmail)
+            .maybeSingle()
+
+          if ((emp as any)?.disabled === true) {
+            console.log(`🚫 Skipping email redirect — recipient disabled: ${recipientEmail}`)
+          } else {
+            const titleMap: Record<string, string> = {
+              salary_approval: 'Salary Approved',
+              salary_initialized: 'Salary Initialized',
+              approval_request: 'Approval Required',
+              field_financing_approval: 'Field Financing Approved',
+              bonus_awarded: 'Bonus Awarded',
+              withdrawal_enabled: 'Withdrawals Enabled',
+              fraud_alert: 'Security Alert',
+            }
+            const title = titleMap[messageType?.toLowerCase() || ''] || 'Notification from Great Pearl Coffee'
+
+            const { error: emailErr } = await supabase.functions.invoke('send-transactional-email', {
+              body: {
+                templateName: 'general-notification',
+                recipientEmail,
+                idempotencyKey: `sms-redirect-${messageType || 'general'}-${recipientEmail}-${Date.now()}`,
+                templateData: {
+                  title,
+                  message,
+                  recipientName: userName || 'Team',
+                },
+              },
+            })
+            if (emailErr) {
+              console.error('SMS→email redirect failed to invoke send-transactional-email:', emailErr)
+            } else {
+              emailSent = true
+              console.log(`📧 SMS redirected to email for ${recipientEmail}`)
+            }
+          }
+        } catch (redirectErr) {
+          console.error('SMS→email redirect error:', redirectErr)
+        }
+      } else {
+        console.warn(`⚠️ SMS blocked but no recipientEmail provided — nothing was redirected (type: ${messageType})`)
+      }
+
+      // Log the outcome
       try {
         await supabase.from('sms_logs').insert({
           recipient_phone: phone,
           recipient_name: userName,
           recipient_email: recipientEmail,
-          message_content: message?.substring(0, 50) + '... [blocked - use email]',
+          message_content: message?.substring(0, 50) + (emailSent ? '... [redirected to email]' : '... [blocked - no email sent]'),
           message_type: messageType || 'general',
-          status: 'redirected_to_email',
-          provider: 'BLOCKED',
+          status: emailSent ? 'redirected_to_email' : 'blocked_no_email',
+          provider: emailSent ? 'EMAIL_REDIRECT' : 'BLOCKED',
           credits_used: 0,
           department: department,
           triggered_by: triggeredBy,
@@ -241,7 +294,10 @@ serve(async (req) => {
         JSON.stringify({ 
           success: true, 
           blocked: true, 
-          reason: 'Non-OTP SMS blocked to save credits. Use email for this notification type.',
+          emailSent,
+          reason: emailSent
+            ? 'Non-OTP SMS redirected to email.'
+            : 'Non-OTP SMS blocked to save credits. No recipientEmail was provided to redirect to.',
           messageType 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
