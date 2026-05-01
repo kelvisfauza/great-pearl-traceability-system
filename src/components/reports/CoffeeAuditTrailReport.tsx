@@ -31,6 +31,26 @@ interface SourceLeg {
   assessed_by: string | null;
   received_by: string | null;
   is_discretion: boolean;
+  batch_number: string | null;
+  quality: {
+    moisture: number | null;
+    group1_defects: number | null;
+    group2_defects: number | null;
+    below12: number | null;
+    pods: number | null;
+    husks: number | null;
+    stones: number | null;
+    fm: number | null;
+    clean_d14: number | null;
+    outturn: number | null;
+    outturn_price: number | null;
+    suggested_price: number | null;
+    final_price: number | null;
+    status: string | null;
+    quality_note: string | null;
+    comments: string | null;
+    date_assessed: string | null;
+  } | null;
 }
 
 interface BatchTrail {
@@ -55,9 +75,14 @@ interface BatchTrail {
 const CoffeeAuditTrailReport = () => {
   const { toast } = useToast();
   const today = new Date().toISOString().slice(0, 10);
-  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
+  // Default to last 90 days so users immediately see existing batches/sales
+  const defaultStart = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 90);
+    return d.toISOString().slice(0, 10);
+  })();
 
-  const [startDate, setStartDate] = useState(monthStart);
+  const [startDate, setStartDate] = useState(defaultStart);
   const [endDate, setEndDate] = useState(today);
   const [coffeeType, setCoffeeType] = useState<string>("all");
   const [supplierFilter, setSupplierFilter] = useState("");
@@ -79,19 +104,55 @@ const CoffeeAuditTrailReport = () => {
     }
     setLoading(true);
     try {
-      // 1. Fetch batches in range
-      let bq = supabase
-        .from("inventory_batches")
-        .select("id, batch_code, coffee_type, batch_date, total_kilograms, remaining_kilograms, status")
-        .gte("batch_date", startDate)
-        .lte("batch_date", endDate)
-        .order("batch_date", { ascending: false });
-      if (coffeeType !== "all") bq = bq.eq("coffee_type", coffeeType);
-      if (batchFilter.trim()) bq = bq.ilike("batch_code", `%${batchFilter.trim()}%`);
-      const { data: batches, error } = await bq;
-      if (error) throw error;
+      // 1. Fetch batches that intersect the date range:
+      //    a) batch_date falls in range, OR
+      //    b) batch had a sale/movement in range
+      const endIso = endDate + "T23:59:59";
+      const [batchesByDateRes, salesInRangeRes, movesInRangeRes] = await Promise.all([
+        (() => {
+          let q = supabase
+            .from("inventory_batches")
+            .select("id, batch_code, coffee_type, batch_date, total_kilograms, remaining_kilograms, status")
+            .gte("batch_date", startDate)
+            .lte("batch_date", endDate);
+          if (coffeeType !== "all") q = q.eq("coffee_type", coffeeType);
+          if (batchFilter.trim()) q = q.ilike("batch_code", `%${batchFilter.trim()}%`);
+          return q;
+        })(),
+        supabase.from("inventory_batch_sales")
+          .select("batch_id")
+          .gte("sale_date", startDate)
+          .lte("sale_date", endDate),
+        supabase.from("inventory_movements")
+          .select("reference_id, reference_type")
+          .gte("created_at", startDate)
+          .lte("created_at", endIso)
+          .eq("reference_type", "batch"),
+      ]);
+      if (batchesByDateRes.error) throw batchesByDateRes.error;
 
-      const batchIds = (batches || []).map(b => b.id);
+      const extraIds = new Set<string>();
+      (salesInRangeRes.data || []).forEach((s: any) => s.batch_id && extraIds.add(s.batch_id));
+      (movesInRangeRes.data || []).forEach((m: any) => m.reference_id && extraIds.add(m.reference_id));
+      const knownIds = new Set((batchesByDateRes.data || []).map((b: any) => b.id));
+      const missingIds = [...extraIds].filter(id => !knownIds.has(id));
+
+      let extraBatches: any[] = [];
+      if (missingIds.length > 0) {
+        let q = supabase
+          .from("inventory_batches")
+          .select("id, batch_code, coffee_type, batch_date, total_kilograms, remaining_kilograms, status")
+          .in("id", missingIds);
+        if (coffeeType !== "all") q = q.eq("coffee_type", coffeeType);
+        if (batchFilter.trim()) q = q.ilike("batch_code", `%${batchFilter.trim()}%`);
+        const { data, error: extraErr } = await q;
+        if (extraErr) throw extraErr;
+        extraBatches = data || [];
+      }
+
+      const batches = [...(batchesByDateRes.data || []), ...extraBatches]
+        .sort((a, b) => (b.batch_date || "").localeCompare(a.batch_date || ""));
+      const batchIds = batches.map((b: any) => b.id);
       if (batchIds.length === 0) {
         setTrails([]);
         setGenerated(true);
@@ -130,7 +191,7 @@ const CoffeeAuditTrailReport = () => {
       (crRes.data || []).forEach((r: any) => crMap.set(r.id, r));
       const batchNums = [...new Set((crRes.data || []).map((r: any) => r.batch_number).filter(Boolean))];
       const qaData = batchNums.length ? (await supabase.from("quality_assessments")
-        .select("batch_number, final_price, suggested_price, admin_discretion_price, admin_discretion_buy, assessed_by")
+        .select("batch_number, final_price, suggested_price, admin_discretion_price, admin_discretion_buy, assessed_by, moisture, group1_defects, group2_defects, below12, pods, husks, stones, fm, clean_d14, outturn, outturn_price, status, quality_note, comments, date_assessed")
         .in("batch_number", batchNums)).data || [] : [];
       const qaMap = new Map<string, any>();
       qaData.forEach((q: any) => qaMap.set(q.batch_number, q));
@@ -176,6 +237,26 @@ const CoffeeAuditTrailReport = () => {
             assessed_by: qa?.assessed_by || null,
             received_by: cr?.created_by || null,
             is_discretion: isDisc,
+            batch_number: cr?.batch_number || null,
+            quality: qa ? {
+              moisture: qa.moisture ?? null,
+              group1_defects: qa.group1_defects ?? null,
+              group2_defects: qa.group2_defects ?? null,
+              below12: qa.below12 ?? null,
+              pods: qa.pods ?? null,
+              husks: qa.husks ?? null,
+              stones: qa.stones ?? null,
+              fm: qa.fm ?? null,
+              clean_d14: qa.clean_d14 ?? null,
+              outturn: qa.outturn ?? null,
+              outturn_price: qa.outturn_price ?? null,
+              suggested_price: qa.suggested_price ?? null,
+              final_price: qa.final_price ?? null,
+              status: qa.status ?? null,
+              quality_note: qa.quality_note ?? null,
+              comments: qa.comments ?? null,
+              date_assessed: qa.date_assessed ?? null,
+            } : null,
           };
         });
 
@@ -353,11 +434,11 @@ const CoffeeAuditTrailReport = () => {
 
           <div class="leg-title">① STORE — Sources of this batch</div>
           <table><thead><tr>
-            <th>Date</th><th>Coffee Record</th><th>Supplier</th><th class="right">Kg</th><th class="right">Buy Price</th><th class="right">Value</th><th>Received By</th><th>Assessed By</th><th>Flag</th>
+            <th>Date</th><th>Batch #</th><th>Supplier</th><th class="right">Kg</th><th class="right">Buy Price</th><th class="right">Value</th><th>Received By</th><th>Assessed By</th><th>Flag</th>
           </tr></thead><tbody>
             ${t.sources.map(s => `<tr>
               <td>${s.purchase_date || '—'}</td>
-              <td style="font-family:monospace;font-size:8px;">${s.coffee_record_id}</td>
+              <td style="font-family:monospace;font-size:9px;">${s.batch_number || s.coffee_record_id.slice(0,8)}</td>
               <td>${s.supplier_name}</td>
               <td class="right">${fmt(s.kilograms)}</td>
               <td class="right">${s.buying_price ? fmt(s.buying_price) : '—'}</td>
@@ -366,6 +447,32 @@ const CoffeeAuditTrailReport = () => {
               <td>${s.assessed_by || '—'}</td>
               <td>${s.is_discretion ? '<b style="color:#dc2626">DISCRETION</b>' : ''}</td>
             </tr>`).join('') || '<tr><td colspan="9" style="text-align:center;color:#6b7280;">No source records linked.</td></tr>'}
+          </tbody></table>
+
+          <div class="leg-title">①·B QUALITY — Assessment details per source</div>
+          <table><thead><tr>
+            <th>Batch #</th><th class="right">MC %</th><th class="right">G1</th><th class="right">G2</th><th class="right">&lt;12</th><th class="right">Pods</th><th class="right">Husks</th><th class="right">Stones</th><th class="right">FM</th><th class="right">Clean D14</th><th class="right">Outturn</th><th class="right">Sugg.</th><th class="right">Final</th><th>Status</th><th>Note</th>
+          </tr></thead><tbody>
+            ${t.sources.filter(s => s.quality).map(s => {
+              const q = s.quality!;
+              return `<tr>
+                <td style="font-family:monospace;font-size:9px;">${s.batch_number || '—'}</td>
+                <td class="right">${q.moisture ?? '—'}</td>
+                <td class="right">${q.group1_defects ?? '—'}</td>
+                <td class="right">${q.group2_defects ?? '—'}</td>
+                <td class="right">${q.below12 ?? '—'}</td>
+                <td class="right">${q.pods ?? '—'}</td>
+                <td class="right">${q.husks ?? '—'}</td>
+                <td class="right">${q.stones ?? '—'}</td>
+                <td class="right">${q.fm ?? '—'}</td>
+                <td class="right">${q.clean_d14 ?? '—'}</td>
+                <td class="right">${q.outturn ?? '—'}</td>
+                <td class="right">${q.suggested_price ? fmt(q.suggested_price) : '—'}</td>
+                <td class="right">${q.final_price ? fmt(q.final_price) : '—'}</td>
+                <td>${q.status || '—'}</td>
+                <td>${(q.quality_note || q.comments || '').toString().slice(0,80)}</td>
+              </tr>`;
+            }).join('') || '<tr><td colspan="15" style="text-align:center;color:#6b7280;">No quality assessments linked.</td></tr>'}
           </tbody></table>
 
           <div class="leg-title">② INVENTORY — Movements</div>
@@ -520,10 +627,10 @@ const CoffeeAuditTrailReport = () => {
 
                         <Section title="① STORE — Sources">
                           <MiniTable
-                            head={["Date","Coffee Record","Supplier","Kg","Buy Price","Value","Received By","Assessed By","Flag"]}
+                            head={["Date","Batch #","Supplier","Kg","Buy Price","Value","Received By","Assessed By","Flag"]}
                             rows={t.sources.map(s => [
                               s.purchase_date || "—",
-                              <span className="font-mono text-xs">{s.coffee_record_id.slice(0, 12)}…</span>,
+                              <span className="font-mono text-xs">{s.batch_number || s.coffee_record_id.slice(0, 8)}</span>,
                               s.supplier_name,
                               fmt(s.kilograms),
                               s.buying_price ? fmt(s.buying_price) : "—",
@@ -533,6 +640,33 @@ const CoffeeAuditTrailReport = () => {
                               s.is_discretion ? <Badge variant="destructive">DISCRETION</Badge> : "",
                             ])}
                             empty="No source records linked."
+                          />
+                        </Section>
+
+                        <Section title="①·B QUALITY — Assessment details per source">
+                          <MiniTable
+                            head={["Batch #","MC %","G1","G2","<12","Pods","Husks","Stones","FM","Clean D14","Outturn","Sugg.","Final","Status","Note"]}
+                            rows={t.sources.filter(s => s.quality).map(s => {
+                              const q = s.quality!;
+                              return [
+                                <span className="font-mono text-xs">{s.batch_number || "—"}</span>,
+                                q.moisture ?? "—",
+                                q.group1_defects ?? "—",
+                                q.group2_defects ?? "—",
+                                q.below12 ?? "—",
+                                q.pods ?? "—",
+                                q.husks ?? "—",
+                                q.stones ?? "—",
+                                q.fm ?? "—",
+                                q.clean_d14 ?? "—",
+                                q.outturn ?? "—",
+                                q.suggested_price ? fmt(q.suggested_price) : "—",
+                                q.final_price ? fmt(q.final_price) : "—",
+                                q.status || "—",
+                                <span className="text-xs">{(q.quality_note || q.comments || "").toString().slice(0,60)}</span>,
+                              ];
+                            })}
+                            empty="No quality assessments linked to these sources."
                           />
                         </Section>
 
