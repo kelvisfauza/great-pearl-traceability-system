@@ -478,7 +478,7 @@ export function getGRNDocumentMarkup(data: GRNDocumentData): string {
   ];
 
   return `
-    <div class="gac-grn-page">
+    <div class="gac-grn-page${data.isDiscretionBuy ? " has-discretion" : ""}">
       <table class="gac-grn-top-table">
         <tr>
           <td class="gac-grn-logo-cell">
