@@ -44,6 +44,12 @@ export interface GRNDocumentData {
   discretionBy?: string;
   inventoryBatchId?: string;
   batchNumber?: string;
+  recoveries?: Array<{
+    type: "advance" | "expense";
+    description: string;
+    date?: string;
+    amount: number;
+  }>;
 }
 
 const LOGO_URL = `${typeof window !== "undefined" ? window.location.origin : ""}/lovable-uploads/great-agro-coffee-logo.png`;
