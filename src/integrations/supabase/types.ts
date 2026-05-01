@@ -10303,6 +10303,7 @@ export type Database = {
         Args: { user_uuid: string }
         Returns: number
       }
+      get_current_user_department: { Args: never; Returns: string }
       get_current_user_email: { Args: never; Returns: string }
       get_guarantor_candidates: {
         Args: never
@@ -10442,6 +10443,7 @@ export type Database = {
         Returns: undefined
       }
       is_current_user_admin: { Args: never; Returns: boolean }
+      is_current_user_admin_by_role: { Args: never; Returns: boolean }
       is_current_user_administrator: { Args: never; Returns: boolean }
       is_ip_whitelisted: { Args: { check_ip: string }; Returns: boolean }
       is_manager_or_above: { Args: never; Returns: boolean }
