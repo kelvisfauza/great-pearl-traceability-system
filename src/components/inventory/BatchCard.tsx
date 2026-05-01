@@ -370,6 +370,7 @@ const BatchCard = ({ batch }: BatchCardProps) => {
                 <div className="space-y-2 max-h-40 overflow-y-auto">
                   {batch.sources.map((source) => {
                     const display = getSupplierDisplay(source);
+                    const meta = sourceMetaMap[source.coffee_record_id] || {};
                     return (
                       <div 
                         key={source.id} 
@@ -378,7 +379,10 @@ const BatchCard = ({ batch }: BatchCardProps) => {
                         <div>
                           <p className="font-medium">{display.displayName}</p>
                           <p className="text-xs text-muted-foreground">
-                            {format(new Date(source.purchase_date), 'PP')}
+                            Delivered: {format(new Date(meta.deliveryDate || source.purchase_date), 'PP')}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Input by: {meta.inputBy || '—'}
                           </p>
                         </div>
                         <span className="font-semibold text-green-500">
