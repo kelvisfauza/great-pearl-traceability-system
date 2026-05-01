@@ -1725,6 +1725,19 @@ const QualityControl = () => {
                   
                   <div className="grid grid-cols-1 gap-6 mt-6">
                     <div>
+                      <Label htmlFor="physical_assessment_by">Physical Assessment By *</Label>
+                      <Input
+                        id="physical_assessment_by"
+                        value={assessmentForm.physical_assessment_by}
+                        onChange={(e) => setAssessmentForm({...assessmentForm, physical_assessment_by: e.target.value})}
+                        placeholder="Name of person who performed the physical assessment"
+                        disabled={readOnly}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        System assessment by: <span className="font-medium text-foreground">{employee?.name || employee?.email || 'Quality Controller'}</span>
+                      </p>
+                    </div>
+                    <div>
                       <Label htmlFor="assessment_comments">Assessment Comments</Label>
                       <Textarea
                         id="assessment_comments"
