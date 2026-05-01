@@ -13,22 +13,22 @@ import { Card, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
 import { Loader2, Package, User, Scale, Layers } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { cachedQuery } from "@/lib/offline/cache";
 
 const CoffeeReceiptsTable = () => {
   const isMobile = useIsMobile();
   
   const { data: receipts, isLoading } = useQuery({
     queryKey: ['v2-coffee-receipts'],
-    queryFn: async () => {
+    queryFn: () => cachedQuery('coffee_records:recent10', async () => {
       const { data, error } = await supabase
         .from('coffee_records')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(10);
-      
       if (error) throw error;
       return data;
-    }
+    })
   });
 
   const getStatusBadge = (status: string) => {
