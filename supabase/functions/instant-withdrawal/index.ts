@@ -187,8 +187,23 @@ serve(async (req) => {
     // Verify wallet balance
     const { data: balanceData } = await supabase.rpc('get_user_balance_safe', { user_email: userEmail });
     const walletBalance = Number(balanceData?.[0]?.wallet_balance || 0);
-    if (walletBalance < numAmount) {
-      return respond(false, { error: `Insufficient wallet balance. Available: UGX ${walletBalance.toLocaleString()}` });
+
+    // Loan minimum balance enforcement: borrowers and guarantors on active loans
+    // must keep UGX 10,000 in their wallet at all times.
+    let reserve = 0;
+    try {
+      const { data: hasLoan } = await supabase.rpc('has_active_loan_obligation', { p_user_id: resolvedUserId });
+      if (hasLoan === true) reserve = 10000;
+    } catch (e) {
+      console.warn('[instant-withdrawal] loan obligation check failed:', (e as Error).message);
+    }
+
+    const spendable = Math.max(0, walletBalance - reserve);
+    if (numAmount > spendable) {
+      const msg = reserve > 0
+        ? `You have an active loan (as borrower or guarantor). UGX ${reserve.toLocaleString()} must remain in your wallet. Available to withdraw: UGX ${spendable.toLocaleString()}.`
+        : `Insufficient wallet balance. Available: UGX ${walletBalance.toLocaleString()}`;
+      return respond(false, { error: msg });
     }
 
     // Fetch employee name early for narrative
