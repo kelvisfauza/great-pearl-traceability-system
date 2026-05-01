@@ -1,0 +1,1 @@
+UPDATE public.monthly_allowances SET amount = 10000, updated_at = now() WHERE allowance_type = 'airtime_allowance';
