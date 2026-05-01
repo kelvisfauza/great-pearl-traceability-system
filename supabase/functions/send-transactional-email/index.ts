@@ -77,6 +77,32 @@ Deno.serve(async (req) => {
     )
   }
 
+  // Centralized DISABLED account guard.
+  // Block sending to any employee whose account has been disabled by an admin.
+  // The 'operations' mailbox and CC copies bypass this check (handled below).
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (supabaseUrl && serviceKey) {
+      const supa = createClient(supabaseUrl, serviceKey)
+      const { data: emp } = await supa
+        .from('employees')
+        .select('disabled, status')
+        .ilike('email', effectiveRecipient)
+        .maybeSingle()
+      if (emp && (emp as any).disabled === true) {
+        console.log(`🚫 Email blocked — recipient disabled: ${effectiveRecipient} (template: ${templateName})`)
+        return new Response(
+          JSON.stringify({ ok: false, blocked: true, error: 'recipient_disabled', recipientEmail: effectiveRecipient }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+  } catch (guardErr) {
+    // Never let the guard itself break legitimate sends — just log and continue.
+    console.error('Disabled-account guard check failed (continuing):', guardErr)
+  }
+
   try {
     // Render React Email template
     const html = await renderAsync(
