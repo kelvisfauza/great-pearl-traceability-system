@@ -34,6 +34,11 @@ export interface GRNDocumentData {
   qualityApprovedBy?: string;
   managerName?: string;
   totalAmount?: number;
+  supplierBankName?: string;
+  supplierAccountName?: string;
+  supplierAccountNumber?: string;
+  supplierCode?: string;
+  supplierEmail?: string;
 }
 
 const LOGO_URL = `${typeof window !== "undefined" ? window.location.origin : ""}/lovable-uploads/great-agro-coffee-logo.png`;
