@@ -38,6 +38,7 @@ Deno.serve(async (req) => {
     let yoSent = 0
     let yoFailed = 0
     const errors: string[] = []
+    const sentPhonesThisRun = new Set<string>()
 
     for (const allowance of (allowances || [])) {
       try {
@@ -84,6 +85,35 @@ Deno.serve(async (req) => {
         }
 
         const cleanPhone = normalizePhone(employee.phone)
+
+        // ── DEDUP: never send airtime to the same phone twice in one run ──
+        // Also check if this phone already received ANY allowance airtime this month
+        if (sentPhonesThisRun.has(cleanPhone)) {
+          console.log(`[DEDUP] Phone ${cleanPhone} already received airtime in this run — skipping ${allowance.employee_name} (${allowance.allowance_type})`)
+          continue
+        }
+        const { data: phoneAlready } = await supabase
+          .from('monthly_allowance_log')
+          .select('id, ledger_reference')
+          .eq('month_year', monthYear)
+          .or(`ledger_reference.ilike.%${cleanPhone}%`)
+          .limit(1)
+          .maybeSingle()
+        // Fallback dedup via ledger metadata (phone field)
+        const { data: ledgerHit } = await supabase
+          .from('ledger_entries')
+          .select('id')
+          .eq('entry_type', 'PAYOUT')
+          .gte('created_at', `${monthYear}-01T00:00:00.000Z`)
+          .contains('metadata', { phone: cleanPhone, month_year: monthYear })
+          .limit(1)
+          .maybeSingle()
+        if (phoneAlready || ledgerHit) {
+          console.log(`[DEDUP] Phone ${cleanPhone} already received an allowance airtime this month — skipping ${allowance.employee_name}`)
+          sentPhonesThisRun.add(cleanPhone)
+          continue
+        }
+
         const yoResult = await yoSendAirtime({
           phone: cleanPhone,
           amount: Number(allowance.amount),
@@ -96,6 +126,7 @@ Deno.serve(async (req) => {
 
         if (yoOk) {
           yoSent++
+          sentPhonesThisRun.add(cleanPhone)
         } else {
           yoFailed++
           errors.push(`Yo airtime failed for ${allowance.employee_name}: ${yoResult.errorMessage || 'unknown'}`)
