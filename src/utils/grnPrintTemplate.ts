@@ -748,7 +748,7 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
 }
 
 export function getGRNPreviewHTML(data: GRNDocumentData): string {
-  return `${getGRNDocumentStyles()}<div class="gac-grn-preview-shell">${getGRNDocumentMarkup(data)}</div>`;
+  return `${getGRNDocumentStyles()}<div class="gac-grn-preview-shell">${getGRNDocumentMarkup(data, "supplier")}${getGRNDocumentMarkup(data, "finance")}</div>`;
 }
 
 export function getGRNPrintDocumentHTML(data: GRNDocumentData[], title: string): string {
