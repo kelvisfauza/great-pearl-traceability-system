@@ -593,6 +593,9 @@ export function getGRNDocumentStyles(): string {
 }
 
 export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier" | "finance" = "supplier"): string {
+  if (copyType === "finance") {
+    return getPaymentOrderMarkup(data);
+  }
   const createdAt = new Date(data.createdAt);
   const issueDate = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" });
   const deliveryDate = createdAt.toLocaleDateString("en-GB");
@@ -846,7 +849,7 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
 }
 
 export function getGRNPreviewHTML(data: GRNDocumentData): string {
-  return `${getGRNDocumentStyles()}<div class="gac-grn-preview-shell">${getGRNDocumentMarkup(data, "supplier")}${getGRNDocumentMarkup(data, "finance")}</div>`;
+  return `${getGRNDocumentStyles()}<div class="gac-grn-preview-shell">${getGRNDocumentMarkup(data, "supplier")}${getPaymentOrderMarkup(data)}</div>`;
 }
 
 export function getGRNPrintDocumentHTML(data: GRNDocumentData[], title: string): string {
@@ -861,7 +864,7 @@ export function getGRNPrintDocumentHTML(data: GRNDocumentData[], title: string):
       </head>
       <body>
         <div class="gac-grn-preview-shell">
-          ${data.map((item) => `${getGRNDocumentMarkup(item, "supplier")}${getGRNDocumentMarkup(item, "finance")}`).join("")}
+          ${data.map((item) => `${getGRNDocumentMarkup(item, "supplier")}${getPaymentOrderMarkup(item)}`).join("")}
         </div>
         <script>
           window.onload = function () {
