@@ -1,41 +1,18 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useDocumentVerification } from '@/hooks/useDocumentVerification';
-import { getVerificationQRUrl } from '@/utils/verificationCode';
 import { Printer } from 'lucide-react';
+import { GRNDocumentData, getGRNPreviewHTML, getGRNPrintDocumentHTML } from '@/utils/grnPrintTemplate';
 
 interface GRNPrintModalProps {
   open: boolean;
   onClose: () => void;
-  grnData: {
-    grnNumber: string;
-    supplierName: string;
-    coffeeType: string;
-    qualityAssessment: string;
-    numberOfBags: number;
-    totalKgs: number;
-    unitPrice: number;
-    assessedBy: string;
-    createdAt: string;
-    moisture?: number;
-    group1_defects?: number;
-    group2_defects?: number;
-    below12?: number;
-    pods?: number;
-    husks?: number;
-    stones?: number;
-    outturn?: number;
-    calculatorComments?: string;
-    isDiscretionBuy?: boolean;
-    rejectionReason?: string;
-    printedBy?: string;
-  } | null;
+  grnData: GRNDocumentData | null;
   onPrinted?: () => void;
 }
 
 const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, onPrinted }) => {
-  const printRef = useRef<HTMLDivElement>(null);
   const { createVerification } = useDocumentVerification();
   const [verificationCode, setVerificationCode] = useState<string | null>(null);
 
@@ -51,311 +28,61 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
             coffeeType: grnData.coffeeType,
             totalKgs: grnData.totalKgs,
             unitPrice: grnData.unitPrice,
-            assessedBy: grnData.assessedBy
-          }
+            assessedBy: grnData.assessedBy,
+          },
         });
         setVerificationCode(code);
       }
     };
+
     generateVerification();
-  }, [open, grnData]);
+  }, [open, grnData, verificationCode, createVerification]);
 
   useEffect(() => {
     if (!open) setVerificationCode(null);
   }, [open]);
 
-  if (!grnData) return null;
-
-  const {
-    grnNumber, supplierName, coffeeType, numberOfBags,
-    totalKgs, unitPrice, assessedBy, createdAt,
-    moisture, group1_defects, group2_defects, below12, pods, husks, stones,
-    outturn, calculatorComments, isDiscretionBuy, rejectionReason
-  } = grnData;
-
-  const totalAmount = totalKgs * unitPrice;
-  const dateObj = new Date(createdAt);
-  const formattedDate = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-  const formattedTime = dateObj.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-
-  // Number to words helper
-  const numberToWords = (num: number): string => {
-    if (num === 0) return 'Zero';
-    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
-      'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-    const convert = (n: number): string => {
-      if (n < 20) return ones[n];
-      if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? ' ' + ones[n % 10] : '');
-      if (n < 1000) return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' and ' + convert(n % 100) : '');
-      if (n < 1000000) return convert(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + convert(n % 1000) : '');
-      return convert(Math.floor(n / 1000000)) + ' Million' + (n % 1000000 ? ' ' + convert(n % 1000000) : '');
+  const previewData = useMemo(() => {
+    if (!grnData) return null;
+    return {
+      ...grnData,
+      verificationCode: verificationCode ?? grnData.verificationCode,
     };
-    return convert(Math.floor(num)) + ' Shillings Only';
-  };
+  }, [grnData, verificationCode]);
 
-  const qualityParameters = [
-    { parameter: 'Moisture Content', value: moisture, unit: '%', standard: '≤ 14%' },
-    { parameter: 'Group 1 Defects', value: group1_defects, unit: '%', standard: '≤ 4%' },
-    { parameter: 'Group 2 Defects', value: group2_defects, unit: '%', standard: '≤ 17%' },
-    { parameter: 'Below Screen 12', value: below12, unit: '%', standard: '≤ 2%' },
-    { parameter: 'Total Foreign Matter', value: pods !== undefined && husks !== undefined && stones !== undefined ? pods + husks + stones : undefined, unit: '%', standard: '≤ 5%' },
-    { parameter: 'Pods', value: pods, unit: '%', standard: '—' },
-    { parameter: 'Husks', value: husks, unit: '%', standard: '—' },
-    { parameter: 'Stones/Foreign Matter', value: stones, unit: '%', standard: '—' },
-  ];
-
-  const totalFM = pods !== undefined && husks !== undefined && stones !== undefined ? pods + husks + stones : undefined;
+  const previewHtml = useMemo(() => {
+    if (!previewData) return '';
+    return getGRNPreviewHTML(previewData);
+  }, [previewData]);
 
   const handlePrint = () => {
-    if (!printRef.current) return;
-    const content = printRef.current.innerHTML;
-    const printWindow = window.open('', '', 'width=900,height=1200');
+    if (!previewData) return;
+
+    const printWindow = window.open('', '', 'width=1000,height=1200');
     if (!printWindow) return;
 
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html lang="en">
-        <head>
-          <meta charset="UTF-8" />
-          <title>GRN - ${grnNumber}</title>
-          <style>${getGRNPrintStyles()}</style>
-        </head>
-        <body>
-          ${content}
-          <script>
-            window.onload = function() {
-              window.print();
-              window.close();
-            };
-          <\/script>
-        </body>
-      </html>
-    `);
+    printWindow.document.write(getGRNPrintDocumentHTML([previewData], `GRN - ${previewData.grnNumber}`));
     printWindow.document.close();
     onPrinted?.();
   };
 
+  if (!grnData) return null;
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-4xl max-h-[90vh] overflow-y-auto p-2 sm:p-4">
+      <DialogContent className="w-full max-w-5xl max-h-[90vh] overflow-y-auto p-2 sm:p-4">
         <DialogHeader>
           <DialogTitle className="text-center text-lg font-bold">
             Goods Received Note Preview
           </DialogTitle>
         </DialogHeader>
 
-        <div ref={printRef}>
-          {/* ========== HEADER ========== */}
-          <div className="grn-header">
-            <div className="grn-header-row">
-              <div className="grn-logo-block">
-                <div className="grn-logo-wrapper">
-                  <img src="/lovable-uploads/great-agro-coffee-logo.png" alt="Logo" className="grn-logo" />
-                </div>
-              </div>
-              <div className="grn-company-block">
-                <h1 className="grn-company-name">GREAT AGRO COFFEE LTD</h1>
-                <p className="grn-motto">Kasese, Uganda.</p>
-                <p className="grn-contacts">Tel: +256 393 001 626 | Email: info@greatpearlcoffee.com</p>
-              </div>
-              {verificationCode && (
-                <div className="grn-qr-block">
-                  <img src={getVerificationQRUrl(verificationCode, 70)} alt="QR" className="grn-qr" />
-                  <p className="grn-qr-label">Scan to Verify</p>
-                  <p className="grn-qr-code">{verificationCode}</p>
-                </div>
-              )}
-            </div>
-            <div className="grn-title-bar">
-              <span className="grn-title-text">GOODS RECEIVED NOTE (GRN)</span>
-            </div>
-          </div>
+        <div
+          className="overflow-auto rounded-md border bg-background"
+          dangerouslySetInnerHTML={{ __html: previewHtml }}
+        />
 
-          {/* ========== DISCRETION BUY BANNER ========== */}
-          {isDiscretionBuy && (
-            <div className="grn-discretion-banner">
-              <div className="grn-discretion-icon">⚠️</div>
-              <div className="grn-discretion-content">
-                <strong>REJECTED LOT — ADMIN DISCRETION PURCHASE</strong>
-                <p>This coffee was rejected during quality assessment but purchased at admin discretion.</p>
-                {rejectionReason && <p><strong>Rejection Reason:</strong> {rejectionReason}</p>}
-                <p><strong>Discretion Price:</strong> UGX {unitPrice.toLocaleString()}/kg</p>
-              </div>
-            </div>
-          )}
-
-          {/* ========== DOCUMENT INFO ========== */}
-          <div className="grn-doc-info">
-            <table className="grn-info-table">
-              <tbody>
-                <tr>
-                  <td className="grn-info-label">GRN Number:</td>
-                  <td className="grn-info-value">{grnNumber}</td>
-                  <td className="grn-info-label">Date:</td>
-                  <td className="grn-info-value">{formattedDate}</td>
-                </tr>
-                <tr>
-                  <td className="grn-info-label">Time Received:</td>
-                  <td className="grn-info-value">{formattedTime}</td>
-                  <td className="grn-info-label">Assessed By:</td>
-                  <td className="grn-info-value">{assessedBy}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          {/* ========== SUPPLIER DETAILS ========== */}
-          <div className="grn-section">
-            <div className="grn-section-header">SUPPLIER DETAILS</div>
-            <table className="grn-info-table">
-              <tbody>
-                <tr>
-                  <td className="grn-info-label">Supplier Name:</td>
-                  <td className="grn-info-value" colSpan={3}>{supplierName}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          {/* ========== GOODS DESCRIPTION ========== */}
-          <div className="grn-section">
-            <div className="grn-section-header">GOODS DESCRIPTION</div>
-            <table className="grn-goods-table">
-              <thead>
-                <tr>
-                  <th className="grn-th-no">#</th>
-                  <th className="grn-th-desc">Description</th>
-                  <th className="grn-th-type">Coffee Type</th>
-                  <th className="grn-th-bags">Bags</th>
-                  <th className="grn-th-weight">Weight (kg)</th>
-                  <th className="grn-th-rate">Rate/kg (UGX)</th>
-                  <th className="grn-th-amount">Amount (UGX)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="grn-td-center">1</td>
-                  <td>{isDiscretionBuy ? 'Raw Coffee Beans (REJECTED — Discretion Buy)' : 'Raw Coffee Beans'}</td>
-                  <td className="grn-td-center">{coffeeType}</td>
-                  <td className="grn-td-center">{numberOfBags}</td>
-                  <td className="grn-td-right">{totalKgs.toLocaleString()}</td>
-                  <td className="grn-td-right">{unitPrice.toLocaleString()}</td>
-                  <td className="grn-td-right grn-td-bold">{totalAmount.toLocaleString()}</td>
-                </tr>
-              </tbody>
-              <tfoot>
-                <tr className="grn-total-row">
-                  <td colSpan={3} className="grn-td-right grn-td-bold">TOTAL</td>
-                  <td className="grn-td-center grn-td-bold">{numberOfBags}</td>
-                  <td className="grn-td-right grn-td-bold">{totalKgs.toLocaleString()}</td>
-                  <td></td>
-                  <td className="grn-td-right grn-td-bold grn-grand-total">UGX {totalAmount.toLocaleString()}</td>
-                </tr>
-              </tfoot>
-            </table>
-            <div className="grn-amount-words">
-              <strong>Amount in Words:</strong> {numberToWords(totalAmount)}
-            </div>
-          </div>
-
-          {/* ========== QUALITY ASSESSMENT ========== */}
-          <div className="grn-section">
-            <div className="grn-section-header">QUALITY ASSESSMENT REPORT</div>
-            {outturn !== undefined && outturn !== null && (
-              <div className="grn-outturn-banner">
-                Outturn: <strong>{outturn}%</strong>
-              </div>
-            )}
-            <table className="grn-quality-table">
-              <thead>
-                <tr>
-                  <th className="grn-qt-param">Parameter</th>
-                  <th className="grn-qt-std">Standard</th>
-                  <th className="grn-qt-result">Result</th>
-                </tr>
-              </thead>
-              <tbody>
-                {qualityParameters.map((p, i) => (
-                  <tr key={i}>
-                    <td>{p.parameter}</td>
-                    <td className="grn-td-center">{p.standard}</td>
-                    <td className="grn-td-center">
-                      {p.value !== undefined && p.value !== null ? `${p.value}${p.unit}` : 'N/A'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {calculatorComments && (
-              <div className="grn-calculator-comments">
-                <strong>Quality Notes:</strong> {calculatorComments}
-              </div>
-            )}
-          </div>
-
-          {/* ========== REMARKS ========== */}
-          <div className="grn-section">
-            <div className="grn-section-header">REMARKS / OBSERVATIONS</div>
-            <div className="grn-remarks-box">
-              <p>Coffee received and inspected as per the quality parameters above.</p>
-            </div>
-          </div>
-
-          {/* ========== SIGNATURES ========== */}
-          <div className="grn-section">
-            <div className="grn-section-header">AUTHORISATION</div>
-            <div className="grn-signatures">
-              <div className="grn-sig-col">
-                <p className="grn-sig-role">Delivered By (Supplier)</p>
-                <div className="grn-sig-space"></div>
-                <div className="grn-sig-line"></div>
-                <p className="grn-sig-details">Name: _____________________</p>
-                <p className="grn-sig-details">Signature: __________________</p>
-                <p className="grn-sig-details">Date: ______________________</p>
-              </div>
-              <div className="grn-sig-col">
-                <p className="grn-sig-role">Received By (Store Keeper)</p>
-                <div className="grn-sig-space"></div>
-                <div className="grn-sig-line"></div>
-                <p className="grn-sig-details">Name: _____________________</p>
-                <p className="grn-sig-details">Signature: __________________</p>
-                <p className="grn-sig-details">Date: ______________________</p>
-              </div>
-              <div className="grn-sig-col">
-                <p className="grn-sig-role">Quality Analyst</p>
-                <div className="grn-sig-space"></div>
-                <div className="grn-sig-line"></div>
-                <p className="grn-sig-details">Name: {assessedBy}</p>
-                <p className="grn-sig-details">Signature: __________________</p>
-                <p className="grn-sig-details">Date: {formattedDate}</p>
-              </div>
-              <div className="grn-sig-col">
-                <p className="grn-sig-role">Authorised By (Manager)</p>
-                <div className="grn-sig-space"></div>
-                <div className="grn-sig-line"></div>
-                <p className="grn-sig-details">Name: _____________________</p>
-                <p className="grn-sig-details">Signature: __________________</p>
-                <p className="grn-sig-details">Date: ______________________</p>
-              </div>
-            </div>
-          </div>
-
-          {/* ========== FOOTER ========== */}
-          <div className="grn-footer">
-            <div className="grn-footer-left">
-              <p>This is a system-generated document.</p>
-              <p>Great Agro Coffee — Management System</p>
-              {grnData.printedBy && <p><strong>Printed by:</strong> {grnData.printedBy}</p>}
-            </div>
-            <div className="grn-footer-right">
-              {verificationCode && <p>Verify: greatagrocoffee.com/verify/{verificationCode}</p>}
-              <p>Printed: {new Date().toLocaleDateString('en-GB')}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-3 flex justify-end gap-2 no-print">
+        <div className="mt-3 flex justify-end gap-2">
           <Button variant="outline" onClick={onClose}>Close</Button>
           <Button onClick={handlePrint} className="gap-2">
             <Printer className="h-4 w-4" />
@@ -366,303 +93,5 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
     </Dialog>
   );
 };
-
-function getGRNPrintStyles(): string {
-  return `
-    @page {
-      margin: 8mm 10mm;
-      size: A4;
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: Arial, Helvetica, sans-serif;
-      font-size: 11px;
-      color: #000;
-      line-height: 1.4;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-
-    /* ===== HEADER ===== */
-    .grn-header { margin-bottom: 6px; }
-    .grn-header-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding-bottom: 8px;
-      border-bottom: 3px double #000;
-    }
-    .grn-logo-block { flex-shrink: 0; }
-    .grn-logo-wrapper {
-      background: #000;
-      padding: 6px 12px;
-      border-radius: 4px;
-    }
-    .grn-logo {
-      height: 36px !important;
-      width: auto !important;
-      display: block !important;
-    }
-    .grn-company-block {
-      text-align: center;
-      flex: 1;
-      padding: 0 12px;
-    }
-    .grn-company-name {
-      font-size: 16px;
-      font-weight: 900;
-      color: #000;
-      letter-spacing: 1.5px;
-      margin-bottom: 1px;
-    }
-    .grn-motto {
-      font-size: 8px;
-      color: #000;
-      font-style: italic;
-      margin-bottom: 2px;
-    }
-    .grn-address { font-size: 8px; color: #000; }
-    .grn-contacts { font-size: 8px; color: #000; }
-    .grn-qr-block { text-align: center; flex-shrink: 0; }
-    .grn-qr {
-      width: 64px !important;
-      height: 64px !important;
-      display: block !important;
-      margin: 0 auto;
-    }
-    .grn-qr-label { font-size: 6px; color: #000; margin-top: 2px; }
-    .grn-qr-code {
-      font-family: 'Courier New', monospace;
-      font-size: 8px;
-      font-weight: bold;
-      color: #000;
-    }
-    .grn-title-bar {
-      background: #000;
-      color: #fff;
-      text-align: center;
-      padding: 6px 0;
-      margin-top: 8px;
-      border-radius: 3px;
-    }
-    .grn-title-text {
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: 3px;
-    }
-
-    /* ===== DOCUMENT INFO ===== */
-    .grn-doc-info {
-      margin: 8px 0;
-      border: 1px solid #000;
-      border-radius: 3px;
-      overflow: hidden;
-    }
-    .grn-info-table { width: 100%; border-collapse: collapse; }
-    .grn-info-table td {
-      padding: 4px 8px;
-      border: 1px solid #000;
-      font-size: 10px;
-      color: #000;
-      font-weight: 500;
-    }
-    .grn-info-label {
-      background: #e8e8e8;
-      font-weight: 700;
-      color: #000;
-      width: 18%;
-      white-space: nowrap;
-    }
-    .grn-info-value { color: #000; width: 32%; font-weight: 600; }
-
-    /* ===== DISCRETION BANNER ===== */
-    .grn-discretion-banner {
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-      margin: 8px 0;
-      padding: 8px 12px;
-      border: 2px solid #c00;
-      border-radius: 4px;
-      background: #fff0f0;
-    }
-    .grn-discretion-icon { font-size: 18px; flex-shrink: 0; }
-    .grn-discretion-content {
-      font-size: 9px;
-      color: #900;
-      line-height: 1.5;
-    }
-    .grn-discretion-content strong { color: #600; }
-    .grn-discretion-content p { margin: 1px 0; }
-
-    /* ===== SECTIONS ===== */
-    .grn-section { margin: 4px 0; }
-    .grn-section-header {
-      background: #e8e8e8;
-      border-left: 4px solid #000;
-      padding: 4px 10px;
-      font-size: 10px;
-      font-weight: 700;
-      color: #000;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 4px;
-    }
-
-    /* ===== GOODS TABLE ===== */
-    .grn-goods-table { width: 100%; border-collapse: collapse; font-size: 10px; }
-    .grn-goods-table th {
-      background: #000;
-      color: #fff;
-      padding: 5px 6px;
-      text-align: left;
-      font-weight: 700;
-      font-size: 9px;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-    }
-    .grn-goods-table td {
-      padding: 6px;
-      border: 1px solid #000;
-      color: #000;
-      font-weight: 600;
-    }
-    .grn-th-no { width: 5%; text-align: center !important; }
-    .grn-th-desc { width: 22%; }
-    .grn-th-type { width: 14%; text-align: center !important; }
-    .grn-th-bags { width: 9%; text-align: center !important; }
-    .grn-th-weight { width: 14%; text-align: right !important; }
-    .grn-th-rate { width: 16%; text-align: right !important; }
-    .grn-th-amount { width: 20%; text-align: right !important; }
-    .grn-td-center { text-align: center; }
-    .grn-td-right { text-align: right; }
-    .grn-td-bold { font-weight: 800; }
-    .grn-total-row {
-      background: #e8e8e8;
-      border-top: 2px solid #000;
-    }
-    .grn-grand-total { font-size: 12px; color: #000; font-weight: 800; }
-    .grn-amount-words {
-      margin-top: 4px;
-      padding: 4px 8px;
-      background: #fff;
-      border: 1px dashed #000;
-      border-radius: 2px;
-      font-size: 10px;
-      font-style: italic;
-      color: #000;
-      font-weight: 600;
-    }
-
-    /* ===== OUTTURN BANNER ===== */
-    .grn-outturn-banner {
-      text-align: center;
-      padding: 5px;
-      background: #e8e8e8;
-      border: 1px solid #000;
-      border-radius: 3px;
-      font-size: 12px;
-      color: #000;
-      font-weight: 600;
-      margin-bottom: 4px;
-    }
-
-    /* ===== QUALITY TABLE ===== */
-    .grn-quality-table { width: 100%; border-collapse: collapse; font-size: 10px; }
-    .grn-quality-table th {
-      background: #e8e8e8;
-      border: 1px solid #000;
-      padding: 4px 8px;
-      font-weight: 700;
-      font-size: 9px;
-      text-transform: uppercase;
-      color: #000;
-    }
-    .grn-quality-table td {
-      border: 1px solid #000;
-      padding: 4px 8px;
-      color: #000;
-      font-weight: 500;
-    }
-    .grn-qt-param { text-align: left; width: 50%; }
-    .grn-qt-std { text-align: center; width: 25%; }
-    .grn-qt-result { text-align: center; width: 25%; }
-
-    /* ===== CALCULATOR COMMENTS ===== */
-    .grn-calculator-comments {
-      margin-top: 4px;
-      padding: 5px 10px;
-      background: #f5f5f5;
-      border: 1px solid #000;
-      border-radius: 2px;
-      font-size: 10px;
-      color: #000;
-      font-weight: 500;
-    }
-
-    /* ===== REMARKS ===== */
-    .grn-remarks-box {
-      border: 1px solid #000;
-      padding: 4px 10px;
-      min-height: 20px;
-      border-radius: 2px;
-      font-size: 9px;
-      color: #000;
-      font-weight: 500;
-    }
-
-    /* ===== SIGNATURES ===== */
-    .grn-signatures {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      margin-top: 6px;
-    }
-    .grn-sig-col {
-      flex: 1;
-      text-align: center;
-      border: 1px solid #000;
-      border-radius: 3px;
-      padding: 6px 4px 8px;
-    }
-    .grn-sig-role {
-      font-size: 9px;
-      font-weight: 700;
-      color: #000;
-      text-transform: uppercase;
-      margin-bottom: 2px;
-    }
-    .grn-sig-space { height: 18px; }
-    .grn-sig-line {
-      border-top: 1px solid #000;
-      margin: 0 8px 4px;
-    }
-    .grn-sig-details {
-      font-size: 8px;
-      color: #000;
-      text-align: left;
-      padding: 1px 8px;
-      font-weight: 500;
-    }
-
-    /* ===== FOOTER ===== */
-    .grn-footer {
-      display: flex;
-      justify-content: space-between;
-      border-top: 2px solid #000;
-      padding-top: 4px;
-      margin-top: 6px;
-      font-size: 7px;
-      color: #000;
-    }
-    .grn-footer-left { text-align: left; }
-    .grn-footer-right { text-align: right; }
-
-    .no-print { display: none !important; }
-    @media screen {
-      body { padding: 16px; max-width: 210mm; margin: 0 auto; }
-    }
-  `;
-}
 
 export default GRNPrintModal;
