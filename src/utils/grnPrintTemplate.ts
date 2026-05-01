@@ -532,7 +532,10 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
           </td>
           <td class="gac-grn-title-cell">
             <div class="gac-grn-official-title">OFFICIAL DOCUMENT</div>
-            <div class="gac-grn-official-subtitle">GOODS RECEIVED NOTE — COFFEE</div>
+            <div class="gac-grn-official-subtitle">
+              GOODS RECEIVED NOTE — COFFEE
+              <span class="gac-grn-copy-label${isFinance ? " finance" : ""}">${isFinance ? "FINANCE COPY" : "SUPPLIER COPY"}</span>
+            </div>
           </td>
           <td class="gac-grn-od-cell">
             <div><strong>OD No:</strong> ${escapeHtml(odNo)}</div>
