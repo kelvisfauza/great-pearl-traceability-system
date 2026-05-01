@@ -429,16 +429,22 @@ const Store = () => {
   const handlePrintGRN = (record: any) => {
     const qualityAssessment = qualityAssessments.find((qa: any) => qa.batch_number === record.batchNumber);
 
+    const unitPrice = Number(qualityAssessment?.final_price || qualityAssessment?.suggested_price || 0);
+    if (!qualityAssessment || unitPrice <= 0) {
+      toast.error("Cannot print GRN — coffee has not been assessed or priced yet by Quality.");
+      return;
+    }
+
     const grnData = {
       grnNumber: record.batchNumber,
       batchNumber: record.batchNumber,
       inventoryBatchId: record.batchNumber,
       supplierName: record.supplierName,
       coffeeType: record.coffeeType,
-      qualityAssessment: qualityAssessment ? "Assessed" : "Pending Assessment",
+      qualityAssessment: "Assessed",
       numberOfBags: record.bags,
       totalKgs: record.kilograms,
-      unitPrice: qualityAssessment?.final_price || qualityAssessment?.suggested_price || 0,
+      unitPrice,
       assessedBy: qualityAssessment?.assessed_by || "N/A",
       physicalAssessmentBy: (qualityAssessment as any)?.physical_assessment_by || undefined,
       inputBy: record.created_by || record.createdBy || record.recordedBy || undefined,
@@ -1588,7 +1594,7 @@ const Store = () => {
         {/* -------------------------------------------------------------------- */}
         {/*                           GRN Print Modal                            */}
         {/* -------------------------------------------------------------------- */}
-        <GRNPrintModal open={showGRNModal} onClose={() => setShowGRNModal(false)} grnData={selectedGRNData} />
+        <GRNPrintModal open={showGRNModal} onClose={() => setShowGRNModal(false)} grnData={selectedGRNData} hideFinanceCopy />
       </div>
     </Layout>
   );

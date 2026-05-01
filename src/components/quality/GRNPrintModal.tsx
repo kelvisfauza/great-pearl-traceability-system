@@ -11,9 +11,10 @@ interface GRNPrintModalProps {
   onClose: () => void;
   grnData: GRNDocumentData | null;
   onPrinted?: () => void;
+  hideFinanceCopy?: boolean;
 }
 
-const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, onPrinted }) => {
+const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, onPrinted, hideFinanceCopy = false }) => {
   const { createVerification } = useDocumentVerification();
   const [verificationCode, setVerificationCode] = useState<string | null>(null);
   const [supplierInfo, setSupplierInfo] = useState<{
@@ -137,8 +138,8 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
 
   const previewHtml = useMemo(() => {
     if (!previewData) return '';
-    return getGRNPreviewHTML(previewData);
-  }, [previewData]);
+    return getGRNPreviewHTML(previewData, { includeFinanceCopy: !hideFinanceCopy });
+  }, [previewData, hideFinanceCopy]);
 
   const handlePrint = () => {
     if (!previewData) return;
@@ -146,7 +147,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
     const printWindow = window.open('', '', 'width=1000,height=1200');
     if (!printWindow) return;
 
-    printWindow.document.write(getGRNPrintDocumentHTML([previewData], `GRN - ${previewData.grnNumber}`));
+    printWindow.document.write(getGRNPrintDocumentHTML([previewData], `GRN - ${previewData.grnNumber}`, { includeFinanceCopy: !hideFinanceCopy }));
     printWindow.document.close();
     onPrinted?.();
   };

@@ -832,11 +832,13 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
   `;
 }
 
-export function getGRNPreviewHTML(data: GRNDocumentData): string {
-  return `${getGRNDocumentStyles()}<div class="gac-grn-preview-shell">${getGRNDocumentMarkup(data, "supplier")}${getPaymentOrderMarkup(data)}</div>`;
+export function getGRNPreviewHTML(data: GRNDocumentData, options?: { includeFinanceCopy?: boolean }): string {
+  const includeFinance = options?.includeFinanceCopy !== false;
+  return `${getGRNDocumentStyles()}<div class="gac-grn-preview-shell">${getGRNDocumentMarkup(data, "supplier")}${includeFinance ? getPaymentOrderMarkup(data) : ""}</div>`;
 }
 
-export function getGRNPrintDocumentHTML(data: GRNDocumentData[], title: string): string {
+export function getGRNPrintDocumentHTML(data: GRNDocumentData[], title: string, options?: { includeFinanceCopy?: boolean }): string {
+  const includeFinance = options?.includeFinanceCopy !== false;
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -848,7 +850,7 @@ export function getGRNPrintDocumentHTML(data: GRNDocumentData[], title: string):
       </head>
       <body>
         <div class="gac-grn-preview-shell">
-          ${data.map((item) => `${getGRNDocumentMarkup(item, "supplier")}${getPaymentOrderMarkup(item)}`).join("")}
+          ${data.map((item) => `${getGRNDocumentMarkup(item, "supplier")}${includeFinance ? getPaymentOrderMarkup(item) : ""}`).join("")}
         </div>
         <script>
           window.onload = function () {
