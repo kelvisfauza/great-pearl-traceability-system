@@ -763,7 +763,7 @@ export function getGRNPrintDocumentHTML(data: GRNDocumentData[], title: string):
       </head>
       <body>
         <div class="gac-grn-preview-shell">
-          ${data.map((item) => getGRNDocumentMarkup(item)).join("")}
+          ${data.map((item) => `${getGRNDocumentMarkup(item, "supplier")}${getGRNDocumentMarkup(item, "finance")}`).join("")}
         </div>
         <script>
           window.onload = function () {
