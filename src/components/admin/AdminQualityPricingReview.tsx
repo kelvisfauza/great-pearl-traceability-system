@@ -382,6 +382,8 @@ const AdminQualityPricingReview = () => {
       if (selectedAssessment.coffee_record) {
         const grnInfo = {
           grnNumber: `GRN-${selectedAssessment.batch_number}`,
+          batchNumber: selectedAssessment.batch_number,
+          inventoryBatchId: selectedAssessment.batch_number,
           supplierName: selectedAssessment.coffee_record.supplier_name,
           coffeeType: selectedAssessment.coffee_record.coffee_type,
           qualityAssessment: 'Approved',
@@ -389,6 +391,10 @@ const AdminQualityPricingReview = () => {
           totalKgs: selectedAssessment.coffee_record.kilograms,
           unitPrice: finalPrice,
           assessedBy: selectedAssessment.assessed_by,
+          physicalAssessmentBy: (selectedAssessment as any).physical_assessment_by || undefined,
+          inputBy: (selectedAssessment.coffee_record as any).created_by || undefined,
+          discretionBy: (selectedAssessment as any).admin_discretion_by || undefined,
+          isDiscretionBuy: (selectedAssessment as any).admin_discretion_buy || undefined,
           createdAt: new Date().toISOString(),
           moisture: selectedAssessment.moisture,
           group1_defects: selectedAssessment.group1_defects,
