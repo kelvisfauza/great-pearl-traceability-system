@@ -49,6 +49,7 @@ import QuickAnalysesList from "@/components/quality/QuickAnalysesList";
 import QualityAssessmentReports from "@/components/quality/QualityAssessmentReports";
 import AdminQualityPricingReview from "@/components/admin/AdminQualityPricingReview";
 import { cn } from "@/lib/utils";
+import EmployeeCombobox from "@/components/quality/EmployeeCombobox";
 
 const QualityControl = () => {
   const {
@@ -1596,14 +1597,15 @@ const QualityControl = () => {
                     <Label htmlFor="physical_assessment_by" className="text-base font-semibold">
                       Physical Assessment By <span className="text-destructive">*</span>
                     </Label>
-                    <Input
-                      id="physical_assessment_by"
-                      value={assessmentForm.physical_assessment_by}
-                      onChange={(e) => setAssessmentForm({...assessmentForm, physical_assessment_by: e.target.value})}
-                      placeholder="Name of person who performed the physical (cupping/screening) assessment"
-                      disabled={readOnly}
-                      className="mt-2"
-                    />
+                    <div className="mt-2">
+                      <EmployeeCombobox
+                        id="physical_assessment_by"
+                        value={assessmentForm.physical_assessment_by}
+                        onChange={(name) => setAssessmentForm({...assessmentForm, physical_assessment_by: name})}
+                        disabled={readOnly}
+                        placeholder="Select employee who did physical assessment..."
+                      />
+                    </div>
                     <p className="text-xs text-muted-foreground mt-2">
                       System assessment by: <span className="font-medium text-foreground">{employee?.name || employee?.email || 'Quality Controller'}</span>
                     </p>

@@ -13,6 +13,7 @@ import { Loader2, CheckCircle, XCircle, Copy } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useActivityTracker } from "@/hooks/useActivityTracker";
 import { executeOrQueue } from "@/lib/offline/queue";
+import EmployeeCombobox from "@/components/quality/EmployeeCombobox";
 
 interface QualityAssessmentFormProps {
   lot: any;
@@ -42,7 +43,7 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
   const [isRejecting, setIsRejecting] = useState(false);
   const [generatedRef, setGeneratedRef] = useState<string | null>(null);
   
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<AssessmentForm>({
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<AssessmentForm>({
     defaultValues: {
       quantity_kg: lot.kilograms,
       moisture_content: 12,
@@ -275,11 +276,12 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-lg border bg-muted/30">
         <div>
           <Label htmlFor="physical_assessment_by">Physical Assessment By *</Label>
-          <Input
+          <input type="hidden" {...register('physical_assessment_by', { required: true })} />
+          <EmployeeCombobox
             id="physical_assessment_by"
-            type="text"
-            placeholder="Name of person who did physical analysis"
-            {...register('physical_assessment_by', { required: true })}
+            value={watch('physical_assessment_by') || ''}
+            onChange={(name) => setValue('physical_assessment_by', name, { shouldValidate: true, shouldDirty: true })}
+            placeholder="Select employee who did physical analysis..."
           />
           <p className="text-xs text-muted-foreground mt-1">
             Person who performed the lab/physical analysis
