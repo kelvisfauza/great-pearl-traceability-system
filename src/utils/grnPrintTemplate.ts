@@ -39,6 +39,11 @@ export interface GRNDocumentData {
   supplierAccountNumber?: string;
   supplierCode?: string;
   supplierEmail?: string;
+  inputBy?: string;
+  physicalAssessmentBy?: string;
+  discretionBy?: string;
+  inventoryBatchId?: string;
+  batchNumber?: string;
 }
 
 const LOGO_URL = `${typeof window !== "undefined" ? window.location.origin : ""}/lovable-uploads/great-agro-coffee-logo.png`;
@@ -972,6 +977,25 @@ export function getPaymentOrderMarkup(data: GRNDocumentData): string {
       </div>
 
       <table class="gac-grn-po-approval">
+        <tr>
+          <td colspan="3" style="background:#f9fafb;">
+            <div class="role" style="margin-bottom:4px;">Traceability &amp; Responsible Personnel</div>
+            <table style="width:100%;border-collapse:collapse;font-size:11px;">
+              <tr>
+                <td style="padding:2px 4px;width:50%;"><strong>Inventory Batch:</strong> <span style="font-family:'Courier New',monospace;font-weight:700;">${displayValue(data.inventoryBatchId || data.batchNumber || data.grnNumber)}</span></td>
+                <td style="padding:2px 4px;width:50%;"><strong>Coffee Input By (Store):</strong> <span style="font-family:'Courier New',monospace;font-weight:700;">${displayValue(data.inputBy)}</span></td>
+              </tr>
+              <tr>
+                <td style="padding:2px 4px;"><strong>Assessed By (Quality):</strong> <span style="font-family:'Courier New',monospace;font-weight:700;">${displayValue(data.assessedBy)}</span></td>
+                <td style="padding:2px 4px;"><strong>Physical Assessment By:</strong> <span style="font-family:'Courier New',monospace;font-weight:700;">${displayValue(data.physicalAssessmentBy)}</span></td>
+              </tr>
+              ${data.isDiscretionBuy || data.discretionBy ? `
+              <tr>
+                <td style="padding:2px 4px;" colspan="2"><strong>Admin Discretion By:</strong> <span style="font-family:'Courier New',monospace;font-weight:700;color:#7f1d1d;">${displayValue(data.discretionBy)}</span></td>
+              </tr>` : ""}
+            </table>
+          </td>
+        </tr>
         <tr>
           <td>
             <div class="role">Prepared By (Quality / Store)</div>

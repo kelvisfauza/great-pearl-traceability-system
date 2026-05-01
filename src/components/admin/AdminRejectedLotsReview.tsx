@@ -133,6 +133,8 @@ const AdminRejectedLotsReview = () => {
         const cr = selectedLot.coffee_record;
         setGrnData({
           grnNumber: `GRN-DISC-${selectedLot.batch_number}`,
+          batchNumber: selectedLot.batch_number,
+          inventoryBatchId: selectedLot.batch_number,
           supplierName: cr.supplier_name,
           coffeeType: cr.coffee_type,
           qualityAssessment: 'REJECTED - Admin Discretion Buy',
@@ -140,6 +142,9 @@ const AdminRejectedLotsReview = () => {
           totalKgs: cr.kilograms,
           unitPrice: price,
           assessedBy: selectedLot.assessed_by,
+          physicalAssessmentBy: (selectedLot as any).physical_assessment_by || undefined,
+          inputBy: (cr as any).created_by || undefined,
+          discretionBy: employee?.name || employee?.email || undefined,
           createdAt: new Date().toISOString(),
           moisture: selectedLot.moisture,
           group1_defects: selectedLot.group1_defects,

@@ -1337,12 +1337,18 @@ const QualityControl = () => {
                               if (storeRecord) {
                                 grnDataList.push({
                                   grnNumber: `GRN-${assessment.batch_number}`,
+                                  batchNumber: assessment.batch_number,
+                                  inventoryBatchId: assessment.batch_number,
                                   supplierName: storeRecord.supplier_name || 'Unknown',
                                   coffeeType: storeRecord.coffee_type || 'Unknown',
                                   numberOfBags: storeRecord.bags || 0,
                                   totalKgs: storeRecord.kilograms || 0,
                                   unitPrice: assessment.final_price || assessment.suggested_price || 0,
                                   assessedBy: assessment.assessed_by || 'Quality Controller',
+                                  physicalAssessmentBy: (assessment as any).physical_assessment_by || undefined,
+                                  inputBy: (storeRecord as any).created_by || undefined,
+                                  discretionBy: (assessment as any).admin_discretion_by || undefined,
+                                  isDiscretionBuy: (assessment as any).admin_discretion_buy || undefined,
                                   createdAt: assessment.date_assessed || new Date().toISOString(),
                                   moisture: assessment.moisture,
                                   group1_defects: assessment.group1_defects,
