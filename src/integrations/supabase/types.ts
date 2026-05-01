@@ -4680,6 +4680,42 @@ export type Database = {
         }
         Relationships: []
       }
+      marquee_announcements: {
+        Row: {
+          created_at: string
+          created_by_email: string | null
+          created_by_name: string | null
+          expires_at: string
+          id: string
+          is_active: boolean
+          message: string
+          priority: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_email?: string | null
+          created_by_name?: string | null
+          expires_at: string
+          id?: string
+          is_active?: boolean
+          message: string
+          priority?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by_email?: string | null
+          created_by_name?: string | null
+          expires_at?: string
+          id?: string
+          is_active?: boolean
+          message?: string
+          priority?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       meal_disbursements: {
         Row: {
           amount: number
