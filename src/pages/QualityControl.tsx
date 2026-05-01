@@ -49,6 +49,7 @@ import QuickAnalysesList from "@/components/quality/QuickAnalysesList";
 import QualityAssessmentReports from "@/components/quality/QualityAssessmentReports";
 import AdminQualityPricingReview from "@/components/admin/AdminQualityPricingReview";
 import { cn } from "@/lib/utils";
+import EmployeeCombobox from "@/components/quality/EmployeeCombobox";
 
 const QualityControl = () => {
   const {
