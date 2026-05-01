@@ -974,6 +974,7 @@ export type Database = {
         Row: {
           bags: number
           batch_number: string
+          client_op_id: string | null
           coffee_type: string
           created_at: string
           created_by: string | null
@@ -991,6 +992,7 @@ export type Database = {
         Insert: {
           bags: number
           batch_number: string
+          client_op_id?: string | null
           coffee_type: string
           created_at?: string
           created_by?: string | null
@@ -1008,6 +1010,7 @@ export type Database = {
         Update: {
           bags?: number
           batch_number?: string
+          client_op_id?: string | null
           coffee_type?: string
           created_at?: string
           created_by?: string | null
@@ -5061,6 +5064,7 @@ export type Database = {
         Row: {
           amount_paid: number
           balance: number | null
+          client_op_id: string | null
           coffee_type: string
           completed_at: string | null
           created_at: string
@@ -5082,6 +5086,7 @@ export type Database = {
         Insert: {
           amount_paid?: number
           balance?: number | null
+          client_op_id?: string | null
           coffee_type?: string
           completed_at?: string | null
           created_at?: string
@@ -5103,6 +5108,7 @@ export type Database = {
         Update: {
           amount_paid?: number
           balance?: number | null
+          client_op_id?: string | null
           coffee_type?: string
           completed_at?: string | null
           created_at?: string
@@ -6276,6 +6282,7 @@ export type Database = {
           batch_number: string
           below12: number | null
           clean_d14: number | null
+          client_op_id: string | null
           comments: string | null
           created_at: string
           date_assessed: string
@@ -6314,6 +6321,7 @@ export type Database = {
           batch_number: string
           below12?: number | null
           clean_d14?: number | null
+          client_op_id?: string | null
           comments?: string | null
           created_at?: string
           date_assessed?: string
@@ -6352,6 +6360,7 @@ export type Database = {
           batch_number?: string
           below12?: number | null
           clean_d14?: number | null
+          client_op_id?: string | null
           comments?: string | null
           created_at?: string
           date_assessed?: string
