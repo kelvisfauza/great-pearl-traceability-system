@@ -435,6 +435,41 @@ export function getGRNDocumentStyles(): string {
         text-align: center;
         font-style: italic;
       }
+      .gac-grn-copy-label {
+        display: inline-block;
+        margin-left: 8px;
+        padding: 2px 8px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        border: 1.5px solid #0a3d8f;
+        color: #0a3d8f;
+        background: #eef4ff;
+        vertical-align: middle;
+      }
+      .gac-grn-copy-label.finance {
+        border-color: #0a6b2a;
+        color: #0a6b2a;
+        background: #ecfdf3;
+      }
+      .gac-grn-bank-box {
+        margin-top: 6px;
+        border: 1.5px solid #0a6b2a;
+        background: #f6fdf8;
+        padding: 6px 10px;
+        font-size: 11.5px;
+      }
+      .gac-grn-bank-box .gac-grn-bank-title {
+        display: block;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.6px;
+        color: #0a6b2a;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+      }
+      .gac-grn-bank-box table { width: 100%; border-collapse: collapse; }
+      .gac-grn-bank-box td { padding: 2px 4px; vertical-align: top; }
       @media print {
         body {
           margin: 0;
