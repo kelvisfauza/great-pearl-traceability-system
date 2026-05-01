@@ -82,6 +82,7 @@ import FieldOperationsReport from "./pages/reports/FieldOperationsReport";
 import ComparisonReport from "./pages/reports/ComparisonReport";
 import EUDRDispatchReports from "./pages/reports/EUDRDispatchReports";
 import WholeBusinessReport from "./pages/reports/WholeBusinessReport";
+import YoPaymentsReport from "./pages/reports/YoPaymentsReport";
 import SystemSettings from "./pages/admin/SystemSettings";
 import SystemTransactions from "./pages/admin/SystemTransactions";
 import AdminInitiateWithdrawal from "./pages/admin/AdminInitiateWithdrawal";
@@ -385,6 +386,11 @@ const App: React.ComponentType = () => {
                 <Route path="/reports/whole-business" element={
                   <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
                     <WholeBusinessReport />
+                  </ProtectedRoute>
+                } />
+                <Route path="/reports/yo-payments" element={
+                  <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
+                    <YoPaymentsReport />
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/system-settings" element={

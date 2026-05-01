@@ -10399,6 +10399,28 @@ export type Database = {
       get_wallet_balance: { Args: { user_uuid: string }; Returns: number }
       get_wallet_balance_safe: { Args: { user_uuid: string }; Returns: number }
       get_wallet_balance_text: { Args: { user_uuid: string }; Returns: number }
+      get_yo_payments_audit: {
+        Args: {
+          p_end_date?: string
+          p_source?: string
+          p_start_date?: string
+          p_status?: string
+        }
+        Returns: {
+          amount: number
+          approved_by: string
+          description: string
+          id: string
+          initiated_by: string
+          metadata: Json
+          occurred_at: string
+          phone: string
+          recipient_name: string
+          source: string
+          status: string
+          yo_reference: string
+        }[]
+      }
       "great pearl": { Args: { conversation_id: string }; Returns: boolean }
       has_role: {
         Args: {

@@ -3,7 +3,7 @@ import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { BarChart3, FileText, TrendingUp, Store, ShoppingCart, BookOpen, Calculator, Receipt, Wallet, AlertTriangle, MapPin, ArrowRight, ClipboardList, Truck, Globe } from "lucide-react";
+import { BarChart3, FileText, TrendingUp, Store, ShoppingCart, BookOpen, Calculator, Receipt, Wallet, AlertTriangle, MapPin, ArrowRight, ClipboardList, Truck, Globe, Smartphone } from "lucide-react";
 import KeyMetrics from "@/components/reports/KeyMetrics";
 import { RefreshMetricsButton } from "@/components/reports/RefreshMetricsButton";
 
@@ -113,6 +113,13 @@ const Reports = () => {
       icon: Truck,
       path: "/reports/eudr-dispatch",
       color: "text-lime-600"
+    });
+    reportCards.push({
+      title: "Yo Payments Audit",
+      description: "Withdrawals, allowances, meals, USSD, milling — all Yo triggers",
+      icon: Smartphone,
+      path: "/reports/yo-payments",
+      color: "text-fuchsia-600"
     });
   }
 
