@@ -470,6 +470,104 @@ export function getGRNDocumentStyles(): string {
       }
       .gac-grn-bank-box table { width: 100%; border-collapse: collapse; }
       .gac-grn-bank-box td { padding: 2px 4px; vertical-align: top; }
+      /* Payment Order (Finance copy) */
+      .gac-grn-po-title {
+        text-align: center;
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: 2px;
+        margin: 8px 0 2px;
+        color: #0a3d8f;
+      }
+      .gac-grn-po-subtitle {
+        text-align: center;
+        font-size: 11px;
+        color: #444;
+        margin-bottom: 8px;
+        font-style: italic;
+      }
+      .gac-grn-po-meta {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 6px 0;
+        font-size: 11.5px;
+      }
+      .gac-grn-po-meta td {
+        padding: 4px 6px;
+        border: 1px solid #1a1a1a;
+      }
+      .gac-grn-po-meta td.label {
+        background: #f0efe9;
+        font-weight: 700;
+        width: 22%;
+      }
+      .gac-grn-po-instruction {
+        margin: 10px 0;
+        padding: 8px 12px;
+        border-left: 4px solid #0a3d8f;
+        background: #eef4ff;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+      .gac-grn-po-instruction strong { color: #0a3d8f; }
+      .gac-grn-po-amount-box {
+        margin: 10px 0;
+        padding: 10px 14px;
+        border: 2px solid #0a3d8f;
+        background: #fff;
+        text-align: center;
+      }
+      .gac-grn-po-amount-box .label {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 1.5px;
+        color: #0a3d8f;
+        text-transform: uppercase;
+      }
+      .gac-grn-po-amount-box .value {
+        font-size: 22px;
+        font-weight: 800;
+        font-family: 'Courier New', monospace;
+        color: #1a1a1a;
+        margin: 4px 0 2px;
+      }
+      .gac-grn-po-amount-box .words {
+        font-size: 11px;
+        font-style: italic;
+        color: #333;
+      }
+      .gac-grn-po-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 8px 0;
+        font-size: 11.5px;
+      }
+      .gac-grn-po-table th, .gac-grn-po-table td {
+        border: 1px solid #1a1a1a;
+        padding: 5px 8px;
+      }
+      .gac-grn-po-table th {
+        background: #f0efe9;
+        text-align: left;
+        font-size: 10.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .gac-grn-po-table td.value { font-family: 'Courier New', monospace; font-weight: 700; }
+      .gac-grn-po-approval {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 14px;
+      }
+      .gac-grn-po-approval td {
+        width: 33.33%;
+        border: 1px solid #1a1a1a;
+        padding: 8px;
+        vertical-align: top;
+        font-size: 11px;
+      }
+      .gac-grn-po-approval .role { font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; font-size: 10px; color: #444; }
+      .gac-grn-po-approval .sig-line { margin-top: 28px; border-top: 1px solid #1a1a1a; padding-top: 3px; font-size: 10px; color: #666; }
       @media print {
         body {
           margin: 0;
@@ -495,6 +593,9 @@ export function getGRNDocumentStyles(): string {
 }
 
 export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier" | "finance" = "supplier"): string {
+  if (copyType === "finance") {
+    return getPaymentOrderMarkup(data);
+  }
   const createdAt = new Date(data.createdAt);
   const issueDate = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" });
   const deliveryDate = createdAt.toLocaleDateString("en-GB");
@@ -510,7 +611,6 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
   const verificationUrl = data.verificationCode ? getVerificationUrl(data.verificationCode) : "";
   const qrCodeUrl = data.verificationCode ? getVerificationQRUrl(data.verificationCode, 110) : "";
   const qualityFactor = data.qualityFactor || (data.outturn != null ? `${data.outturn}%` : undefined);
-  const isFinance = copyType === "finance";
   const qualityRows = [
     ["Moisture Content", data.moisture != null ? `${data.moisture}%` : "—", "≤ 14%"],
     ["Group 1 Defects", data.group1_defects != null ? `${data.group1_defects}%` : "—", "≤ 4%"],
@@ -534,7 +634,7 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
             <div class="gac-grn-official-title">OFFICIAL DOCUMENT</div>
             <div class="gac-grn-official-subtitle">
               GOODS RECEIVED NOTE — COFFEE
-              <span class="gac-grn-copy-label${isFinance ? " finance" : ""}">${isFinance ? "FINANCE COPY" : "SUPPLIER COPY"}</span>
+              <span class="gac-grn-copy-label">SUPPLIER COPY</span>
             </div>
           </td>
           <td class="gac-grn-od-cell">
@@ -667,32 +767,6 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
 
       <div class="gac-grn-amount-words"><strong>Amount in Words:</strong> ${escapeHtml(numberToWords(totalAmount))}</div>
 
-      ${isFinance ? `
-        <div class="gac-grn-bank-box">
-          <span class="gac-grn-bank-title">Supplier Payment Details (Finance Use)</span>
-          <table>
-            <tr>
-              <td style="width:50%;"><strong>Supplier Name:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierName)}</span></td>
-              <td style="width:50%;"><strong>Supplier Code:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierCode)}</span></td>
-            </tr>
-            <tr>
-              <td><strong>Phone:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierPhone)}</span></td>
-              <td><strong>Email:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierEmail)}</span></td>
-            </tr>
-            <tr>
-              <td colspan="2"><strong>Address:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierAddress)}</span></td>
-            </tr>
-            <tr>
-              <td><strong>Bank Name:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierBankName)}</span></td>
-              <td><strong>Account Name:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierAccountName)}</span></td>
-            </tr>
-            <tr>
-              <td colspan="2"><strong>Account Number:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierAccountNumber)}</span></td>
-            </tr>
-          </table>
-        </div>
-      ` : ""}
-
       <p class="gac-grn-note">
         <strong>NB:</strong> To suppliers — please check that you agree to the above calculations and deductions before you sign to receive your
         Payment / GRN. There will be no refunds or re-calculations once you have signed. Paid Price equals Daily Price / Contract Price
@@ -748,7 +822,7 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
 }
 
 export function getGRNPreviewHTML(data: GRNDocumentData): string {
-  return `${getGRNDocumentStyles()}<div class="gac-grn-preview-shell">${getGRNDocumentMarkup(data, "supplier")}${getGRNDocumentMarkup(data, "finance")}</div>`;
+  return `${getGRNDocumentStyles()}<div class="gac-grn-preview-shell">${getGRNDocumentMarkup(data, "supplier")}${getPaymentOrderMarkup(data)}</div>`;
 }
 
 export function getGRNPrintDocumentHTML(data: GRNDocumentData[], title: string): string {
@@ -763,7 +837,7 @@ export function getGRNPrintDocumentHTML(data: GRNDocumentData[], title: string):
       </head>
       <body>
         <div class="gac-grn-preview-shell">
-          ${data.map((item) => `${getGRNDocumentMarkup(item, "supplier")}${getGRNDocumentMarkup(item, "finance")}`).join("")}
+          ${data.map((item) => `${getGRNDocumentMarkup(item, "supplier")}${getPaymentOrderMarkup(item)}`).join("")}
         </div>
         <script>
           window.onload = function () {
@@ -772,5 +846,177 @@ export function getGRNPrintDocumentHTML(data: GRNDocumentData[], title: string):
         <\/script>
       </body>
     </html>
+  `;
+}
+
+export function getPaymentOrderMarkup(data: GRNDocumentData): string {
+  const createdAt = new Date(data.createdAt);
+  const issueDate = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "Y" }).replace("Y", "numeric");
+  const todayFormatted = new Date().toLocaleDateString("en-GB");
+  const deliveryDate = createdAt.toLocaleDateString("en-GB");
+  const totalAmount = data.totalAmount ?? data.totalKgs * data.unitPrice;
+  const grnReference = data.grnNumber.startsWith("GAC-") ? data.grnNumber : `GAC-${data.grnNumber}`;
+  const poNumber = `PO-${data.grnNumber.replace(/[^A-Z0-9]/gi, "").slice(-8) || "00000001"}`;
+  const verificationUrl = data.verificationCode ? getVerificationUrl(data.verificationCode) : "";
+  const qrCodeUrl = data.verificationCode ? getVerificationQRUrl(data.verificationCode, 110) : "";
+
+  return `
+    <div class="gac-grn-page">
+      <table class="gac-grn-top-table">
+        <tr>
+          <td class="gac-grn-logo-cell">
+            <img src="${LOGO_URL}" alt="Great Agro Coffee" class="gac-grn-logo" />
+            <div class="gac-grn-logo-text">GAC</div>
+          </td>
+          <td class="gac-grn-title-cell">
+            <div class="gac-grn-official-title">PAYMENT ORDER</div>
+            <div class="gac-grn-official-subtitle">
+              FINANCE DEPARTMENT — SUPPLIER PAYMENT INSTRUCTION
+              <span class="gac-grn-copy-label finance">FINANCE COPY</span>
+            </div>
+          </td>
+          <td class="gac-grn-od-cell">
+            <div><strong>PO No:</strong> ${escapeHtml(poNumber)}</div>
+            <div><strong>GRN Ref:</strong> ${escapeHtml(grnReference)}</div>
+            <div><strong>Issue Date:</strong> ${escapeHtml(todayFormatted)}</div>
+          </td>
+        </tr>
+      </table>
+
+      <table class="gac-grn-company-strip">
+        <tr>
+          <td style="text-align:center;padding:4px 0;font-size:11px;">
+            <strong class="gac-grn-company-name">GREAT AGRO COFFEE LIMITED</strong><br/>
+            <span class="gac-grn-company-tagline">Kasese Municipality, Tibamwenda Road, Kasese, Uganda</span>
+          </td>
+        </tr>
+      </table>
+
+      <div class="gac-grn-po-title">PAYMENT ORDER</div>
+      <div class="gac-grn-po-subtitle">Authorisation to Finance Department to release supplier payment</div>
+
+      <div class="gac-grn-po-instruction">
+        <strong>To: Finance Department,</strong><br/>
+        Please process payment to the supplier named below in respect of coffee delivered and accepted under
+        <strong>GRN ${escapeHtml(grnReference)}</strong> dated <strong>${escapeHtml(deliveryDate)}</strong>.
+        Verify the supplier's bank details against the system records before disbursement.
+      </div>
+
+      <table class="gac-grn-po-meta">
+        <tr>
+          <td class="label">Supplier Name</td>
+          <td class="value" colspan="3">${displayValue(data.supplierName)}</td>
+        </tr>
+        <tr>
+          <td class="label">Supplier Code</td>
+          <td>${displayValue(data.supplierCode)}</td>
+          <td class="label">Phone</td>
+          <td>${displayValue(data.supplierPhone)}</td>
+        </tr>
+        <tr>
+          <td class="label">Email</td>
+          <td>${displayValue(data.supplierEmail)}</td>
+          <td class="label">Address</td>
+          <td>${displayValue(data.supplierAddress)}</td>
+        </tr>
+      </table>
+
+      <table class="gac-grn-po-table">
+        <thead>
+          <tr>
+            <th style="width:40%;">Description</th>
+            <th>Coffee Type</th>
+            <th>Bags</th>
+            <th>Net Weight (kg)</th>
+            <th>Unit Price (UGX)</th>
+            <th>Amount (UGX)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Coffee delivery — GRN ${escapeHtml(grnReference)} (${escapeHtml(deliveryDate)})</td>
+            <td class="value">${displayValue(data.coffeeType)}</td>
+            <td class="value">${escapeHtml(String(data.numberOfBags))}</td>
+            <td class="value">${escapeHtml(data.totalKgs.toLocaleString())}</td>
+            <td class="value">${escapeHtml(data.unitPrice.toLocaleString())}</td>
+            <td class="value">${escapeHtml(totalAmount.toLocaleString())}</td>
+          </tr>
+          <tr>
+            <td colspan="5" style="text-align:right;font-weight:700;">TOTAL PAYABLE (UGX)</td>
+            <td class="value" style="font-size:13px;font-weight:800;">${escapeHtml(totalAmount.toLocaleString())}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="gac-grn-po-amount-box">
+        <div class="label">Total Amount Payable</div>
+        <div class="value">UGX ${escapeHtml(totalAmount.toLocaleString())}</div>
+        <div class="words">${escapeHtml(numberToWords(totalAmount))}</div>
+      </div>
+
+      <div class="gac-grn-bank-box">
+        <span class="gac-grn-bank-title">Pay To — Supplier Bank Details</span>
+        <table>
+          <tr>
+            <td style="width:50%;"><strong>Bank Name:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierBankName)}</span></td>
+            <td style="width:50%;"><strong>Account Name:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierAccountName)}</span></td>
+          </tr>
+          <tr>
+            <td colspan="2"><strong>Account Number:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierAccountNumber)}</span></td>
+          </tr>
+          <tr>
+            <td><strong>Mobile Money / Phone:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierPhone)}</span></td>
+            <td><strong>Payment Reference:</strong> <span class="gac-grn-line-fill-value">${escapeHtml(grnReference)}</span></td>
+          </tr>
+        </table>
+      </div>
+
+      <table class="gac-grn-po-approval">
+        <tr>
+          <td>
+            <div class="role">Prepared By (Quality / Store)</div>
+            <div style="font-family:'Courier New',monospace;font-weight:700;margin-top:6px;">${displayValue(data.qualityApprovedBy || data.assessedBy, "")}</div>
+            <div class="sig-line">Signature &amp; Date</div>
+          </td>
+          <td>
+            <div class="role">Authorised By (Manager)</div>
+            <div style="font-family:'Courier New',monospace;font-weight:700;margin-top:6px;">${displayValue(data.managerName || data.printedBy, "")}</div>
+            <div class="sig-line">Signature &amp; Date</div>
+          </td>
+          <td>
+            <div class="role">Paid By (Finance)</div>
+            <div class="sig-line" style="margin-top:34px;">Name, Signature &amp; Date</div>
+          </td>
+        </tr>
+      </table>
+
+      <p class="gac-grn-note" style="margin-top:10px;">
+        <strong>NB:</strong> This Payment Order is issued strictly against the referenced GRN and the supplier bank details on
+        record. Any discrepancy must be referred back to the originating department before payment is released.
+      </p>
+
+      <table class="gac-grn-footer-table">
+        <tr>
+          <td class="gac-grn-footer-left">
+            <strong style="color:#1a1a1a;">GREAT AGRO COFFEE LIMITED</strong><br/>
+            Kasese Municipality, Tibamwenda Road, Kasese, Uganda<br/>
+            Tel: +256 393 001 626 &nbsp;|&nbsp; Email: info@greatpearlcoffee.com &nbsp;|&nbsp; Web: www.greatagrocoffee.com
+            ${data.verificationCode ? `<br/><span class="gac-grn-verify-code">Verify code: ${escapeHtml(data.verificationCode)}</span>` : ""}
+            ${data.printedBy ? `<br/><span><strong>Printed by:</strong> ${escapeHtml(data.printedBy)}</span>` : ""}
+          </td>
+          ${data.verificationCode ? `
+            <td class="gac-grn-footer-right">
+              <img src="${qrCodeUrl}" alt="Verify" class="gac-grn-qr" />
+              <div class="gac-grn-qr-label">Scan to verify authenticity</div>
+              <div class="gac-grn-qr-label">${escapeHtml(verificationUrl)}</div>
+            </td>
+          ` : ""}
+        </tr>
+      </table>
+
+      <div class="gac-grn-system-note">
+        Payment Order — system-generated by Great Agro Coffee Traceability System. Issued: ${escapeHtml(issueDate)}.
+      </div>
+    </div>
   `;
 }
