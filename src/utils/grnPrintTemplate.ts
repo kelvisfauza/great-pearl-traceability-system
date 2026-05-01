@@ -611,7 +611,6 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
   const verificationUrl = data.verificationCode ? getVerificationUrl(data.verificationCode) : "";
   const qrCodeUrl = data.verificationCode ? getVerificationQRUrl(data.verificationCode, 110) : "";
   const qualityFactor = data.qualityFactor || (data.outturn != null ? `${data.outturn}%` : undefined);
-  const isFinance = copyType === "finance";
   const qualityRows = [
     ["Moisture Content", data.moisture != null ? `${data.moisture}%` : "—", "≤ 14%"],
     ["Group 1 Defects", data.group1_defects != null ? `${data.group1_defects}%` : "—", "≤ 4%"],
@@ -635,7 +634,7 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
             <div class="gac-grn-official-title">OFFICIAL DOCUMENT</div>
             <div class="gac-grn-official-subtitle">
               GOODS RECEIVED NOTE — COFFEE
-              <span class="gac-grn-copy-label${isFinance ? " finance" : ""}">${isFinance ? "FINANCE COPY" : "SUPPLIER COPY"}</span>
+              <span class="gac-grn-copy-label">SUPPLIER COPY</span>
             </div>
           </td>
           <td class="gac-grn-od-cell">
