@@ -388,6 +388,11 @@ const App: React.ComponentType = () => {
                     <WholeBusinessReport />
                   </ProtectedRoute>
                 } />
+                <Route path="/reports/yo-payments" element={
+                  <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
+                    <YoPaymentsReport />
+                  </ProtectedRoute>
+                } />
                 <Route path="/admin/system-settings" element={
                   <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
                     <SystemSettings />
