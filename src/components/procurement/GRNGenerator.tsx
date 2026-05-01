@@ -51,68 +51,176 @@ const GRNGenerator: React.FC<GRNGeneratorProps> = ({ open, onClose }) => {
 
     const qrCodeUrl = verificationCode ? getVerificationQRUrl(verificationCode, 100) : '';
 
+    const issueDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' });
+    const deliveryDate = new Date(record.date).toLocaleDateString('en-GB');
+    const grnNo = `GAC-${record.batchNumber}`;
+    const odNo = record.batchNumber.replace(/\D/g, '').slice(-4) || '0001';
+    const region = (record as any).region || '';
+    const isRegion = (r: string) => region.toLowerCase().includes(r.toLowerCase());
+    const checkbox = (checked: boolean) =>
+      `<span style="display:inline-block;width:11px;height:11px;border:1.2px solid #1a1a1a;vertical-align:middle;margin-right:4px;text-align:center;line-height:9px;font-size:10px;font-weight:bold;color:#0a6b2a;">${checked ? '✓' : ''}</span>`;
+    const field = (label: string, value: string | number, width = '100%') =>
+      `<span style="display:inline-block;width:${width};">
+         <span style="font-weight:600;">${label}</span>
+         <span style="display:inline-block;border-bottom:1px solid #1a1a1a;min-width:60px;padding:0 6px;font-family:'Courier New',monospace;color:#0a3d8f;">${value || '—'}</span>
+       </span>`;
+
     const grnContent = `
-      <div style="padding: 20px; font-family: Arial, sans-serif;">
-        <div style="text-align: center; margin-bottom: 30px;">
-          <h1>GOODS RECEIVED NOTE (GRN)</h1>
-          <p><strong>Great Agro Coffee</strong></p>
-          <p>+256 393 001 626</p>
-          <p>info@greatpearlcoffee.com</p>
-        </div>
-        
-        <div style="margin-bottom: 20px;">
-          <p><strong>GRN Number:</strong> GRN-${record.batchNumber}</p>
-          <p><strong>Date:</strong> ${new Date(record.date).toLocaleDateString()}</p>
-          <p><strong>Supplier:</strong> ${record.supplierName}</p>
-          <p><strong>Coffee Type:</strong> ${record.coffeeType}</p>
-        </div>
-        
-        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-          <thead>
-            <tr style="background-color: #f5f5f5;">
-              <th style="border: 1px solid #ddd; padding: 8px;">Description</th>
-              <th style="border: 1px solid #ddd; padding: 8px;">Quantity (Bags)</th>
-              <th style="border: 1px solid #ddd; padding: 8px;">Weight (KG)</th>
-              <th style="border: 1px solid #ddd; padding: 8px;">Batch Number</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style="border: 1px solid #ddd; padding: 8px;">${record.coffeeType}</td>
-              <td style="border: 1px solid #ddd; padding: 8px;">${record.bags}</td>
-              <td style="border: 1px solid #ddd; padding: 8px;">${record.kilograms}</td>
-              <td style="border: 1px solid #ddd; padding: 8px;">${record.batchNumber}</td>
-            </tr>
-          </tbody>
+      <div style="padding:14px;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;font-size:11px;line-height:1.45;background:#fffdf3;">
+        <!-- Top Header Row: Logo | Title | OD info -->
+        <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
+          <tr>
+            <td style="border:1.5px solid #1a1a1a;padding:8px 10px;width:18%;text-align:center;vertical-align:middle;">
+              <img src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" alt="GAC" style="height:36px;width:auto;display:block;margin:0 auto 2px;"/>
+              <div style="font-weight:bold;font-size:11px;letter-spacing:1px;">GAC</div>
+            </td>
+            <td style="border:1.5px solid #1a1a1a;padding:10px;width:52%;text-align:center;vertical-align:middle;">
+              <div style="font-weight:bold;font-size:18px;letter-spacing:1.5px;">OFFICIAL DOCUMENT</div>
+              <div style="font-weight:600;font-size:12px;margin-top:2px;letter-spacing:1px;">GOODS RECEIVED NOTE — COFFEE</div>
+            </td>
+            <td style="border:1.5px solid #1a1a1a;padding:8px 10px;width:30%;font-size:10.5px;line-height:1.6;">
+              <div><strong>OD No:</strong> ${odNo}</div>
+              <div><strong>Version No:</strong> 01</div>
+              <div><strong>Issue Date:</strong> ${issueDate}</div>
+            </td>
+          </tr>
         </table>
-        
-        <div style="margin-top: 40px;">
-          <p>This GRN confirms the receipt of the above coffee from ${record.supplierName}.</p>
-          <br/>
-          <div style="display: flex; justify-content: space-between;">
-            <div>
-              <p>_________________________</p>
-              <p>Store Keeper</p>
-            </div>
-            <div>
-              <p>_________________________</p>
-              <p>Quality Controller</p>
-            </div>
+
+        <!-- Company strip + GRN ref -->
+        <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
+          <tr>
+            <td style="text-align:center;padding:4px 0;font-size:11px;">
+              <strong style="font-size:13px;letter-spacing:1px;">GREAT AGRO COFFEE LIMITED</strong><br/>
+              <span style="font-size:9.5px;color:#444;">A SPECIALTY COFFEE PROCESSOR & EXPORTER</span>
+            </td>
+            <td style="width:30%;text-align:right;padding:4px 0;">
+              <strong style="font-size:11px;">GAC-GRNC</strong>
+              <span style="display:inline-block;color:#c1121f;font-weight:bold;font-size:16px;font-family:'Courier New',monospace;border:1px solid #c1121f;padding:2px 8px;margin-left:4px;letter-spacing:1px;">${grnNo}</span>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Region checkboxes -->
+        <div style="margin:6px 0 8px;font-size:11px;">
+          ${checkbox(isRegion('elgon'))}<span style="margin-right:18px;font-weight:600;">Elgon</span>
+          ${checkbox(isRegion('rwenzori'))}<span style="margin-right:18px;font-weight:600;">Rwenzori</span>
+          ${checkbox(isRegion('masaka'))}<span style="margin-right:18px;font-weight:600;">Masaka</span>
+          ${checkbox(!!region && !['elgon','rwenzori','masaka'].some(r=>isRegion(r)))}<span style="font-weight:600;">Other</span>
+          <span style="display:inline-block;border-bottom:1px solid #1a1a1a;min-width:200px;margin-left:4px;padding:0 6px;font-family:'Courier New',monospace;color:#0a3d8f;">${region && !['elgon','rwenzori','masaka'].some(r=>isRegion(r)) ? region : ''}</span>
+        </div>
+
+        <!-- Preamble -->
+        <p style="font-size:10px;text-align:center;margin:6px 16px 12px;line-height:1.4;color:#222;">
+          This Goods Received Note is a Contract between the two parties mentioned, whereby Great Agro Coffee Limited has agreed to buy
+          and the Supplier has agreed to sell coffee under the following terms and conditions. This is to certify that we have received and
+          inspected your coffee delivered to us and found it to conform to the following quality and price specifications.
+        </p>
+
+        <!-- Supplier & Delivery details -->
+        <div style="margin:8px 0;">
+          <div style="margin:8px 0;">${field('Date:&nbsp;', deliveryDate, '38%')} ${field('Supplier&rsquo;s Name:&nbsp;', record.supplierName, '58%')}</div>
+          <div style="margin:8px 0;">${field('Supplier&rsquo;s Address:&nbsp;', (record as any).supplierAddress || '—', '58%')} ${field('Supplier&rsquo;s Tel:&nbsp;', (record as any).supplierPhone || '—', '38%')}</div>
+          <div style="margin:8px 0;">${field('Vehicle Reg:&nbsp;', (record as any).vehicleReg || '—', '48%')} ${field('Delivery Note No:&nbsp;', (record as any).deliveryNote || record.batchNumber, '48%')}</div>
+          <div style="margin:8px 0;">${field('No. of Bags:&nbsp;', `${record.bags} bags`, '32%')} ${field('Weighbridge No:&nbsp;', (record as any).weighbridgeNo || '—', '38%')} ${field('Net Weight (kg):&nbsp;', record.kilograms.toLocaleString(), '28%')}</div>
+          <div style="margin:8px 0;">${field('Type of Coffee:&nbsp;', record.coffeeType, '40%')} ${field('Quality Factor:&nbsp;', (record as any).qualityFactor || '—', '28%')} ${field('Moisture Content:&nbsp;', (record as any).moisture ? `${(record as any).moisture}%` : '—', '28%')}</div>
+          <div style="text-align:center;font-size:10px;font-style:italic;color:#444;margin:6px 0;">Quality Analysis: (See Quality Analysis Form attached)</div>
+        </div>
+
+        <!-- Pricing block -->
+        <table style="width:100%;border-collapse:collapse;margin-top:6px;font-size:10.5px;">
+          <tr>
+            <td style="padding:4px 0;width:34%;"><strong>Other:</strong> <span style="display:inline-block;border-bottom:1px solid #1a1a1a;min-width:120px;">&nbsp;</span></td>
+            <td style="padding:4px 0;width:33%;"></td>
+            <td style="padding:4px 0;width:33%;"><strong>Contract No:</strong> <span style="display:inline-block;border-bottom:1px solid #1a1a1a;min-width:100px;font-family:'Courier New',monospace;color:#0a3d8f;">${(record as any).contractNo || '—'}</span></td>
+          </tr>
+          <tr>
+            <td style="padding:4px 0;"><strong>Non-Contract Price:</strong></td>
+            <td style="padding:4px 0;"><strong>Paid Price:</strong> <span style="display:inline-block;border-bottom:1px solid #1a1a1a;min-width:90px;padding:0 4px;font-family:'Courier New',monospace;color:#0a3d8f;">${(record as any).pricePerKg ? Number((record as any).pricePerKg).toLocaleString() : '—'}</span></td>
+            <td style="padding:4px 0;"><strong>UGX:</strong> <span style="display:inline-block;border-bottom:1px solid #1a1a1a;min-width:120px;padding:0 4px;font-family:'Courier New',monospace;color:#0a3d8f;">${(record as any).totalAmount ? Number((record as any).totalAmount).toLocaleString() : '—'}</span></td>
+          </tr>
+          <tr>
+            <td style="padding:4px 0;"><strong>Contract Price:</strong></td>
+            <td style="padding:4px 0;"><strong>Paid Price:</strong> <span style="display:inline-block;border-bottom:1px solid #1a1a1a;min-width:90px;">&nbsp;</span></td>
+            <td style="padding:4px 0;"><strong>UGX:</strong> <span style="display:inline-block;border-bottom:1px solid #1a1a1a;min-width:120px;">&nbsp;</span></td>
+          </tr>
+          <tr>
+            <td style="padding:4px 0;"><strong>Advance — Payment Voucher No:</strong></td>
+            <td style="padding:4px 0;"><strong>Cheque No:</strong> <span style="display:inline-block;border-bottom:1px solid #1a1a1a;min-width:90px;">&nbsp;</span></td>
+            <td style="padding:4px 0;"><strong>UGX:</strong> <span style="display:inline-block;border-bottom:1px solid #1a1a1a;min-width:120px;">&nbsp;</span></td>
+          </tr>
+          <tr>
+            <td style="padding:4px 0;"><strong>Deduction / Other:</strong> <span style="display:inline-block;border-bottom:1px solid #1a1a1a;min-width:140px;">&nbsp;</span></td>
+            <td></td>
+            <td style="padding:4px 0;"><strong>UGX:</strong> <span style="display:inline-block;border-bottom:1px solid #1a1a1a;min-width:120px;">&nbsp;</span></td>
+          </tr>
+          <tr>
+            <td colspan="2" style="padding:6px 0;border-top:1.5px solid #1a1a1a;"><strong style="font-size:12px;">TOTAL PAID AFTER DEDUCTIONS:</strong></td>
+            <td style="padding:6px 0;border-top:1.5px solid #1a1a1a;"><strong>UGX:</strong> <span style="display:inline-block;border-bottom:2px solid #1a1a1a;min-width:140px;padding:0 4px;font-family:'Courier New',monospace;color:#0a3d8f;font-weight:bold;font-size:12px;">${(record as any).totalAmount ? Number((record as any).totalAmount).toLocaleString() : '—'}</span></td>
+          </tr>
+          <tr>
+            <td style="padding:4px 0;"><strong>Paid Bank:</strong> <span style="display:inline-block;border-bottom:1px solid #1a1a1a;min-width:160px;">&nbsp;</span></td>
+            <td colspan="2" style="padding:4px 0;"><strong>Cheque No:</strong> <span style="display:inline-block;border-bottom:1px solid #1a1a1a;min-width:160px;">&nbsp;</span></td>
+          </tr>
+        </table>
+
+        <!-- Electronic stamp -->
+        <div style="position:relative;margin:14px 0;text-align:center;">
+          <div style="display:inline-block;border:2.5px solid #0a6b2a;color:#0a6b2a;padding:6px 18px;border-radius:60px;transform:rotate(-6deg);font-weight:bold;font-family:Arial,sans-serif;letter-spacing:1.5px;">
+            <div style="font-size:10px;">★ GREAT AGRO COFFEE LTD ★</div>
+            <div style="font-size:13px;margin:2px 0;">${issueDate.toUpperCase()}</div>
+            <div style="font-size:9px;">QUALITY DEPARTMENT</div>
           </div>
         </div>
 
-        ${verificationCode ? `
-        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px dashed #ccc; text-align: center;">
-          <p style="font-size: 10px; color: #666; margin-bottom: 5px;">Document Verification</p>
-          <div style="display: flex; align-items: center; justify-content: center; gap: 15px;">
-            <div style="text-align: left;">
-              <p style="font-size: 12px; font-weight: bold; color: #166534; font-family: monospace;">${verificationCode}</p>
-              <p style="font-size: 9px; color: #999;">Scan QR to verify authenticity</p>
-            </div>
-            <img src="${qrCodeUrl}" alt="Verification QR" style="width: 80px; height: 80px; border: 1px solid #ddd; padding: 4px; background: white;" />
-          </div>
+        <!-- NB clause -->
+        <p style="font-size:9.5px;text-align:center;margin:10px 16px;line-height:1.4;color:#333;">
+          <strong>NB:</strong> To suppliers — please check that you agree to the above calculations and deductions before you sign to receive your
+          Payment / GRN. There will be no refunds or re-calculations once you have signed. Paid Price equals Daily Price / Contract Price
+          divided by the Quality Factor.
+        </p>
+
+        <!-- Signatures -->
+        <div style="margin:14px 0 4px;">
+          <strong>Signed in full acceptance — Supplier:</strong>
+          <span style="display:inline-block;border-bottom:1px solid #1a1a1a;min-width:380px;">&nbsp;</span>
         </div>
-        ` : ''}
+        <table style="width:100%;border-collapse:collapse;margin-top:10px;">
+          <tr>
+            <td style="border:1px solid #1a1a1a;padding:8px;width:33%;font-size:10.5px;">
+              <strong>Signed QM/QC:</strong><br/>
+              <span style="display:inline-block;margin-top:14px;border-bottom:1px solid #1a1a1a;width:90%;font-family:'Courier New',monospace;color:#0a3d8f;">${(record as any).qualityApprovedBy || ''}</span>
+            </td>
+            <td style="border:1px solid #1a1a1a;padding:8px;width:34%;font-size:10.5px;">
+              <strong>Signed PM/UM:</strong><br/>
+              <span style="display:inline-block;margin-top:14px;border-bottom:1px solid #1a1a1a;width:90%;font-family:'Courier New',monospace;color:#0a3d8f;">${employee?.name || employee?.email || ''}</span>
+            </td>
+            <td style="border:1px solid #1a1a1a;padding:8px;width:33%;font-size:10.5px;">
+              <strong>Signed AM:</strong><br/>
+              <span style="display:inline-block;margin-top:14px;border-bottom:1px solid #1a1a1a;width:90%;">&nbsp;</span>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Footer + verification -->
+        <table style="width:100%;border-collapse:collapse;margin-top:12px;border-top:1.5px solid #1a1a1a;">
+          <tr>
+            <td style="padding:8px;font-size:9px;color:#444;line-height:1.5;vertical-align:top;width:65%;">
+              <strong style="color:#1a1a1a;">GREAT AGRO COFFEE LIMITED</strong><br/>
+              Kampala Industrial & Business Park — Namanve / P.O. Box 3181, Kampala, Uganda<br/>
+              Tel: +256 393 001 626 &nbsp;|&nbsp; Email: info@greatpearlcoffee.com &nbsp;|&nbsp; Web: www.greatagrocoffee.com
+              ${verificationCode ? `<br/><span style="color:#0a6b2a;font-weight:bold;font-family:'Courier New',monospace;margin-top:4px;display:inline-block;">Verify code: ${verificationCode}</span>` : ''}
+            </td>
+            ${verificationCode ? `
+            <td style="padding:8px;text-align:right;width:35%;vertical-align:top;">
+              <img src="${qrCodeUrl}" alt="Verify" style="width:78px;height:78px;border:1px solid #ccc;padding:3px;background:#fff;"/>
+              <div style="font-size:8px;color:#666;margin-top:2px;">Scan to verify authenticity</div>
+            </td>` : ''}
+          </tr>
+        </table>
+
+        <div style="text-align:center;margin-top:6px;font-size:8.5px;color:#888;font-style:italic;">
+          Electronic GRN — system-generated by Great Agro Coffee Traceability System. No physical signature required for system records.
+        </div>
       </div>
     `;
 
