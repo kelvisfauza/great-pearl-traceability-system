@@ -494,7 +494,7 @@ export function getGRNDocumentStyles(): string {
   `;
 }
 
-export function getGRNDocumentMarkup(data: GRNDocumentData): string {
+export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier" | "finance" = "supplier"): string {
   const createdAt = new Date(data.createdAt);
   const issueDate = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" });
   const deliveryDate = createdAt.toLocaleDateString("en-GB");
@@ -510,6 +510,7 @@ export function getGRNDocumentMarkup(data: GRNDocumentData): string {
   const verificationUrl = data.verificationCode ? getVerificationUrl(data.verificationCode) : "";
   const qrCodeUrl = data.verificationCode ? getVerificationQRUrl(data.verificationCode, 110) : "";
   const qualityFactor = data.qualityFactor || (data.outturn != null ? `${data.outturn}%` : undefined);
+  const isFinance = copyType === "finance";
   const qualityRows = [
     ["Moisture Content", data.moisture != null ? `${data.moisture}%` : "—", "≤ 14%"],
     ["Group 1 Defects", data.group1_defects != null ? `${data.group1_defects}%` : "—", "≤ 4%"],
