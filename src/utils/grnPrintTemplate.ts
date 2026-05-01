@@ -286,16 +286,27 @@ export function getGRNDocumentStyles(): string {
         text-align: center;
       }
       .gac-grn-discretion {
-        margin-top: 8px;
-        border: 2px solid #c1121f;
+        margin-top: 4px;
+        border: 1.5px solid #c1121f;
         background: #fff1f2;
-        padding: 8px 10px;
+        padding: 3px 6px;
         color: #7f1d1d;
+        font-size: 10px;
+        line-height: 1.25;
       }
       .gac-grn-discretion strong {
-        display: block;
-        margin-bottom: 2px;
+        display: inline;
+        margin-bottom: 0;
       }
+      .gac-grn-page.has-discretion { font-size: 11.2px; line-height: 1.3; }
+      .gac-grn-page.has-discretion .gac-grn-quality-table { font-size: 10.5px; }
+      .gac-grn-page.has-discretion .gac-grn-quality-table th,
+      .gac-grn-page.has-discretion .gac-grn-quality-table td { padding: 2px 5px; }
+      .gac-grn-page.has-discretion .gac-grn-detail-grid td { padding: 2px 4px; font-size: 11px; }
+      .gac-grn-page.has-discretion .gac-grn-pricing-table { font-size: 10.8px; }
+      .gac-grn-page.has-discretion .gac-grn-pricing-table td { padding: 2px 0; }
+      .gac-grn-page.has-discretion .gac-grn-preamble,
+      .gac-grn-page.has-discretion .gac-grn-note { margin: 2px 12px; font-size: 9.5px; }
       .gac-grn-pricing-table {
         margin-top: 4px;
         font-size: 11.5px;
@@ -467,7 +478,7 @@ export function getGRNDocumentMarkup(data: GRNDocumentData): string {
   ];
 
   return `
-    <div class="gac-grn-page">
+    <div class="gac-grn-page${data.isDiscretionBuy ? " has-discretion" : ""}">
       <table class="gac-grn-top-table">
         <tr>
           <td class="gac-grn-logo-cell">
