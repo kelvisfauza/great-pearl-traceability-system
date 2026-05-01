@@ -27,6 +27,8 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { formatDistanceToNow } from "date-fns";
 import AnnouncementDialog from "@/components/notifications/AnnouncementDialog";
 import NotificationDetailModal from "@/components/notifications/NotificationDetailModal";
+import MarqueeAnnouncementDialog from "@/components/announcements/MarqueeAnnouncementDialog";
+import { Megaphone } from "lucide-react";
 
 interface NotificationPanelProps {
   isOpen: boolean;
@@ -119,6 +121,12 @@ const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) => {
               <Button size="sm" variant="secondary" className="hover-scale">
                 <Bell className="h-4 w-4 mr-2" />
                 New announcement
+              </Button>
+            } />
+            <MarqueeAnnouncementDialog trigger={
+              <Button size="sm" variant="secondary" className="hover-scale">
+                <Megaphone className="h-4 w-4 mr-2" />
+                Scrolling banner
               </Button>
             } />
             {notifications.length > 0 && (
