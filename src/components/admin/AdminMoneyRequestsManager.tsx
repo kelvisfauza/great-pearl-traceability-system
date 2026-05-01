@@ -110,7 +110,7 @@ const AdminMoneyRequestsManager = () => {
         // Salary Advance is admin-only — DB trigger auto-completes & disburses.
         // Other request types still follow Admin → Finance.
         const req = requests.find(r => r.id === requestId);
-        if (req?.type === 'Salary Advance') {
+        if (req?.request_type === 'Salary Advance') {
           updateData.status = 'Approved';
           // approval_stage will be set to 'completed' by the DB trigger
         } else {
@@ -131,7 +131,7 @@ const AdminMoneyRequestsManager = () => {
       if (error) throw error;
 
       const approvedReq = requests.find(r => r.id === requestId);
-      const isSalaryAdvance = approvedReq?.type === 'Salary Advance';
+      const isSalaryAdvance = approvedReq?.request_type === 'Salary Advance';
       toast({
         title: approve ? (isSalaryAdvance ? "Advance Disbursed ✅" : "Request Approved") : "Request Rejected",
         description: approve
