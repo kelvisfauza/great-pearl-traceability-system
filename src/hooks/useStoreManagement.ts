@@ -435,7 +435,7 @@ export const useStoreManagement = () => {
           batch_number: recordData.batchNumber,
           status: recordData.status,
           supplier_id: supplier?.id || null,
-          created_by: 'Store Department'
+          created_by: employee?.name || employee?.email || 'Store Department'
         })
         .select()
         .single();
