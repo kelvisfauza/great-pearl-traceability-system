@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
+import { generateBatchNumber } from "@/utils/batchUtils";
 
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -209,7 +210,7 @@ const Store = () => {
     kilograms: "",
     bags: "",
     supplierName: "",
-    batchNumber: `BATCH${Date.now()}`,
+    batchNumber: "",
     status: "pending",
   });
   const [submittingRecord, setSubmittingRecord] = useState(false);
@@ -346,7 +347,7 @@ const Store = () => {
         ...newRecord,
         kilograms: Number(newRecord.kilograms),
         bags: Number(newRecord.bags),
-        batchNumber: `BATCH${Date.now()}`,
+        batchNumber: await generateBatchNumber(newRecord.date),
       });
 
       setNewRecord({
