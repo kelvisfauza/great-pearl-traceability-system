@@ -434,3 +434,19 @@
 .animate-highlight-pulse {
   animation: highlightPulse 1s ease-in-out 3;
 }
+
+/* Marquee scrolling announcement */
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.marquee-track {
+  display: inline-flex;
+  animation: marquee-scroll 40s linear infinite;
+  will-change: transform;
+}
+
+.marquee-track:hover {
+  animation-play-state: paused;
+}
