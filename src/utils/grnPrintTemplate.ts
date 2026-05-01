@@ -667,6 +667,32 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
 
       <div class="gac-grn-amount-words"><strong>Amount in Words:</strong> ${escapeHtml(numberToWords(totalAmount))}</div>
 
+      ${isFinance ? `
+        <div class="gac-grn-bank-box">
+          <span class="gac-grn-bank-title">Supplier Payment Details (Finance Use)</span>
+          <table>
+            <tr>
+              <td style="width:50%;"><strong>Supplier Name:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierName)}</span></td>
+              <td style="width:50%;"><strong>Supplier Code:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierCode)}</span></td>
+            </tr>
+            <tr>
+              <td><strong>Phone:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierPhone)}</span></td>
+              <td><strong>Email:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierEmail)}</span></td>
+            </tr>
+            <tr>
+              <td colspan="2"><strong>Address:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierAddress)}</span></td>
+            </tr>
+            <tr>
+              <td><strong>Bank Name:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierBankName)}</span></td>
+              <td><strong>Account Name:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierAccountName)}</span></td>
+            </tr>
+            <tr>
+              <td colspan="2"><strong>Account Number:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierAccountNumber)}</span></td>
+            </tr>
+          </table>
+        </div>
+      ` : ""}
+
       <p class="gac-grn-note">
         <strong>NB:</strong> To suppliers — please check that you agree to the above calculations and deductions before you sign to receive your
         Payment / GRN. There will be no refunds or re-calculations once you have signed. Paid Price equals Daily Price / Contract Price
