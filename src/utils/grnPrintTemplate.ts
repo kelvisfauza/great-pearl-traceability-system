@@ -470,6 +470,104 @@ export function getGRNDocumentStyles(): string {
       }
       .gac-grn-bank-box table { width: 100%; border-collapse: collapse; }
       .gac-grn-bank-box td { padding: 2px 4px; vertical-align: top; }
+      /* Payment Order (Finance copy) */
+      .gac-grn-po-title {
+        text-align: center;
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: 2px;
+        margin: 8px 0 2px;
+        color: #0a3d8f;
+      }
+      .gac-grn-po-subtitle {
+        text-align: center;
+        font-size: 11px;
+        color: #444;
+        margin-bottom: 8px;
+        font-style: italic;
+      }
+      .gac-grn-po-meta {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 6px 0;
+        font-size: 11.5px;
+      }
+      .gac-grn-po-meta td {
+        padding: 4px 6px;
+        border: 1px solid #1a1a1a;
+      }
+      .gac-grn-po-meta td.label {
+        background: #f0efe9;
+        font-weight: 700;
+        width: 22%;
+      }
+      .gac-grn-po-instruction {
+        margin: 10px 0;
+        padding: 8px 12px;
+        border-left: 4px solid #0a3d8f;
+        background: #eef4ff;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+      .gac-grn-po-instruction strong { color: #0a3d8f; }
+      .gac-grn-po-amount-box {
+        margin: 10px 0;
+        padding: 10px 14px;
+        border: 2px solid #0a3d8f;
+        background: #fff;
+        text-align: center;
+      }
+      .gac-grn-po-amount-box .label {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 1.5px;
+        color: #0a3d8f;
+        text-transform: uppercase;
+      }
+      .gac-grn-po-amount-box .value {
+        font-size: 22px;
+        font-weight: 800;
+        font-family: 'Courier New', monospace;
+        color: #1a1a1a;
+        margin: 4px 0 2px;
+      }
+      .gac-grn-po-amount-box .words {
+        font-size: 11px;
+        font-style: italic;
+        color: #333;
+      }
+      .gac-grn-po-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 8px 0;
+        font-size: 11.5px;
+      }
+      .gac-grn-po-table th, .gac-grn-po-table td {
+        border: 1px solid #1a1a1a;
+        padding: 5px 8px;
+      }
+      .gac-grn-po-table th {
+        background: #f0efe9;
+        text-align: left;
+        font-size: 10.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .gac-grn-po-table td.value { font-family: 'Courier New', monospace; font-weight: 700; }
+      .gac-grn-po-approval {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 14px;
+      }
+      .gac-grn-po-approval td {
+        width: 33.33%;
+        border: 1px solid #1a1a1a;
+        padding: 8px;
+        vertical-align: top;
+        font-size: 11px;
+      }
+      .gac-grn-po-approval .role { font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; font-size: 10px; color: #444; }
+      .gac-grn-po-approval .sig-line { margin-top: 28px; border-top: 1px solid #1a1a1a; padding-top: 3px; font-size: 10px; color: #666; }
       @media print {
         body {
           margin: 0;
