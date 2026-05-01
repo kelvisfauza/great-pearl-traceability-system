@@ -6272,6 +6272,7 @@ export type Database = {
           admin_discretion_notes: string | null
           admin_discretion_price: number | null
           assessed_by: string
+          assessment_ref: string | null
           batch_number: string
           below12: number | null
           clean_d14: number | null
@@ -6290,6 +6291,7 @@ export type Database = {
           moisture: number
           outturn: number | null
           outturn_price: number | null
+          physical_assessment_by: string | null
           pods: number | null
           quality_note: string | null
           reject_final: boolean | null
@@ -6298,6 +6300,7 @@ export type Database = {
           stones: number | null
           store_record_id: string | null
           suggested_price: number
+          system_assessment_by: string | null
           updated_at: string
         }
         Insert: {
@@ -6307,6 +6310,7 @@ export type Database = {
           admin_discretion_notes?: string | null
           admin_discretion_price?: number | null
           assessed_by: string
+          assessment_ref?: string | null
           batch_number: string
           below12?: number | null
           clean_d14?: number | null
@@ -6325,6 +6329,7 @@ export type Database = {
           moisture: number
           outturn?: number | null
           outturn_price?: number | null
+          physical_assessment_by?: string | null
           pods?: number | null
           quality_note?: string | null
           reject_final?: boolean | null
@@ -6333,6 +6338,7 @@ export type Database = {
           stones?: number | null
           store_record_id?: string | null
           suggested_price: number
+          system_assessment_by?: string | null
           updated_at?: string
         }
         Update: {
@@ -6342,6 +6348,7 @@ export type Database = {
           admin_discretion_notes?: string | null
           admin_discretion_price?: number | null
           assessed_by?: string
+          assessment_ref?: string | null
           batch_number?: string
           below12?: number | null
           clean_d14?: number | null
@@ -6360,6 +6367,7 @@ export type Database = {
           moisture?: number
           outturn?: number | null
           outturn_price?: number | null
+          physical_assessment_by?: string | null
           pods?: number | null
           quality_note?: string | null
           reject_final?: boolean | null
@@ -6368,6 +6376,7 @@ export type Database = {
           stones?: number | null
           store_record_id?: string | null
           suggested_price?: number
+          system_assessment_by?: string | null
           updated_at?: string
         }
         Relationships: []
