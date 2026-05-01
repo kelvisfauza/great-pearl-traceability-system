@@ -28,7 +28,13 @@ const priorityIcon = {
 const MarqueeBanner = () => {
   const { employee } = useAuth();
   const [items, setItems] = useState<MarqueeAnnouncement[]>([]);
-  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [dismissed, setDismissed] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem("marquee_dismissed_ids");
+      if (raw) return new Set(JSON.parse(raw));
+    } catch {}
+    return new Set();
+  });
   const [tick, setTick] = useState(0);
 
   const isAdmin = employee?.role && ADMIN_ROLES.includes(employee.role);
@@ -85,6 +91,16 @@ const MarqueeBanner = () => {
     await supabase.from("marquee_announcements" as any).delete().eq("id", id);
   };
 
+  const handleDismiss = (id: string) => {
+    setDismissed((d) => {
+      const next = new Set(d).add(id);
+      try {
+        localStorage.setItem("marquee_dismissed_ids", JSON.stringify(Array.from(next)));
+      } catch {}
+      return next;
+    });
+  };
+
   return (
     <div className={`${priorityStyles[current.priority]} relative flex items-center overflow-hidden border-b border-black/10 print:hidden`}>
       <div className="flex items-center gap-2 px-3 py-1.5 flex-shrink-0 font-semibold text-sm border-r border-white/20">
@@ -108,7 +124,7 @@ const MarqueeBanner = () => {
           </button>
         )}
         <button
-          onClick={() => setDismissed((d) => new Set(d).add(current.id))}
+          onClick={() => handleDismiss(current.id)}
           className="p-1 rounded hover:bg-black/10"
           aria-label="Dismiss"
         >
