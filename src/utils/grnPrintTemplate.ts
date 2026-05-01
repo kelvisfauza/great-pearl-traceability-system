@@ -36,7 +36,7 @@ export interface GRNDocumentData {
   totalAmount?: number;
 }
 
-const LOGO_URL = `${typeof window !== "undefined" ? window.location.origin : ""}/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png`;
+const LOGO_URL = `${typeof window !== "undefined" ? window.location.origin : ""}/lovable-uploads/great-agro-coffee-logo.png`;
 
 function escapeHtml(value: string | number | null | undefined): string {
   return String(value ?? "")
@@ -85,7 +85,7 @@ function field(label: string, value: string | number | null | undefined, width =
 export function getGRNDocumentStyles(): string {
   return `
     <style>
-      @page { size: A4; margin: 12mm 14mm; }
+      @page { size: A4; margin: 8mm 10mm; }
       .gac-grn-preview-shell {
         background: #f4f4f5;
         padding: 16px;
@@ -96,10 +96,10 @@ export function getGRNDocumentStyles(): string {
         margin: 0 auto 16px;
         background: #fffdf7;
         color: #1a1a1a;
-        padding: 14px;
+        padding: 8px 10px;
         font-family: Arial, Helvetica, sans-serif;
-        font-size: 11px;
-        line-height: 1.45;
+        font-size: 9.5px;
+        line-height: 1.3;
         box-shadow: 0 0 0 1px #d4d4d8;
         page-break-after: always;
       }
@@ -123,23 +123,23 @@ export function getGRNDocumentStyles(): string {
         width: 18%;
         text-align: center;
         vertical-align: middle;
-        padding: 8px 10px;
+        padding: 4px 6px;
       }
       .gac-grn-title-cell {
         width: 52%;
         text-align: center;
         vertical-align: middle;
-        padding: 10px;
+        padding: 6px;
       }
       .gac-grn-od-cell {
         width: 30%;
-        font-size: 10.5px;
-        line-height: 1.6;
-        padding: 8px 10px;
+        font-size: 9.5px;
+        line-height: 1.45;
+        padding: 4px 6px;
         vertical-align: middle;
       }
       .gac-grn-logo {
-        height: 36px;
+        height: 30px;
         width: auto;
         display: block;
         margin: 0 auto 2px;
@@ -150,19 +150,19 @@ export function getGRNDocumentStyles(): string {
         letter-spacing: 1px;
       }
       .gac-grn-official-title {
-        font-size: 18px;
+        font-size: 15px;
         font-weight: 700;
-        letter-spacing: 1.5px;
+        letter-spacing: 1.2px;
       }
       .gac-grn-official-subtitle {
-        font-size: 12px;
+        font-size: 10.5px;
         font-weight: 600;
-        margin-top: 2px;
-        letter-spacing: 1px;
+        margin-top: 1px;
+        letter-spacing: 0.8px;
       }
       .gac-grn-company-strip {
         width: 100%;
-        margin: 8px 0;
+        margin: 4px 0;
         border-collapse: collapse;
       }
       .gac-grn-company-name {
@@ -221,15 +221,26 @@ export function getGRNDocumentStyles(): string {
       }
       .gac-grn-preamble,
       .gac-grn-note {
-        margin: 6px 16px 12px;
+        margin: 4px 12px 6px;
         color: #222;
-        line-height: 1.4;
+        line-height: 1.3;
         text-align: center;
       }
-      .gac-grn-preamble { font-size: 10px; }
-      .gac-grn-note { font-size: 9.5px; color: #333; margin-top: 10px; }
+      .gac-grn-preamble { font-size: 8.5px; }
+      .gac-grn-note { font-size: 8px; color: #333; margin-top: 6px; }
+      .gac-grn-detail-grid {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 6px 0 4px;
+      }
+      .gac-grn-detail-grid td {
+        padding: 3px 4px;
+        vertical-align: middle;
+        font-size: 9.5px;
+        white-space: nowrap;
+      }
       .gac-grn-detail-row {
-        margin: 8px 0;
+        margin: 4px 0;
       }
       .gac-grn-field {
         display: inline-block;
@@ -247,20 +258,20 @@ export function getGRNDocumentStyles(): string {
         font-family: 'Courier New', monospace;
       }
       .gac-grn-quality-caption {
-        margin: 6px 0;
+        margin: 4px 0 2px;
         color: #444;
-        font-size: 10px;
+        font-size: 9px;
         text-align: center;
         font-style: italic;
       }
       .gac-grn-quality-table {
-        margin-top: 8px;
-        font-size: 10px;
+        margin-top: 4px;
+        font-size: 9px;
       }
       .gac-grn-quality-table th,
       .gac-grn-quality-table td {
         border: 1px solid #1a1a1a;
-        padding: 5px 6px;
+        padding: 2px 5px;
       }
       .gac-grn-quality-table th {
         background: #f0efe9;
@@ -286,11 +297,11 @@ export function getGRNDocumentStyles(): string {
         margin-bottom: 2px;
       }
       .gac-grn-pricing-table {
-        margin-top: 6px;
-        font-size: 10.5px;
+        margin-top: 4px;
+        font-size: 9.5px;
       }
       .gac-grn-pricing-table td {
-        padding: 4px 0;
+        padding: 2px 0;
         vertical-align: top;
       }
       .gac-grn-line-fill {
@@ -313,16 +324,16 @@ export function getGRNDocumentStyles(): string {
         font-weight: 700;
       }
       .gac-grn-amount-words {
-        margin-top: 8px;
-        padding: 6px 10px;
+        margin-top: 4px;
+        padding: 3px 8px;
         border: 1px dashed #1a1a1a;
-        font-size: 10px;
+        font-size: 9px;
         font-style: italic;
         background: #fff;
       }
       .gac-grn-stamp-wrap {
         position: relative;
-        margin: 14px 0;
+        margin: 6px 0;
         text-align: center;
       }
       .gac-grn-stamp {
@@ -339,7 +350,8 @@ export function getGRNDocumentStyles(): string {
       .gac-grn-stamp-date { font-size: 13px; margin: 2px 0; }
       .gac-grn-stamp-bottom { font-size: 9px; }
       .gac-grn-supplier-sign {
-        margin: 14px 0 4px;
+        margin: 6px 0 2px;
+        font-size: 9.5px;
       }
       .gac-grn-sign-line {
         display: inline-block;
@@ -348,32 +360,32 @@ export function getGRNDocumentStyles(): string {
       }
       .gac-grn-sign-cell {
         width: 33.33%;
-        padding: 8px;
-        font-size: 10.5px;
+        padding: 4px 6px;
+        font-size: 9px;
       }
       .gac-grn-sign-value {
         display: inline-block;
         width: 90%;
-        margin-top: 14px;
+        margin-top: 8px;
         border-bottom: 1px solid #1a1a1a;
         font-family: 'Courier New', monospace;
         color: #0a3d8f;
       }
       .gac-grn-footer-table {
-        margin-top: 12px;
+        margin-top: 6px;
         border-top: 1.5px solid #1a1a1a;
       }
       .gac-grn-footer-left {
         width: 65%;
-        padding: 8px;
+        padding: 4px 6px;
         color: #444;
-        font-size: 9px;
-        line-height: 1.5;
+        font-size: 8px;
+        line-height: 1.35;
         vertical-align: top;
       }
       .gac-grn-footer-right {
         width: 35%;
-        padding: 8px;
+        padding: 4px 6px;
         text-align: right;
         vertical-align: top;
       }
@@ -385,10 +397,10 @@ export function getGRNDocumentStyles(): string {
         font-weight: 700;
       }
       .gac-grn-qr {
-        width: 78px;
-        height: 78px;
+        width: 60px;
+        height: 60px;
         border: 1px solid #ccc;
-        padding: 3px;
+        padding: 2px;
         background: #fff;
       }
       .gac-grn-qr-label {
