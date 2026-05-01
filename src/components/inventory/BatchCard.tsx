@@ -21,6 +21,7 @@ interface SourcePriceInfo {
 const BatchCard = ({ batch }: BatchCardProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [supplierMap, setSupplierMap] = useState<Record<string, SupplierRef>>({});
+  const [sourceMetaMap, setSourceMetaMap] = useState<Record<string, { inputBy?: string; deliveryDate?: string }>>({});
   const [priceInfo, setPriceInfo] = useState<{ avgPrice: number; totalCost: number } | null>(null);
   
   // Fetch supplier codes and price info for sources
@@ -32,11 +33,33 @@ const BatchCard = ({ batch }: BatchCardProps) => {
       
       const { data: records } = await supabase
         .from('coffee_records')
-        .select('id, supplier_id, kilograms')
+        .select('id, supplier_id, kilograms, created_by, date')
         .in('id', recordIds);
       
       if (!records || records.length === 0) return;
-      
+
+      // Resolve inputter names
+      const userIds = Array.from(new Set(records.map(r => r.created_by).filter(Boolean))) as string[];
+      let userNameMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: emps } = await supabase
+          .from('employees')
+          .select('auth_user_id, name')
+          .in('auth_user_id', userIds);
+        if (emps) {
+          emps.forEach((e: any) => { if (e.auth_user_id) userNameMap[e.auth_user_id] = e.name; });
+        }
+      }
+
+      const metaMap: Record<string, { inputBy?: string; deliveryDate?: string }> = {};
+      records.forEach((r: any) => {
+        metaMap[r.id] = {
+          inputBy: r.created_by ? (userNameMap[r.created_by] || 'System') : undefined,
+          deliveryDate: r.date,
+        };
+      });
+      setSourceMetaMap(metaMap);
+
       // Fetch supplier info
       const supplierIds = records.map(r => r.supplier_id).filter(Boolean);
       if (supplierIds.length > 0) {
@@ -347,6 +370,7 @@ const BatchCard = ({ batch }: BatchCardProps) => {
                 <div className="space-y-2 max-h-40 overflow-y-auto">
                   {batch.sources.map((source) => {
                     const display = getSupplierDisplay(source);
+                    const meta = sourceMetaMap[source.coffee_record_id] || {};
                     return (
                       <div 
                         key={source.id} 
@@ -355,7 +379,10 @@ const BatchCard = ({ batch }: BatchCardProps) => {
                         <div>
                           <p className="font-medium">{display.displayName}</p>
                           <p className="text-xs text-muted-foreground">
-                            {format(new Date(source.purchase_date), 'PP')}
+                            Delivered: {format(new Date(meta.deliveryDate || source.purchase_date), 'PP')}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Input by: {meta.inputBy || '—'}
                           </p>
                         </div>
                         <span className="font-semibold text-green-500">
