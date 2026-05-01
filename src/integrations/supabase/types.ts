@@ -10459,6 +10459,10 @@ export type Database = {
         }[]
       }
       "great pearl": { Args: { conversation_id: string }; Returns: boolean }
+      has_active_loan_obligation: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
