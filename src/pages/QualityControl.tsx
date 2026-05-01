@@ -166,7 +166,8 @@ const QualityControl = () => {
     // Manual override and comments
     manual_price: '',
     comments: '',
-    use_manual_price: false  // Toggle between calculator and manual price
+    use_manual_price: false,  // Toggle between calculator and manual price
+    physical_assessment_by: ''
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -339,7 +340,8 @@ const QualityControl = () => {
       reject_final: false,
       manual_price: '',
       comments: '',
-      use_manual_price: false
+      use_manual_price: false,
+      physical_assessment_by: ''
     });
     setActiveTab("price-calculator");
   };
@@ -419,7 +421,8 @@ const QualityControl = () => {
       reject_final: Boolean(assessment.reject_final),
       manual_price: '',
       comments: assessment.comments || '',
-      use_manual_price: false
+      use_manual_price: false,
+      physical_assessment_by: (assessment as any).physical_assessment_by || ''
     });
     
     setActiveTab("price-calculator");
@@ -528,7 +531,8 @@ const QualityControl = () => {
       reject_final: false,
       manual_price: '',
       comments: `Modification requested due to: ${modificationRequest.reason}${modificationRequest.comments ? '. Additional notes: ' + modificationRequest.comments : ''}`,
-      use_manual_price: false
+      use_manual_price: false,
+      physical_assessment_by: ''
     });
     
     setActiveTab("price-calculator");
@@ -681,7 +685,9 @@ const QualityControl = () => {
         comments: assessmentForm.comments || '',
         date_assessed: new Date().toISOString().split('T')[0],
         assessed_by: employee?.name || employee?.email || 'Quality Controller',
-      };
+        physical_assessment_by: assessmentForm.physical_assessment_by?.trim() || null,
+        system_assessment_by: employee?.name || employee?.email || 'Quality Controller',
+      } as any;
 
       console.log('Final assessment data to submit:', assessment);
       
@@ -765,15 +771,17 @@ const QualityControl = () => {
         reject_final: false,
         manual_price: '',
         comments: '',
-        use_manual_price: false
+        use_manual_price: false,
+        physical_assessment_by: ''
       });
       setActiveTab("assessments");
       
+      const savedRef = (result as any)?.assessment_ref || (result as any)?.data?.assessment_ref;
       toast({
         title: editingAssessmentId ? "Assessment Updated ✓" : "Assessment Saved ✓",
-        description: editingAssessmentId 
-          ? "Quality assessment updated. Print GRN now."
-          : "Quality assessment saved. Print GRN now."
+        description: savedRef
+          ? `Reference: ${savedRef} — write this on the physical form.`
+          : (editingAssessmentId ? "Quality assessment updated. Print GRN now." : "Quality assessment saved. Print GRN now.")
       });
       
     } catch (error) {
@@ -836,8 +844,10 @@ const QualityControl = () => {
         comments: assessmentForm.comments || null,
         status: 'pending_admin_pricing',
         reject_outturn_price: false,
-        reject_final: false
-      };
+        reject_final: false,
+        physical_assessment_by: assessmentForm.physical_assessment_by?.trim() || null,
+        system_assessment_by: employee?.name || employee?.email || 'Quality Controller',
+      } as any;
 
       // Use SECURITY DEFINER RPC to bypass RLS
       const { error: assessError } = await supabase
@@ -866,7 +876,8 @@ const QualityControl = () => {
         pods: '', husks: '', stones: '', discretion: '', ref_price: '',
         fm: 0, actual_ott: 0, clean_d14: 0, outturn: 0, outturn_price: 0,
         final_price: 0, quality_note: '', reject_outturn_price: false,
-        reject_final: false, manual_price: '', comments: '', use_manual_price: false
+        reject_final: false, manual_price: '', comments: '', use_manual_price: false,
+        physical_assessment_by: ''
       });
       setActiveTab("pending");
       await refreshData();
@@ -1713,6 +1724,19 @@ const QualityControl = () => {
                   </div>
                   
                   <div className="grid grid-cols-1 gap-6 mt-6">
+                    <div>
+                      <Label htmlFor="physical_assessment_by">Physical Assessment By *</Label>
+                      <Input
+                        id="physical_assessment_by"
+                        value={assessmentForm.physical_assessment_by}
+                        onChange={(e) => setAssessmentForm({...assessmentForm, physical_assessment_by: e.target.value})}
+                        placeholder="Name of person who performed the physical assessment"
+                        disabled={readOnly}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        System assessment by: <span className="font-medium text-foreground">{employee?.name || employee?.email || 'Quality Controller'}</span>
+                      </p>
+                    </div>
                     <div>
                       <Label htmlFor="assessment_comments">Assessment Comments</Label>
                       <Textarea
