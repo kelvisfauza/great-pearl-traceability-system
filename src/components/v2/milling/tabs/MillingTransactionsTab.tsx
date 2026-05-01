@@ -15,6 +15,7 @@ import { Loader2, Cog, Plus, UserPlus, Phone, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { executeOrQueue } from "@/lib/offline/queue";
+import { cachedQuery } from "@/lib/offline/cache";
 
 const MillingTransactionsTab = () => {
   const { employee, isAdmin } = useAuth();
@@ -31,11 +32,11 @@ const MillingTransactionsTab = () => {
 
   const { data: jobs, isLoading } = useQuery({
     queryKey: ['milling-jobs'],
-    queryFn: async () => {
+    queryFn: () => cachedQuery('milling_jobs:recent50', async () => {
       const { data, error } = await supabase.from('milling_jobs').select('*').order('created_at', { ascending: false }).limit(50);
       if (error) throw error;
       return data;
-    }
+    })
   });
 
   const submit = useMutation({
