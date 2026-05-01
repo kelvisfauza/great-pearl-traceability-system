@@ -3,7 +3,7 @@ import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { BarChart3, FileText, TrendingUp, Store, ShoppingCart, BookOpen, Calculator, Receipt, Wallet, AlertTriangle, MapPin, ArrowRight, ClipboardList, Truck, Globe, Smartphone } from "lucide-react";
+import { BarChart3, FileText, TrendingUp, Store, ShoppingCart, BookOpen, Calculator, Receipt, Wallet, AlertTriangle, MapPin, ArrowRight, ClipboardList, Truck, Globe, Smartphone, GitBranch } from "lucide-react";
 import KeyMetrics from "@/components/reports/KeyMetrics";
 import { RefreshMetricsButton } from "@/components/reports/RefreshMetricsButton";
 
@@ -120,6 +120,13 @@ const Reports = () => {
       icon: Smartphone,
       path: "/reports/yo-payments",
       color: "text-fuchsia-600"
+    });
+    reportCards.push({
+      title: "Coffee Audit Trail",
+      description: "End-to-end: Store → Inventory → Sales with actor attribution",
+      icon: GitBranch,
+      path: "/reports/audit-trail",
+      color: "text-rose-600"
     });
   }
 
