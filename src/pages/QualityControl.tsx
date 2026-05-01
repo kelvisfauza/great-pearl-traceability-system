@@ -1591,6 +1591,23 @@ const QualityControl = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  {/* Assessor identification — required before saving */}
+                  <div className="border-2 border-primary/40 rounded-lg p-4 bg-primary/5">
+                    <Label htmlFor="physical_assessment_by" className="text-base font-semibold">
+                      Physical Assessment By <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="physical_assessment_by"
+                      value={assessmentForm.physical_assessment_by}
+                      onChange={(e) => setAssessmentForm({...assessmentForm, physical_assessment_by: e.target.value})}
+                      placeholder="Name of person who performed the physical (cupping/screening) assessment"
+                      disabled={readOnly}
+                      className="mt-2"
+                    />
+                    <p className="text-xs text-muted-foreground mt-2">
+                      System assessment by: <span className="font-medium text-foreground">{employee?.name || employee?.email || 'Quality Controller'}</span>
+                    </p>
+                  </div>
                   <ArabicaPriceCalculator 
                     initialValues={{
                       refPrice: assessmentForm.ref_price,
