@@ -11,12 +11,12 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, Cog, Plus, UserPlus, Phone } from "lucide-react";
+import { Loader2, Cog, Plus, UserPlus, Phone, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const MillingTransactionsTab = () => {
-  const { employee } = useAuth();
+  const { employee, isAdmin } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
@@ -79,6 +79,24 @@ const MillingTransactionsTab = () => {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" })
   });
 
+  const deleteJob = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('milling_jobs').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Milling job deleted" });
+      queryClient.invalidateQueries({ queryKey: ['milling-jobs'] });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" })
+  });
+
+  const handleDelete = (j: any) => {
+    if (window.confirm(`Delete milling job ${j.job_number} for ${j.customer_name}? This cannot be undone.`)) {
+      deleteJob.mutate(j.id);
+    }
+  };
+
   if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>;
 
   const totalRevenue = jobs?.reduce((s, j: any) => s + Number(j.total_cost || 0), 0) || 0;
@@ -135,6 +153,11 @@ const MillingTransactionsTab = () => {
                       </p>
                     </div>
                   </div>
+                  {isAdmin() && (
+                    <Button size="sm" variant="destructive" className="w-full" onClick={() => handleDelete(j)} disabled={deleteJob.isPending}>
+                      <Trash2 className="h-3.5 w-3.5 mr-1" />Delete
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             );
@@ -148,7 +171,7 @@ const MillingTransactionsTab = () => {
         <CardContent className="p-0">
           <Table>
             <TableHeader><TableRow>
-              <TableHead>Job #</TableHead><TableHead>Customer</TableHead><TableHead>Input (kg)</TableHead><TableHead>Output (kg)</TableHead><TableHead>Cost</TableHead><TableHead>Paid</TableHead><TableHead>Status</TableHead>
+              <TableHead>Job #</TableHead><TableHead>Customer</TableHead><TableHead>Input (kg)</TableHead><TableHead>Output (kg)</TableHead><TableHead>Cost</TableHead><TableHead>Paid</TableHead><TableHead>Status</TableHead>{isAdmin() && <TableHead>Actions</TableHead>}
             </TableRow></TableHeader>
             <TableBody>
               {jobs?.map((j: any) => (
@@ -160,9 +183,16 @@ const MillingTransactionsTab = () => {
                   <TableCell>UGX {Number(j.total_cost).toLocaleString()}</TableCell>
                   <TableCell>UGX {Number(j.amount_paid).toLocaleString()}</TableCell>
                   <TableCell><Badge variant={j.status === 'completed' ? 'secondary' : 'outline'}>{j.status}</Badge></TableCell>
+                  {isAdmin() && (
+                    <TableCell>
+                      <Button size="sm" variant="destructive" onClick={() => handleDelete(j)} disabled={deleteJob.isPending}>
+                        <Trash2 className="h-3.5 w-3.5 mr-1" />Delete
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
-              {(!jobs || jobs.length === 0) && <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">No milling jobs</TableCell></TableRow>}
+              {(!jobs || jobs.length === 0) && <TableRow><TableCell colSpan={isAdmin() ? 8 : 7} className="text-center py-6 text-muted-foreground">No milling jobs</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>
