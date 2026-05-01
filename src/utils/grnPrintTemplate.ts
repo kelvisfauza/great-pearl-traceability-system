@@ -608,14 +608,6 @@ export function getGRNDocumentMarkup(data: GRNDocumentData): string {
 
       <div class="gac-grn-amount-words"><strong>Amount in Words:</strong> ${escapeHtml(numberToWords(totalAmount))}</div>
 
-      <div class="gac-grn-stamp-wrap">
-        <div class="gac-grn-stamp">
-          <div class="gac-grn-stamp-top">★ GREAT AGRO COFFEE LTD ★</div>
-          <div class="gac-grn-stamp-date">${escapeHtml(issueDate.toUpperCase())}</div>
-          <div class="gac-grn-stamp-bottom">QUALITY DEPARTMENT</div>
-        </div>
-      </div>
-
       <p class="gac-grn-note">
         <strong>NB:</strong> To suppliers — please check that you agree to the above calculations and deductions before you sign to receive your
         Payment / GRN. There will be no refunds or re-calculations once you have signed. Paid Price equals Daily Price / Contract Price
