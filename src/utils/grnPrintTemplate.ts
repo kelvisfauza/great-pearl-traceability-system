@@ -640,7 +640,7 @@ export function getGRNDocumentMarkup(data: GRNDocumentData): string {
         <tr>
           <td class="gac-grn-footer-left">
             <strong style="color:#1a1a1a;">GREAT AGRO COFFEE LIMITED</strong><br/>
-            Kampala Industrial &amp; Business Park — Namanve / P.O. Box 3181, Kampala, Uganda<br/>
+            Kasese Municipality, Tibamwenda Road, Kasese, Uganda<br/>
             Tel: +256 393 001 626 &nbsp;|&nbsp; Email: info@greatpearlcoffee.com &nbsp;|&nbsp; Web: www.greatagrocoffee.com
             ${data.verificationCode ? `<br/><span class="gac-grn-verify-code">Verify code: ${escapeHtml(data.verificationCode)}</span>` : ""}
             ${data.printedBy ? `<br/><span><strong>Printed by:</strong> ${escapeHtml(data.printedBy)}</span>` : ""}
