@@ -35,6 +35,7 @@ export const useStoreManagement = () => {
   const { toast } = useToast();
   const { getActiveContractForSupplier } = useSupplierContracts();
   const { createAnnouncement } = useNotifications();
+  const { employee } = useAuth();
 
   const fetchStoreData = async (silent = false) => {
     try {
