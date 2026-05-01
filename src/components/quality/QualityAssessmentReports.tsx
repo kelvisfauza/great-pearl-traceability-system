@@ -504,6 +504,7 @@ const QualityAssessmentReports = ({ assessments }: QualityAssessmentReportsProps
                     <th className="p-2 text-left">Coffee Type</th>
                     <th className="p-2 text-left">Outturn</th>
                     <th className="p-2 text-left">Final Price</th>
+                    <th className="p-2 text-left">Assessed By</th>
                     <th className="p-2 text-left">Status</th>
                   </tr>
                 </thead>
@@ -524,6 +525,15 @@ const QualityAssessmentReports = ({ assessments }: QualityAssessmentReportsProps
                         {typeof assessment.outturn === 'number' ? `${assessment.outturn.toFixed(1)}%` : (assessment.outturn || 'N/A')}
                       </td>
                       <td className="p-2">UGX {(assessment.final_price || 0).toLocaleString()}</td>
+                      <td className="p-2 text-xs">
+                        {(assessment as any).physical_assessment_by && (
+                          <div><span className="text-muted-foreground">Physical:</span> {(assessment as any).physical_assessment_by}</div>
+                        )}
+                        <div>
+                          <span className="text-muted-foreground">System:</span>{' '}
+                          {(assessment as any).system_assessment_by || assessment.assessed_by || '—'}
+                        </div>
+                      </td>
                       <td className="p-2">
                         <Badge variant={assessment.reject_final ? "destructive" : "default"}>
                           {assessment.reject_final ? 'REJECTED' : 'ACCEPTED'}

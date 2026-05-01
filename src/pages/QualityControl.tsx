@@ -1420,6 +1420,7 @@ const QualityControl = () => {
                         <TableHead>Defects</TableHead>
                         <TableHead>Final Price</TableHead>
                         <TableHead>Date Assessed</TableHead>
+                        <TableHead>Assessed By</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>GRN</TableHead>
                         <TableHead>Actions</TableHead>
@@ -1471,6 +1472,17 @@ const QualityControl = () => {
                             UGX {(assessment.final_price || assessment.suggested_price)?.toLocaleString()}
                           </TableCell>
                           <TableCell>{assessment.date_assessed}</TableCell>
+                          <TableCell>
+                            <div className="text-xs">
+                              {(assessment as any).physical_assessment_by && (
+                                <div><span className="text-muted-foreground">Physical:</span> {(assessment as any).physical_assessment_by}</div>
+                              )}
+                              <div>
+                                <span className="text-muted-foreground">System:</span>{' '}
+                                {(assessment as any).system_assessment_by || assessment.assessed_by || '—'}
+                              </div>
+                            </div>
+                          </TableCell>
                           <TableCell>{getStatusBadge(assessment.status)}</TableCell>
                           <TableCell>
                             {(assessment as any).grn_printed ? (

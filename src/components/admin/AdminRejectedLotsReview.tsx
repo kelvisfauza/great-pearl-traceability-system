@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { AlertTriangle, DollarSign, Loader2, Coffee, Package, ShoppingCart } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import GRNPrintModal from '@/components/quality/GRNPrintModal';
 
@@ -224,6 +225,12 @@ const AdminRejectedLotsReview = () => {
                     <p className="text-xs text-muted-foreground">Moisture: {lot.moisture}%</p>
                     <p className="text-xs text-muted-foreground">Outturn: {lot.outturn || 'N/A'}%</p>
                   </div>
+                  <div className="text-right border-l pl-4">
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Quality Price</p>
+                    <p className="text-sm font-bold text-amber-600">
+                      UGX {(lot.suggested_price || 0).toLocaleString()}/kg
+                    </p>
+                  </div>
                   <Badge variant="destructive" className="text-xs">Rejected</Badge>
                   <Button
                     size="sm"
@@ -231,6 +238,8 @@ const AdminRejectedLotsReview = () => {
                     className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
                     onClick={() => {
                       setSelectedLot(lot);
+                      // Pre-fill with the quality-suggested price so admin can approve as-is
+                      setDiscretionPrice(lot.suggested_price ? String(lot.suggested_price) : '');
                       setBuyModalOpen(true);
                     }}
                   >
@@ -291,12 +300,47 @@ const AdminRejectedLotsReview = () => {
                 </div>
               </div>
 
+              {/* Quality-suggested price highlight */}
+              <div className="rounded-lg border-2 border-amber-500/40 bg-amber-500/10 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-amber-700 dark:text-amber-400 font-semibold">
+                      Quality-Suggested Price
+                    </p>
+                    <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">
+                      UGX {(selectedLot.suggested_price || 0).toLocaleString()}/kg
+                    </p>
+                    {selectedLot.coffee_record && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Total at this price: UGX {((selectedLot.suggested_price || 0) * selectedLot.coffee_record.kilograms).toLocaleString()}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Submitted by: {(selectedLot as any).system_assessment_by || selectedLot.assessed_by}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="border-amber-600 text-amber-700 hover:bg-amber-600 hover:text-white"
+                    onClick={() => setDiscretionPrice(String(selectedLot.suggested_price || 0))}
+                    disabled={!selectedLot.suggested_price}
+                  >
+                    Use this price
+                  </Button>
+                </div>
+              </div>
+
               {/* Pricing */}
               <div className="space-y-3 pt-2 border-t">
                 <div>
                   <Label htmlFor="discretion_price" className="text-sm font-semibold">
-                    Discretion Price (UGX/kg) *
+                    Final Discretion Price (UGX/kg) *
                   </Label>
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Approve at the quality-suggested price above, or enter a different one.
+                  </p>
                   <Input
                     id="discretion_price"
                     type="number"
@@ -326,10 +370,24 @@ const AdminRejectedLotsReview = () => {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setBuyModalOpen(false)}>Cancel</Button>
+            {selectedLot?.suggested_price ? (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setDiscretionPrice(String(selectedLot.suggested_price));
+                  // Defer to next tick so state is set before submit
+                  setTimeout(() => handleBuyAtDiscretion(), 0);
+                }}
+                disabled={processing}
+              >
+                <CheckCircle2 className="h-4 w-4 mr-1" />
+                Approve at Quality Price
+              </Button>
+            ) : null}
             <Button onClick={handleBuyAtDiscretion} disabled={processing}>
               {processing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               <DollarSign className="h-4 w-4 mr-1" />
-              Confirm Discretion Buy
+              Confirm at Custom Price
             </Button>
           </DialogFooter>
         </DialogContent>
