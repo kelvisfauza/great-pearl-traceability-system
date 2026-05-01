@@ -24,7 +24,11 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
     email?: string | null;
     origin?: string | null;
     code?: string | null;
+    id?: string | null;
   } | null>(null);
+  const [recoveries, setRecoveries] = useState<
+    Array<{ type: "advance" | "expense"; description: string; date?: string; amount: number }>
+  >([]);
 
   useEffect(() => {
     const generateVerification = async () => {
@@ -52,6 +56,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
     if (!open) {
       setVerificationCode(null);
       setSupplierInfo(null);
+      setRecoveries([]);
     }
   }, [open]);
 
@@ -61,13 +66,58 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
       if (!open || !grnData?.supplierName) return;
       const { data, error } = await supabase
         .from('suppliers')
-        .select('bank_name, account_name, account_number, phone, email, origin, code')
+        .select('id, bank_name, account_name, account_number, phone, email, origin, code')
         .ilike('name', grnData.supplierName.trim())
         .maybeSingle();
       if (!error && data) setSupplierInfo(data as any);
     };
     fetchSupplier();
   }, [open, grnData?.supplierName]);
+
+  // Fetch outstanding supplier advances & expenses (recoveries)
+  useEffect(() => {
+    const fetchRecoveries = async () => {
+      if (!open || !supplierInfo?.id) return;
+
+      const [advRes, expRes] = await Promise.all([
+        supabase
+          .from('supplier_advances')
+          .select('description, issued_at, outstanding_ugx')
+          .eq('supplier_id', supplierInfo.id)
+          .eq('is_closed', false)
+          .gt('outstanding_ugx', 0),
+        (supabase as any)
+          .from('supplier_expenses')
+          .select('description, expense_date, outstanding_ugx')
+          .eq('supplier_id', supplierInfo.id)
+          .eq('is_closed', false)
+          .gt('outstanding_ugx', 0),
+      ]);
+
+      const items: Array<{ type: "advance" | "expense"; description: string; date?: string; amount: number }> = [];
+
+      (advRes.data || []).forEach((a: any) => {
+        items.push({
+          type: "advance",
+          description: a.description || "Cash advance",
+          date: a.issued_at ? new Date(a.issued_at).toLocaleDateString("en-GB") : undefined,
+          amount: Number(a.outstanding_ugx) || 0,
+        });
+      });
+
+      (expRes.data || []).forEach((e: any) => {
+        items.push({
+          type: "expense",
+          description: e.description || "Expense paid on behalf",
+          date: e.expense_date ? new Date(e.expense_date).toLocaleDateString("en-GB") : undefined,
+          amount: Number(e.outstanding_ugx) || 0,
+        });
+      });
+
+      setRecoveries(items);
+    };
+    fetchRecoveries();
+  }, [open, supplierInfo?.id]);
 
   const previewData = useMemo(() => {
     if (!grnData) return null;
@@ -81,8 +131,9 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
       supplierBankName: supplierInfo?.bank_name || undefined,
       supplierAccountName: supplierInfo?.account_name || undefined,
       supplierAccountNumber: supplierInfo?.account_number || undefined,
+      recoveries,
     };
-  }, [grnData, verificationCode, supplierInfo]);
+  }, [grnData, verificationCode, supplierInfo, recoveries]);
 
   const previewHtml = useMemo(() => {
     if (!previewData) return '';
