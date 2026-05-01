@@ -627,10 +627,10 @@ const CoffeeAuditTrailReport = () => {
 
                         <Section title="① STORE — Sources">
                           <MiniTable
-                            head={["Date","Coffee Record","Supplier","Kg","Buy Price","Value","Received By","Assessed By","Flag"]}
+                            head={["Date","Batch #","Supplier","Kg","Buy Price","Value","Received By","Assessed By","Flag"]}
                             rows={t.sources.map(s => [
                               s.purchase_date || "—",
-                              <span className="font-mono text-xs">{s.coffee_record_id.slice(0, 12)}…</span>,
+                              <span className="font-mono text-xs">{s.batch_number || s.coffee_record_id.slice(0, 8)}</span>,
                               s.supplier_name,
                               fmt(s.kilograms),
                               s.buying_price ? fmt(s.buying_price) : "—",
@@ -640,6 +640,33 @@ const CoffeeAuditTrailReport = () => {
                               s.is_discretion ? <Badge variant="destructive">DISCRETION</Badge> : "",
                             ])}
                             empty="No source records linked."
+                          />
+                        </Section>
+
+                        <Section title="①·B QUALITY — Assessment details per source">
+                          <MiniTable
+                            head={["Batch #","MC %","G1","G2","<12","Pods","Husks","Stones","FM","Clean D14","Outturn","Sugg.","Final","Status","Note"]}
+                            rows={t.sources.filter(s => s.quality).map(s => {
+                              const q = s.quality!;
+                              return [
+                                <span className="font-mono text-xs">{s.batch_number || "—"}</span>,
+                                q.moisture ?? "—",
+                                q.group1_defects ?? "—",
+                                q.group2_defects ?? "—",
+                                q.below12 ?? "—",
+                                q.pods ?? "—",
+                                q.husks ?? "—",
+                                q.stones ?? "—",
+                                q.fm ?? "—",
+                                q.clean_d14 ?? "—",
+                                q.outturn ?? "—",
+                                q.suggested_price ? fmt(q.suggested_price) : "—",
+                                q.final_price ? fmt(q.final_price) : "—",
+                                q.status || "—",
+                                <span className="text-xs">{(q.quality_note || q.comments || "").toString().slice(0,60)}</span>,
+                              ];
+                            })}
+                            empty="No quality assessments linked to these sources."
                           />
                         </Section>
 
