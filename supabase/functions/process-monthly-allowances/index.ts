@@ -59,13 +59,19 @@ Deno.serve(async (req) => {
         // Get employee to find their user_id for ledger
         const { data: employee } = await supabase
           .from('employees')
-          .select('id, auth_user_id, phone, email')
+          .select('id, auth_user_id, phone, email, disabled, status')
           .eq('email', allowance.employee_email)
           .eq('status', 'Active')
           .maybeSingle()
 
         if (!employee) {
           console.log(`Employee not found or inactive: ${allowance.employee_email}`)
+          continue
+        }
+
+        // Skip disabled / blocked accounts — they do NOT qualify for allowances
+        if (employee.disabled === true) {
+          console.log(`[SKIP] Account disabled — no allowance for ${allowance.employee_name} (${allowance.employee_email})`)
           continue
         }
 
