@@ -851,7 +851,7 @@ export function getGRNPrintDocumentHTML(data: GRNDocumentData[], title: string):
 
 export function getPaymentOrderMarkup(data: GRNDocumentData): string {
   const createdAt = new Date(data.createdAt);
-  const issueDate = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "Y" }).replace("Y", "numeric");
+  const issueDate = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
   const todayFormatted = new Date().toLocaleDateString("en-GB");
   const deliveryDate = createdAt.toLocaleDateString("en-GB");
   const totalAmount = data.totalAmount ?? data.totalKgs * data.unitPrice;
