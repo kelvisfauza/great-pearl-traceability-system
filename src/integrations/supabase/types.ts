@@ -8211,6 +8211,66 @@ export type Database = {
         }
         Relationships: []
       }
+      supplier_expenses: {
+        Row: {
+          amount_ugx: number
+          category: string | null
+          created_at: string
+          description: string
+          expense_date: string
+          id: string
+          is_closed: boolean
+          notes: string | null
+          outstanding_ugx: number
+          recorded_by: string | null
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount_ugx: number
+          category?: string | null
+          created_at?: string
+          description: string
+          expense_date?: string
+          id?: string
+          is_closed?: boolean
+          notes?: string | null
+          outstanding_ugx: number
+          recorded_by?: string | null
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount_ugx?: number
+          category?: string | null
+          created_at?: string
+          description?: string
+          expense_date?: string
+          id?: string
+          is_closed?: boolean
+          notes?: string | null
+          outstanding_ugx?: number
+          recorded_by?: string | null
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_expenses_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_expenses_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_payments: {
         Row: {
           advance_recovered_ugx: number
