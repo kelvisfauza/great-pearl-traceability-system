@@ -499,42 +499,39 @@ export function getGRNDocumentMarkup(data: GRNDocumentData): string {
         </tr>
       </table>
 
-      <div class="gac-grn-region-row">
-        ${checkbox(lowerRegion.includes("elgon"))}<span class="gac-grn-region-label">Elgon</span>
-        ${checkbox(lowerRegion.includes("rwenzori"))}<span class="gac-grn-region-label">Rwenzori</span>
-        ${checkbox(lowerRegion.includes("masaka"))}<span class="gac-grn-region-label">Masaka</span>
-        ${checkbox(isOtherRegion)}<span class="gac-grn-region-label" style="margin-right:4px;">Other</span>
-        <span class="gac-grn-region-other">${isOtherRegion ? escapeHtml(region) : ""}</span>
-      </div>
-
       <p class="gac-grn-preamble">
         This Goods Received Note is a Contract between the two parties mentioned, whereby Great Agro Coffee Limited has agreed to buy
         and the Supplier has agreed to sell coffee under the following terms and conditions. This is to certify that we have received and
         inspected your coffee delivered to us and found it to conform to the following quality and price specifications.
       </p>
 
-      <div class="gac-grn-detail-row">
-        ${field("Date:&nbsp;", deliveryDate, "38%")}
-        ${field("Supplier&rsquo;s Name:&nbsp;", data.supplierName, "58%")}
-      </div>
-      <div class="gac-grn-detail-row">
-        ${field("Supplier&rsquo;s Address:&nbsp;", data.supplierAddress, "58%")}
-        ${field("Supplier&rsquo;s Tel:&nbsp;", data.supplierPhone, "38%")}
-      </div>
-      <div class="gac-grn-detail-row">
-        ${field("Vehicle Reg:&nbsp;", data.vehicleReg, "48%")}
-        ${field("Delivery Note No:&nbsp;", data.deliveryNote || data.grnNumber, "48%")}
-      </div>
-      <div class="gac-grn-detail-row">
-        ${field("No. of Bags:&nbsp;", `${data.numberOfBags} bags`, "32%")}
-        ${field("Weighbridge No:&nbsp;", data.weighbridgeNo, "38%")}
-        ${field("Net Weight (kg):&nbsp;", data.totalKgs.toLocaleString(), "28%")}
-      </div>
-      <div class="gac-grn-detail-row">
-        ${field("Type of Coffee:&nbsp;", data.coffeeType, "40%")}
-        ${field("Quality Factor:&nbsp;", qualityFactor, "28%")}
-        ${field("Moisture Content:&nbsp;", data.moisture != null ? `${data.moisture}%` : undefined, "28%")}
-      </div>
+      <table class="gac-grn-detail-grid">
+        <tr>
+          <td style="width:33%;">${field("Date:&nbsp;", deliveryDate)}</td>
+          <td style="width:34%;">${field("Supplier&rsquo;s Name:&nbsp;", data.supplierName)}</td>
+          <td style="width:33%;"></td>
+        </tr>
+        <tr>
+          <td>${field("Supplier&rsquo;s Address:&nbsp;", data.supplierAddress)}</td>
+          <td></td>
+          <td>${field("Supplier&rsquo;s Tel:&nbsp;", data.supplierPhone)}</td>
+        </tr>
+        <tr>
+          <td>${field("Vehicle Reg:&nbsp;", data.vehicleReg)}</td>
+          <td>${field("Delivery Note No:&nbsp;", data.deliveryNote || data.grnNumber)}</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>${field("No. of Bags:&nbsp;", `${data.numberOfBags} bags`)}</td>
+          <td>${field("Weighbridge No:&nbsp;", data.weighbridgeNo)}</td>
+          <td>${field("Net Weight (kg):&nbsp;", data.totalKgs.toLocaleString())}</td>
+        </tr>
+        <tr>
+          <td>${field("Type of Coffee:&nbsp;", data.coffeeType)}</td>
+          <td>${field("Quality Factor:&nbsp;", qualityFactor)}</td>
+          <td>${field("Moisture Content:&nbsp;", data.moisture != null ? `${data.moisture}%` : undefined)}</td>
+        </tr>
+      </table>
 
       <div class="gac-grn-quality-caption">Quality Analysis: (Electronic quality summary attached below)</div>
 
