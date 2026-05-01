@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { Loader2, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Copy } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useActivityTracker } from "@/hooks/useActivityTracker";
 
@@ -29,6 +29,7 @@ interface AssessmentForm {
   unit_price_ugx: number;
   quantity_kg: number;
   comments: string;
+  physical_assessment_by: string;
 }
 
 const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
@@ -38,6 +39,7 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
   const queryClient = useQueryClient();
   const { trackFormSubmission, trackTaskCompletion } = useActivityTracker();
   const [isRejecting, setIsRejecting] = useState(false);
+  const [generatedRef, setGeneratedRef] = useState<string | null>(null);
   
   const { register, handleSubmit, watch, formState: { errors } } = useForm<AssessmentForm>({
     defaultValues: {
@@ -49,7 +51,8 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
       pods_percentage: 0,
       husks_percentage: 0,
       fm_percentage: 0,
-      outturn_percentage: 62
+      outturn_percentage: 62,
+      physical_assessment_by: ''
     }
   });
 
@@ -70,6 +73,8 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
           store_record_id: lot.id,
           batch_number: lot.batch_number,
           assessed_by: employee?.email || '',
+          physical_assessment_by: data.physical_assessment_by,
+          system_assessment_by: employee?.name || employee?.email || '',
           date_assessed: new Date().toISOString().split('T')[0],
           moisture: data.moisture_content,
           group1_defects: data.group1_percentage,
@@ -82,7 +87,7 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
           final_price: null,
           comments: data.comments,
           status: 'pending_admin_pricing'
-        })
+        } as any)
         .select()
         .single();
 
@@ -95,16 +100,22 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
         .eq('id', lot.id);
 
       if (updateError) throw updateError;
+      return assessment;
     },
-    onSuccess: () => {
+    onSuccess: (assessment: any) => {
       trackFormSubmission('quality_assessment');
       trackTaskCompletion('quality assessment');
+      const ref = assessment?.assessment_ref;
+      if (ref) setGeneratedRef(ref);
       toast({
         title: "Assessment Submitted",
-        description: "Quality assessment saved and sent to admin for final pricing."
+        description: ref
+          ? `Reference: ${ref} — write this on the physical form.`
+          : "Quality assessment saved and sent to admin for final pricing."
       });
       queryClient.invalidateQueries({ queryKey: ['v2-pending-quality'] });
-      navigate('/v2/quality');
+      // Delay navigation so user can copy the ref
+      if (!ref) navigate('/v2/quality');
     },
     onError: (error: any) => {
       toast({
@@ -127,12 +138,14 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
 
       // Create a quality assessment record with rejection — include all quality data and suggested price
       // Status is 'pending_admin_pricing' so admin can review the price, but reject_final stays true
-      await supabase
+      const { data: assessment } = await supabase
         .from('quality_assessments')
         .insert({
           store_record_id: lot.id,
           batch_number: lot.batch_number,
           assessed_by: employee?.email || '',
+          physical_assessment_by: data.physical_assessment_by,
+          system_assessment_by: employee?.name || employee?.email || '',
           date_assessed: new Date().toISOString().split('T')[0],
           moisture: data.moisture_content,
           group1_defects: data.group1_percentage,
@@ -145,16 +158,23 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
           comments: data.comments,
           status: 'pending_admin_pricing',
           reject_final: true
-        });
+        } as any)
+        .select()
+        .single();
+      return assessment;
     },
-    onSuccess: () => {
+    onSuccess: (assessment: any) => {
       trackTaskCompletion('quality rejection');
+      const ref = assessment?.assessment_ref;
+      if (ref) setGeneratedRef(ref);
       toast({
         title: "Lot Rejected — Sent to Admin",
-        description: "Lot rejected with quality data and suggested price sent to admin for review"
+        description: ref
+          ? `Reference: ${ref} — write this on the physical form.`
+          : "Lot rejected with quality data and suggested price sent to admin for review"
       });
       queryClient.invalidateQueries({ queryKey: ['v2-pending-quality'] });
-      navigate('/v2/quality');
+      if (!ref) navigate('/v2/quality');
     },
     onError: (error: any) => {
       toast({
@@ -166,10 +186,26 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
   });
 
   const onSubmit = (data: AssessmentForm) => {
+    if (!data.physical_assessment_by?.trim()) {
+      toast({
+        title: "Physical Assessor Required",
+        description: "Please enter the name of the person who did the physical assessment.",
+        variant: "destructive"
+      });
+      return;
+    }
     submitForPricing.mutate(data);
   };
 
   const handleReject = handleSubmit((data: AssessmentForm) => {
+    if (!data.physical_assessment_by?.trim()) {
+      toast({
+        title: "Physical Assessor Required",
+        description: "Please enter the name of the person who did the physical assessment.",
+        variant: "destructive"
+      });
+      return;
+    }
     if (!data.comments) {
       toast({
         title: "Comments Required",
@@ -188,6 +224,70 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
           Fill in the quality parameters below. All percentages should total to 100%.
         </AlertDescription>
       </Alert>
+
+      {/* Reference shown after successful submission */}
+      {generatedRef && (
+        <Alert className="border-green-500/50 bg-green-500/10">
+          <CheckCircle className="h-4 w-4 text-green-600" />
+          <AlertDescription>
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <strong>Assessment Reference:</strong>{' '}
+                <span className="font-mono text-lg text-green-700 dark:text-green-400">{generatedRef}</span>
+                <p className="text-xs mt-1">Copy this and write it on the physical assessment form.</p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(generatedRef);
+                    toast({ title: "Copied", description: `${generatedRef} copied to clipboard` });
+                  }}
+                >
+                  <Copy className="mr-2 h-4 w-4" /> Copy
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => navigate('/v2/quality')}
+                >
+                  Done
+                </Button>
+              </div>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Assessor identification */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-lg border bg-muted/30">
+        <div>
+          <Label htmlFor="physical_assessment_by">Physical Assessment By *</Label>
+          <Input
+            id="physical_assessment_by"
+            type="text"
+            placeholder="Name of person who did physical analysis"
+            {...register('physical_assessment_by', { required: true })}
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Person who performed the lab/physical analysis
+          </p>
+        </div>
+        <div>
+          <Label>System Assessment By</Label>
+          <Input
+            type="text"
+            value={employee?.name || employee?.email || ''}
+            disabled
+            className="bg-muted"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Auto-filled with your account (you are entering the results)
+          </p>
+        </div>
+      </div>
 
       {/* Auto-rejection warning for Arabica */}
       {isArabica && shouldAutoReject && (
