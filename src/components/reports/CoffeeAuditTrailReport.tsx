@@ -434,11 +434,11 @@ const CoffeeAuditTrailReport = () => {
 
           <div class="leg-title">① STORE — Sources of this batch</div>
           <table><thead><tr>
-            <th>Date</th><th>Coffee Record</th><th>Supplier</th><th class="right">Kg</th><th class="right">Buy Price</th><th class="right">Value</th><th>Received By</th><th>Assessed By</th><th>Flag</th>
+            <th>Date</th><th>Batch #</th><th>Supplier</th><th class="right">Kg</th><th class="right">Buy Price</th><th class="right">Value</th><th>Received By</th><th>Assessed By</th><th>Flag</th>
           </tr></thead><tbody>
             ${t.sources.map(s => `<tr>
               <td>${s.purchase_date || '—'}</td>
-              <td style="font-family:monospace;font-size:8px;">${s.coffee_record_id}</td>
+              <td style="font-family:monospace;font-size:9px;">${s.batch_number || s.coffee_record_id.slice(0,8)}</td>
               <td>${s.supplier_name}</td>
               <td class="right">${fmt(s.kilograms)}</td>
               <td class="right">${s.buying_price ? fmt(s.buying_price) : '—'}</td>
@@ -447,6 +447,32 @@ const CoffeeAuditTrailReport = () => {
               <td>${s.assessed_by || '—'}</td>
               <td>${s.is_discretion ? '<b style="color:#dc2626">DISCRETION</b>' : ''}</td>
             </tr>`).join('') || '<tr><td colspan="9" style="text-align:center;color:#6b7280;">No source records linked.</td></tr>'}
+          </tbody></table>
+
+          <div class="leg-title">①·B QUALITY — Assessment details per source</div>
+          <table><thead><tr>
+            <th>Batch #</th><th class="right">MC %</th><th class="right">G1</th><th class="right">G2</th><th class="right">&lt;12</th><th class="right">Pods</th><th class="right">Husks</th><th class="right">Stones</th><th class="right">FM</th><th class="right">Clean D14</th><th class="right">Outturn</th><th class="right">Sugg.</th><th class="right">Final</th><th>Status</th><th>Note</th>
+          </tr></thead><tbody>
+            ${t.sources.filter(s => s.quality).map(s => {
+              const q = s.quality!;
+              return `<tr>
+                <td style="font-family:monospace;font-size:9px;">${s.batch_number || '—'}</td>
+                <td class="right">${q.moisture ?? '—'}</td>
+                <td class="right">${q.group1_defects ?? '—'}</td>
+                <td class="right">${q.group2_defects ?? '—'}</td>
+                <td class="right">${q.below12 ?? '—'}</td>
+                <td class="right">${q.pods ?? '—'}</td>
+                <td class="right">${q.husks ?? '—'}</td>
+                <td class="right">${q.stones ?? '—'}</td>
+                <td class="right">${q.fm ?? '—'}</td>
+                <td class="right">${q.clean_d14 ?? '—'}</td>
+                <td class="right">${q.outturn ?? '—'}</td>
+                <td class="right">${q.suggested_price ? fmt(q.suggested_price) : '—'}</td>
+                <td class="right">${q.final_price ? fmt(q.final_price) : '—'}</td>
+                <td>${q.status || '—'}</td>
+                <td>${(q.quality_note || q.comments || '').toString().slice(0,80)}</td>
+              </tr>`;
+            }).join('') || '<tr><td colspan="15" style="text-align:center;color:#6b7280;">No quality assessments linked.</td></tr>'}
           </tbody></table>
 
           <div class="leg-title">② INVENTORY — Movements</div>
