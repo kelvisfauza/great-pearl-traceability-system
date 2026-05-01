@@ -154,7 +154,7 @@ const ResetPassword = () => {
             </div>
             <CardTitle>Invalid or Expired Link</CardTitle>
             <CardDescription>
-              This password reset link is invalid or has expired. Please request a new one.
+              {error || 'This password reset link is invalid or has expired. Please request a new one.'}
             </CardDescription>
           </CardHeader>
           <CardContent>
