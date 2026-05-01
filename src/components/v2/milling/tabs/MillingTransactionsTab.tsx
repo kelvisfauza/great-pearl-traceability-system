@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Cog, Plus, UserPlus, Phone, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { executeOrQueue } from "@/lib/offline/queue";
 
 const MillingTransactionsTab = () => {
   const { employee, isAdmin } = useAuth();
@@ -40,16 +41,29 @@ const MillingTransactionsTab = () => {
   const submit = useMutation({
     mutationFn: async () => {
       const totalCost = form.input_weight_kg * form.price_per_kg;
-      const { error } = await supabase.from('milling_jobs').insert({
+      const payload = {
         ...form,
         total_cost: totalCost,
         job_number: form.job_number || `MJ-${Date.now().toString(36).toUpperCase()}`,
         milled_by: employee?.email || '',
+      };
+      return await executeOrQueue({
+        kind: 'milling_job',
+        payload,
+        user_label: `${form.customer_name || 'Customer'} • ${form.input_weight_kg}kg • ${payload.job_number}`,
+        perform: async (client_op_id) => {
+          const { error } = await supabase.from('milling_jobs').insert({ ...payload, client_op_id } as any);
+          if (error) throw error;
+          return payload;
+        }
       });
-      if (error) throw error;
     },
-    onSuccess: () => {
-      toast({ title: "Milling Job Created" });
+    onSuccess: (result: any) => {
+      const queued = result?.queued;
+      toast({
+        title: queued ? "Saved offline" : "Milling Job Created",
+        description: queued ? "Will upload when you reconnect." : undefined,
+      });
       queryClient.invalidateQueries({ queryKey: ['milling-jobs'] });
       setDialogOpen(false);
     },
