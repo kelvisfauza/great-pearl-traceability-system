@@ -484,7 +484,7 @@ const Auth = () => {
                 Reset Password
               </CardTitle>
               <CardDescription>
-                Enter your email and we'll send you a link to reset your password.
+                Enter your email and we'll send you a temporary password. You'll be required to set a new password right after logging in.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -496,7 +496,7 @@ const Auth = () => {
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Password reset link sent to <strong>{forgotEmail}</strong>. Check your inbox and spam folder.
+                    A temporary password has been sent to <strong>{forgotEmail}</strong>. Check your inbox (and spam folder), then sign in — you'll be asked to set a new password right away. If a phone number is on file, you'll also get an SMS telling you to check your email.
                   </p>
                   <Button variant="outline" className="w-full" onClick={() => { setShowForgotPassword(false); setForgotSent(false); setForgotEmail(''); }}>
                     Back to Login
@@ -525,22 +525,23 @@ const Auth = () => {
                       onClick={async () => {
                         setForgotLoading(true);
                         try {
-                          const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
-                            redirectTo: `${window.location.origin}/reset-password`
+                          const { data, error } = await supabase.functions.invoke('forgot-password-temp', {
+                            body: { email: forgotEmail.trim().toLowerCase() }
                           });
-                          if (error) {
-                            toast({ title: "Error", description: error.message, variant: "destructive" });
+                          if (error || (data && data.ok === false)) {
+                            const msg = (data && data.error) || error?.message || 'Failed to send reset email';
+                            toast({ title: "Error", description: msg, variant: "destructive" });
                           } else {
                             setForgotSent(true);
                           }
-                        } catch {
-                          toast({ title: "Error", description: "Failed to send reset email", variant: "destructive" });
+                        } catch (e: any) {
+                          toast({ title: "Error", description: e?.message || "Failed to send reset email", variant: "destructive" });
                         } finally {
                           setForgotLoading(false);
                         }
                       }}
                     >
-                      {forgotLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send Reset Link'}
+                      {forgotLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send Temporary Password'}
                     </Button>
                   </div>
                 </>
