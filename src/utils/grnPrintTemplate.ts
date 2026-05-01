@@ -953,17 +953,62 @@ export function getPaymentOrderMarkup(data: GRNDocumentData): string {
             <td class="value">${escapeHtml(totalAmount.toLocaleString())}</td>
           </tr>
           <tr>
-            <td colspan="5" style="text-align:right;font-weight:700;">TOTAL PAYABLE (UGX)</td>
+            <td colspan="5" style="text-align:right;font-weight:700;">GROSS PAYABLE (UGX)</td>
             <td class="value" style="font-size:13px;font-weight:800;">${escapeHtml(totalAmount.toLocaleString())}</td>
           </tr>
         </tbody>
       </table>
 
+      ${(() => {
+        const recoveries = Array.isArray(data.recoveries) ? data.recoveries.filter(r => Number(r.amount) > 0) : [];
+        const totalRecovery = recoveries.reduce((s, r) => s + Number(r.amount || 0), 0);
+        const netPayable = Math.max(0, totalAmount - totalRecovery);
+        if (recoveries.length === 0) {
+          return `
       <div class="gac-grn-po-amount-box">
         <div class="label">Total Amount Payable</div>
         <div class="value">UGX ${escapeHtml(totalAmount.toLocaleString())}</div>
         <div class="words">${escapeHtml(numberToWords(totalAmount))}</div>
-      </div>
+      </div>`;
+        }
+        return `
+      <table class="gac-grn-po-table" style="margin-top:8px;">
+        <thead>
+          <tr style="background:#fef3c7;">
+            <th colspan="4" style="text-align:left;">RECOVERIES (Outstanding deductions to be settled from this payment)</th>
+          </tr>
+          <tr>
+            <th style="width:15%;">Type</th>
+            <th style="width:50%;">Description</th>
+            <th style="width:15%;">Date</th>
+            <th style="width:20%;">Amount (UGX)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${recoveries.map(r => `
+          <tr>
+            <td style="text-transform:uppercase;font-weight:600;">${escapeHtml(r.type === "advance" ? "Advance" : "Expense")}</td>
+            <td>${escapeHtml(r.description || "—")}</td>
+            <td class="value">${escapeHtml(r.date || "—")}</td>
+            <td class="value">(${escapeHtml(Number(r.amount).toLocaleString())})</td>
+          </tr>`).join("")}
+          <tr>
+            <td colspan="3" style="text-align:right;font-weight:700;">TOTAL RECOVERIES (UGX)</td>
+            <td class="value" style="font-weight:800;color:#7f1d1d;">(${escapeHtml(totalRecovery.toLocaleString())})</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="gac-grn-po-amount-box" style="border:2px solid #166534;background:#f0fdf4;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#374151;margin-bottom:4px;">
+          <span>Gross Payable: <strong>UGX ${escapeHtml(totalAmount.toLocaleString())}</strong></span>
+          <span>Less Recoveries: <strong style="color:#7f1d1d;">(UGX ${escapeHtml(totalRecovery.toLocaleString())})</strong></span>
+        </div>
+        <div class="label">NET AMOUNT PAYABLE TO SUPPLIER</div>
+        <div class="value">UGX ${escapeHtml(netPayable.toLocaleString())}</div>
+        <div class="words">${escapeHtml(numberToWords(netPayable))}</div>
+      </div>`;
+      })()}
 
       <div class="gac-grn-bank-box">
         <span class="gac-grn-bank-title">Pay To — Supplier Bank Details</span>
