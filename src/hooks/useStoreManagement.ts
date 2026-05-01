@@ -3,6 +3,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSupplierContracts } from './useSupplierContracts';
 import { useNotifications } from '@/hooks/useNotifications';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface StoreRecord {
   id: string;
@@ -15,6 +16,7 @@ export interface StoreRecord {
   status: string;
   grnPrintedAt?: string | null;
   grnPrintedBy?: string | null;
+  createdBy?: string | null;
 }
 
 export interface Supplier {
@@ -34,6 +36,7 @@ export const useStoreManagement = () => {
   const { toast } = useToast();
   const { getActiveContractForSupplier } = useSupplierContracts();
   const { createAnnouncement } = useNotifications();
+  const { employee } = useAuth();
 
   const fetchStoreData = async (silent = false) => {
     try {
@@ -66,6 +69,7 @@ export const useStoreManagement = () => {
         status: record.status || 'pending',
         grnPrintedAt: record.grn_printed_at || null,
         grnPrintedBy: record.grn_printed_by || null,
+        createdBy: record.created_by || null,
       }));
       
       // Get quality assessments status
@@ -433,7 +437,7 @@ export const useStoreManagement = () => {
           batch_number: recordData.batchNumber,
           status: recordData.status,
           supplier_id: supplier?.id || null,
-          created_by: 'Store Department'
+          created_by: employee?.name || employee?.email || 'Store Department'
         })
         .select()
         .single();

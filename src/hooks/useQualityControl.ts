@@ -354,7 +354,8 @@ export const useQualityControl = () => {
           supplier_name: coffeeRecord.supplier_name || 'Unknown',
           coffee_type: coffeeRecord.coffee_type || 'Unknown',
           batch_number: coffeeRecord.batch_number || '',
-          status: coffeeRecord.status || 'pending'
+          status: coffeeRecord.status || 'pending',
+          created_by: (coffeeRecord as any).created_by || 'Store Department'
         };
         
         console.log('Creating coffee record with data:', coffeeRecordData);
