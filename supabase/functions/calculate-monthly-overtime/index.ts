@@ -46,9 +46,15 @@ Deno.serve(async (req) => {
     }
 
     // Aggregate overtime and late minutes per employee
+    // IMPORTANT: only count rows where the employee actually attended that day.
+    // A row qualifies for overtime ONLY if BOTH arrival_time and departure_time
+    // are recorded AND the row's status is 'present'. This prevents bogus overtime
+    // when someone only fills the departure time but no arrival (employee was absent).
     const { data: timeRecords, error: timeErr } = await supabase
       .from("attendance_time_records")
-      .select("employee_id, employee_name, employee_email, overtime_minutes, late_minutes")
+      .select(
+        "employee_id, employee_name, employee_email, record_date, arrival_time, departure_time, status, overtime_minutes, late_minutes"
+      )
       .gte("record_date", monthStart)
       .lt("record_date", monthEnd);
 
@@ -61,9 +67,15 @@ Deno.serve(async (req) => {
       employee_email: string;
       total_overtime: number;
       total_late: number;
+      qualifying_days: number;
+      skipped_invalid: number;
     }> = {};
 
+    let totalSkipped = 0;
     for (const r of timeRecords || []) {
+      const status = String(r.status || "").toLowerCase();
+      const attended = !!r.arrival_time && !!r.departure_time && status === "present";
+
       if (!empMap[r.employee_id]) {
         empMap[r.employee_id] = {
           employee_id: r.employee_id,
@@ -71,30 +83,51 @@ Deno.serve(async (req) => {
           employee_email: r.employee_email,
           total_overtime: 0,
           total_late: 0,
+          qualifying_days: 0,
+          skipped_invalid: 0,
         };
       }
+
+      if (!attended) {
+        // Did not actually work that day → no overtime / no late credit
+        if (Number(r.overtime_minutes || 0) > 0 || Number(r.late_minutes || 0) > 0) {
+          empMap[r.employee_id].skipped_invalid += 1;
+          totalSkipped += 1;
+          console.log(
+            `[overtime] Skipping ${r.employee_email} on ${r.record_date}: arrival=${r.arrival_time} departure=${r.departure_time} status=${r.status} ot=${r.overtime_minutes}`
+          );
+        }
+        continue;
+      }
+
       empMap[r.employee_id].total_overtime += Number(r.overtime_minutes || 0);
       empMap[r.employee_id].total_late += Number(r.late_minutes || 0);
+      empMap[r.employee_id].qualifying_days += 1;
     }
 
+    console.log(`[overtime] Skipped ${totalSkipped} invalid rows (no full attendance) for ${monthNames[targetMonth]} ${targetYear}`);
+
     const RATE_PER_HOUR = 3000; // UGX per hour
-    const records = Object.values(empMap).map((emp) => {
-      const netOT = Math.max(0, emp.total_overtime - emp.total_late);
-      const hours = Math.ceil(netOT / 60);
-      return {
-        employee_id: emp.employee_id,
-        employee_name: emp.employee_name,
-        employee_email: emp.employee_email,
-        month: targetMonth,
-        year: targetYear,
-        total_overtime_minutes: emp.total_overtime,
-        total_late_minutes: emp.total_late,
-        net_overtime_minutes: netOT,
-        overtime_rate_per_hour: RATE_PER_HOUR,
-        calculated_pay: hours * RATE_PER_HOUR,
-        status: "pending",
-      };
-    });
+    const records = Object.values(empMap)
+      // Only include employees who actually attended at least one day in the month
+      .filter((emp) => emp.qualifying_days > 0 && emp.total_overtime > 0)
+      .map((emp) => {
+        const netOT = Math.max(0, emp.total_overtime - emp.total_late);
+        const hours = Math.ceil(netOT / 60);
+        return {
+          employee_id: emp.employee_id,
+          employee_name: emp.employee_name,
+          employee_email: emp.employee_email,
+          month: targetMonth,
+          year: targetYear,
+          total_overtime_minutes: emp.total_overtime,
+          total_late_minutes: emp.total_late,
+          net_overtime_minutes: netOT,
+          overtime_rate_per_hour: RATE_PER_HOUR,
+          calculated_pay: hours * RATE_PER_HOUR,
+          status: "pending",
+        };
+      });
 
     if (records.length === 0) {
       return new Response(
