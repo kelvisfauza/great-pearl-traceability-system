@@ -216,7 +216,8 @@ export function getGRNDocumentStyles(): string {
         margin-left: 4px;
         padding: 0 6px;
         border-bottom: 1px solid #1a1a1a;
-        color: #0a3d8f;
+        color: #000;
+        font-weight: 700;
         font-family: 'Courier New', monospace;
       }
       .gac-grn-preamble,
@@ -254,7 +255,8 @@ export function getGRNDocumentStyles(): string {
         min-width: 60px;
         padding: 0 6px;
         border-bottom: 1px solid #1a1a1a;
-        color: #0a3d8f;
+        color: #000;
+        font-weight: 700;
         font-family: 'Courier New', monospace;
       }
       .gac-grn-quality-caption {
@@ -323,7 +325,8 @@ export function getGRNDocumentStyles(): string {
       }
       .gac-grn-line-fill-value {
         font-family: 'Courier New', monospace;
-        color: #0a3d8f;
+        color: #000;
+        font-weight: 700;
       }
       .gac-grn-total-row td {
         border-top: 1.5px solid #1a1a1a;
@@ -380,7 +383,8 @@ export function getGRNDocumentStyles(): string {
         margin-top: 8px;
         border-bottom: 1px solid #1a1a1a;
         font-family: 'Courier New', monospace;
-        color: #0a3d8f;
+        color: #000;
+        font-weight: 700;
       }
       .gac-grn-footer-table {
         margin-top: 6px;
