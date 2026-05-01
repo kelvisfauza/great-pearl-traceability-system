@@ -34,6 +34,11 @@ export interface GRNDocumentData {
   qualityApprovedBy?: string;
   managerName?: string;
   totalAmount?: number;
+  supplierBankName?: string;
+  supplierAccountName?: string;
+  supplierAccountNumber?: string;
+  supplierCode?: string;
+  supplierEmail?: string;
 }
 
 const LOGO_URL = `${typeof window !== "undefined" ? window.location.origin : ""}/lovable-uploads/great-agro-coffee-logo.png`;
@@ -430,6 +435,41 @@ export function getGRNDocumentStyles(): string {
         text-align: center;
         font-style: italic;
       }
+      .gac-grn-copy-label {
+        display: inline-block;
+        margin-left: 8px;
+        padding: 2px 8px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        border: 1.5px solid #0a3d8f;
+        color: #0a3d8f;
+        background: #eef4ff;
+        vertical-align: middle;
+      }
+      .gac-grn-copy-label.finance {
+        border-color: #0a6b2a;
+        color: #0a6b2a;
+        background: #ecfdf3;
+      }
+      .gac-grn-bank-box {
+        margin-top: 6px;
+        border: 1.5px solid #0a6b2a;
+        background: #f6fdf8;
+        padding: 6px 10px;
+        font-size: 11.5px;
+      }
+      .gac-grn-bank-box .gac-grn-bank-title {
+        display: block;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.6px;
+        color: #0a6b2a;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+      }
+      .gac-grn-bank-box table { width: 100%; border-collapse: collapse; }
+      .gac-grn-bank-box td { padding: 2px 4px; vertical-align: top; }
       @media print {
         body {
           margin: 0;
@@ -454,7 +494,7 @@ export function getGRNDocumentStyles(): string {
   `;
 }
 
-export function getGRNDocumentMarkup(data: GRNDocumentData): string {
+export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier" | "finance" = "supplier"): string {
   const createdAt = new Date(data.createdAt);
   const issueDate = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" });
   const deliveryDate = createdAt.toLocaleDateString("en-GB");
@@ -470,6 +510,7 @@ export function getGRNDocumentMarkup(data: GRNDocumentData): string {
   const verificationUrl = data.verificationCode ? getVerificationUrl(data.verificationCode) : "";
   const qrCodeUrl = data.verificationCode ? getVerificationQRUrl(data.verificationCode, 110) : "";
   const qualityFactor = data.qualityFactor || (data.outturn != null ? `${data.outturn}%` : undefined);
+  const isFinance = copyType === "finance";
   const qualityRows = [
     ["Moisture Content", data.moisture != null ? `${data.moisture}%` : "—", "≤ 14%"],
     ["Group 1 Defects", data.group1_defects != null ? `${data.group1_defects}%` : "—", "≤ 4%"],
@@ -491,7 +532,10 @@ export function getGRNDocumentMarkup(data: GRNDocumentData): string {
           </td>
           <td class="gac-grn-title-cell">
             <div class="gac-grn-official-title">OFFICIAL DOCUMENT</div>
-            <div class="gac-grn-official-subtitle">GOODS RECEIVED NOTE — COFFEE</div>
+            <div class="gac-grn-official-subtitle">
+              GOODS RECEIVED NOTE — COFFEE
+              <span class="gac-grn-copy-label${isFinance ? " finance" : ""}">${isFinance ? "FINANCE COPY" : "SUPPLIER COPY"}</span>
+            </div>
           </td>
           <td class="gac-grn-od-cell">
             <div><strong>OD No:</strong> ${escapeHtml(odNo)}</div>
@@ -623,6 +667,32 @@ export function getGRNDocumentMarkup(data: GRNDocumentData): string {
 
       <div class="gac-grn-amount-words"><strong>Amount in Words:</strong> ${escapeHtml(numberToWords(totalAmount))}</div>
 
+      ${isFinance ? `
+        <div class="gac-grn-bank-box">
+          <span class="gac-grn-bank-title">Supplier Payment Details (Finance Use)</span>
+          <table>
+            <tr>
+              <td style="width:50%;"><strong>Supplier Name:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierName)}</span></td>
+              <td style="width:50%;"><strong>Supplier Code:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierCode)}</span></td>
+            </tr>
+            <tr>
+              <td><strong>Phone:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierPhone)}</span></td>
+              <td><strong>Email:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierEmail)}</span></td>
+            </tr>
+            <tr>
+              <td colspan="2"><strong>Address:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierAddress)}</span></td>
+            </tr>
+            <tr>
+              <td><strong>Bank Name:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierBankName)}</span></td>
+              <td><strong>Account Name:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierAccountName)}</span></td>
+            </tr>
+            <tr>
+              <td colspan="2"><strong>Account Number:</strong> <span class="gac-grn-line-fill-value">${displayValue(data.supplierAccountNumber)}</span></td>
+            </tr>
+          </table>
+        </div>
+      ` : ""}
+
       <p class="gac-grn-note">
         <strong>NB:</strong> To suppliers — please check that you agree to the above calculations and deductions before you sign to receive your
         Payment / GRN. There will be no refunds or re-calculations once you have signed. Paid Price equals Daily Price / Contract Price
@@ -678,7 +748,7 @@ export function getGRNDocumentMarkup(data: GRNDocumentData): string {
 }
 
 export function getGRNPreviewHTML(data: GRNDocumentData): string {
-  return `${getGRNDocumentStyles()}<div class="gac-grn-preview-shell">${getGRNDocumentMarkup(data)}</div>`;
+  return `${getGRNDocumentStyles()}<div class="gac-grn-preview-shell">${getGRNDocumentMarkup(data, "supplier")}${getGRNDocumentMarkup(data, "finance")}</div>`;
 }
 
 export function getGRNPrintDocumentHTML(data: GRNDocumentData[], title: string): string {
@@ -693,7 +763,7 @@ export function getGRNPrintDocumentHTML(data: GRNDocumentData[], title: string):
       </head>
       <body>
         <div class="gac-grn-preview-shell">
-          ${data.map((item) => getGRNDocumentMarkup(item)).join("")}
+          ${data.map((item) => `${getGRNDocumentMarkup(item, "supplier")}${getGRNDocumentMarkup(item, "finance")}`).join("")}
         </div>
         <script>
           window.onload = function () {
