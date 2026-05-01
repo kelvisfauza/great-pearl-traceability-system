@@ -19,27 +19,83 @@ const ResetPassword = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    let cancelled = false;
+
     // Listen for the PASSWORD_RECOVERY event from the auth link
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setIsValidSession(true);
-        setChecking(false);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
+        if (!cancelled) {
+          setIsValidSession(true);
+          setChecking(false);
+        }
       }
     });
 
-    // Also check if user already has a valid session (e.g. page was refreshed)
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setIsValidSession(true);
+    const init = async () => {
+      try {
+        const url = new URL(window.location.href);
+        const hash = window.location.hash.startsWith('#')
+          ? window.location.hash.substring(1)
+          : window.location.hash;
+        const hashParams = new URLSearchParams(hash);
+
+        const access_token = hashParams.get('access_token');
+        const refresh_token = hashParams.get('refresh_token');
+        const type = hashParams.get('type') || url.searchParams.get('type');
+        const code = url.searchParams.get('code');
+        const errorDesc = hashParams.get('error_description') || url.searchParams.get('error_description');
+
+        if (errorDesc) {
+          setError(decodeURIComponent(errorDesc));
+          setChecking(false);
+          return;
+        }
+
+        // PKCE flow: exchange ?code=... for a session
+        if (code) {
+          const { error: exErr } = await supabase.auth.exchangeCodeForSession(window.location.href);
+          if (exErr) {
+            setError(exErr.message);
+            setChecking(false);
+            return;
+          }
+          setIsValidSession(true);
+          setChecking(false);
+          // Clean URL
+          window.history.replaceState({}, document.title, '/reset-password');
+          return;
+        }
+
+        // Implicit flow: tokens in hash fragment
+        if (access_token && refresh_token && (type === 'recovery' || type === null)) {
+          const { error: setErr } = await supabase.auth.setSession({ access_token, refresh_token });
+          if (setErr) {
+            setError(setErr.message);
+            setChecking(false);
+            return;
+          }
+          setIsValidSession(true);
+          setChecking(false);
+          window.history.replaceState({}, document.title, '/reset-password');
+          return;
+        }
+
+        // Fallback: page refresh / already authenticated
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) setIsValidSession(true);
+        setChecking(false);
+      } catch (e: any) {
+        setError(e?.message || 'Failed to validate reset link.');
+        setChecking(false);
       }
-      setChecking(false);
     };
 
-    // Give the auth state change a moment to fire, then check session
-    setTimeout(checkSession, 1000);
+    init();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleReset = async (e: React.FormEvent) => {
