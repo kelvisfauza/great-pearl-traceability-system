@@ -107,8 +107,16 @@ const AdminMoneyRequestsManager = () => {
 
       if (approve) {
         updateData.admin_approved_at = new Date().toISOString();
-        updateData.approval_stage = 'pending_finance'; // Move to finance for final approval
-        updateData.status = 'pending';
+        // Salary Advance is admin-only — DB trigger auto-completes & disburses.
+        // Other request types still follow Admin → Finance.
+        const req = requests.find(r => r.id === requestId);
+        if (req?.request_type === 'Salary Advance') {
+          updateData.status = 'Approved';
+          // approval_stage will be set to 'completed' by the DB trigger
+        } else {
+          updateData.approval_stage = 'pending_finance';
+          updateData.status = 'pending';
+        }
       } else {
         updateData.status = 'rejected';
         updateData.approval_stage = 'rejected';
@@ -122,10 +130,14 @@ const AdminMoneyRequestsManager = () => {
 
       if (error) throw error;
 
+      const approvedReq = requests.find(r => r.id === requestId);
+      const isSalaryAdvance = approvedReq?.request_type === 'Salary Advance';
       toast({
-        title: approve ? "Request Approved" : "Request Rejected",
-        description: approve 
-          ? "Request moved to Finance for final approval" 
+        title: approve ? (isSalaryAdvance ? "Advance Disbursed ✅" : "Request Approved") : "Request Rejected",
+        description: approve
+          ? (isSalaryAdvance
+              ? "Wallet credited and advance recorded for 27th recovery."
+              : "Request moved to Finance for final approval")
           : "Request has been rejected"
       });
 
