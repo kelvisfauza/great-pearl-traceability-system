@@ -255,12 +255,11 @@ export const useDayBookData = (selectedDate: Date = new Date()) => {
         });
       });
 
-      // Fetch sales from Supabase for the day
+      // Fetch sales from Supabase for the day (by sale date, not record creation date)
       const { data: salesData } = await supabase
         .from('sales_transactions')
-        .select('customer, coffee_type, weight, total_amount, created_at')
-        .gte('created_at', startOfDay.toISOString())
-        .lte('created_at', endOfDay.toISOString());
+        .select('customer, coffee_type, weight, total_amount, date')
+        .eq('date', dateStr);
 
       if (salesData) {
         salesData.forEach(sale => {
