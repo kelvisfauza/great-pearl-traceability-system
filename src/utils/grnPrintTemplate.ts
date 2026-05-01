@@ -85,7 +85,7 @@ function field(label: string, value: string | number | null | undefined, width =
 export function getGRNDocumentStyles(): string {
   return `
     <style>
-      @page { size: A4; margin: 8mm 10mm; }
+      @page { size: A4; margin: 10mm 12mm; }
       .gac-grn-preview-shell {
         background: #f4f4f5;
         padding: 16px;
@@ -96,10 +96,10 @@ export function getGRNDocumentStyles(): string {
         margin: 0 auto 16px;
         background: #fffdf7;
         color: #1a1a1a;
-        padding: 8px 10px;
+        padding: 10px 14px;
         font-family: Arial, Helvetica, sans-serif;
-        font-size: 9.5px;
-        line-height: 1.3;
+        font-size: 12px;
+        line-height: 1.4;
         box-shadow: 0 0 0 1px #d4d4d8;
         page-break-after: always;
       }
@@ -133,29 +133,29 @@ export function getGRNDocumentStyles(): string {
       }
       .gac-grn-od-cell {
         width: 30%;
-        font-size: 9.5px;
-        line-height: 1.45;
+        font-size: 11.5px;
+        line-height: 1.5;
         padding: 4px 6px;
         vertical-align: middle;
       }
       .gac-grn-logo {
-        height: 30px;
+        height: 38px;
         width: auto;
         display: block;
         margin: 0 auto 2px;
       }
       .gac-grn-logo-text {
         font-weight: 700;
-        font-size: 11px;
+        font-size: 13px;
         letter-spacing: 1px;
       }
       .gac-grn-official-title {
-        font-size: 15px;
+        font-size: 18px;
         font-weight: 700;
         letter-spacing: 1.2px;
       }
       .gac-grn-official-subtitle {
-        font-size: 10.5px;
+        font-size: 12.5px;
         font-weight: 600;
         margin-top: 1px;
         letter-spacing: 0.8px;
@@ -166,16 +166,16 @@ export function getGRNDocumentStyles(): string {
         border-collapse: collapse;
       }
       .gac-grn-company-name {
-        font-size: 13px;
+        font-size: 15px;
         letter-spacing: 1px;
         font-weight: 700;
       }
       .gac-grn-company-tagline {
-        font-size: 9.5px;
+        font-size: 11px;
         color: #444;
       }
       .gac-grn-ref-label {
-        font-size: 11px;
+        font-size: 13px;
         font-weight: 700;
       }
       .gac-grn-ref-code {
@@ -184,7 +184,7 @@ export function getGRNDocumentStyles(): string {
         padding: 2px 8px;
         border: 1px solid #c1121f;
         color: #c1121f;
-        font-size: 16px;
+        font-size: 17px;
         font-weight: 700;
         font-family: 'Courier New', monospace;
         letter-spacing: 1px;
@@ -226,17 +226,17 @@ export function getGRNDocumentStyles(): string {
         line-height: 1.3;
         text-align: center;
       }
-      .gac-grn-preamble { font-size: 8.5px; }
-      .gac-grn-note { font-size: 8px; color: #333; margin-top: 6px; }
+      .gac-grn-preamble { font-size: 10.5px; }
+      .gac-grn-note { font-size: 10px; color: #333; margin-top: 6px; }
       .gac-grn-detail-grid {
         width: 100%;
         border-collapse: collapse;
         margin: 6px 0 4px;
       }
       .gac-grn-detail-grid td {
-        padding: 3px 4px;
+        padding: 4px 5px;
         vertical-align: middle;
-        font-size: 9.5px;
+        font-size: 11.5px;
         white-space: nowrap;
       }
       .gac-grn-detail-row {
@@ -260,22 +260,22 @@ export function getGRNDocumentStyles(): string {
       .gac-grn-quality-caption {
         margin: 4px 0 2px;
         color: #444;
-        font-size: 9px;
+        font-size: 10.5px;
         text-align: center;
         font-style: italic;
       }
       .gac-grn-quality-table {
         margin-top: 4px;
-        font-size: 9px;
+        font-size: 11px;
       }
       .gac-grn-quality-table th,
       .gac-grn-quality-table td {
         border: 1px solid #1a1a1a;
-        padding: 2px 5px;
+        padding: 3px 6px;
       }
       .gac-grn-quality-table th {
         background: #f0efe9;
-        font-size: 9px;
+        font-size: 10.5px;
         text-transform: uppercase;
         letter-spacing: 0.4px;
       }
@@ -298,10 +298,10 @@ export function getGRNDocumentStyles(): string {
       }
       .gac-grn-pricing-table {
         margin-top: 4px;
-        font-size: 9.5px;
+        font-size: 11.5px;
       }
       .gac-grn-pricing-table td {
-        padding: 2px 0;
+        padding: 3px 0;
         vertical-align: top;
       }
       .gac-grn-line-fill {
@@ -320,14 +320,14 @@ export function getGRNDocumentStyles(): string {
       }
       .gac-grn-total-amount {
         border-bottom: 2px solid #1a1a1a;
-        font-size: 12px;
+        font-size: 13.5px;
         font-weight: 700;
       }
       .gac-grn-amount-words {
         margin-top: 4px;
         padding: 3px 8px;
         border: 1px dashed #1a1a1a;
-        font-size: 9px;
+        font-size: 10.5px;
         font-style: italic;
         background: #fff;
       }
@@ -351,7 +351,7 @@ export function getGRNDocumentStyles(): string {
       .gac-grn-stamp-bottom { font-size: 9px; }
       .gac-grn-supplier-sign {
         margin: 6px 0 2px;
-        font-size: 9.5px;
+        font-size: 11.5px;
       }
       .gac-grn-sign-line {
         display: inline-block;
@@ -361,7 +361,7 @@ export function getGRNDocumentStyles(): string {
       .gac-grn-sign-cell {
         width: 33.33%;
         padding: 4px 6px;
-        font-size: 9px;
+        font-size: 11px;
       }
       .gac-grn-sign-value {
         display: inline-block;
@@ -379,7 +379,7 @@ export function getGRNDocumentStyles(): string {
         width: 65%;
         padding: 4px 6px;
         color: #444;
-        font-size: 8px;
+        font-size: 10px;
         line-height: 1.35;
         vertical-align: top;
       }
@@ -406,12 +406,12 @@ export function getGRNDocumentStyles(): string {
       .gac-grn-qr-label {
         margin-top: 2px;
         color: #666;
-        font-size: 8px;
+        font-size: 9.5px;
       }
       .gac-grn-system-note {
         margin-top: 6px;
         color: #888;
-        font-size: 8.5px;
+        font-size: 10px;
         text-align: center;
         font-style: italic;
       }
