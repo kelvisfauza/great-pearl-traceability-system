@@ -1594,7 +1594,7 @@ const Store = () => {
         {/* -------------------------------------------------------------------- */}
         {/*                           GRN Print Modal                            */}
         {/* -------------------------------------------------------------------- */}
-        <GRNPrintModal open={showGRNModal} onClose={() => setShowGRNModal(false)} grnData={selectedGRNData} />
+        <GRNPrintModal open={showGRNModal} onClose={() => setShowGRNModal(false)} grnData={selectedGRNData} hideFinanceCopy />
       </div>
     </Layout>
   );
