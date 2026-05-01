@@ -21,6 +21,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
+import { executeOrQueue } from "@/lib/offline/queue";
 
 interface NewCoffeeReceiptDialogProps {
   open: boolean;
@@ -65,48 +66,56 @@ const NewCoffeeReceiptDialog = ({ open, onOpenChange }: NewCoffeeReceiptDialogPr
       const supplier = suppliers?.find(s => s.id === data.supplier_id);
       const batchNumber = await generateBatchNumber(data.date);
       const recordId = crypto.randomUUID();
-      
-      // 1. Insert coffee record - set to 'inventory' for immediate availability
-      const { error: coffeeError } = await supabase
-        .from('coffee_records')
-        .insert([{
-          id: recordId,
-          supplier_id: data.supplier_id,
-          supplier_name: supplier?.name || '',
-          coffee_type: data.coffee_type,
-          date: data.date,
-          kilograms: data.kilograms,
-          bags: data.bags,
-          batch_number: batchNumber,
-          status: 'pending', // Pending quality assessment before inventory
-          created_by: employee?.email || ''
-        }]);
-      
-      if (coffeeError) throw coffeeError;
 
-      // 2. Insert finance_coffee_lots (same as V1)
-      const { error: financeError } = await supabase
-        .from('finance_coffee_lots')
-        .insert({
-          coffee_record_id: recordId,
-          supplier_id: data.supplier_id,
-          quantity_kg: data.kilograms,
-          unit_price_ugx: 0,
-          total_amount_ugx: 0,
-          quality_json: { bags: data.bags, coffee_type: data.coffee_type },
-          assessed_by: employee?.email || 'Store Department',
-          finance_status: 'READY_FOR_FINANCE'
-        });
+      const recordPayload = {
+        id: recordId,
+        supplier_id: data.supplier_id,
+        supplier_name: supplier?.name || '',
+        coffee_type: data.coffee_type,
+        date: data.date,
+        kilograms: data.kilograms,
+        bags: data.bags,
+        batch_number: batchNumber,
+        status: 'pending',
+        created_by: employee?.email || '',
+      };
 
-      if (financeError) {
-        console.error('Finance lot creation error:', financeError);
-        // Don't fail the whole operation if finance lot fails
-      }
+      const financeLot = {
+        coffee_record_id: recordId,
+        supplier_id: data.supplier_id,
+        quantity_kg: data.kilograms,
+        unit_price_ugx: 0,
+        total_amount_ugx: 0,
+        quality_json: { bags: data.bags, coffee_type: data.coffee_type },
+        assessed_by: employee?.email || 'Store Department',
+        finance_status: 'READY_FOR_FINANCE',
+      };
+
+      return await executeOrQueue({
+        kind: 'coffee_receipt',
+        payload: { ...recordPayload, finance_lot: financeLot },
+        user_label: `${supplier?.name || 'Supplier'} • ${data.kilograms}kg • Batch ${batchNumber}`,
+        perform: async (client_op_id) => {
+          const { error: coffeeError } = await supabase
+            .from('coffee_records')
+            .insert([{ ...recordPayload, client_op_id } as any]);
+          if (coffeeError) throw coffeeError;
+
+          const { error: financeError } = await supabase
+            .from('finance_coffee_lots')
+            .insert(financeLot as any);
+          if (financeError) console.error('Finance lot creation error:', financeError);
+          return recordPayload;
+        }
+      });
     },
-    onSuccess: () => {
+    onSuccess: (result: any) => {
+      const queued = result?.queued;
       toast({
-        title: "Success",
-        description: "Coffee receipt created successfully"
+        title: queued ? "Saved offline" : "Success",
+        description: queued
+          ? "You're offline — receipt saved on this device and will upload when you reconnect."
+          : "Coffee receipt created successfully"
       });
       queryClient.invalidateQueries({ queryKey: ['v2-coffee-receipts'] });
       reset();

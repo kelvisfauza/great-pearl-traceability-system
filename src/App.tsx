@@ -1,6 +1,13 @@
 import React, { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import OfflineIndicator from "@/components/offline/OfflineIndicator";
+import { startQueueAutoSync } from "@/lib/offline/queue";
+
+function OfflineSyncBoot() {
+  useEffect(() => startQueueAutoSync(), []);
+  return null;
+}
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -138,6 +145,8 @@ const App: React.ComponentType = () => {
             <Sonner />
             <BrowserRouter>
               <InactivityTimerInitializer />
+              <OfflineSyncBoot />
+              <OfflineIndicator />
               <MaintenanceGuard>
               <LocationPermissionGate>
               <GlobalActivityTracker />

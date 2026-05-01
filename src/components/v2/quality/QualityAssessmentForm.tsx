@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { Loader2, CheckCircle, XCircle, Copy } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useActivityTracker } from "@/hooks/useActivityTracker";
+import { executeOrQueue } from "@/lib/offline/queue";
 
 interface QualityAssessmentFormProps {
   lot: any;
@@ -66,56 +67,65 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
 
   const submitForPricing = useMutation({
     mutationFn: async (data: AssessmentForm) => {
-      // 1. Create quality assessment with status 'pending_admin_pricing'
-      const { data: assessment, error: assessError } = await supabase
-        .from('quality_assessments')
-        .insert({
-          store_record_id: lot.id,
-          batch_number: lot.batch_number,
-          assessed_by: employee?.email || '',
-          physical_assessment_by: data.physical_assessment_by,
-          system_assessment_by: employee?.name || employee?.email || '',
-          date_assessed: new Date().toISOString().split('T')[0],
-          moisture: data.moisture_content,
-          group1_defects: data.group1_percentage,
-          group2_defects: data.group2_percentage,
-          pods: data.pods_percentage,
-          husks: data.husks_percentage,
-          fm: data.fm_percentage,
-          outturn: data.outturn_percentage,
-          suggested_price: data.unit_price_ugx,
-          final_price: null,
-          comments: data.comments,
-          status: 'pending_admin_pricing'
-        } as any)
-        .select()
-        .single();
+      const payload = {
+        store_record_id: lot.id,
+        batch_number: lot.batch_number,
+        assessed_by: employee?.email || '',
+        physical_assessment_by: data.physical_assessment_by,
+        system_assessment_by: (employee as any)?.name || employee?.email || '',
+        date_assessed: new Date().toISOString().split('T')[0],
+        moisture: data.moisture_content,
+        group1_defects: data.group1_percentage,
+        group2_defects: data.group2_percentage,
+        pods: data.pods_percentage,
+        husks: data.husks_percentage,
+        fm: data.fm_percentage,
+        outturn: data.outturn_percentage,
+        suggested_price: data.unit_price_ugx,
+        final_price: null,
+        comments: data.comments,
+        status: 'pending_admin_pricing',
+        _coffee_record_status_update: 'AWAITING_PRICING',
+      };
 
-      if (assessError) throw assessError;
-
-      // 2. Update coffee_records status to awaiting pricing
-      const { error: updateError } = await supabase
-        .from('coffee_records')
-        .update({ status: 'AWAITING_PRICING' })
-        .eq('id', lot.id);
-
-      if (updateError) throw updateError;
-      return assessment;
+      return await executeOrQueue({
+        kind: 'quality_assessment',
+        payload,
+        user_label: `Batch ${lot.batch_number} • ${lot.supplier_name || ''}`,
+        perform: async (client_op_id) => {
+          const { data: assessment, error: assessError } = await supabase
+            .from('quality_assessments')
+            .insert({ ...payload, client_op_id, _coffee_record_status_update: undefined } as any)
+            .select()
+            .single();
+          if (assessError) throw assessError;
+          const { error: updateError } = await supabase
+            .from('coffee_records')
+            .update({ status: 'AWAITING_PRICING' })
+            .eq('id', lot.id);
+          if (updateError) throw updateError;
+          return assessment;
+        }
+      });
     },
-    onSuccess: (assessment: any) => {
+    onSuccess: (result: any) => {
       trackFormSubmission('quality_assessment');
       trackTaskCompletion('quality assessment');
+      const queued = result?.queued;
+      const assessment = result?.data;
       const ref = assessment?.assessment_ref;
       if (ref) setGeneratedRef(ref);
       toast({
-        title: "Assessment Submitted",
-        description: ref
+        title: queued ? "Saved offline" : "Assessment Submitted",
+        description: queued
+          ? "You're offline — the assessment is saved on this device and will upload automatically when you reconnect."
+          : ref
           ? `Reference: ${ref} — write this on the physical form.`
           : "Quality assessment saved and sent to admin for final pricing."
       });
       queryClient.invalidateQueries({ queryKey: ['v2-pending-quality'] });
-      // Delay navigation so user can copy the ref
-      if (!ref) navigate('/v2/quality');
+      // Stay on page only when there's a ref to copy
+      if (queued || !ref) navigate('/v2/quality');
     },
     onError: (error: any) => {
       toast({
