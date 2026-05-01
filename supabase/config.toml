@@ -143,6 +143,8 @@ project_id = "pudfybkyfedeggmokhco"
     verify_jwt = false
   [functions.send-password-reset-sms]
     verify_jwt = true
+  [functions.forgot-password-temp]
+    verify_jwt = false
   [functions.send-salary-sms-manual]
     verify_jwt = false
   [functions.send-sms]
