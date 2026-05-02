@@ -26,7 +26,7 @@ interface DailyPurchaseTemplateProps {
   rows?: number;
 }
 
-const DailyPurchaseTemplate = ({ rows = 10 }: DailyPurchaseTemplateProps) => {
+const DailyPurchaseTemplate = ({ rows = 22 }: DailyPurchaseTemplateProps) => {
   const templateNo = useMemo(() => generateDailyReference(), []);
   const todayStr = format(new Date(), "dd / MM / yyyy");
 
