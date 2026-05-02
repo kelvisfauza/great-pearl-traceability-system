@@ -85,7 +85,6 @@ const buildHtml = (templateNo: string, dateStr: string, rows: number) => {
         <td></td>
         <td></td>
         <td></td>
-        <td></td>
       </tr>`
     )
     .join("");
@@ -140,7 +139,6 @@ const buildHtml = (templateNo: string, dateStr: string, rows: number) => {
     <thead>
       <tr>
         <th>#</th>
-        <th>Time</th>
         <th>Supplier Name</th>
         <th>Coffee Type</th>
         <th>Bags</th>
@@ -155,7 +153,7 @@ const buildHtml = (templateNo: string, dateStr: string, rows: number) => {
     </tbody>
     <tfoot>
       <tr>
-        <th colspan="4" style="text-align:right;">TOTALS</th>
+        <th colspan="3" style="text-align:right;">TOTALS</th>
         <th></th>
         <th></th>
         <th></th>
