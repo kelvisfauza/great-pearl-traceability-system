@@ -153,7 +153,7 @@ const buildHtml = (templateNo: string, dateStr: string, rows: number) => {
     </tbody>
     <tfoot>
       <tr>
-        <th colspan="4" style="text-align:right;">TOTALS</th>
+        <th colspan="3" style="text-align:right;">TOTALS</th>
         <th></th>
         <th></th>
         <th></th>
