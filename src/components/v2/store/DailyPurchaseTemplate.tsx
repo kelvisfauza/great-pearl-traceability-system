@@ -139,7 +139,6 @@ const buildHtml = (templateNo: string, dateStr: string, rows: number) => {
     <thead>
       <tr>
         <th>#</th>
-        <th>Time</th>
         <th>Supplier Name</th>
         <th>Coffee Type</th>
         <th>Bags</th>
