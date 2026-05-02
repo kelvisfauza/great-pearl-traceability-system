@@ -1341,7 +1341,7 @@ const Store = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <DailyPurchaseTemplate rows={10} />
+      <DailyPurchaseTemplate rows={22} />
               </CardContent>
             </Card>
           </TabsContent>
