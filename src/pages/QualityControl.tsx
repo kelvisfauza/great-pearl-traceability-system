@@ -682,7 +682,7 @@ const QualityControl = () => {
         reject_final: Boolean(assessmentForm.reject_final),
         // Final values - suggested_price stores the final price to be paid
         suggested_price: finalPrice,
-        status: 'assessed' as const,
+        status: Boolean(assessmentForm.reject_final) ? ('rejected' as const) : ('assessed' as const),
         comments: assessmentForm.comments || '',
         date_assessed: new Date().toISOString().split('T')[0],
         assessed_by: employee?.name || employee?.email || 'Quality Controller',
@@ -719,7 +719,9 @@ const QualityControl = () => {
         });
       }
       
-      await updateStoreRecord(selectedRecord.id, { status: 'assessed' });
+      await updateStoreRecord(selectedRecord.id, {
+        status: Boolean(assessmentForm.reject_final) ? 'QUALITY_REJECTED' : 'assessed'
+      });
       
       // Prepare and show GRN for printing after successful assessment
       const grnInfo = {
