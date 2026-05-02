@@ -719,7 +719,9 @@ const QualityControl = () => {
         });
       }
       
-      await updateStoreRecord(selectedRecord.id, { status: 'assessed' });
+      await updateStoreRecord(selectedRecord.id, {
+        status: Boolean(assessmentForm.reject_final) ? 'QUALITY_REJECTED' : 'assessed'
+      });
       
       // Prepare and show GRN for printing after successful assessment
       const grnInfo = {
