@@ -3,21 +3,31 @@ import { Button } from "@/components/ui/button";
 import { Printer, Download } from "lucide-react";
 import { format } from "date-fns";
 
-const generateTemplateNumber = () => {
+const generateDailyReference = () => {
   const d = new Date();
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
-  const rand = Math.floor(1000 + Math.random() * 9000);
-  return `DPR-${y}${m}${day}-${rand}`;
+  const key = `dpr_ref_${y}${m}${day}`;
+  try {
+    const existing = localStorage.getItem(key);
+    if (existing) return existing;
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    const ref = `DPR-${y}${m}${day}-${rand}`;
+    localStorage.setItem(key, ref);
+    return ref;
+  } catch {
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    return `DPR-${y}${m}${day}-${rand}`;
+  }
 };
 
 interface DailyPurchaseTemplateProps {
   rows?: number;
 }
 
-const DailyPurchaseTemplate = ({ rows = 25 }: DailyPurchaseTemplateProps) => {
-  const templateNo = useMemo(() => generateTemplateNumber(), []);
+const DailyPurchaseTemplate = ({ rows = 10 }: DailyPurchaseTemplateProps) => {
+  const templateNo = useMemo(() => generateDailyReference(), []);
   const todayStr = format(new Date(), "dd / MM / yyyy");
 
   const handlePrint = () => {
@@ -54,7 +64,7 @@ const DailyPurchaseTemplate = ({ rows = 25 }: DailyPurchaseTemplateProps) => {
         Download Template
       </Button>
       <span className="text-xs text-muted-foreground self-center">
-        New No.: <strong>{templateNo}</strong>
+        Today's Ref: <strong>{templateNo}</strong> (use Page 2, 3… for extra sheets)
       </span>
     </div>
   );
@@ -68,7 +78,6 @@ const buildHtml = (templateNo: string, dateStr: string, rows: number) => {
       (_, i) => `
       <tr>
         <td class="num">${i + 1}</td>
-        <td></td>
         <td></td>
         <td></td>
         <td></td>
@@ -95,10 +104,10 @@ const buildHtml = (templateNo: string, dateStr: string, rows: number) => {
   .company { font-size: 18px; font-weight: bold; letter-spacing: 1px; margin: 4px 0; }
   .contact { font-size: 11px; color: #444; line-height: 1.4; }
   .doc-title { font-size: 16px; font-weight: bold; margin-top: 8px; text-transform: uppercase; }
-  .meta { display: flex; justify-content: space-between; font-size: 12px; margin: 10px 0 8px; }
+  .meta { display: flex; justify-content: space-between; font-size: 12px; margin: 10px 0 8px; flex-wrap: wrap; gap: 6px; }
   .meta .box { border: 1px solid #333; padding: 4px 10px; }
-  table { width: 100%; border-collapse: collapse; font-size: 11px; }
-  th, td { border: 1px solid #333; padding: 6px 4px; text-align: left; vertical-align: middle; height: 26px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { border: 1px solid #333; padding: 8px 6px; text-align: left; vertical-align: middle; height: 44px; }
   th { background: #f0f0f0; text-align: center; font-size: 10.5px; }
   td.num { text-align: center; width: 28px; color: #555; }
   .signoff { display: flex; justify-content: space-between; margin-top: 24px; font-size: 12px; }
@@ -121,8 +130,9 @@ const buildHtml = (templateNo: string, dateStr: string, rows: number) => {
   </div>
 
   <div class="meta">
-    <div class="box"><strong>Template No.:</strong> ${templateNo}</div>
+    <div class="box"><strong>Daily Ref:</strong> ${templateNo}</div>
     <div class="box"><strong>Date:</strong> ${dateStr}</div>
+    <div class="box"><strong>Page:</strong> _____ of _____</div>
     <div class="box"><strong>Store Manager:</strong> ____________________</div>
   </div>
 
@@ -132,7 +142,6 @@ const buildHtml = (templateNo: string, dateStr: string, rows: number) => {
         <th>#</th>
         <th>Time</th>
         <th>Supplier Name</th>
-        <th>Supplier Code</th>
         <th>Coffee Type</th>
         <th>Bags</th>
         <th>Kilograms (Kg)</th>
@@ -146,7 +155,7 @@ const buildHtml = (templateNo: string, dateStr: string, rows: number) => {
     </tbody>
     <tfoot>
       <tr>
-        <th colspan="5" style="text-align:right;">TOTALS</th>
+        <th colspan="4" style="text-align:right;">TOTALS</th>
         <th></th>
         <th></th>
         <th></th>
