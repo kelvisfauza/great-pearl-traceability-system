@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, FileText, Package, AlertTriangle } from "lucide-react";
 import { format, startOfDay, endOfDay } from "date-fns";
+import DailyPurchaseTemplate from "../DailyPurchaseTemplate";
 
 const StoreReportsTab = () => {
   const today = new Date();
@@ -49,6 +50,18 @@ const StoreReportsTab = () => {
   return (
     <div className="space-y-4 mt-4">
       <h3 className="text-lg font-semibold flex items-center gap-2"><FileText className="h-5 w-5" />Daily Store Report — {format(today, 'PPP')}</h3>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Daily Purchase Template (Manual Reconciliation Sheet)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <p className="text-sm text-muted-foreground">
+            Print or download a blank daily purchase sheet. The store manager fills it in throughout the day and reconciles it against the system at end of day. Each sheet has a unique tracking number.
+          </p>
+          <DailyPurchaseTemplate rows={25} />
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card><CardContent className="p-4 text-center"><Package className="h-6 w-6 mx-auto mb-2 text-blue-500" /><p className="text-sm text-muted-foreground">Receipts Today</p><p className="text-2xl font-bold">{todayRecords?.length || 0}</p></CardContent></Card>
