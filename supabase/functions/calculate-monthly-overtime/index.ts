@@ -108,12 +108,15 @@ Deno.serve(async (req) => {
     console.log(`[overtime] Skipped ${totalSkipped} invalid rows (no full attendance) for ${monthNames[targetMonth]} ${targetYear}`);
 
     const RATE_PER_HOUR = 3000; // UGX per hour
+    const MAX_MONTHLY_PAY = 60000; // UGX cap per employee per month
     const records = Object.values(empMap)
       // Only include employees who actually attended at least one day in the month
       .filter((emp) => emp.qualifying_days > 0 && emp.total_overtime > 0)
       .map((emp) => {
         const netOT = Math.max(0, emp.total_overtime - emp.total_late);
         const hours = Math.ceil(netOT / 60);
+        const rawPay = hours * RATE_PER_HOUR;
+        const cappedPay = Math.min(rawPay, MAX_MONTHLY_PAY);
         return {
           employee_id: emp.employee_id,
           employee_name: emp.employee_name,
@@ -124,7 +127,10 @@ Deno.serve(async (req) => {
           total_late_minutes: emp.total_late,
           net_overtime_minutes: netOT,
           overtime_rate_per_hour: RATE_PER_HOUR,
-          calculated_pay: hours * RATE_PER_HOUR,
+          calculated_pay: cappedPay,
+          admin_notes: rawPay > MAX_MONTHLY_PAY
+            ? `Auto-capped at UGX ${MAX_MONTHLY_PAY.toLocaleString()} (raw: UGX ${rawPay.toLocaleString()} for ${hours}h)`
+            : null,
           status: "pending",
         };
       });
