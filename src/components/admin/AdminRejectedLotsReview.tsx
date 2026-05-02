@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { AlertTriangle, DollarSign, Loader2, Coffee, Package, ShoppingCart } from 'lucide-react';
+import { AlertTriangle, DollarSign, Loader2, Coffee, Package, ShoppingCart, Ban } from 'lucide-react';
 import { CheckCircle2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import GRNPrintModal from '@/components/quality/GRNPrintModal';
@@ -52,6 +52,9 @@ const AdminRejectedLotsReview = () => {
   const [processing, setProcessing] = useState(false);
   const [showGRNModal, setShowGRNModal] = useState(false);
   const [grnData, setGrnData] = useState<any>(null);
+  const [permRejectModal, setPermRejectModal] = useState<{ open: boolean; lot: RejectedLot | null }>({ open: false, lot: null });
+  const [permRejectNotes, setPermRejectNotes] = useState('');
+  const [permRejectSubmitting, setPermRejectSubmitting] = useState(false);
 
   const fetchRejectedLots = useCallback(async () => {
     setLoading(true);
@@ -62,6 +65,7 @@ const AdminRejectedLotsReview = () => {
         .select('*')
         .eq('reject_final', true)
         .eq('admin_discretion_buy', false)
+        .eq('permanently_rejected', false)
         .order('date_assessed', { ascending: false });
 
       if (error) throw error;
@@ -88,6 +92,44 @@ const AdminRejectedLotsReview = () => {
   }, [toast]);
 
   useEffect(() => { fetchRejectedLots(); }, [fetchRejectedLots]);
+
+  const submitPermanentReject = async () => {
+    if (!permRejectModal.lot) return;
+    if (!permRejectNotes.trim()) {
+      toast({ title: 'Reason required', description: 'Enter why the lot is being returned to the supplier.', variant: 'destructive' });
+      return;
+    }
+    setPermRejectSubmitting(true);
+    try {
+      const lot = permRejectModal.lot;
+      const { error } = await supabase
+        .from('quality_assessments')
+        .update({
+          permanently_rejected: true,
+          permanently_rejected_by: employee?.email || employee?.name || 'Admin',
+          permanently_rejected_at: new Date().toISOString(),
+          permanently_rejected_notes: permRejectNotes.trim(),
+          status: 'PERMANENTLY_REJECTED',
+        } as any)
+        .eq('id', lot.id);
+      if (error) throw error;
+
+      if (lot.store_record_id) {
+        await (supabase.from('coffee_records') as any)
+          .update({ status: 'PERMANENTLY_REJECTED' })
+          .eq('id', lot.store_record_id);
+      }
+
+      toast({ title: 'Lot permanently rejected', description: `${lot.batch_number} marked as returned to supplier.` });
+      setPermRejectModal({ open: false, lot: null });
+      setPermRejectNotes('');
+      fetchRejectedLots();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setPermRejectSubmitting(false);
+    }
+  };
 
   const handleBuyAtDiscretion = async () => {
     if (!selectedLot || !discretionPrice) {
@@ -251,6 +293,19 @@ const AdminRejectedLotsReview = () => {
                     <ShoppingCart className="h-4 w-4 mr-1" />
                     Buy at Discretion
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => {
+                      setPermRejectModal({ open: true, lot });
+                      setPermRejectNotes('');
+                    }}
+                    title="Returned to supplier — do not add to inventory"
+                  >
+                    <Ban className="h-4 w-4 mr-1" />
+                    Permanently Reject
+                  </Button>
                 </div>
               </div>
             ))}
@@ -404,6 +459,46 @@ const AdminRejectedLotsReview = () => {
         onClose={() => { setShowGRNModal(false); setGrnData(null); }}
         grnData={grnData}
       />
+
+      <Dialog open={permRejectModal.open} onOpenChange={(o) => !o && setPermRejectModal({ open: false, lot: null })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Ban className="h-5 w-5 text-destructive" />
+              Mark as Permanently Rejected
+            </DialogTitle>
+          </DialogHeader>
+          {permRejectModal.lot && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                This lot will be recorded as returned to the supplier. It will NOT be added to inventory, will not generate a GRN, and will be removed from the discretion list.
+              </p>
+              <div className="text-sm bg-muted p-3 rounded-lg">
+                <p><strong>Batch:</strong> {permRejectModal.lot.batch_number}</p>
+                <p><strong>Supplier:</strong> {permRejectModal.lot.coffee_record?.supplier_name}</p>
+                <p><strong>Quantity:</strong> {permRejectModal.lot.coffee_record?.kilograms} kg ({permRejectModal.lot.coffee_record?.bags} bags)</p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Reason / Notes *</Label>
+                <Textarea
+                  rows={3}
+                  placeholder="Why is this coffee being returned to the supplier?"
+                  value={permRejectNotes}
+                  onChange={(e) => setPermRejectNotes(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPermRejectModal({ open: false, lot: null })}>Cancel</Button>
+            <Button variant="destructive" onClick={submitPermanentReject} disabled={permRejectSubmitting}>
+              {permRejectSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              <Ban className="h-4 w-4 mr-1" />
+              Confirm Permanent Rejection
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

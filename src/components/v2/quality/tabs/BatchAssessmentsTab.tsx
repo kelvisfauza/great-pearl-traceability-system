@@ -9,10 +9,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { Loader2, FlaskConical, CheckCircle, XCircle, Clock, Printer } from "lucide-react";
+import { Ban } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 const BatchAssessmentsTab = () => {
   const navigate = useNavigate();
@@ -22,6 +25,9 @@ const BatchAssessmentsTab = () => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [grnModal, setGrnModal] = useState<{ open: boolean; grnData: any; assessmentId: string | null; coffeeRecordId: string | null }>({ open: false, grnData: null, assessmentId: null, coffeeRecordId: null });
   const [bulkPrinting, setBulkPrinting] = useState(false);
+  const [permRejectModal, setPermRejectModal] = useState<{ open: boolean; lot: any | null; assessment: any | null }>({ open: false, lot: null, assessment: null });
+  const [permRejectNotes, setPermRejectNotes] = useState('');
+  const [permRejectSubmitting, setPermRejectSubmitting] = useState(false);
 
   const { data: lots, isLoading } = useQuery({
     queryKey: ['quality-all-lots'],
@@ -67,6 +73,76 @@ const BatchAssessmentsTab = () => {
 
   const currentUserName = employee?.name || employee?.email || 'Unknown';
   const isAdmin = isSuperAdmin();
+
+  // Helper: a GRN is printable only when there is a real price
+  const hasPrintablePrice = (assessment: any) => {
+    if (!assessment) return false;
+    if (assessment.permanently_rejected) return false;
+    const finalPrice = Number(assessment.final_price || 0);
+    const suggested = Number(assessment.suggested_price || 0);
+    const discretionPrice = Number(assessment.admin_discretion_price || 0);
+    if (assessment.reject_final && !assessment.admin_discretion_buy) return false;
+    return finalPrice > 0 || suggested > 0 || discretionPrice > 0;
+  };
+
+  const submitPermanentReject = async () => {
+    if (!permRejectModal.lot) return;
+    if (!permRejectNotes.trim()) {
+      toast({ title: 'Reason required', description: 'Enter why this lot is being returned to the supplier.', variant: 'destructive' });
+      return;
+    }
+    setPermRejectSubmitting(true);
+    try {
+      const lot = permRejectModal.lot;
+      const assessment = permRejectModal.assessment;
+      const payload: any = {
+        permanently_rejected: true,
+        permanently_rejected_by: currentUserName,
+        permanently_rejected_at: new Date().toISOString(),
+        permanently_rejected_notes: permRejectNotes.trim(),
+        reject_final: true,
+        admin_discretion_buy: false,
+        status: 'PERMANENTLY_REJECTED',
+      };
+
+      if (assessment?.id) {
+        const { error } = await supabase
+          .from('quality_assessments')
+          .update(payload)
+          .eq('id', assessment.id);
+        if (error) throw error;
+      } else {
+        // Create a minimal assessment record to capture the rejection
+        const { error } = await supabase
+          .from('quality_assessments')
+          .insert({
+            store_record_id: lot.id,
+            batch_number: lot.batch_number,
+            assessed_by: currentUserName,
+            date_assessed: new Date().toISOString().slice(0, 10),
+            moisture: 0,
+            suggested_price: 0,
+            ...payload,
+          } as any);
+        if (error) throw error;
+      }
+
+      // Mark coffee_record so it stays out of inventory
+      await (supabase.from('coffee_records') as any)
+        .update({ status: 'PERMANENTLY_REJECTED' })
+        .eq('id', lot.id);
+
+      toast({ title: 'Lot permanently rejected', description: `${lot.batch_number} marked as returned to supplier.` });
+      setPermRejectModal({ open: false, lot: null, assessment: null });
+      setPermRejectNotes('');
+      queryClient.invalidateQueries({ queryKey: ['quality-all-lots'] });
+      queryClient.invalidateQueries({ queryKey: ['quality-all-assessments'] });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setPermRejectSubmitting(false);
+    }
+  };
 
   const markGRNPrinted = async (assessmentId: string, coffeeRecordId?: string) => {
     await supabase
@@ -124,6 +200,7 @@ const BatchAssessmentsTab = () => {
     const printableLots = lots?.filter(l => {
       const assessment = getAssessmentForLot(l.batch_number);
       if (!assessment) return false;
+      if (!hasPrintablePrice(assessment)) return false;
       const isPrinted = assessment.grn_printed;
       if (isPrinted && !isAdmin) return false;
       return selectedIds.includes(l.id);
@@ -273,11 +350,13 @@ const BatchAssessmentsTab = () => {
                   const grnPrinted = assessment?.grn_printed;
                   const grnPrintedBy = assessment?.grn_printed_by;
                   const hasAssessment = !!assessment;
+                  const printable = hasPrintablePrice(assessment);
+                  const isPermRejected = assessment?.permanently_rejected || lot.status === 'PERMANENTLY_REJECTED';
 
                   return (
                     <TableRow key={lot.id}>
                       <TableCell>
-                        {hasAssessment && (
+                        {hasAssessment && printable && (
                           <Checkbox
                             checked={selectedIds.includes(lot.id)}
                             onCheckedChange={() => toggleSelect(lot.id)}
@@ -290,9 +369,15 @@ const BatchAssessmentsTab = () => {
                       <TableCell>{lot.coffee_type}</TableCell>
                       <TableCell className="text-right">{lot.kilograms?.toLocaleString()}</TableCell>
                       <TableCell className="text-right">{lot.bags}</TableCell>
-                      <TableCell>{getStatusBadge(lot.status)}</TableCell>
                       <TableCell>
-                        {hasAssessment ? (
+                        {isPermRejected
+                          ? <Badge variant="destructive"><Ban className="mr-1 h-3 w-3" />Returned to Supplier</Badge>
+                          : getStatusBadge(lot.status)}
+                      </TableCell>
+                      <TableCell>
+                        {isPermRejected ? (
+                          <span className="text-xs text-muted-foreground">No GRN</span>
+                        ) : hasAssessment ? (
                           grnPrinted ? (
                             <div className="flex flex-col gap-1">
                               <Badge className="bg-green-100 text-green-800 text-xs">
@@ -300,6 +385,10 @@ const BatchAssessmentsTab = () => {
                               </Badge>
                               <span className="text-[10px] text-muted-foreground">by {grnPrintedBy}</span>
                             </div>
+                          ) : !printable ? (
+                            <Badge variant="secondary" className="bg-amber-100 text-amber-800 text-xs">
+                              Awaiting Admin Pricing
+                            </Badge>
                           ) : (
                             <Badge variant="secondary" className="bg-orange-100 text-orange-800 text-xs">
                               Not Printed
@@ -311,22 +400,37 @@ const BatchAssessmentsTab = () => {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
-                          {lot.status === 'pending' && (
+                          {lot.status === 'pending' && !isPermRejected && (
                             <Button size="sm" onClick={() => navigate(`/v2/quality/assess/${lot.id}`)}>
                               <FlaskConical className="mr-1 h-3.5 w-3.5" />
                               Assess
                             </Button>
                           )}
-                          {hasAssessment && !grnPrinted && (
+                          {hasAssessment && !grnPrinted && printable && !isPermRejected && (
                             <Button size="sm" variant="outline" onClick={() => openGRNForLot(lot, assessment)}>
                               <Printer className="mr-1 h-3.5 w-3.5" />
                               Print GRN
                             </Button>
                           )}
-                          {hasAssessment && grnPrinted && isAdmin && (
+                          {hasAssessment && grnPrinted && isAdmin && !isPermRejected && (
                             <Button size="sm" variant="ghost" onClick={() => openGRNForLot(lot, assessment)}>
                               <Printer className="mr-1 h-3.5 w-3.5" />
                               Reprint
+                            </Button>
+                          )}
+                          {!isPermRejected && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => {
+                                setPermRejectModal({ open: true, lot, assessment });
+                                setPermRejectNotes('');
+                              }}
+                              title="Mark as permanently rejected (returned to supplier, no inventory)"
+                            >
+                              <Ban className="mr-1 h-3.5 w-3.5" />
+                              Reject
                             </Button>
                           )}
                         </div>
@@ -346,6 +450,46 @@ const BatchAssessmentsTab = () => {
         grnData={grnModal.grnData}
         onPrinted={handlePrinted}
       />
+
+      <Dialog open={permRejectModal.open} onOpenChange={(o) => !o && setPermRejectModal({ open: false, lot: null, assessment: null })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Ban className="h-5 w-5 text-destructive" />
+              Mark as Permanently Rejected
+            </DialogTitle>
+            <DialogDescription>
+              This lot will be marked as returned to the supplier. It will NOT be added to inventory and no GRN can be printed for it.
+            </DialogDescription>
+          </DialogHeader>
+          {permRejectModal.lot && (
+            <div className="space-y-3">
+              <div className="text-sm bg-muted p-3 rounded-lg">
+                <p><strong>Batch:</strong> {permRejectModal.lot.batch_number}</p>
+                <p><strong>Supplier:</strong> {permRejectModal.lot.supplier_name}</p>
+                <p><strong>Quantity:</strong> {permRejectModal.lot.kilograms} kg ({permRejectModal.lot.bags} bags)</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Reason / Notes *</label>
+                <Textarea
+                  rows={3}
+                  placeholder="Why is this coffee being returned to the supplier?"
+                  value={permRejectNotes}
+                  onChange={(e) => setPermRejectNotes(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPermRejectModal({ open: false, lot: null, assessment: null })}>Cancel</Button>
+            <Button variant="destructive" onClick={submitPermanentReject} disabled={permRejectSubmitting}>
+              {permRejectSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              <Ban className="h-4 w-4 mr-1" />
+              Confirm Permanent Rejection
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -6298,6 +6298,10 @@ export type Database = {
           moisture: number
           outturn: number | null
           outturn_price: number | null
+          permanently_rejected: boolean
+          permanently_rejected_at: string | null
+          permanently_rejected_by: string | null
+          permanently_rejected_notes: string | null
           physical_assessment_by: string | null
           pods: number | null
           quality_note: string | null
@@ -6337,6 +6341,10 @@ export type Database = {
           moisture: number
           outturn?: number | null
           outturn_price?: number | null
+          permanently_rejected?: boolean
+          permanently_rejected_at?: string | null
+          permanently_rejected_by?: string | null
+          permanently_rejected_notes?: string | null
           physical_assessment_by?: string | null
           pods?: number | null
           quality_note?: string | null
@@ -6376,6 +6384,10 @@ export type Database = {
           moisture?: number
           outturn?: number | null
           outturn_price?: number | null
+          permanently_rejected?: boolean
+          permanently_rejected_at?: string | null
+          permanently_rejected_by?: string | null
+          permanently_rejected_notes?: string | null
           physical_assessment_by?: string | null
           pods?: number | null
           quality_note?: string | null
