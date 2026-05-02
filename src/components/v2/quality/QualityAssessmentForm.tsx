@@ -225,6 +225,14 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
       });
       return;
     }
+    if (!data.unit_price_ugx || data.unit_price_ugx <= 0) {
+      toast({
+        title: "Suggested Price Required",
+        description: "Enter a Unit Price (UGX/kg) recommendation so Admin can review the lot for discretionary purchase.",
+        variant: "destructive"
+      });
+      return;
+    }
     rejectLot.mutate(data);
   });
 
