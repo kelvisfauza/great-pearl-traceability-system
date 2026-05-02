@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { generateBatchNumber } from "@/utils/batchUtils";
 
 import Layout from "@/components/Layout";
+import DailyPurchaseTemplate from "@/components/v2/store/DailyPurchaseTemplate";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -65,7 +66,7 @@ import StorePreviewModal from "@/components/store/StorePreviewModal";
 /*                               Helper Types                                 */
 /* -------------------------------------------------------------------------- */
 
-type StoreTab = "records" | "pricing" | "operations" | "suppliers";
+type StoreTab = "records" | "pricing" | "operations" | "suppliers" | "reports";
 
 type NewSupplierForm = {
   name: string;
@@ -643,6 +644,10 @@ const Store = () => {
               <TabsTrigger value="suppliers" className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                 <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Suppliers
+              </TabsTrigger>
+              <TabsTrigger value="reports" className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Reports
               </TabsTrigger>
             </TabsList>
           </div>
@@ -1317,6 +1322,26 @@ const Store = () => {
                     <p className="text-sm">Click &quot;Add Supplier&quot; to register your first supplier</p>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ------------------------------------------------------------------ */}
+          {/*                              Reports                               */}
+          {/* ------------------------------------------------------------------ */}
+          <TabsContent value="reports" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Daily Purchase Template
+                </CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  Print or download a blank daily purchase sheet (with a unique tracking number). The store manager fills it in throughout the day and reconciles it against system entries at end of day.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DailyPurchaseTemplate rows={25} />
               </CardContent>
             </Card>
           </TabsContent>
