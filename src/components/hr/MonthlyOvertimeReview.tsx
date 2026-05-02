@@ -87,11 +87,17 @@ const MonthlyOvertimeReview = () => {
   };
 
   const saveEdit = (id: string) => {
+    const MAX_PAY = 60000;
+    const payNum = Number(editValues.pay);
+    if (payNum > MAX_PAY) {
+      toast.error(`Overtime pay cannot exceed UGX ${MAX_PAY.toLocaleString()} per month.`);
+      return;
+    }
     updateMutation.mutate({
       id,
       updates: {
         adjusted_overtime_minutes: Number(editValues.minutes),
-        adjusted_pay: Number(editValues.pay),
+        adjusted_pay: payNum,
         admin_notes: editValues.notes,
       },
     });
