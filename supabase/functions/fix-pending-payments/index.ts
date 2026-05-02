@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
     const { data: pendingPayments, error: paymentsError } = await supabaseClient
       .from('supplier_payments')
       .select('id, batch_number, supplier_id, amount_paid_ugx')
-      .eq('status', 'Pending');
+      .eq('status', 'PENDING_ADMIN_APPROVAL');
 
     if (paymentsError) {
       console.error('Error fetching pending payments:', paymentsError);
@@ -39,7 +39,6 @@ Deno.serve(async (req) => {
         .select('id, amount, confirmed_by')
         .eq('reference', payment.batch_number)
         .eq('transaction_type', 'PAYMENT')
-        .not('confirmed_by', 'is', null)
         .maybeSingle();
 
       if (cashTx) {
@@ -48,7 +47,7 @@ Deno.serve(async (req) => {
         const { error: updateError } = await supabaseClient
           .from('supplier_payments')
           .update({
-            status: 'Paid',
+            status: 'POSTED',
             amount_paid_ugx: Math.abs(Number(cashTx.amount)),
             updated_at: new Date().toISOString()
           })
