@@ -5,6 +5,7 @@ import { useDocumentVerification } from '@/hooks/useDocumentVerification';
 import { Printer } from 'lucide-react';
 import { GRNDocumentData, getGRNPreviewHTML, getGRNPrintDocumentHTML } from '@/utils/grnPrintTemplate';
 import { supabase } from '@/integrations/supabase/client';
+import { stripLegacySupplierSuffix } from '@/utils/supplierDisplay';
 
 interface GRNPrintModalProps {
   open: boolean;
@@ -65,12 +66,71 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
   useEffect(() => {
     const fetchSupplier = async () => {
       if (!open || !grnData?.supplierName) return;
-      const { data, error } = await supabase
+
+      // If GRN has supplier_id, prefer it
+      const supplierId = (grnData as any).supplierId;
+      if (supplierId) {
+        const { data } = await supabase
+          .from('suppliers')
+          .select('id, bank_name, account_name, account_number, phone, email, origin, code, name')
+          .eq('id', supplierId)
+          .maybeSingle();
+        if (data) { setSupplierInfo(data as any); return; }
+      }
+
+      const rawName = grnData.supplierName.trim();
+      const cleaned = stripLegacySupplierSuffix(rawName).trim();
+
+      // Try if name contains a code like "GPC 00019"
+      const codeMatch = rawName.match(/(GPC\s*\d+)/i);
+      if (codeMatch) {
+        const { data } = await supabase
+          .from('suppliers')
+          .select('id, bank_name, account_name, account_number, phone, email, origin, code, name')
+          .ilike('code', codeMatch[1].replace(/\s+/g, ' '))
+          .maybeSingle();
+        if (data) { setSupplierInfo(data as any); return; }
+      }
+
+      // 1. Exact (case-insensitive) match
+      let { data } = await supabase
         .from('suppliers')
-        .select('id, bank_name, account_name, account_number, phone, email, origin, code')
-        .ilike('name', grnData.supplierName.trim())
+        .select('id, bank_name, account_name, account_number, phone, email, origin, code, name')
+        .ilike('name', cleaned)
         .maybeSingle();
-      if (!error && data) setSupplierInfo(data as any);
+
+      // 2. Contains match — supplier name contains the GRN-provided name
+      if (!data) {
+        const res = await supabase
+          .from('suppliers')
+          .select('id, bank_name, account_name, account_number, phone, email, origin, code, name')
+          .ilike('name', `%${cleaned}%`)
+          .limit(5);
+        if (res.data && res.data.length > 0) {
+          // Prefer one with bank/account details
+          const withBank = res.data.find((s: any) => s.bank_name || s.account_number);
+          data = (withBank || res.data[0]) as any;
+        }
+      }
+
+      // 3. Token match — try the longest distinctive word
+      if (!data) {
+        const tokens = cleaned.split(/\s+/).filter(t => t.length >= 4).sort((a, b) => b.length - a.length);
+        for (const tok of tokens) {
+          const res = await supabase
+            .from('suppliers')
+            .select('id, bank_name, account_name, account_number, phone, email, origin, code, name')
+            .ilike('name', `%${tok}%`)
+            .limit(5);
+          if (res.data && res.data.length > 0) {
+            const withBank = res.data.find((s: any) => s.bank_name || s.account_number);
+            data = (withBank || res.data[0]) as any;
+            break;
+          }
+        }
+      }
+
+      if (data) setSupplierInfo(data as any);
     };
     fetchSupplier();
   }, [open, grnData?.supplierName]);
