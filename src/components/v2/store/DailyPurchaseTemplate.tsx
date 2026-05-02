@@ -96,24 +96,24 @@ const buildHtml = (templateNo: string, dateStr: string, rows: number) => {
 <meta charset="utf-8" />
 <title>${templateNo} - Daily Purchase Template</title>
 <style>
-  @page { size: A4 landscape; margin: 12mm; }
-  body { font-family: Arial, Helvetica, sans-serif; color: #111; margin: 0; padding: 16px; }
-  .header { text-align: center; border-bottom: 2px solid #111; padding-bottom: 10px; margin-bottom: 14px; }
-  .logo-wrap { display: inline-block; background: #0d3d1f; padding: 8px 16px; border-radius: 6px; margin-bottom: 8px; }
-  .logo-wrap img { height: 60px; }
-  .company { font-size: 18px; font-weight: bold; letter-spacing: 1px; margin: 4px 0; }
-  .contact { font-size: 11px; color: #444; line-height: 1.4; }
-  .doc-title { font-size: 16px; font-weight: bold; margin-top: 8px; text-transform: uppercase; }
-  .meta { display: flex; justify-content: space-between; font-size: 12px; margin: 10px 0 8px; flex-wrap: wrap; gap: 6px; }
-  .meta .box { border: 1px solid #333; padding: 4px 10px; }
-  table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  th, td { border: 1px solid #333; padding: 8px 6px; text-align: left; vertical-align: middle; height: 44px; }
-  th { background: #f0f0f0; text-align: center; font-size: 10.5px; }
-  td.num { text-align: center; width: 28px; color: #555; }
-  .signoff { display: flex; justify-content: space-between; margin-top: 24px; font-size: 12px; }
+  @page { size: A4 portrait; margin: 8mm; }
+  html, body { height: 100%; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #111; margin: 0; padding: 0; }
+  .header { text-align: center; border-bottom: 1.5px solid #111; padding-bottom: 4px; margin-bottom: 6px; }
+  .logo-wrap { display: none; }
+  .company { font-size: 14px; font-weight: bold; letter-spacing: 0.5px; margin: 2px 0; }
+  .contact { font-size: 9px; color: #444; line-height: 1.3; }
+  .doc-title { font-size: 12px; font-weight: bold; margin-top: 4px; text-transform: uppercase; }
+  .meta { display: flex; justify-content: space-between; font-size: 9.5px; margin: 4px 0; flex-wrap: wrap; gap: 4px; }
+  .meta .box { border: 1px solid #333; padding: 2px 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: 10px; table-layout: fixed; }
+  th, td { border: 1px solid #333; padding: 2px 4px; text-align: left; vertical-align: middle; height: 26px; }
+  th { background: #f0f0f0; text-align: center; font-size: 9.5px; padding: 4px 3px; height: auto; }
+  td.num { text-align: center; width: 22px; color: #555; }
+  .signoff { display: flex; justify-content: space-between; margin-top: 14px; font-size: 10px; }
   .signoff .sig { width: 30%; }
-  .signoff .sig p { border-top: 1px solid #333; margin-top: 40px; padding-top: 4px; text-align: center; }
-  .note { font-size: 10px; color: #666; margin-top: 10px; font-style: italic; }
+  .signoff .sig p { border-top: 1px solid #333; margin-top: 24px; padding-top: 2px; text-align: center; }
+  .note { font-size: 8.5px; color: #666; margin-top: 6px; font-style: italic; }
   @media print { .no-print { display: none; } }
 </style>
 </head>
