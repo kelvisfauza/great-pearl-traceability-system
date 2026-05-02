@@ -1325,6 +1325,26 @@ const Store = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* ------------------------------------------------------------------ */}
+          {/*                              Reports                               */}
+          {/* ------------------------------------------------------------------ */}
+          <TabsContent value="reports" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Daily Purchase Template
+                </CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  Print or download a blank daily purchase sheet (with a unique tracking number). The store manager fills it in throughout the day and reconciles it against system entries at end of day.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DailyPurchaseTemplate rows={25} />
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
 
         {/* -------------------------------------------------------------------- */}
