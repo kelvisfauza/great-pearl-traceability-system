@@ -682,7 +682,7 @@ const QualityControl = () => {
         reject_final: Boolean(assessmentForm.reject_final),
         // Final values - suggested_price stores the final price to be paid
         suggested_price: finalPrice,
-        status: (Boolean(assessmentForm.reject_final) ? 'rejected' : 'assessed') as const,
+        status: Boolean(assessmentForm.reject_final) ? ('rejected' as const) : ('assessed' as const),
         comments: assessmentForm.comments || '',
         date_assessed: new Date().toISOString().split('T')[0],
         assessed_by: employee?.name || employee?.email || 'Quality Controller',
