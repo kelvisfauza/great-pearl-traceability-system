@@ -85,7 +85,6 @@ const buildHtml = (templateNo: string, dateStr: string, rows: number) => {
         <td></td>
         <td></td>
         <td></td>
-        <td></td>
       </tr>`
     )
     .join("");
