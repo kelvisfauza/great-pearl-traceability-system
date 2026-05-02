@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { generateBatchNumber } from "@/utils/batchUtils";
 
 import Layout from "@/components/Layout";
+import DailyPurchaseTemplate from "@/components/v2/store/DailyPurchaseTemplate";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -65,7 +66,7 @@ import StorePreviewModal from "@/components/store/StorePreviewModal";
 /*                               Helper Types                                 */
 /* -------------------------------------------------------------------------- */
 
-type StoreTab = "records" | "pricing" | "operations" | "suppliers";
+type StoreTab = "records" | "pricing" | "operations" | "suppliers" | "reports";
 
 type NewSupplierForm = {
   name: string;
@@ -643,6 +644,10 @@ const Store = () => {
               <TabsTrigger value="suppliers" className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                 <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Suppliers
+              </TabsTrigger>
+              <TabsTrigger value="reports" className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Reports
               </TabsTrigger>
             </TabsList>
           </div>
