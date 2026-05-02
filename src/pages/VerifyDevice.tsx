@@ -18,44 +18,23 @@ const VerifyDevice = () => {
 
     const verifyToken = async () => {
       try {
-        // Find device session with this token
-        const { data: device, error } = await supabase
-          .from('device_sessions')
-          .select('id, token_expires_at, token_used_at, is_trusted')
-          .eq('verification_token', token)
-          .maybeSingle();
+        // Verify the device server-side via SECURITY DEFINER RPC.
+        // The RPC scopes the lookup to a single token row and prevents
+        // anonymous enumeration of device_sessions.
+        const { data, error } = await supabase.rpc('verify_device_token', {
+          p_token: token,
+        });
 
-        if (error || !device) {
+        if (error) {
+          console.error('Failed to verify device:', error);
           setStatus('error');
           return;
         }
 
-        if (device.is_trusted || device.token_used_at) {
-          setStatus('success'); // Already verified
-          return;
-        }
-
-        if (new Date(device.token_expires_at) < new Date()) {
-          setStatus('expired');
-          return;
-        }
-
-        // Mark device as trusted
-        const { error: updateError } = await supabase
-          .from('device_sessions')
-          .update({
-            is_trusted: true,
-            token_used_at: new Date().toISOString(),
-          })
-          .eq('id', device.id);
-
-        if (updateError) {
-          console.error('Failed to verify device:', updateError);
-          setStatus('error');
-          return;
-        }
-
-        setStatus('success');
+        const result = (data as { status?: string } | null) ?? {};
+        if (result.status === 'success') setStatus('success');
+        else if (result.status === 'expired') setStatus('expired');
+        else setStatus('error');
       } catch (err) {
         console.error('Device verification error:', err);
         setStatus('error');

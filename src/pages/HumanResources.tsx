@@ -34,7 +34,6 @@ import SalaryPaymentRequestsManager from '@/components/hr/SalaryPaymentRequestsM
 import MySalaryRequests from '@/components/MySalaryRequests';
 import UserCreationForm from '@/components/hr/UserCreationForm';
 import PrintUserDetails from '@/components/hr/PrintUserDetails';
-import CreateTrainingAccountButton from '@/components/admin/CreateTrainingAccountButton';
 import RoleManagement from '@/components/hr/RoleManagement';
 import AccountStatusManager from '@/components/admin/AccountStatusManager';
 import CompanyEmployeesList from '@/components/hr/CompanyEmployeesList';
@@ -310,7 +309,6 @@ const HumanResources = () => {
           <TabsContent value="create">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <UserCreationForm />
-              <CreateTrainingAccountButton />
             </div>
           </TabsContent>
 

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,6 +12,26 @@ serve(async (req) => {
   }
 
   try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const authClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: userData, error: userErr } = await authClient.auth.getUser();
+    if (userErr || !userData?.user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const apiKey = Deno.env.get("GOSENTEPAY_API_KEY");
     const secretKey = Deno.env.get("GOSENTEPAY_SECRET_KEY");
 
@@ -96,7 +117,6 @@ serve(async (req) => {
           status: "error",
           code: innerData.code || innerData.status || response.status,
           message: innerData.message || "Failed to initiate withdraw collection",
-          details: data,
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -109,10 +129,10 @@ serve(async (req) => {
 
     const userMessage = isConnectionError
       ? "Mobile money withdraw collection service is temporarily unavailable. Please try again later."
-      : errorMsg;
+      : "Unable to process withdraw collection at this time.";
 
     return new Response(
-      JSON.stringify({ error: userMessage, technical_error: errorMsg }),
+      JSON.stringify({ error: userMessage }),
       { status: isConnectionError ? 503 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
