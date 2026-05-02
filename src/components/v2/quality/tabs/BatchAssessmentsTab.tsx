@@ -339,6 +339,7 @@ const BatchAssessmentsTab = () => {
                   <TableHead>Type</TableHead>
                   <TableHead className="text-right">Weight (kg)</TableHead>
                   <TableHead className="text-right">Bags</TableHead>
+                  <TableHead className="text-right">Price (UGX/kg)</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>GRN</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -352,6 +353,8 @@ const BatchAssessmentsTab = () => {
                   const hasAssessment = !!assessment;
                   const printable = hasPrintablePrice(assessment);
                   const isPermRejected = assessment?.permanently_rejected || lot.status === 'PERMANENTLY_REJECTED';
+                  const displayPrice = Number(assessment?.final_price || assessment?.admin_discretion_price || assessment?.suggested_price || 0);
+                  const isDiscretion = !!assessment?.admin_discretion_buy;
 
                   return (
                     <TableRow key={lot.id}>
@@ -369,6 +372,24 @@ const BatchAssessmentsTab = () => {
                       <TableCell>{lot.coffee_type}</TableCell>
                       <TableCell className="text-right">{lot.kilograms?.toLocaleString()}</TableCell>
                       <TableCell className="text-right">{lot.bags}</TableCell>
+                      <TableCell className="text-right">
+                        {hasAssessment ? (
+                          displayPrice > 0 ? (
+                            <div className="flex flex-col items-end gap-1">
+                              <span className="font-semibold">UGX {displayPrice.toLocaleString()}</span>
+                              {isDiscretion && (
+                                <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-700 dark:text-amber-400">
+                                  Discretion
+                                </Badge>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-amber-600">Awaiting pricing</span>
+                          )
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         {isPermRejected
                           ? <Badge variant="destructive"><Ban className="mr-1 h-3 w-3" />Returned to Supplier</Badge>
