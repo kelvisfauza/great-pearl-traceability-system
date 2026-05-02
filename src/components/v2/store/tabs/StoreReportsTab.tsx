@@ -59,7 +59,7 @@ const StoreReportsTab = () => {
           <p className="text-sm text-muted-foreground">
             Print or download a blank daily purchase sheet. The store manager fills it in throughout the day and reconciles it against the system at end of day. Each sheet has a unique tracking number.
           </p>
-          <DailyPurchaseTemplate rows={25} />
+          <DailyPurchaseTemplate rows={10} />
         </CardContent>
       </Card>
 
