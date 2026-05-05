@@ -1951,6 +1951,9 @@ const QuickLoans = () => {
                         <div className="flex justify-between"><span>Maximum Limit:</span><span className="font-semibold">UGX {Number(evaluation.max_limit).toLocaleString()}</span></div>
                         <div className="flex justify-between"><span>Recommended Amount:</span><span className="font-semibold">UGX {Number(evaluation.recommended_amount).toLocaleString()}</span></div>
                         <div className="flex justify-between"><span>Recommended Type:</span><span>{evaluation.recommended_loan_type === 'long_term' ? 'Long-Term' : 'Quick'}</span></div>
+                        <p className="text-[11px] text-muted-foreground italic">
+                          The recommended amount is a suggestion. You may request any amount up to your maximum limit of UGX {Number(evaluation.max_limit).toLocaleString()}.
+                        </p>
                         <div className="text-xs text-muted-foreground border-t pt-2">
                           <strong>Factors:</strong>
                           <ul className="list-disc pl-4 mt-1">
