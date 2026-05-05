@@ -37,7 +37,6 @@ const generateDocx = async (employee: any) => {
         width: { size: 1800, type: WidthType.DXA },
         borders: noBorders,
         verticalAlign: 'center' as any,
-        shading: { fill: '0D3D1F', type: ShadingType.CLEAR, color: 'auto' },
         margins: { top: 120, bottom: 120, left: 120, right: 120 },
         children: [
           new Paragraph({
@@ -49,7 +48,7 @@ const generateDocx = async (employee: any) => {
                   transformation: { width: 70, height: 70 },
                   altText: { title: 'Logo', description: 'Great Agro Coffee Logo', name: 'logo' },
                 })]
-              : [new TextRun({ text: 'GAC', bold: true, color: 'FFFFFF', size: 32 })],
+              : [new TextRun({ text: 'GAC', bold: true, size: 32 })],
           }),
         ],
       }),
@@ -57,13 +56,12 @@ const generateDocx = async (employee: any) => {
         width: { size: 7560, type: WidthType.DXA },
         borders: noBorders,
         verticalAlign: 'center' as any,
-        shading: { fill: '0D3D1F', type: ShadingType.CLEAR, color: 'auto' },
         margins: { top: 120, bottom: 120, left: 200, right: 120 },
         children: [
-          new Paragraph({ children: [new TextRun({ text: 'GREAT AGRO COFFEE LTD', bold: true, size: 36, color: 'FFFFFF' })] }),
-          new Paragraph({ children: [new TextRun({ text: 'Kasese, Uganda', size: 20, color: 'F2F2F2' })] }),
-          new Paragraph({ children: [new TextRun({ text: 'Tel: +256 393 001 626  |  info@greatpearlcoffee.com', size: 18, color: 'F2F2F2' })] }),
-          new Paragraph({ children: [new TextRun({ text: 'www.greatagrocoffee.com  |  UCDA Licensed', size: 18, color: 'F2F2F2' })] }),
+          new Paragraph({ children: [new TextRun({ text: 'GREAT AGRO COFFEE LTD', bold: true, size: 36 })] }),
+          new Paragraph({ children: [new TextRun({ text: 'Kasese, Uganda', size: 20 })] }),
+          new Paragraph({ children: [new TextRun({ text: 'Tel: +256 393 001 626  |  info@greatpearlcoffee.com', size: 18 })] }),
+          new Paragraph({ children: [new TextRun({ text: 'www.greatagrocoffee.com  |  UCDA Licensed', size: 18 })] }),
         ],
       }),
     ],
