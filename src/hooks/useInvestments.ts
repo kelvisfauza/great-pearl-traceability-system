@@ -72,6 +72,7 @@ export const useInvestments = () => {
           description: `Investment locked - ${investRef}`,
           type: 'investment_lock',
           investment_amount: amount,
+          bypass_treasury_check: true,
         },
       }]);
       if (ledgerErr) throw ledgerErr;
@@ -151,6 +152,7 @@ export const useInvestments = () => {
           type: 'investment_early_withdrawal',
           investment_id: investmentId,
           reduced_interest: reducedInterest,
+          bypass_treasury_check: true,
         },
       }]);
       if (ledgerErr) throw ledgerErr;
