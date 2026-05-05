@@ -23,6 +23,7 @@ import SalaryAdvanceReceipt from '@/components/expenses/SalaryAdvanceReceipt';
 import ApprovalProgressTracker from '@/components/expenses/ApprovalProgressTracker';
 import MySalaryPayments from '@/components/expenses/MySalaryPayments';
 import ExpenseTemplateDownload from '@/components/expenses/ExpenseTemplateDownload';
+import CompanyHeaderSheetDownload from '@/components/expenses/CompanyHeaderSheetDownload';
 
 interface ExpenseRequest {
   id: string;
@@ -597,6 +598,7 @@ const MyExpenses = () => {
 
           {/* Download Templates Tab */}
           <TabsContent value="templates" className="space-y-6">
+            <CompanyHeaderSheetDownload />
             <ExpenseTemplateDownload />
           </TabsContent>
 
