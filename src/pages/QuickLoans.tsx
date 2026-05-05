@@ -393,7 +393,7 @@ const QuickLoans = () => {
         daily_interest_rate: dailyRate,
         total_repayable: Math.ceil(total),
         duration_months: months,
-        monthly_installment: freq === 'weekly' ? null : Math.ceil(weekly),
+        monthly_installment: Math.ceil(weekly),
         weekly_installment: freq === 'weekly' ? Math.ceil(weekly) : null,
         total_weeks: freq === 'weekly' ? totalWeeks : null,
         remaining_balance: Math.ceil(total),
