@@ -1365,7 +1365,7 @@ const QualityControl = () => {
                               }
                             }
                             if (grnDataList.length > 0) {
-                              openBulkGRNPrintWindow(grnDataList);
+                              await openBulkGRNPrintWindow(grnDataList);
                               // Mark all as printed in quality_assessments and coffee_records
                               for (const id of selectedForBulkPrint) {
                                 const assessment = filteredAssessments.find((a: any) => a.id === id);
