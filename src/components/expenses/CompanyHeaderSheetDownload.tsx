@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import {
   Document, Packer, Paragraph, TextRun, ImageRun, AlignmentType, Table, TableRow, TableCell,
-  WidthType, BorderStyle, ShadingType, HeightRule, PageOrientation,
+  WidthType, BorderStyle, ShadingType, PageOrientation,
 } from 'docx';
 
 const LOGO_URL = '/lovable-uploads/great-agro-coffee-logo.png';
@@ -24,38 +24,6 @@ const fetchLogoBytes = async (): Promise<Uint8Array | null> => {
 
 const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
 const noBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
-const thinBorder = { style: BorderStyle.SINGLE, size: 4, color: '999999' };
-const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
-
-const labelCell = (text: string, width: number) =>
-  new TableCell({
-    width: { size: width, type: WidthType.DXA },
-    borders: cellBorders,
-    shading: { fill: 'F2F2F2', type: ShadingType.CLEAR, color: 'auto' },
-    margins: { top: 80, bottom: 80, left: 120, right: 120 },
-    children: [new Paragraph({ children: [new TextRun({ text, bold: true, size: 20, color: '333333' })] })],
-  });
-
-const valueCell = (text: string, width: number) =>
-  new TableCell({
-    width: { size: width, type: WidthType.DXA },
-    borders: cellBorders,
-    margins: { top: 80, bottom: 80, left: 120, right: 120 },
-    children: [new Paragraph({ children: [new TextRun({ text: text || ' ', size: 20 })] })],
-  });
-
-const blankLineRow = (label: string) =>
-  new TableRow({
-    height: { value: 600, rule: HeightRule.ATLEAST },
-    children: [
-      new TableCell({
-        width: { size: 9360, type: WidthType.DXA },
-        borders: cellBorders,
-        margins: { top: 80, bottom: 80, left: 120, right: 120 },
-        children: [new Paragraph({ children: [new TextRun({ text: label, bold: true, size: 20 })] })],
-      }),
-    ],
-  });
 
 const generateDocx = async (employee: any) => {
   const logoBytes = await fetchLogoBytes();
