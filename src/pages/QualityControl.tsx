@@ -179,6 +179,7 @@ const QualityControl = () => {
     grnData: {
       grnNumber: string;
       supplierName: string;
+      supplierId?: string;
       coffeeType: string;
       qualityAssessment: string;
       numberOfBags: number;
