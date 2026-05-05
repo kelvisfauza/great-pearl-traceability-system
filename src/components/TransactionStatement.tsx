@@ -370,9 +370,11 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       
       if (uploadError) throw uploadError;
 
-      const { data: publicUrl } = supabase.storage
+      const { data: signed, error: signedErr } = await supabase.storage
         .from('statements')
-        .getPublicUrl(fileName);
+        .createSignedUrl(fileName, 60 * 60 * 24 * 30);
+      if (signedErr) throw signedErr;
+      const downloadUrl = signed?.signedUrl || '';
 
       // 5. Send email with PDF download link
       await supabase.functions.invoke('send-transactional-email', {
@@ -386,7 +388,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
             periodTo,
             currentBalance: updatedBalance,
             transactions,
-            pdfDownloadUrl: publicUrl.publicUrl,
+            pdfDownloadUrl: downloadUrl,
             statementFee: STATEMENT_FEE,
           },
         },
