@@ -727,6 +727,7 @@ const QualityControl = () => {
       const grnInfo = {
         grnNumber: `GRN-${selectedRecord.batch_number || `BATCH-${Date.now()}`}`,
         supplierName: selectedRecord.supplier_name || 'Unknown Supplier',
+        supplierId: (selectedRecord as any).supplier_id || undefined,
         coffeeType: selectedRecord.coffee_type || 'Unknown Coffee Type',
         qualityAssessment: `Moisture: ${assessment.moisture}%, Group 1: ${assessment.group1_defects}%, Group 2: ${assessment.group2_defects}%`,
         numberOfBags: selectedRecord.bags || 0,
@@ -957,6 +958,7 @@ const QualityControl = () => {
         grnData: {
           grnNumber: `GRN-${assessment.batch_number}`,
           supplierName: storeRecord.supplier_name || 'Unknown Supplier',
+          supplierId: (storeRecord as any).supplier_id || undefined,
           coffeeType: storeRecord.coffee_type || 'Unknown Coffee Type', 
           qualityAssessment: qualityResult,
           numberOfBags: storeRecord.bags || 0,
