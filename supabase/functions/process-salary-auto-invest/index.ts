@@ -89,6 +89,7 @@ Deno.serve(async (req) => {
           type: "auto_salary_investment",
           investment_amount: investAmount,
           month: currentMonth,
+          bypass_treasury_check: true,
         },
       }]);
 
