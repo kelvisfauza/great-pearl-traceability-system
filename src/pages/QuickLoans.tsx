@@ -344,9 +344,10 @@ const QuickLoans = () => {
     const numInstallments = freq === 'bullet' ? 1 : freq === 'monthly' ? months : totalWeeks;
     const weekly = numInstallments > 0 ? Math.ceil(total / numInstallments) : 0;
 
-    // Enforce evaluation limit (3× salary already capped)
-    if (amount > Number(evaluation.recommended_amount || 0) + FEE + 1) {
-      toast({ title: 'Above evaluated limit', description: `Evaluation approved up to UGX ${Number(evaluation.recommended_amount).toLocaleString()}.`, variant: 'destructive' });
+    // Evaluation sets the maximum borrowable limit; user chooses any amount up to max_limit
+    const maxAllowed = Number(evaluation.max_limit || evaluation.recommended_amount || 0);
+    if (amount > maxAllowed + FEE + 1) {
+      toast({ title: 'Above your limit', description: `Your evaluated maximum is UGX ${maxAllowed.toLocaleString()}. You can request any amount up to this.`, variant: 'destructive' });
       return;
     }
 
