@@ -57,7 +57,7 @@ serve(async (req) => {
       .order("created_at", { ascending: true });
 
     // 3b. Fetch ALL-TIME wallet balance (same logic as dashboard)
-    const walletEntryTypes = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT'];
+    const walletEntryTypes = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY', 'PAYOUT'];
     const { data: allWalletEntries } = await supabase
       .from("ledger_entries")
       .select("entry_type, amount")

@@ -422,7 +422,7 @@ const BorrowerDetailDialog = ({ selectedBorrower, onClose, today, getStatusBadge
             .from('ledger_entries')
             .select('amount, entry_type')
             .eq('user_id', uid)
-            .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT']);
+            .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY', 'PAYOUT']);
           setBorrowerWalletBalance((walletLedger || []).reduce((sum: number, e: any) => sum + Number(e.amount), 0));
         }
 
@@ -441,7 +441,7 @@ const BorrowerDetailDialog = ({ selectedBorrower, onClose, today, getStatusBadge
               .from('ledger_entries')
               .select('amount, entry_type')
               .eq('user_id', gUid)
-              .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT']);
+              .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY', 'PAYOUT']);
             setGuarantorWalletBalance((gWalletLedger || []).reduce((sum: number, e: any) => sum + Number(e.amount), 0));
           }
         }
