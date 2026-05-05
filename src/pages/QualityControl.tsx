@@ -1342,6 +1342,7 @@ const QualityControl = () => {
                                   batchNumber: assessment.batch_number,
                                   inventoryBatchId: assessment.batch_number,
                                   supplierName: storeRecord.supplier_name || 'Unknown',
+                                  supplierId: (storeRecord as any).supplier_id || undefined,
                                   coffeeType: storeRecord.coffee_type || 'Unknown',
                                   numberOfBags: storeRecord.bags || 0,
                                   totalKgs: storeRecord.kilograms || 0,
