@@ -219,6 +219,7 @@ const BatchAssessmentsTab = () => {
       return {
         grnNumber: `GRN-${lot.batch_number}`,
         supplierName: lot.supplier_name,
+        supplierId: (lot as any).supplier_id || undefined,
         coffeeType: lot.coffee_type,
         numberOfBags: lot.bags,
         totalKgs: lot.kilograms,
@@ -239,7 +240,7 @@ const BatchAssessmentsTab = () => {
       };
     });
 
-    openBulkGRNPrintWindow(grnDataList);
+    await openBulkGRNPrintWindow(grnDataList);
 
     // Mark all as printed
     for (const lot of printableLots) {
