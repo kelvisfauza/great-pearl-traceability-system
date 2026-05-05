@@ -53,7 +53,7 @@ const LoyaltyBalances = () => {
         .from("ledger_entries")
         .select("user_id, amount")
         .in("user_id", authUserIds)
-        .in("entry_type", ["LOYALTY_REWARD", "BONUS", "DEPOSIT", "WITHDRAWAL", "ADJUSTMENT"])
+        .in("entry_type", ["LOYALTY_REWARD", "BONUS", "DEPOSIT", "WITHDRAWAL", "ADJUSTMENT", "MONTHLY_SALARY", "PAYOUT"])
         .gt("amount", 0)
         .limit(10000) as any;
 
@@ -61,7 +61,7 @@ const LoyaltyBalances = () => {
         .from("ledger_entries")
         .select("user_id, amount")
         .in("user_id", authUserIds)
-        .in("entry_type", ["LOYALTY_REWARD", "BONUS", "DEPOSIT", "WITHDRAWAL", "ADJUSTMENT"])
+        .in("entry_type", ["LOYALTY_REWARD", "BONUS", "DEPOSIT", "WITHDRAWAL", "ADJUSTMENT", "MONTHLY_SALARY", "PAYOUT"])
         .lt("amount", 0)
         .limit(10000) as any;
 

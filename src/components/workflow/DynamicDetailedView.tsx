@@ -87,7 +87,7 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
           .from('ledger_entries')
           .select('*')
           .eq('user_id', userId)
-          .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT'])
+          .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY', 'PAYOUT'])
           .order('created_at', { ascending: false });
 
         const allEntries = entries || [];

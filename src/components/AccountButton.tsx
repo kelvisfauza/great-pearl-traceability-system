@@ -104,7 +104,7 @@ export const AccountButton = () => {
       .from('ledger_entries')
       .select('amount, entry_type, created_at')
       .eq('user_id', resolvedUserId)
-      .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT']);
+      .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY', 'PAYOUT']);
 
     if (error) {
       console.error('Error loading account breakdown ledger entries:', error);

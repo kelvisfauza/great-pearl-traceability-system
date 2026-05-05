@@ -74,7 +74,7 @@ serve(async (req) => {
     const guarantorDefaultAmount = guarantorHits.reduce((s: number, e: any) => s + Math.abs(Number(e.amount)), 0);
 
     // Wallet snapshot
-    const walletTypes = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT'];
+    const walletTypes = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY', 'PAYOUT'];
     const { data: walletEntries } = await supabase
       .from("ledger_entries")
       .select("amount")

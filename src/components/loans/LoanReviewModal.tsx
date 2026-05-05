@@ -70,7 +70,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
             .from('ledger_entries')
             .select('amount, entry_type')
             .eq('user_id', gUid)
-            .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT']);
+            .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY', 'PAYOUT']);
           const gBal = (gWalletLedger || []).reduce((sum: number, e: any) => sum + Number(e.amount), 0);
           setGuarantorWalletBalance(gBal);
         }
@@ -116,7 +116,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
           .from('ledger_entries')
           .select('amount, entry_type')
           .eq('user_id', uid)
-          .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT']);
+          .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY', 'PAYOUT']);
         
         const walletBal = (walletLedger || []).reduce((sum: number, e: any) => sum + Number(e.amount), 0);
         setBorrowerWalletBalance(walletBal);
