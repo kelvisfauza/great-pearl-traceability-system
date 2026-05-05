@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import {
   Document, Packer, Paragraph, TextRun, ImageRun, AlignmentType, Table, TableRow, TableCell,
-  WidthType, BorderStyle, ShadingType, HeightRule, PageOrientation,
+  WidthType, BorderStyle, ShadingType, PageOrientation,
 } from 'docx';
 
 const LOGO_URL = '/lovable-uploads/great-agro-coffee-logo.png';
@@ -24,44 +24,11 @@ const fetchLogoBytes = async (): Promise<Uint8Array | null> => {
 
 const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
 const noBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
-const thinBorder = { style: BorderStyle.SINGLE, size: 4, color: '999999' };
-const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
-
-const labelCell = (text: string, width: number) =>
-  new TableCell({
-    width: { size: width, type: WidthType.DXA },
-    borders: cellBorders,
-    shading: { fill: 'F2F2F2', type: ShadingType.CLEAR, color: 'auto' },
-    margins: { top: 80, bottom: 80, left: 120, right: 120 },
-    children: [new Paragraph({ children: [new TextRun({ text, bold: true, size: 20, color: '333333' })] })],
-  });
-
-const valueCell = (text: string, width: number) =>
-  new TableCell({
-    width: { size: width, type: WidthType.DXA },
-    borders: cellBorders,
-    margins: { top: 80, bottom: 80, left: 120, right: 120 },
-    children: [new Paragraph({ children: [new TextRun({ text: text || ' ', size: 20 })] })],
-  });
-
-const blankLineRow = (label: string) =>
-  new TableRow({
-    height: { value: 600, rule: HeightRule.ATLEAST },
-    children: [
-      new TableCell({
-        width: { size: 9360, type: WidthType.DXA },
-        borders: cellBorders,
-        margins: { top: 80, bottom: 80, left: 120, right: 120 },
-        children: [new Paragraph({ children: [new TextRun({ text: label, bold: true, size: 20 })] })],
-      }),
-    ],
-  });
 
 const generateDocx = async (employee: any) => {
   const logoBytes = await fetchLogoBytes();
   const now = new Date();
-  const dateStr = now.toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
-  const refNo = `EXP-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+  const refNo = `DOC-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
   // Header: logo + company info side by side
   const headerRow = new TableRow({
@@ -109,191 +76,6 @@ const generateDocx = async (employee: any) => {
     rows: [headerRow],
   });
 
-  // Gold title bar
-  const titleBar = new Table({
-    width: { size: 9360, type: WidthType.DXA },
-    columnWidths: [9360],
-    borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
-    rows: [
-      new TableRow({
-        children: [
-          new TableCell({
-            width: { size: 9360, type: WidthType.DXA },
-            borders: noBorders,
-            shading: { fill: 'D4A017', type: ShadingType.CLEAR, color: 'auto' },
-            margins: { top: 100, bottom: 100, left: 120, right: 120 },
-            children: [
-              new Paragraph({
-                alignment: AlignmentType.CENTER,
-                children: [new TextRun({ text: 'COMPANY EXPENSE / REQUEST FORM', bold: true, size: 24, color: 'FFFFFF' })],
-              }),
-            ],
-          }),
-        ],
-      }),
-    ],
-  });
-
-  // Meta info table
-  const metaTable = new Table({
-    width: { size: 9360, type: WidthType.DXA },
-    columnWidths: [2340, 2340, 2340, 2340],
-    rows: [
-      new TableRow({
-        children: [
-          labelCell('Reference No.', 2340),
-          valueCell(refNo, 2340),
-          labelCell('Date', 2340),
-          valueCell(dateStr, 2340),
-        ],
-      }),
-    ],
-  });
-
-  // Employee info
-  const employeeTable = new Table({
-    width: { size: 9360, type: WidthType.DXA },
-    columnWidths: [2340, 2340, 2340, 2340],
-    rows: [
-      new TableRow({
-        children: [
-          labelCell('Full Name', 2340),
-          valueCell(employee?.name || 'N/A', 2340),
-          labelCell('Position / Title', 2340),
-          valueCell(employee?.position || 'N/A', 2340),
-        ],
-      }),
-      new TableRow({
-        children: [
-          labelCell('Department', 2340),
-          valueCell(employee?.department || 'N/A', 2340),
-          labelCell('Email', 2340),
-          valueCell(employee?.email || 'N/A', 2340),
-        ],
-      }),
-      new TableRow({
-        children: [
-          labelCell('Phone', 2340),
-          valueCell(employee?.phone || 'N/A', 2340),
-          labelCell('Employee ID', 2340),
-          valueCell(employee?.id?.toString().slice(0, 8) || 'N/A', 2340),
-        ],
-      }),
-    ],
-  });
-
-  // Section header helper
-  const sectionHeader = (text: string) =>
-    new Table({
-      width: { size: 9360, type: WidthType.DXA },
-      columnWidths: [9360],
-      borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
-      rows: [
-        new TableRow({
-          children: [
-            new TableCell({
-              width: { size: 9360, type: WidthType.DXA },
-              borders: noBorders,
-              shading: { fill: '0D3D1F', type: ShadingType.CLEAR, color: 'auto' },
-              margins: { top: 80, bottom: 80, left: 160, right: 120 },
-              children: [new Paragraph({ children: [new TextRun({ text, bold: true, size: 20, color: 'FFFFFF' })] })],
-            }),
-          ],
-        }),
-      ],
-    });
-
-  // Request details (blank fields to fill)
-  const detailsTable = new Table({
-    width: { size: 9360, type: WidthType.DXA },
-    columnWidths: [9360],
-    rows: [
-      new TableRow({
-        height: { value: 500, rule: HeightRule.ATLEAST },
-        children: [
-          new TableCell({
-            width: { size: 9360, type: WidthType.DXA },
-            borders: cellBorders,
-            margins: { top: 80, bottom: 80, left: 120, right: 120 },
-            children: [new Paragraph({ children: [new TextRun({ text: 'Purpose / Title:', bold: true, size: 20 })] })],
-          }),
-        ],
-      }),
-      new TableRow({
-        height: { value: 500, rule: HeightRule.ATLEAST },
-        children: [
-          new TableCell({
-            width: { size: 9360, type: WidthType.DXA },
-            borders: cellBorders,
-            margins: { top: 80, bottom: 80, left: 120, right: 120 },
-            children: [new Paragraph({ children: [new TextRun({ text: 'Amount Requested (UGX):', bold: true, size: 20 })] })],
-          }),
-        ],
-      }),
-      new TableRow({
-        height: { value: 1800, rule: HeightRule.ATLEAST },
-        children: [
-          new TableCell({
-            width: { size: 9360, type: WidthType.DXA },
-            borders: cellBorders,
-            margins: { top: 80, bottom: 80, left: 120, right: 120 },
-            children: [
-              new Paragraph({ children: [new TextRun({ text: 'Description / Justification:', bold: true, size: 20 })] }),
-              new Paragraph({ children: [new TextRun({ text: '' })] }),
-              new Paragraph({ children: [new TextRun({ text: '' })] }),
-              new Paragraph({ children: [new TextRun({ text: '' })] }),
-            ],
-          }),
-        ],
-      }),
-      new TableRow({
-        height: { value: 500, rule: HeightRule.ATLEAST },
-        children: [
-          new TableCell({
-            width: { size: 9360, type: WidthType.DXA },
-            borders: cellBorders,
-            margins: { top: 80, bottom: 80, left: 120, right: 120 },
-            children: [new Paragraph({ children: [new TextRun({ text: 'Payment Method (Cash / Mobile Money / Bank):', bold: true, size: 20 })] })],
-          }),
-        ],
-      }),
-    ],
-  });
-
-  // Approval section
-  const approvalCell = (title: string) =>
-    new TableCell({
-      width: { size: 3120, type: WidthType.DXA },
-      borders: cellBorders,
-      margins: { top: 100, bottom: 100, left: 120, right: 120 },
-      children: [
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [new TextRun({ text: title, bold: true, size: 18, color: '0D3D1F' })],
-        }),
-        new Paragraph({ children: [new TextRun({ text: '' })] }),
-        new Paragraph({ children: [new TextRun({ text: 'Name: ____________________', size: 16, color: '666666' })] }),
-        new Paragraph({ children: [new TextRun({ text: '' })] }),
-        new Paragraph({ children: [new TextRun({ text: 'Sign: ____________________', size: 16, color: '666666' })] }),
-        new Paragraph({ children: [new TextRun({ text: '' })] }),
-        new Paragraph({ children: [new TextRun({ text: 'Date: ____________________', size: 16, color: '666666' })] }),
-      ],
-    });
-
-  const approvalTable = new Table({
-    width: { size: 9360, type: WidthType.DXA },
-    columnWidths: [3120, 3120, 3120],
-    rows: [
-      new TableRow({
-        children: [
-          approvalCell('Requested By'),
-          approvalCell('Admin Approval'),
-          approvalCell('Finance Approval'),
-        ],
-      }),
-    ],
-  });
-
   const spacer = (size = 100) => new Paragraph({ spacing: { before: 0, after: size }, children: [new TextRun({ text: '' })] });
 
   const doc = new Document({
@@ -309,27 +91,9 @@ const generateDocx = async (employee: any) => {
       },
       children: [
         headerTable,
-        titleBar,
-        spacer(200),
-        metaTable,
-        spacer(200),
-        sectionHeader('EMPLOYEE DETAILS'),
-        employeeTable,
-        spacer(200),
-        sectionHeader('REQUEST DETAILS'),
-        detailsTable,
-        spacer(200),
-        sectionHeader('APPROVAL SECTION'),
-        approvalTable,
-        spacer(200),
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [new TextRun({ text: `Ref: ${refNo}  |  This form must be submitted to the Finance Department with all supporting documents.`, size: 14, color: '666666', italics: true })],
-        }),
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [new TextRun({ text: 'Great Agro Coffee Ltd  |  Kasese, Uganda  |  Tel: +256 393 001 626  |  Internal Use Only', size: 14, color: '666666', italics: true })],
-        }),
+        spacer(300),
+        // Blank body — users type whatever they want
+        ...Array.from({ length: 28 }, () => new Paragraph({ children: [new TextRun({ text: '' })] })),
       ],
     }],
   });
@@ -338,7 +102,7 @@ const generateDocx = async (employee: any) => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Company-Header-Sheet-${refNo}.docx`;
+  a.download = `Company-Letterhead-${refNo}.docx`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
