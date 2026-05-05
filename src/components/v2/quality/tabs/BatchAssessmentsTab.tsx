@@ -166,6 +166,7 @@ const BatchAssessmentsTab = () => {
     const grnData = {
       grnNumber: `GRN-${lot.batch_number}`,
       supplierName: lot.supplier_name,
+      supplierId: (lot as any).supplier_id || undefined,
       coffeeType: lot.coffee_type,
       qualityAssessment: `Moisture: ${assessment.moisture}%`,
       numberOfBags: lot.bags,
