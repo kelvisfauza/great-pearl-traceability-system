@@ -10577,6 +10577,10 @@ export type Database = {
       is_current_user_administrator: { Args: never; Returns: boolean }
       is_ip_whitelisted: { Args: { check_ip: string }; Returns: boolean }
       is_manager_or_above: { Args: never; Returns: boolean }
+      is_privileged_realtime_subscriber: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       is_supervisor_or_above: { Args: never; Returns: boolean }
       is_user_role: { Args: never; Returns: boolean }
       log_audit_action: {
