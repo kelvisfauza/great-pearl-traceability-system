@@ -52,10 +52,8 @@ const Verify = () => {
     try {
       // Fetch the verification
       const { data, error: fetchError } = await supabase
-        .from('verifications')
-        .select('*')
-        .eq('code', code.trim().toUpperCase())
-        .single();
+        .rpc('verify_by_code', { _code: code.trim().toUpperCase() })
+        .maybeSingle();
 
       if (fetchError || !data) {
         setVerification(null);

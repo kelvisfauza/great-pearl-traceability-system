@@ -16,18 +16,15 @@ export const useMaintenanceMode = () => {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('system_maintenance')
-        .select('is_active, reason, activated_by, activated_at, recovery_key, recovery_pin')
-        .limit(1)
-        .maybeSingle();
+      // Use safe RPC for unauthenticated polling — only returns is_active + reason
+      const { data, error } = await supabase.rpc('get_maintenance_status').maybeSingle();
 
       if (error) {
         console.error('Error fetching maintenance status:', error);
         return;
       }
 
-      setStatus(data as MaintenanceStatus);
+      setStatus(data ? ({ ...(data as any), activated_by: null, activated_at: null, recovery_key: null, recovery_pin: null }) as MaintenanceStatus : null);
     } catch (err) {
       console.error('Error fetching maintenance status:', err);
     } finally {
