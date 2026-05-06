@@ -39,7 +39,7 @@ const ReportsTab = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('coffee_records')
-        .select('id, batch_number, supplier_name, kilograms, status, created_at')
+        .select('id, batch_number, supplier_name, kilograms, status, created_at, date, coffee_type')
         .order('created_at', { ascending: false })
         .limit(1000);
       if (error) throw error;
