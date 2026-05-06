@@ -10454,6 +10454,13 @@ export type Database = {
           template_name: string
         }[]
       }
+      get_maintenance_status: {
+        Args: never
+        Returns: {
+          is_active: boolean
+          reason: string
+        }[]
+      }
       get_or_create_inventory_batch_for_day: {
         Args: { p_batch_date: string; p_coffee_type: string }
         Returns: string
@@ -10494,6 +10501,7 @@ export type Database = {
           emp_status: string
         }[]
       }
+      get_public_supplier_count: { Args: never; Returns: number }
       get_unified_user_id: { Args: { input_email: string }; Returns: string }
       get_user_balance_data: {
         Args: { user_email: string }
@@ -10743,6 +10751,24 @@ export type Database = {
       validate_withdrawal_balance: {
         Args: { p_amount: number; p_user_id: string }
         Returns: boolean
+      }
+      verify_by_code: {
+        Args: { _code: string }
+        Returns: {
+          code: string
+          department: string
+          employee_no: string
+          id: string
+          issued_at: string
+          issued_to_name: string
+          position: string
+          reference_no: string
+          status: string
+          subtype: string
+          type: string
+          valid_until: string
+          workstation: string
+        }[]
       }
       verify_device_token: { Args: { p_token: string }; Returns: Json }
       verify_withdrawal_code: {
