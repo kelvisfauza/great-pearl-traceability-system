@@ -43,6 +43,13 @@ serve(async (req) => {
   }
 
   try {
+    // Require authenticated caller
+    const authHeader = req.headers.get("Authorization") || req.headers.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
@@ -52,7 +59,33 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { query, userEmail, userPermissions, userDepartment }: SearchRequest = await req.json();
+    const token = authHeader.replace("Bearer ", "");
+    const { data: authData, error: authErr } = await supabase.auth.getUser(token);
+    if (authErr || !authData?.user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { query }: SearchRequest = await req.json();
+
+    // Resolve real permissions/department server-side — never trust client-supplied values
+    const { data: emp } = await supabase
+      .from("employees")
+      .select("email, department, permissions, role, status")
+      .eq("auth_user_id", authData.user.id)
+      .maybeSingle();
+    if (!emp || emp.status !== "Active") {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userEmail = emp.email as string;
+    const userDepartment = (emp.department as string) || "";
+    const isPrivileged = emp.role === "Super Admin" || emp.role === "Administrator";
+    const userPermissions: string[] = isPrivileged
+      ? ["*"]
+      : (Array.isArray(emp.permissions) ? (emp.permissions as string[]) : []);
 
     if (!query || query.length < 2) {
       return new Response(JSON.stringify({ results: [], suggestions: [] }), {
