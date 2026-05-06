@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -35,10 +36,7 @@ interface WithdrawalRequest {
 }
 
 export const useUserAccount = () => {
-  console.log('🏁 useUserAccount hook initializing...');
-  
   const [account, setAccount] = useState<UserAccount | null>(null);
-  const [moneyRequests, setMoneyRequests] = useState<MoneyRequest[]>([]);
   const { user } = useAuth();
   const { toast } = useToast();
   
@@ -51,44 +49,37 @@ export const useUserAccount = () => {
     refreshWallet 
   } = useUserWallet();
 
-  console.log('👤 useUserAccount - user object:', user);
-
-  const fetchUserAccount = async () => {
-    if (!user?.email) {
-      return;
-    }
-
-    console.log('🔍 fetchUserAccount called for user:', { id: user.id, email: user.email });
-
-    try {
-      // Fetch money requests using Supabase ID
-      const { data: moneyRequestsData } = await supabase
+  const { data: moneyRequests = [], refetch: refetchMoneyRequests } = useQuery({
+    queryKey: ['user-money-requests', user?.email],
+    enabled: !!user?.email,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      const { data } = await supabase
         .from('approval_requests')
         .select('*')
-        .eq('requestedby', user.email)
-        .order('created_at', { ascending: false });
+        .eq('requestedby', user!.email!)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      return (data as any[]) || [];
+    },
+  });
 
-      setMoneyRequests((moneyRequestsData as any[]) || []);
-      
-      // Convert wallet data to account format for compatibility
-      if (walletData) {
-        const accountData: UserAccount = {
-          id: `account-${user.id}`,
-          user_id: user.id,
-          wallet_balance: walletData.balance,
-          pending_withdrawals: walletData.pendingWithdrawals,
-          available_to_request: walletData.availableToRequest,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-        setAccount(accountData);
-        console.log('✅ Account synced with wallet data for', user.email, 'Balance:', walletData.balance);
-      }
-      
-    } catch (error: any) {
-      console.error('❌ Error fetching money requests:', error);
+  useEffect(() => {
+    if (user && walletData) {
+      setAccount({
+        id: `account-${user.id}`,
+        user_id: user.id,
+        wallet_balance: walletData.balance,
+        pending_withdrawals: walletData.pendingWithdrawals,
+        available_to_request: walletData.availableToRequest,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
     }
-  };
+  }, [user, walletData]);
+
+  const fetchUserAccount = () => { refetchMoneyRequests(); };
 
   const trackLogin = async () => {
     // Disable all login tracking and popups
@@ -204,13 +195,6 @@ export const useUserAccount = () => {
     printWindow.document.write(content);
     printWindow.document.close();
   };
-
-  useEffect(() => {
-    if (user) {
-      fetchUserAccount();
-      trackLogin(); // Track login when component mounts
-    }
-  }, [user, walletData]);
 
   return {
     account,
