@@ -367,6 +367,117 @@ export default function Treasury() {
         </CardContent>
       </Card>
 
+      {/* Investments overview */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-blue-600" /> Investments Overview
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {(() => {
+            const active = investments.filter(i => i.status === 'active');
+            const matured = investments.filter(i => i.status === 'matured');
+            const early = investments.filter(i => i.status === 'withdrawn_early');
+            const totalActivePrincipal = active.reduce((s, i) => s + Number(i.amount), 0);
+            const totalExpectedReturn = active.reduce(
+              (s, i) => s + Number(i.amount) * (1 + Number(i.interest_rate || 25) / 100), 0);
+            const totalExpectedInterest = totalExpectedReturn - totalActivePrincipal;
+            const totalCashedOut = [...matured, ...early].reduce((s, i) => s + Number(i.total_payout || 0), 0);
+            const totalEarnedPaid = [...matured, ...early].reduce((s, i) => s + Number(i.earned_interest || 0), 0);
+            return (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="rounded-lg border bg-blue-50 p-3">
+                    <div className="text-[10px] text-muted-foreground uppercase">Active Principal</div>
+                    <div className="text-lg font-bold text-blue-700">{fmt(totalActivePrincipal)}</div>
+                    <div className="text-[10px] text-muted-foreground">{active.length} active</div>
+                  </div>
+                  <div className="rounded-lg border bg-green-50 p-3">
+                    <div className="text-[10px] text-muted-foreground uppercase">Expected Returns</div>
+                    <div className="text-lg font-bold text-green-700">{fmt(totalExpectedReturn)}</div>
+                    <div className="text-[10px] text-muted-foreground">+{fmt(totalExpectedInterest)} interest</div>
+                  </div>
+                  <div className="rounded-lg border bg-amber-50 p-3">
+                    <div className="text-[10px] text-muted-foreground uppercase">Cashed Out (Total)</div>
+                    <div className="text-lg font-bold text-amber-700">{fmt(totalCashedOut)}</div>
+                    <div className="text-[10px] text-muted-foreground">{matured.length + early.length} payouts</div>
+                  </div>
+                  <div className="rounded-lg border bg-purple-50 p-3">
+                    <div className="text-[10px] text-muted-foreground uppercase">Interest Paid Out</div>
+                    <div className="text-lg font-bold text-purple-700">{fmt(totalEarnedPaid)}</div>
+                    <div className="text-[10px] text-muted-foreground">to investors so far</div>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  {investments.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-8 text-sm">No investments yet.</div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Investor</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Principal</TableHead>
+                          <TableHead className="text-right">Rate</TableHead>
+                          <TableHead className="text-right">Expected Return</TableHead>
+                          <TableHead className="text-right">Earned So Far</TableHead>
+                          <TableHead className="text-right">Cashed Out</TableHead>
+                          <TableHead>Maturity</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {investments.slice(0, 100).map((inv) => {
+                          const principal = Number(inv.amount);
+                          const rate = Number(inv.interest_rate || 25);
+                          const expectedReturn = principal * (1 + rate / 100);
+                          const isActive = inv.status === 'active';
+                          // Pro-rated earned-so-far for active
+                          const totalDays = (inv.maturity_months || 3) * 30;
+                          const daysElapsed = Math.max(0, Math.floor(
+                            (Date.now() - new Date(inv.start_date).getTime()) / (24 * 60 * 60 * 1000)
+                          ));
+                          const accruedInterest = isActive
+                            ? principal * (rate / 100) * Math.min(1, daysElapsed / totalDays)
+                            : Number(inv.earned_interest || 0);
+                          const cashedOut = isActive ? 0 : Number(inv.total_payout || 0);
+                          return (
+                            <TableRow key={inv.id}>
+                              <TableCell className="text-xs">
+                                <div className="font-medium">{inv.employee_name || inv.user_email}</div>
+                                <div className="text-[10px] text-muted-foreground">{inv.user_email}</div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className={`text-[10px] ${
+                                  inv.status === 'active' ? 'bg-blue-100 text-blue-800' :
+                                  inv.status === 'matured' ? 'bg-green-100 text-green-800' :
+                                  'bg-amber-100 text-amber-800'
+                                }`}>
+                                  {inv.status === 'withdrawn_early' ? 'Early Exit' : inv.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-xs">{fmt(principal)}</TableCell>
+                              <TableCell className="text-right text-xs">{rate}%</TableCell>
+                              <TableCell className="text-right font-mono text-xs text-green-700">{fmt(expectedReturn)}</TableCell>
+                              <TableCell className="text-right font-mono text-xs text-blue-700">{fmt(accruedInterest)}</TableCell>
+                              <TableCell className="text-right font-mono text-xs text-amber-700">{cashedOut > 0 ? fmt(cashedOut) : '—'}</TableCell>
+                              <TableCell className="text-xs whitespace-nowrap">
+                                {new Date(inv.maturity_date).toLocaleDateString()}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  )}
+                </div>
+              </>
+            );
+          })()}
+        </CardContent>
+      </Card>
+
       {/* Transaction log */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-3">
