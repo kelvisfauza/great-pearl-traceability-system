@@ -10,8 +10,14 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 const PerformanceTab = () => {
   const { data: assessments, isLoading: aLoading } = useQuery({
     queryKey: ['perf-assessments'],
+    staleTime: 5 * 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase.from('quality_assessments').select('assessed_by, status, created_at');
+      const since = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from('quality_assessments')
+        .select('assessed_by, status, created_at')
+        .gte('created_at', since)
+        .limit(2000);
       if (error) throw error;
       return data;
     }

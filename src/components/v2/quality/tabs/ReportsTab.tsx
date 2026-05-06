@@ -19,8 +19,15 @@ const ReportsTab = () => {
 
   const { data: assessments, isLoading } = useQuery({
     queryKey: ['reports-assessments'],
+    staleTime: 2 * 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase.from('quality_assessments').select('*').order('created_at', { ascending: false });
+      const since = new Date(Date.now() - 60 * 24 * 3600 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from('quality_assessments')
+        .select('*')
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .limit(500);
       if (error) throw error;
       return data;
     }
@@ -28,8 +35,13 @@ const ReportsTab = () => {
 
   const { data: records } = useQuery({
     queryKey: ['reports-records'],
+    staleTime: 2 * 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase.from('coffee_records').select('*');
+      const { data, error } = await supabase
+        .from('coffee_records')
+        .select('id, batch_number, supplier_name, kilograms, status, created_at')
+        .order('created_at', { ascending: false })
+        .limit(1000);
       if (error) throw error;
       return data;
     }
