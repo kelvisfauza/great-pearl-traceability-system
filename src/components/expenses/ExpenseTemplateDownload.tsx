@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Download, ShoppingCart, Coffee, Wallet, Info, Truck } from 'lucide-react';
+import { Download, ShoppingCart, Coffee, Wallet, Info, Truck, Fuel } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { jsPDF } from 'jspdf';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -23,7 +23,7 @@ const generateRefNumber = (prefix: string) => {
   return `${prefix}-${yr}${mo}${dy}-${rand}`;
 };
 
-type TemplateType = 'cash-requisition' | 'personal-expense' | 'salary-request' | 'service-provider-requisition';
+type TemplateType = 'cash-requisition' | 'personal-expense' | 'salary-request' | 'service-provider-requisition' | 'fuel-ledger';
 
 interface TemplateConfig {
   type: TemplateType;
@@ -98,6 +98,19 @@ const templates: TemplateConfig[] = [
       { label: 'Date of Service' },
       { label: 'Invoice / Receipt Number' },
       { label: 'Additional Notes / Justification', lines: 2 },
+    ],
+  },
+  {
+    type: 'fuel-ledger',
+    title: 'Fuel / Service Provider Ledger',
+    prefix: 'FL',
+    icon: <Fuel className="h-5 w-5" />,
+    description: 'Blank 10-row ledger for fuel stations (Total, Shell, etc.) to record truck refuels',
+    approvalType: 'Fuel Ledger',
+    fields: [
+      { label: 'Service Provider (e.g. Total Energies)' },
+      { label: 'Station Branch / Location' },
+      { label: 'Period Covered' },
     ],
   },
 ];
