@@ -257,14 +257,14 @@ const generatePDF = async (
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0);
     doc.text(label1, margin + 3, rowY + 5.5);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0);
     doc.text(val1, margin + 28, rowY + 5.5);
 
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0);
     doc.text(label2, margin + contentW / 2 + 3, rowY + 5.5);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0);
     doc.text(val2, margin + contentW / 2 + 28, rowY + 5.5);
   };
