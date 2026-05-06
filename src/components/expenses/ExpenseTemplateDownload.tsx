@@ -5,6 +5,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Download, ShoppingCart, Coffee, Wallet, Info, Truck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { jsPDF } from 'jspdf';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 const LOGO_URL = '/lovable-uploads/great-agro-coffee-logo.png';
 
@@ -108,7 +112,19 @@ const loadImageAsBase64 = (url: string): Promise<string> => {
   });
 };
 
-const generatePDF = async (template: TemplateConfig, employeeName: string, department: string, position: string) => {
+interface PrefillData {
+  beneficiaryName?: string;
+  beneficiaryPhone?: string;
+  reason?: string;
+}
+
+const generatePDF = async (
+  template: TemplateConfig,
+  employeeName: string,
+  department: string,
+  position: string,
+  prefill: PrefillData = {},
+) => {
   const refNo = generateRefNumber(template.prefix);
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-UG', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -126,10 +142,10 @@ const generatePDF = async (template: TemplateConfig, employeeName: string, depar
     console.warn('Could not load logo');
   }
 
-  // ===== HEADER (matching GRN style) =====
-  // Dark green header background
-  doc.setFillColor(13, 61, 31); // #0d3d1f - same as GRN
-  doc.rect(0, 0, pageW, 32, 'F');
+  // ===== HEADER (clean, no green background) =====
+  doc.setDrawColor(180, 180, 180);
+  doc.setLineWidth(0.4);
+  doc.line(margin, 32, pageW - margin, 32);
 
   // Logo on the left
   if (logoData) {
@@ -141,12 +157,13 @@ const generatePDF = async (template: TemplateConfig, employeeName: string, depar
   }
 
   // Company name
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(13, 61, 31);
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
   doc.text('GREAT AGRO COFFEE LTD', pageW / 2 + 5, 13, { align: 'center' });
 
   // Location
+  doc.setTextColor(80, 80, 80);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.text('Kasese, Uganda.', pageW / 2 + 5, 19);
@@ -155,14 +172,11 @@ const generatePDF = async (template: TemplateConfig, employeeName: string, depar
   doc.setFontSize(7);
   doc.text('Tel: +256 393 001 626  |  Email: info@greatpearlcoffee.com', pageW / 2 + 5, 25);
 
-  // Gold title bar (like GRN)
-  doc.setFillColor(212, 160, 23);
-  doc.rect(0, 32, pageW, 9, 'F');
-
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(11);
+  // Title (no background)
+  doc.setTextColor(13, 61, 31);
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text(template.title.toUpperCase(), pageW / 2, 38.5, { align: 'center' });
+  doc.text(template.title.toUpperCase(), pageW / 2, 39, { align: 'center' });
 
   let y = 48;
 
@@ -202,10 +216,11 @@ const generatePDF = async (template: TemplateConfig, employeeName: string, depar
 
   y += 20;
 
-  // Employee details section
-  doc.setFillColor(13, 61, 31);
-  doc.rect(margin, y, contentW, 7, 'F');
-  doc.setTextColor(255, 255, 255);
+  // Employee details section (outlined, no fill)
+  doc.setDrawColor(13, 61, 31);
+  doc.setLineWidth(0.5);
+  doc.rect(margin, y, contentW, 7);
+  doc.setTextColor(13, 61, 31);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.text('EMPLOYEE DETAILS', margin + 4, y + 5);
@@ -239,10 +254,11 @@ const generatePDF = async (template: TemplateConfig, employeeName: string, depar
   drawInfoRow('Department:', department, 'Date:', dateStr, y);
   y += 14;
 
-  // Request Details section
-  doc.setFillColor(13, 61, 31);
-  doc.rect(margin, y, contentW, 7, 'F');
-  doc.setTextColor(255, 255, 255);
+  // Request Details section (outlined, no fill)
+  doc.setDrawColor(13, 61, 31);
+  doc.setLineWidth(0.5);
+  doc.rect(margin, y, contentW, 7);
+  doc.setTextColor(13, 61, 31);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.text('REQUEST DETAILS', margin + 4, y + 5);
@@ -251,6 +267,15 @@ const generatePDF = async (template: TemplateConfig, employeeName: string, depar
   // Form fields
   template.fields.forEach((field) => {
     const lines = field.lines || 1;
+    const lower = field.label.toLowerCase();
+    let prefillValue: string | undefined;
+    if (prefill.beneficiaryName && (lower.includes('service provider name') || lower.includes('beneficiary'))) {
+      prefillValue = prefill.beneficiaryName;
+    } else if (prefill.beneficiaryPhone && (lower.includes('phone') || lower.includes('contact') || lower.includes('account number'))) {
+      prefillValue = prefill.beneficiaryPhone;
+    } else if (prefill.reason && (lower.includes('reason') || lower.includes('justification') || lower.includes('description') || lower.includes('service provided') || lower.includes('purpose'))) {
+      prefillValue = prefill.reason;
+    }
 
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
@@ -264,14 +289,25 @@ const generatePDF = async (template: TemplateConfig, employeeName: string, depar
       const lineY = y + i * 7;
       doc.line(margin, lineY + 4, margin + contentW, lineY + 4);
     }
+    if (prefillValue) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(20, 20, 20);
+      const wrapped = doc.splitTextToSize(prefillValue, contentW - 2);
+      const maxLines = Math.min(lines, wrapped.length);
+      for (let i = 0; i < maxLines; i++) {
+        doc.text(wrapped[i], margin + 1, y + i * 7 + 3);
+      }
+    }
     y += lines * 7 + 4;
   });
 
   // Approval section
   y += 3;
-  doc.setFillColor(13, 61, 31);
-  doc.rect(margin, y, contentW, 7, 'F');
-  doc.setTextColor(255, 255, 255);
+  doc.setDrawColor(13, 61, 31);
+  doc.setLineWidth(0.5);
+  doc.rect(margin, y, contentW, 7);
+  doc.setTextColor(13, 61, 31);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.text('APPROVAL SECTION', margin + 4, y + 5);
@@ -317,32 +353,58 @@ const generatePDF = async (template: TemplateConfig, employeeName: string, depar
 
   // Footer
   const footerY = 282;
-  doc.setFillColor(13, 61, 31);
-  doc.rect(0, footerY, pageW, 15, 'F');
+  doc.setDrawColor(180, 180, 180);
+  doc.setLineWidth(0.3);
+  doc.line(margin, footerY, pageW - margin, footerY);
 
   doc.setFontSize(6);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(200, 200, 200);
+  doc.setTextColor(110, 110, 110);
   doc.text(`Ref: ${refNo}  |  This form must be submitted to the Finance Department with all supporting documents.`, pageW / 2, footerY + 5, { align: 'center' });
   doc.text('Great Agro Coffee Ltd  |  Kasese, Uganda  |  Tel: +256 393 001 626  |  Internal Use Only', pageW / 2, footerY + 10, { align: 'center' });
 
+  // Open in new tab and trigger print, also save copy
+  const blobUrl = doc.output('bloburl');
+  const printWin = window.open(blobUrl as unknown as string, '_blank');
+  if (printWin) {
+    printWin.addEventListener('load', () => {
+      try { printWin.focus(); printWin.print(); } catch { /* noop */ }
+    });
+  }
   doc.save(`${template.prefix}-${refNo}.pdf`);
 };
 
 const ExpenseTemplateDownload = () => {
   const { employee } = useAuth();
   const [downloading, setDownloading] = useState<TemplateType | null>(null);
+  const [prefillOpen, setPrefillOpen] = useState(false);
+  const [activeTemplate, setActiveTemplate] = useState<TemplateConfig | null>(null);
+  const [beneficiaryName, setBeneficiaryName] = useState('');
+  const [beneficiaryPhone, setBeneficiaryPhone] = useState('');
+  const [reason, setReason] = useState('');
 
-  const handleDownload = async (template: TemplateConfig) => {
+  const handleDownload = (template: TemplateConfig) => {
     if (!employee) return;
+    setActiveTemplate(template);
+    setBeneficiaryName('');
+    setBeneficiaryPhone('');
+    setReason('');
+    setPrefillOpen(true);
+  };
+
+  const runGenerate = async (prefill: PrefillData) => {
+    if (!employee || !activeTemplate) return;
+    const template = activeTemplate;
     setDownloading(template.type);
+    setPrefillOpen(false);
 
     try {
       await generatePDF(
         template,
         employee.name || 'N/A',
         employee.department || 'N/A',
-        employee.position || 'N/A'
+        employee.position || 'N/A',
+        prefill,
       );
     } catch (err) {
       console.error('PDF generation error:', err);
@@ -386,6 +448,37 @@ const ExpenseTemplateDownload = () => {
           </Card>
         ))}
       </div>
+
+      <Dialog open={prefillOpen} onOpenChange={setPrefillOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Fill recipient details (optional)</DialogTitle>
+            <DialogDescription>
+              Add the person/provider you are requesting money for. These will be printed on the form. Leave blank to print an empty template.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="ben-name">Recipient / Service Provider Name</Label>
+              <Input id="ben-name" value={beneficiaryName} onChange={(e) => setBeneficiaryName(e.target.value)} placeholder="e.g. John Mukasa" />
+            </div>
+            <div>
+              <Label htmlFor="ben-phone">Phone / Account Number</Label>
+              <Input id="ben-phone" value={beneficiaryPhone} onChange={(e) => setBeneficiaryPhone(e.target.value)} placeholder="e.g. 0772 123 456" />
+            </div>
+            <div>
+              <Label htmlFor="ben-reason">Reason</Label>
+              <Textarea id="ben-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why is this payment needed?" rows={3} />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => runGenerate({})}>Skip & print blank</Button>
+            <Button onClick={() => runGenerate({ beneficiaryName, beneficiaryPhone, reason })}>
+              Generate & Print
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
