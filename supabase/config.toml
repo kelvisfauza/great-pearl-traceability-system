@@ -97,6 +97,8 @@ project_id = "pudfybkyfedeggmokhco"
     verify_jwt = true
   [functions.generate-risk-assessment]
     verify_jwt = true
+  [functions.get-treasury-overview]
+    verify_jwt = true
   [functions.gosentepay-callback]
     verify_jwt = false
   [functions.gosentepay-deposit]
