@@ -71,10 +71,10 @@ export const useQualityControl = () => {
       
       const { data: allRecords, error } = await supabase
         .from('coffee_records')
-        .select('*')
+        .select('id, date, kilograms, bags, supplier_id, supplier_name, coffee_type, batch_number, status, created_at, updated_at')
         .not('status', 'in', '("sales","inventory")')
         .order('created_at', { ascending: false })
-        .limit(500);
+        .limit(200);
 
       if (error) throw error;
 
@@ -145,7 +145,7 @@ export const useQualityControl = () => {
         .from('quality_assessments')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(500);
+        .limit(200);
 
       if (qualityError) {
         console.error('Error fetching quality assessments from Supabase:', qualityError);
@@ -154,26 +154,15 @@ export const useQualityControl = () => {
       let enrichedSupabaseData = [];
       if (supabaseQualityData && supabaseQualityData.length > 0) {
         const storeRecordIds = [...new Set(supabaseQualityData.map(qa => qa.store_record_id).filter(Boolean))];
-        const batchNumbers = [...new Set(supabaseQualityData.map(qa => qa.batch_number).filter(Boolean))];
-        
-        // Fetch coffee records by both id and batch_number for better matching
+
+        // Fetch coffee records only by store_record_id (single query, indexed lookup)
         let coffeeRecords: any[] = [];
-        if (storeRecordIds.length > 0 || batchNumbers.length > 0) {
+        if (storeRecordIds.length > 0) {
           const { data: recordsById } = await supabase
             .from('coffee_records')
-            .select('*')
+            .select('id, supplier_id, supplier_name, coffee_type, kilograms, batch_number')
             .in('id', storeRecordIds);
-          
-          const { data: recordsByBatch } = await supabase
-            .from('coffee_records')
-            .select('*')
-            .in('batch_number', batchNumbers);
-          
-          // Combine and deduplicate
-          const allRecords = [...(recordsById || []), ...(recordsByBatch || [])];
-          const uniqueRecords = new Map();
-          allRecords.forEach(r => uniqueRecords.set(r.id, r));
-          coffeeRecords = Array.from(uniqueRecords.values());
+          coffeeRecords = recordsById || [];
         }
 
         // Resolve suppliers for these coffee records
