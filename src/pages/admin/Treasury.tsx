@@ -245,6 +245,18 @@ export default function Treasury() {
         </Card>
       )}
 
+      {!loading && loadError && (
+        <Card className="border-destructive bg-destructive/5">
+          <CardContent className="p-4 flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <div className="font-semibold text-destructive">Treasury data could not be loaded</div>
+              <div className="text-muted-foreground mt-1">{loadError}</div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="border-primary/40">
