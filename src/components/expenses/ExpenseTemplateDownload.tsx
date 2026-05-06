@@ -255,17 +255,17 @@ const generatePDF = async (
 
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(80, 80, 80);
+    doc.setTextColor(0, 0, 0);
     doc.text(label1, margin + 3, rowY + 5.5);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(30, 30, 30);
+    doc.setTextColor(0, 0, 0);
     doc.text(val1, margin + 28, rowY + 5.5);
 
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(80, 80, 80);
+    doc.setTextColor(0, 0, 0);
     doc.text(label2, margin + contentW / 2 + 3, rowY + 5.5);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(30, 30, 30);
+    doc.setTextColor(0, 0, 0);
     doc.text(val2, margin + contentW / 2 + 28, rowY + 5.5);
   };
 
