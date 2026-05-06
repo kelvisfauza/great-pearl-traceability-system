@@ -74,6 +74,7 @@ export default function Treasury() {
   const [balance, setBalance] = useState<PoolBalance | null>(null);
   const [entries, setEntries] = useState<PoolEntry[]>([]);
   const [investments, setInvestments] = useState<InvestmentRow[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [backfilling, setBackfilling] = useState(false);
@@ -92,23 +93,23 @@ export default function Treasury() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: bal }, { data: ents }, { data: invs }] = await Promise.all([
-      supabase.from("treasury_pool_balance" as any).select("*").eq("id", 1).maybeSingle(),
-      supabase
-        .from("treasury_pool_entries" as any)
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(500),
-      supabase
-        .from("investments" as any)
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(1000),
-    ]);
-    setBalance(bal as any);
-    setEntries((ents as any[]) || []);
-    setInvestments((invs as any[]) || []);
-    setLoading(false);
+    setLoadError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("get-treasury-overview");
+      if (error) throw error;
+      if ((data as any)?.ok === false) throw new Error((data as any).error || "Failed to load treasury overview");
+
+      setBalance(((data as any)?.balance ?? null) as any);
+      setEntries((((data as any)?.entries ?? []) as any[]) || []);
+      setInvestments((((data as any)?.investments ?? []) as any[]) || []);
+    } catch (err: any) {
+      setBalance(null);
+      setEntries([]);
+      setInvestments([]);
+      setLoadError(err.message || "Failed to load treasury overview");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);
