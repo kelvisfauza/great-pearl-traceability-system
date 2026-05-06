@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Download, ShoppingCart, Coffee, Wallet, Info, Truck } from 'lucide-react';
+import { Download, ShoppingCart, Coffee, Wallet, Info, Truck, Fuel } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { jsPDF } from 'jspdf';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -23,7 +23,7 @@ const generateRefNumber = (prefix: string) => {
   return `${prefix}-${yr}${mo}${dy}-${rand}`;
 };
 
-type TemplateType = 'cash-requisition' | 'personal-expense' | 'salary-request' | 'service-provider-requisition';
+type TemplateType = 'cash-requisition' | 'personal-expense' | 'salary-request' | 'service-provider-requisition' | 'fuel-ledger';
 
 interface TemplateConfig {
   type: TemplateType;
@@ -98,6 +98,19 @@ const templates: TemplateConfig[] = [
       { label: 'Date of Service' },
       { label: 'Invoice / Receipt Number' },
       { label: 'Additional Notes / Justification', lines: 2 },
+    ],
+  },
+  {
+    type: 'fuel-ledger',
+    title: 'Fuel / Service Provider Ledger',
+    prefix: 'FL',
+    icon: <Fuel className="h-5 w-5" />,
+    description: 'Blank 10-row ledger for fuel stations (Total, Shell, etc.) to record truck refuels',
+    approvalType: 'Fuel Ledger',
+    fields: [
+      { label: 'Service Provider (e.g. Total Energies)' },
+      { label: 'Station Branch / Location' },
+      { label: 'Period Covered' },
     ],
   },
 ];
@@ -261,6 +274,88 @@ const generatePDF = async (
   drawInfoRow('Department:', department, 'Date:', dateStr, y);
   y += 14;
 
+  // ===== FUEL LEDGER BRANCH =====
+  if (template.type === 'fuel-ledger') {
+    // Provider summary
+    doc.setDrawColor(13, 61, 31);
+    doc.setLineWidth(0.5);
+    doc.rect(margin, y, contentW, 7);
+    doc.setTextColor(13, 61, 31);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('SERVICE PROVIDER', margin + 4, y + 5);
+    y += 7;
+
+    drawInfoRow('Provider:', prefill.beneficiaryName || '', 'Branch:', prefill.beneficiaryPhone || '', y);
+    y += 8;
+    drawInfoRow('Period:', prefill.reason || '', 'Issued:', dateStr, y);
+    y += 12;
+
+    // Ledger table header
+    const cols = [
+      { label: '#',           w: 8 },
+      { label: 'Date',        w: 22 },
+      { label: 'Truck No.',   w: 24 },
+      { label: 'Driver Name', w: 38 },
+      { label: 'Phone',       w: 26 },
+      { label: 'Litres',      w: 16 },
+      { label: 'Amount (UGX)',w: 26 },
+      { label: 'Signature',   w: contentW - (8 + 22 + 24 + 38 + 26 + 16 + 26) },
+    ];
+    const rowH = 11;
+    const headerH = 8;
+
+    // Header row (filled light)
+    doc.setFillColor(235, 240, 235);
+    doc.setDrawColor(13, 61, 31);
+    doc.setLineWidth(0.4);
+    doc.rect(margin, y, contentW, headerH, 'FD');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(13, 61, 31);
+    let cx = margin;
+    cols.forEach((c) => {
+      doc.text(c.label, cx + c.w / 2, y + 5.5, { align: 'center' });
+      cx += c.w;
+    });
+    // vertical lines header
+    cx = margin;
+    cols.forEach((c) => {
+      doc.line(cx, y, cx, y + headerH);
+      cx += c.w;
+    });
+    doc.line(margin + contentW, y, margin + contentW, y + headerH);
+    y += headerH;
+
+    // 10 empty rows
+    doc.setDrawColor(180, 180, 180);
+    doc.setLineWidth(0.3);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(60, 60, 60);
+    for (let r = 0; r < 10; r++) {
+      const ry = y + r * rowH;
+      // outer rect
+      doc.rect(margin, ry, contentW, rowH);
+      // verticals
+      let vx = margin;
+      cols.forEach((c) => {
+        doc.line(vx, ry, vx, ry + rowH);
+        vx += c.w;
+      });
+      // row number
+      doc.text(String(r + 1), margin + cols[0].w / 2, ry + rowH / 2 + 1, { align: 'center' });
+    }
+    y += 10 * rowH + 4;
+
+    // Totals row
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(13, 61, 31);
+    doc.setFontSize(9);
+    doc.text('TOTAL LITRES: __________', margin, y + 5);
+    doc.text('TOTAL AMOUNT (UGX): __________________', margin + contentW / 2, y + 5);
+    y += 10;
+  } else {
   // Request Details section (outlined, no fill)
   doc.setDrawColor(13, 61, 31);
   doc.setLineWidth(0.5);
@@ -308,6 +403,7 @@ const generatePDF = async (
     }
     y += lines * 7 + 4;
   });
+  }
 
   // Approval section
   y += 3;
@@ -425,13 +521,18 @@ const ExpenseTemplateDownload = () => {
 
   const submitForApproval = async () => {
     if (!employee || !activeTemplate) return;
+    const isFuel = activeTemplate.type === 'fuel-ledger';
     const amt = parseFloat(amount);
-    if (!amt || amt <= 0) {
+    if (!isFuel && (!amt || amt <= 0)) {
       toast({ title: 'Amount required', description: 'Please enter a valid amount before submitting for approval.', variant: 'destructive' });
       return;
     }
-    if (!reason.trim()) {
+    if (!isFuel && !reason.trim()) {
       toast({ title: 'Reason required', description: 'Please enter a reason for this request.', variant: 'destructive' });
+      return;
+    }
+    if (isFuel && !beneficiaryName.trim()) {
+      toast({ title: 'Provider required', description: 'Please enter the service provider (e.g. Total Energies).', variant: 'destructive' });
       return;
     }
     setSubmitting(true);
@@ -451,7 +552,7 @@ const ExpenseTemplateDownload = () => {
           type: activeTemplate.approvalType,
           title,
           description,
-          amount: amt,
+          amount: isFuel ? 0 : amt,
           requestedby: employee.email,
           requestedby_name: employee.name,
           requestedby_position: employee.position,
@@ -460,10 +561,11 @@ const ExpenseTemplateDownload = () => {
           priority: 'Medium',
           status: 'Pending Admin',
           approval_stage: 'pending_admin',
-          requires_three_approvals: amt > 50000,
+          requires_three_approvals: !isFuel && amt > 50000,
           details: JSON.stringify({
             beneficiary_name: beneficiaryName || null,
             beneficiary_phone: beneficiaryPhone || null,
+            is_fuel_ledger: isFuel,
           }),
         } as any);
 
@@ -520,25 +622,35 @@ const ExpenseTemplateDownload = () => {
           <DialogHeader>
             <DialogTitle>{activeTemplate?.title || 'Request details'}</DialogTitle>
             <DialogDescription>
-              Enter who the money is for, the amount, and the reason. Submit for approval and a printable copy will be generated.
+              {activeTemplate?.type === 'fuel-ledger'
+                ? 'Enter the service provider details. The printable ledger has 10 blank rows for the station to fill in (date, truck, driver, phone, litres, amount, signature) plus our reference and approval block.'
+                : 'Enter who the money is for, the amount, and the reason. Submit for approval and a printable copy will be generated.'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label htmlFor="ben-name">Recipient / Service Provider Name</Label>
-              <Input id="ben-name" value={beneficiaryName} onChange={(e) => setBeneficiaryName(e.target.value)} placeholder="e.g. John Mukasa" />
+              <Label htmlFor="ben-name">
+                {activeTemplate?.type === 'fuel-ledger' ? 'Service Provider (e.g. Total Energies)' : 'Recipient / Service Provider Name'}
+              </Label>
+              <Input id="ben-name" value={beneficiaryName} onChange={(e) => setBeneficiaryName(e.target.value)} placeholder={activeTemplate?.type === 'fuel-ledger' ? 'Total Energies Kasese' : 'e.g. John Mukasa'} />
             </div>
             <div>
-              <Label htmlFor="ben-phone">Phone / Account Number</Label>
-              <Input id="ben-phone" value={beneficiaryPhone} onChange={(e) => setBeneficiaryPhone(e.target.value)} placeholder="e.g. 0772 123 456" />
+              <Label htmlFor="ben-phone">
+                {activeTemplate?.type === 'fuel-ledger' ? 'Branch / Location' : 'Phone / Account Number'}
+              </Label>
+              <Input id="ben-phone" value={beneficiaryPhone} onChange={(e) => setBeneficiaryPhone(e.target.value)} placeholder={activeTemplate?.type === 'fuel-ledger' ? 'e.g. Kasese Town Branch' : 'e.g. 0772 123 456'} />
             </div>
+            {activeTemplate?.type !== 'fuel-ledger' && (
             <div>
               <Label htmlFor="ben-amount">Amount (UGX)</Label>
               <Input id="ben-amount" type="number" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g. 50000" />
             </div>
+            )}
             <div>
-              <Label htmlFor="ben-reason">Reason</Label>
-              <Textarea id="ben-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why is this payment needed?" rows={3} />
+              <Label htmlFor="ben-reason">
+                {activeTemplate?.type === 'fuel-ledger' ? 'Period Covered (optional)' : 'Reason'}
+              </Label>
+              <Textarea id="ben-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={activeTemplate?.type === 'fuel-ledger' ? 'e.g. May 2026' : 'Why is this payment needed?'} rows={activeTemplate?.type === 'fuel-ledger' ? 1 : 3} />
             </div>
           </div>
           <DialogFooter className="gap-2 flex-wrap">
@@ -547,7 +659,7 @@ const ExpenseTemplateDownload = () => {
               Print without submitting
             </Button>
             <Button onClick={submitForApproval} disabled={submitting}>
-              {submitting ? 'Submitting…' : 'Submit for Approval & Print'}
+              {submitting ? 'Submitting…' : activeTemplate?.type === 'fuel-ledger' ? 'Log & Print Ledger' : 'Submit for Approval & Print'}
             </Button>
           </DialogFooter>
         </DialogContent>
