@@ -73,7 +73,8 @@ export const useQualityControl = () => {
         .from('coffee_records')
         .select('*')
         .not('status', 'in', '("sales","inventory")')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(500);
 
       if (error) throw error;
 
@@ -143,7 +144,8 @@ export const useQualityControl = () => {
       const { data: supabaseQualityData, error: qualityError } = await supabase
         .from('quality_assessments')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(500);
 
       if (qualityError) {
         console.error('Error fetching quality assessments from Supabase:', qualityError);
