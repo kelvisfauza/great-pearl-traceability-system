@@ -67,6 +67,25 @@ serve(async (req) => {
       );
     }
 
+    // Authorize: caller must be Admin OR have Finance permission
+    const adminClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+    const { data: callerEmp } = await adminClient
+      .from("employees")
+      .select("role, permissions, status")
+      .eq("auth_user_id", userData.user.id)
+      .maybeSingle();
+    const isAdmin = callerEmp?.role === "Super Admin" || callerEmp?.role === "Administrator";
+    const isFinance = Array.isArray(callerEmp?.permissions) && callerEmp!.permissions.includes("Finance");
+    if (!callerEmp || callerEmp.status !== "Active" || (!isAdmin && !isFinance)) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden — Finance or Admin role required" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     if (!Deno.env.get("YO_API_USERNAME") || !Deno.env.get("YO_API_PASSWORD")) {
       throw new Error("Yo Payments API credentials not configured");
     }

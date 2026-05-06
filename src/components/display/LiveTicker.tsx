@@ -16,10 +16,10 @@ const LiveTicker = () => {
     const today = format(new Date(), 'yyyy-MM-dd');
     const tickerItems: TickerItem[] = [];
 
-    const [todayRes, pendingRes, supplierCount] = await Promise.all([
+    const [todayRes, pendingRes, supplierCountRes] = await Promise.all([
       supabase.from('coffee_records').select('supplier_name, kilograms, coffee_type').eq('date', today).order('created_at', { ascending: false }).limit(20),
       supabase.from('coffee_records').select('supplier_name, kilograms').eq('status', 'pending').limit(10),
-      supabase.from('suppliers').select('*', { count: 'exact', head: true }),
+      supabase.rpc('get_public_supplier_count'),
     ]);
 
     todayRes.data?.forEach((p, idx) => {
@@ -39,8 +39,9 @@ const LiveTicker = () => {
       });
     }
 
-    if (supplierCount.count) {
-      tickerItems.push({ id: 'si', text: `👥 Working with ${supplierCount.count.toLocaleString()}+ registered farmers across Kasese`, type: 'info' });
+    const supplierCount = (supplierCountRes.data as number | null) ?? 0;
+    if (supplierCount) {
+      tickerItems.push({ id: 'si', text: `👥 Working with ${supplierCount.toLocaleString()}+ registered farmers across Kasese`, type: 'info' });
     }
 
     const totalToday = todayRes.data?.reduce((s, p) => s + (p.kilograms || 0), 0) || 0;
