@@ -7,7 +7,7 @@ import MaintenancePage from '@/pages/MaintenancePage';
 const BYPASS_ROUTES = ['/maintenance-recovery', '/auth', '/display', '/verify'];
 
 const MaintenanceGuard = ({ children }: { children: React.ReactNode }) => {
-  const { isActive, reason, loading } = useMaintenanceMode();
+  const { isActive, reason, expectedBackOnline, loading } = useMaintenanceMode();
   const authContext = useContext(AuthContext);
   const location = useLocation();
 
@@ -26,7 +26,7 @@ const MaintenanceGuard = ({ children }: { children: React.ReactNode }) => {
 
   // Show maintenance page if active
   if (isActive) {
-    return <MaintenancePage reason={reason} />;
+    return <MaintenancePage reason={reason} expectedBackOnline={expectedBackOnline} />;
   }
 
   return <>{children}</>;
