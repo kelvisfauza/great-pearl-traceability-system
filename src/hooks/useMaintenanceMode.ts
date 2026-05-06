@@ -8,6 +8,7 @@ interface MaintenanceStatus {
   activated_at: string | null;
   recovery_key: string | null;
   recovery_pin: string | null;
+  expected_back_online: string | null;
 }
 
 export const useMaintenanceMode = () => {
@@ -24,7 +25,7 @@ export const useMaintenanceMode = () => {
         return;
       }
 
-      setStatus(data ? ({ ...(data as any), activated_by: null, activated_at: null, recovery_key: null, recovery_pin: null }) as MaintenanceStatus : null);
+      setStatus(data ? ({ ...(data as any), activated_by: null, activated_at: null, recovery_key: null, recovery_pin: null, expected_back_online: (data as any).expected_back_online ?? null }) as MaintenanceStatus : null);
     } catch (err) {
       console.error('Error fetching maintenance status:', err);
     } finally {
@@ -56,7 +57,7 @@ export const useMaintenanceMode = () => {
     return pin;
   };
 
-  const toggleMaintenance = useCallback(async (activate: boolean, reason?: string, activatedBy?: string) => {
+  const toggleMaintenance = useCallback(async (activate: boolean, reason?: string, activatedBy?: string, expectedBackOnline?: string | null) => {
     const { data: record } = await supabase
       .from('system_maintenance')
       .select('id')
@@ -78,6 +79,7 @@ export const useMaintenanceMode = () => {
         recovery_key: recoveryCode,
         recovery_pin: recoveryPin,
         recovery_sms_sent: false,
+        expected_back_online: activate ? (expectedBackOnline || null) : null,
       } as any)
       .eq('id', (record as any).id)
       .select('recovery_key, recovery_pin')
@@ -91,12 +93,11 @@ export const useMaintenanceMode = () => {
     // Send SMS with recovery codes to Fauza2 when activating
     if (activate && recoveryCode && recoveryPin) {
       try {
-        // Get Fauza2's phone number
         const { data: fauza } = await supabase
           .from('employees')
           .select('phone')
-          .eq('email', 'fauzakusa@greatagrocoffee.com')
-          .single();
+          .eq('email', 'fauzakusa@greatpearlcoffee.com')
+          .maybeSingle();
 
         if (fauza?.phone) {
           const smsMessage = `MAINTENANCE MODE ACTIVATED. Recovery Code: ${recoveryCode}. PIN: ${recoveryPin}. Use these at the recovery page to restore the system.`;
@@ -160,6 +161,7 @@ export const useMaintenanceMode = () => {
   return {
     isActive: status?.is_active ?? false,
     reason: status?.reason,
+    expectedBackOnline: status?.expected_back_online ?? null,
     activatedBy: status?.activated_by,
     activatedAt: status?.activated_at,
     recoveryKey: status?.recovery_key,
