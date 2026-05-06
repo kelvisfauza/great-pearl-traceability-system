@@ -8651,6 +8651,7 @@ export type Database = {
           activated_at: string | null
           activated_by: string | null
           created_at: string
+          expected_back_online: string | null
           id: string
           is_active: boolean
           reason: string | null
@@ -8664,6 +8665,7 @@ export type Database = {
           activated_at?: string | null
           activated_by?: string | null
           created_at?: string
+          expected_back_online?: string | null
           id?: string
           is_active?: boolean
           reason?: string | null
@@ -8677,6 +8679,7 @@ export type Database = {
           activated_at?: string | null
           activated_by?: string | null
           created_at?: string
+          expected_back_online?: string | null
           id?: string
           is_active?: boolean
           reason?: string | null
@@ -10457,6 +10460,7 @@ export type Database = {
       get_maintenance_status: {
         Args: never
         Returns: {
+          expected_back_online: string
           is_active: boolean
           reason: string
         }[]
