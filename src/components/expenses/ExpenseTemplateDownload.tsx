@@ -389,6 +389,8 @@ const ExpenseTemplateDownload = () => {
   const [beneficiaryName, setBeneficiaryName] = useState('');
   const [beneficiaryPhone, setBeneficiaryPhone] = useState('');
   const [reason, setReason] = useState('');
+  const [amount, setAmount] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const handleDownload = (template: TemplateConfig) => {
     if (!employee) return;
@@ -396,6 +398,7 @@ const ExpenseTemplateDownload = () => {
     setBeneficiaryName('');
     setBeneficiaryPhone('');
     setReason('');
+    setAmount('');
     setPrefillOpen(true);
   };
 
@@ -420,12 +423,68 @@ const ExpenseTemplateDownload = () => {
     }
   };
 
+  const submitForApproval = async () => {
+    if (!employee || !activeTemplate) return;
+    const amt = parseFloat(amount);
+    if (!amt || amt <= 0) {
+      toast({ title: 'Amount required', description: 'Please enter a valid amount before submitting for approval.', variant: 'destructive' });
+      return;
+    }
+    if (!reason.trim()) {
+      toast({ title: 'Reason required', description: 'Please enter a reason for this request.', variant: 'destructive' });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const title = beneficiaryName
+        ? `${activeTemplate.title} - ${beneficiaryName}`
+        : activeTemplate.title;
+      const description = [
+        beneficiaryName ? `Recipient: ${beneficiaryName}` : null,
+        beneficiaryPhone ? `Phone/Account: ${beneficiaryPhone}` : null,
+        `Reason: ${reason}`,
+      ].filter(Boolean).join('\n');
+
+      const { error } = await supabase
+        .from('approval_requests')
+        .insert({
+          type: activeTemplate.approvalType,
+          title,
+          description,
+          amount: amt,
+          requestedby: employee.email,
+          requestedby_name: employee.name,
+          requestedby_position: employee.position,
+          department: employee.department,
+          daterequested: new Date().toISOString().split('T')[0],
+          priority: 'Medium',
+          status: 'Pending Admin',
+          approval_stage: 'pending_admin',
+          requires_three_approvals: amt > 50000,
+          details: JSON.stringify({
+            beneficiary_name: beneficiaryName || null,
+            beneficiary_phone: beneficiaryPhone || null,
+          }),
+        } as any);
+
+      if (error) throw error;
+
+      toast({ title: 'Submitted for approval', description: 'Generating your printable copy now…' });
+      await runGenerate({ beneficiaryName, beneficiaryPhone, reason });
+    } catch (err: any) {
+      console.error('Submit for approval error:', err);
+      toast({ title: 'Submission failed', description: err?.message || 'Could not submit for approval.', variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Alert className="border-blue-200 bg-blue-50">
         <Info className="h-4 w-4 text-blue-600" />
         <AlertDescription className="text-sm text-blue-800">
-          <strong>New Process:</strong> Download the appropriate template below, fill it in manually, and submit the physical form to the Finance Department along with any supporting documents.
+          <strong>One-page workflow:</strong> Pick a form, fill in the recipient and amount, then submit for approval — your printable copy is generated at the same time.
         </AlertDescription>
       </Alert>
 
@@ -457,11 +516,11 @@ const ExpenseTemplateDownload = () => {
       </div>
 
       <Dialog open={prefillOpen} onOpenChange={setPrefillOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Fill recipient details (optional)</DialogTitle>
+            <DialogTitle>{activeTemplate?.title || 'Request details'}</DialogTitle>
             <DialogDescription>
-              Add the person/provider you are requesting money for. These will be printed on the form. Leave blank to print an empty template.
+              Enter who the money is for, the amount, and the reason. Submit for approval and a printable copy will be generated.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -474,14 +533,21 @@ const ExpenseTemplateDownload = () => {
               <Input id="ben-phone" value={beneficiaryPhone} onChange={(e) => setBeneficiaryPhone(e.target.value)} placeholder="e.g. 0772 123 456" />
             </div>
             <div>
+              <Label htmlFor="ben-amount">Amount (UGX)</Label>
+              <Input id="ben-amount" type="number" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g. 50000" />
+            </div>
+            <div>
               <Label htmlFor="ben-reason">Reason</Label>
               <Textarea id="ben-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why is this payment needed?" rows={3} />
             </div>
           </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => runGenerate({})}>Skip & print blank</Button>
-            <Button onClick={() => runGenerate({ beneficiaryName, beneficiaryPhone, reason })}>
-              Generate & Print
+          <DialogFooter className="gap-2 flex-wrap">
+            <Button variant="ghost" onClick={() => runGenerate({})} disabled={submitting}>Print blank only</Button>
+            <Button variant="outline" onClick={() => runGenerate({ beneficiaryName, beneficiaryPhone, reason })} disabled={submitting}>
+              Print without submitting
+            </Button>
+            <Button onClick={submitForApproval} disabled={submitting}>
+              {submitting ? 'Submitting…' : 'Submit for Approval & Print'}
             </Button>
           </DialogFooter>
         </DialogContent>
