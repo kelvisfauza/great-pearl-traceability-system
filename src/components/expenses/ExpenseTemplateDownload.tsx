@@ -236,17 +236,7 @@ const generatePDF = async (
 
   y += 20;
 
-  // Employee details section (outlined, no fill)
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.5);
-  doc.rect(margin, y, contentW, 7);
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.text('EMPLOYEE DETAILS', margin + 4, y + 5);
-  y += 7;
-
-  // Employee info rows
+  // Employee info rows (used by fuel ledger branch)
   const drawInfoRow = (label1: string, val1: string, label2: string, val2: string, rowY: number) => {
     doc.setDrawColor(200, 200, 200);
     doc.setLineWidth(0.3);
@@ -268,11 +258,6 @@ const generatePDF = async (
     doc.setTextColor(0, 0, 0);
     doc.text(val2, margin + contentW / 2 + 28, rowY + 5.5);
   };
-
-  drawInfoRow('Full Name:', employeeName, 'Position:', position || 'N/A', y);
-  y += 8;
-  drawInfoRow('Department:', department, 'Date:', dateStr, y);
-  y += 14;
 
   // ===== FUEL LEDGER BRANCH =====
   if (template.type === 'fuel-ledger') {
