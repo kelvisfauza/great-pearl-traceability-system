@@ -44,11 +44,13 @@ const BatchAssessmentsTab = () => {
 
   const { data: assessments } = useQuery({
     queryKey: ['quality-all-assessments'],
+    staleTime: 60_000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('quality_assessments')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(500);
       if (error) throw error;
       return data;
     }

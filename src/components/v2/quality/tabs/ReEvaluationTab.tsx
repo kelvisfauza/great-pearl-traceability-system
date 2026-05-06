@@ -27,12 +27,14 @@ const ReEvaluationTab = () => {
 
   const { data: assessments, isLoading } = useQuery({
     queryKey: ['reevaluation-assessments'],
+    staleTime: 60_000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('quality_assessments')
         .select('*')
         .in('status', ['approved', 'submitted_to_finance', 'pending_admin_pricing'])
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(300);
       if (error) throw error;
       return data;
     }

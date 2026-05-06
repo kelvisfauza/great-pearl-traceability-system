@@ -9,8 +9,13 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 const SupplierAnalyticsTab = () => {
   const { data: records, isLoading: recordsLoading } = useQuery({
     queryKey: ['supplier-analytics-records'],
+    staleTime: 5 * 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase.from('coffee_records').select('*');
+      const { data, error } = await supabase
+        .from('coffee_records')
+        .select('id, batch_number, supplier_name, kilograms, status, created_at')
+        .order('created_at', { ascending: false })
+        .limit(1000);
       if (error) throw error;
       return data;
     }
@@ -18,8 +23,13 @@ const SupplierAnalyticsTab = () => {
 
   const { data: assessments, isLoading: assessmentsLoading } = useQuery({
     queryKey: ['supplier-analytics-assessments'],
+    staleTime: 5 * 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase.from('quality_assessments').select('*');
+      const { data, error } = await supabase
+        .from('quality_assessments')
+        .select('batch_number, moisture, outturn, group1_defects, group2_defects, pods, husks, fm, status, created_at')
+        .order('created_at', { ascending: false })
+        .limit(1000);
       if (error) throw error;
       return data;
     }
