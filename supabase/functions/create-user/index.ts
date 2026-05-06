@@ -14,6 +14,15 @@ serve(async (req) => {
   }
 
   try {
+    // ---- AuthN/AuthZ: only Super Admin or HR can provision new accounts ----
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Create admin client with service role key
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -26,8 +35,40 @@ serve(async (req) => {
       }
     )
 
+    const token = authHeader.replace('Bearer ', '')
+    const { data: callerData, error: callerErr } = await supabaseAdmin.auth.getUser(token)
+    if (callerErr || !callerData?.user) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    const { data: callerEmployee } = await supabaseAdmin
+      .from('employees')
+      .select('role, permissions, status')
+      .eq('auth_user_id', callerData.user.id)
+      .maybeSingle()
+    const callerIsSuperAdmin = callerEmployee?.role === 'Super Admin'
+    const callerIsAdmin = callerIsSuperAdmin || callerEmployee?.role === 'Administrator'
+    const callerIsHR = Array.isArray(callerEmployee?.permissions) && callerEmployee!.permissions.includes('Human Resources')
+    if (!callerEmployee || callerEmployee.status !== 'Active' || (!callerIsAdmin && !callerIsHR)) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Forbidden — admin or HR role required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Get the employee data from request
     const { employeeData, linkExisting = false } = await req.json()
+
+    // Only Super Admin can mint elevated roles
+    const elevatedRoles = ['Administrator', 'Super Admin']
+    if (elevatedRoles.includes(employeeData?.role) && !callerIsSuperAdmin) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Only Super Admin can create Administrator or Super Admin accounts' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
     console.log('🔧 Processing user creation:', { 
       email: employeeData.email, 
       linkExisting, 
