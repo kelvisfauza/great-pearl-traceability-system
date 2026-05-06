@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 const LOGO_URL = '/lovable-uploads/great-agro-coffee-logo.png';
 
@@ -30,6 +32,7 @@ interface TemplateConfig {
   icon: React.ReactNode;
   description: string;
   fields: { label: string; lines?: number }[];
+  approvalType: string;
 }
 
 const templates: TemplateConfig[] = [
@@ -39,6 +42,7 @@ const templates: TemplateConfig[] = [
     prefix: 'CR',
     icon: <ShoppingCart className="h-5 w-5" />,
     description: 'Request money for company purchases or business needs',
+    approvalType: 'Cash Requisition',
     fields: [
       { label: 'Purpose / Title' },
       { label: 'Amount Requested (UGX)' },
@@ -53,6 +57,7 @@ const templates: TemplateConfig[] = [
     prefix: 'PE',
     icon: <Coffee className="h-5 w-5" />,
     description: 'Claim reimbursement for personal expenses (lunch, airtime, transport)',
+    approvalType: 'Personal Expense',
     fields: [
       { label: 'Expense Type (Food/Airtime/Data/Transport/Other)' },
       { label: 'Amount Claimed (UGX)' },
@@ -67,6 +72,7 @@ const templates: TemplateConfig[] = [
     prefix: 'SR',
     icon: <Wallet className="h-5 w-5" />,
     description: 'Request salary advance or payment',
+    approvalType: 'Salary Request',
     fields: [
       { label: 'Request Type (Advance / Mid-Month / End-Month)' },
       { label: 'Amount Requested (UGX)' },
@@ -81,6 +87,7 @@ const templates: TemplateConfig[] = [
     prefix: 'SPR',
     icon: <Truck className="h-5 w-5" />,
     description: 'Request payment for external service providers (transport, repairs, consultants, etc.)',
+    approvalType: 'Service Provider Requisition',
     fields: [
       { label: 'Service Provider Name' },
       { label: 'Service Provider Contact / Phone' },
