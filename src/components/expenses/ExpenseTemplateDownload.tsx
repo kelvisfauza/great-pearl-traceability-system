@@ -521,13 +521,18 @@ const ExpenseTemplateDownload = () => {
 
   const submitForApproval = async () => {
     if (!employee || !activeTemplate) return;
+    const isFuel = activeTemplate.type === 'fuel-ledger';
     const amt = parseFloat(amount);
-    if (!amt || amt <= 0) {
+    if (!isFuel && (!amt || amt <= 0)) {
       toast({ title: 'Amount required', description: 'Please enter a valid amount before submitting for approval.', variant: 'destructive' });
       return;
     }
-    if (!reason.trim()) {
+    if (!isFuel && !reason.trim()) {
       toast({ title: 'Reason required', description: 'Please enter a reason for this request.', variant: 'destructive' });
+      return;
+    }
+    if (isFuel && !beneficiaryName.trim()) {
+      toast({ title: 'Provider required', description: 'Please enter the service provider (e.g. Total Energies).', variant: 'destructive' });
       return;
     }
     setSubmitting(true);
@@ -547,7 +552,7 @@ const ExpenseTemplateDownload = () => {
           type: activeTemplate.approvalType,
           title,
           description,
-          amount: amt,
+          amount: isFuel ? 0 : amt,
           requestedby: employee.email,
           requestedby_name: employee.name,
           requestedby_position: employee.position,
@@ -556,10 +561,11 @@ const ExpenseTemplateDownload = () => {
           priority: 'Medium',
           status: 'Pending Admin',
           approval_stage: 'pending_admin',
-          requires_three_approvals: amt > 50000,
+          requires_three_approvals: !isFuel && amt > 50000,
           details: JSON.stringify({
             beneficiary_name: beneficiaryName || null,
             beneficiary_phone: beneficiaryPhone || null,
+            is_fuel_ledger: isFuel,
           }),
         } as any);
 
@@ -616,25 +622,35 @@ const ExpenseTemplateDownload = () => {
           <DialogHeader>
             <DialogTitle>{activeTemplate?.title || 'Request details'}</DialogTitle>
             <DialogDescription>
-              Enter who the money is for, the amount, and the reason. Submit for approval and a printable copy will be generated.
+              {activeTemplate?.type === 'fuel-ledger'
+                ? 'Enter the service provider details. The printable ledger has 10 blank rows for the station to fill in (date, truck, driver, phone, litres, amount, signature) plus our reference and approval block.'
+                : 'Enter who the money is for, the amount, and the reason. Submit for approval and a printable copy will be generated.'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label htmlFor="ben-name">Recipient / Service Provider Name</Label>
-              <Input id="ben-name" value={beneficiaryName} onChange={(e) => setBeneficiaryName(e.target.value)} placeholder="e.g. John Mukasa" />
+              <Label htmlFor="ben-name">
+                {activeTemplate?.type === 'fuel-ledger' ? 'Service Provider (e.g. Total Energies)' : 'Recipient / Service Provider Name'}
+              </Label>
+              <Input id="ben-name" value={beneficiaryName} onChange={(e) => setBeneficiaryName(e.target.value)} placeholder={activeTemplate?.type === 'fuel-ledger' ? 'Total Energies Kasese' : 'e.g. John Mukasa'} />
             </div>
             <div>
-              <Label htmlFor="ben-phone">Phone / Account Number</Label>
-              <Input id="ben-phone" value={beneficiaryPhone} onChange={(e) => setBeneficiaryPhone(e.target.value)} placeholder="e.g. 0772 123 456" />
+              <Label htmlFor="ben-phone">
+                {activeTemplate?.type === 'fuel-ledger' ? 'Branch / Location' : 'Phone / Account Number'}
+              </Label>
+              <Input id="ben-phone" value={beneficiaryPhone} onChange={(e) => setBeneficiaryPhone(e.target.value)} placeholder={activeTemplate?.type === 'fuel-ledger' ? 'e.g. Kasese Town Branch' : 'e.g. 0772 123 456'} />
             </div>
+            {activeTemplate?.type !== 'fuel-ledger' && (
             <div>
               <Label htmlFor="ben-amount">Amount (UGX)</Label>
               <Input id="ben-amount" type="number" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g. 50000" />
             </div>
+            )}
             <div>
-              <Label htmlFor="ben-reason">Reason</Label>
-              <Textarea id="ben-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why is this payment needed?" rows={3} />
+              <Label htmlFor="ben-reason">
+                {activeTemplate?.type === 'fuel-ledger' ? 'Period Covered (optional)' : 'Reason'}
+              </Label>
+              <Textarea id="ben-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={activeTemplate?.type === 'fuel-ledger' ? 'e.g. May 2026' : 'Why is this payment needed?'} rows={activeTemplate?.type === 'fuel-ledger' ? 1 : 3} />
             </div>
           </div>
           <DialogFooter className="gap-2 flex-wrap">
@@ -643,7 +659,7 @@ const ExpenseTemplateDownload = () => {
               Print without submitting
             </Button>
             <Button onClick={submitForApproval} disabled={submitting}>
-              {submitting ? 'Submitting…' : 'Submit for Approval & Print'}
+              {submitting ? 'Submitting…' : activeTemplate?.type === 'fuel-ledger' ? 'Log & Print Ledger' : 'Submit for Approval & Print'}
             </Button>
           </DialogFooter>
         </DialogContent>
