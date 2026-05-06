@@ -237,10 +237,10 @@ const generatePDF = async (
   y += 20;
 
   // Employee details section (outlined, no fill)
-  doc.setDrawColor(13, 61, 31);
+  doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.5);
   doc.rect(margin, y, contentW, 7);
-  doc.setTextColor(13, 61, 31);
+  doc.setTextColor(0, 0, 0);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.text('EMPLOYEE DETAILS', margin + 4, y + 5);
@@ -277,10 +277,10 @@ const generatePDF = async (
   // ===== FUEL LEDGER BRANCH =====
   if (template.type === 'fuel-ledger') {
     // Provider summary
-    doc.setDrawColor(13, 61, 31);
+    doc.setDrawColor(0, 0, 0);
     doc.setLineWidth(0.5);
     doc.rect(margin, y, contentW, 7);
-    doc.setTextColor(13, 61, 31);
+    doc.setTextColor(0, 0, 0);
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
     doc.text('SERVICE PROVIDER', margin + 4, y + 5);
@@ -306,13 +306,13 @@ const generatePDF = async (
     const headerH = 8;
 
     // Header row (filled light)
-    doc.setFillColor(235, 240, 235);
-    doc.setDrawColor(13, 61, 31);
+    doc.setFillColor(245, 245, 245);
+    doc.setDrawColor(0, 0, 0);
     doc.setLineWidth(0.4);
     doc.rect(margin, y, contentW, headerH, 'FD');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
-    doc.setTextColor(13, 61, 31);
+    doc.setTextColor(0, 0, 0);
     let cx = margin;
     cols.forEach((c) => {
       doc.text(c.label, cx + c.w / 2, y + 5.5, { align: 'center' });
@@ -350,17 +350,17 @@ const generatePDF = async (
 
     // Totals row
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(13, 61, 31);
+    doc.setTextColor(0, 0, 0);
     doc.setFontSize(9);
     doc.text('TOTAL LITRES: __________', margin, y + 5);
     doc.text('TOTAL AMOUNT (UGX): __________________', margin + contentW / 2, y + 5);
     y += 10;
   } else {
   // Request Details section (outlined, no fill)
-  doc.setDrawColor(13, 61, 31);
+  doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.5);
   doc.rect(margin, y, contentW, 7);
-  doc.setTextColor(13, 61, 31);
+  doc.setTextColor(0, 0, 0);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.text('REQUEST DETAILS', margin + 4, y + 5);
@@ -407,10 +407,10 @@ const generatePDF = async (
 
   // Approval section
   y += 3;
-  doc.setDrawColor(13, 61, 31);
+  doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.5);
   doc.rect(margin, y, contentW, 7);
-  doc.setTextColor(13, 61, 31);
+  doc.setTextColor(0, 0, 0);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.text('APPROVAL SECTION', margin + 4, y + 5);
@@ -434,7 +434,7 @@ const generatePDF = async (
 
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(13, 61, 31);
+    doc.setTextColor(0, 0, 0);
     doc.text(box.title, bx + boxW / 2, y + 5, { align: 'center' });
 
     // Name line
