@@ -274,6 +274,88 @@ const generatePDF = async (
   drawInfoRow('Department:', department, 'Date:', dateStr, y);
   y += 14;
 
+  // ===== FUEL LEDGER BRANCH =====
+  if (template.type === 'fuel-ledger') {
+    // Provider summary
+    doc.setDrawColor(13, 61, 31);
+    doc.setLineWidth(0.5);
+    doc.rect(margin, y, contentW, 7);
+    doc.setTextColor(13, 61, 31);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('SERVICE PROVIDER', margin + 4, y + 5);
+    y += 7;
+
+    drawInfoRow('Provider:', prefill.beneficiaryName || '', 'Branch:', prefill.beneficiaryPhone || '', y);
+    y += 8;
+    drawInfoRow('Period:', prefill.reason || '', 'Issued:', dateStr, y);
+    y += 12;
+
+    // Ledger table header
+    const cols = [
+      { label: '#',           w: 8 },
+      { label: 'Date',        w: 22 },
+      { label: 'Truck No.',   w: 24 },
+      { label: 'Driver Name', w: 38 },
+      { label: 'Phone',       w: 26 },
+      { label: 'Litres',      w: 16 },
+      { label: 'Amount (UGX)',w: 26 },
+      { label: 'Signature',   w: contentW - (8 + 22 + 24 + 38 + 26 + 16 + 26) },
+    ];
+    const rowH = 11;
+    const headerH = 8;
+
+    // Header row (filled light)
+    doc.setFillColor(235, 240, 235);
+    doc.setDrawColor(13, 61, 31);
+    doc.setLineWidth(0.4);
+    doc.rect(margin, y, contentW, headerH, 'FD');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(13, 61, 31);
+    let cx = margin;
+    cols.forEach((c) => {
+      doc.text(c.label, cx + c.w / 2, y + 5.5, { align: 'center' });
+      cx += c.w;
+    });
+    // vertical lines header
+    cx = margin;
+    cols.forEach((c) => {
+      doc.line(cx, y, cx, y + headerH);
+      cx += c.w;
+    });
+    doc.line(margin + contentW, y, margin + contentW, y + headerH);
+    y += headerH;
+
+    // 10 empty rows
+    doc.setDrawColor(180, 180, 180);
+    doc.setLineWidth(0.3);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(60, 60, 60);
+    for (let r = 0; r < 10; r++) {
+      const ry = y + r * rowH;
+      // outer rect
+      doc.rect(margin, ry, contentW, rowH);
+      // verticals
+      let vx = margin;
+      cols.forEach((c) => {
+        doc.line(vx, ry, vx, ry + rowH);
+        vx += c.w;
+      });
+      // row number
+      doc.text(String(r + 1), margin + cols[0].w / 2, ry + rowH / 2 + 1, { align: 'center' });
+    }
+    y += 10 * rowH + 4;
+
+    // Totals row
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(13, 61, 31);
+    doc.setFontSize(9);
+    doc.text('TOTAL LITRES: __________', margin, y + 5);
+    doc.text('TOTAL AMOUNT (UGX): __________________', margin + contentW / 2, y + 5);
+    y += 10;
+  } else {
   // Request Details section (outlined, no fill)
   doc.setDrawColor(13, 61, 31);
   doc.setLineWidth(0.5);
@@ -321,6 +403,7 @@ const generatePDF = async (
     }
     y += lines * 7 + 4;
   });
+  }
 
   // Approval section
   y += 3;
