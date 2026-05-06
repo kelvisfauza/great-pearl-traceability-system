@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -30,12 +31,10 @@ const PENDING_WITHDRAWAL_STATUSES = [
 ];
 
 export const useUserWallet = () => {
-  const [walletData, setWalletData] = useState<WalletData | null>(null);
-  const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [unifiedUserId, setUnifiedUserId] = useState<string | null>(null);
   const { user, employee } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const walletOwnerEmail = employee?.email || user?.email || null;
 
   const isPendingWithdrawal = (withdrawal: Pick<WithdrawalRequest, 'status' | 'approval_stage'>) => {
     const normalizedStatus = (withdrawal.status || '').toLowerCase();
@@ -57,134 +56,108 @@ export const useUserWallet = () => {
     }
   };
 
-  const fetchWalletData = async () => {
-    const walletOwnerEmail = employee?.email || user?.email;
+  const queryKey = ['user-wallet', walletOwnerEmail];
 
-    if (!walletOwnerEmail) {
-      setLoading(false);
-      return;
-    }
+  const { data, isLoading, refetch } = useQuery({
+    queryKey,
+    enabled: !!walletOwnerEmail,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      console.log('💰 Fetching wallet data for:', walletOwnerEmail);
 
-    try {
-      console.log('💰 Fetching wallet data for:', walletOwnerEmail, '(auth email:', user?.email, ')');
-
-      // Get balance data using the safe function
       const { data: balanceData, error: balanceError } = await supabase
-        .rpc('get_user_balance_safe', { user_email: walletOwnerEmail });
-      
-      if (balanceError) {
-        throw balanceError;
-      }
-      
+        .rpc('get_user_balance_safe', { user_email: walletOwnerEmail! });
+      if (balanceError) throw balanceError;
+
       const userData = balanceData?.[0];
-      if (userData) {
-        const wallet: WalletData = {
-          balance: Number(userData.wallet_balance) || 0,
-          pendingWithdrawals: Number(userData.pending_withdrawals) || 0,
-          availableToRequest: Number(userData.available_balance) || 0,
-          employeeName: userData.name || employee.name || 'Unknown'
-        };
+      let wallet: WalletData = userData
+        ? {
+            balance: Number(userData.wallet_balance) || 0,
+            pendingWithdrawals: Number(userData.pending_withdrawals) || 0,
+            availableToRequest: Number(userData.available_balance) || 0,
+            employeeName: userData.name || employee?.name || 'Unknown',
+          }
+        : {
+            balance: 0,
+            pendingWithdrawals: 0,
+            availableToRequest: 0,
+            employeeName: employee?.name || 'Unknown',
+          };
 
-        setWalletData(wallet);
-        console.log('✅ Wallet loaded:', { balance: wallet.balance });
-      } else {
-        setWalletData({
-          balance: 0,
-          pendingWithdrawals: 0,
-          availableToRequest: 0,
-          employeeName: employee.name || 'Unknown'
-        });
-        console.log('⚠️ No wallet data found, using defaults');
-      }
-      
-      // Get unified user ID for withdrawal requests and realtime matching
       const { data: userIdData } = await supabase
-        .rpc('get_unified_user_id', { input_email: walletOwnerEmail });
-      
-      const unifiedId = userIdData || user?.id;
-      setUnifiedUserId(unifiedId || null);
+        .rpc('get_unified_user_id', { input_email: walletOwnerEmail! });
+      const unifiedId = (userIdData as string | null) || user?.id || null;
 
-      if (!unifiedId) {
-        setWithdrawalRequests([]);
-        return;
-      }
-      
-      // Fetch legacy wallet withdrawal requests
-      const { data: withdrawalRequestsData } = await supabase
-        .from('withdrawal_requests')
-        .select('*')
-        .eq('user_id', unifiedId)
-        .order('created_at', { ascending: false });
+      let allWithdrawals: WithdrawalRequest[] = [];
+      if (unifiedId) {
+        const [legacyRes, approvalRes] = await Promise.all([
+          supabase
+            .from('withdrawal_requests')
+            .select('*')
+            .eq('user_id', unifiedId)
+            .order('created_at', { ascending: false })
+            .limit(50),
+          supabase
+            .from('approval_requests')
+            .select('id, amount, status, created_at, approval_stage, disbursement_phone, disbursement_method, details')
+            .eq('requestedby', walletOwnerEmail!)
+            .eq('type', 'Withdrawal Request')
+            .order('created_at', { ascending: false })
+            .limit(50),
+        ]);
 
-      // Fetch approval-based withdrawal requests used by the current approvals flow
-      const { data: approvalWithdrawalRequestsData } = await supabase
-        .from('approval_requests')
-        .select('id, amount, status, created_at, approval_stage, disbursement_phone, disbursement_method, details')
-        .eq('requestedby', walletOwnerEmail)
-        .eq('type', 'Withdrawal Request')
-        .order('created_at', { ascending: false });
+        const legacyWithdrawals: WithdrawalRequest[] = (legacyRes.data || []).map((w: any) => ({
+          id: w.id,
+          amount: Number(w.amount) || 0,
+          phone_number: w.phone_number || 'N/A',
+          status: w.status || 'pending',
+          request_ref: w.request_ref || w.id,
+          channel: w.channel || 'CASH',
+          created_at: w.created_at,
+          source: 'wallet',
+        }));
 
-      const legacyWithdrawals: WithdrawalRequest[] = (withdrawalRequestsData || []).map((withdrawal) => ({
-        id: withdrawal.id,
-        amount: Number(withdrawal.amount) || 0,
-        phone_number: withdrawal.phone_number || 'N/A',
-        status: withdrawal.status || 'pending',
-        request_ref: withdrawal.request_ref || withdrawal.id,
-        channel: withdrawal.channel || 'CASH',
-        created_at: withdrawal.created_at,
-        source: 'wallet',
-      }));
+        const approvalWithdrawals: WithdrawalRequest[] = (approvalRes.data || []).map((w: any) => {
+          const details = w.details && typeof w.details === 'object' ? (w.details as Record<string, any>) : null;
+          return {
+            id: w.id,
+            amount: Number(w.amount) || 0,
+            phone_number: w.disbursement_phone || 'N/A',
+            status: w.status || 'pending',
+            request_ref: details?.ref || details?.withdrawal_id || w.id,
+            channel: normalizeApprovalChannel(w.disbursement_method),
+            created_at: w.created_at,
+            approval_stage: w.approval_stage || undefined,
+            source: 'approval',
+          };
+        });
 
-      const approvalWithdrawals: WithdrawalRequest[] = (approvalWithdrawalRequestsData || []).map((withdrawal) => {
-        const details = withdrawal.details && typeof withdrawal.details === 'object' ? withdrawal.details as Record<string, any> : null;
+        allWithdrawals = [...approvalWithdrawals, ...legacyWithdrawals].sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
 
-        return {
-          id: withdrawal.id,
-          amount: Number(withdrawal.amount) || 0,
-          phone_number: withdrawal.disbursement_phone || 'N/A',
-          status: withdrawal.status || 'pending',
-          request_ref: details?.ref || details?.withdrawal_id || withdrawal.id,
-          channel: normalizeApprovalChannel(withdrawal.disbursement_method),
-          created_at: withdrawal.created_at,
-          approval_stage: withdrawal.approval_stage || undefined,
-          source: 'approval',
-        };
-      });
+        const frozenPending = allWithdrawals
+          .filter(isPendingWithdrawal)
+          .reduce((sum, w) => sum + (Number(w.amount) || 0), 0);
 
-      const allWithdrawals = [...approvalWithdrawals, ...legacyWithdrawals].sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-
-      setWithdrawalRequests(allWithdrawals);
-
-      const frozenPending = allWithdrawals
-        .filter(isPendingWithdrawal)
-        .reduce((sum, withdrawal) => sum + (Number(withdrawal.amount) || 0), 0);
-
-      setWalletData((prev) => {
-        if (!prev) return prev;
-
-        return {
-          ...prev,
+        wallet = {
+          ...wallet,
           pendingWithdrawals: frozenPending,
-          availableToRequest: Math.max(0, prev.balance - frozenPending),
+          availableToRequest: Math.max(0, wallet.balance - frozenPending),
         };
-      });
-      
-    } catch (error: any) {
-      console.error('❌ Error fetching wallet data:', error);
-      
-      // Provide default wallet data even on error
-      setWalletData({
-        balance: 0,
-        pendingWithdrawals: 0,
-        availableToRequest: 0,
-        employeeName: employee?.name || 'Unknown'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+      }
+
+      return { wallet, withdrawals: allWithdrawals, unifiedUserId: unifiedId };
+    },
+  });
+
+  const walletData = data?.wallet ?? null;
+  const withdrawalRequests = data?.withdrawals ?? [];
+  const unifiedUserId = data?.unifiedUserId ?? null;
+  const loading = isLoading;
+  const fetchWalletData = () => { refetch(); };
 
   const createWithdrawalRequest = async (amount: number, phoneNumber: string, channel: string = 'ZENGAPAY') => {
     const walletOwnerEmail = employee?.email || user?.email;
@@ -273,7 +246,7 @@ export const useUserWallet = () => {
 
       // Refresh wallet data after a short delay to let DB settle
       await new Promise(resolve => setTimeout(resolve, 500));
-      await fetchWalletData();
+      await refetch();
     } catch (error: any) {
       console.error('Error creating withdrawal request:', error);
       toast({
@@ -284,68 +257,11 @@ export const useUserWallet = () => {
     }
   };
 
-  useEffect(() => {
-    if (user) {
-      fetchWalletData();
-    } else {
-      setLoading(false);
-    }
-  }, [user, employee]);
-
-  // Passive refresh to avoid stale wallet values when realtime misses events
-  useEffect(() => {
-    if (!user?.id) return;
-
-    const onFocus = () => fetchWalletData();
-    const intervalId = window.setInterval(() => fetchWalletData(), 30000);
-
-    window.addEventListener('focus', onFocus);
-    document.addEventListener('visibilitychange', onFocus);
-
-    return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener('focus', onFocus);
-      document.removeEventListener('visibilitychange', onFocus);
-    };
-  }, [user?.id, user?.email]);
-
-  // Real-time subscription for balance changes
-  useEffect(() => {
-    const trackedUserId = unifiedUserId || user?.id;
-    if (!trackedUserId) return;
-
-    const channel = supabase
-      .channel('wallet-realtime')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'ledger_entries',
-        filter: `user_id=eq.${trackedUserId}`,
-      }, () => {
-        console.log('📡 Ledger entry changed, refreshing wallet...');
-        fetchWalletData();
-      })
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'withdrawal_requests',
-        filter: `user_id=eq.${trackedUserId}`,
-      }, () => {
-        console.log('📡 Withdrawal request changed, refreshing wallet...');
-        fetchWalletData();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user?.id, unifiedUserId]);
-
   return {
     walletData,
     withdrawalRequests,
     loading,
     createWithdrawalRequest,
-    refreshWallet: fetchWalletData
+    refreshWallet: () => { refetch(); },
   };
 };
