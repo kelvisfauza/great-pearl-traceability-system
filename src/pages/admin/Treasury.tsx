@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Wallet, ArrowDownCircle, ArrowUpCircle, RefreshCw, Plus, Banknote, AlertTriangle, History,
 } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 
 type Direction = "credit" | "debit";
 type Channel = "yo_payments" | "cash" | "bank" | "internal" | "other";
@@ -50,6 +51,21 @@ interface PoolBalance {
   updated_at: string;
 }
 
+interface InvestmentRow {
+  id: string;
+  user_email: string;
+  employee_name: string | null;
+  amount: number;
+  interest_rate: number;
+  maturity_months: number;
+  start_date: string;
+  maturity_date: string;
+  status: string;
+  earned_interest: number;
+  total_payout: number;
+  withdrawn_at: string | null;
+}
+
 const fmt = (n: number | null | undefined) =>
   `UGX ${Number(n ?? 0).toLocaleString()}`;
 
@@ -57,6 +73,7 @@ export default function Treasury() {
   const { toast } = useToast();
   const [balance, setBalance] = useState<PoolBalance | null>(null);
   const [entries, setEntries] = useState<PoolEntry[]>([]);
+  const [investments, setInvestments] = useState<InvestmentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [backfilling, setBackfilling] = useState(false);
@@ -75,16 +92,22 @@ export default function Treasury() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: bal }, { data: ents }] = await Promise.all([
+    const [{ data: bal }, { data: ents }, { data: invs }] = await Promise.all([
       supabase.from("treasury_pool_balance" as any).select("*").eq("id", 1).maybeSingle(),
       supabase
         .from("treasury_pool_entries" as any)
         .select("*")
         .order("created_at", { ascending: false })
         .limit(500),
+      supabase
+        .from("investments" as any)
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(1000),
     ]);
     setBalance(bal as any);
     setEntries((ents as any[]) || []);
+    setInvestments((invs as any[]) || []);
     setLoading(false);
   }, []);
 
