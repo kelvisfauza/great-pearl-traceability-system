@@ -3,15 +3,76 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, FileText, Download, Printer } from "lucide-react";
+import { Loader2, FileText, Download, Printer, Search } from "lucide-react";
 import { format, startOfWeek, endOfWeek, subDays } from "date-fns";
 
 const ReportsTab = () => {
   const [reportType, setReportType] = useState("daily");
   const printRef = useRef<HTMLDivElement>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[] | null>(null);
+
+  const runHistoricalSearch = async () => {
+    const term = searchTerm.trim();
+    if (!term) return;
+    setSearching(true);
+    setSearchQuery(term);
+    try {
+      // Search assessments directly by batch_number (no date/row cap)
+      const { data: byBatch } = await supabase
+        .from('quality_assessments')
+        .select('*')
+        .ilike('batch_number', `%${term}%`)
+        .order('created_at', { ascending: false })
+        .limit(500);
+
+      // Also find matching coffee records by supplier_name or batch
+      const { data: matchingRecords } = await supabase
+        .from('coffee_records')
+        .select('id, batch_number, supplier_name, supplier_id, coffee_type, kilograms')
+        .or(`batch_number.ilike.%${term}%,supplier_name.ilike.%${term}%`)
+        .limit(500);
+
+      const recordIds = (matchingRecords || []).map(r => r.id);
+      let bySupplier: any[] = [];
+      if (recordIds.length > 0) {
+        const { data } = await supabase
+          .from('quality_assessments')
+          .select('*')
+          .in('store_record_id', recordIds)
+          .order('created_at', { ascending: false })
+          .limit(500);
+        bySupplier = data || [];
+      }
+
+      // Merge + dedupe by id, enrich with supplier info
+      const recMap = new Map((matchingRecords || []).map(r => [r.id, r]));
+      const merged = new Map<string, any>();
+      [...(byBatch || []), ...bySupplier].forEach(a => {
+        const rec = recMap.get(a.store_record_id);
+        merged.set(a.id, {
+          ...a,
+          supplier_name: rec?.supplier_name || '—',
+          coffee_type: rec?.coffee_type || '—',
+          kilograms: rec?.kilograms || 0,
+        });
+      });
+      setSearchResults(Array.from(merged.values()).sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      ));
+    } catch (e) {
+      console.error('Historical search failed:', e);
+      setSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
 
   const today = new Date().toISOString().split('T')[0];
   const weekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
@@ -80,6 +141,78 @@ const ReportsTab = () => {
         <h3 className="text-lg font-semibold flex items-center gap-2"><FileText className="h-5 w-5" />Quality Reports</h3>
         <Button variant="outline" onClick={handlePrint}><Printer className="mr-1 h-4 w-4" />Print Report</Button>
       </div>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Search className="h-4 w-4" /> Search Historical Assessments
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Find any quality assessment regardless of age. Search by batch number or supplier name.
+          </p>
+          <div className="flex gap-2">
+            <Input
+              placeholder="e.g. BATCH-2023-045 or supplier name"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') runHistoricalSearch(); }}
+            />
+            <Button onClick={runHistoricalSearch} disabled={searching || !searchTerm.trim()}>
+              {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              <span className="ml-1 hidden sm:inline">Search</span>
+            </Button>
+          </div>
+
+          {searchResults !== null && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm">
+                  <span className="font-medium">{searchResults.length}</span> result{searchResults.length === 1 ? '' : 's'} for "{searchQuery}"
+                </p>
+                {searchResults.length > 0 && (
+                  <Button size="sm" variant="ghost" onClick={() => { setSearchResults(null); setSearchTerm(''); }}>
+                    Clear
+                  </Button>
+                )}
+              </div>
+              {searchResults.length > 0 ? (
+                <div className="rounded-md border overflow-x-auto max-h-[400px] overflow-y-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Batch #</TableHead>
+                        <TableHead>Supplier</TableHead>
+                        <TableHead>Moisture</TableHead>
+                        <TableHead>Outturn</TableHead>
+                        <TableHead>Final Price</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {searchResults.map(a => (
+                        <TableRow key={a.id}>
+                          <TableCell className="text-sm">{a.date_assessed || format(new Date(a.created_at), 'PP')}</TableCell>
+                          <TableCell className="font-mono text-xs">{a.batch_number}</TableCell>
+                          <TableCell className="text-sm">{a.supplier_name}</TableCell>
+                          <TableCell>{a.moisture}%</TableCell>
+                          <TableCell>{a.outturn}%</TableCell>
+                          <TableCell>{a.final_price?.toLocaleString() || '—'}</TableCell>
+                          <TableCell><Badge variant="outline">{a.status}</Badge></TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground py-2">No historical assessments matched.</p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Tabs value={reportType} onValueChange={setReportType}>
         <TabsList>
