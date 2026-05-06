@@ -21,10 +21,11 @@ import {
 } from '@/components/ui/alert-dialog';
 
 const MaintenanceToggle = () => {
-  const { isActive, reason, activatedBy, activatedAt, loading, toggleMaintenance } = useMaintenanceMode();
+  const { isActive, reason, activatedBy, activatedAt, expectedBackOnline, loading, toggleMaintenance } = useMaintenanceMode();
   const { employee } = useAuth();
   const [showConfirm, setShowConfirm] = useState(false);
   const [maintenanceReason, setMaintenanceReason] = useState('');
+  const [expectedBack, setExpectedBack] = useState('');
   const [toggling, setToggling] = useState(false);
 
   const handleToggle = () => {
@@ -38,9 +39,11 @@ const MaintenanceToggle = () => {
   const handleActivate = async () => {
     setToggling(true);
     try {
-      await toggleMaintenance(true, maintenanceReason, employee?.name || 'Admin');
+      const expectedISO = expectedBack ? new Date(expectedBack).toISOString() : null;
+      await toggleMaintenance(true, maintenanceReason, employee?.name || 'Admin', expectedISO);
       setShowConfirm(false);
       setMaintenanceReason('');
+      setExpectedBack('');
       toast({
         title: 'Maintenance Mode Activated',
         description: 'All users have been logged out. Recovery code and PIN have been sent via SMS to the authorized administrator.',
@@ -108,6 +111,11 @@ const MaintenanceToggle = () => {
                   {activatedAt && ` at ${new Date(activatedAt).toLocaleString()}`}
                 </p>
                 {reason && <p className="text-muted-foreground mt-1">Reason: {reason}</p>}
+                {expectedBackOnline && (
+                  <p className="text-muted-foreground mt-1">
+                    Expected back online: <strong>{new Date(expectedBackOnline).toLocaleString()}</strong>
+                  </p>
+                )}
               </div>
             </div>
 
@@ -150,6 +158,19 @@ const MaintenanceToggle = () => {
                   placeholder="e.g., Database migration, System update..."
                   className="mt-1"
                 />
+              </div>
+              <div className="pt-2">
+                <Label htmlFor="expected-back">Expected back online</Label>
+                <Input
+                  id="expected-back"
+                  type="datetime-local"
+                  value={expectedBack}
+                  onChange={(e) => setExpectedBack(e.target.value)}
+                  className="mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Shown to users on the maintenance page so they know when to come back.
+                </p>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>

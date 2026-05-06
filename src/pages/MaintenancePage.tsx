@@ -1,6 +1,12 @@
 import { Construction, Wrench, Clock, ShieldCheck } from 'lucide-react';
 
-const MaintenancePage = ({ reason }: { reason?: string | null }) => {
+const MaintenancePage = ({ reason, expectedBackOnline }: { reason?: string | null; expectedBackOnline?: string | null }) => {
+  const formattedBack = expectedBackOnline
+    ? new Date(expectedBackOnline).toLocaleString(undefined, {
+        weekday: 'short', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      })
+    : null;
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
       {/* Subtle animated background circles */}
@@ -29,6 +35,12 @@ const MaintenancePage = ({ reason }: { reason?: string | null }) => {
           <p className="text-muted-foreground text-base leading-relaxed max-w-md mx-auto">
             {reason || 'We are currently performing scheduled maintenance to improve the system. We\'ll be back shortly.'}
           </p>
+          {formattedBack && (
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
+              <Clock className="h-4 w-4" />
+              Expected back online: {formattedBack}
+            </div>
+          )}
         </div>
 
         {/* Status cards */}
