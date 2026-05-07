@@ -58,16 +58,25 @@ export const useMaintenanceMode = () => {
   };
 
   const toggleMaintenance = useCallback(async (activate: boolean, reason?: string, activatedBy?: string, expectedBackOnline?: string | null) => {
-    const baseQuery = supabase
+    const { data: activeRecord } = await supabase
+      .from('system_maintenance')
+      .select('id')
+      .eq('is_active', true)
+      .order('is_active', { ascending: false })
+      .order('updated_at', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const { data: latestRecord } = await supabase
       .from('system_maintenance')
       .select('id')
       .order('is_active', { ascending: false })
       .order('updated_at', { ascending: false })
       .order('created_at', { ascending: false })
-      .limit(1);
+      .limit(1)
+      .maybeSingle();
 
-    const { data: activeRecord } = await baseQuery.eq('is_active', true).maybeSingle();
-    const { data: latestRecord } = await baseQuery.maybeSingle();
     const record = activeRecord ?? latestRecord;
 
     if (!record) throw new Error('No maintenance record found');

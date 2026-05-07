@@ -65,6 +65,9 @@ const MaintenanceRecovery = () => {
             <Label htmlFor="recovery-code">Recovery Code (10 digits)</Label>
             <Input
               id="recovery-code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
               placeholder="Enter 10-digit recovery code..."
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 10))}
@@ -77,6 +80,8 @@ const MaintenanceRecovery = () => {
             <Label htmlFor="recovery-pin">PIN (4 digits)</Label>
             <Input
               id="recovery-pin"
+              inputMode="numeric"
+              autoComplete="one-time-code"
               placeholder="Enter 4-digit PIN..."
               value={pin}
               onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
