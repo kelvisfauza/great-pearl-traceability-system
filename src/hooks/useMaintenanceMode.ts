@@ -58,11 +58,17 @@ export const useMaintenanceMode = () => {
   };
 
   const toggleMaintenance = useCallback(async (activate: boolean, reason?: string, activatedBy?: string, expectedBackOnline?: string | null) => {
-    const { data: record } = await supabase
+    const baseQuery = supabase
       .from('system_maintenance')
       .select('id')
-      .limit(1)
-      .maybeSingle();
+      .order('is_active', { ascending: false })
+      .order('updated_at', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    const { data: activeRecord } = await baseQuery.eq('is_active', true).maybeSingle();
+    const { data: latestRecord } = await baseQuery.maybeSingle();
+    const record = activeRecord ?? latestRecord;
 
     if (!record) throw new Error('No maintenance record found');
 
@@ -127,7 +133,7 @@ export const useMaintenanceMode = () => {
 
   const deactivateWithKey = useCallback(async (code: string, pin: string) => {
     const { data, error } = await supabase
-      .rpc('verify_and_deactivate_maintenance' as any, { _code: code.trim(), _pin: pin.trim() });
+      .rpc('verify_and_deactivate_maintenance' as any, { _code: code, _pin: pin });
     if (error || !data) {
       throw new Error('Invalid recovery code or PIN');
     }
