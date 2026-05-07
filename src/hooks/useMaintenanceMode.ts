@@ -126,35 +126,11 @@ export const useMaintenanceMode = () => {
   }, [fetchStatus]);
 
   const deactivateWithKey = useCallback(async (code: string, pin: string) => {
-    const normalizedCode = code.trim();
-    const normalizedPin = pin.trim();
-
-    const { data: record } = await supabase
-      .from('system_maintenance')
-      .select('id, recovery_key, recovery_pin, is_active')
-      .limit(1)
-      .maybeSingle();
-
-    const storedCode = ((record as any)?.recovery_key || '').trim();
-    const storedPin = ((record as any)?.recovery_pin || '').trim();
-
-    if (!record || storedCode !== normalizedCode || storedPin !== normalizedPin) {
+    const { data, error } = await supabase
+      .rpc('verify_and_deactivate_maintenance' as any, { _code: code.trim(), _pin: pin.trim() });
+    if (error || !data) {
       throw new Error('Invalid recovery code or PIN');
     }
-
-    const { error } = await supabase
-      .from('system_maintenance')
-      .update({
-        is_active: false,
-        reason: null,
-        activated_by: null,
-        activated_at: null,
-        recovery_key: null,
-        recovery_pin: null,
-      } as any)
-      .eq('id', (record as any).id);
-
-    if (error) throw error;
     await fetchStatus();
   }, [fetchStatus]);
 

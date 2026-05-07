@@ -10756,6 +10756,14 @@ export type Database = {
         Args: { p_amount: number; p_user_id: string }
         Returns: boolean
       }
+      verify_admin_withdrawal_pin: {
+        Args: { _id: string; _pin: string }
+        Returns: boolean
+      }
+      verify_and_deactivate_maintenance: {
+        Args: { _code: string; _pin: string }
+        Returns: boolean
+      }
       verify_by_code: {
         Args: { _code: string }
         Returns: {

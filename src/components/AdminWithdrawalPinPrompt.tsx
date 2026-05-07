@@ -88,8 +88,10 @@ const AdminWithdrawalPinPrompt = () => {
         return;
       }
 
-      // Verify PIN
-      if (pin !== pendingWithdrawal.pin_code) {
+      // Verify PIN server-side (PIN is hashed in DB)
+      const { data: ok, error: verifyErr } = await supabase
+        .rpc('verify_admin_withdrawal_pin' as any, { _id: pendingWithdrawal.id, _pin: pin });
+      if (verifyErr || !ok) {
         setError('Incorrect PIN. Please try again.');
         setPin('');
         return;
