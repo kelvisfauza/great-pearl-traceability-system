@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
     .or('metadata->>notified_at.is.null,metadata->>notified_at.eq.')
     .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
     .order('created_at', { ascending: false })
-    .limit(50)
+    .limit(200)
 
   if (error) {
     return new Response(JSON.stringify({ ok: false, error: error.message }), {
@@ -37,48 +37,78 @@ Deno.serve(async (req) => {
     })
   }
 
-  // Send one email per error
-  let sentCount = 0
+  // Build a single hourly digest email grouping all new errors
   const nowIso = new Date().toISOString()
+  const list = errors as any[]
 
-  for (const e of errors as any[]) {
-    const sev = (e.severity || '').toUpperCase()
-    const message = `A new ${sev} system error was detected:\n\n` +
-      `Title: ${e.title}\n` +
-      `Description: ${e.description || 'n/a'}\n` +
-      `Type: ${e.error_type || 'n/a'}\n` +
-      `Component: ${e.component || 'n/a'}\n` +
-      `Affected User: ${e.user_email || 'n/a'}\n` +
-      `URL: ${e.url || 'n/a'}\n` +
-      `Time: ${new Date(e.created_at).toLocaleString()}\n\n` +
-      `Please review and resolve this in IT Department > System Errors.`
+  // Group by severity
+  const bySeverity: Record<string, any[]> = { critical: [], high: [] }
+  for (const e of list) {
+    const sev = (e.severity || 'high').toLowerCase()
+    if (!bySeverity[sev]) bySeverity[sev] = []
+    bySeverity[sev].push(e)
+  }
 
-    for (const recipient of RECIPIENTS) {
-      try {
-        const { error: sendErr } = await supabase.functions.invoke('send-transactional-email', {
-          body: {
-            templateName: 'general-notification',
-            recipientEmail: recipient,
-            idempotencyKey: `sys-error-${e.id}-${recipient}`,
-            templateData: {
-              title: `[${sev}] ${e.title}`,
-              subject: `[${sev}] System Error: ${e.title} - Great Agro Coffee`,
-              message,
-              recipientName: recipient.split('@')[0],
-            },
+  const fmt = (e: any, idx: number) =>
+    `${idx}. [${(e.severity || '').toUpperCase()}] ${e.title}\n` +
+    `   • Description: ${e.description || 'n/a'}\n` +
+    `   • Type: ${e.error_type || 'n/a'} | Component: ${e.component || 'n/a'}\n` +
+    `   • Affected User: ${e.user_email || 'n/a'}\n` +
+    `   • URL: ${e.url || 'n/a'}\n` +
+    `   • Time: ${new Date(e.created_at).toLocaleString()}\n`
+
+  const sections: string[] = []
+  sections.push(`Hourly System Error Digest`)
+  sections.push(`Total new errors: ${list.length} (Critical: ${bySeverity.critical.length}, High: ${bySeverity.high.length})`)
+  sections.push(`Window: last 24h unnotified, generated ${new Date().toLocaleString()}`)
+  sections.push('')
+
+  let counter = 1
+  if (bySeverity.critical.length > 0) {
+    sections.push(`──── CRITICAL (${bySeverity.critical.length}) ────`)
+    for (const e of bySeverity.critical) sections.push(fmt(e, counter++))
+  }
+  if (bySeverity.high.length > 0) {
+    sections.push(`──── HIGH (${bySeverity.high.length}) ────`)
+    for (const e of bySeverity.high) sections.push(fmt(e, counter++))
+  }
+  sections.push('')
+  sections.push(`Please review and resolve in IT Department > System Errors.`)
+
+  const message = sections.join('\n')
+  const subject = `[Hourly Digest] ${list.length} system error(s) — ${bySeverity.critical.length} critical, ${bySeverity.high.length} high`
+  const digestKey = `sys-error-digest-${new Date().toISOString().slice(0, 13)}` // hour bucket
+
+  let sentCount = 0
+  for (const recipient of RECIPIENTS) {
+    try {
+      const { error: sendErr } = await supabase.functions.invoke('send-transactional-email', {
+        body: {
+          templateName: 'general-notification',
+          recipientEmail: recipient,
+          idempotencyKey: `${digestKey}-${recipient}`,
+          templateData: {
+            title: `System Error Digest — ${list.length} new`,
+            subject,
+            message,
+            recipientName: recipient.split('@')[0],
           },
-        })
-        if (!sendErr) sentCount++
-      } catch (err) {
-        console.error('Send failed for', recipient, err)
-      }
+        },
+      })
+      if (!sendErr) sentCount++
+    } catch (err) {
+      console.error('Send failed for', recipient, err)
     }
+  }
 
+  // Mark all included errors as notified
+  const ids = list.map((e) => e.id)
+  for (const e of list) {
     const newMeta = { ...(e.metadata || {}), notified_at: nowIso, notified_to: RECIPIENTS }
     await supabase.from('system_errors').update({ metadata: newMeta }).eq('id', e.id)
   }
 
-  return new Response(JSON.stringify({ ok: true, errors: errors.length, emails_sent: sentCount }), {
+  return new Response(JSON.stringify({ ok: true, errors: list.length, emails_sent: sentCount, ids }), {
     status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
 })
