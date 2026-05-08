@@ -202,13 +202,13 @@ Deno.serve(async (req) => {
       // Check AGAIN after storing to prevent race conditions
       const { data: duplicateCheck, error: duplicateError } = await supabaseAdmin
         .from('verification_codes')
-        .select('code, created_at')
+        .select('id, created_at')
         .eq('email', email)
         .eq('phone', phone)
         .gte('created_at', sixHoursAgo.toISOString())
         .order('created_at', { ascending: false })
-        .limit(2); // Get up to 2 recent codes
-        
+        .limit(2);
+
       if (!duplicateError && duplicateCheck && duplicateCheck.length > 1) {
         // Multiple codes found - this is a duplicate request
         const timeDiff = new Date(duplicateCheck[0].created_at).getTime() - new Date(duplicateCheck[1].created_at).getTime();
@@ -216,11 +216,11 @@ Deno.serve(async (req) => {
         if (timeDiff < 10000) { // If codes were created within 10 seconds of each other
           console.log('🚫 Duplicate request detected - aborting SMS send');
           
-          // Delete the newer duplicate code
+          // Delete the newer duplicate row (most recent insert)
           await supabaseAdmin
             .from('verification_codes')
             .delete()
-            .eq('code', verificationCode);
+            .eq('id', duplicateCheck[0].id);
             
           return new Response(
             JSON.stringify({
