@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.verify_email_otp(text, text) TO postgres;
