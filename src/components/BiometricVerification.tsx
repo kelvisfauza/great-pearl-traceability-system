@@ -315,24 +315,19 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
         return;
       }
 
-      const { data: storedCode, error: codeError } = await supabase
-        .from('verification_codes')
-        .select('*')
-        .eq('email', email)
-        .eq('code', registrationOtpCode)
-        .gte('expires_at', new Date().toISOString())
-        .single();
-
-      if (codeError || !storedCode) {
-        setError('Invalid or expired verification code');
+      const { data: vr, error: vErr } = await supabase.rpc('verify_2fa_code', {
+        _email: email,
+        _phone: '',
+        _code: registrationOtpCode,
+      });
+      const result: any = vr;
+      if (vErr || !result?.success) {
+        setError(result?.error === 'expired'
+          ? 'Verification code has expired'
+          : 'Invalid or expired verification code');
         setIsVerifying(false);
         return;
       }
-
-      await supabase
-        .from('verification_codes')
-        .delete()
-        .eq('id', storedCode.id);
 
       setRegistrationOtpVerified(true);
       setRegistrationOtpRequired(false);
@@ -413,26 +408,19 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
         return;
       }
 
-      // Verify code from database
-      const { data: storedCode, error: codeError } = await supabase
-        .from('verification_codes')
-        .select('*')
-        .eq('email', email)
-        .eq('code', verificationCode)
-        .gte('expires_at', new Date().toISOString())
-        .single();
-
-      if (codeError || !storedCode) {
-        setError('Invalid or expired verification code');
+      const { data: vr2, error: vErr2 } = await supabase.rpc('verify_2fa_code', {
+        _email: email,
+        _phone: '',
+        _code: verificationCode,
+      });
+      const result2: any = vr2;
+      if (vErr2 || !result2?.success) {
+        setError(result2?.error === 'expired'
+          ? 'Verification code has expired'
+          : 'Invalid or expired verification code');
         setIsVerifying(false);
         return;
       }
-
-      // Delete used code
-      await supabase
-        .from('verification_codes')
-        .delete()
-        .eq('id', storedCode.id);
 
       toast.success('Verification successful!');
       onVerificationComplete();

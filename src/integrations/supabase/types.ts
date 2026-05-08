@@ -10756,6 +10756,10 @@ export type Database = {
         Args: { p_amount: number; p_user_id: string }
         Returns: boolean
       }
+      verify_2fa_code: {
+        Args: { _code: string; _email: string; _phone: string }
+        Returns: Json
+      }
       verify_admin_withdrawal_pin: {
         Args: { _id: string; _pin: string }
         Returns: boolean
@@ -10783,6 +10787,10 @@ export type Database = {
         }[]
       }
       verify_device_token: { Args: { p_token: string }; Returns: Json }
+      verify_email_otp: {
+        Args: { _code: string; _email: string }
+        Returns: Json
+      }
       verify_login_otp: {
         Args: { _code: string; _user_id: string }
         Returns: boolean
@@ -10797,6 +10805,10 @@ export type Database = {
       }
       verify_withdrawal_code: {
         Args: { p_code: string; p_code_id: string }
+        Returns: Json
+      }
+      verify_withdrawal_otp: {
+        Args: { _code: string; _id: string }
         Returns: Json
       }
     }

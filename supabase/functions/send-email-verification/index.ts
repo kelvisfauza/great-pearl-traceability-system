@@ -99,29 +99,13 @@ const handler = async (req: Request): Promise<Response> => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     if (action === "send_code") {
-      const { data: existingCode } = await supabase
+      // Codes are bcrypt-hashed at rest, so we can no longer "resend" the same code.
+      // Always invalidate any pending unverified code and issue a fresh one.
+      await supabase
         .from("email_verification_codes")
-        .select("*")
+        .update({ verified_at: new Date().toISOString() })
         .eq("email", email)
-        .gte("expires_at", new Date().toISOString())
-        .lt("attempts", 3)
-        .is("verified_at", null)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
-
-      if (existingCode) {
-        await sendVerificationEmail(email, existingCode.code);
-
-        console.log("Resent existing verification code for:", email);
-        return new Response(
-          JSON.stringify({
-            success: true,
-            message: "Verification code sent to your email"
-          }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+        .is("verified_at", null);
 
       const verificationCode = Math.floor(1000 + Math.random() * 9000).toString();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
@@ -159,61 +143,31 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
-      const { data: verificationRecord, error: fetchError } = await supabase
-        .from("email_verification_codes")
-        .select("*")
-        .eq("email", email)
-        .is("verified_at", null)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
-
-      if (fetchError || !verificationRecord) {
+      const { data: rpcRes, error: rpcErr } = await supabase.rpc('verify_email_otp', {
+        _email: email, _code: code,
+      });
+      if (rpcErr) {
         return new Response(
-          JSON.stringify({ error: "No verification code found. Please request a new one." }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: "Verification failed. Please try again." }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-
-      if (new Date(verificationRecord.expires_at) < new Date()) {
+      const r: any = rpcRes || {};
+      if (r.success) {
         return new Response(
-          JSON.stringify({ error: "Verification code has expired. Please request a new one." }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      if (verificationRecord.attempts >= 3) {
-        return new Response(
-          JSON.stringify({ error: "Too many failed attempts. Please request a new code." }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      if (verificationRecord.code === code) {
-        await supabase
-          .from("email_verification_codes")
-          .update({ verified_at: new Date().toISOString() })
-          .eq("id", verificationRecord.id);
-
-        return new Response(
-          JSON.stringify({
-            success: true,
-            message: "Email verified successfully"
-          }),
+          JSON.stringify({ success: true, message: "Email verified successfully" }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-
-      await supabase
-        .from("email_verification_codes")
-        .update({ attempts: verificationRecord.attempts + 1 })
-        .eq("id", verificationRecord.id);
-
-      const attemptsLeft = 3 - (verificationRecord.attempts + 1);
+      const msg = r.error === 'expired'
+        ? 'Verification code has expired. Please request a new one.'
+        : r.error === 'too_many_attempts'
+          ? 'Too many failed attempts. Please request a new code.'
+          : r.error === 'no_code'
+            ? 'No verification code found. Please request a new one.'
+            : `Invalid code.${typeof r.attempts_left === 'number' ? ` ${r.attempts_left} attempt${r.attempts_left !== 1 ? 's' : ''} remaining.` : ''}`;
       return new Response(
-        JSON.stringify({
-          error: `Invalid code. ${attemptsLeft} attempt${attemptsLeft !== 1 ? 's' : ''} remaining.`
-        }),
+        JSON.stringify({ error: msg }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

@@ -202,13 +202,13 @@ Deno.serve(async (req) => {
       // Check AGAIN after storing to prevent race conditions
       const { data: duplicateCheck, error: duplicateError } = await supabaseAdmin
         .from('verification_codes')
-        .select('code, created_at')
+        .select('id, created_at')
         .eq('email', email)
         .eq('phone', phone)
         .gte('created_at', sixHoursAgo.toISOString())
         .order('created_at', { ascending: false })
-        .limit(2); // Get up to 2 recent codes
-        
+        .limit(2);
+
       if (!duplicateError && duplicateCheck && duplicateCheck.length > 1) {
         // Multiple codes found - this is a duplicate request
         const timeDiff = new Date(duplicateCheck[0].created_at).getTime() - new Date(duplicateCheck[1].created_at).getTime();
@@ -216,11 +216,11 @@ Deno.serve(async (req) => {
         if (timeDiff < 10000) { // If codes were created within 10 seconds of each other
           console.log('🚫 Duplicate request detected - aborting SMS send');
           
-          // Delete the newer duplicate code
+          // Delete the newer duplicate row (most recent insert)
           await supabaseAdmin
             .from('verification_codes')
             .delete()
-            .eq('code', verificationCode);
+            .eq('id', duplicateCheck[0].id);
             
           return new Response(
             JSON.stringify({
@@ -368,124 +368,29 @@ LINK: ${loginLink}
       
       console.log('🔍 Verifying code:', { email, phone: phone?.substring(0, 6) + '***', code: code?.substring(0, 2) + '***' });
       
-      // Get verification code from database
-      const { data: storedCodes, error: fetchError } = await supabaseAdmin
-        .from('verification_codes')
-        .select('*')
-        .eq('email', email)
-        .eq('phone', phone)
-        .order('created_at', { ascending: false })
-        .limit(1);
-        
-      if (fetchError) {
-        console.error('❌ Database error fetching verification code:', fetchError);
+      // Hashed-OTP verification via SECURITY DEFINER RPC
+      const { data: rpcRes, error: rpcErr } = await supabaseAdmin.rpc('verify_2fa_code', {
+        _email: email, _phone: phone, _code: code,
+      });
+      if (rpcErr) {
+        console.error('❌ verify_2fa_code rpc error:', rpcErr);
         throw new Error('Database error occurred');
       }
-      
-      console.log('📊 Database query result:', { 
-        found: storedCodes?.length || 0,
-        email,
-        phone: phone?.substring(0, 6) + '***'
-      });
-
-      if (!storedCodes || storedCodes.length === 0) {
-        console.log('❌ No verification code found in database');
+      const r: any = rpcRes || {};
+      if (!r.success) {
+        const msg = r.error === 'expired'
+          ? 'Verification code has expired. Please request a new code.'
+          : r.error === 'too_many_attempts'
+            ? 'Too many failed attempts. Please request a new code.'
+            : r.error === 'no_code'
+              ? 'No verification code found. Please request a new code.'
+              : `Invalid verification code.${typeof r.attempts_left === 'number' ? ` ${r.attempts_left} attempts remaining.` : ''}`;
         return new Response(
-          JSON.stringify({
-            success: false,
-            error: 'No verification code found. Please request a new code.'
-          }),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400,
-          }
+          JSON.stringify({ success: false, error: msg }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
         );
       }
-      
-      const storedData = storedCodes[0];
-      console.log('📋 Found verification code:', { 
-        id: storedData.id,
-        attempts: storedData.attempts,
-        expires_at: storedData.expires_at
-      });
-
-      // Check if code has expired
-      const now = new Date();
-      const expiresAt = new Date(storedData.expires_at);
-      if (now > expiresAt) {
-        console.log('⏰ Code has expired');
-        
-        // Clean up expired code
-        await supabaseAdmin
-          .from('verification_codes')
-          .delete()
-          .eq('id', storedData.id);
-          
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: 'Verification code has expired. Please request a new code.'
-          }),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400,
-          }
-        );
-      }
-
-      // Check attempts limit
-      if (storedData.attempts >= 3) {
-        console.log('🚫 Too many attempts');
-        
-        // Clean up the code
-        await supabaseAdmin
-          .from('verification_codes')
-          .delete()
-          .eq('id', storedData.id);
-          
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: 'Too many failed attempts. Please request a new code.'
-          }),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400,
-          }
-        );
-      }
-
-      // Verify the code
-      if (storedData.code !== code) {
-        console.log('❌ Invalid code provided');
-        
-        // Increment attempts
-        await supabaseAdmin
-          .from('verification_codes')
-          .update({ attempts: storedData.attempts + 1 })
-          .eq('id', storedData.id);
-        
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: `Invalid verification code. ${3 - (storedData.attempts + 1)} attempts remaining.`
-          }),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400,
-          }
-        );
-      }
-
-      // Code is valid - clean up and return success
       console.log('✅ Code verification successful');
-      
-      await supabaseAdmin
-        .from('verification_codes')
-        .delete()
-        .eq('id', storedData.id);
-      
-      console.log('Verification code validated successfully');
 
       return new Response(
         JSON.stringify({
