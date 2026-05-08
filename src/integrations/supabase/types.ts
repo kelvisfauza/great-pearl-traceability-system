@@ -10762,7 +10762,7 @@ export type Database = {
       }
       verify_admin_withdrawal_pin: {
         Args: { _id: string; _pin: string }
-        Returns: boolean
+        Returns: Json
       }
       verify_and_deactivate_maintenance: {
         Args: { _code: string; _pin: string }
@@ -10793,7 +10793,7 @@ export type Database = {
       }
       verify_login_otp: {
         Args: { _code: string; _user_id: string }
-        Returns: boolean
+        Returns: Json
       }
       verify_maintenance_recovery_key: {
         Args: { _key: string }
