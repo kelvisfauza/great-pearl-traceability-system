@@ -1163,13 +1163,16 @@ const QuickLoans = () => {
         entry_type: 'WITHDRAWAL',
         amount: -amount,
         reference: txRef,
+        source_category: 'LOAN_REPAYMENT',
         metadata: {
           loan_id: walletRepayLoan.id,
           source: 'wallet_loan_repayment',
+          type: 'internal_transfer_credit',
+          bypass_treasury_check: true,
           description: `Loan repayment from wallet – UGX ${amount.toLocaleString()}`
         }
       });
-      if (ledgerErr) throw new Error('Failed to deduct from wallet');
+      if (ledgerErr) throw new Error(ledgerErr.message || 'Failed to deduct from wallet');
 
       // For full early payoff, use daily pro-rata discount; for partial, use simple subtraction
       const newPaidAmount = (walletRepayLoan.paid_amount || 0) + amount;
