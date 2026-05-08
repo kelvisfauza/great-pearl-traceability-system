@@ -640,6 +640,14 @@ const QuickLoans = () => {
           nextDeduction.setDate(27);
         }
 
+        // Evaluation fee (10k) is baked into loan_amount/total_repayable as profit,
+        // but it must NOT be sent to the borrower's wallet — only the requested amount is disbursed.
+        const EVAL_FEE = 10000;
+        const isTopUpLoan = !!(loan as any).is_topup;
+        const requestedDisbursement = isTopUpLoan
+          ? Math.max(0, (loan.original_loan_amount || loan.loan_amount) - EVAL_FEE)
+          : Math.max(0, loan.loan_amount - EVAL_FEE);
+
         // Update loan status
         const { error } = await supabase.from('loans').update({
           admin_approved: true,
@@ -649,7 +657,7 @@ const QuickLoans = () => {
           start_date: startDate.toISOString().split('T')[0],
           end_date: endDate.toISOString().split('T')[0],
           next_deduction_date: nextDeduction.toISOString().split('T')[0],
-          disbursed_amount: loan.loan_amount,
+          disbursed_amount: requestedDisbursement,
         }).eq('id', loanId);
         if (error) throw error;
 
@@ -715,8 +723,9 @@ const QuickLoans = () => {
         }
 
         // Add to borrower's wallet via ledger
-        // For top-ups: only disburse the additional amount (original_loan_amount), not the rolled-over balance
-        const disbursedAmount = isTopUp ? (loan.original_loan_amount || loan.loan_amount) : loan.loan_amount;
+        // Disburse only the requested amount (loan_amount minus the 10k evaluation fee
+        // which the company keeps as profit and recovers via repayment).
+        const disbursedAmount = requestedDisbursement;
         const borrowerEmployee = await supabase.from('employees').select('auth_user_id').eq('email', loan.employee_email).single();
         if (borrowerEmployee.data?.auth_user_id) {
           await supabase.from('ledger_entries').insert({
@@ -729,6 +738,7 @@ const QuickLoans = () => {
               duration_months: loan.duration_months, 
               interest_rate: loan.interest_rate, 
               principal: loan.loan_amount, 
+              evaluation_fee: EVAL_FEE,
               source: isTopUp ? 'loan_topup_disbursement' : 'loan_disbursement',
               repayment_frequency: loan.repayment_frequency || 'monthly',
               ...(isTopUp ? { parent_loan_id: parentLoanId, additional_amount: disbursedAmount, rolled_over_balance: loan.loan_amount - disbursedAmount } : {}),
