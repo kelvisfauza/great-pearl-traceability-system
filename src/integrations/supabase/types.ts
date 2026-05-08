@@ -10787,6 +10787,14 @@ export type Database = {
         Args: { _code: string; _user_id: string }
         Returns: boolean
       }
+      verify_maintenance_recovery_key: {
+        Args: { _key: string }
+        Returns: boolean
+      }
+      verify_maintenance_recovery_pin: {
+        Args: { _pin: string }
+        Returns: boolean
+      }
       verify_withdrawal_code: {
         Args: { p_code: string; p_code_id: string }
         Returns: Json
