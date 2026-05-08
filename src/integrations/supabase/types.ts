@@ -10783,6 +10783,10 @@ export type Database = {
         }[]
       }
       verify_device_token: { Args: { p_token: string }; Returns: Json }
+      verify_login_otp: {
+        Args: { _code: string; _user_id: string }
+        Returns: boolean
+      }
       verify_withdrawal_code: {
         Args: { p_code: string; p_code_id: string }
         Returns: Json
