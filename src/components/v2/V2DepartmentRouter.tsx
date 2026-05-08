@@ -30,6 +30,8 @@ const DEPARTMENT_ROUTES: Record<string, string> = {
   'Milling': '/v2/milling',
   'Inventory': '/v2/inventory',
   'Procurement': '/v2/procurement',
+  'Procurement & IT': '/v2/it',
+  'IT & Procurement': '/v2/it',
 };
 
 // Departments that have V2 dashboards
@@ -57,6 +59,8 @@ const SUPPORTED_DEPARTMENTS = [
   'Milling',
   'Inventory',
   'Procurement',
+  'Procurement & IT',
+  'IT & Procurement',
 ];
 
 const V2DepartmentRouter = () => {
