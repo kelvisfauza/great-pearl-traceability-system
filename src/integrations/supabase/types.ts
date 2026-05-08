@@ -10261,7 +10261,6 @@ export type Database = {
       }
     }
     Functions: {
-      _diag_verify: { Args: { _code: string; _email: string }; Returns: Json }
       _qr_hash: { Args: { _value: string }; Returns: string }
       _qr_lookup_employee: {
         Args: { _lookup: string }
