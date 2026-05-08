@@ -35,19 +35,14 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Verify the code exists and is valid
-    const { data: verificationRecord, error: verifyError } = await supabase
-      .from('verification_codes')
-      .select('*')
-      .eq('email', email)
-      .eq('phone', phone)
-      .eq('code', code)
-      .gt('expires_at', new Date().toISOString())
-      .single();
+    // Hashed-OTP verification via SECURITY DEFINER RPC
+    const { data: rpcRes, error: verifyError } = await supabase.rpc('verify_2fa_code', {
+      _email: email, _phone: phone, _code: code,
+    });
+    const verificationOk = !verifyError && (rpcRes as any)?.success === true;
+    console.log('Verification rpc result:', { rpcRes, verifyError });
 
-    console.log('Verification record result:', { verificationRecord, verifyError });
-
-    if (verifyError || !verificationRecord) {
+    if (!verificationOk) {
       // Generate HTML response for invalid/expired code
       const html = `
         <!DOCTYPE html>
@@ -78,12 +73,6 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'text/html' }
       });
     }
-
-    // Mark code as used by incrementing attempts
-    await supabase
-      .from('verification_codes')
-      .update({ attempts: verificationRecord.attempts + 1 })
-      .eq('id', verificationRecord.id);
 
     // Get employee data for authentication
     const { data: employee, error: employeeError } = await supabase
