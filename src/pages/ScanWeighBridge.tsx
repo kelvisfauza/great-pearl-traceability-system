@@ -256,24 +256,27 @@ const ScanWeighBridge = () => {
       const response = await fetch(capturedImageUrl);
       const blob = await response.blob();
 
-      const fileName = `weighbridge/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
-      const { error: upErr } = await supabase.storage
-        .from('dispatch-attachments')
-        .upload(fileName, blob, { contentType: 'image/jpeg' });
-      if (upErr) throw upErr;
+      // Convert blob to base64
+      const base64: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(String(reader.result));
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
 
-      const { data: urlData } = supabase.storage
-        .from('dispatch-attachments')
-        .getPublicUrl(fileName);
-
-      const { error: insertErr } = await supabase
-        .from('weighbridge_scanned_tickets' as any)
-        .insert({
-          session_id: sessionId,
-          qr_data: `auto-captured-${Date.now()}`,
-          photo_url: urlData.publicUrl,
-        });
-      if (insertErr) throw insertErr;
+      // Use edge function (service-role) to bypass anon storage RLS
+      const { data, error: fnErr } = await supabase.functions.invoke(
+        'weighbridge-upload-ticket',
+        {
+          body: {
+            session_code: sessionCode,
+            image_base64: base64,
+            content_type: blob.type || 'image/jpeg',
+          },
+        },
+      );
+      if (fnErr) throw fnErr;
+      if (!data?.ok) throw new Error(data?.error || 'Upload failed');
 
       setTicketCount(c => c + 1);
       URL.revokeObjectURL(capturedImageUrl);

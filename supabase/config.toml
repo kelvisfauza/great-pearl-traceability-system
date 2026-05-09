@@ -29,6 +29,8 @@ project_id = "pudfybkyfedeggmokhco"
 [functions]
   [functions.ai-loan-limit]
     verify_jwt = true
+  [functions.weighbridge-upload-ticket]
+    verify_jwt = false
   [functions.ai-search]
     verify_jwt = true
   [functions.analyst-price-reminder]
