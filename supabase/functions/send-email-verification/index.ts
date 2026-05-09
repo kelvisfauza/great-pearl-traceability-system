@@ -86,8 +86,10 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const { email, action, code }: VerificationRequest = await req.json();
+    const normalizedEmail = email?.trim().toLowerCase();
+    const normalizedCode = code?.trim();
 
-    if (!email) {
+    if (!normalizedEmail) {
       return new Response(
         JSON.stringify({ error: "Email is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -104,7 +106,7 @@ const handler = async (req: Request): Promise<Response> => {
       await supabase
         .from("email_verification_codes")
         .update({ verified_at: new Date().toISOString() })
-        .eq("email", email)
+        .eq("email", normalizedEmail)
         .is("verified_at", null);
 
       const verificationCode = Math.floor(1000 + Math.random() * 9000).toString();
@@ -113,7 +115,7 @@ const handler = async (req: Request): Promise<Response> => {
       const { error: dbError } = await supabase
         .from("email_verification_codes")
         .insert({
-          email,
+          email: normalizedEmail,
           code: verificationCode,
           expires_at: expiresAt.toISOString(),
         });
@@ -123,9 +125,9 @@ const handler = async (req: Request): Promise<Response> => {
         throw new Error("Failed to store verification code");
       }
 
-      await sendVerificationEmail(email, verificationCode);
+      await sendVerificationEmail(normalizedEmail, verificationCode);
 
-      console.log("Verification code sent to:", email);
+      console.log("Verification code sent to:", normalizedEmail);
       return new Response(
         JSON.stringify({
           success: true,
@@ -136,7 +138,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     if (action === "verify_code") {
-      if (!code) {
+      if (!normalizedCode) {
         return new Response(
           JSON.stringify({ error: "Code is required" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -144,9 +146,10 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       const { data: rpcRes, error: rpcErr } = await supabase.rpc('verify_email_otp', {
-        _email: email, _code: code,
+        _email: normalizedEmail, _code: normalizedCode,
       });
       if (rpcErr) {
+        console.error('verify_email_otp rpc error:', rpcErr);
         return new Response(
           JSON.stringify({ error: "Verification failed. Please try again." }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -167,8 +170,8 @@ const handler = async (req: Request): Promise<Response> => {
             ? 'No verification code found. Please request a new one.'
             : `Invalid code.${typeof r.attempts_left === 'number' ? ` ${r.attempts_left} attempt${r.attempts_left !== 1 ? 's' : ''} remaining.` : ''}`;
       return new Response(
-        JSON.stringify({ error: msg }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ success: false, error: msg, code: r.error ?? 'invalid' }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
