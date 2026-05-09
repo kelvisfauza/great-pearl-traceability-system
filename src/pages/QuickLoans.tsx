@@ -1052,6 +1052,19 @@ const QuickLoans = () => {
 
       if (txInsertErr) throw new Error('Failed to create transaction record');
 
+      // Refresh the session before invoking the edge function. An expired JWT
+      // causes the Supabase platform to return 401 before our code runs.
+      const { data: sessionData } = await supabase.auth.getSession();
+      let accessToken = sessionData?.session?.access_token;
+      if (!accessToken) {
+        const { data: refreshed } = await supabase.auth.refreshSession();
+        accessToken = refreshed?.session?.access_token;
+      }
+      if (!accessToken) {
+        await supabase.from('mobile_money_transactions').update({ status: 'failed' }).eq('transaction_ref', txRef);
+        throw new Error('Your session expired. Please sign in again to repay.');
+      }
+
       // Use deposit API (sends push notification to user's phone)
       const { data: result, error: fnErr } = await supabase.functions.invoke('gosentepay-deposit', {
         body: {
@@ -1059,7 +1072,8 @@ const QuickLoans = () => {
           amount: amount,
           email: employee.email,
           ref: txRef,
-        }
+        },
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
 
       if (fnErr || result?.status === 'error' || result?.error) {
