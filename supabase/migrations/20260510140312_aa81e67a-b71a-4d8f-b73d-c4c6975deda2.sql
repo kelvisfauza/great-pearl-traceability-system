@@ -1,0 +1,4 @@
+INSERT INTO public.sms_logs (recipient_phone, recipient_name, recipient_email, message_content, message_type, status, provider, retry_count, max_retries, next_retry_at, department, triggered_by)
+VALUES ('0767626940', 'Bwambale Benson', 'bwambalebenson@greatpearlcoffee.com',
+'GREAT AGRO COFFEE: Dear Bwambale Benson, your loan installment #1 of UGX 76,667 has been PAID today. Wallet UGX 22,246 + Guarantor UGX 10,538 + Salary Advance UGX 43,883 (will be cut from your May 2026 salary). Remaining loan balance: UGX 153,334. Next due 8 Jun 2026.',
+'loan_repayment', 'failed', 'yoolasms', 0, 10, now() - interval '1 minute', 'Finance', 'manual_catchup_admin');
