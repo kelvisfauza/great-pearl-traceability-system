@@ -105,9 +105,7 @@ Deno.serve(async (req) => {
         // ═══════════════════════════════════════════════════
         if (walletBalance > 0 && remainingAmount > 0) {
           deductedFromWallet = Math.min(walletBalance, remainingAmount)
-          remainingAmount -= deductedFromWallet
-
-          await supabase.from('ledger_entries').insert({
+          const { error: walletInsErr } = await supabase.from('ledger_entries').insert({
             user_id: borrowerUserId,
             entry_type: 'WITHDRAWAL',
             amount: -deductedFromWallet,
@@ -120,6 +118,12 @@ Deno.serve(async (req) => {
               description: `Loan repayment installment ${repayment.installment_number}${penaltyAmount > 0 ? ` (incl. penalty UGX ${penaltyAmount})` : ''}`
             }
           })
+          if (walletInsErr) {
+            console.error(`  ❌ FAILED to write wallet ledger entry:`, walletInsErr)
+            deductedFromWallet = 0
+            throw new Error(`Wallet deduction insert failed: ${walletInsErr.message}`)
+          }
+          remainingAmount -= deductedFromWallet
           deductionSources.push(`Wallet: UGX ${deductedFromWallet.toLocaleString()}`)
           console.log(`  ✅ Deducted UGX ${deductedFromWallet} from wallet`)
         }
@@ -142,9 +146,7 @@ Deno.serve(async (req) => {
 
             if (guarantorBalance > 0) {
               deductedFromGuarantor = Math.min(guarantorBalance, remainingAmount)
-              remainingAmount -= deductedFromGuarantor
-
-              await supabase.from('ledger_entries').insert({
+              const { error: gIns } = await supabase.from('ledger_entries').insert({
                 user_id: guarantorUserId,
                 entry_type: 'ADJUSTMENT',
                 amount: -deductedFromGuarantor,
@@ -157,6 +159,12 @@ Deno.serve(async (req) => {
                   description: `Guarantor recovery for ${loan.employee_name}'s loan`
                 }
               })
+              if (gIns) {
+                console.error(`  ❌ FAILED to write guarantor ledger entry:`, gIns)
+                deductedFromGuarantor = 0
+                throw new Error(`Guarantor deduction insert failed: ${gIns.message}`)
+              }
+              remainingAmount -= deductedFromGuarantor
               deductionSources.push(`Guarantor: UGX ${deductedFromGuarantor.toLocaleString()}`)
               console.log(`  ✅ Deducted UGX ${deductedFromGuarantor} from guarantor`)
 
