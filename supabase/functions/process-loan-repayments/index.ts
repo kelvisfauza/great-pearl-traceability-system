@@ -115,6 +115,7 @@ Deno.serve(async (req) => {
               installment: repayment.installment_number,
               source: 'wallet',
               penalty_included: penaltyAmount,
+              bypass_treasury_check: true,
               description: `Loan repayment installment ${repayment.installment_number}${penaltyAmount > 0 ? ` (incl. penalty UGX ${penaltyAmount})` : ''}`
             }
           })
@@ -156,6 +157,7 @@ Deno.serve(async (req) => {
                   installment: repayment.installment_number,
                   borrower: borrowerEmail,
                   source: 'guarantor',
+                  bypass_treasury_check: true,
                   description: `Guarantor recovery for ${loan.employee_name}'s loan`
                 }
               })
@@ -231,6 +233,7 @@ Deno.serve(async (req) => {
                 installment: repayment.installment_number,
                 source: 'overdraft_recovery',
                 penalty_included: penaltyAmount,
+                bypass_treasury_check: true,
                 description: `Loan recovery (overdraft) – salary already paid. Installment #${repayment.installment_number}. Wallet will remain negative until next deposit.`
               }
             })
@@ -318,6 +321,7 @@ Deno.serve(async (req) => {
                     loan_id: loan.id,
                     installment: repayment.installment_number,
                     source: 'overdraft_no_headroom',
+                  bypass_treasury_check: true,
                     description: `Loan recovery (overdraft) – salary headroom exhausted. Installment #${repayment.installment_number}.`
                   }
                 })
@@ -337,6 +341,7 @@ Deno.serve(async (req) => {
                   loan_id: loan.id,
                   installment: repayment.installment_number,
                   source: 'overdraft_no_salary',
+                bypass_treasury_check: true,
                   description: `Loan recovery (overdraft) – no salary on file. Installment #${repayment.installment_number}.`
                 }
               })
