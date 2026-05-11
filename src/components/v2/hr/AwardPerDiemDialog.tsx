@@ -9,7 +9,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Wallet, Plus } from "lucide-react";
+import { Wallet, Plus, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
@@ -18,9 +18,21 @@ const AwardPerDiemDialog = () => {
   const [selectedEmployee, setSelectedEmployee] = useState("");
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
+  const [refNumber, setRefNumber] = useState("");
   const { employee } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const generateRef = (empName?: string) => {
+    const initials = (empName || "EMP")
+      .split(" ")
+      .map((p) => p[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 3);
+    const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+    return `PD-${format(new Date(), "yyyyMMdd")}-${initials}-${rand}`;
+  };
 
   const { data: employees } = useQuery({
     queryKey: ["active-employees-for-perdiem"],
@@ -52,6 +64,7 @@ const AwardPerDiemDialog = () => {
     mutationFn: async () => {
       const emp = employees?.find((e) => e.id === selectedEmployee);
       if (!emp) throw new Error("Employee not found");
+      const reference = refNumber.trim() || generateRef(emp.name);
 
       // 1. Insert per diem award record
       const { error: awardError } = await supabase.from("per_diem_awards").insert({
@@ -59,7 +72,7 @@ const AwardPerDiemDialog = () => {
         employee_email: emp.email,
         employee_name: emp.name,
         amount: parseFloat(amount),
-        reason,
+        reason: `${reason} (Ref: ${reference})`,
         awarded_by: employee?.name || "HR",
       });
       if (awardError) throw awardError;
@@ -71,10 +84,11 @@ const AwardPerDiemDialog = () => {
           user_id: userId,
           entry_type: "DEPOSIT",
           amount: parseFloat(amount),
-          reference: `PERDIEM-${format(new Date(), "yyyyMMdd")}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
+          reference,
           metadata: {
             type: "per_diem",
             reason,
+            ref_number: reference,
             awarded_by: employee?.name || "HR",
             employee_name: emp.name,
           },
@@ -88,7 +102,7 @@ const AwardPerDiemDialog = () => {
           await supabase.functions.invoke("send-sms", {
             body: {
               phone: emp.phone,
-              message: `Dear ${emp.name}, you have been awarded a per diem of UGX ${parseFloat(amount).toLocaleString()}. Reason: ${reason}. The amount has been added to your wallet balance. Great Agro Coffee.`,
+              message: `Dear ${emp.name}, per diem of UGX ${parseFloat(amount).toLocaleString()} awarded. Reason: ${reason}. Ref: ${reference}. Added to your wallet. Great Agro Coffee.`,
               userName: emp.name,
               messageType: "per_diem_award",
             },
@@ -98,18 +112,19 @@ const AwardPerDiemDialog = () => {
         }
       }
 
-      return emp;
+      return { emp, reference };
     },
-    onSuccess: (emp) => {
+    onSuccess: ({ emp, reference }) => {
       toast({
         title: "Per Diem Awarded!",
-        description: `UGX ${parseInt(amount).toLocaleString()} per diem awarded to ${emp.name}. Amount added to wallet and SMS sent.`,
+        description: `UGX ${parseInt(amount).toLocaleString()} awarded to ${emp.name}. Ref: ${reference}.`,
         duration: 8000,
       });
       setOpen(false);
       setSelectedEmployee("");
       setAmount("");
       setReason("");
+      setRefNumber("");
       queryClient.invalidateQueries({ queryKey: ["per-diem-history"] });
     },
     onError: (err: any) => {
@@ -136,7 +151,14 @@ const AwardPerDiemDialog = () => {
           <div className="space-y-4 mt-4">
             <div>
               <Label>Employee</Label>
-              <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+              <Select
+                value={selectedEmployee}
+                onValueChange={(v) => {
+                  setSelectedEmployee(v);
+                  const emp = employees?.find((e) => e.id === v);
+                  if (!refNumber.trim()) setRefNumber(generateRef(emp?.name));
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select employee" />
                 </SelectTrigger>
@@ -148,6 +170,32 @@ const AwardPerDiemDialog = () => {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <Label>Reference Number (Requisition Ref)</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs gap-1"
+                  onClick={() => {
+                    const emp = employees?.find((e) => e.id === selectedEmployee);
+                    setRefNumber(generateRef(emp?.name));
+                  }}
+                >
+                  <RefreshCw className="h-3 w-3" /> Regenerate
+                </Button>
+              </div>
+              <Input
+                value={refNumber}
+                onChange={(e) => setRefNumber(e.target.value)}
+                placeholder="Auto-generated, or paste from printed requisition"
+                className="font-mono text-sm"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Used on wallet ledger, SMS and history. Edit to match a printed requisition form.
+              </p>
             </div>
             <div>
               <Label>Amount (UGX)</Label>
