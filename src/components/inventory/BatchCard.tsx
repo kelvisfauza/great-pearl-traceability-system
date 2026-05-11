@@ -121,61 +121,61 @@ const BatchCard = ({ batch }: BatchCardProps) => {
         return;
       }
 
+      const perSource: Record<string, { unitPrice: number; totalCost: number }> = {};
+
+      // 1) Prefer finance_coffee_lots (authoritative paid price)
       const { data: lots } = await supabase
         .from('finance_coffee_lots')
         .select('coffee_record_id, unit_price_ugx, quantity_kg, total_amount_ugx')
         .in('coffee_record_id', recordIds);
 
       if (lots && lots.length > 0) {
-        let totalCost = 0;
-        let totalKg = 0;
-        const perSource: Record<string, { unitPrice: number; totalCost: number }> = {};
         for (const lot of lots) {
           const quantityKg = Number(lot.quantity_kg) || sourceWeights.get(lot.coffee_record_id) || 0;
           const cost = Number(lot.total_amount_ugx) || ((Number(lot.unit_price_ugx) || 0) * quantityKg);
-          totalCost += cost;
-          totalKg += quantityKg;
           const unit = quantityKg > 0 ? cost / quantityKg : Number(lot.unit_price_ugx) || 0;
-          perSource[lot.coffee_record_id] = { unitPrice: unit, totalCost: cost };
-        }
-        setSourcePriceMap(perSource);
-
-        if (totalKg > 0) {
-          setPriceInfo({ avgPrice: totalCost / totalKg, totalCost });
-          return;
-        }
-      }
-
-      const { data: assessments } = await supabase
-        .from('quality_assessments')
-        .select('store_record_id, final_price, suggested_price')
-        .in('store_record_id', recordIds)
-        .not('final_price', 'is', null);
-
-      if (assessments && assessments.length > 0) {
-        let totalCost = 0;
-        let totalKg = 0;
-        const perSource: Record<string, { unitPrice: number; totalCost: number }> = {};
-
-        for (const assessment of assessments) {
-          const quantityKg = sourceWeights.get(assessment.store_record_id) || 0;
-          const unitPrice = Number(assessment.final_price) || Number(assessment.suggested_price) || 0;
-
-          if (quantityKg > 0 && unitPrice > 0) {
-            totalCost += quantityKg * unitPrice;
-            totalKg += quantityKg;
-            perSource[assessment.store_record_id] = { unitPrice, totalCost: quantityKg * unitPrice };
+          if (unit > 0) {
+            perSource[lot.coffee_record_id] = { unitPrice: unit, totalCost: cost };
           }
         }
-        setSourcePriceMap(perSource);
+      }
 
-        if (totalKg > 0) {
-          setPriceInfo({ avgPrice: totalCost / totalKg, totalCost });
-          return;
+      // 2) Fill gaps from quality_assessments for any source still missing a price
+      const missingIds = recordIds.filter((id) => !perSource[id]);
+      if (missingIds.length > 0) {
+        const { data: assessments } = await supabase
+          .from('quality_assessments')
+          .select('store_record_id, final_price, suggested_price')
+          .in('store_record_id', missingIds);
+
+        if (assessments && assessments.length > 0) {
+          for (const assessment of assessments) {
+            const unitPrice = Number(assessment.final_price) || Number(assessment.suggested_price) || 0;
+            const quantityKg = sourceWeights.get(assessment.store_record_id) || 0;
+            if (unitPrice > 0) {
+              perSource[assessment.store_record_id] = {
+                unitPrice,
+                totalCost: quantityKg * unitPrice,
+              };
+            }
+          }
         }
       }
 
-      setPriceInfo(null);
+      // 3) Aggregate across all sources we found prices for
+      let totalCost = 0;
+      let totalKg = 0;
+      for (const id of recordIds) {
+        const p = perSource[id];
+        const kg = sourceWeights.get(id) || 0;
+        if (p && kg > 0) {
+          totalCost += kg * p.unitPrice;
+          totalKg += kg;
+        }
+      }
+
+      setSourcePriceMap(perSource);
+      setPriceInfo(totalKg > 0 ? { avgPrice: totalCost / totalKg, totalCost } : null);
     };
 
     fetchPriceInfo();
