@@ -179,6 +179,8 @@ serve(async (req) => {
             totalOvertimeMinutes: review.total_overtime_minutes,
             totalLateMinutes: review.total_late_minutes,
             payoutDestination: payoutMessage,
+            payoutMethod,
+            payoutReference,
           },
         },
       });
