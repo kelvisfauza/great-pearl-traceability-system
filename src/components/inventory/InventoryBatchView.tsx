@@ -3,11 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Package, Archive, Search, Filter, Coffee } from "lucide-react";
+import { Loader2, Package, Archive, Search, Filter, Coffee, ClipboardCheck } from "lucide-react";
 import { useInventoryBatches } from "@/hooks/useInventoryBatches";
 import BatchCard from "./BatchCard";
 import MigrationButton from "./MigrationButton";
 import ResyncButton from "./ResyncButton";
+import AssessmentHistoryTab from "@/components/v2/quality/tabs/AssessmentHistoryTab";
 
 const isRobusta = (type: string) => type?.toLowerCase().includes('robusta');
 const isArabica = (type: string) => type?.toLowerCase().includes('arabica');
@@ -191,9 +192,13 @@ const InventoryBatchView = () => {
             <Package className="h-4 w-4" />
             Active ({activeBatches.length})
           </TabsTrigger>
-          <TabsTrigger value="history" className="gap-2">
+          <TabsTrigger value="soldout" className="gap-2">
             <Archive className="h-4 w-4" />
-            History ({soldOutBatches.length})
+            Sold Out ({soldOutBatches.length})
+          </TabsTrigger>
+          <TabsTrigger value="assessments" className="gap-2">
+            <ClipboardCheck className="h-4 w-4" />
+            Assessments
           </TabsTrigger>
         </TabsList>
 
@@ -215,7 +220,7 @@ const InventoryBatchView = () => {
           )}
         </TabsContent>
 
-        <TabsContent value="history" className="space-y-4">
+        <TabsContent value="soldout" className="space-y-4">
           {filterBatches(soldOutBatches).length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
@@ -231,6 +236,10 @@ const InventoryBatchView = () => {
               <BatchCard key={batch.id} batch={batch} />
             ))
           )}
+        </TabsContent>
+
+        <TabsContent value="assessments">
+          <AssessmentHistoryTab />
         </TabsContent>
       </Tabs>
     </div>
