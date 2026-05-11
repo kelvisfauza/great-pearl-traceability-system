@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
     console.log(`[overtime] Skipped ${totalSkipped} invalid rows (no full attendance) for ${monthNames[targetMonth]} ${targetYear}`);
 
     const RATE_PER_HOUR = 3000; // UGX per hour
-    const MAX_MONTHLY_PAY = 60000; // UGX cap per employee per month
+    const MAX_MONTHLY_PAY = 100000; // UGX cap per employee per month
     const records = Object.values(empMap)
       // Only include employees who actually attended at least one day in the month
       .filter((emp) => emp.qualifying_days > 0 && emp.total_overtime > 0)
