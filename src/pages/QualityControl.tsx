@@ -1,5 +1,6 @@
 import Layout from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
+import AssessmentHistoryTab from "@/components/v2/quality/tabs/AssessmentHistoryTab";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -1150,6 +1151,9 @@ const QualityControl = () => {
               <TabsTrigger value="price-calculator" disabled={!selectedRecord} className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                 {selectedRecord ? 'Price Assess' : 'Select First'}
               </TabsTrigger>
+              <TabsTrigger value="history" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                History
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -1834,6 +1838,10 @@ const QualityControl = () => {
 
           <TabsContent value="reports">
             <QualityAssessmentReports assessments={qualityAssessments} />
+          </TabsContent>
+
+          <TabsContent value="history">
+            <AssessmentHistoryTab />
           </TabsContent>
 
         </Tabs>
