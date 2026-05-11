@@ -3,11 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Package, Archive, Search, Filter, Coffee } from "lucide-react";
+import { Loader2, Package, Archive, Search, Filter, Coffee, ClipboardCheck } from "lucide-react";
 import { useInventoryBatches } from "@/hooks/useInventoryBatches";
 import BatchCard from "./BatchCard";
 import MigrationButton from "./MigrationButton";
 import ResyncButton from "./ResyncButton";
+import AssessmentHistoryTab from "@/components/v2/quality/tabs/AssessmentHistoryTab";
 
 const isRobusta = (type: string) => type?.toLowerCase().includes('robusta');
 const isArabica = (type: string) => type?.toLowerCase().includes('arabica');
