@@ -5421,6 +5421,11 @@ export type Database = {
           month: number
           net_overtime_minutes: number
           overtime_rate_per_hour: number
+          paid_at: string | null
+          payout_destination: string | null
+          payout_method: string | null
+          payout_reference: string | null
+          payout_status: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           status: string
@@ -5442,6 +5447,11 @@ export type Database = {
           month: number
           net_overtime_minutes?: number
           overtime_rate_per_hour?: number
+          paid_at?: string | null
+          payout_destination?: string | null
+          payout_method?: string | null
+          payout_reference?: string | null
+          payout_status?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
@@ -5463,6 +5473,11 @@ export type Database = {
           month?: number
           net_overtime_minutes?: number
           overtime_rate_per_hour?: number
+          paid_at?: string | null
+          payout_destination?: string | null
+          payout_method?: string | null
+          payout_reference?: string | null
+          payout_status?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
