@@ -187,8 +187,8 @@ const MonthlyOvertimeReview = () => {
                 </div>
                 <div className="flex gap-2">
                   {pendingCount > 0 && (
-                    <Button size="sm" onClick={() => handleApproveAll(first.month, first.year)}>
-                      <Check className="h-4 w-4 mr-1" /> Approve All ({pendingCount})
+                    <Button size="sm" onClick={() => handleApproveAllWallet(first.month, first.year)}>
+                      <Wallet className="h-4 w-4 mr-1" /> Approve All to Wallet ({pendingCount})
                     </Button>
                   )}
                   <Badge variant={pendingCount > 0 ? 'default' : 'secondary'}>
@@ -273,7 +273,7 @@ const MonthlyOvertimeReview = () => {
                             )}
                             {r.status === 'pending' && (
                               <>
-                                <Button size="sm" variant="ghost" className="h-7 px-2 text-green-600" onClick={() => handleApprove(r.id)}>
+                                <Button size="sm" variant="ghost" className="h-7 px-2 text-green-600" onClick={() => openPayoutDialog(r)} title="Approve & Pay">
                                   <Check className="h-3 w-3" />
                                 </Button>
                                 <Button size="sm" variant="ghost" className="h-7 px-2 text-red-500" onClick={() => handleReject(r.id)}>
@@ -292,6 +292,73 @@ const MonthlyOvertimeReview = () => {
           </Card>
         );
       })}
+
+      <Dialog open={!!payoutTarget} onOpenChange={(o) => !o && setPayoutTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Approve & Pay Overtime</DialogTitle>
+            <DialogDescription>
+              {payoutTarget && (
+                <>
+                  <span className="font-medium">{payoutTarget.employee_name}</span> — UGX{' '}
+                  <span className="font-semibold">
+                    {Number(payoutTarget.adjusted_pay ?? payoutTarget.calculated_pay).toLocaleString()}
+                  </span>{' '}
+                  for {monthNames[payoutTarget.month]} {payoutTarget.year}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <RadioGroup value={payoutMethod} onValueChange={(v) => setPayoutMethod(v as any)}>
+              <div className="flex items-start space-x-3 rounded-md border p-3 cursor-pointer hover:bg-muted/50">
+                <RadioGroupItem value="wallet" id="pm-wallet" className="mt-1" />
+                <Label htmlFor="pm-wallet" className="flex-1 cursor-pointer">
+                  <div className="flex items-center gap-2 font-medium">
+                    <Wallet className="h-4 w-4" /> Credit to in-app wallet
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Adds the amount to the employee's wallet balance instantly. No mobile money fees.
+                  </p>
+                </Label>
+              </div>
+              <div className="flex items-start space-x-3 rounded-md border p-3 cursor-pointer hover:bg-muted/50">
+                <RadioGroupItem value="mobile_money" id="pm-momo" className="mt-1" />
+                <Label htmlFor="pm-momo" className="flex-1 cursor-pointer">
+                  <div className="flex items-center gap-2 font-medium">
+                    <Smartphone className="h-4 w-4" /> Send to mobile money (Yo Payments)
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Disburses cash directly to the employee's MTN/Airtel number.
+                  </p>
+                </Label>
+              </div>
+            </RadioGroup>
+
+            {payoutMethod === 'mobile_money' && (
+              <div className="space-y-1">
+                <Label htmlFor="pm-phone" className="text-xs">Phone number</Label>
+                <Input
+                  id="pm-phone"
+                  value={payoutPhone}
+                  onChange={(e) => setPayoutPhone(e.target.value)}
+                  placeholder="e.g. 0772XXXXXX"
+                />
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPayoutTarget(null)} disabled={payoutSubmitting}>
+              Cancel
+            </Button>
+            <Button onClick={submitPayout} disabled={payoutSubmitting}>
+              {payoutSubmitting ? 'Processing…' : 'Approve & Pay'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
