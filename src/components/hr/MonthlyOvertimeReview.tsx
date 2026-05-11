@@ -9,13 +9,20 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Check, X, Clock, Edit2, Save } from 'lucide-react';
+import { Check, X, Clock, Edit2, Save, Wallet, Smartphone } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 const MonthlyOvertimeReview = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<{ minutes: string; pay: string; notes: string }>({ minutes: '', pay: '', notes: '' });
+  const [payoutTarget, setPayoutTarget] = useState<any | null>(null);
+  const [payoutMethod, setPayoutMethod] = useState<'wallet' | 'mobile_money'>('wallet');
+  const [payoutPhone, setPayoutPhone] = useState('');
+  const [payoutSubmitting, setPayoutSubmitting] = useState(false);
 
   const { data: reviews = [], isLoading } = useQuery({
     queryKey: ['monthly-overtime-reviews'],
@@ -47,11 +54,52 @@ const MonthlyOvertimeReview = () => {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const handleApprove = (id: string) => {
-    updateMutation.mutate({
-      id,
-      updates: { status: 'approved', reviewed_by: user?.email, reviewed_at: new Date().toISOString() },
-    });
+  const openPayoutDialog = async (record: any) => {
+    setPayoutTarget(record);
+    setPayoutMethod('wallet');
+    // Prefill phone from employees table
+    try {
+      const { data: emp } = await supabase
+        .from('employees')
+        .select('phone')
+        .eq('email', record.employee_email)
+        .maybeSingle();
+      setPayoutPhone(emp?.phone || '');
+    } catch {
+      setPayoutPhone('');
+    }
+  };
+
+  const submitPayout = async () => {
+    if (!payoutTarget) return;
+    if (payoutMethod === 'mobile_money' && !payoutPhone.trim()) {
+      toast.error('Phone number is required for mobile money');
+      return;
+    }
+    setPayoutSubmitting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('process-overtime-payout', {
+        body: {
+          reviewId: payoutTarget.id,
+          payoutMethod,
+          phone: payoutMethod === 'mobile_money' ? payoutPhone.trim() : undefined,
+          approverEmail: user?.email,
+        },
+      });
+      if (error) throw error;
+      if (data && (data as any).ok === false) throw new Error((data as any).error);
+      toast.success(
+        payoutMethod === 'wallet'
+          ? `Credited UGX ${Number(payoutTarget.adjusted_pay ?? payoutTarget.calculated_pay).toLocaleString()} to ${payoutTarget.employee_name}'s wallet`
+          : `Sent UGX ${Number(payoutTarget.adjusted_pay ?? payoutTarget.calculated_pay).toLocaleString()} to ${payoutPhone}`,
+      );
+      setPayoutTarget(null);
+      queryClient.invalidateQueries({ queryKey: ['monthly-overtime-reviews'] });
+    } catch (e: any) {
+      toast.error(e.message || 'Payout failed');
+    } finally {
+      setPayoutSubmitting(false);
+    }
   };
 
   const handleReject = (id: string) => {
@@ -61,20 +109,19 @@ const MonthlyOvertimeReview = () => {
     });
   };
 
-  const handleApproveAll = (month: number, year: number) => {
+  const handleApproveAllWallet = async (month: number, year: number) => {
     const pending = reviews.filter((r: any) => r.month === month && r.year === year && r.status === 'pending');
-    Promise.all(
-      pending.map((r: any) =>
-        supabase.from('monthly_overtime_reviews').update({
-          status: 'approved',
-          reviewed_by: user?.email,
-          reviewed_at: new Date().toISOString(),
-        }).eq('id', r.id)
-      )
-    ).then(() => {
-      queryClient.invalidateQueries({ queryKey: ['monthly-overtime-reviews'] });
-      toast.success(`Approved ${pending.length} records`);
-    });
+    if (!pending.length) return;
+    if (!confirm(`Approve ${pending.length} records and credit each employee's WALLET?`)) return;
+    let success = 0, failed = 0;
+    for (const r of pending) {
+      const { data, error } = await supabase.functions.invoke('process-overtime-payout', {
+        body: { reviewId: r.id, payoutMethod: 'wallet', approverEmail: user?.email },
+      });
+      if (error || (data as any)?.ok === false) failed++; else success++;
+    }
+    queryClient.invalidateQueries({ queryKey: ['monthly-overtime-reviews'] });
+    toast.success(`Wallet credit done: ${success} ok, ${failed} failed`);
   };
 
   const startEdit = (record: any) => {
@@ -87,7 +134,7 @@ const MonthlyOvertimeReview = () => {
   };
 
   const saveEdit = (id: string) => {
-    const MAX_PAY = 60000;
+    const MAX_PAY = 100000;
     const payNum = Number(editValues.pay);
     if (payNum > MAX_PAY) {
       toast.error(`Overtime pay cannot exceed UGX ${MAX_PAY.toLocaleString()} per month.`);
