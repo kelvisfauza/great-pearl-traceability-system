@@ -4,10 +4,11 @@ import PriceTicker from "@/components/PriceTicker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   FlaskConical, RefreshCw, Settings2, BookOpen, BarChart3, 
-  Warehouse, FileText, Lightbulb, GraduationCap, CheckSquare, Trophy
+  Warehouse, FileText, Lightbulb, GraduationCap, CheckSquare, Trophy, History
 } from "lucide-react";
 import BatchAssessmentsTab from "@/components/v2/quality/tabs/BatchAssessmentsTab";
 import ReEvaluationTab from "@/components/v2/quality/tabs/ReEvaluationTab";
+import AssessmentHistoryTab from "@/components/v2/quality/tabs/AssessmentHistoryTab";
 import CalibrationTab from "@/components/v2/quality/tabs/CalibrationTab";
 import DefectLibraryTab from "@/components/v2/quality/tabs/DefectLibraryTab";
 import SupplierAnalyticsTab from "@/components/v2/quality/tabs/SupplierAnalyticsTab";
@@ -21,6 +22,7 @@ import PerformanceTab from "@/components/v2/quality/tabs/PerformanceTab";
 const tabs = [
   { id: "assessments", label: "Assessments", icon: FlaskConical },
   { id: "reevaluation", label: "Re-evaluation", icon: RefreshCw },
+  { id: "history", label: "History", icon: History },
   { id: "calibration", label: "Calibration", icon: Settings2 },
   { id: "defects", label: "Defect Library", icon: BookOpen },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
@@ -70,6 +72,7 @@ const QualityDepartment = () => {
 
               <TabsContent value="assessments"><BatchAssessmentsTab /></TabsContent>
               <TabsContent value="reevaluation"><ReEvaluationTab /></TabsContent>
+              <TabsContent value="history"><AssessmentHistoryTab /></TabsContent>
               <TabsContent value="calibration"><CalibrationTab /></TabsContent>
               <TabsContent value="defects"><DefectLibraryTab /></TabsContent>
               <TabsContent value="analytics"><SupplierAnalyticsTab /></TabsContent>
