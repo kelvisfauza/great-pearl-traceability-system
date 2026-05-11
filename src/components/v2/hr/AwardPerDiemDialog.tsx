@@ -104,6 +104,7 @@ const AwardPerDiemDialog = () => {
               phone: emp.phone,
               message: `Dear ${emp.name}, per diem of UGX ${parseFloat(amount).toLocaleString()} awarded. Reason: ${reason}. Ref: ${reference}. Added to your wallet. Great Agro Coffee.`,
               userName: emp.name,
+              recipientEmail: emp.email,
               messageType: "per_diem_award",
             },
           });
