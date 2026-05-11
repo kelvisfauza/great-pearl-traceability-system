@@ -74,7 +74,7 @@ serve(async (req) => {
       if (emp?.phone && !employeePhone) employeePhone = emp.phone;
 
       const { data: uid } = await supabase.rpc("get_unified_user_id", {
-        _email: review.employee_email,
+        input_email: review.employee_email,
       });
       if (uid) userId = uid as string;
     } catch (_) { /* ignore */ }
@@ -86,7 +86,16 @@ serve(async (req) => {
 
     if (payoutMethod === "wallet") {
       if (!userId) {
-        return fail("Could not resolve employee wallet (user_id). Make sure the employee has an auth account.");
+        // Fallback: look up auth user directly by email
+        const { data: authUser } = await supabase
+          .from("employees")
+          .select("auth_user_id")
+          .eq("email", review.employee_email)
+          .maybeSingle();
+        if ((authUser as any)?.auth_user_id) userId = (authUser as any).auth_user_id;
+      }
+      if (!userId) {
+        return fail("Could not resolve employee wallet (user_id). Make sure the employee has an auth account with a matching email.");
       }
       const { error: ledgerErr } = await supabase.from("ledger_entries").insert({
         user_id: userId,
