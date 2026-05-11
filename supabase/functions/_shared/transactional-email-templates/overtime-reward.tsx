@@ -16,6 +16,9 @@ interface OvertimeRewardProps {
   netOvertimeHours?: number
   ratePerHour?: number
   rewardAmount?: number
+  payoutDestination?: string
+  payoutMethod?: string
+  payoutReference?: string
 }
 
 const OvertimeRewardEmail = ({
@@ -29,6 +32,9 @@ const OvertimeRewardEmail = ({
   netOvertimeHours = 0,
   ratePerHour = 3000,
   rewardAmount = 0,
+  payoutDestination = '',
+  payoutMethod = '',
+  payoutReference = '',
 }: OvertimeRewardProps) => (
   <Html lang="en" dir="ltr">
     <Head />
@@ -62,9 +68,21 @@ const OvertimeRewardEmail = ({
 
         <Section style={infoBox}>
           <Text style={infoText}>
-            ℹ️ <strong>How to claim:</strong> This reward has been added to your <strong>Bonuses</strong>. 
-            Log in to the system and go to your <strong>Wallet → Bonuses</strong> section to claim it. 
-            Once claimed, the amount will be credited to your wallet balance.
+            {payoutMethod === 'mobile_money' ? (
+              <>
+                ✅ <strong>Paid via Mobile Money.</strong> UGX {(rewardAmount || 0).toLocaleString()} has been sent to <strong>{payoutDestination || 'your registered number'}</strong>. No further action needed — please check your phone for the mobile money confirmation.
+                {payoutReference ? <><br /><span style={{ fontSize: '12px', color: '#1565c0' }}>Reference: {payoutReference}</span></> : null}
+              </>
+            ) : payoutMethod === 'wallet' ? (
+              <>
+                ✅ <strong>Credited to your wallet.</strong> UGX {(rewardAmount || 0).toLocaleString()} is already available in your in-app wallet balance — no need to claim. You can use or withdraw it anytime.
+                {payoutReference ? <><br /><span style={{ fontSize: '12px', color: '#1565c0' }}>Reference: {payoutReference}</span></> : null}
+              </>
+            ) : (
+              <>
+                ℹ️ Your reward of UGX {(rewardAmount || 0).toLocaleString()} has been processed{payoutDestination ? <> — {payoutDestination}</> : null}.
+              </>
+            )}
           </Text>
         </Section>
 
