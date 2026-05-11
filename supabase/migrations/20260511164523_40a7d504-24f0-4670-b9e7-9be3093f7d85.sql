@@ -1,0 +1,1 @@
+UPDATE public.quality_assessments SET final_price=15500, suggested_price=15500 WHERE batch_number='20260412001';
