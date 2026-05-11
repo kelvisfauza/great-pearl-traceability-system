@@ -326,6 +326,28 @@ const MonthlyOvertimeReview = () => {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
+            <div className="space-y-1">
+              <Label htmlFor="pm-ref" className="text-xs flex items-center justify-between">
+                <span>Reference number</span>
+                <button
+                  type="button"
+                  className="text-[10px] text-primary hover:underline"
+                  onClick={() => payoutTarget && setPayoutReference(generateRef(payoutTarget))}
+                >
+                  Regenerate
+                </button>
+              </Label>
+              <Input
+                id="pm-ref"
+                value={payoutReference}
+                onChange={(e) => setPayoutReference(e.target.value)}
+                placeholder="Auto-filled — editable"
+              />
+              <p className="text-[10px] text-muted-foreground">
+                Used as the transaction reference on wallet ledger / mobile money payout, email & SMS.
+              </p>
+            </div>
+
             <RadioGroup value={payoutMethod} onValueChange={(v) => setPayoutMethod(v as any)}>
               <div className="flex items-start space-x-3 rounded-md border p-3 cursor-pointer hover:bg-muted/50">
                 <RadioGroupItem value="wallet" id="pm-wallet" className="mt-1" />
