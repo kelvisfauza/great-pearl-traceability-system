@@ -24,6 +24,7 @@ import ApprovalProgressTracker from '@/components/expenses/ApprovalProgressTrack
 import MySalaryPayments from '@/components/expenses/MySalaryPayments';
 import ExpenseTemplateDownload from '@/components/expenses/ExpenseTemplateDownload';
 import CompanyHeaderSheetDownload from '@/components/expenses/CompanyHeaderSheetDownload';
+import PerDiemTemplateDownload from '@/components/expenses/PerDiemTemplateDownload';
 
 interface ExpenseRequest {
   id: string;
@@ -599,6 +600,7 @@ const MyExpenses = () => {
           {/* Download Templates Tab */}
           <TabsContent value="templates" className="space-y-6">
             <CompanyHeaderSheetDownload />
+            <PerDiemTemplateDownload />
             <ExpenseTemplateDownload />
           </TabsContent>
 
