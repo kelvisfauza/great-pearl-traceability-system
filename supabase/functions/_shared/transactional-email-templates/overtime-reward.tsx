@@ -52,37 +52,8 @@ const OvertimeRewardEmail = ({
 
         <Text style={text}>
           We appreciate your extra effort and dedication. After reviewing the attendance records for <strong>{month}</strong>, 
-          you have earned an overtime reward. Here is a detailed breakdown of how your reward was calculated:
+          you have earned an overtime reward.
         </Text>
-
-        <Section style={breakdownBox}>
-          <Text style={breakdownTitle}>📊 Your Attendance Breakdown</Text>
-          <Hr style={divider} />
-          
-          <Section style={rowStyle}>
-            <Text style={labelStyle}>Total Overtime Recorded</Text>
-            <Text style={valueStyle}>{(totalOvertimeMinutes || 0).toLocaleString()} minutes ({Math.floor((totalOvertimeMinutes || 0) / 60)}h {(totalOvertimeMinutes || 0) % 60}m)</Text>
-          </Section>
-
-          <Section style={rowStyle}>
-            <Text style={labelStyle}>Total Late Time Recorded</Text>
-            <Text style={valueStyleRed}>- {(totalLateMinutes || 0).toLocaleString()} minutes ({Math.floor((totalLateMinutes || 0) / 60)}h {(totalLateMinutes || 0) % 60}m)</Text>
-          </Section>
-
-          <Hr style={divider} />
-
-          <Section style={rowStyle}>
-            <Text style={labelStyleBold}>Net Overtime (After Deductions)</Text>
-            <Text style={valueStyleGreen}>{(netOvertimeMinutes || 0).toLocaleString()} minutes = {netOvertimeHours} hours</Text>
-          </Section>
-        </Section>
-
-        <Section style={calculationBox}>
-          <Text style={calcTitle}>💰 Reward Calculation</Text>
-          <Hr style={dividerLight} />
-          <Text style={calcRow}>{netOvertimeHours} hours × UGX {(ratePerHour || 0).toLocaleString()}/hr</Text>
-          <Text style={rewardAmountStyle}>= UGX {(rewardAmount || 0).toLocaleString()}</Text>
-        </Section>
 
         <Section style={rewardBadge}>
           <Text style={rewardBadgeLabel}>YOUR OVERTIME REWARD</Text>
