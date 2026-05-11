@@ -138,9 +138,9 @@ export const useOvertimeAwards = () => {
         currentEmployee: employee
       });
 
-      // Calculate total amount (4000 UGX per hour), capped at 100,000 UGX per award
+      // Calculate total amount (1,500 UGX per hour), capped at 100,000 UGX per award
       const totalMinutes = (hours * 60) + minutes;
-      const rawAmount = (totalMinutes / 60) * 4000;
+      const rawAmount = (totalMinutes / 60) * 1500;
       const OVERTIME_CAP = 100000;
       const totalAmount = Math.min(rawAmount, OVERTIME_CAP);
 
