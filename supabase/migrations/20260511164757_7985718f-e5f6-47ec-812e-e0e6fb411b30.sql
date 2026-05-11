@@ -1,0 +1,1 @@
+UPDATE public.finance_coffee_lots SET unit_price_ugx=15500, updated_at=now() WHERE coffee_record_id='CR-1776087129654';
