@@ -338,13 +338,25 @@ const MonthlyOvertimeReview = () => {
 
             {payoutMethod === 'mobile_money' && (
               <div className="space-y-1">
-                <Label htmlFor="pm-phone" className="text-xs">Phone number</Label>
+                <Label htmlFor="pm-phone" className="text-xs flex items-center justify-between">
+                  <span>Phone number</span>
+                  {payoutPhone && (
+                    <span className="text-[10px] text-muted-foreground">
+                      {payoutTarget?.employee_name}'s registered number
+                    </span>
+                  )}
+                </Label>
                 <Input
                   id="pm-phone"
                   value={payoutPhone}
                   onChange={(e) => setPayoutPhone(e.target.value)}
-                  placeholder="e.g. 0772XXXXXX"
+                  placeholder={payoutPhone ? payoutPhone : "e.g. 0772XXXXXX"}
                 />
+                {!payoutPhone && (
+                  <p className="text-[10px] text-amber-600">
+                    No phone on file. Please enter the employee's MTN/Airtel number.
+                  </p>
+                )}
               </div>
             )}
           </div>
