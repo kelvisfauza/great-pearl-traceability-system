@@ -1,0 +1,2 @@
+UPDATE public.coffee_records SET status='inventory', updated_at=now() WHERE id='CR-1776087129654' AND status='assessed';
+UPDATE public.quality_assessments SET status='approved' WHERE batch_number='20260412001' AND status='assessed';
