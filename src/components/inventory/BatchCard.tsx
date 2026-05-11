@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Package, TrendingDown, Users, Calendar, CheckCircle2, AlertCircle, DollarSign } from "lucide-react";
+import { ChevronDown, Package, TrendingDown, Users, Calendar, CheckCircle2, AlertCircle, DollarSign, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { BatchWithDetails, BatchSource } from "@/hooks/useInventoryBatches";
 import { useState, useEffect } from "react";
@@ -23,6 +24,7 @@ const BatchCard = ({ batch }: BatchCardProps) => {
   const [supplierMap, setSupplierMap] = useState<Record<string, SupplierRef>>({});
   const [sourceMetaMap, setSourceMetaMap] = useState<Record<string, { inputBy?: string; deliveryDate?: string }>>({});
   const [priceInfo, setPriceInfo] = useState<{ avgPrice: number; totalCost: number } | null>(null);
+  const [sourcePriceMap, setSourcePriceMap] = useState<Record<string, { unitPrice: number; totalCost: number }>>({});
   
   // Fetch supplier codes and price info for sources
   useEffect(() => {
@@ -127,12 +129,16 @@ const BatchCard = ({ batch }: BatchCardProps) => {
       if (lots && lots.length > 0) {
         let totalCost = 0;
         let totalKg = 0;
+        const perSource: Record<string, { unitPrice: number; totalCost: number }> = {};
         for (const lot of lots) {
           const quantityKg = Number(lot.quantity_kg) || sourceWeights.get(lot.coffee_record_id) || 0;
           const cost = Number(lot.total_amount_ugx) || ((Number(lot.unit_price_ugx) || 0) * quantityKg);
           totalCost += cost;
           totalKg += quantityKg;
+          const unit = quantityKg > 0 ? cost / quantityKg : Number(lot.unit_price_ugx) || 0;
+          perSource[lot.coffee_record_id] = { unitPrice: unit, totalCost: cost };
         }
+        setSourcePriceMap(perSource);
 
         if (totalKg > 0) {
           setPriceInfo({ avgPrice: totalCost / totalKg, totalCost });
@@ -149,6 +155,7 @@ const BatchCard = ({ batch }: BatchCardProps) => {
       if (assessments && assessments.length > 0) {
         let totalCost = 0;
         let totalKg = 0;
+        const perSource: Record<string, { unitPrice: number; totalCost: number }> = {};
 
         for (const assessment of assessments) {
           const quantityKg = sourceWeights.get(assessment.store_record_id) || 0;
@@ -157,8 +164,10 @@ const BatchCard = ({ batch }: BatchCardProps) => {
           if (quantityKg > 0 && unitPrice > 0) {
             totalCost += quantityKg * unitPrice;
             totalKg += quantityKg;
+            perSource[assessment.store_record_id] = { unitPrice, totalCost: quantityKg * unitPrice };
           }
         }
+        setSourcePriceMap(perSource);
 
         if (totalKg > 0) {
           setPriceInfo({ avgPrice: totalCost / totalKg, totalCost });
@@ -171,6 +180,67 @@ const BatchCard = ({ batch }: BatchCardProps) => {
 
     fetchPriceInfo();
   }, [batch.sources, batch.batch_date, batch.coffee_type]);
+
+  const handlePrint = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const sourcesHtml = batch.sources.map((s) => {
+      const display = getSupplierDisplay(s);
+      const meta = sourceMetaMap[s.coffee_record_id] || {};
+      const price = sourcePriceMap[s.coffee_record_id];
+      return `<tr>
+        <td>${display.displayName}</td>
+        <td>${format(new Date(meta.deliveryDate || s.purchase_date), 'PP')}</td>
+        <td>${meta.inputBy || '—'}</td>
+        <td style="text-align:right">${Number(s.kilograms).toLocaleString()} kg</td>
+        <td style="text-align:right">${price ? 'UGX ' + Math.round(price.unitPrice).toLocaleString() : '—'}</td>
+        <td style="text-align:right">${price ? 'UGX ' + Math.round(price.totalCost).toLocaleString() : '—'}</td>
+      </tr>`;
+    }).join('');
+
+    const salesHtml = batch.sales.map((sale) => `
+      <tr>
+        <td>${sale.customer_name || 'Unknown Customer'}</td>
+        <td>${format(new Date(sale.sale_date), 'PP')}</td>
+        <td style="text-align:right">${Number(sale.kilograms_deducted).toLocaleString()} kg</td>
+      </tr>`).join('');
+
+    const html = `<!DOCTYPE html><html><head><title>Batch ${batch.batch_code}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
+        h1 { margin: 0 0 4px; font-size: 20px; }
+        h2 { font-size: 14px; margin: 18px 0 8px; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+        .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 16px; margin-top: 12px; font-size: 12px; }
+        .meta div span { color: #666; display: block; font-size: 11px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th, td { padding: 6px 8px; border-bottom: 1px solid #eee; text-align: left; }
+        th { background: #f5f5f5; font-size: 11px; text-transform: uppercase; }
+        .footer { margin-top: 24px; font-size: 10px; color: #888; text-align: center; }
+      </style></head><body>
+      <h1>Batch Report — ${batch.batch_code}</h1>
+      <p style="font-size:12px;color:#666;margin:0">Great Pearl Coffee Factory</p>
+      <div class="meta">
+        <div><span>Coffee Type</span>${batch.coffee_type}</div>
+        <div><span>Batch Date</span>${format(new Date(batch.batch_date), 'PP')}</div>
+        <div><span>Status</span>${batch.status}</div>
+        <div><span>Total Volume</span>${batch.total_kilograms.toLocaleString()} kg</div>
+        <div><span>Remaining</span>${batch.remaining_kilograms.toLocaleString()} kg</div>
+        <div><span>Sold</span>${soldKg.toLocaleString()} kg</div>
+        <div><span>Avg Paid Price</span>${priceInfo ? 'UGX ' + Math.round(priceInfo.avgPrice).toLocaleString() + '/kg' : '—'}</div>
+        <div><span>Total Cost</span>${priceInfo ? 'UGX ' + Math.round(priceInfo.totalCost).toLocaleString() : '—'}</div>
+      </div>
+      <h2>Source Purchases (${batch.sources.length})</h2>
+      <table><thead><tr><th>Supplier</th><th>Delivered</th><th>Input By</th><th style="text-align:right">Quantity</th><th style="text-align:right">Price/kg</th><th style="text-align:right">Total Paid</th></tr></thead>
+      <tbody>${sourcesHtml || '<tr><td colspan="6" style="text-align:center;color:#888">No sources</td></tr>'}</tbody></table>
+      ${batch.sales.length > 0 ? `<h2>Sales History (${batch.sales.length})</h2>
+      <table><thead><tr><th>Customer</th><th>Date</th><th style="text-align:right">Qty Sold</th></tr></thead>
+      <tbody>${salesHtml}</tbody></table>` : ''}
+      <p class="footer">Printed on ${format(new Date(), 'PPpp')}</p>
+      <script>window.onload=()=>{window.print();setTimeout(()=>window.close(),300)}</script>
+      </body></html>`;
+
+    const w = window.open('', '_blank', 'width=900,height=700');
+    if (w) { w.document.write(html); w.document.close(); }
+  };
   
   const getSupplierDisplay = (source: BatchSource) => {
     const supplier = supplierMap[source.coffee_record_id];
@@ -286,6 +356,15 @@ const BatchCard = ({ batch }: BatchCardProps) => {
                   </div>
                 )}
 
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handlePrint}
+                  title="Print batch report"
+                >
+                  <Printer className="h-4 w-4" />
+                </Button>
+
                 <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
               </div>
             </div>
@@ -371,6 +450,7 @@ const BatchCard = ({ batch }: BatchCardProps) => {
                   {batch.sources.map((source) => {
                     const display = getSupplierDisplay(source);
                     const meta = sourceMetaMap[source.coffee_record_id] || {};
+                    const price = sourcePriceMap[source.coffee_record_id];
                     return (
                       <div 
                         key={source.id} 
@@ -385,9 +465,23 @@ const BatchCard = ({ batch }: BatchCardProps) => {
                             Input by: {meta.inputBy || '—'}
                           </p>
                         </div>
-                        <span className="font-semibold text-green-500">
-                          +{source.kilograms.toLocaleString()} kg
-                        </span>
+                        <div className="text-right">
+                          <p className="font-semibold text-green-500">
+                            +{source.kilograms.toLocaleString()} kg
+                          </p>
+                          {price ? (
+                            <>
+                              <p className="text-xs text-muted-foreground">
+                                @ UGX {Math.round(price.unitPrice).toLocaleString()}/kg
+                              </p>
+                              <p className="text-xs font-medium text-foreground">
+                                Paid: UGX {Math.round(price.totalCost).toLocaleString()}
+                              </p>
+                            </>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">price n/a</p>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
