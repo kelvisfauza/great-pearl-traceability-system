@@ -22,7 +22,20 @@ const MonthlyOvertimeReview = () => {
   const [payoutTarget, setPayoutTarget] = useState<any | null>(null);
   const [payoutMethod, setPayoutMethod] = useState<'wallet' | 'mobile_money'>('wallet');
   const [payoutPhone, setPayoutPhone] = useState('');
+  const [payoutReference, setPayoutReference] = useState('');
   const [payoutSubmitting, setPayoutSubmitting] = useState(false);
+
+  const generateRef = (record: any) => {
+    const mm = String(record.month).padStart(2, '0');
+    const initials = (record.employee_name || 'EMP')
+      .split(' ')
+      .map((p: string) => p[0])
+      .join('')
+      .slice(0, 3)
+      .toUpperCase();
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    return `OT-${record.year}${mm}-${initials}-${rand}`;
+  };
 
   const { data: reviews = [], isLoading } = useQuery({
     queryKey: ['monthly-overtime-reviews'],
@@ -57,6 +70,7 @@ const MonthlyOvertimeReview = () => {
   const openPayoutDialog = async (record: any) => {
     setPayoutTarget(record);
     setPayoutMethod('wallet');
+    setPayoutReference(record.payout_reference || generateRef(record));
     // Prefill phone from employees table
     try {
       const { data: emp } = await supabase
@@ -84,6 +98,7 @@ const MonthlyOvertimeReview = () => {
           payoutMethod,
           phone: payoutMethod === 'mobile_money' ? payoutPhone.trim() : undefined,
           approverEmail: user?.email,
+          customReference: payoutReference.trim() || undefined,
         },
       });
       if (error) throw error;
@@ -311,6 +326,28 @@ const MonthlyOvertimeReview = () => {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
+            <div className="space-y-1">
+              <Label htmlFor="pm-ref" className="text-xs flex items-center justify-between">
+                <span>Reference number</span>
+                <button
+                  type="button"
+                  className="text-[10px] text-primary hover:underline"
+                  onClick={() => payoutTarget && setPayoutReference(generateRef(payoutTarget))}
+                >
+                  Regenerate
+                </button>
+              </Label>
+              <Input
+                id="pm-ref"
+                value={payoutReference}
+                onChange={(e) => setPayoutReference(e.target.value)}
+                placeholder="Auto-filled — editable"
+              />
+              <p className="text-[10px] text-muted-foreground">
+                Used as the transaction reference on wallet ledger / mobile money payout, email & SMS.
+              </p>
+            </div>
+
             <RadioGroup value={payoutMethod} onValueChange={(v) => setPayoutMethod(v as any)}>
               <div className="flex items-start space-x-3 rounded-md border p-3 cursor-pointer hover:bg-muted/50">
                 <RadioGroupItem value="wallet" id="pm-wallet" className="mt-1" />

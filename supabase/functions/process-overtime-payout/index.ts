@@ -36,7 +36,7 @@ serve(async (req) => {
     );
 
     const body = await req.json().catch(() => ({}));
-    const { reviewId, payoutMethod, phone, approverEmail } = body || {};
+    const { reviewId, payoutMethod, phone, approverEmail, customReference } = body || {};
 
     if (!reviewId || !payoutMethod) {
       return fail("Missing reviewId or payoutMethod");
@@ -80,7 +80,9 @@ serve(async (req) => {
     } catch (_) { /* ignore */ }
 
     let payoutDestination = "wallet";
-    let payoutReference = `OT-${review.id.slice(0, 8)}-${Date.now()}`;
+    let payoutReference = (typeof customReference === "string" && customReference.trim())
+      ? customReference.trim()
+      : `OT-${review.id.slice(0, 8)}-${Date.now()}`;
     let payoutStatus: "paid" | "failed" | "pending" = "pending";
     let payoutMessage = "";
 
