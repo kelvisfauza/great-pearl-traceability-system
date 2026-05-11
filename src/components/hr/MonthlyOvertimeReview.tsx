@@ -22,7 +22,20 @@ const MonthlyOvertimeReview = () => {
   const [payoutTarget, setPayoutTarget] = useState<any | null>(null);
   const [payoutMethod, setPayoutMethod] = useState<'wallet' | 'mobile_money'>('wallet');
   const [payoutPhone, setPayoutPhone] = useState('');
+  const [payoutReference, setPayoutReference] = useState('');
   const [payoutSubmitting, setPayoutSubmitting] = useState(false);
+
+  const generateRef = (record: any) => {
+    const mm = String(record.month).padStart(2, '0');
+    const initials = (record.employee_name || 'EMP')
+      .split(' ')
+      .map((p: string) => p[0])
+      .join('')
+      .slice(0, 3)
+      .toUpperCase();
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    return `OT-${record.year}${mm}-${initials}-${rand}`;
+  };
 
   const { data: reviews = [], isLoading } = useQuery({
     queryKey: ['monthly-overtime-reviews'],
@@ -57,6 +70,7 @@ const MonthlyOvertimeReview = () => {
   const openPayoutDialog = async (record: any) => {
     setPayoutTarget(record);
     setPayoutMethod('wallet');
+    setPayoutReference(record.payout_reference || generateRef(record));
     // Prefill phone from employees table
     try {
       const { data: emp } = await supabase
@@ -84,6 +98,7 @@ const MonthlyOvertimeReview = () => {
           payoutMethod,
           phone: payoutMethod === 'mobile_money' ? payoutPhone.trim() : undefined,
           approverEmail: user?.email,
+          customReference: payoutReference.trim() || undefined,
         },
       });
       if (error) throw error;
