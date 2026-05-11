@@ -1,0 +1,1 @@
+UPDATE public.employees SET email = 'masikarecheal@greatpearlcoffee.com', phone = '0775366265' WHERE id = '143e74f9-a5d6-49ad-9e75-7771009453a1';
