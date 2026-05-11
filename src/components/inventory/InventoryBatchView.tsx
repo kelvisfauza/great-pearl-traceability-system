@@ -192,9 +192,13 @@ const InventoryBatchView = () => {
             <Package className="h-4 w-4" />
             Active ({activeBatches.length})
           </TabsTrigger>
-          <TabsTrigger value="history" className="gap-2">
+          <TabsTrigger value="soldout" className="gap-2">
             <Archive className="h-4 w-4" />
-            History ({soldOutBatches.length})
+            Sold Out ({soldOutBatches.length})
+          </TabsTrigger>
+          <TabsTrigger value="assessments" className="gap-2">
+            <ClipboardCheck className="h-4 w-4" />
+            Assessments
           </TabsTrigger>
         </TabsList>
 
@@ -216,7 +220,7 @@ const InventoryBatchView = () => {
           )}
         </TabsContent>
 
-        <TabsContent value="history" className="space-y-4">
+        <TabsContent value="soldout" className="space-y-4">
           {filterBatches(soldOutBatches).length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
@@ -232,6 +236,10 @@ const InventoryBatchView = () => {
               <BatchCard key={batch.id} batch={batch} />
             ))
           )}
+        </TabsContent>
+
+        <TabsContent value="assessments">
+          <AssessmentHistoryTab />
         </TabsContent>
       </Tabs>
     </div>
