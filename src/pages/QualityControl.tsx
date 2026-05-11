@@ -1839,6 +1839,10 @@ const QualityControl = () => {
             <QualityAssessmentReports assessments={qualityAssessments} />
           </TabsContent>
 
+          <TabsContent value="history">
+            <AssessmentHistoryTab />
+          </TabsContent>
+
         </Tabs>
         
         {/* GRN Print Modal */}
