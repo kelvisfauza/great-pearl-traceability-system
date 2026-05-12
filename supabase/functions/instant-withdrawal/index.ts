@@ -289,8 +289,25 @@ serve(async (req) => {
         .update({ payout_status: 'failed', completed_at: new Date().toISOString() })
         .eq('id', instantRecord.id);
 
+      const rawMsg = statusMsgMatch?.[1]?.trim() || "";
+      const lower = rawMsg.toLowerCase();
+      const isUnfunded =
+        lower.includes("insufficient") ||
+        lower.includes("not enough") ||
+        lower.includes("balance") ||
+        lower.includes("no funds") ||
+        lower.includes("unfunded") ||
+        lower.includes("float") ||
+        lower.includes("low funds") ||
+        statusCode === "1217" ||
+        statusCode === "10403";
+
+      if (isUnfunded) {
+        return respond(false, { error: "Account not funded. Please try again later or contact support." });
+      }
+
       return respond(false, {
-        error: "Payout failed: " + (statusMsgMatch?.[1]?.trim() || "Yo Payments rejected the transaction"),
+        error: "Payout failed: " + (rawMsg || "Yo Payments rejected the transaction"),
       });
     }
 
