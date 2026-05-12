@@ -110,7 +110,7 @@ const generateDocx = async (employee: any) => {
     columnWidths: [1400, 7960],
     borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
     rows: [
-      refCell('Our Ref:', `GAC/OPS/${String(now.getFullYear()).slice(-2)}/_____`),
+      refCell('Our Ref:', refNo),
       refCell('Your Ref:', '________________________'),
       refCell('Date:', today),
     ],
