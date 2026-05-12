@@ -20,6 +20,16 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from '@/components/ui/input-otp';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface InstantEligibility {
   eligible: boolean;
@@ -68,6 +78,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   // Instant withdrawal state
   const [instantEligibility, setInstantEligibility] = useState<InstantEligibility | null>(null);
   const [instantLoading, setInstantLoading] = useState(false);
+  const [showInstantConfirm, setShowInstantConfirm] = useState(false);
   const [eligibilityLoading, setEligibilityLoading] = useState(false);
   const [eligibilityResolved, setEligibilityResolved] = useState(false);
   const [useInstant, setUseInstant] = useState(false);
@@ -522,6 +533,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const isAmountValid = amount && parsedAmount <= availableAmount && parsedAmount >= 2000 && isCashRoundAmount && !withdrawalStatus.disabled && !isWalletFrozen && isDisbursementValid;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
@@ -673,7 +685,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                   {instantEligibility?.eligible && (
                     <Button
                       type="button"
-                      onClick={handleInstantWithdraw}
+                      onClick={() => setShowInstantConfirm(true)}
                       disabled={instantLoading || withdrawalStatus.disabled || isWalletFrozen || !amount || parsedAmount < 2000 || parsedAmount > instantMaxAmount || (needsInstantPhoneInput && !isValidMobileNumber)}
                       className="bg-green-600 hover:bg-green-700 text-white"
                     >
@@ -798,5 +810,62 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
         </div>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={showInstantConfirm} onOpenChange={setShowInstantConfirm}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
+            <Zap className="h-5 w-5 text-green-600" /> Confirm Instant Withdrawal
+          </AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div className="space-y-3 pt-2">
+              <p>Please review the details below before proceeding. This action cannot be undone.</p>
+              <div className="rounded-lg border bg-muted/40 p-3 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Amount</span>
+                  <span className="font-bold text-foreground">UGX {parsedAmount.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Sending to</span>
+                  <span className="font-medium text-foreground">{instantPhoneDisplay || '—'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Method</span>
+                  <span className="font-medium text-foreground">Mobile Money (Instant)</span>
+                </div>
+              </div>
+              {parsedAmount > 100000 ? (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+                  ⚠️ Amounts above UGX 100,000 require admin + finance approval before payout.
+                </p>
+              ) : (
+                <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded p-2">
+                  ✅ This will be sent immediately to the mobile money number above.
+                </p>
+              )}
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={instantLoading}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={instantLoading}
+            onClick={(e) => {
+              e.preventDefault();
+              setShowInstantConfirm(false);
+              handleInstantWithdraw();
+            }}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            {instantLoading ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...</>
+            ) : (
+              <>Yes, Send Now</>
+            )}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 };
