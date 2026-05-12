@@ -104,7 +104,7 @@ project_id = "pudfybkyfedeggmokhco"
   [functions.gosentepay-callback]
     verify_jwt = false
   [functions.gosentepay-deposit]
-    verify_jwt = true
+    verify_jwt = false
   [functions.gosentepay-payout]
     verify_jwt = true
   [functions.gosentepay-withdraw-collection]
