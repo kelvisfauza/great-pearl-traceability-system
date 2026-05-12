@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Wallet, Plus, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { sendPaymentReceipt } from "@/utils/sendPaymentReceipt";
 
 const AwardPerDiemDialog = () => {
   const [open, setOpen] = useState(false);
@@ -111,6 +112,28 @@ const AwardPerDiemDialog = () => {
         } catch (smsErr) {
           console.error("Per diem SMS failed:", smsErr);
         }
+      }
+
+      // 4. Send official payment receipt (PDF) via email + SMS link
+      try {
+        await sendPaymentReceipt({
+          paymentType: 'general',
+          paidTo: { name: emp.name, phone: emp.phone || '', email: emp.email || undefined },
+          description: `Per Diem Award — ${reason}`,
+          invoiceNumber: reference,
+          amount: parseFloat(amount),
+          charges: 0,
+          total: parseFloat(amount),
+          paymentMethod: 'Wallet Credit',
+          transactionId: reference,
+          paidOn: new Date().toISOString(),
+          processedBy: employee?.name || 'HR',
+          notes: 'Per diem credited to employee wallet.',
+          recipientEmail: emp.email || undefined,
+          recipientPhone: emp.phone || undefined,
+        });
+      } catch (receiptErr) {
+        console.error('Per diem receipt failed:', receiptErr);
       }
 
       return { emp, reference };
