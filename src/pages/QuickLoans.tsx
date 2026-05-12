@@ -162,12 +162,14 @@ const QuickLoans = () => {
         setWalletBalances(balances);
       }
 
-      // Set current user's wallet balance using the same RPC as the dashboard
+      // Set current user's wallet balance using the same RPC as the Wallet page.
+      // We use available_balance (gross minus pending withdrawals) so the figure
+      // shown here matches what the Wallet page displays as spendable.
       if (employee.email) {
         const { data: balanceData } = await supabase.rpc('get_user_balance_safe', { user_email: employee.email });
         const userData = balanceData?.[0];
         if (userData) {
-          setMyWalletBalance(Number(userData.wallet_balance) || 0);
+          setMyWalletBalance(Number(userData.available_balance) || 0);
         }
       }
     } catch (err) {
