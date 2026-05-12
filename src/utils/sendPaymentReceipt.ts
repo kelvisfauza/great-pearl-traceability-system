@@ -75,35 +75,25 @@ export const sendPaymentReceipt = async (input: SendReceiptInput): Promise<SendR
   const tasks: Promise<unknown>[] = [];
 
   if (email) {
-    const message = [
-        `This serves as your official Payment Receipt from Great Pearl Coffee Company — Finance Department.`,
-        ``,
-        `Receipt No: ${reference}`,
-        `Description: ${input.description}`,
-        ...(input.invoiceNumber ? [`Invoice Reference: ${input.invoiceNumber}`] : []),
-        `Amount: ${formatUGX(input.amount)}`,
-        ...(input.charges > 0 ? [`Charges: ${formatUGX(input.charges)}`] : []),
-        `Total Paid: ${formatUGX(input.total)}`,
-        `Payment Method: ${input.paymentMethod}`,
-        ...(input.transactionId ? [`Transaction ID: ${input.transactionId}`] : []),
-        `Processed By: ${input.processedBy}`,
-        ``,
-        `Download the signed PDF receipt: ${pdfUrl}`,
-        ``,
-        `The PDF is digitally signed by Mukobi Godwin, Finance Manager. Please retain it for your records.`,
-      ].join('\n');
     tasks.push(
       supabase.functions
         .invoke('send-transactional-email', {
           body: {
-            templateName: 'general-notification',
+            templateName: 'payment-receipt',
             recipientEmail: email,
             idempotencyKey: `receipt-${reference}`,
             templateData: {
-              subject: `Payment Receipt ${reference} — ${formatUGX(input.total)}`,
-              title: `Payment Receipt — ${reference}`,
               recipientName: input.paidTo.name,
-              message,
+              reference,
+              description: input.description,
+              invoiceNumber: input.invoiceNumber,
+              amount: formatUGX(input.amount),
+              charges: input.charges > 0 ? formatUGX(input.charges) : undefined,
+              total: formatUGX(input.total),
+              paymentMethod: input.paymentMethod,
+              transactionId: input.transactionId,
+              processedBy: input.processedBy,
+              pdfUrl,
             },
           },
         })
