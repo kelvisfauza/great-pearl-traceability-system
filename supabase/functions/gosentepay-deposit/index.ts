@@ -33,7 +33,7 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization") || req.headers.get("authorization");
+    const authHeader = req.headers.get("Authorization") || req.headers.get("authorization") || req.headers.get("x-supabase-authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
@@ -51,8 +51,14 @@ serve(async (req) => {
 
     const authClient = createClient(
       supabaseUrl,
-      supabaseAnonKey,
-      { global: { headers: { Authorization: authHeader } } }
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? supabaseAnonKey,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+        global: { headers: { Authorization: authHeader } },
+      }
     );
 
     const { data: userData, error: userErr } = await authClient.auth.getUser(token);
