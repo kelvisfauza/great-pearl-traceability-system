@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import {
   Document, Packer, Paragraph, TextRun, ImageRun, AlignmentType, Table, TableRow, TableCell,
-  WidthType, BorderStyle, ShadingType, PageOrientation,
+  WidthType, BorderStyle, ShadingType, PageOrientation, Footer,
 } from 'docx';
 
 const LOGO_URL = '/lovable-uploads/great-agro-coffee-logo.png';
@@ -25,19 +25,34 @@ const fetchLogoBytes = async (): Promise<Uint8Array | null> => {
 const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
 const noBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
 
+const thinBlack = { style: BorderStyle.SINGLE, size: 6, color: '000000' };
+
 const generateDocx = async (employee: any) => {
   const logoBytes = await fetchLogoBytes();
   const now = new Date();
   const refNo = `DOC-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+  const today = `${now.getDate()}${['th','st','nd','rd'][((now.getDate()%100)>10&&(now.getDate()%100)<14)?0:[0,1,2,3][now.getDate()%10]||0]} ${now.toLocaleString('en-US',{month:'long'})} ${now.getFullYear()}`;
 
-  // Header: logo + company info side by side
+  // TOP HEADER: company name (right) + logo (far right), with bottom border
   const headerRow = new TableRow({
     children: [
       new TableCell({
-        width: { size: 1800, type: WidthType.DXA },
-        borders: noBorders,
+        width: { size: 8460, type: WidthType.DXA },
+        borders: { ...noBorders, bottom: thinBlack },
         verticalAlign: 'center' as any,
-        margins: { top: 120, bottom: 120, left: 120, right: 120 },
+        margins: { top: 120, bottom: 200, left: 0, right: 200 },
+        children: [
+          new Paragraph({
+            alignment: AlignmentType.RIGHT,
+            children: [new TextRun({ text: 'GREAT AGRO COFFEE LTD', bold: true, size: 32, font: 'Arial' })],
+          }),
+        ],
+      }),
+      new TableCell({
+        width: { size: 900, type: WidthType.DXA },
+        borders: { ...noBorders, bottom: thinBlack, left: { style: BorderStyle.SINGLE, size: 6, color: '000000' } },
+        verticalAlign: 'center' as any,
+        margins: { top: 80, bottom: 80, left: 120, right: 80 },
         children: [
           new Paragraph({
             alignment: AlignmentType.CENTER,
@@ -45,23 +60,11 @@ const generateDocx = async (employee: any) => {
               ? [new ImageRun({
                   type: 'png',
                   data: logoBytes,
-                  transformation: { width: 70, height: 70 },
-                  altText: { title: 'Logo', description: 'Great Agro Coffee Logo', name: 'logo' },
+                  transformation: { width: 60, height: 60 },
+                  altText: { title: 'Logo', description: 'GAC Logo', name: 'logo' },
                 })]
-              : [new TextRun({ text: 'GAC', bold: true, size: 32 })],
+              : [new TextRun({ text: 'GAC', bold: true, size: 28 })],
           }),
-        ],
-      }),
-      new TableCell({
-        width: { size: 7560, type: WidthType.DXA },
-        borders: noBorders,
-        verticalAlign: 'center' as any,
-        margins: { top: 120, bottom: 120, left: 200, right: 120 },
-        children: [
-          new Paragraph({ children: [new TextRun({ text: 'GREAT AGRO COFFEE LTD', bold: true, size: 36 })] }),
-          new Paragraph({ children: [new TextRun({ text: 'Kasese, Uganda', size: 20 })] }),
-          new Paragraph({ children: [new TextRun({ text: 'Tel: +256 393 001 626  |  info@greatpearlcoffee.com', size: 18 })] }),
-          new Paragraph({ children: [new TextRun({ text: 'www.greatagrocoffee.com  |  UCDA Licensed', size: 18 })] }),
         ],
       }),
     ],
@@ -69,12 +72,82 @@ const generateDocx = async (employee: any) => {
 
   const headerTable = new Table({
     width: { size: 9360, type: WidthType.DXA },
-    columnWidths: [1800, 7560],
+    columnWidths: [8460, 900],
     borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
     rows: [headerRow],
   });
 
   const spacer = (size = 100) => new Paragraph({ spacing: { before: 0, after: size }, children: [new TextRun({ text: '' })] });
+
+  // Contact block (left aligned, under header)
+  const contactLines = [
+    'Kasese, Uganda',
+    '0393001626',
+    'operations@greatpearlcoffee.com',
+    'www.greatpearlcoffee.com',
+  ].map(t => new Paragraph({ children: [new TextRun({ text: t, size: 20 })], spacing: { after: 40 } }));
+
+  // Ref / Date block as a borderless 2-col table
+  const refCell = (label: string, value: string) => new TableRow({
+    children: [
+      new TableCell({
+        width: { size: 1400, type: WidthType.DXA },
+        borders: noBorders,
+        margins: { top: 40, bottom: 40, left: 0, right: 80 },
+        children: [new Paragraph({ children: [new TextRun({ text: label, bold: true, size: 20 })] })],
+      }),
+      new TableCell({
+        width: { size: 7960, type: WidthType.DXA },
+        borders: noBorders,
+        margins: { top: 40, bottom: 40, left: 0, right: 0 },
+        children: [new Paragraph({ children: [new TextRun({ text: value, size: 20 })] })],
+      }),
+    ],
+  });
+
+  const refTable = new Table({
+    width: { size: 9360, type: WidthType.DXA },
+    columnWidths: [1400, 7960],
+    borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
+    rows: [
+      refCell('Our Ref:', `GAC/OPS/${String(now.getFullYear()).slice(-2)}/_____`),
+      refCell('Your Ref:', '________________________'),
+      refCell('Date:', today),
+    ],
+  });
+
+  // FOOTER: thin top border + 4 columns
+  const footCell = (heading: string, value: string, align: any = AlignmentType.LEFT) => new TableCell({
+    width: { size: 2340, type: WidthType.DXA },
+    borders: { ...noBorders, top: thinBlack },
+    margins: { top: 120, bottom: 60, left: 80, right: 80 },
+    children: [
+      new Paragraph({ alignment: align, children: [new TextRun({ text: heading, bold: true, size: 18 })] }),
+      new Paragraph({ alignment: align, children: [new TextRun({ text: value, size: 18 })] }),
+    ],
+  });
+
+  const footerTable = new Table({
+    width: { size: 9360, type: WidthType.DXA },
+    columnWidths: [2340, 2340, 2340, 2340],
+    borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
+    rows: [new TableRow({
+      children: [
+        new TableCell({
+          width: { size: 2340, type: WidthType.DXA },
+          borders: { ...noBorders, top: thinBlack },
+          margins: { top: 120, bottom: 60, left: 0, right: 80 },
+          children: [
+            new Paragraph({ children: [new TextRun({ text: 'Great Agro Coffee Ltd', bold: true, size: 18 })] }),
+            new Paragraph({ children: [new TextRun({ text: 'Kasese, Uganda', size: 18 })] }),
+          ],
+        }),
+        footCell('Telephone', '0393001626'),
+        footCell('Email', 'operations@greatpearlcoffee.com'),
+        footCell('Website', 'www.greatpearlcoffee.com'),
+      ],
+    })],
+  });
 
   const doc = new Document({
     styles: {
@@ -87,11 +160,18 @@ const generateDocx = async (employee: any) => {
           margin: { top: 720, right: 720, bottom: 720, left: 720 },
         },
       },
+      footers: {
+        default: new Footer({ children: [footerTable] }),
+      },
       children: [
         headerTable,
+        spacer(200),
+        ...contactLines,
+        spacer(200),
+        refTable,
         spacer(300),
         // Blank body — users type whatever they want
-        ...Array.from({ length: 28 }, () => new Paragraph({ children: [new TextRun({ text: '' })] })),
+        ...Array.from({ length: 24 }, () => new Paragraph({ children: [new TextRun({ text: '' })] })),
       ],
     }],
   });
