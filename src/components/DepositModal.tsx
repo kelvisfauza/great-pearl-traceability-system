@@ -58,23 +58,18 @@ export const DepositModal: React.FC<DepositModalProps> = ({ open, onOpenChange }
 
     setLoading(true);
     try {
-      // Ensure we have a fresh session before invoking the edge function.
-      // Without this, an expired JWT causes the platform to reject the call
-      // with a 401 before our edge function code ever runs.
       const { data: sessionData } = await supabase.auth.getSession();
-      let accessToken = sessionData?.session?.access_token;
-      if (!accessToken) {
+      if (!sessionData?.session) {
         const { data: refreshed } = await supabase.auth.refreshSession();
-        accessToken = refreshed?.session?.access_token;
-      }
-      if (!accessToken) {
-        toast({
-          title: "Session expired",
-          description: "Please sign in again to make a deposit.",
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
+        if (!refreshed?.session) {
+          toast({
+            title: "Session expired",
+            description: "Please sign in again to make a deposit.",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
       }
 
       const ref = `DEP-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -102,9 +97,6 @@ export const DepositModal: React.FC<DepositModalProps> = ({ open, onOpenChange }
           amount: depositAmount,
           email: user.email || employee?.email || '',
           ref,
-        },
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
         },
       });
 

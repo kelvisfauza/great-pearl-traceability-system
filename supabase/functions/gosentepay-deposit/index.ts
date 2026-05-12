@@ -4,7 +4,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "authorization, x-supabase-authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 const YO_API_URL = "https://paymentsapi1.yo.co.ug/ybs/task.php";
@@ -32,20 +33,37 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
+    const authHeader = req.headers.get("Authorization") || req.headers.get("authorization") || req.headers.get("x-supabase-authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    const token = authHeader.replace("Bearer ", "").trim();
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error("Supabase auth environment is not configured");
+    }
+
     const authClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: authHeader } } }
+      supabaseUrl,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? supabaseAnonKey,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+        global: { headers: { Authorization: authHeader } },
+      }
     );
-    const { data: userData, error: userErr } = await authClient.auth.getUser();
+
+    const { data: userData, error: userErr } = await authClient.auth.getUser(token);
     if (userErr || !userData?.user) {
+      console.error("[Yo Payments Deposit] Auth failed:", userErr?.message ?? "No user returned");
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -85,7 +103,6 @@ serve(async (req) => {
     }
 
     // Build callback URL for Yo Payments notification
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const callbackUrl = `${supabaseUrl}/functions/v1/gosentepay-callback`;
 
     // Build XML request for Yo Payments acdepositfunds (collect/receive money from user's mobile money)
