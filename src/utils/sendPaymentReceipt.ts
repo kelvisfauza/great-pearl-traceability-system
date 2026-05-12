@@ -98,7 +98,13 @@ export const sendPaymentReceipt = async (input: SendReceiptInput): Promise<SendR
       const totalStr = `UGX ${Number(input.total || 0).toLocaleString('en-UG')}`;
       const sms = `GREAT PEARL COFFEE — Payment Receipt ${reference}: ${totalStr} for "${input.description.substring(0, 40)}". Download: ${shorten(pdfUrl)}`;
       const { error: smsErr } = await supabase.functions.invoke('send-sms', {
-        body: { phone, message: sms.substring(0, 320) },
+        body: {
+          phone,
+          message: sms.substring(0, 320),
+          messageType: 'payout_confirmation',
+          userName: input.paidTo.name,
+          recipientEmail: input.recipientEmail || input.paidTo.email,
+        },
       });
       if (smsErr) errors.push(`SMS error: ${smsErr.message}`);
       else smsSent = true;
