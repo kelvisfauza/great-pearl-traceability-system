@@ -69,10 +69,13 @@ export const sendPaymentReceipt = async (input: SendReceiptInput): Promise<SendR
     }
   }
 
+  const formatUGX = (n: number) => `UGX ${Number(n || 0).toLocaleString('en-UG')}`;
+
+  // 3 + 4) Run email and SMS in PARALLEL so the UI doesn't wait twice
+  const tasks: Promise<void>[] = [];
+
   if (email) {
-    try {
-      const formatUGX = (n: number) => `UGX ${Number(n || 0).toLocaleString('en-UG')}`;
-      const message = [
+    const message = [
         `This serves as your official Payment Receipt from Great Pearl Coffee Company — Finance Department.`,
         ``,
         `Receipt No: ${reference}`,
@@ -89,48 +92,53 @@ export const sendPaymentReceipt = async (input: SendReceiptInput): Promise<SendR
         ``,
         `The PDF is digitally signed by Mukobi Godwin, Finance Manager. Please retain it for your records.`,
       ].join('\n');
-
-      const { error: emailErr } = await supabase.functions.invoke('send-transactional-email', {
-        body: {
-          templateName: 'general-notification',
-          recipientEmail: email,
-          idempotencyKey: `receipt-${reference}`,
-          templateData: {
-            subject: `Payment Receipt ${reference} — ${formatUGX(input.total)}`,
-            title: `Payment Receipt — ${reference}`,
-            recipientName: input.paidTo.name,
-            message,
+    tasks.push(
+      supabase.functions
+        .invoke('send-transactional-email', {
+          body: {
+            templateName: 'general-notification',
+            recipientEmail: email,
+            idempotencyKey: `receipt-${reference}`,
+            templateData: {
+              subject: `Payment Receipt ${reference} — ${formatUGX(input.total)}`,
+              title: `Payment Receipt — ${reference}`,
+              recipientName: input.paidTo.name,
+              message,
+            },
           },
-        },
-      });
-      if (emailErr) errors.push(`Email error: ${emailErr.message}`);
-      else emailSent = true;
-    } catch (e: any) {
-      errors.push(`Email error: ${e.message}`);
-    }
+        })
+        .then(({ error: emailErr }) => {
+          if (emailErr) errors.push(`Email error: ${emailErr.message}`);
+          else emailSent = true;
+        })
+        .catch((e: any) => errors.push(`Email error: ${e.message}`)),
+    );
   }
 
-  // 4) Send SMS (if phone provided)
   const phone = input.recipientPhone || input.paidTo.phone;
   if (phone) {
-    try {
-      const totalStr = `UGX ${Number(input.total || 0).toLocaleString('en-UG')}`;
-      const sms = `GREAT PEARL COFFEE — Payment Receipt ${reference}: ${totalStr} for "${input.description.substring(0, 40)}". Download: ${shorten(pdfUrl)}`;
-      const { error: smsErr } = await supabase.functions.invoke('send-sms', {
-        body: {
-          phone,
-          message: sms.substring(0, 320),
-          messageType: 'payout_confirmation',
-          userName: input.paidTo.name,
-          recipientEmail: input.recipientEmail || input.paidTo.email,
-        },
-      });
-      if (smsErr) errors.push(`SMS error: ${smsErr.message}`);
-      else smsSent = true;
-    } catch (e: any) {
-      errors.push(`SMS error: ${e.message}`);
-    }
+    const totalStr = formatUGX(input.total);
+    const sms = `GREAT PEARL COFFEE — Payment Receipt ${reference}: ${totalStr} for "${input.description.substring(0, 40)}". Download: ${shorten(pdfUrl)}`;
+    tasks.push(
+      supabase.functions
+        .invoke('send-sms', {
+          body: {
+            phone,
+            message: sms.substring(0, 320),
+            messageType: 'payout_confirmation',
+            userName: input.paidTo.name,
+            recipientEmail: email,
+          },
+        })
+        .then(({ error: smsErr }) => {
+          if (smsErr) errors.push(`SMS error: ${smsErr.message}`);
+          else smsSent = true;
+        })
+        .catch((e: any) => errors.push(`SMS error: ${e.message}`)),
+    );
   }
+
+  await Promise.all(tasks);
 
   return {
     ok: emailSent || smsSent,
