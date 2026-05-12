@@ -72,7 +72,7 @@ export const sendPaymentReceipt = async (input: SendReceiptInput): Promise<SendR
   const formatUGX = (n: number) => `UGX ${Number(n || 0).toLocaleString('en-UG')}`;
 
   // 3 + 4) Run email and SMS in PARALLEL so the UI doesn't wait twice
-  const tasks: Promise<void>[] = [];
+  const tasks: Promise<unknown>[] = [];
 
   if (email) {
     const message = [
