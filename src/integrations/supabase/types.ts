@@ -2405,6 +2405,45 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_template_refs: {
+        Row: {
+          approval_type: string
+          created_at: string
+          employee_email: string | null
+          employee_name: string | null
+          ref: string
+          request_id: string | null
+          template_type: string
+          used: boolean
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          approval_type: string
+          created_at?: string
+          employee_email?: string | null
+          employee_name?: string | null
+          ref: string
+          request_id?: string | null
+          template_type: string
+          used?: boolean
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          approval_type?: string
+          created_at?: string
+          employee_email?: string | null
+          employee_name?: string | null
+          ref?: string
+          request_id?: string | null
+          template_type?: string
+          used?: boolean
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: []
+      }
       facilitation_requests: {
         Row: {
           amount_requested: number

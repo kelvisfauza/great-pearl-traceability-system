@@ -248,45 +248,39 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
     cursorY += noteLines.length * 12 + 6;
   }
 
-  // ---- Authorisation block (signature) ----
-  const sigBoxY = pageH - 200;
-  doc.setDrawColor(220, 220, 220);
-  doc.setLineWidth(0.5);
-  doc.line(margin, sigBoxY - 10, pageW - margin, sigBoxY - 10);
+  // ---- Authorisation block (compact signature) ----
+  const sigBoxY = pageH - 130;
+  doc.setDrawColor(230, 230, 230);
+  doc.setLineWidth(0.4);
+  doc.line(margin, sigBoxY - 8, pageW - margin, sigBoxY - 8);
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.setTextColor(28, 80, 50);
-  doc.text('AUTHORISED & DIGITALLY SIGNED', margin, sigBoxY + 6);
-
-  // Signature image
+  // Signature image (smaller, tucked above the name line)
   try {
     const sig = await loadImageAsDataUrl(signatureUrl);
-    doc.addImage(sig, 'PNG', margin, sigBoxY + 14, 130, 60);
+    doc.addImage(sig, 'PNG', margin, sigBoxY - 4, 70, 30);
   } catch {/* signature optional */}
 
   // Underline & name
-  doc.setDrawColor(40, 40, 40);
-  doc.line(margin, sigBoxY + 80, margin + 200, sigBoxY + 80);
+  doc.setDrawColor(80, 80, 80);
+  doc.line(margin, sigBoxY + 30, margin + 150, sigBoxY + 30);
   doc.setTextColor(20, 20, 20);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.text(FINANCE_MANAGER.name, margin, sigBoxY + 94);
+  doc.setFontSize(10);
+  doc.text(FINANCE_MANAGER.name, margin, sigBoxY + 40);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9.5);
-  doc.setTextColor(90, 90, 90);
-  doc.text(`${FINANCE_MANAGER.title} • Great Pearl Coffee Company`, margin, sigBoxY + 107);
-  doc.text(`Signed digitally on ${formatDate(new Date().toISOString())}`, margin, sigBoxY + 119);
-
-  // Validation note (right side)
-  doc.setFont('helvetica', 'italic');
   doc.setFontSize(8.5);
-  doc.setTextColor(120, 120, 120);
+  doc.setTextColor(110, 110, 110);
+  doc.text(`${FINANCE_MANAGER.title} • Signed ${formatDate(new Date().toISOString())}`, margin, sigBoxY + 50);
+
+  // Validation note (right side, smaller)
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(8);
+  doc.setTextColor(140, 140, 140);
   const validLines = doc.splitTextToSize(
-    `This is a system-generated receipt. Verify authenticity by quoting reference ${data.reference} to ${COMPANY.email}.`,
+    `Verify authenticity by quoting ref ${data.reference} to ${COMPANY.email}.`,
     220,
   );
-  doc.text(validLines, pageW - margin - 220, sigBoxY + 94);
+  doc.text(validLines, pageW - margin - 220, sigBoxY + 40);
 
   // ---- Footer ----
   doc.setDrawColor(28, 80, 50);

@@ -144,8 +144,21 @@ const generatePDF = async (
   department: string,
   position: string,
   prefill: PrefillData = {},
+  employeeEmail?: string,
 ) => {
   const refNo = generateRefNumber(template.prefix);
+  // Persist the ref so Finance can validate the printed paper later
+  try {
+    await supabase.from('expense_template_refs' as any).insert({
+      ref: refNo,
+      template_type: template.type,
+      approval_type: template.approvalType,
+      employee_email: employeeEmail || null,
+      employee_name: employeeName,
+    });
+  } catch (e) {
+    console.warn('Could not log expense template ref:', e);
+  }
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-UG', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -496,6 +509,7 @@ const ExpenseTemplateDownload = () => {
         employee.department || 'N/A',
         employee.position || 'N/A',
         prefill,
+        employee.email,
       );
     } catch (err) {
       console.error('PDF generation error:', err);
