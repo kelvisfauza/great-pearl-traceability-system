@@ -532,7 +532,9 @@ const BorrowerDetailDialog = ({ selectedBorrower, onClose, today, getStatusBadge
               totalInterest: Number(selectedBorrower.total_interest || (Number(selectedBorrower.total_repayable || 0) - Number(selectedBorrower.loan_amount || 0))),
               loanType: selectedBorrower.loan_type,
               repaymentFrequency: selectedBorrower.repayment_frequency,
+              startDate: selectedBorrower.start_date,
             }}
+            repayments={selectedBorrower.repayments || []}
           />
         )}
         {selectedBorrower && (
