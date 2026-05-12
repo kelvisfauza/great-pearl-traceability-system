@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import {
   Document, Packer, Paragraph, TextRun, ImageRun, AlignmentType, Table, TableRow, TableCell,
-  WidthType, BorderStyle, ShadingType, PageOrientation,
+  WidthType, BorderStyle, ShadingType, PageOrientation, Footer,
 } from 'docx';
 
 const LOGO_URL = '/lovable-uploads/great-agro-coffee-logo.png';
@@ -161,7 +161,7 @@ const generateDocx = async (employee: any) => {
         },
       },
       footers: {
-        default: new (require('docx').Footer)({ children: [footerTable] }),
+        default: new Footer({ children: [footerTable] }),
       },
       children: [
         headerTable,
