@@ -71,6 +71,23 @@ export const sendPaymentReceipt = async (input: SendReceiptInput): Promise<SendR
 
   const formatUGX = (n: number) => `UGX ${Number(n || 0).toLocaleString('en-UG')}`;
 
+  // Resolve Finance Manager (Mukobi Godwin) email so he always gets a copy
+  let financeManagerEmail: string | undefined;
+  try {
+    const { data: fm } = await supabase
+      .from('employees')
+      .select('email')
+      .or('name.ilike.%mukobi godwin%,name.ilike.%godwin mukobi%')
+      .not('email', 'is', null)
+      .limit(1)
+      .maybeSingle();
+    financeManagerEmail = fm?.email || undefined;
+  } catch (e) {
+    console.warn('Finance manager lookup failed:', e);
+  }
+  // Fallback to a known mailbox if lookup misses
+  if (!financeManagerEmail) financeManagerEmail = 'finance@greatpearlcoffee.com';
+
   // 3 + 4) Run email and SMS in PARALLEL so the UI doesn't wait twice
   const tasks: Promise<unknown>[] = [];
 
@@ -102,6 +119,34 @@ export const sendPaymentReceipt = async (input: SendReceiptInput): Promise<SendR
           else emailSent = true;
         })
         .catch((e: any) => errors.push(`Email error: ${e.message}`)),
+    );
+  }
+
+  // Always send a copy to the Finance Manager (Mukobi Godwin) — unless he is the recipient
+  if (financeManagerEmail && financeManagerEmail.toLowerCase() !== (email || '').toLowerCase()) {
+    tasks.push(
+      supabase.functions
+        .invoke('send-transactional-email', {
+          body: {
+            templateName: 'payment-receipt',
+            recipientEmail: financeManagerEmail,
+            idempotencyKey: `receipt-${reference}-fm`,
+            templateData: {
+              recipientName: `[Finance Copy] ${input.paidTo.name}`,
+              reference,
+              description: input.description,
+              invoiceNumber: input.invoiceNumber,
+              amount: formatUGX(input.amount),
+              charges: input.charges > 0 ? formatUGX(input.charges) : undefined,
+              total: formatUGX(input.total),
+              paymentMethod: input.paymentMethod,
+              transactionId: input.transactionId,
+              processedBy: input.processedBy,
+              pdfUrl,
+            },
+          },
+        })
+        .catch((e: any) => console.warn('Finance Manager copy failed:', e?.message)),
     );
   }
 
