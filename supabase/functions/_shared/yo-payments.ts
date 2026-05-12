@@ -96,9 +96,33 @@ function parseYoResponse(xml: string): YoPayoutResult {
     };
   }
 
+  const rawMsg = statusMsgMatch?.[1]?.trim() || `Yo Payments returned status: ${status}`;
+  // Detect insufficient float / unfunded Yo Payments account and normalize the
+  // user-facing message so the UI can surface a clear "Account not funded" error.
+  const lower = rawMsg.toLowerCase();
+  const isUnfunded =
+    lower.includes("insufficient") ||
+    lower.includes("not enough") ||
+    lower.includes("balance") ||
+    lower.includes("no funds") ||
+    lower.includes("unfunded") ||
+    lower.includes("float") ||
+    lower.includes("low funds") ||
+    statusCode === "1217" || // Yo: insufficient funds on payment account
+    statusCode === "10403";
+
+  if (isUnfunded) {
+    return {
+      success: false,
+      errorMessage: "Account not funded",
+      statusMessage: "Account not funded",
+      rawResponse: xml,
+    };
+  }
+
   return {
     success: false,
-    errorMessage: statusMsgMatch?.[1]?.trim() || `Yo Payments returned status: ${status}`,
+    errorMessage: rawMsg,
     statusMessage: statusMsgMatch?.[1]?.trim(),
     rawResponse: xml,
   };
