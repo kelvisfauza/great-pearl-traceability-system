@@ -17,6 +17,8 @@ import { useFinanceApprovals } from '@/hooks/useFinanceApprovals';
 import { RejectionModal } from '@/components/workflow/RejectionModal';
 import { DelegateApprovalModal } from '@/components/approval/DelegateApprovalModal';
 import { useAuth } from '@/contexts/AuthContext';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const PendingApprovalRequests = () => {
   const { requests, loading, handleFinanceApproval } = useFinanceApprovals();
@@ -27,14 +29,28 @@ const PendingApprovalRequests = () => {
   const [requestToReject, setRequestToReject] = useState<string | null>(null);
   const [processing, setProcessing] = useState<string | null>(null);
   const [delegateModal, setDelegateModal] = useState<{ open: boolean; reason: string; requestId: string; amount: number; title?: string }>({ open: false, reason: '', requestId: '', amount: 0 });
+  const [refModal, setRefModal] = useState<{ open: boolean; requestId: string; type: string; title: string; ref: string }>({ open: false, requestId: '', type: '', title: '', ref: '' });
 
-  const handleApprove = async (requestId: string) => {
+  const MY_EXPENSE_TYPES = ['Cash Requisition', 'Personal Expense', 'Salary Request'];
+
+  const handleApprove = async (requestId: string, providedRef?: string) => {
+    const req = requests.find(r => r.id === requestId);
+    // For My Expense types, force ref entry first
+    if (req && MY_EXPENSE_TYPES.includes(req.type) && !providedRef) {
+      setRefModal({ open: true, requestId, type: req.type, title: req.title, ref: '' });
+      return;
+    }
     setProcessing(requestId);
-    const result = await handleFinanceApproval(requestId, true);
+    const result = await handleFinanceApproval(requestId, true, undefined, undefined, providedRef);
     if (result && typeof result === 'object' && 'blocked' in result) {
-      const req = requests.find(r => r.id === requestId);
       setDelegateModal({ open: true, reason: result.reason, requestId, amount: req?.amount || 0, title: req?.title });
     }
+    if (result && typeof result === 'object' && ('needsRef' in result || 'invalidRef' in result)) {
+      // keep modal open so they can correct
+      setProcessing(null);
+      return;
+    }
+    setRefModal({ open: false, requestId: '', type: '', title: '', ref: '' });
     setProcessing(null);
   };
 
@@ -306,6 +322,42 @@ const PendingApprovalRequests = () => {
         requestAmount={delegateModal.amount}
         requestTitle={delegateModal.title}
       />
+
+      {/* Document Reference Modal — Finance must enter the ref printed on the paper requisition */}
+      <Dialog open={refModal.open} onOpenChange={(o) => !o && setRefModal({ open: false, requestId: '', type: '', title: '', ref: '' })}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enter Document Reference</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              You're paying a <strong>{refModal.type}</strong> request: <em>{refModal.title}</em>.
+              Enter the <strong>Ref</strong> number printed on the paper form. The system will verify it exists before paying.
+            </p>
+            <div>
+              <Label htmlFor="doc-ref">Document Reference</Label>
+              <Input
+                id="doc-ref"
+                autoFocus
+                placeholder="e.g. CR-260512-ABC12"
+                value={refModal.ref}
+                onChange={(e) => setRefModal((s) => ({ ...s, ref: e.target.value }))}
+                className="font-mono"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setRefModal({ open: false, requestId: '', type: '', title: '', ref: '' })}>Cancel</Button>
+              <Button
+                disabled={!refModal.ref.trim() || processing === refModal.requestId}
+                onClick={() => handleApprove(refModal.requestId, refModal.ref.trim())}
+                className="bg-emerald-600 hover:bg-emerald-700"
+              >
+                {processing === refModal.requestId ? 'Verifying…' : 'Verify & Pay'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
