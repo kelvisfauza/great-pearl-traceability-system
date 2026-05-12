@@ -58,6 +58,7 @@ import { template as investmentConfirmation } from './investment-confirmation.ts
 import { template as instantWithdrawalConfirmation } from './instant-withdrawal-confirmation.tsx'
 import { template as requestExpiredRefund } from './request-expired-refund.tsx'
 import { template as generalNotification } from './general-notification.tsx'
+import { template as paymentReceipt } from './payment-receipt.tsx'
 import { template as withdrawalAuthRequest } from './withdrawal-auth-request.tsx'
 import { template as instantWithdrawalApprovalRequest } from './instant-withdrawal-approval-request.tsx'
 import { template as mealDisbursementNotification } from './meal-disbursement-notification.tsx'
@@ -117,6 +118,7 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'instant-withdrawal-confirmation': instantWithdrawalConfirmation,
   'request-expired-refund': requestExpiredRefund,
   'general-notification': generalNotification,
+  'payment-receipt': paymentReceipt,
   'withdrawal-auth-request': withdrawalAuthRequest,
   'instant-withdrawal-approval-request': instantWithdrawalApprovalRequest,
   'meal-disbursement-notification': mealDisbursementNotification,
