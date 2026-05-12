@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UtensilsCrossed, Send, Loader2, Phone, DollarSign, RefreshCw, RotateCcw, CheckCheck } from 'lucide-react';
+import { UtensilsCrossed, Send, Loader2, Phone, DollarSign, RefreshCw, RotateCcw, CheckCheck, Printer, Filter } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
@@ -24,6 +24,7 @@ const MealDisbursementSection = () => {
   const [rechecking, setRechecking] = useState(false);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [markingId, setMarkingId] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   const [form, setForm] = useState({
     receiverPhone: '',
@@ -196,6 +197,38 @@ const MealDisbursementSection = () => {
 
   const hasPending = disbursements.some((d: any) => d.yo_status === 'pending_approval');
 
+  const visibleDisbursements = showAll ? disbursements : disbursements.slice(0, 10);
+
+  const handlePrint = () => {
+    const rows = disbursements.map((d: any) => `
+      <tr>
+        <td>${new Date(d.created_at).toLocaleDateString('en-UG', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+        <td>${d.receiver_name || '—'}</td>
+        <td>${d.receiver_phone || ''}</td>
+        <td>${d.description || ''}</td>
+        <td style="text-align:right">${formatAmount(d.amount)}</td>
+        <td style="text-align:right">${formatAmount(d.withdraw_charge)}</td>
+        <td style="text-align:right">${formatAmount(d.total_amount)}</td>
+        <td>${d.yo_status || ''}</td>
+        <td>${d.initiated_by_name || ''}</td>
+      </tr>`).join('');
+    const html = `<!doctype html><html><head><title>Meal Disbursements</title>
+      <style>body{font-family:Arial,sans-serif;padding:24px;color:#111}h1{margin:0 0 4px}small{color:#666}
+      table{width:100%;border-collapse:collapse;margin-top:16px;font-size:12px}
+      th,td{border:1px solid #ddd;padding:6px 8px;text-align:left}
+      th{background:#f3f4f6}</style></head><body>
+      <h1>Meal Disbursements</h1>
+      <small>Generated ${new Date().toLocaleString('en-UG')} • ${disbursements.length} record(s)</small>
+      <table><thead><tr>
+        <th>Date</th><th>Receiver</th><th>Phone</th><th>Description</th>
+        <th>Amount</th><th>Charge</th><th>Total</th><th>Status</th><th>Initiated By</th>
+      </tr></thead><tbody>${rows}</tbody></table>
+      <script>window.onload=()=>{window.print();setTimeout(()=>window.close(),300)}</script>
+      </body></html>`;
+    const w = window.open('', '_blank', 'width=1024,height=768');
+    if (w) { w.document.write(html); w.document.close(); }
+  };
+
   return (
     <Card className="card-modern">
       <CardHeader className="flex flex-row items-center justify-between pb-3">
@@ -210,6 +243,9 @@ const MealDisbursementSection = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handlePrint} disabled={disbursements.length === 0} className="gap-1">
+            <Printer className="w-4 h-4" /> Print
+          </Button>
           {hasPending && (
             <Button variant="outline" size="sm" onClick={handleRecheck} disabled={rechecking} className="gap-1">
               <RefreshCw className={`w-4 h-4 ${rechecking ? 'animate-spin' : ''}`} />
@@ -343,7 +379,7 @@ const MealDisbursementSection = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {disbursements.map((d: any) => (
+                {visibleDisbursements.map((d: any) => (
                   <TableRow key={d.id}>
                     <TableCell className="whitespace-nowrap text-sm">
                       {new Date(d.created_at).toLocaleDateString('en-UG', { day: '2-digit', month: 'short', year: 'numeric' })}
@@ -388,6 +424,15 @@ const MealDisbursementSection = () => {
                 ))}
               </TableBody>
             </Table>
+            {disbursements.length > 10 && (
+              <div className="flex items-center justify-between px-2 py-3 text-sm text-muted-foreground">
+                <span>Showing {visibleDisbursements.length} of {disbursements.length} disbursements</span>
+                <Button variant="ghost" size="sm" onClick={() => setShowAll(s => !s)} className="gap-1">
+                  <Filter className="w-3.5 h-3.5" />
+                  {showAll ? 'Show recent 10 only' : `Show all ${disbursements.length}`}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </CardContent>
