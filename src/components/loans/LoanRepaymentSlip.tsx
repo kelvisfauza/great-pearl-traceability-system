@@ -21,15 +21,23 @@ interface LoanRepaymentSlipProps {
     totalInterest: number;
     loanType?: 'quick' | 'long_term';
     repaymentFrequency?: 'weekly' | 'monthly' | 'bullet';
+    startDate?: string;
   } | null;
+  repayments?: Array<{
+    installment_number: number;
+    due_date: string;
+    amount_due: number;
+    amount_paid?: number;
+    status?: string;
+  }>;
 }
 
-const LoanRepaymentSlip = ({ open, onClose, loanData }: LoanRepaymentSlipProps) => {
+const LoanRepaymentSlip = ({ open, onClose, loanData, repayments }: LoanRepaymentSlipProps) => {
   const slipRef = useRef<HTMLDivElement>(null);
 
   if (!loanData) return null;
 
-  const { employeeName, employeeEmail, guarantorName, loanAmount, interestRate, dailyRate, durationMonths, totalWeeks, weeklyInstallment, totalRepayable, totalInterest, loanType, repaymentFrequency } = loanData;
+  const { employeeName, employeeEmail, guarantorName, loanAmount, interestRate, dailyRate, durationMonths, totalWeeks, weeklyInstallment, totalRepayable, totalInterest, loanType, repaymentFrequency, startDate } = loanData;
   const isLongTerm = loanType === 'long_term';
   const freq = repaymentFrequency || 'weekly';
   const isBullet = freq === 'bullet';
@@ -38,25 +46,37 @@ const LoanRepaymentSlip = ({ open, onClose, loanData }: LoanRepaymentSlipProps) 
   // Generate schedule based on frequency
   const schedule: { period: number; label: string; dueDate: string; installment: number; interest: number; principal: number; balance: number }[] = [];
   const scheduleInterest = totalRepayable - loanAmount;
-  const numPeriods = isBullet ? 1 : (isMonthly ? durationMonths : totalWeeks);
+  const hasRealRepayments = Array.isArray(repayments) && repayments.length > 0;
+  const sortedReps = hasRealRepayments
+    ? [...repayments!].sort((a, b) => (a.installment_number || 0) - (b.installment_number || 0))
+    : [];
+  const numPeriods = hasRealRepayments
+    ? sortedReps.length
+    : (isBullet ? 1 : (isMonthly ? durationMonths : totalWeeks));
   const periodInterest = Math.round(scheduleInterest / numPeriods);
   const periodPrincipal = Math.round(loanAmount / numPeriods);
   let balance = loanAmount;
-  const startDate = new Date();
+  const baseDate = startDate ? new Date(startDate) : new Date();
 
   for (let i = 1; i <= numPeriods; i++) {
-    const dueDate = new Date(startDate);
-    if (isBullet) {
-      dueDate.setMonth(dueDate.getMonth() + durationMonths);
-    } else if (isMonthly) {
-      dueDate.setMonth(dueDate.getMonth() + i);
+    let dueDate: Date;
+    if (hasRealRepayments) {
+      dueDate = new Date(sortedReps[i - 1].due_date);
     } else {
-      dueDate.setDate(dueDate.getDate() + i * 7);
+      dueDate = new Date(baseDate);
+      if (isBullet) {
+        dueDate.setMonth(dueDate.getMonth() + durationMonths);
+      } else if (isMonthly) {
+        dueDate.setMonth(dueDate.getMonth() + i);
+      } else {
+        dueDate.setDate(dueDate.getDate() + i * 7);
+      }
     }
     const isLast = i === numPeriods;
+    const realAmount = hasRealRepayments ? Number(sortedReps[i - 1].amount_due || 0) : 0;
     const principalPart = isLast ? balance : periodPrincipal;
     const interestPart = isLast ? (scheduleInterest - periodInterest * (numPeriods - 1)) : periodInterest;
-    const installmentAmt = principalPart + interestPart;
+    const installmentAmt = hasRealRepayments && realAmount > 0 ? realAmount : (principalPart + interestPart);
     const newBalance = Math.max(0, Math.round(balance - principalPart));
     schedule.push({
       period: i,
