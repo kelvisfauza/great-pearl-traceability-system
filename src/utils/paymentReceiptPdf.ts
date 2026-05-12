@@ -225,10 +225,14 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
   doc.setTextColor(20, 20, 20);
   doc.setFontSize(10);
   doc.text(data.paymentMethod, margin, cursorY);
-  doc.text(data.transactionId || '—', margin + 220, cursorY);
+  const txRefMaxW = pageW - margin - 130 - (margin + 220) - 10;
+  doc.setFontSize(9);
+  const txLines = doc.splitTextToSize(data.transactionId || '—', txRefMaxW);
+  doc.text(txLines, margin + 220, cursorY);
+  doc.setFontSize(10);
   const procLines = doc.splitTextToSize(data.processedBy || '—', 130);
   doc.text(procLines, pageW - margin - 130, cursorY);
-  cursorY += 22;
+  cursorY += Math.max(22, txLines.length * 11 + 10, procLines.length * 12 + 10);
 
   if (data.notes) {
     doc.setFont('helvetica', 'bold');
