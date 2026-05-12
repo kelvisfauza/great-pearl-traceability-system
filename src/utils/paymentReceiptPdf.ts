@@ -70,13 +70,13 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
   const pageH = doc.internal.pageSize.getHeight();
   const margin = 40;
 
-  // ---- Watermark "PAID" ----
+  // ---- Watermark "PAID" (light gray so it prints visibly in B&W) ----
   doc.saveGraphicsState();
   // @ts-ignore - jspdf supports GState
-  doc.setGState(new (doc as any).GState({ opacity: 0.07 }));
+  doc.setGState(new (doc as any).GState({ opacity: 0.08 }));
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(140);
-  doc.setTextColor(34, 139, 34);
+  doc.setTextColor(0, 0, 0);
   doc.text('PAID', pageW / 2, pageH / 2 + 40, { align: 'center', angle: 25 });
   doc.restoreGraphicsState();
 
@@ -254,33 +254,44 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
   doc.setLineWidth(0.4);
   doc.line(margin, sigBoxY - 8, pageW - margin, sigBoxY - 8);
 
+  // "AUTHORIZED BY" label
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(60, 60, 60);
+  doc.text('AUTHORIZED BY', margin, sigBoxY + 2);
+
+  // White background plate behind signature so transparent PNG prints on plain white
+  doc.setFillColor(255, 255, 255);
+  doc.rect(margin, sigBoxY + 6, 150, 32, 'F');
+
   // Signature image (smaller, tucked above the name line)
   try {
     const sig = await loadImageAsDataUrl(signatureUrl);
-    doc.addImage(sig, 'PNG', margin, sigBoxY - 4, 70, 30);
+    doc.addImage(sig, 'PNG', margin + 4, sigBoxY + 8, 70, 28);
   } catch {/* signature optional */}
 
-  // Underline & name
-  doc.setDrawColor(80, 80, 80);
-  doc.line(margin, sigBoxY + 30, margin + 150, sigBoxY + 30);
-  doc.setTextColor(20, 20, 20);
+  // Underline & name (solid black for B&W print clarity)
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.6);
+  doc.line(margin, sigBoxY + 40, margin + 180, sigBoxY + 40);
+  doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
-  doc.text(FINANCE_MANAGER.name, margin, sigBoxY + 40);
+  doc.text(FINANCE_MANAGER.name, margin, sigBoxY + 52);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
-  doc.setTextColor(110, 110, 110);
-  doc.text(`${FINANCE_MANAGER.title} • Signed ${formatDate(new Date().toISOString())}`, margin, sigBoxY + 50);
+  doc.setTextColor(60, 60, 60);
+  doc.text(`${FINANCE_MANAGER.title} • Signed ${formatDate(new Date().toISOString())}`, margin, sigBoxY + 62);
 
   // Validation note (right side, smaller)
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(8);
-  doc.setTextColor(140, 140, 140);
+  doc.setTextColor(80, 80, 80);
   const validLines = doc.splitTextToSize(
     `Verify authenticity by quoting ref ${data.reference} to ${COMPANY.email}.`,
     220,
   );
-  doc.text(validLines, pageW - margin - 220, sigBoxY + 40);
+  doc.text(validLines, pageW - margin - 220, sigBoxY + 52);
 
   // ---- Footer ----
   doc.setDrawColor(28, 80, 50);
