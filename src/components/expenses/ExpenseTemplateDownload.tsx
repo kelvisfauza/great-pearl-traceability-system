@@ -144,6 +144,7 @@ const generatePDF = async (
   department: string,
   position: string,
   prefill: PrefillData = {},
+  employeeEmail?: string,
 ) => {
   const refNo = generateRefNumber(template.prefix);
   // Persist the ref so Finance can validate the printed paper later
@@ -152,7 +153,7 @@ const generatePDF = async (
       ref: refNo,
       template_type: template.type,
       approval_type: template.approvalType,
-      employee_email: prefill?.employeeEmail || null,
+      employee_email: employeeEmail || null,
       employee_name: employeeName,
     });
   } catch (e) {
@@ -508,6 +509,7 @@ const ExpenseTemplateDownload = () => {
         employee.department || 'N/A',
         employee.position || 'N/A',
         prefill,
+        employee.email,
       );
     } catch (err) {
       console.error('PDF generation error:', err);
