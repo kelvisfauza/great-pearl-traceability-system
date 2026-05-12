@@ -75,6 +75,14 @@ const MarqueeBanner = () => {
   }, []);
 
   const visible = items.filter((i) => !dismissed.has(i.id) && new Date(i.expires_at) > new Date());
+
+  // Rotate through visible announcements every 7s
+  useEffect(() => {
+    if (visible.length <= 1) return;
+    const id = setInterval(() => setActiveIndex((i) => i + 1), 7000);
+    return () => clearInterval(id);
+  }, [visible.length]);
+
   if (visible.length === 0) return null;
 
   // Sort highest priority first, but cycle through ALL of them
