@@ -20,6 +20,16 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from '@/components/ui/input-otp';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface InstantEligibility {
   eligible: boolean;
@@ -68,6 +78,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   // Instant withdrawal state
   const [instantEligibility, setInstantEligibility] = useState<InstantEligibility | null>(null);
   const [instantLoading, setInstantLoading] = useState(false);
+  const [showInstantConfirm, setShowInstantConfirm] = useState(false);
   const [eligibilityLoading, setEligibilityLoading] = useState(false);
   const [eligibilityResolved, setEligibilityResolved] = useState(false);
   const [useInstant, setUseInstant] = useState(false);
@@ -673,7 +684,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                   {instantEligibility?.eligible && (
                     <Button
                       type="button"
-                      onClick={handleInstantWithdraw}
+                      onClick={() => setShowInstantConfirm(true)}
                       disabled={instantLoading || withdrawalStatus.disabled || isWalletFrozen || !amount || parsedAmount < 2000 || parsedAmount > instantMaxAmount || (needsInstantPhoneInput && !isValidMobileNumber)}
                       className="bg-green-600 hover:bg-green-700 text-white"
                     >
