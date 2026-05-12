@@ -118,6 +118,7 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'instant-withdrawal-confirmation': instantWithdrawalConfirmation,
   'request-expired-refund': requestExpiredRefund,
   'general-notification': generalNotification,
+  'payment-receipt': paymentReceipt,
   'withdrawal-auth-request': withdrawalAuthRequest,
   'instant-withdrawal-approval-request': instantWithdrawalApprovalRequest,
   'meal-disbursement-notification': mealDisbursementNotification,
