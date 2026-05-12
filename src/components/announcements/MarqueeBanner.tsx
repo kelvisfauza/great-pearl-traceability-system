@@ -14,9 +14,9 @@ interface MarqueeAnnouncement {
 const ADMIN_ROLES = ["Administrator", "Super Admin", "Managing Director", "Admin"];
 
 const priorityStyles = {
-  info: "bg-blue-600 text-white",
-  warning: "bg-amber-500 text-black",
-  critical: "bg-red-600 text-white",
+  info: "bg-gradient-to-r from-blue-600 via-sky-500 to-blue-600 text-white",
+  warning: "bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-black",
+  critical: "bg-gradient-to-r from-red-700 via-rose-600 to-red-700 text-white",
 };
 
 const priorityIcon = {
@@ -36,6 +36,7 @@ const MarqueeBanner = () => {
     return new Set();
   });
   const [tick, setTick] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   const isAdmin = employee?.role && ADMIN_ROLES.includes(employee.role);
 
@@ -76,15 +77,12 @@ const MarqueeBanner = () => {
   const visible = items.filter((i) => !dismissed.has(i.id) && new Date(i.expires_at) > new Date());
   if (visible.length === 0) return null;
 
-  // Show highest priority first
+  // Sort highest priority first, but cycle through ALL of them
   const order = { critical: 0, warning: 1, info: 2 } as const;
   const sorted = [...visible].sort((a, b) => order[a.priority] - order[b.priority]);
-  const current = sorted[0];
+  const current = sorted[activeIndex % sorted.length];
   const Icon = priorityIcon[current.priority];
-
-  // Combine all messages of the current priority into one scrolling string
-  const samePriority = sorted.filter((s) => s.priority === current.priority);
-  const combined = samePriority.map((s) => s.message).join("    •    ");
+  const message = current.message;
 
   const handleDelete = async (id: string) => {
     if (!isAdmin) return;
@@ -101,18 +99,40 @@ const MarqueeBanner = () => {
     });
   };
 
+  const labelMap = { info: "Info", warning: "Warning", critical: "Critical" } as const;
+
   return (
-    <div className={`${priorityStyles[current.priority]} relative flex items-center overflow-hidden border-b border-black/10 print:hidden`}>
-      <div className="flex items-center gap-2 px-3 py-1.5 flex-shrink-0 font-semibold text-sm border-r border-white/20">
-        <Icon className="h-4 w-4" />
-        <span className="hidden sm:inline">Announcement</span>
+    <div
+      key={current.id}
+      className={`${priorityStyles[current.priority]} relative flex items-center overflow-hidden border-b border-black/10 print:hidden transition-colors duration-500 animate-fade-in`}
+    >
+      <div className="flex items-center gap-2 px-3 py-1.5 flex-shrink-0 font-bold text-sm border-r border-white/20 bg-black/15">
+        <Icon className="h-4 w-4 animate-pulse" />
+        <span className="hidden sm:inline uppercase tracking-wide">{labelMap[current.priority]}</span>
+        {sorted.length > 1 && (
+          <span className="ml-1 text-[10px] opacity-90 bg-black/20 rounded-full px-1.5 py-0.5">
+            {(activeIndex % sorted.length) + 1}/{sorted.length}
+          </span>
+        )}
       </div>
       <div className="flex-1 overflow-hidden py-2">
-        <div className="marquee-track whitespace-nowrap text-sm font-medium">
-          <span className="inline-block px-8">{combined}</span>
-          <span className="inline-block px-8">{combined}</span>
+        <div key={current.id} className="marquee-track whitespace-nowrap text-sm font-semibold tracking-wide">
+          <span className="inline-block px-8 drop-shadow-sm">{message}</span>
+          <span className="inline-block px-8 drop-shadow-sm">{message}</span>
         </div>
       </div>
+      {sorted.length > 1 && (
+        <div className="hidden md:flex items-center gap-1 px-2">
+          {sorted.map((_, i) => (
+            <span
+              key={i}
+              className={`h-1.5 w-1.5 rounded-full transition-all ${
+                i === activeIndex % sorted.length ? "bg-white w-4" : "bg-white/40"
+              }`}
+            />
+          ))}
+        </div>
+      )}
       <div className="flex items-center gap-1 px-2 flex-shrink-0">
         {isAdmin && (
           <button
