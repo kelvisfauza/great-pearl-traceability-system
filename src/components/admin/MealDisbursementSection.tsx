@@ -119,6 +119,15 @@ const MealDisbursementSection = () => {
   };
 
   const handleRetry = async (payment: any) => {
+    const ageHours = (Date.now() - new Date(payment.created_at).getTime()) / (1000 * 60 * 60);
+    if (ageHours > 2) {
+      toast({
+        title: 'Retry not allowed',
+        description: 'This transaction is older than 2 hours and is considered permanently failed. Use Mark Paid if it was settled outside the system.',
+        variant: 'destructive',
+      });
+      return;
+    }
     if (!confirm(`Retry sending UGX ${Number(payment.amount).toLocaleString()} to ${payment.receiver_name || payment.receiver_phone}?`)) return;
     setRetryingId(payment.id);
     try {
@@ -350,7 +359,7 @@ const MealDisbursementSection = () => {
                     <TableCell>
                       {d.yo_status !== 'success' && d.yo_status !== 'paid' && (
                         <div className="flex gap-1">
-                          {(d.yo_status === 'failed' || d.yo_status === 'pending_approval') && (
+                          {(d.yo_status === 'failed' || d.yo_status === 'pending_approval') && ((Date.now() - new Date(d.created_at).getTime()) / (1000 * 60 * 60) <= 2) && (
                             <Button
                               variant="outline"
                               size="sm"
