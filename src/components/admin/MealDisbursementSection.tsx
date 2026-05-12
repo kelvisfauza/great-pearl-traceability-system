@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UtensilsCrossed, Send, Loader2, Phone, DollarSign, RefreshCw, RotateCcw, CheckCheck } from 'lucide-react';
+import { UtensilsCrossed, Send, Loader2, Phone, DollarSign, RefreshCw, RotateCcw, CheckCheck, Printer, Filter } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
@@ -24,6 +24,7 @@ const MealDisbursementSection = () => {
   const [rechecking, setRechecking] = useState(false);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [markingId, setMarkingId] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   const [form, setForm] = useState({
     receiverPhone: '',
@@ -210,6 +211,9 @@ const MealDisbursementSection = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handlePrint} disabled={disbursements.length === 0} className="gap-1">
+            <Printer className="w-4 h-4" /> Print
+          </Button>
           {hasPending && (
             <Button variant="outline" size="sm" onClick={handleRecheck} disabled={rechecking} className="gap-1">
               <RefreshCw className={`w-4 h-4 ${rechecking ? 'animate-spin' : ''}`} />
