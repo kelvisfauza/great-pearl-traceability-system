@@ -82,6 +82,19 @@ serve(async (req) => {
   try { parsedBody = JSON.parse(rawBody) } catch {}
   
   if (parsedBody.action === 'process_queue') {
+    // Require service-role bearer or dedicated QUEUE_SECRET to prevent abuse
+    const authHdr = req.headers.get('Authorization') || ''
+    const queueSecret = Deno.env.get('SMS_QUEUE_SECRET') || ''
+    const providedToken = authHdr.startsWith('Bearer ') ? authHdr.slice(7) : ''
+    const queueAuthorized =
+      (providedToken && providedToken === serviceRoleKey) ||
+      (queueSecret && providedToken === queueSecret)
+    if (!queueAuthorized) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
     console.log('Processing SMS queue...')
     try {
       const { data: pendingMessages, error: fetchError } = await supabase
