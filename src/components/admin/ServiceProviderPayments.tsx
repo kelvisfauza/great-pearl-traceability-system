@@ -10,7 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Truck, Send, Loader2, Phone, DollarSign, RefreshCw, RotateCcw, CheckCheck, UserPlus, Users, Printer, Filter } from 'lucide-react';
+import { Truck, Send, Loader2, Phone, DollarSign, RefreshCw, RotateCcw, CheckCheck, UserPlus, Users, Printer, Filter, Receipt } from 'lucide-react';
+import { sendPaymentReceipt } from '@/utils/sendPaymentReceipt';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
@@ -26,6 +27,7 @@ const ServiceProviderPayments = () => {
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [markingId, setMarkingId] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [receiptingId, setReceiptingId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     receiverPhone: '',
@@ -235,6 +237,42 @@ const ServiceProviderPayments = () => {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
     } finally {
       setMarkingId(null);
+    }
+  };
+
+  const handleSendReceipt = async (payment: any) => {
+    setReceiptingId(payment.id);
+    try {
+      const provider = savedProviders.find((p: any) => p.phone === payment.receiver_phone || p.name === payment.receiver_name);
+      const result = await sendPaymentReceipt({
+        paymentType: 'service-provider',
+        paidTo: {
+          name: payment.receiver_name || 'Service Provider',
+          phone: payment.receiver_phone,
+          email: provider?.email || payment.provider_email || undefined,
+        },
+        description: payment.service_description || 'Service payment',
+        invoiceNumber: payment.invoice_number || undefined,
+        amount: Number(payment.amount || 0),
+        charges: Number(payment.withdraw_charge || 0),
+        total: Number(payment.total_amount || (Number(payment.amount || 0) + Number(payment.withdraw_charge || 0))),
+        paymentMethod: 'Mobile Money',
+        transactionId: payment.yo_transaction_reference || payment.id,
+        paidOn: payment.updated_at || payment.created_at,
+        processedBy: payment.initiated_by_name || employee?.name || 'Finance Team',
+        processedByEmail: payment.initiated_by || employee?.email,
+        notes: payment.notes || undefined,
+      });
+      if (result.ok) {
+        const channels = [result.emailSent && 'email', result.smsSent && 'SMS'].filter(Boolean).join(' & ') || 'PDF only';
+        toast({ title: 'Receipt sent', description: `${result.reference} delivered via ${channels}.` });
+      } else {
+        toast({ title: 'Receipt failed', description: result.errors.join('; ') || 'No channel available', variant: 'destructive' });
+      }
+    } catch (err: any) {
+      toast({ title: 'Receipt error', description: err.message, variant: 'destructive' });
+    } finally {
+      setReceiptingId(null);
     }
   };
 
@@ -499,32 +537,46 @@ const ServiceProviderPayments = () => {
                     <TableCell>{getStatusBadge(d.yo_status)}</TableCell>
                     <TableCell className="text-sm">{d.initiated_by_name}</TableCell>
                     <TableCell>
-                      {d.yo_status !== 'success' && d.yo_status !== 'paid' && (
-                        <div className="flex gap-1">
-                          {(d.yo_status === 'failed' || d.yo_status === 'pending_approval') && ((Date.now() - new Date(d.created_at).getTime()) / (1000 * 60 * 60) <= 2) && (
+                      <div className="flex gap-1 flex-wrap">
+                        {d.yo_status !== 'success' && d.yo_status !== 'paid' && (
+                          <>
+                            {(d.yo_status === 'failed' || d.yo_status === 'pending_approval') && ((Date.now() - new Date(d.created_at).getTime()) / (1000 * 60 * 60) <= 2) && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleRetry(d)}
+                                disabled={retryingId === d.id}
+                                className="gap-1 text-xs"
+                              >
+                                {retryingId === d.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
+                                Retry
+                              </Button>
+                            )}
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleRetry(d)}
-                              disabled={retryingId === d.id}
-                              className="gap-1 text-xs"
+                              onClick={() => handleMarkAsPaid(d)}
+                              disabled={markingId === d.id}
+                              className="gap-1 text-xs text-green-700 border-green-300 hover:bg-green-50"
                             >
-                              {retryingId === d.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
-                              Retry
+                              {markingId === d.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCheck className="h-3 w-3" />}
+                              Mark Paid
                             </Button>
-                          )}
+                          </>
+                        )}
+                        {(d.yo_status === 'success' || d.yo_status === 'paid') && (
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleMarkAsPaid(d)}
-                            disabled={markingId === d.id}
-                            className="gap-1 text-xs text-green-700 border-green-300 hover:bg-green-50"
+                            onClick={() => handleSendReceipt(d)}
+                            disabled={receiptingId === d.id}
+                            className="gap-1 text-xs text-blue-700 border-blue-300 hover:bg-blue-50"
                           >
-                            {markingId === d.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCheck className="h-3 w-3" />}
-                            Mark Paid
+                            {receiptingId === d.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Receipt className="h-3 w-3" />}
+                            Send Receipt
                           </Button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
