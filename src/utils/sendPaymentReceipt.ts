@@ -49,7 +49,26 @@ export const sendPaymentReceipt = async (input: SendReceiptInput): Promise<SendR
   pdfUrl = supabase.storage.from('payment-receipts').getPublicUrl(path).data.publicUrl;
 
   // 3) Send email (if email provided)
-  const email = input.recipientEmail || input.paidTo.email;
+  let email = input.recipientEmail || input.paidTo.email;
+
+  // Fallback: if no email but we have a phone, try to resolve a system user by phone
+  if (!email && (input.recipientPhone || input.paidTo.phone)) {
+    try {
+      const rawPhone = (input.recipientPhone || input.paidTo.phone).replace(/\D/g, '');
+      const last9 = rawPhone.slice(-9);
+      const { data: emp } = await supabase
+        .from('employees')
+        .select('email, phone')
+        .or(`phone.ilike.%${last9}%,phone.eq.+256${last9},phone.eq.256${last9},phone.eq.0${last9}`)
+        .not('email', 'is', null)
+        .limit(1)
+        .maybeSingle();
+      if (emp?.email) email = emp.email;
+    } catch (e) {
+      console.warn('Email lookup by phone failed:', e);
+    }
+  }
+
   if (email) {
     try {
       const formatUGX = (n: number) => `UGX ${Number(n || 0).toLocaleString('en-UG')}`;
