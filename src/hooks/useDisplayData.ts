@@ -110,7 +110,7 @@ export const useDisplayData = () => {
     dispatches.data?.forEach((d) => {
       const trucks = d.trucks as any[];
       if (Array.isArray(trucks)) {
-        trucks.forEach((t) => { dispatched += Number(t.weight || t.netWeight || 0); });
+        trucks.forEach((t) => { dispatched += Number(t.total_weight_store || t.weight || t.netWeight || 0); });
       }
     });
 
