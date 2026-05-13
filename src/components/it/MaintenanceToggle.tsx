@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 const MaintenanceToggle = () => {
-  const { isActive, reason, activatedBy, activatedAt, expectedBackOnline, loading, toggleMaintenance } = useMaintenanceMode();
+  const { isManualActive: isActive, reason, activatedBy, activatedAt, expectedBackOnline, loading, toggleMaintenance } = useMaintenanceMode();
   const { employee } = useAuth();
   const [showConfirm, setShowConfirm] = useState(false);
   const [maintenanceReason, setMaintenanceReason] = useState('');
