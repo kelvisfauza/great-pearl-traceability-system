@@ -10517,6 +10517,10 @@ export type Database = {
           expected_back_online: string
           is_active: boolean
           reason: string
+          scheduled_active: boolean
+          scheduled_back_online: string
+          scheduled_reason: string
+          server_now: string
         }[]
       }
       get_or_create_inventory_batch_for_day: {

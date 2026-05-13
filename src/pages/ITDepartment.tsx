@@ -26,6 +26,7 @@ import { ITPermissionManager } from '@/components/it/ITPermissionManager';
 import ReportRemindersSettings from '@/components/it/ReportRemindersSettings';
 import AttendanceTimeManager from '@/components/it/AttendanceTimeManager';
 import MaintenanceToggle from '@/components/it/MaintenanceToggle';
+import ScheduledDowntimeSettings from '@/components/it/ScheduledDowntimeSettings';
 import EmailTracker from '@/components/it/EmailTracker';
 import ActiveUsers from '@/components/it/ActiveUsers';
 import SessionLogs from '@/components/it/SessionLogs';
@@ -215,6 +216,7 @@ const ITDepartment = () => {
 
           <TabsContent value="maintenance" className="space-y-4">
             <MaintenanceToggle />
+            <ScheduledDowntimeSettings />
           </TabsContent>
         </Tabs>
       </div>

@@ -9,6 +9,9 @@ interface MaintenanceStatus {
   recovery_key: string | null;
   recovery_pin: string | null;
   expected_back_online: string | null;
+  scheduled_active?: boolean;
+  scheduled_reason?: string | null;
+  scheduled_back_online?: string | null;
 }
 
 export const useMaintenanceMode = () => {
@@ -25,7 +28,18 @@ export const useMaintenanceMode = () => {
         return;
       }
 
-      setStatus(data ? ({ ...(data as any), activated_by: null, activated_at: null, recovery_key: null, recovery_pin: null, expected_back_online: (data as any).expected_back_online ?? null }) as MaintenanceStatus : null);
+      const d: any = data;
+      setStatus(d ? ({
+        ...d,
+        activated_by: null,
+        activated_at: null,
+        recovery_key: null,
+        recovery_pin: null,
+        expected_back_online: d.expected_back_online ?? null,
+        scheduled_active: d.scheduled_active ?? false,
+        scheduled_reason: d.scheduled_reason ?? null,
+        scheduled_back_online: d.scheduled_back_online ?? null,
+      }) as MaintenanceStatus : null);
     } catch (err) {
       console.error('Error fetching maintenance status:', err);
     } finally {
@@ -150,9 +164,13 @@ export const useMaintenanceMode = () => {
   }, [fetchStatus]);
 
   return {
-    isActive: status?.is_active ?? false,
-    reason: status?.reason,
-    expectedBackOnline: status?.expected_back_online ?? null,
+    isActive: (status?.is_active ?? false) || (status?.scheduled_active ?? false),
+    isManualActive: status?.is_active ?? false,
+    isScheduledActive: status?.scheduled_active ?? false,
+    reason: status?.is_active ? status?.reason : (status?.scheduled_active ? (status?.scheduled_reason ?? null) : status?.reason),
+    expectedBackOnline: status?.is_active
+      ? (status?.expected_back_online ?? null)
+      : (status?.scheduled_active ? (status?.scheduled_back_online ?? null) : null),
     activatedBy: status?.activated_by,
     activatedAt: status?.activated_at,
     recoveryKey: status?.recovery_key,
