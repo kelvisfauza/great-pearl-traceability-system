@@ -20,6 +20,10 @@ interface PayslipData {
   paymentMethod: string;
   transactionId: string;
   processedDate: string;
+  nssfEmployee?: number;
+  nssfEmployer?: number;
+  paye?: number;
+  taxableIncome?: number;
   advanceDetails?: Array<{
     advance_id: string;
     original_amount: number;
@@ -126,7 +130,11 @@ function generatePayslipPDF(data: PayslipData): Uint8Array {
   y += 10;
 
   // Deductions
-  if (data.advanceDeduction > 0) {
+  const nssfEmp = Number(data.nssfEmployee || 0);
+  const paye    = Number(data.paye || 0);
+  const totalDeductions = nssfEmp + paye + data.advanceDeduction;
+
+  if (totalDeductions > 0) {
     doc.setFillColor(255, 248, 225);
     doc.rect(15, y, w - 30, 7, 'F');
     doc.setFont('helvetica', 'bold');
@@ -134,6 +142,30 @@ function generatePayslipPDF(data: PayslipData): Uint8Array {
     doc.setFontSize(8);
     doc.text('DEDUCTIONS', 18, y + 5);
     y += 9;
+
+    if (nssfEmp > 0) {
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 100, 100);
+      doc.setFontSize(9);
+      doc.text('NSSF Employee Contribution (5%)', 18, y + 5);
+      doc.setTextColor(198, 40, 40);
+      doc.text(`- UGX ${nssfEmp.toLocaleString()}`, w - 18, y + 5, { align: 'right' });
+      doc.setDrawColor(230, 230, 230);
+      doc.line(15, y + 8, w - 15, y + 8);
+      y += 10;
+    }
+
+    if (paye > 0) {
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 100, 100);
+      doc.setFontSize(9);
+      doc.text('PAYE (URA Tax)', 18, y + 5);
+      doc.setTextColor(198, 40, 40);
+      doc.text(`- UGX ${paye.toLocaleString()}`, w - 18, y + 5, { align: 'right' });
+      doc.setDrawColor(230, 230, 230);
+      doc.line(15, y + 8, w - 15, y + 8);
+      y += 10;
+    }
 
     if (data.advanceDetails && data.advanceDetails.length > 0) {
       for (const adv of data.advanceDetails) {
@@ -147,7 +179,7 @@ function generatePayslipPDF(data: PayslipData): Uint8Array {
         doc.line(15, y + 8, w - 15, y + 8);
         y += 10;
       }
-    } else {
+    } else if (data.advanceDeduction > 0) {
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(100, 100, 100);
       doc.setFontSize(9);
@@ -165,7 +197,7 @@ function generatePayslipPDF(data: PayslipData): Uint8Array {
     doc.setTextColor(198, 40, 40);
     doc.setFontSize(9);
     doc.text('Total Deductions', 18, y + 5.5);
-    doc.text(`- UGX ${data.advanceDeduction.toLocaleString()}`, w - 18, y + 5.5, { align: 'right' });
+    doc.text(`- UGX ${totalDeductions.toLocaleString()}`, w - 18, y + 5.5, { align: 'right' });
     y += 12;
   }
 
@@ -181,6 +213,20 @@ function generatePayslipPDF(data: PayslipData): Uint8Array {
   doc.text(`UGX ${data.netSalary.toLocaleString()}`, w - 22, y + 10.5, { align: 'right' });
 
   y += 25;
+
+  // Employer contribution note (not deducted from employee)
+  const nssfEr = Number(data.nssfEmployer || 0);
+  if (nssfEr > 0) {
+    doc.setFillColor(240, 247, 243);
+    doc.roundedRect(15, y, w - 30, 12, 2, 2, 'F');
+    doc.setTextColor(26, 86, 50);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Employer NSSF Contribution (10%)', 20, y + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`UGX ${nssfEr.toLocaleString()} — paid by employer, not deducted from your salary.`, 20, y + 9);
+    y += 16;
+  }
 
   // ── Note ──
   if (data.advanceDeduction > 0) {
