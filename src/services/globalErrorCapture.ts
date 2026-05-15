@@ -1,52 +1,100 @@
 import { supabase } from '@/integrations/supabase/client';
 
-// Singleton service for capturing global errors
+const RECIPIENTS = ['tatwanzire@greatpearlcoffee.com', 'fauzakusa@greatpearlcoffee.com'];
+const DEDUPE_WINDOW_MS = 10 * 60 * 1000; // suppress identical error for 10 min
+const BATCH_FLUSH_MS = 30 * 1000;        // flush every 30s
+
+interface CapturedError {
+  title: string;
+  description: string;
+  error_type: string;
+  severity: string;
+  component: string;
+  stack_trace?: string;
+  metadata?: any;
+  ts: number;
+}
+
+// Singleton service for capturing global errors — emails only, no DB writes
 class GlobalErrorCaptureService {
   private isInitialized = false;
   private userContext: { id?: string; email?: string; name?: string; department?: string } = {};
+  private buffer: CapturedError[] = [];
+  private dedupe = new Map<string, number>();
+  private flushTimer: number | null = null;
 
   setUserContext(context: { id?: string; email?: string; name?: string; department?: string }) {
     this.userContext = context;
   }
 
-  private async logError(errorData: {
-    title: string;
-    description: string;
-    error_type: string;
-    severity: string;
-    component: string;
-    stack_trace?: string;
-    metadata?: any;
-  }) {
+  private signature(e: { title: string; description: string; component: string }) {
+    return `${e.title}|${(e.description || '').slice(0, 200)}|${e.component}`;
+  }
+
+  private async logError(errorData: Omit<CapturedError, 'ts'>) {
     try {
-      await supabase.from('system_errors').insert({
-        ...errorData,
-        user_id: this.userContext.id,
-        user_email: this.userContext.email,
-        url: window.location.href,
-        user_agent: navigator.userAgent,
-        status: 'open',
-        recommendation: this.getRecommendation(errorData.error_type, errorData.description)
-      });
-    } catch (err) {
-      // Silently fail to prevent infinite loops
+      const sig = this.signature(errorData);
+      const last = this.dedupe.get(sig) || 0;
+      const now = Date.now();
+      if (now - last < DEDUPE_WINDOW_MS) return; // suppress duplicate
+      this.dedupe.set(sig, now);
+      this.buffer.push({ ...errorData, ts: now });
+      this.scheduleFlush();
+    } catch {
+      // never throw from error capture
     }
   }
 
-  private getRecommendation(errorType: string, message: string): string {
-    const lower = message.toLowerCase();
-    
-    if (errorType === 'network' || lower.includes('fetch') || lower.includes('network')) {
-      return '1. Check internet connection\n2. Verify API endpoints\n3. Check CORS settings';
+  private scheduleFlush() {
+    if (this.flushTimer != null) return;
+    this.flushTimer = window.setTimeout(() => {
+      this.flushTimer = null;
+      void this.flush();
+    }, BATCH_FLUSH_MS);
+  }
+
+  private async flush() {
+    if (this.buffer.length === 0) return;
+    const batch = this.buffer.splice(0, this.buffer.length);
+    const sevRank: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
+    const top = batch.reduce((acc, e) => (sevRank[e.severity] || 0) > (sevRank[acc.severity] || 0) ? e : acc, batch[0]);
+    const lines: string[] = [];
+    lines.push(`Captured ${batch.length} client error(s) from ${this.userContext.email || 'unknown user'}.`);
+    lines.push(`URL: ${window.location.href}`);
+    lines.push('');
+    batch.forEach((e, i) => {
+      lines.push(`${i + 1}. [${e.severity.toUpperCase()}] ${e.title}`);
+      lines.push(`   Description: ${e.description || 'n/a'}`);
+      lines.push(`   Type: ${e.error_type} | Component: ${e.component}`);
+      if (e.stack_trace) lines.push(`   Stack: ${String(e.stack_trace).split('\n').slice(0, 3).join(' | ')}`);
+      lines.push(`   Time: ${new Date(e.ts).toLocaleString()}`);
+      lines.push('');
+    });
+    lines.push(`User: ${this.userContext.name || ''} (${this.userContext.email || 'n/a'}) — Dept: ${this.userContext.department || 'n/a'}`);
+    lines.push(`Agent: ${navigator.userAgent}`);
+
+    const subject = `[Client Error] ${batch.length} error(s) — ${top.severity.toUpperCase()}: ${top.title}`;
+    const idem = `client-err-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    for (const recipient of RECIPIENTS) {
+      try {
+        await supabase.functions.invoke('send-transactional-email', {
+          body: {
+            templateName: 'general-notification',
+            recipientEmail: recipient,
+            idempotencyKey: `${idem}-${recipient}`,
+            templateData: {
+              title: `Client Error Report — ${batch.length} new`,
+              subject,
+              message: lines.join('\n'),
+              recipientName: recipient.split('@')[0],
+            },
+          },
+        });
+      } catch {
+        // swallow — never propagate
+      }
     }
-    if (lower.includes('permission') || lower.includes('denied') || lower.includes('unauthorized')) {
-      return '1. Check user permissions\n2. Verify authentication\n3. Review RLS policies';
-    }
-    if (lower.includes('timeout')) {
-      return '1. Check server response time\n2. Optimize queries\n3. Increase timeout settings';
-    }
-    
-    return '1. Check system logs\n2. Review recent changes\n3. Contact IT support';
   }
 
   private getSeverity(message: string): string {
@@ -60,6 +108,9 @@ class GlobalErrorCaptureService {
   initialize() {
     if (this.isInitialized) return;
     this.isInitialized = true;
+
+    // Flush remaining errors on unload
+    window.addEventListener('beforeunload', () => { void this.flush(); });
 
     // Capture unhandled errors
     window.addEventListener('error', (event) => {
