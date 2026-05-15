@@ -97,20 +97,6 @@ class GlobalErrorCaptureService {
     }
   }
 
-  private getRecommendation(errorType: string, message: string): string {
-    const lower = message.toLowerCase();
-    
-    if (errorType === 'network' || lower.includes('fetch') || lower.includes('network')) {
-      return '1. Check internet connection\n2. Verify API endpoints\n3. Check CORS settings';
-    }
-    if (lower.includes('permission') || lower.includes('denied') || lower.includes('unauthorized')) {
-      return '1. Check user permissions\n2. Verify authentication\n3. Review RLS policies';
-    }
-    if (lower.includes('timeout')) {
-      return '1. Check server response time\n2. Optimize queries\n3. Increase timeout settings';
-    }
-    
-
   private getSeverity(message: string): string {
     const lower = message.toLowerCase();
     if (lower.includes('critical') || lower.includes('fatal') || lower.includes('crash')) return 'critical';
