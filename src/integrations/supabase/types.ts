@@ -1873,9 +1873,12 @@ export type Database = {
         Row: {
           advance_deduction: number
           advance_id: string | null
+          approved_at: string | null
+          approved_by: string | null
           completed_at: string | null
           completed_by: string | null
           created_at: string
+          disbursement_reference: string | null
           employee_email: string
           employee_id: string
           employee_name: string
@@ -1884,14 +1887,20 @@ export type Database = {
           id: string
           net_salary: number
           notes: string | null
+          nssf_employee: number
+          nssf_employer: number
+          nssf_total: number
+          paye: number
           payment_label: string | null
           payment_method: string
           payment_month: string
+          payroll_run_id: string | null
           processed_by: string
           processed_by_email: string
           salary_amount: number
           sms_sent: boolean | null
           status: string
+          taxable_income: number
           time_deduction: number
           time_deduction_hours: number
           transaction_id: string | null
@@ -1900,9 +1909,12 @@ export type Database = {
         Insert: {
           advance_deduction?: number
           advance_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string
+          disbursement_reference?: string | null
           employee_email: string
           employee_id: string
           employee_name: string
@@ -1911,14 +1923,20 @@ export type Database = {
           id?: string
           net_salary?: number
           notes?: string | null
+          nssf_employee?: number
+          nssf_employer?: number
+          nssf_total?: number
+          paye?: number
           payment_label?: string | null
           payment_method?: string
           payment_month: string
+          payroll_run_id?: string | null
           processed_by: string
           processed_by_email: string
           salary_amount?: number
           sms_sent?: boolean | null
           status?: string
+          taxable_income?: number
           time_deduction?: number
           time_deduction_hours?: number
           transaction_id?: string | null
@@ -1927,9 +1945,12 @@ export type Database = {
         Update: {
           advance_deduction?: number
           advance_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string
+          disbursement_reference?: string | null
           employee_email?: string
           employee_id?: string
           employee_name?: string
@@ -1938,17 +1959,56 @@ export type Database = {
           id?: string
           net_salary?: number
           notes?: string | null
+          nssf_employee?: number
+          nssf_employer?: number
+          nssf_total?: number
+          paye?: number
           payment_label?: string | null
           payment_method?: string
           payment_month?: string
+          payroll_run_id?: string | null
           processed_by?: string
           processed_by_email?: string
           salary_amount?: number
           sms_sent?: boolean | null
           status?: string
+          taxable_income?: number
           time_deduction?: number
           time_deduction_hours?: number
           transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      employee_tax_profile: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          nssf_exempt: boolean
+          nssf_number: string | null
+          paye_exempt: boolean
+          tin: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id?: string
+          nssf_exempt?: boolean
+          nssf_number?: string | null
+          paye_exempt?: boolean
+          tin?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          nssf_exempt?: boolean
+          nssf_number?: string | null
+          paye_exempt?: boolean
+          tin?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -5715,6 +5775,72 @@ export type Database = {
           },
         ]
       }
+      payroll_runs: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          approved_by_email: string | null
+          created_at: string
+          created_by: string | null
+          created_by_email: string | null
+          disbursed_at: string | null
+          employee_count: number
+          id: string
+          month: string
+          notes: string | null
+          preview: Json | null
+          status: string
+          total_gross: number
+          total_net: number
+          total_nssf_employee: number
+          total_nssf_employer: number
+          total_paye: number
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_by_email?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_email?: string | null
+          disbursed_at?: string | null
+          employee_count?: number
+          id?: string
+          month: string
+          notes?: string | null
+          preview?: Json | null
+          status?: string
+          total_gross?: number
+          total_net?: number
+          total_nssf_employee?: number
+          total_nssf_employer?: number
+          total_paye?: number
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_by_email?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_email?: string | null
+          disbursed_at?: string | null
+          employee_count?: number
+          id?: string
+          month?: string
+          notes?: string | null
+          preview?: Json | null
+          status?: string
+          total_gross?: number
+          total_net?: number
+          total_nssf_employee?: number
+          total_nssf_employer?: number
+          total_paye?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       per_diem_awards: {
         Row: {
           amount: number
@@ -7849,6 +7975,65 @@ export type Database = {
           status?: string
         }
         Relationships: []
+      }
+      statutory_liabilities: {
+        Row: {
+          amount: number
+          created_at: string
+          employee_email: string | null
+          employee_id: string | null
+          employee_name: string | null
+          id: string
+          month: string
+          payroll_run_id: string | null
+          remittance_ref: string | null
+          remitted_at: string | null
+          salary_payment_id: string | null
+          status: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          employee_email?: string | null
+          employee_id?: string | null
+          employee_name?: string | null
+          id?: string
+          month: string
+          payroll_run_id?: string | null
+          remittance_ref?: string | null
+          remitted_at?: string | null
+          salary_payment_id?: string | null
+          status?: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          employee_email?: string | null
+          employee_id?: string | null
+          employee_name?: string | null
+          id?: string
+          month?: string
+          payroll_run_id?: string | null
+          remittance_ref?: string | null
+          remitted_at?: string | null
+          salary_payment_id?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "statutory_liabilities_payroll_run_id_fkey"
+            columns: ["payroll_run_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_runs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       storage_locations: {
         Row: {
