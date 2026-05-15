@@ -1,47 +1,98 @@
-## Goal
-Make 1,500 UGX/hr the permanent overtime rate, recompute April, surface those records in HR for approval, and let HR choose **Wallet credit** OR **Mobile money (Yo Payments)** when approving — with email + SMS notifications stating where the money went. Emails never show the multiplication factor.
+## Payroll Deductions Module (NSSF + PAYE)
 
-## Changes
+Add statutory NSSF and PAYE deductions to payroll, with admin review/approval before disbursement, separate statutory liability records, and reports.
 
-### 1. Rate update (1,500 UGX/hr, 100k cap)
-- `supabase/functions/calculate-monthly-overtime/index.ts`: `RATE_PER_HOUR = 1500`, `MAX_MONTHLY_PAY = 100000`.
-- `src/hooks/useOvertimeAwards.ts`: rate 4000 → 1500, cap 100k (already added).
-- `MonthlyOvertimeReview.tsx`: edit cap 60k → 100k.
+### 1. Database changes (one migration)
 
-### 2. Recompute April 2026
-Existing April records were calculated at the old rate. Update each row to the new rate (1,500 × ceil(net_minutes/60), capped at 100,000). Reset status to `pending` so HR re-approves with payout method.
+**Extend `employee_salary_payments`** — add columns:
+- `nssf_employee` numeric default 0 (5% of gross, deducted from employee)
+- `nssf_employer` numeric default 0 (10% of gross, employer cost)
+- `nssf_total` numeric default 0 (15%)
+- `taxable_income` numeric default 0 (gross − nssf_employee)
+- `paye` numeric default 0
+- `disbursement_reference` text
+- `approved_by` text, `approved_at` timestamptz
+- `payroll_run_id` uuid
 
-### 3. New columns on `monthly_overtime_reviews`
-- `payout_method` (`wallet` | `mobile_money`)
-- `payout_destination` (phone number or "wallet")
-- `payout_status` (`pending` | `paid` | `failed`)
-- `paid_at`, `payout_reference`
+**New table `payroll_runs`**:
+- month (text), status (`draft` | `pending_approval` | `approved` | `disbursed`)
+- totals: gross, nssf_employee, nssf_employer, paye, net
+- created_by, approved_by, approved_at, disbursed_at
 
-### 4. New edge function `process-overtime-payout`
-Inputs: `reviewId`, `payoutMethod`, `phone?`.
-- Mark review `approved` + chosen payout details.
-- **Wallet**: insert `ledger_entries` DEPOSIT (with `bypass_treasury_check: true`, source `overtime_reward`) — credits the employee's wallet.
-- **Mobile money**: call Yo Payments via shared `yoPayout` (same pattern as `meal-disbursement`); store reference + status; on failure mark `failed`.
-- After success, invoke `send-transactional-email` (template `overtime-reward`, no factor breakdown — already stripped) and `send-sms` with a short message stating amount + destination ("credited to wallet" OR "sent to MTN/Airtel 0700…").
+**New table `statutory_liabilities`** (one row per employee per run per type):
+- payroll_run_id, employee_id, employee_name, month
+- type (`nssf_employee` | `nssf_employer` | `paye`)
+- amount, status (`pending` | `remitted`), remitted_at, remittance_ref
 
-### 5. HR UI: Approval dialog
-In `MonthlyOvertimeReview.tsx` replace the green check button with an **Approve & Pay** dialog:
-- Radio: Wallet credit / Mobile money
-- If mobile money: phone input prefilled from `employees.phone`
-- Submit → invokes `process-overtime-payout`
-- Bulk "Approve All" prompts once for default method (wallet, since safest), then loops per record server-side.
+**New table `employee_tax_profile`** (optional overrides):
+- employee_id, tin, nssf_number, nssf_exempt bool, paye_exempt bool
 
-### 6. April summary email to HR
-Send a one-off `general-notification` email to **Fauzakusa@greatpearlcoffee.com** (CC operations) listing the 16 employees and their April rewards at 1,500/hr. Sent immediately after the recompute migration runs.
+RLS: admin/HR/finance read-write, employees read their own rows.
 
-## Notes
-- Email template (`overtime-reward.tsx`) already had hours×rate breakdown removed — only the final reward badge shows.
-- Yo Payments float currently ~UGX 1.88M; sufficient for full April payout (~UGX 622k). Wallet credits don't touch Yo float.
-- SMS allowlist must include `process-overtime-payout` (per SMS Restriction policy) — will be added.
-- All notifications CC operations per Ops Oversight policy.
+### 2. Calculation logic (`src/lib/payroll/statutory.ts`)
 
-## Out of scope
-- Auto-paying without HR approval (kept manual).
-- Adjusting historical `overtime_awards` rows (those are separate one-off awards).
+Pure functions used by both UI preview and edge functions:
 
-Confirm and I'll ship it.
+```ts
+calculateNSSF(gross) → { employee: gross*0.05, employer: gross*0.10, total: gross*0.15 }
+
+calculatePAYE(taxable) per URA monthly bands:
+  ≤ 235,000           → 0
+  235,001 – 335,000   → 10% × (x − 235,000)
+  335,001 – 410,000   → 10,000 + 20% × (x − 335,000)
+  410,001 – 10,000,000→ 25,000 + 30% × (x − 410,000)
+  > 10,000,000        → above + additional 10% on excess over 10M
+
+calculatePayroll(gross, {nssfExempt, payeExempt}) →
+  { gross, nssfEmployee, nssfEmployer, taxable, paye, net }
+```
+
+### 3. Edge function updates
+
+- **`process-auto-salaries`**: compute NSSF + PAYE, store on payment row, write 3 `statutory_liabilities` rows, credit only `net` (gross − nssf_employee − paye − advance − time_deduction).
+- **New `run-payroll-preview`**: build a draft `payroll_runs` row with per-employee preview (no disbursement). Admin reviews.
+- **New `approve-payroll-run`**: marks run `approved`, then triggers disbursement (reuses auto-salary credit/SMS/email logic).
+
+### 4. Frontend
+
+**New page `src/pages/v2/hr/Payroll.tsx`** with tabs:
+- **Run payroll** — pick month → preview table (employee, gross, NSSF 5%, PAYE, net) with totals row → Submit for approval.
+- **Pending approval** — admin reviews run, can approve/reject. Approve triggers disbursement.
+- **History** — past runs, status, totals, drill-down to employees.
+- **Reports** (printable + CSV export):
+  1. Employee payroll summary (per run)
+  2. NSSF monthly schedule (employee + employer columns, totals)
+  3. PAYE monthly schedule
+  4. Net salary disbursement report
+  5. Employer statutory cost report (NSSF employer 10% + any other employer costs)
+
+Update existing **payslip PDF** (`generate-payslip`) to show NSSF (employee) and PAYE rows in the deductions section, plus an info line showing employer NSSF (not deducted).
+
+Add nav entry under HR for "Payroll & Statutory".
+
+### 5. Admin gate
+
+- Disbursement only fires when run status = `approved`.
+- Approval requires admin role (`admin` or `finance`); reuses existing approval separation-of-duties (creator ≠ approver).
+
+### Out of scope (not in this change)
+- LST (local service tax), pension top-ups
+- Bulk URA/NSSF e-filing exports beyond CSV
+- Editing per-employee gross from the preview screen (edit on employee record as today)
+
+### Files to add
+- `supabase/migrations/<ts>_payroll_deductions.sql`
+- `src/lib/payroll/statutory.ts` (+ unit-friendly pure fns)
+- `src/pages/v2/hr/Payroll.tsx`
+- `src/components/hr/payroll/PayrollPreviewTable.tsx`
+- `src/components/hr/payroll/PayrollRunsList.tsx`
+- `src/components/hr/payroll/reports/*` (5 report components)
+- `src/hooks/usePayrollRuns.ts`
+- `supabase/functions/run-payroll-preview/index.ts`
+- `supabase/functions/approve-payroll-run/index.ts`
+
+### Files to modify
+- `supabase/functions/process-auto-salaries/index.ts` — add NSSF + PAYE calc, write statutory_liabilities, credit net.
+- `supabase/functions/generate-payslip/index.ts` — render NSSF + PAYE deduction rows.
+- `src/components/v2/hr/ProcessPayrollDialog.tsx` — show new deduction columns.
+- HR navigation — add Payroll page link.
