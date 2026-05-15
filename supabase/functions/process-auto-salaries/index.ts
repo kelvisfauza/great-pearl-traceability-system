@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { calculatePayroll } from '../_shared/statutory.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,9 +17,18 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const now = new Date();
-    const currentMonth = now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    const body = await req.json().catch(() => ({}));
+    const payrollRunId: string | null = body?.payrollRunId || null;
+    const currentMonth: string = body?.month || now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
     
     console.log(`🚀 Auto-salary processing started for ${currentMonth}`);
+
+    // Load tax profiles once
+    const { data: taxProfiles } = await supabase
+      .from('employee_tax_profile')
+      .select('employee_id, nssf_exempt, paye_exempt');
+    const profileMap = new Map<string, any>();
+    for (const p of taxProfiles || []) profileMap.set(String(p.employee_id), p);
 
     // 1. Get all active employees
     const { data: employees, error: empError } = await supabase
@@ -69,6 +79,10 @@ Deno.serve(async (req) => {
           results.push({ employee: emp.name, status: 'skipped', reason: 'No salary' });
           continue;
         }
+
+        // Statutory deductions
+        const profile = profileMap.get(String(emp.id)) || profileMap.get(String(emp.employee_id)) || {};
+        const stat = calculatePayroll(grossSalary, { nssfExempt: !!profile.nssf_exempt, payeExempt: !!profile.paye_exempt });
 
         // 2. Check for active salary advances
         let totalAdvanceDeduction = 0;
@@ -128,7 +142,7 @@ Deno.serve(async (req) => {
           }
         }
 
-        const netSalary = grossSalary - totalAdvanceDeduction;
+        const netSalary = Math.max(0, stat.net - totalAdvanceDeduction);
 
         // 3. Create salary payment record
         const { data: paymentRecord, error: paymentError } = await supabase
@@ -140,6 +154,11 @@ Deno.serve(async (req) => {
             employee_phone: emp.phone,
             salary_amount: grossSalary,
             gross_salary: grossSalary,
+            nssf_employee: stat.nssfEmployee,
+            nssf_employer: stat.nssfEmployer,
+            nssf_total: stat.nssfTotal,
+            taxable_income: stat.taxableIncome,
+            paye: stat.paye,
             advance_deduction: totalAdvanceDeduction,
             advance_id: advanceId,
             time_deduction: 0,
@@ -153,6 +172,8 @@ Deno.serve(async (req) => {
             status: 'completed',
             completed_at: new Date().toISOString(),
             completed_by: 'Auto-Salary System',
+            payroll_run_id: payrollRunId,
+            disbursement_reference: `AUTO-SAL-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-${emp.name.replace(/\s/g, '').substring(0, 6).toUpperCase()}`,
             transaction_id: `AUTO-SAL-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-${emp.name.replace(/\s/g, '').substring(0, 6).toUpperCase()}`,
           })
           .select()
@@ -162,6 +183,27 @@ Deno.serve(async (req) => {
           console.error(`❌ Failed to create payment for ${emp.name}:`, paymentError);
           errors.push({ employee: emp.name, error: paymentError.message });
           continue;
+        }
+
+        // 3b. Statutory liabilities (always recorded — exempt entries skipped because amount=0)
+        const statutoryRows = [
+          { type: 'nssf_employee', amount: stat.nssfEmployee },
+          { type: 'nssf_employer', amount: stat.nssfEmployer },
+          { type: 'paye',          amount: stat.paye },
+        ].filter(r => r.amount > 0).map(r => ({
+          payroll_run_id: payrollRunId,
+          salary_payment_id: paymentRecord.id,
+          employee_id: String(emp.employee_id || emp.id),
+          employee_name: emp.name,
+          employee_email: emp.email,
+          month: currentMonth,
+          type: r.type,
+          amount: r.amount,
+          status: 'pending',
+        }));
+        if (statutoryRows.length) {
+          const { error: statErr } = await supabase.from('statutory_liabilities').insert(statutoryRows);
+          if (statErr) console.error(`❌ Statutory write failed for ${emp.name}:`, statErr);
         }
 
         // 4. Credit employee wallet via ledger entry
@@ -282,6 +324,9 @@ Deno.serve(async (req) => {
           employee: emp.name,
           status: 'processed',
           gross: grossSalary,
+          nssfEmployee: stat.nssfEmployee,
+          nssfEmployer: stat.nssfEmployer,
+          paye: stat.paye,
           advanceDeduction: totalAdvanceDeduction,
           net: netSalary,
           advances: advanceDetails,
