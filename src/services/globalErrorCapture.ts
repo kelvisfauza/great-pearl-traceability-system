@@ -3,6 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 const RECIPIENTS = ['tatwanzire@greatpearlcoffee.com', 'fauzakusa@greatpearlcoffee.com'];
 const DEDUPE_WINDOW_MS = 10 * 60 * 1000; // suppress identical error for 10 min
 const BATCH_FLUSH_MS = 30 * 1000;        // flush every 30s
+const NETWORK_STORAGE_KEY = 'network_errors_pending_v1';
+const NETWORK_LAST_SENT_KEY = 'network_errors_last_sent_date';
+const NETWORK_DIGEST_HOUR = 17; // 5 PM local time
+const NETWORK_CHECK_INTERVAL_MS = 5 * 60 * 1000; // check every 5 min
 
 interface CapturedError {
   title: string;
@@ -38,10 +42,85 @@ class GlobalErrorCaptureService {
       const now = Date.now();
       if (now - last < DEDUPE_WINDOW_MS) return; // suppress duplicate
       this.dedupe.set(sig, now);
+
+      // Network errors: never send immediately — batch into daily 5 PM digest
+      if (errorData.error_type === 'network') {
+        this.persistNetworkError({ ...errorData, ts: now });
+        return;
+      }
+
       this.buffer.push({ ...errorData, ts: now });
       this.scheduleFlush();
     } catch {
       // never throw from error capture
+    }
+  }
+
+  private persistNetworkError(e: CapturedError) {
+    try {
+      const raw = localStorage.getItem(NETWORK_STORAGE_KEY);
+      const list: CapturedError[] = raw ? JSON.parse(raw) : [];
+      list.push(e);
+      // cap at 500 to avoid runaway storage
+      const trimmed = list.slice(-500);
+      localStorage.setItem(NETWORK_STORAGE_KEY, JSON.stringify(trimmed));
+    } catch {
+      // storage full / unavailable — drop silently
+    }
+  }
+
+  private async flushNetworkDigestIfDue() {
+    try {
+      const now = new Date();
+      if (now.getHours() < NETWORK_DIGEST_HOUR) return;
+      const todayKey = now.toISOString().slice(0, 10);
+      if (localStorage.getItem(NETWORK_LAST_SENT_KEY) === todayKey) return;
+
+      const raw = localStorage.getItem(NETWORK_STORAGE_KEY);
+      const list: CapturedError[] = raw ? JSON.parse(raw) : [];
+      // Mark as sent for today even if list is empty, so we don't keep checking
+      localStorage.setItem(NETWORK_LAST_SENT_KEY, todayKey);
+      if (list.length === 0) return;
+
+      // Clear pending before sending so we don't double-send on retry
+      localStorage.removeItem(NETWORK_STORAGE_KEY);
+
+      const lines: string[] = [];
+      lines.push(`Daily Network Issues Digest — ${list.length} event(s) captured today.`);
+      lines.push(`User: ${this.userContext.name || ''} (${this.userContext.email || 'n/a'}) — Dept: ${this.userContext.department || 'n/a'}`);
+      lines.push('');
+      list.forEach((e, i) => {
+        lines.push(`${i + 1}. ${e.title}`);
+        lines.push(`   ${e.description || 'n/a'}`);
+        if (e.metadata?.url) lines.push(`   URL: ${e.metadata.url}`);
+        lines.push(`   Time: ${new Date(e.ts).toLocaleString()}`);
+        lines.push('');
+      });
+
+      const subject = `[Network Digest] ${list.length} network event(s) — ${todayKey}`;
+      const idem = `network-digest-${todayKey}-${this.userContext.email || 'anon'}`;
+
+      for (const recipient of RECIPIENTS) {
+        try {
+          await supabase.functions.invoke('send-transactional-email', {
+            body: {
+              templateName: 'general-notification',
+              recipientEmail: recipient,
+              idempotencyKey: `${idem}-${recipient}`,
+              templateData: {
+                title: `Daily Network Digest — ${list.length} events`,
+                subject,
+                message: lines.join('\n'),
+                recipientName: recipient.split('@')[0],
+              },
+            },
+          });
+        } catch {
+          // swallow
+        }
+      }
+    } catch {
+      // never throw
     }
   }
 
@@ -111,6 +190,10 @@ class GlobalErrorCaptureService {
 
     // Flush remaining errors on unload
     window.addEventListener('beforeunload', () => { void this.flush(); });
+
+    // Schedule the daily 5 PM network digest check
+    void this.flushNetworkDigestIfDue();
+    window.setInterval(() => { void this.flushNetworkDigestIfDue(); }, NETWORK_CHECK_INTERVAL_MS);
 
     // Capture unhandled errors
     window.addEventListener('error', (event) => {
