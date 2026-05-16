@@ -10910,6 +10910,15 @@ export type Database = {
           total_kg: number
         }[]
       }
+      recompute_loan_paid_from_ledger: {
+        Args: { p_loan_id: string }
+        Returns: {
+          new_paid: number
+          new_remaining: number
+          old_paid: number
+          out_loan_id: string
+        }[]
+      }
       record_treasury_entry: {
         Args: {
           p_amount: number

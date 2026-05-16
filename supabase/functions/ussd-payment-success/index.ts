@@ -274,7 +274,26 @@ async function processServicePayment(
       const newBal = bal - apply;
       const newPaid = Number(loan.paid_amount || 0) + apply;
 
-      await supabase.from("loan_repayments").insert({
+      // Strict idempotency: never insert a duplicate for the same
+      // (loan_id, payment_reference). Earlier versions of this function
+      // hammered loan_repayments 4x for the same USSD ref, over-counting
+      // loans.paid_amount. A partial unique index now guards this too,
+      // but we check first so we can skip the loans-update on duplicate.
+      const { data: existingRep } = await supabase
+        .from("loan_repayments")
+        .select("id")
+        .eq("loan_id", loan.id)
+        .eq("payment_reference", externalRef)
+        .maybeSingle();
+
+      if (existingRep) {
+        console.log(
+          `[USSD Payment Success] Skipping duplicate repayment for loan ${loan.id} ref ${externalRef}`,
+        );
+        continue;
+      }
+
+      const { error: repInsErr } = await supabase.from("loan_repayments").insert({
         loan_id: loan.id,
         amount_due: apply,
         amount_paid: apply,
@@ -284,6 +303,13 @@ async function processServicePayment(
         deducted_from: "ussd_momo",
         payment_reference: externalRef,
       });
+      if (repInsErr) {
+        // Unique-index violation = another concurrent call already inserted it.
+        console.log(
+          `[USSD Payment Success] loan_repayments insert skipped (${loan.id}): ${repInsErr.message}`,
+        );
+        continue;
+      }
 
       await supabase.from("loans").update({
         paid_amount: newPaid,
