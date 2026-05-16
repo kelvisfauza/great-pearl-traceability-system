@@ -92,6 +92,7 @@ import EUDRDispatchReports from "./pages/reports/EUDRDispatchReports";
 import WholeBusinessReport from "./pages/reports/WholeBusinessReport";
 import YoPaymentsReport from "./pages/reports/YoPaymentsReport";
 import CoffeeAuditTrailReportPage from "./pages/reports/CoffeeAuditTrailReport";
+import StoreAuditComparison from "./pages/reports/StoreAuditComparison";
 import SystemSettings from "./pages/admin/SystemSettings";
 import SystemTransactions from "./pages/admin/SystemTransactions";
 import AdminInitiateWithdrawal from "./pages/admin/AdminInitiateWithdrawal";
@@ -390,6 +391,11 @@ const App: React.ComponentType = () => {
                 <Route path="/reports/comparison" element={
                   <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
                     <ComparisonReport />
+                  </ProtectedRoute>
+                } />
+                <Route path="/reports/store-audit" element={
+                  <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
+                    <StoreAuditComparison />
                   </ProtectedRoute>
                 } />
                 <Route path="/reports/eudr-dispatch" element={
