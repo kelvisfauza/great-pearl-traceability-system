@@ -58,7 +58,7 @@ const StatutoryInfoModal = () => {
       return;
     }
     toast({ title: 'Saved', description: 'Your statutory information has been recorded.' });
-    await fetchEmployeeData(employee.user_id || undefined);
+    await fetchEmployeeData((employee as any).user_id || undefined);
     setOpen(false);
   };
 
