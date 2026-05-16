@@ -108,6 +108,7 @@ import MaintenanceRecovery from "./pages/MaintenanceRecovery";
 import QuickLoans from "./pages/QuickLoans";
 import ProfileCompletionModal from "./components/ProfileCompletionModal";
 import BirthdayNotification from "./components/BirthdayNotification";
+import StatutoryInfoModal from "./components/StatutoryInfoModal";
 import { useInactivityTimer } from './hooks/useInactivityTimer';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import GlobalErrorCaptureInitializer from './components/GlobalErrorCaptureInitializer';
@@ -157,6 +158,7 @@ const App: React.ComponentType = () => {
               <MonthlyReportReminder />
               <ProfileCompletionModal />
               <BirthdayNotification />
+              <StatutoryInfoModal />
               
               {/* <RoleNotificationHandler /> - Disabled due to performance issues */}
               
