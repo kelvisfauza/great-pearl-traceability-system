@@ -128,6 +128,13 @@ const Reports = () => {
       path: "/reports/audit-trail",
       color: "text-rose-600"
     });
+    reportCards.push({
+      title: "Store Audit & MoM",
+      description: "Purchases ↔ Sales ↔ EUDR dispatch match + month-over-month",
+      icon: BarChart3,
+      path: "/reports/store-audit",
+      color: "text-teal-700"
+    });
   }
 
   return (
