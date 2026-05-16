@@ -314,8 +314,43 @@ export const useOvertimeAwards = () => {
         throw new Error('Update failed. Please contact your system administrator.');
       }
 
-      // Send notification to the employee
       const awardData = data as OvertimeAward;
+
+      // Credit the employee's wallet (idempotent via OT-AWARD-<id> reference).
+      // Without this the award is "completed" on screen but the balance never changes.
+      try {
+        const { data: uid } = await supabase
+          .rpc('get_unified_user_id', { input_email: awardData.employee_email } as any);
+        const ledgerRef = `OT-AWARD-${awardData.id}`;
+        const { data: existing } = await supabase
+          .from('ledger_entries')
+          .select('id')
+          .eq('reference', ledgerRef)
+          .maybeSingle();
+        if (!existing && uid) {
+          const { error: ledErr } = await supabase.from('ledger_entries').insert({
+            user_id: uid as string,
+            entry_type: 'DEPOSIT',
+            amount: Math.round(Number(awardData.total_amount || 0)),
+            reference: ledgerRef,
+            metadata: {
+              description: `Overtime reward — ref ${awardData.reference_number}`,
+              source: 'overtime_reward',
+              overtime_award_id: awardData.id,
+              reference_number: awardData.reference_number,
+              department: awardData.department,
+              hours: awardData.hours,
+              minutes: awardData.minutes,
+              completed_by: employee?.name || 'Admin',
+            },
+          } as any);
+          if (ledErr) console.error('✅ Overtime ledger credit failed:', ledErr);
+        }
+      } catch (ledgerError) {
+        console.error('✅ Overtime ledger credit error:', ledgerError);
+      }
+
+      // Send notification to the employee
       try {
         await addDoc(collection(db, 'notifications'), {
           type: 'system',
