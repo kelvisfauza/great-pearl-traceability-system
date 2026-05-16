@@ -328,7 +328,7 @@ serve(async (req) => {
 
     // Deduct from wallet via ledger (deduct immediately even if pending approval)
     const ledgerRef = `INSTANT-WD-${instantRecord.id}`;
-    await supabase.from('ledger_entries').insert({
+    const { error: ledgerErr } = await supabase.from('ledger_entries').insert({
       user_id: resolvedUserId,
       entry_type: 'WITHDRAWAL',
       amount: -numAmount,
@@ -340,8 +340,49 @@ serve(async (req) => {
         payout_ref: txRef,
         instant_withdrawal_id: instantRecord.id,
         yo_status: txStatus,
+        // Yo payout has ALREADY succeeded at this point — the treasury/float
+        // check must not block recording the user-side debit, otherwise the
+        // user keeps the cash AND the wallet balance (real money leak).
+        bypass_treasury_check: true,
       },
     });
+
+    if (ledgerErr) {
+      // Critical: payout already left Yo, but we couldn't debit the wallet.
+      // Flag the row for reconciliation and alert admins instead of silently
+      // returning success and letting the user keep the float.
+      console.error('[instant-withdrawal] CRITICAL: ledger debit failed after successful payout:', ledgerErr.message);
+      await supabase.from('instant_withdrawals')
+        .update({
+          payout_status: 'reconciliation_needed',
+          payout_ref: txRef,
+          ledger_reference: ledgerRef,
+          completed_at: isPending ? null : new Date().toISOString(),
+        })
+        .eq('id', instantRecord.id);
+
+      // Best-effort admin alert
+      try {
+        await supabase.functions.invoke('send-transactional-email', {
+          body: {
+            templateName: 'general-notification',
+            recipientEmail: 'fauzakusa@greatpearlcoffee.com',
+            ccEmails: ['operations@greatpearlcoffee.com'],
+            idempotencyKey: `instant-wd-reconcile-${instantRecord.id}`,
+            templateData: {
+              title: 'URGENT: Instant withdrawal needs manual ledger reconciliation',
+              message: `Yo payout of UGX ${numAmount.toLocaleString()} to ${cleanPhone} for ${employeeName} (${userEmail}) succeeded (ref ${txRef}) but the wallet debit failed: ${ledgerErr.message}. Please post the missing debit manually with reference ${ledgerRef}.`,
+            },
+          },
+        });
+      } catch (_) { /* swallow */ }
+
+      return respond(false, {
+        error: 'Payout was sent but wallet sync failed. Operations has been alerted to reconcile. Please do not retry.',
+        payoutRef: txRef,
+        ledgerRef,
+      });
+    }
 
     // Update tracking record
     await supabase.from('instant_withdrawals')
