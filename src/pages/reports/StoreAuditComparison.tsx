@@ -10,6 +10,7 @@ import { ArrowLeft, Printer, Loader2, TrendingUp, TrendingDown, CheckCircle2, Al
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import StandardPrintHeader from "@/components/print/StandardPrintHeader";
+import { getStandardPrintStyles } from "@/utils/printStyles";
 
 type PeriodMetrics = {
   label: string;
@@ -138,7 +139,86 @@ const StoreAuditComparison = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [comparisonMonth]);
 
-  const handlePrint = () => window.print();
+  const handlePrint = () => {
+    if (!current || !prior) return;
+    const w = window.open("", "_blank", "width=1024,height=768");
+    if (!w) return;
+
+    const row = (label: string, a: string | number, b: string | number, c: string | number = "") =>
+      `<tr><td>${label}</td><td class="amount">${a}</td><td class="amount">${b}</td><td class="amount">${c}</td></tr>`;
+
+    const salesVsDispatchDiff = Math.abs(current.salesKg - current.dispatchKg);
+    const svdBase = Math.max(current.salesKg, current.dispatchKg);
+    const svdPct = svdBase > 0 ? (salesVsDispatchDiff / svdBase) * 100 : 0;
+    const svdOk = svdPct <= 5;
+
+    const html = `
+      <html><head><title>Store Management Audit</title>
+      <style>${getStandardPrintStyles()}</style>
+      </head><body>
+        <div class="print-header" style="text-align:center;border-bottom:2px solid #333;padding-bottom:12px;margin-bottom:15px;">
+          <h1 class="company-name">GREAT AGRO COFFEE</h1>
+          <div class="company-details">
+            <p>Kasese, Uganda · +256 393 001 626</p>
+            <p>www.greatagrocoffee.com | info@greatpearlcoffee.com</p>
+          </div>
+          <h2 class="document-title">Store Management Audit</h2>
+          <div class="document-info">
+            <p>${current.label} vs ${prior.label}</p>
+            <p>Generated: ${new Date().toLocaleString()}</p>
+          </div>
+        </div>
+
+        <div class="content-section">
+          <h3 class="section-title">Period Summary</h3>
+          <table>
+            <thead><tr><th>Period</th><th class="amount">Purchases</th><th class="amount">Sales (kg)</th><th class="amount">Sales (UGX)</th><th class="amount">EUDR Dispatched</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Current</strong> — ${current.label}</td><td class="amount">${fmtKg(current.purchaseKg)} (${current.purchaseCount})</td><td class="amount">${fmtKg(current.salesKg)} (${current.salesCount})</td><td class="amount">${fmtUgx(current.salesAmount)}</td><td class="amount">${fmtKg(current.dispatchKg)} (${current.dispatchCount})</td></tr>
+              <tr><td><strong>Comparison</strong> — ${prior.label}</td><td class="amount">${fmtKg(prior.purchaseKg)} (${prior.purchaseCount})</td><td class="amount">${fmtKg(prior.salesKg)} (${prior.salesCount})</td><td class="amount">${fmtUgx(prior.salesAmount)}</td><td class="amount">${fmtKg(prior.dispatchKg)} (${prior.dispatchCount})</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="content-section">
+          <h3 class="section-title">Traceability Audit — Current Period</h3>
+          <table>
+            <thead><tr><th>Flow</th><th class="amount">Value A</th><th class="amount">Value B</th><th class="amount">Difference</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>Sales vs EUDR Dispatch</td><td class="amount">${fmtKg(current.salesKg)}</td><td class="amount">${fmtKg(current.dispatchKg)}</td><td class="amount">${fmtKg(salesVsDispatchDiff)}</td><td class="${svdOk ? 'positive' : 'negative'}">${svdOk ? 'Matched' : svdPct.toFixed(1) + '% gap'}</td></tr>
+              <tr><td>Purchases vs Sales</td><td class="amount">${fmtKg(current.purchaseKg)}</td><td class="amount">${fmtKg(current.salesKg)}</td><td class="amount">${fmtKg(current.purchaseKg - current.salesKg)}</td><td class="${current.purchaseKg >= current.salesKg ? 'positive' : 'negative'}">${current.purchaseKg >= current.salesKg ? 'Healthy surplus' : 'Oversold'}</td></tr>
+              <tr><td>Purchases vs EUDR Dispatch</td><td class="amount">${fmtKg(current.purchaseKg)}</td><td class="amount">${fmtKg(current.dispatchKg)}</td><td class="amount">${fmtKg(current.purchaseKg - current.dispatchKg)}</td><td>Throughput ${current.purchaseKg > 0 ? ((current.dispatchKg / current.purchaseKg) * 100).toFixed(1) : '0'}%</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="content-section">
+          <h3 class="section-title">Month-over-Month Comparison</h3>
+          <table>
+            <thead><tr><th>Metric</th><th class="amount">${current.label}</th><th class="amount">${prior.label}</th><th class="amount">Change</th></tr></thead>
+            <tbody>
+              ${row("Purchases (kg)", fmtKg(current.purchaseKg), fmtKg(prior.purchaseKg), `${pct(current.purchaseKg, prior.purchaseKg).toFixed(1)}%`)}
+              ${row("Purchase Receipts", current.purchaseCount, prior.purchaseCount, `${current.purchaseCount - prior.purchaseCount > 0 ? '+' : ''}${current.purchaseCount - prior.purchaseCount}`)}
+              ${row("Sales (kg)", fmtKg(current.salesKg), fmtKg(prior.salesKg), `${pct(current.salesKg, prior.salesKg).toFixed(1)}%`)}
+              ${row("Sales Revenue", fmtUgx(current.salesAmount), fmtUgx(prior.salesAmount), `${pct(current.salesAmount, prior.salesAmount).toFixed(1)}%`)}
+              ${row("Sales Transactions", current.salesCount, prior.salesCount, `${current.salesCount - prior.salesCount > 0 ? '+' : ''}${current.salesCount - prior.salesCount}`)}
+              ${row("EUDR Dispatched (kg)", fmtKg(current.dispatchKg), fmtKg(prior.dispatchKg), `${pct(current.dispatchKg, prior.dispatchKg).toFixed(1)}%`)}
+              ${row("Dispatch Reports", current.dispatchCount, prior.dispatchCount, `${current.dispatchCount - prior.dispatchCount > 0 ? '+' : ''}${current.dispatchCount - prior.dispatchCount}`)}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="footer">
+          <p>Tolerance for Sales↔Dispatch match is 5%. Differences beyond may indicate untracked dispatches, unreconciled sales, or weighbridge variances.</p>
+          <p>Great Agro Coffee — Store Management Audit</p>
+        </div>
+      </body></html>`;
+
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(() => { w.print(); }, 250);
+  };
 
   return (
     <Layout title="Store Management Audit" subtitle="Purchases ↔ Sales ↔ EUDR Dispatch comparison & month-over-month">
