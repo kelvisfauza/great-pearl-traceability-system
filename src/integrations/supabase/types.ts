@@ -2047,6 +2047,7 @@ export type Database = {
           next_of_kin_name: string | null
           next_of_kin_phone: string | null
           next_of_kin_relationship: string | null
+          nssf_number: string | null
           permissions: string[]
           phone: string | null
           position: string
@@ -2055,6 +2056,7 @@ export type Database = {
           role_notification_shown_at: string | null
           salary: number
           status: string
+          tin_number: string | null
           training_progress: number | null
           tribe: string | null
           updated_at: string
@@ -2096,6 +2098,7 @@ export type Database = {
           next_of_kin_name?: string | null
           next_of_kin_phone?: string | null
           next_of_kin_relationship?: string | null
+          nssf_number?: string | null
           permissions?: string[]
           phone?: string | null
           position: string
@@ -2104,6 +2107,7 @@ export type Database = {
           role_notification_shown_at?: string | null
           salary?: number
           status?: string
+          tin_number?: string | null
           training_progress?: number | null
           tribe?: string | null
           updated_at?: string
@@ -2145,6 +2149,7 @@ export type Database = {
           next_of_kin_name?: string | null
           next_of_kin_phone?: string | null
           next_of_kin_relationship?: string | null
+          nssf_number?: string | null
           permissions?: string[]
           phone?: string | null
           position?: string
@@ -2153,6 +2158,7 @@ export type Database = {
           role_notification_shown_at?: string | null
           salary?: number
           status?: string
+          tin_number?: string | null
           training_progress?: number | null
           tribe?: string | null
           updated_at?: string
@@ -10536,6 +10542,7 @@ export type Database = {
           next_of_kin_name: string | null
           next_of_kin_phone: string | null
           next_of_kin_relationship: string | null
+          nssf_number: string | null
           permissions: string[]
           phone: string | null
           position: string
@@ -10544,6 +10551,7 @@ export type Database = {
           role_notification_shown_at: string | null
           salary: number
           status: string
+          tin_number: string | null
           training_progress: number | null
           tribe: string | null
           updated_at: string
