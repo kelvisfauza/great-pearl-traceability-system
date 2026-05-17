@@ -212,6 +212,7 @@ const ADMIN_NAV = [
       { icon: ArrowLeftRight, label: "System Transactions", path: "/admin/system-transactions" },
       { icon: FileText, label: "User Statement", path: "/admin/user-statement" },
       { icon: FileText, label: "Backfill Trace", path: "/admin/backfill-trace" },
+      { icon: ShieldAlert, label: "Wallet Audit", path: "/admin/wallet-audit" },
       { icon: Cog, label: "System Settings", path: "/admin/system-settings" },
     ]
   }
