@@ -319,7 +319,7 @@ const V2Navigation = () => {
               {section.section}
             </h3>
             <nav className="flex flex-col gap-1">
-              {section.items.map((item) => {
+              {section.items.map((item: any) => {
                 if (!hasPermission(item.permission)) return null;
                 
                 const Icon = item.icon;
