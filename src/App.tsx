@@ -162,6 +162,7 @@ const App: React.ComponentType = () => {
               <ProfileCompletionModal />
               <BirthdayNotification />
               <StatutoryInfoModal />
+              <SeasonalAdvisoryModal />
               
               {/* <RoleNotificationHandler /> - Disabled due to performance issues */}
               
