@@ -97,6 +97,7 @@ import SystemSettings from "./pages/admin/SystemSettings";
 import SystemTransactions from "./pages/admin/SystemTransactions";
 import AdminInitiateWithdrawal from "./pages/admin/AdminInitiateWithdrawal";
 import Treasury from "./pages/admin/Treasury";
+import UserStatement from "./pages/admin/UserStatement";
 import UserDailyReports from "./pages/UserDailyReports";
 import { DailyReportReminder } from "./components/reports/DailyReportReminder";
 import { MonthlyReportReminder } from "./components/reports/MonthlyReportReminder";
@@ -436,6 +437,11 @@ const App: React.ComponentType = () => {
                 <Route path="/admin/treasury" element={
                   <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
                     <Treasury />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/user-statement" element={
+                  <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
+                    <UserStatement />
                   </ProtectedRoute>
                 } />
                 <Route path="/scan-weighbridge" element={<ScanWeighBridge />} />
