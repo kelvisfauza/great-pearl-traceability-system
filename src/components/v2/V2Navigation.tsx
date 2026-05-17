@@ -23,7 +23,8 @@ import {
   CreditCard,
   Clock,
   ArrowLeftRight,
-  Calculator
+  Calculator,
+  FileText
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
