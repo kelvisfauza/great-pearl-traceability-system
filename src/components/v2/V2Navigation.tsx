@@ -211,6 +211,7 @@ const ADMIN_NAV = [
     items: [
       { icon: ArrowLeftRight, label: "System Transactions", path: "/admin/system-transactions" },
       { icon: FileText, label: "User Statement", path: "/admin/user-statement" },
+      { icon: FileText, label: "Backfill Trace", path: "/admin/backfill-trace" },
       { icon: Cog, label: "System Settings", path: "/admin/system-settings" },
     ]
   }
