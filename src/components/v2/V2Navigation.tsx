@@ -23,7 +23,8 @@ import {
   CreditCard,
   Clock,
   ArrowLeftRight,
-  Calculator
+  Calculator,
+  FileText
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -209,6 +210,7 @@ const ADMIN_NAV = [
     section: "System Admin",
     items: [
       { icon: ArrowLeftRight, label: "System Transactions", path: "/admin/system-transactions" },
+      { icon: FileText, label: "User Statement", path: "/admin/user-statement" },
       { icon: Cog, label: "System Settings", path: "/admin/system-settings" },
     ]
   }
@@ -317,7 +319,7 @@ const V2Navigation = () => {
               {section.section}
             </h3>
             <nav className="flex flex-col gap-1">
-              {section.items.map((item) => {
+              {section.items.map((item: any) => {
                 if (!hasPermission(item.permission)) return null;
                 
                 const Icon = item.icon;
