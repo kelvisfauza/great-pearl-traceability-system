@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AlertTriangle, CheckCircle2, RefreshCw, Search, ShieldAlert, Wallet, ExternalLink } from "lucide-react";
+import { AlertTriangle, CheckCircle2, RefreshCw, Search, ShieldAlert, Wallet, ExternalLink, Download } from "lucide-react";
 
 const fmt = (n: number) => `UGX ${Math.round(Number(n || 0)).toLocaleString()}`;
 
@@ -173,6 +173,38 @@ const WalletAudit = () => {
         </div>
         <Button variant="outline" onClick={() => refetch()} disabled={isFetching} className="gap-2">
           <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} /> Recompute
+        </Button>
+        <Button
+          variant="default"
+          className="gap-2 ml-2"
+          disabled={!data || data.length === 0}
+          onClick={() => {
+            const rows = filtered;
+            const header = ["Name","Email","Balance","Entries","Backfill","YoPending","DupClusters","BonusWriteoffs","Risk","Reasons"];
+            const csv = [header.join(",")].concat(
+              rows.map((u) => [
+                JSON.stringify(u.name),
+                JSON.stringify(u.email),
+                u.balance,
+                u.entries,
+                u.backfillCount,
+                u.pendingYoCount,
+                u.duplicateClusters,
+                u.bonusWriteoffs,
+                u.risk,
+                JSON.stringify(u.reasons.join(" | ")),
+              ].join(","))
+            ).join("\n");
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `wallet-audit-${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+        >
+          <Download className="h-4 w-4" /> Export CSV
         </Button>
       </div>
 
