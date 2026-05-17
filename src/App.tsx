@@ -111,6 +111,7 @@ import QuickLoans from "./pages/QuickLoans";
 import ProfileCompletionModal from "./components/ProfileCompletionModal";
 import BirthdayNotification from "./components/BirthdayNotification";
 import StatutoryInfoModal from "./components/StatutoryInfoModal";
+import SeasonalAdvisoryModal from "./components/SeasonalAdvisoryModal";
 import { useInactivityTimer } from './hooks/useInactivityTimer';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import GlobalErrorCaptureInitializer from './components/GlobalErrorCaptureInitializer';
