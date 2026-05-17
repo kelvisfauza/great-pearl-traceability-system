@@ -209,6 +209,7 @@ const ADMIN_NAV = [
     section: "System Admin",
     items: [
       { icon: ArrowLeftRight, label: "System Transactions", path: "/admin/system-transactions" },
+      { icon: FileText, label: "User Statement", path: "/admin/user-statement" },
       { icon: Cog, label: "System Settings", path: "/admin/system-settings" },
     ]
   }
