@@ -187,6 +187,19 @@ serve(async (req) => {
     // Verify wallet balance
     const { data: balanceData } = await supabase.rpc('get_user_balance_safe', { user_email: userEmail });
     const walletBalance = Number(balanceData?.[0]?.wallet_balance || 0);
+    const availableBalance = Number(balanceData?.[0]?.available_balance ?? walletBalance);
+    const pendingWithdrawals = Number(balanceData?.[0]?.pending_withdrawals || 0);
+
+    // Also subtract any in-flight instant withdrawals still pending payout (race guard).
+    let inFlightInstant = 0;
+    try {
+      const { data: inflight } = await supabase
+        .from('instant_withdrawals')
+        .select('amount')
+        .eq('user_id', resolvedUserId)
+        .in('payout_status', ['pending', 'pending_approval', 'reconciliation_needed']);
+      inFlightInstant = (inflight || []).reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
+    } catch (_) { /* non-fatal */ }
 
     // Loan minimum balance enforcement: borrowers and guarantors on active loans
     // must keep UGX 10,000 in their wallet at all times.
@@ -198,11 +211,14 @@ serve(async (req) => {
       console.warn('[instant-withdrawal] loan obligation check failed:', (e as Error).message);
     }
 
-    const spendable = Math.max(0, walletBalance - reserve);
+    // Authoritative spendable balance: ledger balance minus pending withdrawal_requests
+    // minus in-flight instant withdrawals minus loan reserve.
+    const baseAvailable = Math.min(availableBalance, walletBalance - pendingWithdrawals);
+    const spendable = Math.max(0, baseAvailable - inFlightInstant - reserve);
     if (numAmount > spendable) {
       const msg = reserve > 0
         ? `You have an active loan (as borrower or guarantor). UGX ${reserve.toLocaleString()} must remain in your wallet. Available to withdraw: UGX ${spendable.toLocaleString()}.`
-        : `Insufficient wallet balance. Available: UGX ${walletBalance.toLocaleString()}`;
+        : `Insufficient wallet balance. Available: UGX ${spendable.toLocaleString()} (wallet ${walletBalance.toLocaleString()}, pending ${(pendingWithdrawals + inFlightInstant).toLocaleString()}).`;
       return respond(false, { error: msg });
     }
 
