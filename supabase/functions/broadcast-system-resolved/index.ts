@@ -141,7 +141,7 @@ Deno.serve(async (req) => {
   for (const r of unique) {
     let bal: number | null = null
     try {
-      const { data: authUser } = await supabase.rpc('get_unified_user_id', { p_email: r.email })
+      const { data: authUser } = await supabase.rpc('get_unified_user_id', { input_email: r.email })
       const userId: string | null = (authUser as any) || null
       if (userId) {
         const { data: rows } = await supabase
