@@ -175,9 +175,9 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     }
   };
 
-  // Statement fee temporarily waived for a 1-hour free window during reconciliation.
+  // Statement fee temporarily waived for a 2-hour free window during reconciliation.
   // After this timestamp, the normal fee resumes.
-  const FREE_UNTIL = new Date('2026-05-18T07:15:00Z');
+  const FREE_UNTIL = new Date('2026-05-18T09:15:00Z');
   const isFreeWindow = new Date() < FREE_UNTIL;
   const STATEMENT_FEE = isFreeWindow ? 0 : 500;
 
@@ -688,7 +688,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
                   <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-center gap-2">
                     <span className="text-emerald-600 text-sm">✓</span>
                     <p className="text-xs text-emerald-800">
-                      Statements are <span className="font-bold">free for the next hour</span> — download as many as you need.
+                      Statements are <span className="font-bold">free for the next 2 hours</span> — download as many as you need.
                     </p>
                   </div>
                 ) : (
