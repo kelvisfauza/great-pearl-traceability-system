@@ -193,24 +193,27 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       // Statement fee waived — no ledger charge
       const statementRef = `STMT-FREE-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
 
-      // 2. Fetch all entries in the date range
+      const periodStart = `${dateFrom}T00:00:00`;
+      const periodEnd = `${dateTo}T23:59:59`;
+
+      // 2. Fetch all wallet-affecting entries up to the statement end date so balances are period-correct
       const { data: allEntries, error } = await supabase
         .from('ledger_entries')
         .select('*')
         .eq('user_id', unifiedUserId)
         .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY'])
-        .gte('created_at', `${dateFrom}T00:00:00`)
-        .lte('created_at', `${dateTo}T23:59:59`)
+        .lte('created_at', periodEnd)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
 
-      const fetchedEntries = (allEntries || []) as LedgerEntry[];
-      const walletBalance = currentBalance;
-      
-      // Build running balances (ascending for correct calculation)
-      const walletSum = fetchedEntries.filter(e => WALLET_TYPES.includes(e.entry_type)).reduce((s, e) => s + e.amount, 0);
-      let runBal = walletBalance - walletSum;
+      const upToEndEntries = (allEntries || []) as LedgerEntry[];
+      const fetchedEntries = upToEndEntries.filter((entry) => entry.created_at >= periodStart && entry.created_at <= periodEnd);
+
+      // Build running balances from the actual opening balance at the start of the selected period
+      let runBal = upToEndEntries
+        .filter((entry) => entry.created_at < periodStart && WALLET_TYPES.includes(entry.entry_type))
+        .reduce((sum, entry) => sum + entry.amount, 0);
       
       const transactionsAsc = fetchedEntries.map(e => {
         const affectsWallet = WALLET_TYPES.includes(e.entry_type);
@@ -232,6 +235,10 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
 
       // Reverse so most recent transactions appear on top
       const transactions = [...transactionsAsc].reverse();
+
+      const closingBalance = transactionsAsc.length > 0
+        ? (transactionsAsc[transactionsAsc.length - 1].balance ?? runBal)
+        : runBal;
 
       const periodFrom = format(new Date(dateFrom), 'MMM dd, yyyy');
       const periodTo = format(new Date(dateTo), 'MMM dd, yyyy');
@@ -274,9 +281,9 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       doc.text(`${periodFrom} - ${periodTo}`, margin + 25, y);
       y += 5;
       doc.setFont('helvetica', 'bold');
-      doc.text('Wallet Balance:', margin, y);
+      doc.text('Balance at end of period:', margin, y);
       doc.setFont('helvetica', 'normal');
-      doc.text(`UGX ${walletBalance.toLocaleString()}`, margin + 35, y);
+      doc.text(`UGX ${closingBalance.toLocaleString()}`, margin + 35, y);
       y += 5;
       if (spendableBalance != null) {
         doc.setFont('helvetica', 'bold');
@@ -374,7 +381,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
             employeeName: empName,
             periodFrom,
             periodTo,
-            currentBalance: walletBalance,
+            currentBalance: closingBalance,
             transactions,
             pdfDownloadUrl: downloadUrl,
             statementFee: STATEMENT_FEE,
