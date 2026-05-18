@@ -52,6 +52,7 @@ interface TransactionStatementProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   currentBalance: number;
+  spendableBalance?: number;
   balanceBroughtForward?: number;
   thisMonthEarnings?: number;
 }
@@ -59,7 +60,7 @@ interface TransactionStatementProps {
 const DISPLAY_LIMIT = 10;
 const WALLET_TYPES = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY', 'PAYOUT'];
 
-export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open, onOpenChange, currentBalance, balanceBroughtForward = 0, thisMonthEarnings = 0 }) => {
+export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open, onOpenChange, currentBalance, spendableBalance, balanceBroughtForward = 0, thisMonthEarnings = 0 }) => {
   const { user, employee } = useAuth();
   const { toast } = useToast();
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
@@ -127,7 +128,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
           <strong>Date:</strong> ${format(new Date(), 'MMMM dd, yyyy')}<br/>
           <strong>Balance from last month:</strong> UGX ${Math.max(0, balanceBroughtForward).toLocaleString()}<br/>
           <strong>This month:</strong> UGX ${thisMonthEarnings.toLocaleString()}<br/>
-          <strong>Current Balance:</strong> UGX ${currentBalance.toLocaleString()}
+          <strong>Wallet Balance:</strong> UGX ${currentBalance.toLocaleString()}${spendableBalance != null ? `<br/><strong>Available to spend:</strong> UGX ${spendableBalance.toLocaleString()}` : ''}
         </div>
         <table>
           <thead><tr><th>Date</th><th>Type</th><th style="text-align:right">Amount (UGX)</th><th style="text-align:right">Balance (UGX)</th></tr></thead>
@@ -285,10 +286,17 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       doc.text(`${periodFrom} - ${periodTo}`, margin + 25, y);
       y += 5;
       doc.setFont('helvetica', 'bold');
-      doc.text('Current Balance:', margin, y);
+      doc.text('Wallet Balance:', margin, y);
       doc.setFont('helvetica', 'normal');
       doc.text(`UGX ${updatedBalance.toLocaleString()}`, margin + 35, y);
       y += 5;
+      if (spendableBalance != null) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('Available to spend:', margin, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`UGX ${Math.max(0, spendableBalance - STATEMENT_FEE).toLocaleString()}`, margin + 35, y);
+        y += 5;
+      }
       doc.setFont('helvetica', 'bold');
       doc.text('Statement Charge:', margin, y);
       doc.setFont('helvetica', 'normal');
@@ -544,9 +552,15 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
           </span>
         </div>
         <div className="flex justify-between font-semibold border-t pt-1 mt-1">
-          <span>Current balance:</span>
+          <span>Wallet balance:</span>
           <span>UGX {currentBalance.toLocaleString()}</span>
         </div>
+        {spendableBalance != null && (
+          <div className="flex justify-between text-muted-foreground">
+            <span>Available to spend:</span>
+            <span className="font-medium text-foreground">UGX {spendableBalance.toLocaleString()}</span>
+          </div>
+        )}
       </div>
 
       {loading && entries.length === 0 ? (
