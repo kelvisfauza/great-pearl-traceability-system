@@ -175,7 +175,8 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     }
   };
 
-  const STATEMENT_FEE = 500;
+  // Statement fee temporarily waived during wallet reconciliation
+  const STATEMENT_FEE = 0;
 
   const handleSendStatement = async () => {
     if (!user?.email || !dateFrom || !dateTo) return;
@@ -185,20 +186,8 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         .rpc('get_unified_user_id', { input_email: user.email });
       const unifiedUserId = userIdData || user.id;
 
-      // 1. Charge 500 UGX statement fee (overdraft allowed)
-      const statementRef = `STMT-FEE-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-      const { error: feeError } = await supabase.from('ledger_entries').insert({
-        user_id: unifiedUserId,
-        entry_type: 'WITHDRAWAL',
-        amount: -STATEMENT_FEE,
-        reference: statementRef,
-        metadata: {
-          source: 'statement_fee',
-          description: 'Transaction Statement Charge',
-          period: `${dateFrom} to ${dateTo}`,
-        },
-      });
-      if (feeError) throw feeError;
+      // Statement fee waived — no ledger charge
+      const statementRef = `STMT-FREE-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
 
       // 2. Fetch all entries in the date range
       const { data: allEntries, error } = await supabase
@@ -396,8 +385,8 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
 
       setEmailSent(true);
       toast({
-        title: 'Statement Sent — UGX 500 Charged',
-        description: `PDF statement sent to ${user.email}. UGX 500 deducted.`,
+        title: 'Statement Sent',
+        description: `PDF statement sent to ${user.email}. No fee charged.`,
       });
 
       fetchEntries();
@@ -684,10 +673,10 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
                 <p className="text-sm text-muted-foreground">
                   Select the period for your statement. It will be sent to <span className="font-medium text-foreground">{user?.email}</span>
                 </p>
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2">
-                  <span className="text-amber-600 text-sm">💰</span>
-                  <p className="text-xs text-amber-800">
-                    A fee of <span className="font-bold">UGX 500</span> will be deducted from your wallet for this statement.
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-center gap-2">
+                  <span className="text-emerald-600 text-sm">✓</span>
+                  <p className="text-xs text-emerald-800">
+                    Statements are <span className="font-bold">free</span> during the current wallet reconciliation.
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
