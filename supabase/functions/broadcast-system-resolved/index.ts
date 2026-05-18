@@ -19,7 +19,9 @@ function token(): string {
 
 const SUBJECT = "✅ System Fully Restored — Withdrawals Re-enabled"
 
-const HTML = (name: string) => `<!doctype html>
+const fmtUGX = (n: number) => `UGX ${Math.round(n).toLocaleString('en-UG')}`
+
+const HTML = (name: string, balance: number | null) => `<!doctype html>
 <html>
 <body style="margin:0;padding:0;background:#f5f1ea;font-family:'Helvetica Neue',Arial,sans-serif;color:#1f2937;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f5f1ea;padding:32px 16px;">
@@ -49,6 +51,16 @@ const HTML = (name: string) => `<!doctype html>
                 </td>
               </tr>
             </table>
+            ${balance !== null ? `
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 20px;">
+              <tr>
+                <td style="background:#fffbeb;border:1px solid #fcd34d;padding:18px 20px;border-radius:8px;text-align:center;">
+                  <div style="font-size:12px;color:#92400e;letter-spacing:1px;text-transform:uppercase;font-weight:600;">Your Confirmed Wallet Balance</div>
+                  <div style="font-size:28px;color:#3d2817;font-weight:700;margin-top:6px;letter-spacing:-0.5px;">${fmtUGX(balance)}</div>
+                  <div style="font-size:12px;color:#6b7280;margin-top:6px;">As verified by IT &amp; Finance on ${new Date().toLocaleDateString('en-UG',{day:'numeric',month:'long',year:'numeric'})}</div>
+                </td>
+              </tr>
+            </table>` : ''}
             <p style="font-size:15px;margin:18px 0 8px;"><strong>If you still notice anything unusual:</strong></p>
             <ol style="font-size:14px;line-height:1.7;color:#374151;padding-left:20px;margin:0 0 18px;">
               <li>Refresh your browser using <strong>Ctrl + F5</strong> (Windows) or <strong>Cmd + Shift + R</strong> (Mac)</li>
@@ -72,7 +84,7 @@ const HTML = (name: string) => `<!doctype html>
 </body>
 </html>`
 
-const TEXT = (name: string) => `Dear ${name || 'Team'},
+const TEXT = (name: string, balance: number | null) => `Dear ${name || 'Team'},
 
 SYSTEM FULLY RESTORED ✅
 
@@ -80,7 +92,10 @@ We are pleased to inform you that the system access issue some of you experience
 
 💸 WITHDRAWALS RE-ENABLED
 You can now withdraw funds from your wallet normally. All wallet balances have been audited and confirmed accurate.
-
+${balance !== null ? `
+YOUR CONFIRMED WALLET BALANCE: ${fmtUGX(balance)}
+(Verified by IT & Finance on ${new Date().toLocaleDateString('en-UG',{day:'numeric',month:'long',year:'numeric'})})
+` : ''}
 If you still notice anything unusual:
 1. Refresh your browser (Ctrl + F5 / Cmd + Shift + R)
 2. Log out and log back in
@@ -121,36 +136,93 @@ Deno.serve(async (req) => {
     seen.add(k); return true
   })
 
-  const today = new Date().toISOString().split('T')[0]
-  const results: Array<{email: string; status: string}> = []
-
+  // Resolve each recipient's auth id and wallet balance (ledger sum)
+  const balances: Array<{ name: string; email: string; balance: number | null }> = []
   for (const r of unique) {
+    let bal: number | null = null
     try {
-      const idem = `system-resolved-${today}-${r.email.toLowerCase()}`
+      const { data: authUser } = await supabase.rpc('get_unified_user_id', { p_email: r.email })
+      const userId: string | null = (authUser as any) || null
+      if (userId) {
+        const { data: rows } = await supabase
+          .from('ledger_entries')
+          .select('amount')
+          .eq('user_id', userId)
+        if (rows) bal = rows.reduce((s: number, x: any) => s + Number(x.amount || 0), 0)
+      }
+    } catch (_) { /* ignore lookup errors */ }
+    balances.push({ ...r, balance: bal })
+  }
+
+  const stamp = Date.now()
+  const results: Array<{ email: string; balance: number | null; status: string }> = []
+
+  for (const r of balances) {
+    try {
+      const idem = `system-resolved-v2-${stamp}-${r.email.toLowerCase()}`
       await sendLovableEmail(
         { to: r.email, from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`, sender_domain: SENDER_DOMAIN,
-          subject: SUBJECT, html: HTML(r.name), text: TEXT(r.name),
+          subject: SUBJECT, html: HTML(r.name, r.balance), text: TEXT(r.name, r.balance),
           purpose: 'transactional', label: 'system-resolved-broadcast',
           idempotency_key: idem, unsubscribe_token: token() },
         { apiKey: lovableApiKey, idempotencyKey: idem }
       )
-      results.push({ email: r.email, status: 'sent' })
+      results.push({ email: r.email, balance: r.balance, status: 'sent' })
     } catch (err: any) {
-      results.push({ email: r.email, status: `failed: ${err.message}` })
+      results.push({ email: r.email, balance: r.balance, status: `failed: ${err.message}` })
     }
   }
 
-  // CC operations once
+  // Build a consolidated CC summary for Operations
   try {
-    const idem = `system-resolved-${today}-ops-cc`
+    const rowsHtml = balances
+      .sort((a, b) => (b.balance || 0) - (a.balance || 0))
+      .map(b => `<tr>
+        <td style="padding:8px 12px;border-bottom:1px solid #ece4d4;font-size:13px;color:#1f2937;">${b.name}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #ece4d4;font-size:12px;color:#6b7280;">${b.email}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #ece4d4;font-size:13px;color:#3d2817;font-weight:600;text-align:right;">${b.balance !== null ? fmtUGX(b.balance) : '—'}</td>
+      </tr>`).join('')
+    const totalBal = balances.reduce((s, b) => s + (b.balance || 0), 0)
+
+    const opsHtml = `<!doctype html><html><body style="margin:0;padding:0;background:#f5f1ea;font-family:'Helvetica Neue',Arial,sans-serif;color:#1f2937;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f5f1ea;padding:32px 16px;"><tr><td align="center">
+        <table role="presentation" width="720" cellspacing="0" cellpadding="0" style="max-width:720px;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 24px rgba(60,40,20,0.08);">
+          <tr><td style="background:linear-gradient(135deg,#3d2817 0%,#6b4423 100%);padding:24px 28px;">
+            <div style="color:#f5e6c8;font-size:12px;letter-spacing:2px;text-transform:uppercase;">Operations Copy</div>
+            <h1 style="color:#ffffff;font-size:22px;margin:6px 0 0;font-weight:600;">System Restoration Broadcast — Wallet Audit Summary</h1>
+          </td></tr>
+          <tr><td style="padding:24px 28px;">
+            <p style="font-size:14px;color:#374151;margin:0 0 14px;">The following confirmed wallet balances were communicated to each employee on ${new Date().toLocaleDateString('en-UG',{day:'numeric',month:'long',year:'numeric'})}:</p>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #ece4d4;border-radius:8px;overflow:hidden;">
+              <thead><tr style="background:#faf6ef;">
+                <th align="left" style="padding:10px 12px;font-size:12px;color:#6b4423;text-transform:uppercase;letter-spacing:1px;">Employee</th>
+                <th align="left" style="padding:10px 12px;font-size:12px;color:#6b4423;text-transform:uppercase;letter-spacing:1px;">Email</th>
+                <th align="right" style="padding:10px 12px;font-size:12px;color:#6b4423;text-transform:uppercase;letter-spacing:1px;">Balance</th>
+              </tr></thead>
+              <tbody>${rowsHtml}</tbody>
+              <tfoot><tr style="background:#fffbeb;">
+                <td colspan="2" style="padding:12px;font-size:13px;font-weight:700;color:#92400e;">TOTAL (${balances.length} employees)</td>
+                <td style="padding:12px;font-size:14px;font-weight:700;color:#3d2817;text-align:right;">${fmtUGX(totalBal)}</td>
+              </tr></tfoot>
+            </table>
+            <p style="font-size:12px;color:#9ca3af;margin:18px 0 0;">Sent: ${results.filter(r=>r.status==='sent').length} / Failed: ${results.filter(r=>r.status!=='sent').length}</p>
+          </td></tr>
+        </table>
+      </td></tr></table></body></html>`
+
+    const opsText = `OPERATIONS COPY — System Restoration Broadcast\n\nConfirmed wallet balances communicated:\n\n${balances.map(b => `• ${b.name} <${b.email}>: ${b.balance !== null ? fmtUGX(b.balance) : '—'}`).join('\n')}\n\nTOTAL: ${fmtUGX(totalBal)} across ${balances.length} employees.`
+
+    const opsIdem = `system-resolved-v2-${stamp}-ops-summary`
     await sendLovableEmail(
       { to: OPERATIONS_EMAIL, from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`, sender_domain: SENDER_DOMAIN,
-        subject: `[CC] ${SUBJECT}`, html: HTML('Operations'), text: `[CC - Broadcast]\n\n${TEXT('Operations')}`,
-        purpose: 'transactional', label: 'system-resolved-broadcast-cc',
-        idempotency_key: idem, unsubscribe_token: token() },
-      { apiKey: lovableApiKey, idempotencyKey: idem }
+        subject: `[CC] ${SUBJECT} — Wallet Audit Summary`, html: opsHtml, text: opsText,
+        purpose: 'transactional', label: 'system-resolved-ops-summary',
+        idempotency_key: opsIdem, unsubscribe_token: token() },
+      { apiKey: lovableApiKey, idempotencyKey: opsIdem }
     )
-  } catch (_) { /* ignore */ }
+  } catch (err) {
+    console.error('Ops CC summary failed:', err)
+  }
 
   const sent = results.filter(r => r.status === 'sent').length
   const failed = results.length - sent
