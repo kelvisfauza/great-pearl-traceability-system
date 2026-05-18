@@ -1,10 +1,11 @@
 import { sendLovableEmail } from 'npm:@lovable.dev/email-js@0.0.4'
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1'
 
-const SITE_NAME = "Great Pearl Coffee"
+const SITE_NAME = "Great Agro Coffee"
 const SENDER_DOMAIN = "notify.greatpearlcoffeesystem.site"
-const FROM_DOMAIN = "greatpearlcoffeesystem.site"
+const FROM_DOMAIN = "notify.greatpearlcoffeesystem.site"
 const OPERATIONS_EMAIL = 'operations@greatpearlcoffee.com'
+const LOGO_URL = 'https://great-pearl-traceability-system.lovable.app/lovable-uploads/great-agro-coffee-logo.png'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,32 +17,78 @@ function token(): string {
   return Array.from(b).map(x => x.toString(16).padStart(2, '0')).join('')
 }
 
-const SUBJECT = "System Issue Resolved — Great Pearl Coffee"
+const SUBJECT = "✅ System Fully Restored — Withdrawals Re-enabled"
 
-const HTML = (name: string) => `<!doctype html><html><body style="font-family:Arial,sans-serif;background:#ffffff;color:#1f2937;padding:24px;max-width:640px;margin:0 auto;">
-  <h2 style="color:#15803d;margin:0 0 16px;">System Issue Resolved ✅</h2>
-  <p>Dear ${name || 'Team'},</p>
-  <p>The system access issue some of you experienced earlier today has been <strong>fully resolved</strong>. You should now be able to log in and access your dashboards, roles, and permissions normally.</p>
-  <p><strong>If you still see any problem:</strong></p>
-  <ol>
-    <li>Refresh your browser (Ctrl + F5 / Cmd + Shift + R)</li>
-    <li>Log out and log back in</li>
-  </ol>
-  <p>We apologise for the inconvenience caused and thank you for your patience.</p>
-  <p style="color:#6b7280;margin-top:24px;">— Great Pearl Coffee IT</p>
-</body></html>`
+const HTML = (name: string) => `<!doctype html>
+<html>
+<body style="margin:0;padding:0;background:#f5f1ea;font-family:'Helvetica Neue',Arial,sans-serif;color:#1f2937;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f5f1ea;padding:32px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="640" cellspacing="0" cellpadding="0" style="max-width:640px;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 24px rgba(60,40,20,0.08);">
+        <tr>
+          <td style="background:linear-gradient(135deg,#3d2817 0%,#6b4423 100%);padding:28px 32px;text-align:center;">
+            <img src="${LOGO_URL}" alt="Great Agro Coffee" width="64" height="64" style="display:inline-block;border-radius:12px;background:#ffffff;padding:6px;margin-bottom:10px;" />
+            <div style="color:#f5e6c8;font-size:14px;letter-spacing:2px;text-transform:uppercase;">Great Agro Coffee</div>
+            <h1 style="color:#ffffff;font-size:24px;margin:8px 0 0;font-weight:600;">System Fully Restored ✅</h1>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:32px;">
+            <p style="font-size:16px;margin:0 0 16px;">Dear <strong>${name || 'Team'}</strong>,</p>
+            <p style="font-size:15px;line-height:1.65;margin:0 0 18px;">
+              We are pleased to inform you that the system access issue some of you experienced earlier today has been
+              <strong style="color:#15803d;">fully resolved</strong>. All dashboards, roles, permissions and modules are now operating normally.
+            </p>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:20px 0;">
+              <tr>
+                <td style="background:#ecfdf5;border-left:4px solid #15803d;padding:16px 18px;border-radius:6px;">
+                  <div style="font-weight:600;color:#15803d;font-size:15px;margin-bottom:6px;">💸 Withdrawals Re-enabled</div>
+                  <div style="font-size:14px;color:#374151;line-height:1.55;">
+                    You can now withdraw funds from your wallet normally. All wallet balances have been audited and confirmed accurate.
+                  </div>
+                </td>
+              </tr>
+            </table>
+            <p style="font-size:15px;margin:18px 0 8px;"><strong>If you still notice anything unusual:</strong></p>
+            <ol style="font-size:14px;line-height:1.7;color:#374151;padding-left:20px;margin:0 0 18px;">
+              <li>Refresh your browser using <strong>Ctrl + F5</strong> (Windows) or <strong>Cmd + Shift + R</strong> (Mac)</li>
+              <li>Log out and log back in to refresh your session</li>
+              <li>If the problem persists, contact IT or Operations</li>
+            </ol>
+            <p style="font-size:14px;line-height:1.6;color:#4b5563;margin:20px 0 0;">
+              We sincerely apologise for the inconvenience caused this morning and thank you for your patience and understanding while we worked to resolve it.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#faf6ef;padding:20px 32px;border-top:1px solid #ece4d4;text-align:center;">
+            <div style="font-size:13px;color:#6b4423;font-weight:600;">Great Agro Coffee — IT & Operations</div>
+            <div style="font-size:12px;color:#9ca3af;margin-top:4px;">This is an automated system notification.</div>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`
 
 const TEXT = (name: string) => `Dear ${name || 'Team'},
 
-The system access issue some of you experienced earlier today has been fully resolved. You should now be able to log in and access your dashboards, roles and permissions normally.
+SYSTEM FULLY RESTORED ✅
 
-If you still see any problem:
+We are pleased to inform you that the system access issue some of you experienced earlier today has been fully resolved. All dashboards, roles, permissions and modules are now operating normally.
+
+💸 WITHDRAWALS RE-ENABLED
+You can now withdraw funds from your wallet normally. All wallet balances have been audited and confirmed accurate.
+
+If you still notice anything unusual:
 1. Refresh your browser (Ctrl + F5 / Cmd + Shift + R)
 2. Log out and log back in
+3. If the problem persists, contact IT or Operations
 
-We apologise for the inconvenience caused and thank you for your patience.
+We sincerely apologise for the inconvenience caused this morning and thank you for your patience.
 
-— Great Pearl Coffee IT`
+— Great Agro Coffee, IT & Operations`
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
