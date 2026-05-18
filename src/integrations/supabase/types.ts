@@ -10681,6 +10681,10 @@ export type Database = {
       }
       get_current_user_department: { Args: never; Returns: string }
       get_current_user_email: { Args: never; Returns: string }
+      get_effective_wallet_balance: {
+        Args: { p_user_id: string }
+        Returns: number
+      }
       get_guarantor_candidates: {
         Args: never
         Returns: {
@@ -10732,6 +10736,10 @@ export type Database = {
           total_amount_ugx: number
           total_payments: number
         }[]
+      }
+      get_pending_wallet_commitments: {
+        Args: { p_user_email?: string; p_user_id: string }
+        Returns: number
       }
       get_pending_withdrawals: { Args: { user_uuid: string }; Returns: number }
       get_pending_withdrawals_safe: {
