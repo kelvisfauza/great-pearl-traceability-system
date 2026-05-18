@@ -83,13 +83,14 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const [eligibilityResolved, setEligibilityResolved] = useState(false);
   const [useInstant, setUseInstant] = useState(false);
 
-  // Check if instant withdrawals are within operating hours (Mon-Sat, before 7 PM EAT)
+  // Check if instant withdrawals are within operating hours (Mon-Sat, before 7:15 PM EAT)
   const getOperatingHoursStatus = () => {
     const nowEAT = new Date(new Date().toLocaleString("en-US", { timeZone: "Africa/Nairobi" }));
     const day = nowEAT.getDay(); // 0=Sun, 6=Sat
-    const hour = nowEAT.getHours();
-    if (day === 0) return { closed: true, reason: "Instant withdrawals are not available on Sundays. Available Mon–Sat before 7:00 PM." };
-    if (hour >= 19) return { closed: true, reason: "Instant withdrawals close at 7:00 PM daily. Please try again tomorrow morning." };
+    const minutesOfDay = nowEAT.getHours() * 60 + nowEAT.getMinutes();
+    const CUTOFF = 19 * 60 + 15; // 7:15 PM EAT
+    if (day === 0) return { closed: true, reason: "Instant withdrawals are not available on Sundays. Available Mon–Sat before 7:15 PM." };
+    if (minutesOfDay >= CUTOFF) return { closed: true, reason: "Instant withdrawals close at 7:15 PM daily. Please try again tomorrow morning." };
     return { closed: false, reason: "" };
   };
 

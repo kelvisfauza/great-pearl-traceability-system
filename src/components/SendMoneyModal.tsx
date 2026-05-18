@@ -388,7 +388,7 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
                 )}
 
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
-                  <p>💡 This sends real money to the mobile money number via Yo Payments. The amount is deducted from your wallet immediately. Available Mon–Sat before 7 PM.</p>
+                  <p>💡 This sends real money to the mobile money number via Yo Payments. The amount is deducted from your wallet immediately. Available Mon–Sat before 7:15 PM.</p>
                 </div>
 
                 <Button
