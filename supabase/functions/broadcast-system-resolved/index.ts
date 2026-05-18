@@ -144,11 +144,11 @@ Deno.serve(async (req) => {
       const { data: authUser } = await supabase.rpc('get_unified_user_id', { input_email: r.email })
       const userId: string | null = (authUser as any) || null
       if (userId) {
-        const { data: rows } = await supabase
-          .from('ledger_entries')
-          .select('amount')
-          .eq('user_id', userId)
-        if (rows) bal = rows.reduce((s: number, x: any) => s + Number(x.amount || 0), 0)
+        const { data: effective, error: rpcErr } = await supabase
+          .rpc('get_effective_wallet_balance', { p_user_id: userId })
+        if (!rpcErr && effective !== null && effective !== undefined) {
+          bal = Number(effective)
+        }
       }
     } catch (_) { /* ignore lookup errors */ }
     balances.push({ ...r, balance: bal })
