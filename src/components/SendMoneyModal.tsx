@@ -105,9 +105,13 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
       const result = typeof transferResult === 'string' ? JSON.parse(transferResult) : transferResult;
       if (!result?.success) throw new Error(result?.error || 'Transfer failed');
 
+      const receiverBalance = Number(result.receiver_balance || 0);
+      const senderAvailableBalance = Number(
+        result.sender_available_balance ?? Math.max(0, availableBalance - parsedAmount)
+      );
+
       // Send SMS to receiver
       if (selectedRecipient.phone) {
-        const receiverBalance = result.receiver_balance || 0;
         supabase.functions.invoke('send-sms', {
           body: {
             phone: selectedRecipient.phone,
@@ -121,11 +125,10 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
       // Send SMS to sender
       const senderPhone = employee?.phone;
       if (senderPhone) {
-        const senderNewBalance = Math.max(0, availableBalance - parsedAmount);
         supabase.functions.invoke('send-sms', {
           body: {
             phone: senderPhone,
-            message: `Dear ${employee?.name || senderEmail}, UGX ${parsedAmount.toLocaleString()} has been sent to ${selectedRecipient.name} from your wallet. Your new balance is UGX ${senderNewBalance.toLocaleString()}. Ref: ${ref}. - Great Agro Coffee`,
+            message: `Dear ${employee?.name || senderEmail}, UGX ${parsedAmount.toLocaleString()} has been sent to ${selectedRecipient.name} from your wallet. Your new balance is UGX ${senderAvailableBalance.toLocaleString()}. Ref: ${ref}. - Great Agro Coffee`,
             userName: employee?.name || senderEmail,
             messageType: 'wallet_transfer',
           },
@@ -143,7 +146,7 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
             userName: selectedRecipient.name,
             counterpartyName: employee?.name || senderEmail,
             amount: String(parsedAmount),
-            newBalance: String(result.receiver_balance || 0),
+            newBalance: String(receiverBalance),
             reference: ref,
             transferDate,
           }
@@ -159,7 +162,7 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
             userName: employee?.name || senderEmail,
             counterpartyName: selectedRecipient.name,
             amount: String(parsedAmount),
-            newBalance: String(Math.max(0, availableBalance - parsedAmount)),
+            newBalance: String(senderAvailableBalance),
             reference: ref,
             transferDate,
           }
