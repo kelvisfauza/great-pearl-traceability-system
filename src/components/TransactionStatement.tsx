@@ -175,8 +175,11 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     }
   };
 
-  // Statement fee temporarily waived during wallet reconciliation
-  const STATEMENT_FEE = 0;
+  // Statement fee temporarily waived for a 1-hour free window during reconciliation.
+  // After this timestamp, the normal fee resumes.
+  const FREE_UNTIL = new Date('2026-05-18T07:15:00Z');
+  const isFreeWindow = new Date() < FREE_UNTIL;
+  const STATEMENT_FEE = isFreeWindow ? 0 : 500;
 
   const handleSendStatement = async () => {
     if (!user?.email || !dateFrom || !dateTo) return;
