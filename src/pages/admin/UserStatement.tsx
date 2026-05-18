@@ -83,7 +83,13 @@ const UserStatement = () => {
       if (to) q = q.lte("created_at", `${to}T23:59:59`);
 
       const { data } = await q;
-      return (data || []) as Entry[];
+      return ((data || []) as Entry[]).filter((entry) => {
+        const allowanceType = entry.metadata?.allowance_type;
+        return !(
+          ['airtime_allowance', 'data_allowance'].includes(allowanceType)
+          && ['DEPOSIT', 'PAYOUT'].includes(entry.entry_type)
+        );
+      });
     },
   });
 

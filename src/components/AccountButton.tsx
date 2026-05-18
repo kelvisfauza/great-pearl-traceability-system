@@ -102,16 +102,19 @@ export const AccountButton = () => {
 
     const { data: allEntries, error } = await supabase
       .from('ledger_entries')
-      .select('amount, entry_type, created_at')
+      .select('amount, entry_type, created_at, metadata')
       .eq('user_id', resolvedUserId)
-      .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY', 'PAYOUT']);
+      .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY']);
 
     if (error) {
       console.error('Error loading account breakdown ledger entries:', error);
       return;
     }
 
-    const entries = allEntries || [];
+    const entries = (allEntries || []).filter((entry: any) => {
+      const allowanceType = entry?.metadata?.allowance_type;
+      return !['airtime_allowance', 'data_allowance'].includes(allowanceType);
+    });
     const before = entries.filter(e => new Date(e.created_at) < monthStart);
     const current = entries.filter(e => new Date(e.created_at) >= monthStart);
 

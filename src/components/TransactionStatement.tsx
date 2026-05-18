@@ -48,6 +48,12 @@ const getTransferMeta = (entry: LedgerEntry) => {
   return null;
 };
 
+const isDirectAllowancePayout = (entry: Pick<LedgerEntry, 'entry_type' | 'metadata'>) => {
+  const meta = entry.metadata ? (typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata) : null;
+  return ['airtime_allowance', 'data_allowance'].includes(meta?.allowance_type)
+    && ['DEPOSIT', 'PAYOUT'].includes(entry.entry_type);
+};
+
 interface TransactionStatementProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -58,7 +64,7 @@ interface TransactionStatementProps {
 }
 
 const DISPLAY_LIMIT = 10;
-const WALLET_TYPES = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY', 'PAYOUT', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY'];
+const WALLET_TYPES = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY'];
 
 export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open, onOpenChange, currentBalance, spendableBalance, balanceBroughtForward = 0, thisMonthEarnings = 0 }) => {
   const { user, employee } = useAuth();
@@ -150,25 +156,18 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         .rpc('get_unified_user_id', { input_email: user.email });
       const unifiedUserId = userIdData || user.id;
 
-      // Get total count first
-      const { count } = await supabase
-        .from('ledger_entries')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', unifiedUserId)
-        .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY']);
-      
-      setTotalCount(count || 0);
-
       const { data, error } = await supabase
         .from('ledger_entries')
         .select('*')
         .eq('user_id', unifiedUserId)
         .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY'])
         .order('created_at', { ascending: false })
-        .limit(DISPLAY_LIMIT);
+        .limit(2000);
 
       if (error) throw error;
-      setEntries((data || []) as LedgerEntry[]);
+      const filteredEntries = ((data || []) as LedgerEntry[]).filter((entry) => !isDirectAllowancePayout(entry));
+      setTotalCount(filteredEntries.length);
+      setEntries(filteredEntries.slice(0, DISPLAY_LIMIT));
     } catch (err) {
       console.error('Error fetching ledger:', err);
     } finally {
@@ -207,7 +206,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
 
       if (error) throw error;
 
-      const upToEndEntries = (allEntries || []) as LedgerEntry[];
+      const upToEndEntries = ((allEntries || []) as LedgerEntry[]).filter((entry) => !isDirectAllowancePayout(entry));
       const fetchedEntries = upToEndEntries.filter((entry) => entry.created_at >= periodStart && entry.created_at <= periodEnd);
 
       // Build running balances from the actual opening balance at the start of the selected period
