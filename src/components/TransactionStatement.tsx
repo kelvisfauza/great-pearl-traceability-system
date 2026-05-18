@@ -688,7 +688,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
                   <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-center gap-2">
                     <span className="text-emerald-600 text-sm">✓</span>
                     <p className="text-xs text-emerald-800">
-                      Statements are <span className="font-bold">free for the next hour</span> — download as many as you need.
+                      Statements are <span className="font-bold">free for the next 2 hours</span> — download as many as you need.
                     </p>
                   </div>
                 ) : (
