@@ -52,14 +52,15 @@ interface TransactionStatementProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   currentBalance: number;
+  spendableBalance?: number;
   balanceBroughtForward?: number;
   thisMonthEarnings?: number;
 }
 
 const DISPLAY_LIMIT = 10;
-const WALLET_TYPES = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY', 'PAYOUT'];
+const WALLET_TYPES = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY', 'PAYOUT', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY'];
 
-export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open, onOpenChange, currentBalance, balanceBroughtForward = 0, thisMonthEarnings = 0 }) => {
+export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open, onOpenChange, currentBalance, spendableBalance, balanceBroughtForward = 0, thisMonthEarnings = 0 }) => {
   const { user, employee } = useAuth();
   const { toast } = useToast();
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
@@ -127,7 +128,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
           <strong>Date:</strong> ${format(new Date(), 'MMMM dd, yyyy')}<br/>
           <strong>Balance from last month:</strong> UGX ${Math.max(0, balanceBroughtForward).toLocaleString()}<br/>
           <strong>This month:</strong> UGX ${thisMonthEarnings.toLocaleString()}<br/>
-          <strong>Current Balance:</strong> UGX ${currentBalance.toLocaleString()}
+          <strong>Wallet Balance:</strong> UGX ${currentBalance.toLocaleString()}${spendableBalance != null ? `<br/><strong>Available to spend:</strong> UGX ${spendableBalance.toLocaleString()}` : ''}
         </div>
         <table>
           <thead><tr><th>Date</th><th>Type</th><th style="text-align:right">Amount (UGX)</th><th style="text-align:right">Balance (UGX)</th></tr></thead>
@@ -192,24 +193,27 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       // Statement fee waived — no ledger charge
       const statementRef = `STMT-FREE-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
 
-      // 2. Fetch all entries in the date range
+      const periodStart = `${dateFrom}T00:00:00`;
+      const periodEnd = `${dateTo}T23:59:59`;
+
+      // 2. Fetch all wallet-affecting entries up to the statement end date so balances are period-correct
       const { data: allEntries, error } = await supabase
         .from('ledger_entries')
         .select('*')
         .eq('user_id', unifiedUserId)
         .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY'])
-        .gte('created_at', `${dateFrom}T00:00:00`)
-        .lte('created_at', `${dateTo}T23:59:59`)
+        .lte('created_at', periodEnd)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
 
-      const fetchedEntries = (allEntries || []) as LedgerEntry[];
-      const updatedBalance = currentBalance - STATEMENT_FEE;
-      
-      // Build running balances (ascending for correct calculation)
-      const walletSum = fetchedEntries.filter(e => WALLET_TYPES.includes(e.entry_type)).reduce((s, e) => s + e.amount, 0);
-      let runBal = updatedBalance - walletSum;
+      const upToEndEntries = (allEntries || []) as LedgerEntry[];
+      const fetchedEntries = upToEndEntries.filter((entry) => entry.created_at >= periodStart && entry.created_at <= periodEnd);
+
+      // Build running balances from the actual opening balance at the start of the selected period
+      let runBal = upToEndEntries
+        .filter((entry) => entry.created_at < periodStart && WALLET_TYPES.includes(entry.entry_type))
+        .reduce((sum, entry) => sum + entry.amount, 0);
       
       const transactionsAsc = fetchedEntries.map(e => {
         const affectsWallet = WALLET_TYPES.includes(e.entry_type);
@@ -229,20 +233,12 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         };
       });
 
-      // Add the statement fee if it falls outside the date range
-      const feeInRange = fetchedEntries.some(e => e.reference === statementRef);
-      if (!feeInRange) {
-        transactionsAsc.push({
-          date: format(new Date(), 'MMM dd, yyyy h:mm a'),
-          type: '📄 Transaction Charge',
-          description: 'Statement Charge',
-          amount: -STATEMENT_FEE,
-          balance: updatedBalance,
-        });
-      }
-
       // Reverse so most recent transactions appear on top
       const transactions = [...transactionsAsc].reverse();
+
+      const closingBalance = transactionsAsc.length > 0
+        ? (transactionsAsc[transactionsAsc.length - 1].balance ?? runBal)
+        : runBal;
 
       const periodFrom = format(new Date(dateFrom), 'MMM dd, yyyy');
       const periodTo = format(new Date(dateTo), 'MMM dd, yyyy');
@@ -285,10 +281,17 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       doc.text(`${periodFrom} - ${periodTo}`, margin + 25, y);
       y += 5;
       doc.setFont('helvetica', 'bold');
-      doc.text('Current Balance:', margin, y);
+      doc.text('Balance at end of period:', margin, y);
       doc.setFont('helvetica', 'normal');
-      doc.text(`UGX ${updatedBalance.toLocaleString()}`, margin + 35, y);
+      doc.text(`UGX ${closingBalance.toLocaleString()}`, margin + 35, y);
       y += 5;
+      if (spendableBalance != null) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('Available to spend:', margin, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`UGX ${spendableBalance.toLocaleString()}`, margin + 35, y);
+        y += 5;
+      }
       doc.setFont('helvetica', 'bold');
       doc.text('Statement Charge:', margin, y);
       doc.setFont('helvetica', 'normal');
@@ -378,7 +381,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
             employeeName: empName,
             periodFrom,
             periodTo,
-            currentBalance: updatedBalance,
+            currentBalance: closingBalance,
             transactions,
             pdfDownloadUrl: downloadUrl,
             statementFee: STATEMENT_FEE,
@@ -544,9 +547,15 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
           </span>
         </div>
         <div className="flex justify-between font-semibold border-t pt-1 mt-1">
-          <span>Current balance:</span>
+          <span>Wallet balance:</span>
           <span>UGX {currentBalance.toLocaleString()}</span>
         </div>
+        {spendableBalance != null && (
+          <div className="flex justify-between text-muted-foreground">
+            <span>Available to spend:</span>
+            <span className="font-medium text-foreground">UGX {spendableBalance.toLocaleString()}</span>
+          </div>
+        )}
       </div>
 
       {loading && entries.length === 0 ? (

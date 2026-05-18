@@ -550,7 +550,7 @@ export const AccountButton = () => {
             </Button>
 
             {/* Transaction Statement */}
-            <TransactionStatement open={showStatement} onOpenChange={setShowStatement} currentBalance={availableLoyalty} balanceBroughtForward={breakdown.balanceBroughtForward} thisMonthEarnings={breakdown.thisMonthNet} />
+            <TransactionStatement open={showStatement} onOpenChange={setShowStatement} currentBalance={walletBalance} spendableBalance={availableLoyalty} balanceBroughtForward={breakdown.balanceBroughtForward} thisMonthEarnings={breakdown.thisMonthNet} />
 
             <Separator />
 
