@@ -58,7 +58,7 @@ interface TransactionStatementProps {
 }
 
 const DISPLAY_LIMIT = 10;
-const WALLET_TYPES = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY', 'PAYOUT'];
+const WALLET_TYPES = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY', 'PAYOUT', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY'];
 
 export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open, onOpenChange, currentBalance, spendableBalance, balanceBroughtForward = 0, thisMonthEarnings = 0 }) => {
   const { user, employee } = useAuth();
@@ -206,11 +206,11 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       if (error) throw error;
 
       const fetchedEntries = (allEntries || []) as LedgerEntry[];
-      const updatedBalance = currentBalance - STATEMENT_FEE;
+      const walletBalance = currentBalance;
       
       // Build running balances (ascending for correct calculation)
       const walletSum = fetchedEntries.filter(e => WALLET_TYPES.includes(e.entry_type)).reduce((s, e) => s + e.amount, 0);
-      let runBal = updatedBalance - walletSum;
+      let runBal = walletBalance - walletSum;
       
       const transactionsAsc = fetchedEntries.map(e => {
         const affectsWallet = WALLET_TYPES.includes(e.entry_type);
@@ -229,18 +229,6 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
           balance: affectsWallet ? runBal : null,
         };
       });
-
-      // Add the statement fee if it falls outside the date range
-      const feeInRange = fetchedEntries.some(e => e.reference === statementRef);
-      if (!feeInRange) {
-        transactionsAsc.push({
-          date: format(new Date(), 'MMM dd, yyyy h:mm a'),
-          type: '📄 Transaction Charge',
-          description: 'Statement Charge',
-          amount: -STATEMENT_FEE,
-          balance: updatedBalance,
-        });
-      }
 
       // Reverse so most recent transactions appear on top
       const transactions = [...transactionsAsc].reverse();
@@ -288,13 +276,13 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       doc.setFont('helvetica', 'bold');
       doc.text('Wallet Balance:', margin, y);
       doc.setFont('helvetica', 'normal');
-      doc.text(`UGX ${updatedBalance.toLocaleString()}`, margin + 35, y);
+      doc.text(`UGX ${walletBalance.toLocaleString()}`, margin + 35, y);
       y += 5;
       if (spendableBalance != null) {
         doc.setFont('helvetica', 'bold');
         doc.text('Available to spend:', margin, y);
         doc.setFont('helvetica', 'normal');
-        doc.text(`UGX ${Math.max(0, spendableBalance - STATEMENT_FEE).toLocaleString()}`, margin + 35, y);
+        doc.text(`UGX ${spendableBalance.toLocaleString()}`, margin + 35, y);
         y += 5;
       }
       doc.setFont('helvetica', 'bold');
@@ -386,7 +374,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
             employeeName: empName,
             periodFrom,
             periodTo,
-            currentBalance: updatedBalance,
+            currentBalance: walletBalance,
             transactions,
             pdfDownloadUrl: downloadUrl,
             statementFee: STATEMENT_FEE,
