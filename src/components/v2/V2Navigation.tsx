@@ -213,6 +213,7 @@ const ADMIN_NAV = [
       { icon: FileText, label: "User Statement", path: "/admin/user-statement" },
       { icon: FileText, label: "Backfill Trace", path: "/admin/backfill-trace" },
       { icon: ShieldAlert, label: "Wallet Audit", path: "/admin/wallet-audit" },
+      { icon: Clock, label: "Balances @ Time", path: "/admin/point-in-time-balances" },
       { icon: Cog, label: "System Settings", path: "/admin/system-settings" },
     ]
   }
