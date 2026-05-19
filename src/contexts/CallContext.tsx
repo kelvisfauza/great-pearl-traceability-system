@@ -376,11 +376,12 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
           await supabase.from('call_sessions').update({ status: 'missed', ended_at: new Date().toISOString() }).eq('id', row.id);
           toast({ title: 'No answer', description: `${calleeName} did not pick up.` });
           sendSignal('hangup', {});
+          logCallToChat(calleeAuthId, type, 'missed');
           cleanup();
         }
       }
     }, 45000);
-  }, [myId, active, incoming, toast, setupPeer, joinChannel, cleanup, sendSignal]);
+  }, [myId, active, incoming, toast, setupPeer, joinChannel, cleanup, sendSignal, logCallToChat]);
 
   // Incoming call detection
   useEffect(() => {
@@ -438,13 +439,23 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
           if (row.status === 'declined' || row.status === 'ended' || row.status === 'missed') {
             toast({ title: row.status === 'declined' ? 'Call declined' : 'Call ended' });
             sendSignal('hangup', {});
+            // Caller logs the outcome so it appears once in the shared chat
+            if (isInitiator && active) {
+              const peerId = active.caller_id === myId ? active.callee_id : active.caller_id;
+              const dur = answeredAtRef.current ? Math.floor((Date.now() - answeredAtRef.current) / 1000) : undefined;
+              const outcome: 'declined' | 'missed' | 'ended' =
+                row.status === 'declined' ? 'declined'
+              : row.status === 'missed'   ? 'missed'
+              : 'ended';
+              logCallToChat(peerId, active.call_type, outcome, dur);
+            }
             cleanup();
           }
         }
       )
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [active, cleanup, sendSignal, toast]);
+  }, [active, cleanup, sendSignal, toast, isInitiator, myId, logCallToChat]);
 
   const acceptIncoming = useCallback(async () => {
     if (!incoming || !incomingPeer) return;
@@ -464,6 +475,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
     await supabase.from('call_sessions').update({ status: 'active', answered_at: new Date().toISOString() }).eq('id', row.id);
+    answeredAtRef.current = Date.now();
     joinChannel(row.id, () => {
       // Tell caller we're ready so they create the offer
       sendSignal('ready', {});
@@ -473,10 +485,11 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
   const declineIncoming = useCallback(async () => {
     if (!incoming) return;
     ringtone.stop();
+    const row = incoming;
     await supabase
       .from('call_sessions')
       .update({ status: 'declined', ended_at: new Date().toISOString() })
-      .eq('id', incoming.id);
+      .eq('id', row.id);
     setIncoming(null);
     setIncomingPeer(null);
   }, [incoming, ringtone]);
@@ -484,10 +497,17 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
   const hangup = useCallback(async () => {
     if (!active) return;
     const id = active.id;
+    const peerId = active.caller_id === myId ? active.callee_id : active.caller_id;
+    const dur = answeredAtRef.current ? Math.floor((Date.now() - answeredAtRef.current) / 1000) : undefined;
+    const wasInitiator = isInitiator;
+    const callType = active.call_type;
     sendSignal('hangup', {});
     await supabase.from('call_sessions').update({ status: 'ended', ended_at: new Date().toISOString() }).eq('id', id);
+    if (wasInitiator) {
+      logCallToChat(peerId, callType, 'ended', dur);
+    }
     cleanup();
-  }, [active, cleanup, sendSignal]);
+  }, [active, cleanup, sendSignal, myId, isInitiator, logCallToChat]);
 
   const toggleMute = useCallback(() => {
     const s = localStreamRef.current;
