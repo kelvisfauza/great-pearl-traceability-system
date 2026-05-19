@@ -46,7 +46,17 @@ export const sendPaymentReceipt = async (input: SendReceiptInput): Promise<SendR
   if (uploadErr) {
     return { ok: false, reference, emailSent, smsSent, errors: [`Upload failed: ${uploadErr.message}`] };
   }
-  pdfUrl = supabase.storage.from('payment-receipts').getPublicUrl(path).data.publicUrl;
+  // The `payment-receipts` bucket is PRIVATE — getPublicUrl() returns a URL
+  // that 404s. Use a long-lived signed URL (1 year) so external recipients
+  // (suppliers/employees) can open the PDF from email or SMS.
+  const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
+  const { data: signed, error: signErr } = await supabase.storage
+    .from('payment-receipts')
+    .createSignedUrl(path, ONE_YEAR_SECONDS);
+  if (signErr || !signed?.signedUrl) {
+    return { ok: false, reference, emailSent, smsSent, errors: [`Sign URL failed: ${signErr?.message || 'unknown'}`] };
+  }
+  pdfUrl = signed.signedUrl;
 
   // 3) Send email (if email provided)
   let email = input.recipientEmail || input.paidTo.email;
