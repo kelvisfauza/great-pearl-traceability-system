@@ -11125,6 +11125,7 @@ export type Database = {
         Args: { action_name: string; module_name: string }
         Returns: boolean
       }
+      user_has_milling_access: { Args: never; Returns: boolean }
       user_has_module: { Args: { module_name: string }; Returns: boolean }
       user_has_permission: {
         Args: { permission_name: string }
