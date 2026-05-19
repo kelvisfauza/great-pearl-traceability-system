@@ -41,16 +41,21 @@ const ICE_CONFIG: RTCConfiguration = {
   ],
 };
 
-// Simple WebAudio ringtone
+// Classic dual-tone phone ringtone (440Hz + 480Hz, 2s on / 4s off cadence)
 function useRingtone() {
   const ctxRef = useRef<AudioContext | null>(null);
-  const intervalRef = useRef<number | null>(null);
+  const timeoutsRef = useRef<number[]>([]);
+  const nodesRef = useRef<{ osc: OscillatorNode; gain: GainNode }[]>([]);
 
   const stop = useCallback(() => {
-    if (intervalRef.current) {
-      window.clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
+    timeoutsRef.current.forEach(id => window.clearTimeout(id));
+    timeoutsRef.current = [];
+    nodesRef.current.forEach(({ osc, gain }) => {
+      try { gain.gain.cancelScheduledValues(0); gain.gain.value = 0; } catch {}
+      try { osc.stop(); } catch {}
+      try { osc.disconnect(); gain.disconnect(); } catch {}
+    });
+    nodesRef.current = [];
     if (ctxRef.current) {
       try { ctxRef.current.close(); } catch {}
       ctxRef.current = null;
@@ -64,18 +69,39 @@ function useRingtone() {
       if (!Ctx) return;
       const ctx: AudioContext = new Ctx();
       ctxRef.current = ctx;
-      const beep = () => {
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.frequency.value = 480;
-        o.type = 'sine';
-        g.gain.value = 0.15;
-        o.connect(g).connect(ctx.destination);
-        o.start();
-        setTimeout(() => { try { o.stop(); } catch {} }, 350);
+
+      // One "ring" = two tones (440 + 480Hz) played together for ~2s,
+      // with a soft attack/release envelope, then 4s of silence.
+      const playRing = () => {
+        if (!ctxRef.current) return;
+        const now = ctx.currentTime;
+        const duration = 2.0;
+        const master = ctx.createGain();
+        master.gain.setValueAtTime(0, now);
+        master.gain.linearRampToValueAtTime(0.18, now + 0.05);
+        master.gain.setValueAtTime(0.18, now + duration - 0.1);
+        master.gain.linearRampToValueAtTime(0, now + duration);
+        master.connect(ctx.destination);
+
+        [440, 480].forEach(freq => {
+          const osc = ctx.createOscillator();
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          const gain = ctx.createGain();
+          gain.gain.value = 0.5;
+          osc.connect(gain).connect(master);
+          osc.start(now);
+          osc.stop(now + duration + 0.05);
+          nodesRef.current.push({ osc, gain });
+        });
       };
-      beep();
-      intervalRef.current = window.setInterval(beep, 1300);
+
+      const loop = () => {
+        playRing();
+        const id = window.setTimeout(loop, 6000); // 2s ring + 4s pause
+        timeoutsRef.current.push(id);
+      };
+      loop();
     } catch (e) {
       console.warn('Ringtone failed', e);
     }
