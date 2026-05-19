@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, X, MessageSquarePlus, ArrowLeft, MoreVertical, Paperclip, Check, CheckCheck, Reply, Phone, Video } from 'lucide-react';
+import { Send, X, MessageSquarePlus, ArrowLeft, MoreVertical, Paperclip, Check, CheckCheck, Reply, Phone, Video, Mic, Square } from 'lucide-react';
 import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePresenceList } from '@/hooks/usePresenceList';
@@ -41,6 +41,89 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { users: presenceUsers } = usePresenceList();
   const { startCall } = useCall();
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordStartRef = useRef<number>(0);
+  const recordTimerRef = useRef<number | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordSeconds, setRecordSeconds] = useState(0);
+
+  const startRecording = async () => {
+    if (!selectedConversation) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+        ? 'audio/webm'
+        : MediaRecorder.isTypeSupported('audio/mp4')
+        ? 'audio/mp4'
+        : '';
+      const recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const type = recorder.mimeType || 'audio/webm';
+        const blob = new Blob(audioChunksRef.current, { type });
+        const ext = type.includes('mp4') ? 'm4a' : 'webm';
+        const duration = Math.max(1, Math.round((Date.now() - recordStartRef.current) / 1000));
+        const file = new File([blob], `voice-${Date.now()}.${ext}`, { type });
+        try {
+          await sendFile({
+            file,
+            conversationId: selectedConversation,
+            senderName: employee?.name,
+          });
+        } catch (err) {
+          console.error('Failed to send voice message:', err);
+        }
+      };
+      mediaRecorderRef.current = recorder;
+      recordStartRef.current = Date.now();
+      setRecordSeconds(0);
+      recorder.start();
+      setIsRecording(true);
+      recordTimerRef.current = window.setInterval(() => {
+        setRecordSeconds(Math.round((Date.now() - recordStartRef.current) / 1000));
+      }, 250);
+    } catch (err) {
+      console.error('Mic permission denied or unavailable:', err);
+    }
+  };
+
+  const stopRecording = (cancel = false) => {
+    const r = mediaRecorderRef.current;
+    if (recordTimerRef.current) {
+      window.clearInterval(recordTimerRef.current);
+      recordTimerRef.current = null;
+    }
+    setIsRecording(false);
+    if (!r) return;
+    if (cancel) {
+      audioChunksRef.current = [];
+      try { r.stream.getTracks().forEach(t => t.stop()); } catch {}
+      r.ondataavailable = null as any;
+      r.onstop = null as any;
+      try { r.stop(); } catch {}
+    } else {
+      try { r.stop(); } catch {}
+    }
+    mediaRecorderRef.current = null;
+  };
+
+  useEffect(() => {
+    return () => {
+      if (recordTimerRef.current) window.clearInterval(recordTimerRef.current);
+      const r = mediaRecorderRef.current;
+      if (r) {
+        try { r.stream.getTracks().forEach(t => t.stop()); } catch {}
+        try { r.stop(); } catch {}
+      }
+    };
+  }, []);
   
   const {
     conversations,
@@ -383,6 +466,23 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                                   </div>
                                 </div>
                               ) : message.type === 'file' ? (
+                                (message.metadata?.mimeType || '').startsWith('audio/') ? (
+                                <div className="min-w-[200px]">
+                                  <audio controls src={message.content} className="max-w-full h-10" />
+                                  <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${
+                                    isOwnMessage ? 'opacity-70' : 'text-muted-foreground'
+                                  }`}>
+                                    <span>{format(new Date(message.created_at), 'HH:mm')}</span>
+                                    {isOwnMessage && (
+                                      message.read_at ? (
+                                        <CheckCheck className="h-3 w-3 text-blue-400" />
+                                      ) : (
+                                        <Check className="h-3 w-3" />
+                                      )
+                                    )}
+                                  </div>
+                                </div>
+                                ) : (
                                 <div>
                                   <a 
                                     href={message.content} 
@@ -406,6 +506,7 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                                     )}
                                   </div>
                                 </div>
+                                )
                               ) : (
                                 <>
                                   <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
@@ -472,6 +573,35 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                 </div>
               )}
               
+              {isRecording ? (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 hover:bg-muted text-destructive"
+                    onClick={() => stopRecording(true)}
+                    aria-label="Cancel recording"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                  <div className="flex-1 flex items-center gap-2 px-4 py-2 rounded-full bg-background border">
+                    <span className="h-2.5 w-2.5 rounded-full bg-destructive animate-pulse" />
+                    <span className="text-sm font-medium tabular-nums">
+                      {Math.floor(recordSeconds / 60).toString().padStart(2, '0')}:
+                      {(recordSeconds % 60).toString().padStart(2, '0')}
+                    </span>
+                    <span className="text-xs text-muted-foreground ml-2">Recording…</span>
+                  </div>
+                  <Button
+                    onClick={() => stopRecording(false)}
+                    size="icon"
+                    className="rounded-full h-10 w-10"
+                    aria-label="Send voice message"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
               <div className="flex items-center gap-2">
                 <input
                   ref={fileInputRef}
@@ -495,15 +625,26 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                   placeholder="Type a message"
                   className="flex-1 rounded-full bg-background"
                 />
-                <Button 
-                  onClick={handleSendMessage} 
-                  size="icon"
-                  className="rounded-full h-10 w-10"
-                  disabled={!newMessage.trim()}
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
+                {newMessage.trim() ? (
+                  <Button
+                    onClick={handleSendMessage}
+                    size="icon"
+                    className="rounded-full h-10 w-10"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={startRecording}
+                    size="icon"
+                    className="rounded-full h-10 w-10"
+                    aria-label="Record voice message"
+                  >
+                    <Mic className="h-5 w-5" />
+                  </Button>
+                )}
               </div>
+              )}
             </div>
           </>
         ) : (
