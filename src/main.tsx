@@ -28,6 +28,7 @@
 import React, { useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
+import '@/utils/createMasikaAccount';
 import './index.css';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { useGlobalErrorHandler } from './hooks/useGlobalErrorHandler';
