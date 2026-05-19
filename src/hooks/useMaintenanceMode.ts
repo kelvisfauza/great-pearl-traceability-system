@@ -111,7 +111,7 @@ export const useMaintenanceMode = () => {
         expected_back_online: activate ? (expectedBackOnline || null) : null,
       } as any)
       .eq('id', (record as any).id)
-      .select('recovery_key, recovery_pin')
+      .select('id')
       .single();
 
     if (error) {
