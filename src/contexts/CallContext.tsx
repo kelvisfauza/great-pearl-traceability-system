@@ -133,6 +133,8 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const remoteStreamRef = useRef<MediaStream | null>(null);
+  const [remoteStreamVersion, setRemoteStreamVersion] = useState(0);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
   const remoteSetRef = useRef(false);
@@ -226,6 +228,8 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     setCameraOff(false);
     setRemoteHasVideo(false);
     answeredAtRef.current = null;
+    remoteStreamRef.current = null;
+    setRemoteStreamVersion(v => v + 1);
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
@@ -276,18 +280,12 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
 
     pc.ontrack = (ev) => {
       const [remote] = ev.streams;
-      // Always pipe the remote stream into a dedicated <audio> element
-      // so we hear the other party even on audio-only calls (where
-      // the remote <video> is visually hidden and may not play audio).
-      if (remoteAudioRef.current) {
-        remoteAudioRef.current.srcObject = remote;
-        remoteAudioRef.current.play().catch(err => console.warn('[call] audio play blocked', err));
-      }
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = remote;
-        remoteVideoRef.current.play().catch(() => {});
-      }
+      // Save the remote stream; an effect attaches it to the audio/
+      // video elements once they mount (the dialog may not be in the
+      // DOM yet when ontrack fires).
+      remoteStreamRef.current = remote;
       setRemoteHasVideo(remote.getVideoTracks().length > 0);
+      setRemoteStreamVersion(v => v + 1);
     };
 
     pc.onicecandidate = (ev) => {
@@ -600,6 +598,38 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
 
   const isVideo = active?.call_type === 'video';
 
+  // Attach the remote stream to the audio/video sinks whenever either
+  // the stream or the elements become available (Radix dialogs mount
+  // their content lazily, so refs may be null when ontrack fires).
+  useEffect(() => {
+    const stream = remoteStreamRef.current;
+    if (!stream) return;
+    if (remoteAudioRef.current && remoteAudioRef.current.srcObject !== stream) {
+      remoteAudioRef.current.srcObject = stream;
+      remoteAudioRef.current.play().catch(err => console.warn('[call] audio play blocked', err));
+    }
+    if (remoteVideoRef.current && remoteVideoRef.current.srcObject !== stream) {
+      remoteVideoRef.current.srcObject = stream;
+      remoteVideoRef.current.play().catch(() => {});
+    }
+  }, [remoteStreamVersion, active, remoteHasVideo]);
+
+  // Tick once a second to refresh the call duration display
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    const id = window.setInterval(() => setTick(t => t + 1), 1000);
+    return () => window.clearInterval(id);
+  }, [active]);
+
+  const formatDuration = (startMs: number | null) => {
+    if (!startMs) return null;
+    const total = Math.floor((Date.now() - startMs) / 1000);
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return `${m}:${String(s).padStart(2, '0')}`;
+  };
+
   return (
     <CallContext.Provider value={value}>
       {children}
@@ -660,7 +690,9 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
                 </Avatar>
                 <p className="text-lg font-semibold">{activePeer?.name}</p>
                 <p className="text-sm text-white/70">
-                  {isInitiator && active?.status === 'ringing' ? 'Ringing…' : 'Connected'}
+                  {isInitiator && active?.status === 'ringing'
+                    ? 'Ringing…'
+                    : (formatDuration(answeredAtRef.current) || 'Connecting…')}
                 </p>
               </div>
             )}
@@ -679,7 +711,12 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
             {/* Header */}
             <div className="absolute top-3 left-4 right-4 flex justify-between items-center text-sm">
               <span className="font-medium">{activePeer?.name}</span>
-              <span className="uppercase tracking-wide text-xs opacity-70">{active?.call_type}</span>
+              <span className="flex items-center gap-2 text-xs opacity-80">
+                {answeredAtRef.current && (
+                  <span className="font-mono tabular-nums">{formatDuration(answeredAtRef.current)}</span>
+                )}
+                <span className="uppercase tracking-wide opacity-70">{active?.call_type}</span>
+              </span>
             </div>
           </div>
 
