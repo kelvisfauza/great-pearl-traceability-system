@@ -20,7 +20,6 @@ import MobileNavigation from "./MobileNavigation";
 import AttendanceReminder from "./attendance/AttendanceReminder";
 import { Menu } from "lucide-react";
 import { Button } from "./ui/button";
-import MarqueeBanner from "./announcements/MarqueeBanner";
 
 const COMPANY_DOMAIN = "@greatagrocoffee.com";
 
@@ -72,8 +71,6 @@ const DashboardLayout = ({ children, title, subtitle, showMessageButton = true }
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Admin scrolling announcement banner */}
-        <MarqueeBanner />
         {/* Header */}
         <header className="sticky top-0 z-30 h-16 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border flex items-center justify-between px-4 md:px-6 print:hidden">
           <div className="flex items-center gap-4 min-w-0">
