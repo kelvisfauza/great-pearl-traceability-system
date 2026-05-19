@@ -623,33 +623,89 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
               )}
               
               {isRecording ? (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-10 w-10 hover:bg-muted text-destructive"
-                    onClick={() => stopRecording(true)}
-                    aria-label="Cancel recording"
-                  >
-                    <X className="h-5 w-5" />
-                  </Button>
-                  <div className="flex-1 flex items-center gap-2 px-4 py-2 rounded-full bg-background border">
-                    <span className="h-2.5 w-2.5 rounded-full bg-destructive animate-pulse" />
-                    <span className="text-sm font-medium tabular-nums">
-                      {Math.floor(recordSeconds / 60).toString().padStart(2, '0')}:
-                      {(recordSeconds % 60).toString().padStart(2, '0')}
-                    </span>
-                    <span className="text-xs text-muted-foreground ml-2">Recording…</span>
+                isLocked ? (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10 hover:bg-muted text-destructive"
+                      onClick={() => stopRecording(true)}
+                      aria-label="Cancel recording"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </Button>
+                    <div className="flex-1 flex items-center gap-2 px-4 py-2 rounded-full bg-background border">
+                      <span className="h-2.5 w-2.5 rounded-full bg-destructive animate-pulse" />
+                      <span className="text-sm font-medium tabular-nums">
+                        {Math.floor(recordSeconds / 60).toString().padStart(2, '0')}:
+                        {(recordSeconds % 60).toString().padStart(2, '0')}
+                      </span>
+                      <span className="text-xs text-muted-foreground ml-2 flex items-center gap-1">
+                        <Lock className="h-3 w-3" /> Locked
+                      </span>
+                    </div>
+                    <Button
+                      onClick={() => stopRecording(false)}
+                      size="icon"
+                      className="rounded-full h-10 w-10"
+                      aria-label="Send voice message"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <Button
-                    onClick={() => stopRecording(false)}
-                    size="icon"
-                    className="rounded-full h-10 w-10"
-                    aria-label="Send voice message"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
+                ) : (
+                  <div className="relative flex items-center gap-2">
+                    {/* Slide-up lock hint above the mic */}
+                    <div
+                      className="absolute right-1 -top-24 flex flex-col items-center gap-1 pointer-events-none select-none"
+                      style={{
+                        opacity: Math.min(1, Math.max(0.4, -dragOffset.y / LOCK_THRESHOLD + 0.4)),
+                        transform: `translateY(${Math.max(dragOffset.y, -LOCK_THRESHOLD)}px)`,
+                      }}
+                    >
+                      <div className="h-10 w-10 rounded-full bg-muted border flex items-center justify-center shadow-sm">
+                        <Lock className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <ChevronUp className="h-4 w-4 text-muted-foreground animate-bounce" />
+                    </div>
+
+                    {/* Recording status pill with slide-to-cancel */}
+                    <div className="flex-1 flex items-center gap-2 px-4 py-2 rounded-full bg-background border overflow-hidden">
+                      <span className="h-2.5 w-2.5 rounded-full bg-destructive animate-pulse flex-shrink-0" />
+                      <span className="text-sm font-medium tabular-nums flex-shrink-0">
+                        {Math.floor(recordSeconds / 60).toString().padStart(2, '0')}:
+                        {(recordSeconds % 60).toString().padStart(2, '0')}
+                      </span>
+                      <div
+                        className="ml-auto text-xs text-muted-foreground flex items-center gap-1 truncate"
+                        style={{
+                          transform: `translateX(${Math.max(dragOffset.x, -CANCEL_THRESHOLD)}px)`,
+                          opacity: Math.max(0.3, 1 + dragOffset.x / CANCEL_THRESHOLD),
+                        }}
+                      >
+                        <ChevronUp className="h-3 w-3 -rotate-90" />
+                        <span className={cancelOnReleaseRef.current ? 'text-destructive font-medium' : ''}>
+                          {cancelOnReleaseRef.current ? 'Release to cancel' : 'Slide to cancel'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Mic button — held */}
+                    <button
+                      type="button"
+                      onPointerMove={handleMicPointerMove}
+                      onPointerUp={handleMicPointerUp}
+                      onPointerCancel={handleMicPointerUp}
+                      className="rounded-full h-12 w-12 bg-primary text-primary-foreground flex items-center justify-center shadow-lg scale-110 transition-transform touch-none select-none"
+                      aria-label="Recording"
+                      style={{
+                        transform: `translate(${Math.max(dragOffset.x, -CANCEL_THRESHOLD)}px, ${Math.max(dragOffset.y, -LOCK_THRESHOLD)}px) scale(1.1)`,
+                      }}
+                    >
+                      <Mic className="h-5 w-5" />
+                    </button>
+                  </div>
+                )
               ) : (
               <div className="flex items-center gap-2">
                 <input
@@ -683,14 +739,14 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                     <Send className="h-4 w-4" />
                   </Button>
                 ) : (
-                  <Button
-                    onClick={startRecording}
-                    size="icon"
-                    className="rounded-full h-10 w-10"
-                    aria-label="Record voice message"
+                  <button
+                    type="button"
+                    onPointerDown={handleMicPointerDown}
+                    className="rounded-full h-10 w-10 bg-primary text-primary-foreground flex items-center justify-center touch-none select-none"
+                    aria-label="Hold to record voice message"
                   >
                     <Mic className="h-5 w-5" />
-                  </Button>
+                  </button>
                 )}
               </div>
               )}
