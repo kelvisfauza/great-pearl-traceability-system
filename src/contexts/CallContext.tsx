@@ -640,6 +640,10 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
           <div className="relative w-full aspect-video bg-neutral-900">
+            {/* Hidden audio sink — always plays the remote stream so audio
+                works even when the video element is hidden (audio-only). */}
+            <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
+
             {/* Remote video / audio-only fallback */}
             <video
               ref={remoteVideoRef}
