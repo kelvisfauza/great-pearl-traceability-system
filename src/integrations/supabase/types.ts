@@ -7351,6 +7351,51 @@ export type Database = {
         }
         Relationships: []
       }
+      role_change_audit: {
+        Row: {
+          actor_role: string | null
+          actor_user_id: string | null
+          block_reason: string | null
+          created_at: string
+          id: string
+          new_role: string | null
+          old_role: string | null
+          operation: string
+          raw_new: Json | null
+          raw_old: Json | null
+          target_user_id: string | null
+          was_blocked: boolean
+        }
+        Insert: {
+          actor_role?: string | null
+          actor_user_id?: string | null
+          block_reason?: string | null
+          created_at?: string
+          id?: string
+          new_role?: string | null
+          old_role?: string | null
+          operation: string
+          raw_new?: Json | null
+          raw_old?: Json | null
+          target_user_id?: string | null
+          was_blocked?: boolean
+        }
+        Update: {
+          actor_role?: string | null
+          actor_user_id?: string | null
+          block_reason?: string | null
+          created_at?: string
+          id?: string
+          new_role?: string | null
+          old_role?: string | null
+          operation?: string
+          raw_new?: Json | null
+          raw_old?: Json | null
+          target_user_id?: string | null
+          was_blocked?: boolean
+        }
+        Relationships: []
+      }
       salary_advance_payments: {
         Row: {
           advance_id: string
@@ -10915,6 +10960,7 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      is_super_admin: { Args: { _uid: string }; Returns: boolean }
       is_supervisor_or_above: { Args: never; Returns: boolean }
       is_user_role: { Args: never; Returns: boolean }
       log_audit_action: {
