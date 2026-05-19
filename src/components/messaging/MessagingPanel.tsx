@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePresenceList } from '@/hooks/usePresenceList';
 import { useCall } from '@/contexts/CallContext';
 import UserSelectorDialog from './UserSelectorDialog';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns';
 
 interface MessagingPanelProps {
   isOpen: boolean;
@@ -56,6 +56,16 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
     if (selectedConversation) {
       fetchMessages(selectedConversation);
     }
+  }, [selectedConversation, fetchMessages]);
+
+  // Fallback polling for the currently open conversation so messages
+  // appear in near real-time even if the realtime channel is degraded.
+  useEffect(() => {
+    if (!selectedConversation) return;
+    const i = setInterval(() => {
+      fetchMessages(selectedConversation);
+    }, 2000);
+    return () => clearInterval(i);
   }, [selectedConversation, fetchMessages]);
 
   useEffect(() => {
@@ -115,27 +125,27 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
     return otherParticipant?.avatar_url;
   };
 
-  const getOtherParticipantStatus = (conversation: any) => {
-    const otherParticipant = conversation.participants?.find(
+  const getOtherParticipantPresence = (conversation: any) => {
+    const otherParticipant = conversation?.participants?.find(
       (p: any) => p.user_id !== employee?.authUserId
     );
-    if (!otherParticipant) return 'offline';
-    
-    // Debug logging
-    console.log('🔍 Checking presence for participant:', {
-      participant_user_id: otherParticipant.user_id,
-      participant_email: otherParticipant.employee_email,
-      presenceUsers: presenceUsers.map(u => ({ id: u.id, email: u.email, status: u.status }))
-    });
-    
-    // Try to find by user_id first, then fallback to email matching (case-insensitive)
-    const presenceUser = presenceUsers.find(u => 
-      u.id === otherParticipant.user_id || 
+    if (!otherParticipant) return { status: 'offline' as const, lastSeen: null as string | null };
+    const presenceUser = presenceUsers.find(u =>
+      u.id === otherParticipant.user_id ||
       u.email?.toLowerCase() === otherParticipant.employee_email?.toLowerCase()
     );
-    
-    console.log('✅ Found presence user:', presenceUser);
-    return presenceUser?.status || 'offline';
+    return {
+      status: (presenceUser?.status || 'offline') as 'online' | 'away' | 'offline',
+      lastSeen: presenceUser?.online_at || null,
+    };
+  };
+
+  const formatLastSeen = (iso: string | null) => {
+    if (!iso) return 'offline';
+    const d = new Date(iso);
+    if (isToday(d)) return `last seen today at ${format(d, 'HH:mm')}`;
+    if (isYesterday(d)) return `last seen yesterday at ${format(d, 'HH:mm')}`;
+    return `last seen ${formatDistanceToNow(d, { addSuffix: true })}`;
   };
 
   const handleFileAttachment = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -206,9 +216,25 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                   <p className="font-semibold text-sm truncate">
                     {getConversationName(currentConversation)}
                   </p>
-                  <p className="text-xs opacity-80 capitalize">
-                    {getOtherParticipantStatus(currentConversation)}
-                  </p>
+                  {(() => {
+                    const { status, lastSeen } = getOtherParticipantPresence(currentConversation);
+                    const label =
+                      status === 'online' ? 'online'
+                      : status === 'away' ? 'away'
+                      : formatLastSeen(lastSeen);
+                    return (
+                      <p className="text-xs opacity-80 flex items-center gap-1.5">
+                        <span
+                          className={`inline-block h-2 w-2 rounded-full ${
+                            status === 'online' ? 'bg-green-400'
+                            : status === 'away' ? 'bg-yellow-400'
+                            : 'bg-muted-foreground/60'
+                          }`}
+                        />
+                        <span className="truncate">{label}</span>
+                      </p>
+                    );
+                  })()}
                 </div>
                 <div className="flex items-center gap-1">
                   <Button
