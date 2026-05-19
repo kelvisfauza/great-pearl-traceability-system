@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, X, MessageSquarePlus, ArrowLeft, MoreVertical, Paperclip, Check, CheckCheck, Reply, Phone, Video, Mic, Square } from 'lucide-react';
+import { Send, X, MessageSquarePlus, ArrowLeft, MoreVertical, Paperclip, Check, CheckCheck, Reply, Phone, Video, Mic, Lock, Trash2, ChevronUp } from 'lucide-react';
 import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePresenceList } from '@/hooks/usePresenceList';
@@ -47,6 +47,13 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
   const recordTimerRef = useRef<number | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  const cancelOnReleaseRef = useRef(false);
+  const lockedRef = useRef(false);
+  const LOCK_THRESHOLD = 70; // px upward to lock
+  const CANCEL_THRESHOLD = 100; // px left to cancel
 
   const startRecording = async () => {
     if (!selectedConversation) return;
@@ -101,6 +108,10 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
       recordTimerRef.current = null;
     }
     setIsRecording(false);
+    setIsLocked(false);
+    lockedRef.current = false;
+    setDragOffset({ x: 0, y: 0 });
+    pointerStartRef.current = null;
     if (!r) return;
     if (cancel) {
       audioChunksRef.current = [];
@@ -112,6 +123,44 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
       try { r.stop(); } catch {}
     }
     mediaRecorderRef.current = null;
+  };
+
+  // WhatsApp-style hold-to-record handlers
+  const handleMicPointerDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    pointerStartRef.current = { x: e.clientX, y: e.clientY };
+    cancelOnReleaseRef.current = false;
+    setDragOffset({ x: 0, y: 0 });
+    startRecording();
+  };
+
+  const handleMicPointerMove = (e: React.PointerEvent) => {
+    if (!pointerStartRef.current || lockedRef.current) return;
+    const dx = Math.min(0, e.clientX - pointerStartRef.current.x); // only leftward
+    const dy = Math.min(0, e.clientY - pointerStartRef.current.y); // only upward
+    setDragOffset({ x: dx, y: dy });
+
+    // Lock if dragged up past threshold
+    if (-dy >= LOCK_THRESHOLD) {
+      lockedRef.current = true;
+      setIsLocked(true);
+      setDragOffset({ x: 0, y: 0 });
+      pointerStartRef.current = null;
+      return;
+    }
+    // Mark cancel if dragged left past threshold
+    cancelOnReleaseRef.current = -dx >= CANCEL_THRESHOLD;
+  };
+
+  const handleMicPointerUp = () => {
+    if (lockedRef.current) return; // locked mode — wait for explicit send/cancel
+    if (!isRecording && mediaRecorderRef.current == null) {
+      // Recording never actually started (e.g. permission denied)
+      pointerStartRef.current = null;
+      setDragOffset({ x: 0, y: 0 });
+      return;
+    }
+    stopRecording(cancelOnReleaseRef.current);
   };
 
   useEffect(() => {
