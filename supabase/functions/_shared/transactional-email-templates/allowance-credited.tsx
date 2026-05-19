@@ -10,35 +10,47 @@ interface Props {
   allowanceType?: string
   amount?: string
   month?: string
+  disbursementMethod?: string
+  phone?: string
 }
 
 const AllowanceCreditedEmail = ({
   employeeName, allowanceType = 'Allowance', amount = '0', month = '',
-}: Props) => (
+  disbursementMethod, phone,
+}: Props) => {
+  const isAirtime = /airtime/i.test(allowanceType) || /airtime/i.test(disbursementMethod || '')
+  const destinationLabel = isAirtime
+    ? `sent as airtime to your phone${phone ? ` (${phone})` : ''}`
+    : 'credited to your wallet'
+  return (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>✅ {allowanceType} of UGX {amount} credited to your wallet</Preview>
+    <Preview>✅ {allowanceType} of UGX {amount} {destinationLabel}</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={header}>
           <Text style={headerEmoji}>✅</Text>
-          <Heading style={h1}>{allowanceType} Credited</Heading>
+          <Heading style={h1}>{allowanceType} {isAirtime ? 'Sent' : 'Credited'}</Heading>
           <Text style={subtitle}>{SITE_NAME} — {month}</Text>
         </Section>
         <Section style={content}>
           <Text style={greeting}>Dear {employeeName || 'Employee'},</Text>
           <Text style={bodyText}>
-            Your monthly <strong>{allowanceType.toLowerCase()}</strong> for <strong>{month}</strong> has been credited to your wallet.
+            Your monthly <strong>{allowanceType.toLowerCase()}</strong> for <strong>{month}</strong> has been {destinationLabel}.
           </Text>
 
           <Section style={amountCard}>
-            <Text style={amountLabel}>Amount Credited</Text>
+            <Text style={amountLabel}>{isAirtime ? 'Airtime Sent' : 'Amount Credited'}</Text>
             <Text style={amountValue}>UGX {amount}</Text>
             <Text style={amountType}>{allowanceType}</Text>
           </Section>
 
           <Hr style={divider} />
-          <Text style={closingText}>Log in to your dashboard to view your updated wallet balance.</Text>
+          <Text style={closingText}>
+            {isAirtime
+              ? 'Please check your phone to confirm the airtime has arrived. If you do not receive it within a few minutes, contact HR.'
+              : 'Log in to your dashboard to view your updated wallet balance.'}
+          </Text>
           <Text style={closing}>Best regards,<br /><strong>{SITE_NAME} HR Department</strong></Text>
         </Section>
         <Section style={footerSection}>
@@ -47,7 +59,8 @@ const AllowanceCreditedEmail = ({
       </Container>
     </Body>
   </Html>
-)
+  )
+}
 
 export const template = {
   component: AllowanceCreditedEmail,
