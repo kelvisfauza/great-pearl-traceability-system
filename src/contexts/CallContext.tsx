@@ -462,6 +462,30 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     return () => { supabase.removeChannel(ch); };
   }, [active, cleanup, sendSignal, toast, isInitiator, myId, logCallToChat]);
 
+  // Watch the incoming (ringing) call so the ringtone stops if the
+  // caller hangs up / cancels / times out before the callee answers.
+  useEffect(() => {
+    if (!incoming) return;
+    const ch = supabase
+      .channel(`incoming-watch:${incoming.id}`)
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'call_sessions', filter: `id=eq.${incoming.id}` },
+        (payload) => {
+          const row = payload.new as CallRow;
+          if (row.status !== 'ringing') {
+            ringtone.stop();
+            setIncoming(null);
+            setIncomingPeer(null);
+            if (row.status === 'missed') {
+              toast({ title: 'Missed call', description: `${incomingPeer?.name || 'Caller'} tried to reach you.` });
+            }
+          }
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [incoming, incomingPeer, ringtone, toast]);
+
   const acceptIncoming = useCallback(async () => {
     if (!incoming || !incomingPeer) return;
     ringtone.stop();
