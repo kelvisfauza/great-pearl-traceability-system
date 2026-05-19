@@ -436,6 +436,32 @@ serve(async (req) => {
     
     console.log('Formatted phone:', formattedPhone)
     
+    const callerPriority = (parsedBody.priority || '').toString().toLowerCase();
+    const isPremium =
+      callerPriority === 'premium' ||
+      PREMIUM_SMS_TYPES.has((messageType || '').toLowerCase());
+
+    // PREMIUM ROUTE: try BulkSMS Premium first, fall back to YoolaSMS/Infobip below if it fails
+    if (isPremium) {
+      console.log(`💎 Premium routing for type=${messageType}`);
+      const bulkResult = await sendBulkSmsPremium(formattedPhone, message, supabase, {
+        userName, recipientEmail, messageType, department, triggeredBy: triggeredBy || userId, requestId,
+      });
+      if (bulkResult.success) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: 'SMS sent via BulkSMS Premium',
+            phone: formattedPhone,
+            provider: 'BulkSMS-Premium',
+            details: bulkResult.details,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      console.warn('⚠️ BulkSMS Premium failed, falling back to YoolaSMS');
+    }
+
     const apiKey = Deno.env.get('YOOLA_SMS_API_KEY')
     if (!apiKey) {
       console.error('YOOLA_SMS_API_KEY not configured')
@@ -663,10 +689,31 @@ serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
+
+    // Final fallback: BulkSMS Premium (only try here if not already tried as premium)
+    if (!isPremium) {
+      console.log('Attempting BulkSMS Premium as final fallback...');
+      const bulkResult = await sendBulkSmsPremium(formattedPhone, message, supabase, {
+        userName, recipientEmail, messageType, department, triggeredBy: triggeredBy || userId, requestId,
+      });
+      if (bulkResult.success) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: 'SMS sent via final fallback (BulkSMS Premium)',
+            phone: formattedPhone,
+            provider: 'BulkSMS-Premium',
+            details: bulkResult.details,
+            fallback: true,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
-        error: 'SMS failed via both YoolaSMS and Infobip', 
+        error: 'SMS failed via all providers (YoolaSMS, Infobip, BulkSMS)',
         details: lastError?.message || 'All providers failed',
         phone: formattedPhone
       }),
