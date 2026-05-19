@@ -64,6 +64,88 @@ async function sendInfobipSmsFallback(phone: string, message: string, supabase: 
   }
 }
 
+async function sendBulkSmsPremium(phone: string, message: string, supabase: any, meta: any) {
+  try {
+    const tokenId = Deno.env.get('BULKSMS_TOKEN_ID');
+    const tokenSecret = Deno.env.get('BULKSMS_TOKEN_SECRET');
+    if (!tokenId || !tokenSecret) {
+      console.error('BulkSMS credentials not configured');
+      return { success: false };
+    }
+
+    const auth = btoa(`${tokenId}:${tokenSecret}`);
+    const response = await fetch('https://api.bulksms.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        to: phone,
+        body: message,
+        routingGroup: 'PREMIUM',
+        encoding: 'TEXT',
+      }),
+    });
+
+    const responseText = await response.text();
+    console.log('BulkSMS Premium response:', response.status, responseText);
+
+    let result: any = {};
+    try { result = JSON.parse(responseText); } catch { result = { raw: responseText }; }
+
+    try {
+      await supabase.from('sms_logs').insert({
+        recipient_phone: phone,
+        recipient_name: meta.userName,
+        recipient_email: meta.recipientEmail,
+        message_content: message,
+        message_type: meta.messageType || 'general',
+        status: response.ok ? 'sent' : 'failed',
+        provider: 'BulkSMS-Premium',
+        provider_response: result,
+        credits_used: 1,
+        department: meta.department,
+        triggered_by: meta.triggeredBy,
+        request_id: meta.requestId,
+        failure_reason: response.ok ? null : responseText,
+      });
+    } catch (dbErr) {
+      console.error('Failed to log BulkSMS Premium:', dbErr);
+    }
+
+    return { success: response.ok, details: result };
+  } catch (err) {
+    console.error('BulkSMS Premium error:', err.message);
+    return { success: false };
+  }
+}
+
+// Message types that should be routed via BulkSMS Premium first (high-priority)
+const PREMIUM_SMS_TYPES = new Set([
+  'loan_reminder',
+  'loan_guarantor_request',
+  'loan_repayment',
+  'loan_recovery',
+  'loan_overdue',
+  'loan_default',
+  'loan_disbursed',
+  'loan_paid_off',
+  'loan',
+  'guarantor_recovery',
+  'job_application',
+  'job_application_received',
+  'job_application_shortlisted',
+  'job_application_interview',
+  'job_application_offer',
+  'job_application_rejected',
+  'job_application_status',
+  'otp',
+  'verification',
+  'login_code',
+  'twofa',
+]);
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
