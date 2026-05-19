@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import OfflineIndicator from "@/components/offline/OfflineIndicator";
 import { startQueueAutoSync } from "@/lib/offline/queue";
+import MarqueeBanner from "@/components/announcements/MarqueeBanner";
 
 function OfflineSyncBoot() {
   useEffect(() => startQueueAutoSync(), []);
@@ -169,6 +170,7 @@ const App: React.ComponentType = () => {
               
               {/* <RoleNotificationHandler /> - Disabled due to performance issues */}
               
+              <MarqueeBanner />
               <Routes>
                 <Route path="/auth" element={<Auth />} />
                 
