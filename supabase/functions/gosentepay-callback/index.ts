@@ -373,14 +373,20 @@ serve(async (req) => {
       } else {
         // Resolve unified user ID for wallet credit
         let walletUserId = transaction.user_id;
+        let walletOwnerEmail: string | null = null;
+        let walletOwnerName = "";
+        let walletOwnerPhone: string | null = null;
         try {
           const { data: emp } = await supabaseClient
             .from("employees")
-            .select("email")
+            .select("email, name, phone")
             .eq("auth_user_id", transaction.user_id)
             .maybeSingle();
 
           if (emp?.email) {
+            walletOwnerEmail = emp.email;
+            walletOwnerName = emp.name || "";
+            walletOwnerPhone = emp.phone || null;
             const { data: unifiedId } = await supabaseClient.rpc("get_unified_user_id", {
               input_email: emp.email,
             });
@@ -412,6 +418,36 @@ serve(async (req) => {
           console.error("Error creating ledger entry:", ledgerError);
         } else {
           console.log(`Successfully credited UGX ${depositAmount} to user ${transaction.user_id}`);
+
+          // Fetch updated wallet balance + send SMS confirmation
+          try {
+            let newBalanceText = "";
+            if (walletOwnerEmail) {
+              const { data: balRows } = await supabaseClient
+                .rpc("get_user_balance_safe", { user_email: walletOwnerEmail });
+              const row = Array.isArray(balRows) ? balRows[0] : balRows;
+              if (row?.wallet_balance != null) {
+                newBalanceText = ` New wallet balance: UGX ${Number(row.wallet_balance).toLocaleString()}.`;
+              }
+            }
+
+            const smsPhone = walletOwnerPhone || phone;
+            if (smsPhone) {
+              const shortRef = String(ref).slice(-6).toUpperCase();
+              const greet = walletOwnerName ? `Dear ${walletOwnerName}, ` : "";
+              await supabaseClient.functions.invoke("send-sms", {
+                body: {
+                  phone: smsPhone,
+                  message: `${greet}UGX ${Number(depositAmount).toLocaleString()} has been credited to your wallet.${newBalanceText} Ref: ${shortRef}. - Great Agro Coffee`,
+                  userName: walletOwnerName || "User",
+                  messageType: "payout_confirmation",
+                  recipientEmail: walletOwnerEmail,
+                },
+              });
+            }
+          } catch (smsErr) {
+            console.error("[Yo Callback] Deposit SMS failed:", smsErr);
+          }
         }
       }
     } else {

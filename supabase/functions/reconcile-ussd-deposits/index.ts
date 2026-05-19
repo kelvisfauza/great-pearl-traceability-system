@@ -146,11 +146,25 @@ Deno.serve(async (req) => {
 
           // Best-effort SMS + email + notification (non-blocking)
           const shortRef = externalRef.slice(-6).toUpperCase();
+
+          // Fetch updated wallet balance (post-credit)
+          let balanceSuffix = "";
+          try {
+            const { data: balRows } = await supabase
+              .rpc("get_user_balance_safe", { user_email: emp.email });
+            const row = Array.isArray(balRows) ? balRows[0] : balRows;
+            if (row?.wallet_balance != null) {
+              balanceSuffix = ` New wallet balance: UGX ${Number(row.wallet_balance).toLocaleString()}.`;
+            }
+          } catch (balErr) {
+            console.error("[Reconcile USSD] Balance lookup failed:", balErr);
+          }
+
           try {
             await supabase.functions.invoke("send-sms", {
               body: {
                 phone: normalizedPhone,
-                message: `Dear ${emp.name}, UGX ${amount.toLocaleString()} has been credited to your wallet via USSD. Ref: ${shortRef}. - Great Agro Coffee`,
+                message: `Dear ${emp.name}, UGX ${amount.toLocaleString()} has been credited to your wallet via USSD.${balanceSuffix} Ref: ${shortRef}. - Great Agro Coffee`,
                 userName: emp.name,
                 messageType: "payout_confirmation",
                 recipientEmail: emp.email,

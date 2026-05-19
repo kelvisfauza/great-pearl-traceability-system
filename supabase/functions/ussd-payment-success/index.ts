@@ -616,8 +616,24 @@ async function processServicePayment(
             const shortRef = externalRef.slice(-6).toUpperCase();
             const isThirdParty = targetPhone !== normalizedPhone;
             const targetLine = isThirdParty ? `\nTo: ${emp.name}` : "";
+
+            // Fetch updated wallet balance for the owner (post-credit)
+            let balanceLine = "";
+            let newBalance: number | null = null;
+            try {
+              const { data: balRows } = await supabase
+                .rpc("get_user_balance_safe", { user_email: emp.email });
+              const row = Array.isArray(balRows) ? balRows[0] : balRows;
+              if (row?.wallet_balance != null) {
+                newBalance = Number(row.wallet_balance);
+                balanceLine = `\nWallet Balance: UGX ${newBalance.toLocaleString()}`;
+              }
+            } catch (balErr) {
+              console.error("[USSD Payment Success] Balance lookup failed:", balErr);
+            }
+
             userMessage =
-              `Wallet credited UGX ${Number(amount).toLocaleString()}.${targetLine}\n` +
+              `Wallet credited UGX ${Number(amount).toLocaleString()}.${targetLine}${balanceLine}\n` +
               `Ref: ${shortRef}\n` +
               `Thank you for using Great Agro Coffee.`;
 
@@ -639,6 +655,7 @@ async function processServicePayment(
                 ? `You sent UGX ${Number(amount).toLocaleString()} to ${emp.name}'s wallet via USSD. ` +
                   `Ref: ${shortRef}. - Great Agro Coffee`
                 : `Dear ${emp.name}, UGX ${Number(amount).toLocaleString()} has been credited to your wallet via USSD. ` +
+                  `New wallet balance: UGX ${(newBalance ?? 0).toLocaleString()}. ` +
                   `Ref: ${shortRef}. - Great Agro Coffee`;
               await supabase.functions.invoke("send-sms", {
                 body: {
@@ -659,7 +676,9 @@ async function processServicePayment(
               try {
                 const ownerSms =
                   `Dear ${emp.name}, UGX ${Number(amount).toLocaleString()} was deposited to your wallet by ` +
-                  `${depositorName} (${normalizedPhone}). Ref: ${shortRef}. - Great Agro Coffee`;
+                  `${depositorName} (${normalizedPhone}). ` +
+                  `New wallet balance: UGX ${(newBalance ?? 0).toLocaleString()}. ` +
+                  `Ref: ${shortRef}. - Great Agro Coffee`;
                 await supabase.functions.invoke("send-sms", {
                   body: {
                     phone: emp.phone,
