@@ -112,6 +112,64 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
 
   const ringtone = useRingtone();
 
+  // Log a call event as a message in the direct conversation between
+  // the current user and the peer so missed/declined/ended calls show
+  // up inline in the chat (like WhatsApp).
+  const logCallToChat = useCallback(async (
+    peerAuthId: string,
+    callType: CallType,
+    outcome: 'missed' | 'declined' | 'ended' | 'outgoing',
+    durationSec?: number,
+  ) => {
+    if (!myId) return;
+    try {
+      // Find existing direct conversation between the two users
+      const { data: mine } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', myId);
+      const { data: theirs } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', peerAuthId);
+      const mineIds = new Set((mine || []).map((r: any) => r.conversation_id));
+      let convId = (theirs || []).find((r: any) => mineIds.has(r.conversation_id))?.conversation_id;
+
+      if (!convId) {
+        const { data: conv, error: convErr } = await supabase
+          .from('conversations')
+          .insert({ type: 'direct', created_by: myId })
+          .select()
+          .single();
+        if (convErr || !conv) return;
+        convId = conv.id;
+        await supabase.from('conversation_participants').insert([
+          { conversation_id: convId, user_id: myId },
+          { conversation_id: convId, user_id: peerAuthId },
+        ]);
+      }
+
+      const label =
+        outcome === 'missed'   ? `📞 Missed ${callType} call`
+      : outcome === 'declined' ? `📞 ${callType === 'video' ? 'Video' : 'Voice'} call declined`
+      : outcome === 'ended'    ? `📞 ${callType === 'video' ? 'Video' : 'Voice'} call${durationSec ? ` · ${Math.floor(durationSec / 60)}:${String(durationSec % 60).padStart(2, '0')}` : ''}`
+      :                          `📞 ${callType === 'video' ? 'Video' : 'Voice'} call`;
+
+      await supabase.from('messages').insert({
+        conversation_id: convId,
+        sender_id: myId,
+        sender_name: 'Call',
+        content: label,
+        type: 'text',
+      });
+    } catch (e) {
+      console.warn('[call] log to chat failed', e);
+    }
+  }, [myId]);
+
+  // Track when the active call was answered so we can report duration
+  const answeredAtRef = useRef<number | null>(null);
+
   // Request OS-level notification permission once (so we can pop up
   // an incoming-call notification even when the tab is in the background).
   useEffect(() => {
@@ -138,6 +196,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     setMuted(false);
     setCameraOff(false);
     setRemoteHasVideo(false);
+    answeredAtRef.current = null;
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
   }, []);
@@ -317,11 +376,12 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
           await supabase.from('call_sessions').update({ status: 'missed', ended_at: new Date().toISOString() }).eq('id', row.id);
           toast({ title: 'No answer', description: `${calleeName} did not pick up.` });
           sendSignal('hangup', {});
+          logCallToChat(calleeAuthId, type, 'missed');
           cleanup();
         }
       }
     }, 45000);
-  }, [myId, active, incoming, toast, setupPeer, joinChannel, cleanup, sendSignal]);
+  }, [myId, active, incoming, toast, setupPeer, joinChannel, cleanup, sendSignal, logCallToChat]);
 
   // Incoming call detection
   useEffect(() => {
@@ -376,16 +436,29 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
         { event: 'UPDATE', schema: 'public', table: 'call_sessions', filter: `id=eq.${active.id}` },
         (payload) => {
           const row = payload.new as CallRow;
+          if (row.status === 'active' && !answeredAtRef.current) {
+            answeredAtRef.current = Date.now();
+          }
           if (row.status === 'declined' || row.status === 'ended' || row.status === 'missed') {
             toast({ title: row.status === 'declined' ? 'Call declined' : 'Call ended' });
             sendSignal('hangup', {});
+            // Caller logs the outcome so it appears once in the shared chat
+            if (isInitiator && active) {
+              const peerId = active.caller_id === myId ? active.callee_id : active.caller_id;
+              const dur = answeredAtRef.current ? Math.floor((Date.now() - answeredAtRef.current) / 1000) : undefined;
+              const outcome: 'declined' | 'missed' | 'ended' =
+                row.status === 'declined' ? 'declined'
+              : row.status === 'missed'   ? 'missed'
+              : 'ended';
+              logCallToChat(peerId, active.call_type, outcome, dur);
+            }
             cleanup();
           }
         }
       )
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [active, cleanup, sendSignal, toast]);
+  }, [active, cleanup, sendSignal, toast, isInitiator, myId, logCallToChat]);
 
   const acceptIncoming = useCallback(async () => {
     if (!incoming || !incomingPeer) return;
@@ -405,6 +478,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
     await supabase.from('call_sessions').update({ status: 'active', answered_at: new Date().toISOString() }).eq('id', row.id);
+    answeredAtRef.current = Date.now();
     joinChannel(row.id, () => {
       // Tell caller we're ready so they create the offer
       sendSignal('ready', {});
@@ -414,10 +488,11 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
   const declineIncoming = useCallback(async () => {
     if (!incoming) return;
     ringtone.stop();
+    const row = incoming;
     await supabase
       .from('call_sessions')
       .update({ status: 'declined', ended_at: new Date().toISOString() })
-      .eq('id', incoming.id);
+      .eq('id', row.id);
     setIncoming(null);
     setIncomingPeer(null);
   }, [incoming, ringtone]);
@@ -425,10 +500,17 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
   const hangup = useCallback(async () => {
     if (!active) return;
     const id = active.id;
+    const peerId = active.caller_id === myId ? active.callee_id : active.caller_id;
+    const dur = answeredAtRef.current ? Math.floor((Date.now() - answeredAtRef.current) / 1000) : undefined;
+    const wasInitiator = isInitiator;
+    const callType = active.call_type;
     sendSignal('hangup', {});
     await supabase.from('call_sessions').update({ status: 'ended', ended_at: new Date().toISOString() }).eq('id', id);
+    if (wasInitiator) {
+      logCallToChat(peerId, callType, 'ended', dur);
+    }
     cleanup();
-  }, [active, cleanup, sendSignal]);
+  }, [active, cleanup, sendSignal, myId, isInitiator, logCallToChat]);
 
   const toggleMute = useCallback(() => {
     const s = localStreamRef.current;
