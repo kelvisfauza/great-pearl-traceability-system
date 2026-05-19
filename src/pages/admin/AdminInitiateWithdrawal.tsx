@@ -140,7 +140,7 @@ const AdminInitiateWithdrawal = () => {
           initiated_by: employee?.email || 'admin',
           initiated_by_name: employee?.name || 'Admin',
         })
-        .select()
+        .select('id, employee_id, employee_email, employee_name, amount, reason, pin_expires_at, status, initiated_by, initiated_by_name, created_at')
         .single();
 
       if (error) throw error;
