@@ -56,7 +56,7 @@ const Index = () => {
   const isAdmin = employee.role === 'Administrator' || employee.role === 'Super Admin';
 
   return (
-    <DashboardLayout title="Dashboard" subtitle="Overview" showMessageButton={false}>
+    <DashboardLayout title="Dashboard" subtitle="Overview">
       <div className="space-y-4 pb-8">
         <HolidayBanner userName={employee?.name?.split(' ')[0]} />
         <AssignedRoleNotification />
