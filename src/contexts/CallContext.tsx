@@ -112,6 +112,15 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
 
   const ringtone = useRingtone();
 
+  // Request OS-level notification permission once (so we can pop up
+  // an incoming-call notification even when the tab is in the background).
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    if (Notification.permission === 'default') {
+      try { Notification.requestPermission(); } catch {}
+    }
+  }, []);
+
   const cleanup = useCallback(() => {
     try { pcRef.current?.close(); } catch {}
     pcRef.current = null;
@@ -333,6 +342,25 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
           setIncoming(row);
           setIncomingPeer(peer);
           ringtone.start();
+
+          // Surface an OS-level notification when the user isn't actively
+          // looking at the tab, and try to bring the window to focus.
+          try {
+            if (typeof document !== 'undefined' && document.hidden &&
+                'Notification' in window && Notification.permission === 'granted') {
+              const n = new Notification(`Incoming ${row.call_type} call`, {
+                body: `${peer.name} is calling you`,
+                icon: '/favicon.ico',
+                tag: `call-${row.id}`,
+                requireInteraction: true,
+              });
+              n.onclick = () => {
+                try { window.focus(); } catch {}
+                n.close();
+              };
+            }
+          } catch (e) { console.warn('[call] notification failed', e); }
+          try { window.focus(); } catch {}
         }
       )
       .subscribe();
