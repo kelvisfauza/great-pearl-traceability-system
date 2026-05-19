@@ -284,7 +284,13 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
       // video elements once they mount (the dialog may not be in the
       // DOM yet when ontrack fires).
       remoteStreamRef.current = remote;
-      setRemoteHasVideo(remote.getVideoTracks().length > 0);
+      // Track-level listener so we flip "has video" as soon as the
+      // remote video track is actually live (video tracks often arrive
+      // after the first ontrack fires with only audio).
+      const recompute = () => setRemoteHasVideo(remote.getVideoTracks().length > 0);
+      recompute();
+      remote.onaddtrack = recompute;
+      remote.onremovetrack = recompute;
       setRemoteStreamVersion(v => v + 1);
     };
 
