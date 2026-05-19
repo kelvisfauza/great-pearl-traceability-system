@@ -83,7 +83,6 @@ async function sendBulkSmsPremium(phone: string, message: string, supabase: any,
       body: JSON.stringify({
         to: phone,
         body: message,
-        routingGroup: 'PREMIUM',
         encoding: 'TEXT',
       }),
     });
