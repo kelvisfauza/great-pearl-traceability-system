@@ -10592,12 +10592,15 @@ export type Database = {
         Args: { employee_salary: number }
         Returns: number
       }
+      can_approve_finance: { Args: never; Returns: boolean }
       can_bypass_sms_verification: {
         Args: { user_email: string }
         Returns: boolean
       }
       can_manage_quality_assessments: { Args: never; Returns: boolean }
+      can_manage_users: { Args: never; Returns: boolean }
       can_perform_action: { Args: { action_type: string }; Returns: boolean }
+      can_process_finance: { Args: never; Returns: boolean }
       check_auth_user_exists: { Args: { user_uuid: string }; Returns: Json }
       check_unread_messages_for_sms: { Args: never; Returns: undefined }
       cleanup_expired_email_verification_codes: {
@@ -10678,6 +10681,66 @@ export type Database = {
       get_available_to_request_text: {
         Args: { user_uuid: string }
         Returns: number
+      }
+      get_current_employee: {
+        Args: never
+        Returns: {
+          account_name: string | null
+          account_number: string | null
+          address: string | null
+          alternative_bank: string | null
+          auth_user_id: string | null
+          avatar_url: string | null
+          bank_email: string | null
+          bank_name: string | null
+          bank_phone: string | null
+          bypass_sms_verification: boolean | null
+          created_at: string
+          date_of_birth: string | null
+          department: string
+          disabled: boolean | null
+          disabled_at: string | null
+          disabled_reason: string | null
+          district: string | null
+          email: string
+          emergency_contact: string | null
+          employee_id: string | null
+          gender: string | null
+          id: string
+          is_training_account: boolean | null
+          join_date: string
+          last_notified_role: string | null
+          marital_status: string | null
+          name: string
+          national_id_name: string | null
+          national_id_number: string | null
+          next_of_kin_name: string | null
+          next_of_kin_phone: string | null
+          next_of_kin_relationship: string | null
+          nssf_number: string | null
+          permissions: string[]
+          phone: string | null
+          position: string
+          profile_completed: boolean | null
+          role: string
+          role_notification_shown_at: string | null
+          salary: number
+          status: string
+          tin_number: string | null
+          training_progress: number | null
+          tribe: string | null
+          updated_at: string
+          wallet_frozen: boolean | null
+          wallet_frozen_at: string | null
+          wallet_frozen_by: string | null
+          wallet_frozen_reason: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "employees"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       get_current_user_department: { Args: never; Returns: string }
       get_current_user_email: { Args: never; Returns: string }
@@ -11012,6 +11075,11 @@ export type Database = {
         Args: { p_coffee_record_id: string }
         Returns: Json
       }
+      user_can: {
+        Args: { action_name: string; module_name: string }
+        Returns: boolean
+      }
+      user_has_module: { Args: { module_name: string }; Returns: boolean }
       user_has_permission: {
         Args: { permission_name: string }
         Returns: boolean
