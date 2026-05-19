@@ -130,6 +130,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
 
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -227,6 +228,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     answeredAtRef.current = null;
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+    if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
   }, [ringtone]);
 
   const sendSignal = useCallback((event: string, payload: any) => {
@@ -274,7 +276,17 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
 
     pc.ontrack = (ev) => {
       const [remote] = ev.streams;
-      if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remote;
+      // Always pipe the remote stream into a dedicated <audio> element
+      // so we hear the other party even on audio-only calls (where
+      // the remote <video> is visually hidden and may not play audio).
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = remote;
+        remoteAudioRef.current.play().catch(err => console.warn('[call] audio play blocked', err));
+      }
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remote;
+        remoteVideoRef.current.play().catch(() => {});
+      }
       setRemoteHasVideo(remote.getVideoTracks().length > 0);
     };
 
@@ -466,6 +478,9 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
           const row = payload.new as CallRow;
           if (row.status === 'active' && !answeredAtRef.current) {
             answeredAtRef.current = Date.now();
+            // Reflect the answered state locally so the caller's UI
+            // stops showing "Ringing…" and switches to "Connected".
+            setActive(row);
           }
           if (row.status === 'declined' || row.status === 'ended' || row.status === 'missed') {
             toast({ title: row.status === 'declined' ? 'Call declined' : 'Call ended' });
@@ -625,6 +640,10 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
           <div className="relative w-full aspect-video bg-neutral-900">
+            {/* Hidden audio sink — always plays the remote stream so audio
+                works even when the video element is hidden (audio-only). */}
+            <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
+
             {/* Remote video / audio-only fallback */}
             <video
               ref={remoteVideoRef}
