@@ -53,7 +53,7 @@ const SeasonalAdvisoryModal = () => {
     <>
       {/* ========== OFF-SEASON SAVINGS ADVISORY ========== */}
       <Dialog open={step === 'off-season'} onOpenChange={() => { /* require button to advance */ }}>
-        <DialogContent className="max-w-lg p-0 overflow-hidden border-0 shadow-2xl">
+        <DialogContent className="max-w-lg p-0 border-0 shadow-2xl max-h-[90vh] overflow-y-auto">
           {/* Hero band */}
           <div className="relative bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 px-6 pt-6 pb-8 text-white">
             <div className="absolute inset-0 opacity-10" style={{
@@ -112,7 +112,7 @@ const SeasonalAdvisoryModal = () => {
 
       {/* ========== EBOLA OUTBREAK WARNING ========== */}
       <Dialog open={step === 'ebola'} onOpenChange={() => { /* require checkbox + button */ }}>
-        <DialogContent className="max-w-lg p-0 overflow-hidden border-0 shadow-2xl">
+        <DialogContent className="max-w-lg p-0 border-0 shadow-2xl max-h-[90vh] overflow-y-auto">
           <div className="relative bg-gradient-to-br from-red-700 via-red-800 to-rose-900 px-6 pt-6 pb-8 text-white">
             <div className="absolute inset-0 opacity-10" style={{
               backgroundImage: 'repeating-linear-gradient(45deg, white 0 2px, transparent 2px 14px)'
