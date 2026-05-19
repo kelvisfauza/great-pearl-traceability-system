@@ -133,6 +133,8 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const remoteStreamRef = useRef<MediaStream | null>(null);
+  const [remoteStreamVersion, setRemoteStreamVersion] = useState(0);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
   const remoteSetRef = useRef(false);
@@ -226,6 +228,8 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     setCameraOff(false);
     setRemoteHasVideo(false);
     answeredAtRef.current = null;
+    remoteStreamRef.current = null;
+    setRemoteStreamVersion(v => v + 1);
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
@@ -276,18 +280,12 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
 
     pc.ontrack = (ev) => {
       const [remote] = ev.streams;
-      // Always pipe the remote stream into a dedicated <audio> element
-      // so we hear the other party even on audio-only calls (where
-      // the remote <video> is visually hidden and may not play audio).
-      if (remoteAudioRef.current) {
-        remoteAudioRef.current.srcObject = remote;
-        remoteAudioRef.current.play().catch(err => console.warn('[call] audio play blocked', err));
-      }
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = remote;
-        remoteVideoRef.current.play().catch(() => {});
-      }
+      // Save the remote stream; an effect attaches it to the audio/
+      // video elements once they mount (the dialog may not be in the
+      // DOM yet when ontrack fires).
+      remoteStreamRef.current = remote;
       setRemoteHasVideo(remote.getVideoTracks().length > 0);
+      setRemoteStreamVersion(v => v + 1);
     };
 
     pc.onicecandidate = (ev) => {
