@@ -138,6 +138,8 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
   const remoteSetRef = useRef(false);
+  const readyRetryRef = useRef<number | null>(null);
+  const callerSubscribedRef = useRef(false);
 
   const ringtone = useRingtone();
 
@@ -221,6 +223,11 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     try { ringtone.stop(); } catch {}
     pendingIceRef.current = [];
     remoteSetRef.current = false;
+    callerSubscribedRef.current = false;
+    if (readyRetryRef.current) {
+      window.clearInterval(readyRetryRef.current);
+      readyRetryRef.current = null;
+    }
     setActive(null);
     setActivePeer(null);
     setIsInitiator(false);
@@ -318,6 +325,15 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
       // Callee signals they're ready; caller creates offer
       const pc = pcRef.current;
       if (!pc) return;
+      // Flip caller UI from "Ringing…" to connected as soon as we know
+      // the callee accepted (don't rely on postgres_changes which may
+      // not be enabled for this table).
+      if (!answeredAtRef.current) {
+        answeredAtRef.current = Date.now();
+        setActive(prev => prev ? { ...prev, status: 'active' } as CallRow : prev);
+      }
+      // If we've already created/sent an offer, ignore duplicate readys
+      if (pc.localDescription) return;
       try {
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
@@ -328,6 +344,11 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     ch.on('broadcast', { event: 'offer' }, async ({ payload }) => {
       const pc = pcRef.current;
       if (!pc) return;
+      // Offer arrived — stop the ready-retry loop on the callee side
+      if (readyRetryRef.current) {
+        window.clearInterval(readyRetryRef.current);
+        readyRetryRef.current = null;
+      }
       try {
         await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
         remoteSetRef.current = true;
@@ -371,7 +392,10 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     ch.subscribe((status) => {
-      if (status === 'SUBSCRIBED' && onReady) onReady();
+      if (status === 'SUBSCRIBED') {
+        callerSubscribedRef.current = true;
+        if (onReady) onReady();
+      }
     });
 
     channelRef.current = ch;
