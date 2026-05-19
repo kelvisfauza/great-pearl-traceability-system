@@ -436,6 +436,9 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
         { event: 'UPDATE', schema: 'public', table: 'call_sessions', filter: `id=eq.${active.id}` },
         (payload) => {
           const row = payload.new as CallRow;
+          if (row.status === 'active' && !answeredAtRef.current) {
+            answeredAtRef.current = Date.now();
+          }
           if (row.status === 'declined' || row.status === 'ended' || row.status === 'missed') {
             toast({ title: row.status === 'declined' ? 'Call declined' : 'Call ended' });
             sendSignal('hangup', {});
