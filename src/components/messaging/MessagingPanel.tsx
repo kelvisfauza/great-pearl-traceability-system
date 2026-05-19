@@ -524,19 +524,30 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                   const lastMessage = conversation.lastMessage;
                   const unreadCount = conversation.unread_count || 0;
                   const conversationName = getConversationName(conversation);
-                  
+          const { status: presenceStatus } = getOtherParticipantPresence(conversation);
+
                   return (
                     <button
                       key={conversation.id}
                       onClick={() => setSelectedConversation(conversation.id)}
                       className="w-full p-3 hover:bg-muted/50 transition-colors text-left flex items-center gap-3 border-b border-border/50"
                     >
-                      <Avatar className="h-12 w-12 flex-shrink-0">
-                        <AvatarImage src={getConversationAvatar(conversation)} alt={conversationName} />
-                        <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                          {conversationName?.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                      <div className="relative flex-shrink-0">
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={getConversationAvatar(conversation)} alt={conversationName} />
+                          <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                            {conversationName?.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span
+                          aria-label={presenceStatus}
+                          className={`absolute bottom-0 right-0 h-3 w-3 rounded-full ring-2 ring-background ${
+                            presenceStatus === 'online' ? 'bg-green-500'
+                            : presenceStatus === 'away' ? 'bg-yellow-400'
+                            : 'bg-muted-foreground/50'
+                          }`}
+                        />
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-0.5">
                           <p className="font-semibold text-sm truncate">
