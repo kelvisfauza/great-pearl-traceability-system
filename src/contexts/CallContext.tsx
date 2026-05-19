@@ -685,9 +685,9 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
               ref={remoteVideoRef}
               autoPlay
               playsInline
-              className={`w-full h-full object-cover ${remoteHasVideo ? '' : 'hidden'}`}
+              className={`w-full h-full object-cover ${isVideo && remoteHasVideo ? '' : 'hidden'}`}
             />
-            {!remoteHasVideo && (
+            {!(isVideo && remoteHasVideo) && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
                 <Avatar className="h-24 w-24">
                   <AvatarFallback className="text-2xl bg-primary/20 text-primary-foreground">
