@@ -702,6 +702,39 @@ export type Database = {
         }
         Relationships: []
       }
+      call_sessions: {
+        Row: {
+          answered_at: string | null
+          call_type: string
+          callee_id: string
+          caller_id: string
+          ended_at: string | null
+          id: string
+          started_at: string
+          status: string
+        }
+        Insert: {
+          answered_at?: string | null
+          call_type: string
+          callee_id: string
+          caller_id: string
+          ended_at?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          answered_at?: string | null
+          call_type?: string
+          callee_id?: string
+          caller_id?: string
+          ended_at?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
       chart_of_accounts: {
         Row: {
           account_code: string

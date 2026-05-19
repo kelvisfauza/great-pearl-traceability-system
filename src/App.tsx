@@ -16,6 +16,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PriceProvider } from "@/contexts/PriceContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { LeaveEnforcementProvider } from "@/contexts/LeaveEnforcementContext";
+import { CallProvider } from "@/contexts/CallContext";
 import { useGlobalErrorHandler } from "./hooks/useGlobalErrorHandler";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Index from "./pages/Index";
@@ -151,6 +152,7 @@ const App: React.ComponentType = () => {
         <GlobalErrorCaptureInitializer />
         <PriceProvider>
           <TooltipProvider>
+          <CallProvider>
             <Toaster />
             <Sonner />
             <BrowserRouter>
@@ -475,6 +477,7 @@ const App: React.ComponentType = () => {
               </LocationPermissionGate>
               </MaintenanceGuard>
             </BrowserRouter>
+          </CallProvider>
           </TooltipProvider>
         </PriceProvider>
         </LeaveEnforcementProvider>
