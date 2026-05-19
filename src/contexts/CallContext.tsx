@@ -575,8 +575,22 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     await supabase.from('call_sessions').update({ status: 'active', answered_at: new Date().toISOString() }).eq('id', row.id);
     answeredAtRef.current = Date.now();
     joinChannel(row.id, () => {
-      // Tell caller we're ready so they create the offer
+      // Tell caller we're ready so they create the offer. The caller's
+      // channel may not have finished subscribing yet, so retry until
+      // we receive the offer (remoteSetRef flips true) or give up.
       sendSignal('ready', {});
+      let attempts = 0;
+      readyRetryRef.current = window.setInterval(() => {
+        attempts += 1;
+        if (remoteSetRef.current || attempts > 20) {
+          if (readyRetryRef.current) {
+            window.clearInterval(readyRetryRef.current);
+            readyRetryRef.current = null;
+          }
+          return;
+        }
+        sendSignal('ready', {});
+      }, 600);
     });
   }, [incoming, incomingPeer, ringtone, setupPeer, joinChannel, sendSignal, cleanup]);
 
