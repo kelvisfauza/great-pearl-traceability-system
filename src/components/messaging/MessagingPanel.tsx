@@ -3,10 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, X, MessageSquarePlus, ArrowLeft, MoreVertical, Paperclip, Check, CheckCheck, Reply } from 'lucide-react';
+import { Send, X, MessageSquarePlus, ArrowLeft, MoreVertical, Paperclip, Check, CheckCheck, Reply, Phone, Video } from 'lucide-react';
 import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePresenceList } from '@/hooks/usePresenceList';
+import { useCall } from '@/contexts/CallContext';
 import UserSelectorDialog from './UserSelectorDialog';
 import { format } from 'date-fns';
 
@@ -39,6 +40,7 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { users: presenceUsers } = usePresenceList();
+  const { startCall } = useCall();
   
   const {
     conversations,
@@ -209,6 +211,34 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                   </p>
                 </div>
                 <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 hover:bg-primary-foreground/10"
+                    aria-label="Voice call"
+                    onClick={() => {
+                      const other = currentConversation?.participants?.find(
+                        (p: any) => p.user_id !== employee?.authUserId
+                      );
+                      if (other?.user_id) startCall(other.user_id, other.employee_name || 'User', 'audio');
+                    }}
+                  >
+                    <Phone className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 hover:bg-primary-foreground/10"
+                    aria-label="Video call"
+                    onClick={() => {
+                      const other = currentConversation?.participants?.find(
+                        (p: any) => p.user_id !== employee?.authUserId
+                      );
+                      if (other?.user_id) startCall(other.user_id, other.employee_name || 'User', 'video');
+                    }}
+                  >
+                    <Video className="h-5 w-5" />
+                  </Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary-foreground/10">
                     <MoreVertical className="h-5 w-5" />
                   </Button>
