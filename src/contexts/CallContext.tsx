@@ -188,6 +188,8 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
     }
+    // Safety: always stop the ringtone on any cleanup
+    try { ringtone.stop(); } catch {}
     pendingIceRef.current = [];
     remoteSetRef.current = false;
     setActive(null);
@@ -199,7 +201,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     answeredAtRef.current = null;
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
-  }, []);
+  }, [ringtone]);
 
   const sendSignal = useCallback((event: string, payload: any) => {
     channelRef.current?.send({ type: 'broadcast', event, payload });
