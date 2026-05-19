@@ -130,6 +130,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
 
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -227,6 +228,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     answeredAtRef.current = null;
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+    if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
   }, [ringtone]);
 
   const sendSignal = useCallback((event: string, payload: any) => {
@@ -274,7 +276,17 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
 
     pc.ontrack = (ev) => {
       const [remote] = ev.streams;
-      if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remote;
+      // Always pipe the remote stream into a dedicated <audio> element
+      // so we hear the other party even on audio-only calls (where
+      // the remote <video> is visually hidden and may not play audio).
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = remote;
+        remoteAudioRef.current.play().catch(err => console.warn('[call] audio play blocked', err));
+      }
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remote;
+        remoteVideoRef.current.play().catch(() => {});
+      }
       setRemoteHasVideo(remote.getVideoTracks().length > 0);
     };
 
