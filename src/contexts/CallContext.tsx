@@ -478,6 +478,9 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
           const row = payload.new as CallRow;
           if (row.status === 'active' && !answeredAtRef.current) {
             answeredAtRef.current = Date.now();
+            // Reflect the answered state locally so the caller's UI
+            // stops showing "Ringing…" and switches to "Connected".
+            setActive(row);
           }
           if (row.status === 'declined' || row.status === 'ended' || row.status === 'missed') {
             toast({ title: row.status === 'declined' ? 'Call declined' : 'Call ended' });
