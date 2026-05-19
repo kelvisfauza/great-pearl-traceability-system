@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { PiggyBank, Calendar, TrendingDown, ShieldAlert, Activity, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
-const SESSION_KEY = 'seasonal_advisory_shown_v1';
+const STORAGE_KEY_PREFIX = 'seasonal_advisory_ack_v1:';
 const STATUTORY_SKIP_KEY = 'statutory_info_skip_until';
 
 type Step = 'off-season' | 'ebola' | null;
@@ -16,7 +16,8 @@ const SeasonalAdvisoryModal = () => {
 
   useEffect(() => {
     if (!employee) return;
-    if (sessionStorage.getItem(SESSION_KEY)) return;
+    const ackKey = STORAGE_KEY_PREFIX + ((employee as any).id || (employee as any).email || 'anon');
+    if (localStorage.getItem(ackKey)) return;
 
     // Wait until the statutory modal is no longer blocking the screen
     const hasTin = !!(employee as any).tin_number?.toString().trim();
@@ -40,7 +41,8 @@ const SeasonalAdvisoryModal = () => {
 
   const handleOffSeasonNext = () => setStep('ebola');
   const handleClose = () => {
-    sessionStorage.setItem(SESSION_KEY, '1');
+    const ackKey = STORAGE_KEY_PREFIX + ((employee as any)?.id || (employee as any)?.email || 'anon');
+    try { localStorage.setItem(ackKey, new Date().toISOString()); } catch {}
     setStep(null);
     setAcknowledgedEbola(false);
   };
