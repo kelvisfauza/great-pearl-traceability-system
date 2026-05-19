@@ -471,6 +471,7 @@ const App: React.ComponentType = () => {
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <AdminWithdrawalPinPrompt />
+              <EbolaPrecautionPopup />
               </LocationPermissionGate>
               </MaintenanceGuard>
             </BrowserRouter>
