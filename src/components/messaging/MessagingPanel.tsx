@@ -573,6 +573,35 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                 </div>
               )}
               
+              {isRecording ? (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 hover:bg-muted text-destructive"
+                    onClick={() => stopRecording(true)}
+                    aria-label="Cancel recording"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                  <div className="flex-1 flex items-center gap-2 px-4 py-2 rounded-full bg-background border">
+                    <span className="h-2.5 w-2.5 rounded-full bg-destructive animate-pulse" />
+                    <span className="text-sm font-medium tabular-nums">
+                      {Math.floor(recordSeconds / 60).toString().padStart(2, '0')}:
+                      {(recordSeconds % 60).toString().padStart(2, '0')}
+                    </span>
+                    <span className="text-xs text-muted-foreground ml-2">Recording…</span>
+                  </div>
+                  <Button
+                    onClick={() => stopRecording(false)}
+                    size="icon"
+                    className="rounded-full h-10 w-10"
+                    aria-label="Send voice message"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
               <div className="flex items-center gap-2">
                 <input
                   ref={fileInputRef}
@@ -596,15 +625,26 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                   placeholder="Type a message"
                   className="flex-1 rounded-full bg-background"
                 />
-                <Button 
-                  onClick={handleSendMessage} 
-                  size="icon"
-                  className="rounded-full h-10 w-10"
-                  disabled={!newMessage.trim()}
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
+                {newMessage.trim() ? (
+                  <Button
+                    onClick={handleSendMessage}
+                    size="icon"
+                    className="rounded-full h-10 w-10"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={startRecording}
+                    size="icon"
+                    className="rounded-full h-10 w-10"
+                    aria-label="Record voice message"
+                  >
+                    <Mic className="h-5 w-5" />
+                  </Button>
+                )}
               </div>
+              )}
             </div>
           </>
         ) : (
