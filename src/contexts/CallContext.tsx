@@ -112,6 +112,64 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
 
   const ringtone = useRingtone();
 
+  // Log a call event as a message in the direct conversation between
+  // the current user and the peer so missed/declined/ended calls show
+  // up inline in the chat (like WhatsApp).
+  const logCallToChat = useCallback(async (
+    peerAuthId: string,
+    callType: CallType,
+    outcome: 'missed' | 'declined' | 'ended' | 'outgoing',
+    durationSec?: number,
+  ) => {
+    if (!myId) return;
+    try {
+      // Find existing direct conversation between the two users
+      const { data: mine } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', myId);
+      const { data: theirs } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', peerAuthId);
+      const mineIds = new Set((mine || []).map((r: any) => r.conversation_id));
+      let convId = (theirs || []).find((r: any) => mineIds.has(r.conversation_id))?.conversation_id;
+
+      if (!convId) {
+        const { data: conv, error: convErr } = await supabase
+          .from('conversations')
+          .insert({ type: 'direct', created_by: myId })
+          .select()
+          .single();
+        if (convErr || !conv) return;
+        convId = conv.id;
+        await supabase.from('conversation_participants').insert([
+          { conversation_id: convId, user_id: myId },
+          { conversation_id: convId, user_id: peerAuthId },
+        ]);
+      }
+
+      const label =
+        outcome === 'missed'   ? `📞 Missed ${callType} call`
+      : outcome === 'declined' ? `📞 ${callType === 'video' ? 'Video' : 'Voice'} call declined`
+      : outcome === 'ended'    ? `📞 ${callType === 'video' ? 'Video' : 'Voice'} call${durationSec ? ` · ${Math.floor(durationSec / 60)}:${String(durationSec % 60).padStart(2, '0')}` : ''}`
+      :                          `📞 ${callType === 'video' ? 'Video' : 'Voice'} call`;
+
+      await supabase.from('messages').insert({
+        conversation_id: convId,
+        sender_id: myId,
+        sender_name: 'Call',
+        content: label,
+        type: 'text',
+      });
+    } catch (e) {
+      console.warn('[call] log to chat failed', e);
+    }
+  }, [myId]);
+
+  // Track when the active call was answered so we can report duration
+  const answeredAtRef = useRef<number | null>(null);
+
   // Request OS-level notification permission once (so we can pop up
   // an incoming-call notification even when the tab is in the background).
   useEffect(() => {
@@ -138,6 +196,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     setMuted(false);
     setCameraOff(false);
     setRemoteHasVideo(false);
+    answeredAtRef.current = null;
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
   }, []);
