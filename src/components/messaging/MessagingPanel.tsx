@@ -466,6 +466,23 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                                   </div>
                                 </div>
                               ) : message.type === 'file' ? (
+                                (message.metadata?.mimeType || '').startsWith('audio/') ? (
+                                <div className="min-w-[200px]">
+                                  <audio controls src={message.content} className="max-w-full h-10" />
+                                  <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${
+                                    isOwnMessage ? 'opacity-70' : 'text-muted-foreground'
+                                  }`}>
+                                    <span>{format(new Date(message.created_at), 'HH:mm')}</span>
+                                    {isOwnMessage && (
+                                      message.read_at ? (
+                                        <CheckCheck className="h-3 w-3 text-blue-400" />
+                                      ) : (
+                                        <Check className="h-3 w-3" />
+                                      )
+                                    )}
+                                  </div>
+                                </div>
+                                ) : (
                                 <div>
                                   <a 
                                     href={message.content} 
@@ -489,6 +506,7 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                                     )}
                                   </div>
                                 </div>
+                                )
                               ) : (
                                 <>
                                   <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
