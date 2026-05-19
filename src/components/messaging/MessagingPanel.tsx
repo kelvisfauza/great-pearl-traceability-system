@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, X, MessageSquarePlus, ArrowLeft, MoreVertical, Paperclip, Check, CheckCheck, Reply, Phone, Video, Mic, Square } from 'lucide-react';
+import { Send, X, MessageSquarePlus, ArrowLeft, MoreVertical, Paperclip, Check, CheckCheck, Reply, Phone, Video, Mic, Lock, Trash2, ChevronUp } from 'lucide-react';
 import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePresenceList } from '@/hooks/usePresenceList';
@@ -47,6 +47,13 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
   const recordTimerRef = useRef<number | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  const cancelOnReleaseRef = useRef(false);
+  const lockedRef = useRef(false);
+  const LOCK_THRESHOLD = 70; // px upward to lock
+  const CANCEL_THRESHOLD = 100; // px left to cancel
 
   const startRecording = async () => {
     if (!selectedConversation) return;
@@ -101,6 +108,10 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
       recordTimerRef.current = null;
     }
     setIsRecording(false);
+    setIsLocked(false);
+    lockedRef.current = false;
+    setDragOffset({ x: 0, y: 0 });
+    pointerStartRef.current = null;
     if (!r) return;
     if (cancel) {
       audioChunksRef.current = [];
@@ -112,6 +123,44 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
       try { r.stop(); } catch {}
     }
     mediaRecorderRef.current = null;
+  };
+
+  // WhatsApp-style hold-to-record handlers
+  const handleMicPointerDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    pointerStartRef.current = { x: e.clientX, y: e.clientY };
+    cancelOnReleaseRef.current = false;
+    setDragOffset({ x: 0, y: 0 });
+    startRecording();
+  };
+
+  const handleMicPointerMove = (e: React.PointerEvent) => {
+    if (!pointerStartRef.current || lockedRef.current) return;
+    const dx = Math.min(0, e.clientX - pointerStartRef.current.x); // only leftward
+    const dy = Math.min(0, e.clientY - pointerStartRef.current.y); // only upward
+    setDragOffset({ x: dx, y: dy });
+
+    // Lock if dragged up past threshold
+    if (-dy >= LOCK_THRESHOLD) {
+      lockedRef.current = true;
+      setIsLocked(true);
+      setDragOffset({ x: 0, y: 0 });
+      pointerStartRef.current = null;
+      return;
+    }
+    // Mark cancel if dragged left past threshold
+    cancelOnReleaseRef.current = -dx >= CANCEL_THRESHOLD;
+  };
+
+  const handleMicPointerUp = () => {
+    if (lockedRef.current) return; // locked mode — wait for explicit send/cancel
+    if (!isRecording && mediaRecorderRef.current == null) {
+      // Recording never actually started (e.g. permission denied)
+      pointerStartRef.current = null;
+      setDragOffset({ x: 0, y: 0 });
+      return;
+    }
+    stopRecording(cancelOnReleaseRef.current);
   };
 
   useEffect(() => {
@@ -574,33 +623,89 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
               )}
               
               {isRecording ? (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-10 w-10 hover:bg-muted text-destructive"
-                    onClick={() => stopRecording(true)}
-                    aria-label="Cancel recording"
-                  >
-                    <X className="h-5 w-5" />
-                  </Button>
-                  <div className="flex-1 flex items-center gap-2 px-4 py-2 rounded-full bg-background border">
-                    <span className="h-2.5 w-2.5 rounded-full bg-destructive animate-pulse" />
-                    <span className="text-sm font-medium tabular-nums">
-                      {Math.floor(recordSeconds / 60).toString().padStart(2, '0')}:
-                      {(recordSeconds % 60).toString().padStart(2, '0')}
-                    </span>
-                    <span className="text-xs text-muted-foreground ml-2">Recording…</span>
+                isLocked ? (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10 hover:bg-muted text-destructive"
+                      onClick={() => stopRecording(true)}
+                      aria-label="Cancel recording"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </Button>
+                    <div className="flex-1 flex items-center gap-2 px-4 py-2 rounded-full bg-background border">
+                      <span className="h-2.5 w-2.5 rounded-full bg-destructive animate-pulse" />
+                      <span className="text-sm font-medium tabular-nums">
+                        {Math.floor(recordSeconds / 60).toString().padStart(2, '0')}:
+                        {(recordSeconds % 60).toString().padStart(2, '0')}
+                      </span>
+                      <span className="text-xs text-muted-foreground ml-2 flex items-center gap-1">
+                        <Lock className="h-3 w-3" /> Locked
+                      </span>
+                    </div>
+                    <Button
+                      onClick={() => stopRecording(false)}
+                      size="icon"
+                      className="rounded-full h-10 w-10"
+                      aria-label="Send voice message"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <Button
-                    onClick={() => stopRecording(false)}
-                    size="icon"
-                    className="rounded-full h-10 w-10"
-                    aria-label="Send voice message"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
+                ) : (
+                  <div className="relative flex items-center gap-2">
+                    {/* Slide-up lock hint above the mic */}
+                    <div
+                      className="absolute right-1 -top-24 flex flex-col items-center gap-1 pointer-events-none select-none"
+                      style={{
+                        opacity: Math.min(1, Math.max(0.4, -dragOffset.y / LOCK_THRESHOLD + 0.4)),
+                        transform: `translateY(${Math.max(dragOffset.y, -LOCK_THRESHOLD)}px)`,
+                      }}
+                    >
+                      <div className="h-10 w-10 rounded-full bg-muted border flex items-center justify-center shadow-sm">
+                        <Lock className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <ChevronUp className="h-4 w-4 text-muted-foreground animate-bounce" />
+                    </div>
+
+                    {/* Recording status pill with slide-to-cancel */}
+                    <div className="flex-1 flex items-center gap-2 px-4 py-2 rounded-full bg-background border overflow-hidden">
+                      <span className="h-2.5 w-2.5 rounded-full bg-destructive animate-pulse flex-shrink-0" />
+                      <span className="text-sm font-medium tabular-nums flex-shrink-0">
+                        {Math.floor(recordSeconds / 60).toString().padStart(2, '0')}:
+                        {(recordSeconds % 60).toString().padStart(2, '0')}
+                      </span>
+                      <div
+                        className="ml-auto text-xs text-muted-foreground flex items-center gap-1 truncate"
+                        style={{
+                          transform: `translateX(${Math.max(dragOffset.x, -CANCEL_THRESHOLD)}px)`,
+                          opacity: Math.max(0.3, 1 + dragOffset.x / CANCEL_THRESHOLD),
+                        }}
+                      >
+                        <ChevronUp className="h-3 w-3 -rotate-90" />
+                        <span className={cancelOnReleaseRef.current ? 'text-destructive font-medium' : ''}>
+                          {cancelOnReleaseRef.current ? 'Release to cancel' : 'Slide to cancel'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Mic button — held */}
+                    <button
+                      type="button"
+                      onPointerMove={handleMicPointerMove}
+                      onPointerUp={handleMicPointerUp}
+                      onPointerCancel={handleMicPointerUp}
+                      className="rounded-full h-12 w-12 bg-primary text-primary-foreground flex items-center justify-center shadow-lg scale-110 transition-transform touch-none select-none"
+                      aria-label="Recording"
+                      style={{
+                        transform: `translate(${Math.max(dragOffset.x, -CANCEL_THRESHOLD)}px, ${Math.max(dragOffset.y, -LOCK_THRESHOLD)}px) scale(1.1)`,
+                      }}
+                    >
+                      <Mic className="h-5 w-5" />
+                    </button>
+                  </div>
+                )
               ) : (
               <div className="flex items-center gap-2">
                 <input
@@ -634,14 +739,14 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                     <Send className="h-4 w-4" />
                   </Button>
                 ) : (
-                  <Button
-                    onClick={startRecording}
-                    size="icon"
-                    className="rounded-full h-10 w-10"
-                    aria-label="Record voice message"
+                  <button
+                    type="button"
+                    onPointerDown={handleMicPointerDown}
+                    className="rounded-full h-10 w-10 bg-primary text-primary-foreground flex items-center justify-center touch-none select-none"
+                    aria-label="Hold to record voice message"
                   >
                     <Mic className="h-5 w-5" />
-                  </Button>
+                  </button>
                 )}
               </div>
               )}
