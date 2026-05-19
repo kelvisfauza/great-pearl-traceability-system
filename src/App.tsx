@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import OfflineIndicator from "@/components/offline/OfflineIndicator";
 import { startQueueAutoSync } from "@/lib/offline/queue";
 import MarqueeBanner from "@/components/announcements/MarqueeBanner";
+import EbolaPrecautionPopup from "@/components/health/EbolaPrecautionPopup";
 
 function OfflineSyncBoot() {
   useEffect(() => startQueueAutoSync(), []);
@@ -470,6 +471,7 @@ const App: React.ComponentType = () => {
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <AdminWithdrawalPinPrompt />
+              <EbolaPrecautionPopup />
               </LocationPermissionGate>
               </MaintenanceGuard>
             </BrowserRouter>
