@@ -187,6 +187,11 @@ export const AccountButton = () => {
   }, [ledgerUserId]);
 
   const formatCurrency = (amount: number) => `UGX ${amount.toLocaleString()}`;
+  const formatCompact = (amount: number) => {
+    if (amount >= 1_000_000) return `UGX ${(amount / 1_000_000).toFixed(amount >= 10_000_000 ? 0 : 1)}M`;
+    if (amount >= 1_000) return `UGX ${(amount / 1_000).toFixed(0)}K`;
+    return `UGX ${amount.toLocaleString()}`;
+  };
 
   const reprintVoucher = (withdrawal: { amount: number; phone_number: string; request_ref?: string; channel?: string; created_at: string }) => {
     const printWindow = window.open('', '_blank');
@@ -264,17 +269,24 @@ export const AccountButton = () => {
     <>
       <Sheet>
         <SheetTrigger asChild>
-          <Button variant="outline" size="sm" className="relative gap-2">
-            <Wallet className="h-4 w-4" />
-            {balanceHidden ? '••••••' : formatCurrency(availableLoyalty)}
+          <Button variant="outline" size="sm" className="relative gap-1.5 max-w-full px-2 sm:px-3 sm:gap-2">
+            <Wallet className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate">
+              {balanceHidden ? '••••' : (
+                <>
+                  <span className="sm:hidden">{formatCompact(availableLoyalty)}</span>
+                  <span className="hidden sm:inline">{formatCurrency(availableLoyalty)}</span>
+                </>
+              )}
+            </span>
             {!balanceHidden && stats && stats.todayEarnings > 0 && (
-              <Badge variant="secondary" className="ml-1 text-xs bg-green-100 text-green-700 px-1.5 py-0">
-                +{stats.todayEarnings.toLocaleString()}
+              <Badge variant="secondary" className="ml-0.5 text-[10px] sm:text-xs bg-green-100 text-green-700 px-1 py-0 flex-shrink-0">
+                +{stats.todayEarnings >= 1000 ? `${Math.round(stats.todayEarnings / 1000)}K` : stats.todayEarnings.toLocaleString()}
               </Badge>
             )}
             <span
               role="button"
-              className="ml-1 cursor-pointer text-muted-foreground hover:text-foreground"
+              className="ml-0.5 cursor-pointer text-muted-foreground hover:text-foreground flex-shrink-0"
               onClick={(e) => { e.stopPropagation(); setBalanceHidden(h => { const next = !h; localStorage.setItem('balanceHidden', String(next)); return next; }); }}
             >
               {balanceHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}

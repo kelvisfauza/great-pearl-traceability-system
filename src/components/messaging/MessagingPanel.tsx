@@ -192,7 +192,7 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
 
   return (
     <>
-      <div className="fixed right-4 bottom-20 w-96 h-[600px] bg-background border border-border rounded-lg shadow-2xl z-50 flex flex-col overflow-hidden">
+      <div className="fixed inset-0 sm:inset-auto sm:right-4 sm:bottom-20 sm:w-96 sm:h-[600px] sm:rounded-lg bg-background border border-border shadow-2xl z-50 flex flex-col overflow-hidden">
         {/* WhatsApp-style Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground">
           <div className="flex items-center gap-3 flex-1 min-w-0">

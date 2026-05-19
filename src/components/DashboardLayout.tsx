@@ -89,8 +89,8 @@ const DashboardLayout = ({ children, title, subtitle, showMessageButton = true }
             )}
           </div>
           
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <GlobalSearch />
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 min-w-0">
+            {!isMobile && <GlobalSearch />}
             {showMessageButton && !isMobile && (
               <ChatButton
                 onClick={toggleMessaging}
@@ -102,7 +102,7 @@ const DashboardLayout = ({ children, title, subtitle, showMessageButton = true }
               unreadCount={notificationUnreadCount}
             />
             <ThemeToggle />
-            <AccountButton />
+            {!isMobile && <AccountButton />}
           </div>
         </header>
 
