@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
       // First check if there's ANY existing code (regardless of age)
       const { data: existingCodes, error: existingError } = await supabaseAdmin
         .from('verification_codes')
-        .select('created_at, expires_at, code, id')
+        .select('created_at, expires_at, id')
         .eq('email', email)
         .eq('phone', phone)
         .order('created_at', { ascending: false })
