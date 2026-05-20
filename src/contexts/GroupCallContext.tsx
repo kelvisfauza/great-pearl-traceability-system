@@ -158,6 +158,8 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const screenStreamRef = useRef<MediaStream | null>(null);
   const peerRetryTimersRef = useRef<Map<string, number>>(new Map());
   const channelRetryTimerRef = useRef<number | null>(null);
+  const reconnectPeerRef = useRef<(peerId: string) => void>(() => {});
+  const rejoinChannelRef = useRef<() => void>(() => {});
 
   useEffect(() => { activeRef.current = active; }, [active]);
   useEffect(() => { localStreamRef.current = localStream; }, [localStream]);
@@ -245,8 +247,30 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
 
     pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
-        // peer dropped
+      const state = pc.connectionState;
+      if (state === 'connected') {
+        updateParticipant(peerId, { joined: true });
+        const t = peerRetryTimersRef.current.get(peerId);
+        if (t) { window.clearTimeout(t); peerRetryTimersRef.current.delete(peerId); }
+        return;
+      }
+      if (state === 'disconnected' || state === 'failed') {
+        updateParticipant(peerId, { joined: false });
+        // First try ICE restart (cheap). If still bad after 6s, full re-handshake.
+        if (myId && myId < peerId) {
+          try { (pc as any).restartIce?.(); } catch {}
+        }
+        const existingTimer = peerRetryTimersRef.current.get(peerId);
+        if (existingTimer) window.clearTimeout(existingTimer);
+        const timer = window.setTimeout(() => {
+          const current = peersRef.current.get(peerId);
+          if (!current) return;
+          const s = current.pc.connectionState;
+          if (s !== 'connected') {
+            reconnectPeerRef.current(peerId);
+          }
+        }, state === 'failed' ? 2500 : 6000);
+        peerRetryTimersRef.current.set(peerId, timer);
       }
     };
 
@@ -313,6 +337,22 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
     }
   }, [createPeer, myId, sendSignal, updateParticipant]);
+
+  // Wired up after handlePeerJoin is defined to avoid TDZ issues.
+  useEffect(() => {
+    reconnectPeerRef.current = (peerId: string) => {
+      const entry = peersRef.current.get(peerId);
+      if (entry) {
+        try { entry.pc.close(); } catch {}
+        peersRef.current.delete(peerId);
+      }
+      updateParticipant(peerId, { joined: false });
+      // Re-announce so the other side learns we want a fresh negotiation.
+      sendSignal('join', { from: myId, name: nameByUserRef.current.get(myId || '') });
+      // Glare-rule offerer kicks it off; otherwise we wait for their hello/offer.
+      handlePeerJoin(peerId, nameByUserRef.current.get(peerId));
+    };
+  }, [handlePeerJoin, myId, sendSignal, updateParticipant]);
 
   const joinChannel = useCallback((callId: string) => {
     if (!myId) return;
