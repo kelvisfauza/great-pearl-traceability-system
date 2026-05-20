@@ -376,6 +376,13 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                 >
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if ((currentConversation as any)?.type === 'group') setShowGroupSettings(true);
+                  }}
+                  className={`flex items-center gap-3 flex-1 min-w-0 text-left ${(currentConversation as any)?.type === 'group' ? 'hover:opacity-90' : ''}`}
+                >
                 <Avatar className="h-9 w-9">
                   <AvatarImage src={getConversationAvatar(currentConversation)} alt={getConversationName(currentConversation)} />
                   <AvatarFallback className="bg-primary-foreground/20 text-primary-foreground text-sm">
@@ -411,6 +418,7 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                     );
                   })()}
                 </div>
+                </button>
                 <div className="flex items-center gap-1">
                   <Button
                     variant="ghost"
