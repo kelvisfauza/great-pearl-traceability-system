@@ -156,6 +156,10 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const nameByUserRef = useRef<Map<string, string>>(new Map());
   const cameraTrackRef = useRef<MediaStreamTrack | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
+  const peerRetryTimersRef = useRef<Map<string, number>>(new Map());
+  const channelRetryTimerRef = useRef<number | null>(null);
+  const reconnectPeerRef = useRef<(peerId: string) => void>(() => {});
+  const rejoinChannelRef = useRef<() => void>(() => {});
 
   useEffect(() => { activeRef.current = active; }, [active]);
   useEffect(() => { localStreamRef.current = localStream; }, [localStream]);
@@ -188,6 +192,8 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       try { entry.pc.close(); } catch {}
       peersRef.current.delete(userId);
     }
+    const t = peerRetryTimersRef.current.get(userId);
+    if (t) { window.clearTimeout(t); peerRetryTimersRef.current.delete(userId); }
     removeParticipant(userId);
   }, [removeParticipant]);
 
@@ -241,8 +247,30 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
 
     pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
-        // peer dropped
+      const state = pc.connectionState;
+      if (state === 'connected') {
+        updateParticipant(peerId, { joined: true });
+        const t = peerRetryTimersRef.current.get(peerId);
+        if (t) { window.clearTimeout(t); peerRetryTimersRef.current.delete(peerId); }
+        return;
+      }
+      if (state === 'disconnected' || state === 'failed') {
+        updateParticipant(peerId, { joined: false });
+        // First try ICE restart (cheap). If still bad after 6s, full re-handshake.
+        if (myId && myId < peerId) {
+          try { (pc as any).restartIce?.(); } catch {}
+        }
+        const existingTimer = peerRetryTimersRef.current.get(peerId);
+        if (existingTimer) window.clearTimeout(existingTimer);
+        const timer = window.setTimeout(() => {
+          const current = peersRef.current.get(peerId);
+          if (!current) return;
+          const s = current.pc.connectionState;
+          if (s !== 'connected') {
+            reconnectPeerRef.current(peerId);
+          }
+        }, state === 'failed' ? 2500 : 6000);
+        peerRetryTimersRef.current.set(peerId, timer);
       }
     };
 
@@ -309,6 +337,22 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
     }
   }, [createPeer, myId, sendSignal, updateParticipant]);
+
+  // Wired up after handlePeerJoin is defined to avoid TDZ issues.
+  useEffect(() => {
+    reconnectPeerRef.current = (peerId: string) => {
+      const entry = peersRef.current.get(peerId);
+      if (entry) {
+        try { entry.pc.close(); } catch {}
+        peersRef.current.delete(peerId);
+      }
+      updateParticipant(peerId, { joined: false });
+      // Re-announce so the other side learns we want a fresh negotiation.
+      sendSignal('join', { from: myId, name: nameByUserRef.current.get(myId || '') });
+      // Glare-rule offerer kicks it off; otherwise we wait for their hello/offer.
+      handlePeerJoin(peerId, nameByUserRef.current.get(peerId));
+    };
+  }, [handlePeerJoin, myId, sendSignal, updateParticipant]);
 
   const joinChannel = useCallback((callId: string) => {
     if (!myId) return;
@@ -424,9 +468,58 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             }
           } catch {}
         }
+        if (status === 'CHANNEL_ERROR' || status === 'CLOSED' || status === 'TIMED_OUT') {
+          // Channel dropped — schedule a re-subscribe if we're still in the call.
+          if (channelRetryTimerRef.current) window.clearTimeout(channelRetryTimerRef.current);
+          channelRetryTimerRef.current = window.setTimeout(() => {
+            channelRetryTimerRef.current = null;
+            if (!activeRef.current || activeRef.current.id !== callId) return;
+            try { if (channelRef.current) supabase.removeChannel(channelRef.current); } catch {}
+            channelRef.current = null;
+            rejoinChannelRef.current();
+          }, 1500);
+        }
       });
     channelRef.current = ch;
   }, [cleanupPeer, handleAnswer, handleIce, handleOffer, handlePeerJoin, myId, removeParticipant, sendSignal, toast]);
+
+  // Keep latest rejoin closure for the channel-error retry path and
+  // network/visibility recovery.
+  useEffect(() => {
+    rejoinChannelRef.current = () => {
+      const a = activeRef.current;
+      if (a) joinChannel(a.id);
+    };
+  }, [joinChannel]);
+
+  // Recover from network drops or tab-suspend by re-announcing and
+  // forcing a fresh handshake on any peer that isn't currently connected.
+  useEffect(() => {
+    if (!active) return;
+    const recover = () => {
+      // If channel is gone, rebuild it; otherwise just re-announce.
+      if (!channelRef.current) {
+        rejoinChannelRef.current();
+      } else {
+        sendSignal('join', { from: myId, name: nameByUserRef.current.get(myId || '') });
+      }
+      // Rebuild any peer that isn't in a good state.
+      peersRef.current.forEach((entry, peerId) => {
+        const s = entry.pc.connectionState;
+        if (s !== 'connected' && s !== 'connecting') {
+          reconnectPeerRef.current(peerId);
+        }
+      });
+    };
+    const onOnline = () => recover();
+    const onVisible = () => { if (document.visibilityState === 'visible') recover(); };
+    window.addEventListener('online', onOnline);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [active, myId, sendSignal]);
 
   const acquireLocalStream = useCallback(async (type: GroupCallType) => {
     const constraints: MediaStreamConstraints = type === 'video'
