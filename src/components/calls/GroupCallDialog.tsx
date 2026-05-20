@@ -98,6 +98,7 @@ const GroupCallDialog = () => {
 
   const others: GroupParticipant[] = Array.from(participants.values()).filter(p => p.userId !== myId);
   const count = others.length + 1;
+  const connectedCount = 1 + others.filter(p => p.joined).length;
   const gridCols = count <= 2 ? 'grid-cols-1' : count <= 4 ? 'grid-cols-2' : 'grid-cols-3';
 
   // Spotlight mode: someone is sharing their screen
@@ -133,7 +134,10 @@ const GroupCallDialog = () => {
             <div>
               <p className="font-semibold text-sm">{active.title || 'Group call'}</p>
               <p className="text-xs opacity-80">
-                {count} {isVideo ? 'video' : 'voice'} participants
+                <span className="inline-flex items-center gap-1">
+                  <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  {connectedCount} of {count} connected
+                </span>
                 {screenSharerId && (screenSharerId === myId ? ' · You are sharing' : ' · Someone is sharing')}
               </p>
             </div>
@@ -208,7 +212,7 @@ const GroupCallDialog = () => {
               <Tabs value={panel} onValueChange={(v) => setPanel(v as any)} className="flex-1 flex flex-col">
                 <div className="flex items-center justify-between px-2 pt-2">
                   <TabsList>
-                    <TabsTrigger value="people">People ({count})</TabsTrigger>
+                    <TabsTrigger value="people">People ({connectedCount}/{count})</TabsTrigger>
                     <TabsTrigger value="chat">Chat</TabsTrigger>
                   </TabsList>
                   <Button variant="ghost" size="icon" onClick={() => setPanel(null)}>
@@ -229,7 +233,16 @@ const GroupCallDialog = () => {
                   <ScrollArea className="flex-1 h-full">
                     <ul className="divide-y">
                       <li className="flex items-center justify-between px-3 py-2 text-sm">
-                        <span className="font-medium">{myName} (you){isHost ? ' · Host' : ''}</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="relative flex h-2.5 w-2.5 shrink-0">
+                            <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60 animate-ping" />
+                            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="font-medium truncate">{myName} (you){isHost ? ' · Host' : ''}</p>
+                            <p className="text-xs text-emerald-600">Connected</p>
+                          </div>
+                        </div>
                         <div className="flex items-center gap-2">
                           {muted && <MicOff className="h-4 w-4 text-red-500" />}
                           {myHandRaised && <Hand className="h-4 w-4 text-amber-500" />}
@@ -237,9 +250,23 @@ const GroupCallDialog = () => {
                       </li>
                       {others.map(p => (
                         <li key={p.userId} className="flex items-center justify-between px-3 py-2 text-sm">
-                          <div className="min-w-0">
-                            <p className="truncate">{p.name}</p>
-                            <p className="text-xs text-muted-foreground">{p.joined ? 'Connected' : 'Connecting…'}</p>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="relative flex h-2.5 w-2.5 shrink-0">
+                              {p.joined ? (
+                                <>
+                                  <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60 animate-ping" />
+                                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                                </>
+                              ) : (
+                                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-400 animate-pulse" />
+                              )}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="truncate">{p.name}</p>
+                              <p className={cn('text-xs', p.joined ? 'text-emerald-600' : 'text-amber-600')}>
+                                {p.joined ? 'Connected' : 'Connecting…'}
+                              </p>
+                            </div>
                           </div>
                           <div className="flex items-center gap-2">
                             {mutedPeers.has(p.userId) && <MicOff className="h-4 w-4 text-red-500" />}
