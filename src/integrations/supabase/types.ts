@@ -750,6 +750,7 @@ export type Database = {
           call_type: string
           callee_id: string
           caller_id: string
+          caller_name: string | null
           ended_at: string | null
           id: string
           started_at: string
@@ -760,6 +761,7 @@ export type Database = {
           call_type: string
           callee_id: string
           caller_id: string
+          caller_name?: string | null
           ended_at?: string | null
           id?: string
           started_at?: string
@@ -770,6 +772,7 @@ export type Database = {
           call_type?: string
           callee_id?: string
           caller_id?: string
+          caller_name?: string | null
           ended_at?: string | null
           id?: string
           started_at?: string
