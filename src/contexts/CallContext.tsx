@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, PhoneIncoming, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import EscalateCallDialog from '@/components/calls/EscalateCallDialog';
+import { ensureNotificationPermission, showCallNotification } from '@/lib/callNotifications';
 
 type CallType = 'audio' | 'video';
 type CallStatus = 'ringing' | 'active' | 'ended' | 'declined' | 'missed';
