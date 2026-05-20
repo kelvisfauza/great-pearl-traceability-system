@@ -21,6 +21,7 @@ interface CallRow {
   started_at: string;
   answered_at: string | null;
   ended_at: string | null;
+  caller_name?: string | null;
 }
 
 interface PeerInfo {
