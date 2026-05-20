@@ -148,6 +148,10 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [mutedPeers, setMutedPeers] = useState<Set<string>>(new Set());
   const [chatMessages, setChatMessages] = useState<GroupChatMessage[]>([]);
   const [unreadChat, setUnreadChat] = useState(0);
+
+  // Hook the first user gesture to request OS notification permission so
+  // incoming group calls can surface even when the tab is backgrounded.
+  useEffect(() => { ensureNotificationPermission(); }, []);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [screenSharerId, setScreenSharerId] = useState<string | null>(null);
   const [missedGroupCalls, setMissedGroupCalls] = useState<MissedGroupCall[]>([]);
