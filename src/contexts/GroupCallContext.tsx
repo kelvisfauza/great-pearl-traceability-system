@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { ensureNotificationPermission, showCallNotification } from '@/lib/callNotifications';
 
 export type GroupCallType = 'audio' | 'video';
 
@@ -1045,6 +1046,14 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             type: call.call_type,
             title: call.title,
           });
+          // OS-level notification so the call surfaces even when the user
+          // is in another tab or app (browser still open).
+          showCallNotification({
+            title: `Incoming group ${call.call_type} call`,
+            body: call.title ? `${hostName}: ${call.title}` : `${hostName} is calling`,
+            tag: `group-call-${call.id}`,
+          });
+          try { window.focus(); } catch {}
         }
       )
       .subscribe();
