@@ -12,6 +12,7 @@ interface Message {
   type: 'text' | 'image' | 'file';
   metadata?: any;
   read_at?: string;
+  delivered_at?: string;
   reply_to_id?: string;
   replied_message?: Message;
 }
