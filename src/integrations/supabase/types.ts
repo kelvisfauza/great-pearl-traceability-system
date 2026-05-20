@@ -10730,6 +10730,10 @@ export type Database = {
             Args: { activity_name: string; context?: Json; user_uuid: string }
             Returns: Json
           }
+      award_all_meeting_attendance_bonuses: {
+        Args: { _call_id: string }
+        Returns: Json
+      }
       award_host_meeting_bonus: { Args: { _call_id: string }; Returns: Json }
       award_meeting_attendance_bonus: {
         Args: { _call_id: string; _interacted?: boolean }
