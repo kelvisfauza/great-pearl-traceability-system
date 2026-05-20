@@ -286,6 +286,9 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
   };
 
   const getConversationAvatar = (conversation: any) => {
+    if (conversation?.type === 'group') {
+      return conversation?.avatar_url || undefined;
+    }
     const otherParticipant = conversation.participants?.find(
       (p: any) => p.user_id !== employee?.authUserId
     );
