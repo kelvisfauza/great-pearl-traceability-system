@@ -20,6 +20,31 @@ const ICE_CONFIG: RTCConfiguration = {
 export const GROUP_CALL_SOFT_LIMIT = 6;
 export const GROUP_CALL_HARD_LIMIT = 8;
 
+const DEPT_KEYWORDS = [
+  'department', 'dept', 'team', 'quality', 'finance', 'hr', 'human resource',
+  'procurement', 'operations', 'milling', 'logistics', 'sales', 'marketing',
+  'store', 'warehouse', 'admin', 'management', 'board', 'staff meeting'
+];
+
+const isDepartmentalTitle = (title?: string | null) => {
+  if (!title) return false;
+  const t = title.toLowerCase();
+  return DEPT_KEYWORDS.some(k => t.includes(k));
+};
+
+const awardMeetingLoyalty = async (userId: string, title: string | null, callId: string) => {
+  const activity = isDepartmentalTitle(title) ? 'departmental_meeting' : 'group_meeting';
+  try {
+    await supabase.rpc('award_activity_reward' as any, {
+      user_uuid: userId,
+      activity_name: activity,
+      context: { description: `attending ${title || 'a group meeting'}`, call_id: callId }
+    });
+  } catch (err) {
+    console.warn('Loyalty reward for meeting failed (non-fatal):', err);
+  }
+};
+
 export interface GroupParticipant {
   userId: string;
   name: string;
