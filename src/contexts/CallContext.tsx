@@ -168,6 +168,8 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
   const callerSubscribedRef = useRef(false);
 
   const ringtone = useRingtone();
+  // Caller-side ringback tone (so the caller hears "ring ring" while waiting)
+  const ringback = useRingtone();
 
   // Log a call event as a message in the direct conversation between
   // the current user and the peer so missed/declined/ended calls show
@@ -247,6 +249,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     }
     // Safety: always stop the ringtone on any cleanup
     try { ringtone.stop(); } catch {}
+    try { ringback.stop(); } catch {}
     pendingIceRef.current = [];
     remoteSetRef.current = false;
     callerSubscribedRef.current = false;
@@ -266,7 +269,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
-  }, [ringtone]);
+  }, [ringtone, ringback]);
 
   const sendSignal = useCallback((event: string, payload: any) => {
     channelRef.current?.send({ type: 'broadcast', event, payload });
@@ -313,6 +316,8 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
 
     pc.ontrack = (ev) => {
       const [remote] = ev.streams;
+      // Remote media is flowing — stop the caller-side ringback.
+      try { ringback.stop(); } catch {}
       // Save the remote stream; an effect attaches it to the audio/
       // video elements once they mount (the dialog may not be in the
       // DOM yet when ontrack fires).
@@ -470,6 +475,9 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
     joinChannel(row.id);
+
+    // Start caller-side ringback so the caller hears "ring ring" while waiting.
+    try { ringback.start(); } catch {}
 
     // Ringback / timeout
     setTimeout(async () => {
