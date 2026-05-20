@@ -1,80 +1,45 @@
-## Goal
+## Group calls (mesh WebRTC) — implementation plan
 
-Add a Teams-style internal communication module to the system: 1:1 chat plus 1:1 voice/video calls between logged-in employees, using Supabase Realtime for signaling/messaging and WebRTC for peer-to-peer audio/video.
+### Scope
+- Group voice & video calls inside the existing messaging system.
+- Two entry points: (1) "Call group" button in a group conversation header, (2) "New group call" dialog where the caller picks 2–N people ad-hoc.
+- Mesh topology: each participant opens one `RTCPeerConnection` per other participant. Hard cap **8** (audio-only allowed up to 12); UI warns above 6 that quality will degrade. 20-person calls will not be reliable on mesh — flagged in UI.
 
-## Scope (Phase 1)
+### Data model (new migration)
+- `group_calls` — one row per group call session
+  - `host_id` (auth user), `call_type` ('audio'|'video'), `status` ('ringing'|'active'|'ended'), `conversation_id` (nullable, links to messaging conversation if any), `started_at`, `ended_at`, `title` (nullable)
+- `group_call_participants` — one row per invitee
+  - `call_id` → `group_calls.id`, `user_id`, `status` ('ringing'|'joined'|'declined'|'left'|'missed'), `joined_at`, `left_at`
+- RLS: only the host or any invited participant can read/update their own row.
+- Realtime enabled on both tables.
 
-In scope:
-- 1:1 text chat between any two employees (persistent history)
-- Online presence (reuse existing `user_presence`)
-- 1:1 voice and video calls over WebRTC, with ringing UI, accept/decline, mute, camera toggle, hang up
-- Call log (who called whom, duration, status)
-- Unread message badges
-- A dedicated "Communication" page + a floating call/incoming-call dialog available anywhere in the app
+### Signaling
+- One Supabase realtime channel per call: `group-call:{call_id}`.
+- Broadcast events between peers:
+  - `join` — new peer announces presence (payload: `{ userId }`)
+  - `offer` / `answer` — targeted (payload: `{ to, from, sdp }`)
+  - `ice` — targeted ICE candidate
+  - `leave` — peer leaving
+- Glare rule: the peer with the **lexicographically smaller userId** creates the offer when two peers see each other.
 
-Out of scope (later phases):
-- Group calls (3+ participants) — needs an SFU like LiveKit
-- Call recording
-- Screen sharing (easy to add later)
-- PSTN / phone dial-out
-- File attachments inside chat (current generic messaging covers this; we can extend later)
+### Frontend
+- New `GroupCallContext.tsx` (separate from existing 1:1 `CallContext`) managing:
+  - `Map<peerId, RTCPeerConnection>`, `Map<peerId, MediaStream>`
+  - Local stream, mute/camera toggles, leave/end-for-all
+- New UI: `GroupCallDialog.tsx` — tiled grid of remote videos + self-view, controls bar (mute/cam/leave/end).
+- New `NewGroupCallDialog.tsx` — multi-select employee picker, audio/video toggle, "Start call" button.
+- Incoming-group-call ringer reuses the existing `useRingtone` hook, with accept/decline.
+- Add "Group call" buttons in `MessagingPanel` group-conversation header (voice + video icons).
 
-## Architecture
+### Non-goals (this pass)
+- No TURN server change (keep current STUN/TURN config from 1:1).
+- No screen sharing, no recording, no waiting room, no host transfer.
+- No SFU. If 20-person quality is required, we'd swap to LiveKit later — the data model is compatible.
 
-```text
- ┌───────────────┐   Realtime (postgres_changes + broadcast)   ┌───────────────┐
- │  User A (web) │ ◄────────────── Supabase ─────────────────► │  User B (web) │
- │  WebRTC peer  │                                              │  WebRTC peer  │
- │      ▲        │ ───── direct P2P media (audio/video) ─────► │      ▲        │
- └──────┴────────┘                                              └──────┴───────┘
-```
+### Files touched
+- New: migration, `src/contexts/GroupCallContext.tsx`, `src/components/calls/GroupCallDialog.tsx`, `src/components/calls/NewGroupCallDialog.tsx`, `src/components/calls/IncomingGroupCallToast.tsx`
+- Edited: `src/App.tsx` (wrap provider), `src/components/messaging/MessagingPanel.tsx` (add group-call buttons + entry to new-group-call dialog)
 
-- Signaling: a Supabase Realtime broadcast channel per call (`call:{callId}`) carries SDP offer/answer + ICE candidates.
-- Chat: standard Postgres table + `postgres_changes` subscription.
-- Presence: existing `user_presence` table.
-- STUN: free Google STUN servers (`stun:stun.l.google.com:19302`). No TURN needed for most office networks; we can add later if cross-NAT calls fail.
-
-## Database (new tables)
-
-1. `conversations` — one row per 1:1 pair (`user_a_id`, `user_b_id`, ordered so the pair is unique).
-2. `chat_messages` — `conversation_id`, `sender_id`, `body`, `created_at`, `read_at`.
-3. `call_sessions` — `id`, `caller_id`, `callee_id`, `type` ('audio'|'video'), `status` ('ringing'|'active'|'ended'|'declined'|'missed'), `started_at`, `answered_at`, `ended_at`.
-
-RLS: users can only read/write rows where they are a participant. Standard policies using `auth.uid()`.
-
-## Frontend
-
-New files:
-- `src/hooks/useConversations.ts` — list of conversations + unread counts
-- `src/hooks/useChat.ts` — messages for one conversation, send, mark-as-read, realtime subscribe
-- `src/hooks/useWebRTCCall.ts` — manages RTCPeerConnection, local/remote streams, signaling via Supabase broadcast channel, call lifecycle
-- `src/hooks/useIncomingCall.ts` — global subscription that listens for `call_sessions` rows where `callee_id = me AND status = 'ringing'`
-- `src/components/communication/CommunicationPage.tsx` — split-pane: left = conversation list, right = chat thread + call buttons
-- `src/components/communication/ChatThread.tsx`
-- `src/components/communication/ConversationList.tsx`
-- `src/components/communication/CallDialog.tsx` — full-screen modal showing local + remote video, controls (mute, camera, hang up)
-- `src/components/communication/IncomingCallDialog.tsx` — ringing UI with accept/decline + ringtone
-- `src/components/communication/CallProvider.tsx` — context provider mounted near app root so incoming calls work on any page
-
-Wiring:
-- Add `<CallProvider>` inside `App.tsx` (inside auth providers).
-- Add a "Communication" entry to the main navigation and a route `/communication`.
-- Reuse existing `UserSelectorDialog` to start a new conversation/call.
-
-## Technical details
-
-- `RTCPeerConnection` config: `{ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }`
-- Signaling messages sent via `supabase.channel('call:'+callId).send({ type:'broadcast', event:'signal', payload:{...} })` — events: `offer`, `answer`, `ice`, `hangup`.
-- Getting media: `navigator.mediaDevices.getUserMedia({ audio:true, video: type==='video' })` with permission-error handling.
-- Ringtone: small generated tone via WebAudio (no asset needed) or a short looping audio file.
-- Call timeout: if `ringing` for > 45s, mark as `missed`.
-- Cleanup: close peer connection + stop tracks on hangup/unmount.
-
-## Security notes
-
-- Strict RLS on all three tables; never trust client-supplied `caller_id` — derive from `auth.uid()` in inserts.
-- Edge function NOT required for Phase 1 (everything is client + Realtime + Postgres with RLS).
-
-## Deliverable
-
-A working Communication page where two logged-in employees can chat in real time and start/answer 1:1 voice or video calls, with incoming-call notifications anywhere in the app.
+### Risks / caveats called out in UI
+- "Mesh group calls work best up to 6 people. Above that, expect choppy video — switch to audio-only."
+- Browser tab must stay open to relay (no SFU). If host leaves, call ends for everyone else.
