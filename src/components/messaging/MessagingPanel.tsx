@@ -466,6 +466,16 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 hover:bg-primary-foreground/10"
+                    aria-label="New group chat"
+                    title="New group chat"
+                    onClick={() => setShowNewGroup(true)}
+                  >
+                    <UsersRound className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 hover:bg-primary-foreground/10"
                     onClick={() => setShowUserSelector(true)}
                   >
                     <MessageSquarePlus className="h-5 w-5" />
