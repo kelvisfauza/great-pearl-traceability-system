@@ -117,6 +117,7 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [cameraOff, setCameraOff] = useState(false);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [handsRaised, setHandsRaised] = useState<Set<string>>(new Set());
+  const [mutedPeers, setMutedPeers] = useState<Set<string>>(new Set());
   const [chatMessages, setChatMessages] = useState<GroupChatMessage[]>([]);
   const [unreadChat, setUnreadChat] = useState(0);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
@@ -183,6 +184,7 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setMuted(false);
     setCameraOff(false);
     setHandsRaised(new Set());
+    setMutedPeers(new Set());
     setChatMessages([]);
     setUnreadChat(0);
     setIsScreenSharing(false);
@@ -316,6 +318,13 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           return next;
         });
       })
+      .on('broadcast', { event: 'mute' }, ({ payload }) => {
+        setMutedPeers(prev => {
+          const next = new Set(prev);
+          if (payload.muted) next.add(payload.from); else next.delete(payload.from);
+          return next;
+        });
+      })
       .on('broadcast', { event: 'chat' }, ({ payload }) => {
         setChatMessages(prev => [...prev, {
           id: `${payload.from}-${payload.at}-${Math.random().toString(36).slice(2,7)}`,
@@ -343,6 +352,10 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (status === 'SUBSCRIBED') {
           // Announce arrival
           sendSignal('join', { from: myId, name: nameByUserRef.current.get(myId) });
+          // Broadcast current mute state so newcomers see it
+          const s = localStreamRef.current;
+          const isMuted = !!s && s.getAudioTracks().length > 0 && s.getAudioTracks().every(t => !t.enabled);
+          sendSignal('mute', { from: myId, muted: isMuted });
         }
       });
     channelRef.current = ch;
@@ -521,7 +534,8 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const enabled = s.getAudioTracks().some(t => t.enabled);
     s.getAudioTracks().forEach(t => (t.enabled = !enabled));
     setMuted(enabled);
-  }, []);
+    if (myId) sendSignal('mute', { from: myId, muted: enabled });
+  }, [myId, sendSignal]);
 
   const toggleCamera = useCallback(() => {
     const s = localStreamRef.current;
@@ -629,8 +643,11 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       return;
     }
     unique.forEach(i => nameByUserRef.current.set(i.userId, i.name));
-    const rows = unique.map(i => ({ call_id: cur.id, user_id: i.userId, status: 'ringing' }));
-    const { error } = await (supabase as any).from('group_call_participants').insert(rows);
+    const rows = unique.map(i => ({ call_id: cur.id, user_id: i.userId, status: 'ringing', joined_at: null, left_at: null }));
+    // Upsert so re-inviting someone who previously declined/missed/left doesn't violate the (call_id,user_id) unique constraint
+    const { error } = await (supabase as any)
+      .from('group_call_participants')
+      .upsert(rows, { onConflict: 'call_id,user_id' });
     if (error) {
       toast({ title: 'Failed to invite', description: error.message, variant: 'destructive' });
       return;
@@ -774,6 +791,7 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     <GroupCallContext.Provider value={{
       active, participants, incoming, muted, cameraOff, localStream,
       handsRaised, myHandRaised: myId ? handsRaised.has(myId) : false,
+      mutedPeers,
       chatMessages, unreadChat, markChatRead,
       isScreenSharing, screenSharerId,
       startGroupCall, acceptIncoming, declineIncoming, leaveCall, endForAll, toggleMute, toggleCamera,
