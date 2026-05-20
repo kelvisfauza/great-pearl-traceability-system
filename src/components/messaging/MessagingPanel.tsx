@@ -8,9 +8,11 @@ import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePresenceList } from '@/hooks/usePresenceList';
 import { useCall } from '@/contexts/CallContext';
+import { useGroupCall } from '@/contexts/GroupCallContext';
 import UserSelectorDialog from './UserSelectorDialog';
 import NewGroupChatDialog from './NewGroupChatDialog';
 import NewGroupCallDialog from '@/components/calls/NewGroupCallDialog';
+import GroupSettingsDialog from './GroupSettingsDialog';
 import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns';
 import CallRecordingBubble from './CallRecordingBubble';
 
@@ -40,6 +42,7 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
   const [showUserSelector, setShowUserSelector] = useState(false);
   const [showNewGroup, setShowNewGroup] = useState(false);
   const [showGroupCall, setShowGroupCall] = useState<null | { preset: { userId: string; name: string }[]; title?: string; conversationId?: string | null }>(null);
+  const [showGroupSettings, setShowGroupSettings] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const { employee } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -47,6 +50,7 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
   const inputRef = useRef<HTMLInputElement>(null);
   const { users: presenceUsers } = usePresenceList();
   const { startCall } = useCall();
+  const { startGroupCall } = useGroupCall();
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordStartRef = useRef<number>(0);
@@ -282,6 +286,9 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
   };
 
   const getConversationAvatar = (conversation: any) => {
+    if (conversation?.type === 'group') {
+      return conversation?.avatar_url || undefined;
+    }
     const otherParticipant = conversation.participants?.find(
       (p: any) => p.user_id !== employee?.authUserId
     );
@@ -369,6 +376,13 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                 >
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if ((currentConversation as any)?.type === 'group') setShowGroupSettings(true);
+                  }}
+                  className={`flex items-center gap-3 flex-1 min-w-0 text-left ${(currentConversation as any)?.type === 'group' ? 'hover:opacity-90' : ''}`}
+                >
                 <Avatar className="h-9 w-9">
                   <AvatarImage src={getConversationAvatar(currentConversation)} alt={getConversationName(currentConversation)} />
                   <AvatarFallback className="bg-primary-foreground/20 text-primary-foreground text-sm">
@@ -404,6 +418,7 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                     );
                   })()}
                 </div>
+                </button>
                 <div className="flex items-center gap-1">
                   <Button
                     variant="ghost"
@@ -416,7 +431,13 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                         const preset = (currentConversation?.participants || [])
                           .filter((p: any) => p.user_id !== employee?.authUserId && p.user_id)
                           .map((p: any) => ({ userId: p.user_id, name: p.employee_name || 'User' }));
-                        setShowGroupCall({ preset, title: getConversationName(currentConversation), conversationId: currentConversation?.id });
+                        if (preset.length === 0) return;
+                        startGroupCall({
+                          type: 'audio',
+                          invitees: preset,
+                          title: getConversationName(currentConversation),
+                          conversationId: currentConversation?.id || null,
+                        });
                         return;
                       }
                       const other = currentConversation?.participants?.find(
@@ -438,7 +459,13 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                         const preset = (currentConversation?.participants || [])
                           .filter((p: any) => p.user_id !== employee?.authUserId && p.user_id)
                           .map((p: any) => ({ userId: p.user_id, name: p.employee_name || 'User' }));
-                        setShowGroupCall({ preset, title: getConversationName(currentConversation), conversationId: currentConversation?.id });
+                        if (preset.length === 0) return;
+                        startGroupCall({
+                          type: 'video',
+                          invitees: preset,
+                          title: getConversationName(currentConversation),
+                          conversationId: currentConversation?.id || null,
+                        });
                         return;
                       }
                       const other = currentConversation?.participants?.find(
@@ -932,6 +959,17 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
         onClose={() => setShowUserSelector(false)}
         onSelectUser={handleSelectUser}
       />
+
+      {currentConversation && (currentConversation as any).type === 'group' && (
+        <GroupSettingsDialog
+          open={showGroupSettings}
+          onClose={() => setShowGroupSettings(false)}
+          conversationId={currentConversation.id}
+          initialName={getConversationName(currentConversation)}
+          initialAvatarUrl={(currentConversation as any).avatar_url}
+          onSaved={() => { try { (messagesData as any).fetchConversations?.(); } catch {} }}
+        />
+      )}
 
       <NewGroupChatDialog
         open={showNewGroup}
