@@ -234,6 +234,7 @@ const GroupCallDialog = () => {
                     handRaised={handsRaised.has(spotlightTile.userId)}
                     sharing
                     micMuted={spotlightTile.isLocal ? muted : mutedPeers.has(spotlightTile.userId)}
+                    isHost={spotlightTile.userId === active.hostId}
                   />
                 </div>
               </div>
@@ -248,6 +249,7 @@ const GroupCallDialog = () => {
                     handRaised={myHandRaised}
                     sharing={isScreenSharing}
                     micMuted={muted}
+                    isHost={isHost}
                   />
                   {others.map(p => (
                     <Tile
@@ -258,6 +260,7 @@ const GroupCallDialog = () => {
                       handRaised={handsRaised.has(p.userId)}
                       sharing={screenSharerId === p.userId}
                       micMuted={mutedPeers.has(p.userId)}
+                      isHost={p.userId === active.hostId}
                     />
                   ))}
                 </div>
@@ -276,6 +279,7 @@ const GroupCallDialog = () => {
                       isVideo={isVideo}
                       handRaised={handsRaised.has(t.userId)}
                       micMuted={t.isLocal ? muted : mutedPeers.has(t.userId)}
+                      isHost={t.userId === active.hostId}
                     />
                   </div>
                 ))}
