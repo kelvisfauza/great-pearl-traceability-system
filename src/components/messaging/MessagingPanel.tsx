@@ -8,9 +8,11 @@ import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePresenceList } from '@/hooks/usePresenceList';
 import { useCall } from '@/contexts/CallContext';
+import { useGroupCall } from '@/contexts/GroupCallContext';
 import UserSelectorDialog from './UserSelectorDialog';
 import NewGroupChatDialog from './NewGroupChatDialog';
 import NewGroupCallDialog from '@/components/calls/NewGroupCallDialog';
+import GroupSettingsDialog from './GroupSettingsDialog';
 import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns';
 import CallRecordingBubble from './CallRecordingBubble';
 
@@ -40,6 +42,7 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
   const [showUserSelector, setShowUserSelector] = useState(false);
   const [showNewGroup, setShowNewGroup] = useState(false);
   const [showGroupCall, setShowGroupCall] = useState<null | { preset: { userId: string; name: string }[]; title?: string; conversationId?: string | null }>(null);
+  const [showGroupSettings, setShowGroupSettings] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const { employee } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -47,6 +50,7 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
   const inputRef = useRef<HTMLInputElement>(null);
   const { users: presenceUsers } = usePresenceList();
   const { startCall } = useCall();
+  const { startGroupCall } = useGroupCall();
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordStartRef = useRef<number>(0);
