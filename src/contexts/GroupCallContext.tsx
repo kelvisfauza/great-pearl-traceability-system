@@ -268,10 +268,20 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     updateParticipant(peerId, { name: name || nameByUserRef.current.get(peerId) || 'Participant' });
     // Glare rule: smaller userId initiates offer
     if (myId < peerId) {
-      const entry = peersRef.current.get(peerId) ?? createPeer(peerId, activeRef.current.type);
-      const offer = await entry.pc.createOffer();
-      await entry.pc.setLocalDescription(offer);
-      sendSignal('offer', { to: peerId, from: myId, sdp: offer, name: nameByUserRef.current.get(myId) });
+      const existing = peersRef.current.get(peerId);
+      // If we already started negotiating with this peer, don't start over —
+      // a duplicate join/hello must not blow away an in-flight or established
+      // connection (which would leave both sides without a working pc).
+      if (existing && existing.pc.signalingState !== 'closed' && existing.pc.signalingState !== 'stable') return;
+      if (existing && existing.pc.connectionState === 'connected') return;
+      const entry = existing ?? createPeer(peerId, activeRef.current.type);
+      try {
+        const offer = await entry.pc.createOffer();
+        await entry.pc.setLocalDescription(offer);
+        sendSignal('offer', { to: peerId, from: myId, sdp: offer, name: nameByUserRef.current.get(myId) });
+      } catch (err) {
+        console.warn('[group-call] createOffer failed', err);
+      }
     }
   }, [createPeer, myId, sendSignal, updateParticipant]);
 
