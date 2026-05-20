@@ -300,8 +300,11 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setUnreadChat(c => c + 1);
       })
       .on('broadcast', { event: 'screen' }, ({ payload }) => {
-        setScreenSharerId(payload.on ? payload.from : (prev => prev === payload.from ? null : prev) as any);
-        if (!payload.on) setScreenSharerId(prev => (prev === payload.from ? null : prev));
+        if (payload.on) {
+          setScreenSharerId(payload.from);
+        } else {
+          setScreenSharerId(prev => (prev === payload.from ? null : prev));
+        }
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
