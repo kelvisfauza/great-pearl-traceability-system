@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, X, MessageSquarePlus, ArrowLeft, MoreVertical, Paperclip, Check, CheckCheck, Reply, Phone, Video, Mic, Lock, Trash2, ChevronUp } from 'lucide-react';
+import { Send, X, MessageSquarePlus, ArrowLeft, Paperclip, Check, CheckCheck, Reply, Phone, Video, Mic, Lock, Trash2, ChevronUp } from 'lucide-react';
 import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePresenceList } from '@/hooks/usePresenceList';
@@ -387,7 +387,12 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                             : 'bg-muted-foreground/60'
                           }`}
                         />
-                        <span className="truncate">{label}</span>
+                        <span className="overflow-hidden whitespace-nowrap flex-1 min-w-0">
+                          <span className="marquee-track">
+                            <span className="px-4">{label}</span>
+                            <span className="px-4">{label}</span>
+                          </span>
+                        </span>
                       </p>
                     );
                   })()}
@@ -420,9 +425,6 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                     }}
                   >
                     <Video className="h-5 w-5" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary-foreground/10">
-                    <MoreVertical className="h-5 w-5" />
                   </Button>
                 </div>
               </>
