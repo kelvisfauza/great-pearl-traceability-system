@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff, Users,
   Hand, MessageSquare, MonitorUp, MonitorOff, UserPlus, X, Send,
+  Maximize2, Minimize2,
 } from 'lucide-react';
 import { useGroupCall, GroupParticipant } from '@/contexts/GroupCallContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -72,6 +73,7 @@ const GroupCallDialog = () => {
   const [panel, setPanel] = useState<null | 'chat' | 'people'>(null);
   const [chatInput, setChatInput] = useState('');
   const [addOpen, setAddOpen] = useState(false);
+  const [fullView, setFullView] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -94,6 +96,20 @@ const GroupCallDialog = () => {
   const count = others.length + 1;
   const gridCols = count <= 2 ? 'grid-cols-1' : count <= 4 ? 'grid-cols-2' : 'grid-cols-3';
 
+  // Spotlight mode: someone is sharing their screen
+  const spotlightActive = !!screenSharerId;
+  const someoneElseSharing = !!screenSharerId && screenSharerId !== myId;
+
+  const tilesAll = [
+    { userId: myId!, name: `${myName} (you)`, stream: localStream, isLocal: true, joined: true },
+    ...others.map(p => ({ userId: p.userId, name: p.name, stream: p.stream, isLocal: false, joined: p.joined })),
+  ];
+  const spotlightTile = spotlightActive ? tilesAll.find(t => t.userId === screenSharerId) : null;
+  const stripTiles = spotlightActive ? tilesAll.filter(t => t.userId !== screenSharerId) : [];
+
+  const showSidePanel = !!panel && !fullView;
+  const showStrip = spotlightActive && !fullView && stripTiles.length > 0;
+
   return (
     <Dialog open onOpenChange={() => {}}>
       <DialogContent
@@ -102,7 +118,7 @@ const GroupCallDialog = () => {
         onEscapeKeyDown={(e) => e.preventDefault()}
         hideCloseButton
       >
-        <div className="flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground">
+        <div className={cn('flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground', fullView && 'hidden')}>
           <div className="flex items-center gap-2">
             <Users className="h-5 w-5" />
             <div>
@@ -116,30 +132,65 @@ const GroupCallDialog = () => {
         </div>
 
         <div className="flex-1 flex min-h-0">
-          <div className="flex-1 overflow-auto p-4 bg-muted/40">
-            <div className={cn('grid gap-3', gridCols)}>
-              <Tile
-                stream={localStream}
-                name={myName}
-                isLocal
-                isVideo={isVideo || isScreenSharing}
-                handRaised={myHandRaised}
-                sharing={isScreenSharing}
-              />
-              {others.map(p => (
-                <Tile
-                  key={p.userId}
-                  stream={p.stream}
-                  name={p.name}
-                  isVideo={isVideo || screenSharerId === p.userId}
-                  handRaised={handsRaised.has(p.userId)}
-                  sharing={screenSharerId === p.userId}
-                />
-              ))}
-            </div>
+          <div className={cn('flex-1 min-w-0 flex', spotlightActive ? 'flex-row' : 'flex-col')}>
+            {spotlightActive && spotlightTile ? (
+              <div className={cn('flex-1 min-w-0 p-2 bg-black flex items-center justify-center')}>
+                <div className="w-full h-full max-h-full">
+                  <Tile
+                    stream={spotlightTile.stream}
+                    name={spotlightTile.name}
+                    isLocal={spotlightTile.isLocal}
+                    muted={spotlightTile.isLocal}
+                    isVideo
+                    handRaised={handsRaised.has(spotlightTile.userId)}
+                    sharing
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 overflow-auto p-4 bg-muted/40">
+                <div className={cn('grid gap-3', gridCols)}>
+                  <Tile
+                    stream={localStream}
+                    name={myName}
+                    isLocal
+                    isVideo={isVideo || isScreenSharing}
+                    handRaised={myHandRaised}
+                    sharing={isScreenSharing}
+                  />
+                  {others.map(p => (
+                    <Tile
+                      key={p.userId}
+                      stream={p.stream}
+                      name={p.name}
+                      isVideo={isVideo || screenSharerId === p.userId}
+                      handRaised={handsRaised.has(p.userId)}
+                      sharing={screenSharerId === p.userId}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {showStrip && (
+              <div className="w-40 shrink-0 border-l bg-background/60 overflow-y-auto p-2 space-y-2">
+                {stripTiles.map(t => (
+                  <div key={t.userId} className="w-full">
+                    <Tile
+                      stream={t.stream}
+                      name={t.name}
+                      isLocal={t.isLocal}
+                      muted={t.isLocal}
+                      isVideo={isVideo}
+                      handRaised={handsRaised.has(t.userId)}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {panel && (
+          {showSidePanel && (
             <div className="w-80 border-l bg-background flex flex-col">
               <Tabs value={panel} onValueChange={(v) => setPanel(v as any)} className="flex-1 flex flex-col">
                 <div className="flex items-center justify-between px-2 pt-2">
@@ -212,7 +263,7 @@ const GroupCallDialog = () => {
           )}
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-2 p-3 border-t bg-background">
+        <div className={cn('flex flex-wrap items-center justify-center gap-2 p-3 border-t bg-background', fullView && 'absolute bottom-2 left-1/2 -translate-x-1/2 border rounded-full px-3 py-2 bg-background/80 backdrop-blur')}>
           <Button size="lg" variant={muted ? 'destructive' : 'secondary'} onClick={toggleMute} className="rounded-full h-12 w-12 p-0">
             {muted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
           </Button>
@@ -224,9 +275,21 @@ const GroupCallDialog = () => {
           <Button size="lg" variant={myHandRaised ? 'warning' : 'secondary'} onClick={toggleHand} className="rounded-full h-12 w-12 p-0" title={myHandRaised ? 'Lower hand' : 'Raise hand'}>
             <Hand className="h-5 w-5" />
           </Button>
-          <Button size="lg" variant={isScreenSharing ? 'success' : 'secondary'} onClick={toggleScreenShare} className="rounded-full h-12 w-12 p-0" title={isScreenSharing ? 'Stop sharing' : 'Share screen'}>
+          <Button
+            size="lg"
+            variant={isScreenSharing ? 'success' : 'secondary'}
+            onClick={toggleScreenShare}
+            disabled={someoneElseSharing}
+            className="rounded-full h-12 w-12 p-0"
+            title={someoneElseSharing ? 'Someone else is sharing' : isScreenSharing ? 'Stop sharing' : 'Share screen (one at a time)'}
+          >
             {isScreenSharing ? <MonitorOff className="h-5 w-5" /> : <MonitorUp className="h-5 w-5" />}
           </Button>
+          {spotlightActive && (
+            <Button size="lg" variant="secondary" onClick={() => setFullView(v => !v)} className="rounded-full h-12 w-12 p-0" title={fullView ? 'Exit full view' : 'Full view'}>
+              {fullView ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+            </Button>
+          )}
           <Button size="lg" variant="secondary" onClick={() => setPanel(p => p === 'chat' ? null : 'chat')} className="rounded-full h-12 w-12 p-0 relative" title="Chat">
             <MessageSquare className="h-5 w-5" />
             {unreadChat > 0 && panel !== 'chat' && (
