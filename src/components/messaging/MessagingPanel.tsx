@@ -873,10 +873,17 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm text-muted-foreground truncate flex-1">
-                            {lastMessage?.content || 'Tap to start chatting'}
-                          </p>
+                         <div className="flex items-center justify-between gap-2">
+                           <p className="text-sm text-muted-foreground truncate flex-1">
+                             {(() => {
+                               if (!lastMessage) return 'Tap to start chatting';
+                               const mime = lastMessage.metadata?.mimeType || '';
+                               if (mime.startsWith('audio/')) return '🎤 Voice message';
+                               if (mime.startsWith('image/') || lastMessage.type === 'image') return '📷 Photo';
+                               if (lastMessage.type === 'file') return `📎 ${lastMessage.metadata?.fileName || 'File'}`;
+                               return lastMessage.content;
+                             })()}
+                           </p>
                           {unreadCount > 0 && (
                             <span className="bg-primary text-primary-foreground text-xs rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center font-medium flex-shrink-0">
                               {unreadCount}
