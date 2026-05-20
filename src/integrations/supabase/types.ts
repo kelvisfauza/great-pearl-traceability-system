@@ -10826,6 +10826,18 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: number
       }
+      get_employee_directory: {
+        Args: never
+        Returns: {
+          auth_user_id: string
+          avatar_url: string
+          department: string
+          email: string
+          id: string
+          job_position: string
+          name: string
+        }[]
+      }
       get_guarantor_candidates: {
         Args: never
         Returns: {
