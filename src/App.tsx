@@ -157,8 +157,8 @@ const App: React.ComponentType = () => {
         <GlobalErrorCaptureInitializer />
         <PriceProvider>
           <TooltipProvider>
-          <CallProvider>
           <GroupCallProvider>
+          <CallProvider>
             <Toaster />
             <Sonner />
             <GroupCallDialog />
@@ -487,8 +487,8 @@ const App: React.ComponentType = () => {
               </LocationPermissionGate>
               </MaintenanceGuard>
             </BrowserRouter>
-          </GroupCallProvider>
           </CallProvider>
+          </GroupCallProvider>
           </TooltipProvider>
         </PriceProvider>
         </LeaveEnforcementProvider>
