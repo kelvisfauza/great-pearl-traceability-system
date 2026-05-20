@@ -1112,6 +1112,71 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return () => { supabase.removeChannel(ch); };
   }, [missedGroupCalls.length, myId]);
 
+  // Polling fallback for incoming group calls. Realtime postgres_changes
+  // can be lagged or paused by browsers (especially Edge) when the tab
+  // is backgrounded — poll every 4s for ringing rows so the popup still
+  // appears within seconds.
+  const processedGroupIncomingRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!myId) return;
+    let stopped = false;
+    const poll = async () => {
+      if (stopped) return;
+      if (incoming || activeRef.current) return;
+      try {
+        const since = new Date(Date.now() - 90_000).toISOString();
+        const { data } = await (supabase as any)
+          .from('group_call_participants')
+          .select('call_id, status, created_at, group_calls!inner(id, host_id, call_type, status, title)')
+          .eq('user_id', myId)
+          .eq('status', 'ringing')
+          .gte('created_at', since)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        const row = data?.[0];
+        if (!row || !row.group_calls) return;
+        const call = row.group_calls;
+        if (call.status !== 'ringing' && call.status !== 'active') return;
+        if (processedGroupIncomingRef.current.has(call.id)) return;
+        processedGroupIncomingRef.current.add(call.id);
+        if (processedGroupIncomingRef.current.size > 200) {
+          processedGroupIncomingRef.current = new Set(
+            Array.from(processedGroupIncomingRef.current).slice(-100),
+          );
+        }
+        let hostName = 'Someone';
+        try {
+          const { data: nm } = await supabase.rpc('get_employee_display_name' as any, { _auth_user_id: call.host_id });
+          if (typeof nm === 'string' && nm.trim()) hostName = nm;
+        } catch {}
+        setIncoming({
+          callId: call.id,
+          hostId: call.host_id,
+          hostName,
+          type: call.call_type,
+          title: call.title,
+        });
+        showCallNotification({
+          title: `Incoming group ${call.call_type} call`,
+          body: call.title ? `${hostName}: ${call.title}` : `${hostName} is calling`,
+          tag: `group-call-${call.id}`,
+        });
+        try { window.focus(); } catch {}
+      } catch {}
+    };
+    const id = window.setInterval(poll, 4000);
+    const onVis = () => { if (!document.hidden) poll(); };
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('focus', onVis);
+    poll();
+    return () => {
+      stopped = true;
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('focus', onVis);
+    };
+  }, [myId, incoming]);
+
   // Watch active call row to detect end-for-all
   useEffect(() => {
     if (!active) return;
