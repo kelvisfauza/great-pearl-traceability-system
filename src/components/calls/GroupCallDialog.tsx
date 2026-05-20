@@ -568,6 +568,52 @@ const GroupCallDialog = () => {
               <UserPlus className="h-5 w-5" />
             </Button>
           )}
+          {isHost && (
+            <Button
+              size="lg"
+              variant={recorder.isRecording ? 'destructive' : 'secondary'}
+              onClick={() => {
+                if (recorder.isRecording) {
+                  recorder.stop();
+                } else {
+                  recorder.start({
+                    callId: active.id,
+                    hostUserId: myId!,
+                    hostName: myName,
+                    title: active.title,
+                    getStreams: () => {
+                      const out: MediaStream[] = [];
+                      if (localStream) out.push(localStream);
+                      for (const p of others) {
+                        if (p.stream) out.push(p.stream);
+                      }
+                      return out;
+                    },
+                  });
+                }
+              }}
+              disabled={recorder.isUploading}
+              className="rounded-full h-12 px-4"
+              title={recorder.isRecording ? 'Stop recording' : 'Record call (host only)'}
+            >
+              {recorder.isUploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving…
+                </>
+              ) : recorder.isRecording ? (
+                <>
+                  <Square className="h-4 w-4 mr-2 fill-current" />
+                  Stop · {Math.floor(recorder.seconds / 60)}:{String(recorder.seconds % 60).padStart(2, '0')}
+                </>
+              ) : (
+                <>
+                  <Circle className="h-4 w-4 mr-2 text-red-500 fill-red-500" />
+                  Record
+                </>
+              )}
+            </Button>
+          )}
           <Button size="lg" variant="destructive" onClick={leaveCall} className="rounded-full h-12 px-6">
             <PhoneOff className="h-5 w-5 mr-2" /> Leave
           </Button>
