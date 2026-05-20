@@ -503,7 +503,13 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     }
     const { data, error } = await supabase
       .from('call_sessions')
-      .insert({ caller_id: myId, callee_id: calleeAuthId, call_type: type, status: 'ringing' })
+      .insert({
+        caller_id: myId,
+        callee_id: calleeAuthId,
+        call_type: type,
+        status: 'ringing',
+        caller_name: employee?.name || user?.user_metadata?.name || user?.email || null,
+      } as any)
       .select()
       .single();
     if (error || !data) {
