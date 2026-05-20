@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff, Users,
   Hand, MessageSquare, MonitorUp, MonitorOff, UserPlus, X, Send,
-  Maximize2, Minimize2, Crown, Volume2, UserX,
+  Maximize2, Minimize2, Crown, Volume2, UserX, ChevronUp,
 } from 'lucide-react';
 import { useGroupCall, GroupParticipant } from '@/contexts/GroupCallContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -161,6 +161,32 @@ const Tile = ({ stream, name, muted, isLocal, isVideo, handRaised, sharing, micM
   );
 };
 
+const MiniTile = ({ stream, name, isLocal, micMuted }: { stream: MediaStream | null; name: string; isLocal?: boolean; micMuted?: boolean }) => {
+  const ref = useRef<HTMLVideoElement | null>(null);
+  useEffect(() => {
+    if (ref.current && stream && ref.current.srcObject !== stream) {
+      ref.current.srcObject = stream;
+    }
+  }, [stream]);
+  const initials = name.split(' ').map(s => s[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || 'U';
+  return (
+    <div className="relative bg-black/80 rounded overflow-hidden aspect-video flex items-center justify-center">
+      {stream && stream.getVideoTracks().length > 0 ? (
+        <video ref={ref} autoPlay playsInline muted className="w-full h-full object-cover" />
+      ) : (
+        <div className="h-7 w-7 rounded-full bg-primary/40 text-primary-foreground flex items-center justify-center text-[10px] font-semibold">
+          {initials}
+        </div>
+      )}
+      {micMuted && (
+        <div className="absolute bottom-0.5 right-0.5 bg-black/70 rounded-full p-0.5">
+          <MicOff className="h-2.5 w-2.5 text-red-400" />
+        </div>
+      )}
+    </div>
+  );
+};
+
 const GroupCallDialog = () => {
   const {
     active, participants, localStream, muted, cameraOff,
@@ -176,6 +202,7 @@ const GroupCallDialog = () => {
   const [chatInput, setChatInput] = useState('');
   const [addOpen, setAddOpen] = useState(false);
   const [fullView, setFullView] = useState(false);
+  const [minimized, setMinimized] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -213,6 +240,67 @@ const GroupCallDialog = () => {
   const showSidePanel = !!panel && !fullView;
   const showStrip = spotlightActive && !fullView && stripTiles.length > 0;
 
+  if (minimized) {
+    return (
+      <>
+        {/* Keep remote audio playing while minimized */}
+        {others.map(p => (
+          <RemoteAudioSink key={`sink-min-${p.userId}`} stream={p.stream} />
+        ))}
+        <div className="fixed bottom-4 right-4 z-[100] w-72 rounded-xl border bg-card shadow-2xl overflow-hidden animate-in slide-in-from-bottom">
+          <div className="flex items-center justify-between gap-2 px-3 py-2 bg-primary text-primary-foreground">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-70 animate-ping" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+              </span>
+              <p className="text-xs font-medium truncate">
+                {active.title || 'Group call'} · {connectedCount}/{count}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setMinimized(false)}
+              className="p-1 rounded hover:bg-white/15"
+              title="Expand call"
+            >
+              <ChevronUp className="h-4 w-4" />
+            </button>
+          </div>
+          {isVideo && (
+            <div className="grid grid-cols-3 gap-1 p-2 bg-black/90 max-h-32 overflow-hidden">
+              {tilesAll.slice(0, 6).map(t => (
+                <MiniTile
+                  key={t.userId}
+                  stream={t.stream}
+                  name={t.name}
+                  isLocal={t.isLocal}
+                  micMuted={t.isLocal ? muted : mutedPeers.has(t.userId)}
+                />
+              ))}
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-1 p-2 border-t bg-background">
+            <Button size="sm" variant={muted ? 'destructive' : 'secondary'} onClick={toggleMute} className="h-9 w-9 p-0 rounded-full">
+              {muted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </Button>
+            {isVideo && (
+              <Button size="sm" variant={cameraOff ? 'destructive' : 'secondary'} onClick={toggleCamera} className="h-9 w-9 p-0 rounded-full">
+                {cameraOff ? <VideoOff className="h-4 w-4" /> : <VideoIcon className="h-4 w-4" />}
+              </Button>
+            )}
+            <Button size="sm" variant="secondary" onClick={() => setMinimized(false)} className="h-9 px-3 rounded-full text-xs">
+              Open
+            </Button>
+            <Button size="sm" variant="destructive" onClick={leaveCall} className="h-9 px-3 rounded-full text-xs">
+              <PhoneOff className="h-4 w-4 mr-1" /> Leave
+            </Button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <Dialog open onOpenChange={() => {}}>
       <DialogContent
@@ -244,6 +332,16 @@ const GroupCallDialog = () => {
               </p>
             </div>
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setMinimized(true)}
+            className="text-primary-foreground hover:bg-white/15 gap-1"
+            title="Minimize call to keep working"
+          >
+            <Minimize2 className="h-4 w-4" />
+            <span className="text-xs hidden sm:inline">Minimize</span>
+          </Button>
         </div>
 
         <div className="flex-1 flex min-h-0">
