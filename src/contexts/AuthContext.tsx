@@ -235,8 +235,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           isOneTimePassword: false,
           mustChangePassword: false,
           authUserId: employeeData.auth_user_id || targetUserId,
-          disabled: employeeData.disabled || false
-        };
+          disabled: employeeData.disabled || false,
+          tin_number: (employeeData as any).tin_number || '',
+          nssf_number: (employeeData as any).nssf_number || ''
+        } as any;
 
         return employee;
       }
