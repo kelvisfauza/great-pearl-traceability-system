@@ -44,6 +44,7 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
   const { employee } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const { users: presenceUsers } = usePresenceList();
   const { startCall } = useCall();
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -213,14 +214,14 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
-    if (sendingRef.current) return;
-    sendingRef.current = true;
 
     const content = newMessage;
     const reply = replyingTo;
     // Clear the input immediately for a snappy UX; restore on failure.
     setNewMessage('');
     setReplyingTo(null);
+    // Keep focus on the input so the user can keep typing
+    inputRef.current?.focus();
 
     try {
       await sendMessage({
@@ -233,8 +234,6 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
       console.error('Failed to send message:', error);
       setNewMessage(content);
       setReplyingTo(reply);
-    } finally {
-      sendingRef.current = false;
     }
   };
 
@@ -804,6 +803,7 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                   <Paperclip className="h-5 w-5" />
                 </Button>
                 <Input
+                  ref={inputRef}
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyDown={handleKeyDown}
