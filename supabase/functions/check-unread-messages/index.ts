@@ -21,15 +21,15 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log('🔍 Checking for unread messages older than 20 minutes...');
+    console.log('🔍 Checking for unread messages older than 5 minutes...');
 
-    // Calculate timestamp for 20 minutes ago
-    const twentyMinutesAgo = new Date(Date.now() - 20 * 60 * 1000).toISOString();
+    // Calculate timestamp for 5 minutes ago
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
     // Find messages that are:
     // 1. Not read (read_at is null)
-    // 2. Older than 20 minutes
-    // 3. SMS notification not sent yet
+    // 2. Older than 5 minutes
+    // 3. Reminder notification not sent yet
     const { data: unreadMessages, error: messagesError } = await supabase
       .from('messages')
       .select(`
@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
       `)
       .is('read_at', null)
       .is('sms_notification_sent', false)
-      .lt('created_at', twentyMinutesAgo);
+      .lt('created_at', fiveMinutesAgo);
 
     if (messagesError) {
       console.error('Error fetching unread messages:', messagesError);
@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
     }
 
     if (!unreadMessages || unreadMessages.length === 0) {
-      console.log('✅ No unread messages older than 20 minutes found');
+      console.log('✅ No unread messages older than 5 minutes found');
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -62,9 +62,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`📨 Found ${unreadMessages.length} unread messages older than 20 minutes`);
+    console.log(`📨 Found ${unreadMessages.length} unread messages older than 5 minutes`);
 
-    let smsSentCount = 0;
+    let notifiedCount = 0;
     const errors = [];
 
     // Process each unread message
@@ -83,43 +83,57 @@ Deno.serve(async (req) => {
 
         // Send SMS to each recipient
         for (const participant of participants) {
-          // Get recipient's employee details
+          // Get recipient's employee details (skip disabled accounts)
           const { data: recipientEmployee } = await supabase
             .from('employees')
-            .select('name, phone')
+            .select('name, email, disabled')
             .eq('auth_user_id', participant.user_id)
             .single();
 
-          if (!recipientEmployee?.phone) {
-            console.log(`⚠️ No phone number found for user ${participant.user_id}`);
+          if (!recipientEmployee?.email || recipientEmployee.disabled) {
+            console.log(`⚠️ Skipping user ${participant.user_id} (no email or disabled)`);
             continue;
           }
 
-          console.log(`📱 Sending 20-minute reminder SMS to: ${recipientEmployee.name}`);
+          const senderName = message.sender_name || 'a colleague';
+          const preview =
+            message.type === 'text' && typeof message.content === 'string'
+              ? message.content.slice(0, 200)
+              : `[${message.type || 'message'}]`;
 
-          // Send SMS notification
-          const { error: smsError } = await supabase.functions.invoke('send-sms', {
+          console.log(`📧 Sending 5-minute unread-chat email to: ${recipientEmployee.email}`);
+
+          // Send email reminder (primary channel)
+          const { error: emailError } = await supabase.functions.invoke('send-transactional-email', {
             body: {
-              phone: recipientEmployee.phone,
-              message: `Dear ${recipientEmployee.name}, you have an unread chat from ${message.sender_name || 'a colleague'}. Open app to read.`,
-              userName: recipientEmployee.name,
-              messageType: 'unread_chat_reminder'
-            }
+              templateName: 'general-notification',
+              recipientEmail: recipientEmployee.email,
+              idempotencyKey: `unread-chat-${message.id}-${participant.user_id}`,
+              templateData: {
+                subject: `New unread chat from ${senderName}`,
+                title: `You have an unread chat from ${senderName}`,
+                recipientName: recipientEmployee.name,
+                message:
+                  `You received a new message from ${senderName} that you haven't read yet:\n\n` +
+                  `"${preview}"\n\n` +
+                  `Open the Great Pearl Coffee app to reply.`,
+              },
+            },
           });
 
-          if (smsError) {
-            console.error(`Failed to send SMS to ${recipientEmployee.name}:`, smsError);
+          if (emailError) {
+            console.error(`Failed to email ${recipientEmployee.name}:`, emailError);
             errors.push({
               messageId: message.id,
               recipient: recipientEmployee.name,
-              error: smsError.message
+              error: emailError.message,
             });
           } else {
-            smsSentCount++;
+            notifiedCount++;
           }
         }
 
-        // Mark message as SMS notification sent
+        // Mark message as reminder sent (re-uses legacy sms_notification_sent flag)
         await supabase
           .from('messages')
           .update({
@@ -137,13 +151,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`✅ Sent ${smsSentCount} SMS notifications`);
+    console.log(`✅ Sent ${notifiedCount} email notifications`);
 
     return new Response(
       JSON.stringify({
         success: true,
         message: `Processed ${unreadMessages.length} unread messages`,
-        smsSent: smsSentCount,
+        notified: notifiedCount,
         errors: errors.length > 0 ? errors : undefined
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
