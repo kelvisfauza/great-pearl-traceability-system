@@ -1,0 +1,1 @@
+ALTER FUNCTION public.mask_sms_failure_code() SET search_path = public, pg_temp;
