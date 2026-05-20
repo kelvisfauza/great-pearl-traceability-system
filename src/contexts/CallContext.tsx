@@ -733,24 +733,50 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
   // caller hangs up / cancels / times out before the callee answers.
   useEffect(() => {
     if (!incoming) return;
-    const ch = supabase
-      .channel(`incoming-watch:${incoming.id}`)
-      .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'call_sessions', filter: `id=eq.${incoming.id}` },
-        (payload) => {
-          const row = payload.new as CallRow;
-          if (row.status !== 'ringing') {
-            ringtone.stop();
-            setIncoming(null);
-            setIncomingPeer(null);
-            if (row.status === 'missed') {
-              toast({ title: 'Missed call', description: `${incomingPeer?.name || 'Caller'} tried to reach you.` });
-            }
-          }
+    const incomingId = incoming.id;
+    const dismissIfNotRinging = (row: CallRow | null | undefined) => {
+      if (!row) return false;
+      if (row.status !== 'ringing') {
+        ringtone.stop();
+        setIncoming(null);
+        setIncomingPeer(null);
+        if (row.status === 'missed') {
+          toast({ title: 'Missed call', description: `${incomingPeer?.name || 'Caller'} tried to reach you.` });
+        } else if (row.status === 'ended' || row.status === 'declined') {
+          toast({ title: 'Call canceled', description: `${incomingPeer?.name || 'Caller'} hung up.` });
         }
+        return true;
+      }
+      return false;
+    };
+    const ch = supabase
+      .channel(`incoming-watch:${incomingId}`)
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'call_sessions', filter: `id=eq.${incomingId}` },
+        (payload) => { dismissIfNotRinging(payload.new as CallRow); }
       )
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    // Polling fallback — Edge/throttled tabs sometimes miss the UPDATE
+    // event, leaving the "ringing" popup stuck after the caller hangs up.
+    // Re-check the row every 2s as a safety net.
+    let stopped = false;
+    const poll = async () => {
+      if (stopped) return;
+      try {
+        const { data } = await supabase
+          .from('call_sessions')
+          .select('*')
+          .eq('id', incomingId)
+          .maybeSingle();
+        dismissIfNotRinging(data as CallRow | null);
+      } catch {}
+    };
+    const id = window.setInterval(poll, 2000);
+    return () => {
+      stopped = true;
+      window.clearInterval(id);
+      supabase.removeChannel(ch);
+    };
   }, [incoming, incomingPeer, ringtone, toast]);
 
   const acceptIncoming = useCallback(async () => {
