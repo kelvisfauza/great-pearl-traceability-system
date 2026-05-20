@@ -249,6 +249,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     }
     // Safety: always stop the ringtone on any cleanup
     try { ringtone.stop(); } catch {}
+    try { ringback.stop(); } catch {}
     pendingIceRef.current = [];
     remoteSetRef.current = false;
     callerSubscribedRef.current = false;
