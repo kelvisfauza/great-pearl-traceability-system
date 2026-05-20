@@ -114,6 +114,8 @@ interface GroupCallContextValue {
   missedGroupCalls: MissedGroupCall[];
   rejoinGroupCall: (callId: string) => Promise<void>;
   dismissMissed: (callId: string) => void;
+  forceMuteParticipant: (userId: string) => void;
+  removeParticipantFromCall: (userId: string) => Promise<void>;
 }
 
 const GroupCallContext = createContext<GroupCallContextValue | null>(null);
