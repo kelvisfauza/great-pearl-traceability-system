@@ -325,6 +325,16 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
       remote.onaddtrack = recompute;
       remote.onremovetrack = recompute;
       setRemoteStreamVersion(v => v + 1);
+      // Real connection signal: remote media is actually flowing.
+      // Use this (not the 'ready' broadcast) to start the call timer.
+      if (!answeredAtRef.current) {
+        answeredAtRef.current = Date.now();
+        setActive(prev => prev ? { ...prev, status: 'active' } as CallRow : prev);
+      }
+      console.log('[call] remote track received', {
+        audio: remote.getAudioTracks().length,
+        video: remote.getVideoTracks().length,
+      });
     };
 
     pc.onicecandidate = (ev) => {
@@ -334,10 +344,17 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     pc.onconnectionstatechange = () => {
-      if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
-        // Let user hang up manually; just log
-        console.log('[call] connection state:', pc.connectionState);
+      console.log('[call] connection state:', pc.connectionState);
+      if (pc.connectionState === 'failed') {
+        toast({
+          title: 'Call connection failed',
+          description: 'Could not establish media. Check your network and try again.',
+          variant: 'destructive',
+        });
       }
+    };
+    pc.oniceconnectionstatechange = () => {
+      console.log('[call] ice state:', pc.iceConnectionState);
     };
 
     return stream;
@@ -351,13 +368,6 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
       // Callee signals they're ready; caller creates offer
       const pc = pcRef.current;
       if (!pc) return;
-      // Flip caller UI from "Ringing…" to connected as soon as we know
-      // the callee accepted (don't rely on postgres_changes which may
-      // not be enabled for this table).
-      if (!answeredAtRef.current) {
-        answeredAtRef.current = Date.now();
-        setActive(prev => prev ? { ...prev, status: 'active' } as CallRow : prev);
-      }
       // If we've already created/sent an offer, ignore duplicate readys
       if (pc.localDescription) return;
       try {
