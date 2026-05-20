@@ -602,7 +602,21 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
             await supabase.from('call_sessions').update({ status: 'declined', ended_at: new Date().toISOString() }).eq('id', row.id);
             return;
           }
-          const peer = await fetchPeer(row.caller_id);
+          let peer: PeerInfo;
+          const embeddedName = (row as any).caller_name as string | undefined;
+          if (embeddedName && embeddedName.trim()) {
+            const safeName = embeddedName.trim();
+            const initials = safeName
+              .split(' ')
+              .map(s => s[0])
+              .filter(Boolean)
+              .slice(0, 2)
+              .join('')
+              .toUpperCase() || 'U';
+            peer = { name: safeName, avatarInitials: initials };
+          } else {
+            peer = await fetchPeer(row.caller_id);
+          }
           setIncoming(row);
           setIncomingPeer(peer);
           ringtone.start();
