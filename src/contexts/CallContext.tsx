@@ -152,7 +152,11 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
 
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
-  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+  // Use a hidden <video> element as the audio sink. On iOS Safari and
+  // many Android browsers, audio attached to <audio> is routed to the
+  // earpiece; routing the same MediaStream through a <video> element
+  // forces playback through the loudspeaker.
+  const remoteAudioRef = useRef<HTMLVideoElement | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteStreamRef = useRef<MediaStream | null>(null);
@@ -691,6 +695,8 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     if (!stream) return;
     if (remoteAudioRef.current && remoteAudioRef.current.srcObject !== stream) {
       remoteAudioRef.current.srcObject = stream;
+      remoteAudioRef.current.volume = 1.0;
+      try { (remoteAudioRef.current as any).setSinkId?.('default'); } catch {}
       remoteAudioRef.current.play().catch(err => console.warn('[call] audio play blocked', err));
     }
     if (remoteVideoRef.current && remoteVideoRef.current.srcObject !== stream) {
@@ -756,8 +762,16 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
         >
           <div className="relative w-full aspect-video bg-neutral-900">
             {/* Hidden audio sink — always plays the remote stream so audio
-                works even when the video element is hidden (audio-only). */}
-            <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
+                works even when the video element is hidden (audio-only).
+                Using <video> instead of <audio> forces loudspeaker output
+                on iOS/Android instead of the earpiece. */}
+            <video
+              ref={remoteAudioRef}
+              autoPlay
+              playsInline
+              // muted attribute would silence it; we want it audible.
+              className="absolute w-0 h-0 opacity-0 pointer-events-none"
+            />
 
             {/* Remote video / audio-only fallback */}
             <video
@@ -832,6 +846,23 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
               aria-label="Hang up"
             >
               <PhoneOff className="h-5 w-5" />
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unavailable banner — shown when ringing times out */}
+      <Dialog open={!!unavailable} onOpenChange={(o) => { if (!o) setUnavailable(null); }}>
+        <DialogContent className="sm:max-w-md border-destructive">
+          <div className="flex flex-col items-center gap-4 py-6 text-center">
+            <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center">
+              <PhoneOff className="h-8 w-8 text-destructive" />
+            </div>
+            <p className="text-xl font-bold text-destructive">
+              {unavailable}
+            </p>
+            <Button onClick={() => setUnavailable(null)} className="mt-2">
+              OK
             </Button>
           </div>
         </DialogContent>
