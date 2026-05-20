@@ -326,6 +326,17 @@ export const useMessages = () => {
 
       console.log('✅ Message sent successfully:', newMessage.id);
 
+      // Award loyalty for chat activity (rate-limited & capped server-side)
+      try {
+        await supabase.rpc('award_activity_reward' as any, {
+          user_uuid: user.id,
+          activity_name: 'chat_message',
+          context: { description: 'sending a chat message' }
+        });
+      } catch (rewardErr) {
+        console.warn('Loyalty reward for chat_message failed (non-fatal):', rewardErr);
+      }
+
       // Check if this is the first unread message and send SMS notifications
       if (participants && participants.length > 0) {
         for (const participant of participants) {
