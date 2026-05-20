@@ -523,7 +523,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
         }
       } catch {}
       window.setTimeout(() => setUnavailable(null), 6000);
-    }, 10000);
+    }, 20000);
   }, [myId, active, incoming, toast, setupPeer, joinChannel, cleanup, sendSignal, logCallToChat]);
 
   // Incoming call detection
