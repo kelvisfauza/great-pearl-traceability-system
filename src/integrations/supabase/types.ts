@@ -10975,6 +10975,10 @@ export type Database = {
           name: string
         }[]
       }
+      get_employee_display_name: {
+        Args: { _auth_user_id: string }
+        Returns: string
+      }
       get_guarantor_candidates: {
         Args: never
         Returns: {
