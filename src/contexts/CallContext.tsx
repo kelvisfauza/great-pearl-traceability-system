@@ -166,6 +166,8 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
   const remoteSetRef = useRef(false);
   const readyRetryRef = useRef<number | null>(null);
   const callerSubscribedRef = useRef(false);
+  const activePeerRef = useRef<PeerInfo | null>(null);
+  useEffect(() => { activePeerRef.current = activePeer; }, [activePeer]);
 
   const ringtone = useRingtone();
   // Caller-side ringback tone (so the caller hears "ring ring" while waiting)
@@ -439,6 +441,24 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
       cleanup();
     });
 
+    ch.on('broadcast', { event: 'busy' }, () => {
+      // Callee is already on another call — show a loud unavailable banner
+      abandonedRef.current = true;
+      try { ringback.stop(); } catch {}
+      const peerName = activePeerRef.current?.name || 'They';
+      const message = `${peerName} is currently on another call.`;
+      try {
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(message);
+          window.speechSynthesis.speak(u);
+        }
+      } catch {}
+      setUnavailable(message);
+      window.setTimeout(() => setUnavailable(null), 6000);
+      cleanup();
+    });
+
     ch.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
         callerSubscribedRef.current = true;
@@ -537,7 +557,20 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
           const row = payload.new as CallRow;
           if (row.status !== 'ringing') return;
           if (active || incoming) {
-            // Auto-decline if already busy
+            // Auto-decline — but first tell the caller we're busy so they
+            // get a clear "on another call" message instead of a generic decline.
+            try {
+              const busyCh = supabase.channel(`call:${row.id}`, { config: { broadcast: { self: false } } });
+              await new Promise<void>((resolve) => {
+                let done = false;
+                busyCh.subscribe((status) => {
+                  if (status === 'SUBSCRIBED' && !done) { done = true; resolve(); }
+                });
+                setTimeout(() => { if (!done) { done = true; resolve(); } }, 1500);
+              });
+              await busyCh.send({ type: 'broadcast', event: 'busy', payload: { from: myId } });
+              setTimeout(() => { try { supabase.removeChannel(busyCh); } catch {} }, 800);
+            } catch {}
             await supabase.from('call_sessions').update({ status: 'declined', ended_at: new Date().toISOString() }).eq('id', row.id);
             return;
           }

@@ -319,6 +319,12 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           setScreenSharerId(prev => (prev === payload.from ? null : prev));
         }
       })
+      .on('broadcast', { event: 'busy' }, ({ payload }) => {
+        // An invitee told us they're already on another call
+        const name = nameByUserRef.current.get(payload.from) || payload.name || 'A participant';
+        toast({ title: `${name} is on another call`, description: 'They were not added to this call.' });
+        removeParticipant(payload.from);
+      })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           // Announce arrival
@@ -326,7 +332,7 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
       });
     channelRef.current = ch;
-  }, [cleanupPeer, handleAnswer, handleIce, handleOffer, handlePeerJoin, myId, sendSignal]);
+  }, [cleanupPeer, handleAnswer, handleIce, handleOffer, handlePeerJoin, myId, removeParticipant, sendSignal, toast]);
 
   const acquireLocalStream = useCallback(async (type: GroupCallType) => {
     const constraints: MediaStreamConstraints = type === 'video'
@@ -647,6 +653,25 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           } catch {}
           // If user is already busy → file it under missed so they can rejoin later
           if (activeRef.current || incoming) {
+            // Tell the host we're busy so their UI can show "X is on another call"
+            try {
+              const busyCh = supabase.channel(`group-call:${call.id}`, { config: { broadcast: { self: false } } });
+              const myName = user?.user_metadata?.name || user?.email || 'A participant';
+              await new Promise<void>((resolve) => {
+                let done = false;
+                busyCh.subscribe((status) => {
+                  if (status === 'SUBSCRIBED' && !done) { done = true; resolve(); }
+                });
+                setTimeout(() => { if (!done) { done = true; resolve(); } }, 1500);
+              });
+              await busyCh.send({ type: 'broadcast', event: 'busy', payload: { from: myId, name: myName } });
+              setTimeout(() => { try { supabase.removeChannel(busyCh); } catch {} }, 800);
+            } catch {}
+            try {
+              await (supabase as any).from('group_call_participants')
+                .update({ status: 'missed' })
+                .eq('call_id', call.id).eq('user_id', myId);
+            } catch {}
             setMissedGroupCalls(prev => prev.some(m => m.callId === call.id) ? prev : [
               ...prev,
               { callId: call.id, hostId: call.host_id, hostName, type: call.call_type, title: call.title, at: Date.now() },
