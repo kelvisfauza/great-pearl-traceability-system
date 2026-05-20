@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff, Users,
   Hand, MessageSquare, MonitorUp, MonitorOff, UserPlus, X, Send,
-  Maximize2, Minimize2,
+  Maximize2, Minimize2, Crown, Volume2,
 } from 'lucide-react';
 import { useGroupCall, GroupParticipant } from '@/contexts/GroupCallContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -30,16 +30,62 @@ const RemoteAudioSink = ({ stream }: { stream: MediaStream | null }) => {
   return <audio ref={ref} autoPlay playsInline className="hidden" />;
 };
 
-const Tile = ({ stream, name, muted, isLocal, isVideo, handRaised, sharing, micMuted }: { stream: MediaStream | null; name: string; muted?: boolean; isLocal?: boolean; isVideo: boolean; handRaised?: boolean; sharing?: boolean; micMuted?: boolean; }) => {
+// Detect whether a stream's audio level is above a speaking threshold.
+const useIsSpeaking = (stream: MediaStream | null, enabled: boolean) => {
+  const [speaking, setSpeaking] = useState(false);
+  useEffect(() => {
+    if (!stream || !enabled) { setSpeaking(false); return; }
+    const audioTrack = stream.getAudioTracks()[0];
+    if (!audioTrack) { setSpeaking(false); return; }
+    let ctx: AudioContext | null = null;
+    let raf = 0;
+    let lastAbove = 0;
+    try {
+      const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
+      ctx = new Ctx();
+      const src = ctx!.createMediaStreamSource(new MediaStream([audioTrack]));
+      const analyser = ctx!.createAnalyser();
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.6;
+      src.connect(analyser);
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      const tick = () => {
+        analyser.getByteTimeDomainData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) {
+          const v = (data[i] - 128) / 128;
+          sum += v * v;
+        }
+        const rms = Math.sqrt(sum / data.length);
+        const now = performance.now();
+        if (rms > 0.04) lastAbove = now;
+        setSpeaking(now - lastAbove < 400);
+        raf = requestAnimationFrame(tick);
+      };
+      tick();
+    } catch {}
+    return () => {
+      cancelAnimationFrame(raf);
+      try { ctx?.close(); } catch {}
+    };
+  }, [stream, enabled]);
+  return speaking;
+};
+
+const Tile = ({ stream, name, muted, isLocal, isVideo, handRaised, sharing, micMuted, isHost }: { stream: MediaStream | null; name: string; muted?: boolean; isLocal?: boolean; isVideo: boolean; handRaised?: boolean; sharing?: boolean; micMuted?: boolean; isHost?: boolean; }) => {
   const ref = useRef<HTMLVideoElement | null>(null);
   useEffect(() => {
     if (ref.current && stream && ref.current.srcObject !== stream) {
       ref.current.srcObject = stream;
     }
   }, [stream]);
+  const speaking = useIsSpeaking(stream, !micMuted);
   const initials = name.split(' ').map(s => s[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || 'U';
   return (
-    <div className="relative bg-black/80 rounded-lg overflow-hidden aspect-video flex items-center justify-center">
+    <div className={cn(
+      'relative bg-black/80 rounded-lg overflow-hidden aspect-video flex items-center justify-center transition-shadow',
+      speaking && 'ring-4 ring-emerald-400 shadow-[0_0_24px_rgba(16,185,129,0.55)]'
+    )}>
       {stream && isVideo ? (
         <video
           ref={ref}
@@ -50,7 +96,10 @@ const Tile = ({ stream, name, muted, isLocal, isVideo, handRaised, sharing, micM
         />
       ) : (
         <div className="flex flex-col items-center gap-2 text-primary-foreground">
-          <div className="h-16 w-16 rounded-full bg-primary/40 flex items-center justify-center text-2xl font-semibold">
+          <div className={cn(
+            'h-16 w-16 rounded-full bg-primary/40 flex items-center justify-center text-2xl font-semibold transition-shadow',
+            speaking && 'ring-4 ring-emerald-400 shadow-[0_0_24px_rgba(16,185,129,0.55)]'
+          )}>
             {initials}
           </div>
           {!stream && <span className="text-xs opacity-80">Connecting…</span>}
@@ -59,17 +108,26 @@ const Tile = ({ stream, name, muted, isLocal, isVideo, handRaised, sharing, micM
       <div className="absolute bottom-2 left-2 text-xs text-white bg-black/60 px-2 py-0.5 rounded">
         <span className="inline-flex items-center gap-1">
           {micMuted && <MicOff className="h-3 w-3 text-red-400" />}
+          {speaking && !micMuted && <Volume2 className="h-3 w-3 text-emerald-300 animate-pulse" />}
           {name}{isLocal ? ' (you)' : ''}
         </span>
       </div>
+      {isHost && (
+        <div className="absolute top-2 right-2 text-[10px] font-semibold uppercase tracking-wide text-amber-950 bg-amber-300/95 px-2 py-0.5 rounded-full flex items-center gap-1 shadow">
+          <Crown className="h-3 w-3" /> Host
+        </div>
+      )}
       {handRaised && (
         <div className="absolute top-2 left-2 text-xs text-white bg-amber-500/90 px-2 py-0.5 rounded-full flex items-center gap-1">
           <Hand className="h-3 w-3" /> Raised
         </div>
       )}
       {sharing && (
-        <div className="absolute top-2 right-2 text-xs text-white bg-emerald-600/90 px-2 py-0.5 rounded-full flex items-center gap-1">
-          <MonitorUp className="h-3 w-3" /> Sharing
+        <div className={cn(
+          'absolute text-xs text-white bg-emerald-600/95 px-2 py-0.5 rounded-full flex items-center gap-1 shadow',
+          isHost ? 'top-9 right-2' : 'top-2 right-2'
+        )}>
+          <MonitorUp className="h-3 w-3" /> Presenting
         </div>
       )}
       {/* Audio for remote peers is played by RemoteAudioSink mounted at the
@@ -176,6 +234,7 @@ const GroupCallDialog = () => {
                     handRaised={handsRaised.has(spotlightTile.userId)}
                     sharing
                     micMuted={spotlightTile.isLocal ? muted : mutedPeers.has(spotlightTile.userId)}
+                    isHost={spotlightTile.userId === active.hostId}
                   />
                 </div>
               </div>
@@ -190,6 +249,7 @@ const GroupCallDialog = () => {
                     handRaised={myHandRaised}
                     sharing={isScreenSharing}
                     micMuted={muted}
+                    isHost={isHost}
                   />
                   {others.map(p => (
                     <Tile
@@ -200,6 +260,7 @@ const GroupCallDialog = () => {
                       handRaised={handsRaised.has(p.userId)}
                       sharing={screenSharerId === p.userId}
                       micMuted={mutedPeers.has(p.userId)}
+                      isHost={p.userId === active.hostId}
                     />
                   ))}
                 </div>
@@ -218,6 +279,7 @@ const GroupCallDialog = () => {
                       isVideo={isVideo}
                       handRaised={handsRaised.has(t.userId)}
                       micMuted={t.isLocal ? muted : mutedPeers.has(t.userId)}
+                      isHost={t.userId === active.hostId}
                     />
                   </div>
                 ))}
