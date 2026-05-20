@@ -569,7 +569,29 @@ export const useMessages = () => {
 
       if (participantsError) throw participantsError;
 
-      await fetchConversations();
+      // Optimistically add the new conversation locally so the UI can open it immediately,
+      // instead of waiting for the full conversations refetch.
+      try {
+        const [{ data: meEmp }, { data: otherEmp }] = await Promise.all([
+          supabase.from('employees').select('name,email,avatar_url').eq('auth_user_id', user.id).maybeSingle(),
+          supabase.from('employees').select('name,email,avatar_url').eq('auth_user_id', participantId).maybeSingle(),
+        ]);
+        const optimistic: Conversation = {
+          id: conversation.id,
+          type: (conversation as any).type || type,
+          created_at: (conversation as any).created_at || new Date().toISOString(),
+          participants: [
+            { user_id: user.id, employee_name: meEmp?.name || '', employee_email: meEmp?.email || '', avatar_url: meEmp?.avatar_url || undefined },
+            { user_id: participantId, employee_name: otherEmp?.name || '', employee_email: otherEmp?.email || '', avatar_url: otherEmp?.avatar_url || undefined },
+          ],
+          unread_count: 0,
+        };
+        setConversations(prev => (prev.some(c => c.id === optimistic.id) ? prev : [optimistic, ...prev]));
+      } catch (e) {
+        console.warn('Optimistic conversation insert failed', e);
+      }
+      // Refresh in the background; don't block the UI.
+      fetchConversations();
       return { id: conversation.id };
     } catch (error) {
       console.error('Error creating conversation:', error);

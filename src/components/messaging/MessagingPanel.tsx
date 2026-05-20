@@ -232,6 +232,17 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
 
   const handleSelectUser = async (userId: string) => {
     try {
+      // Optimistically open existing conversation if it's already in the local list
+      const existing = conversations.find((c: any) =>
+        c.type !== 'group' &&
+        c.participants?.some((p: any) => p.user_id === userId) &&
+        c.participants?.some((p: any) => p.user_id === employee?.authUserId)
+      );
+      if (existing) {
+        setSelectedConversation(existing.id);
+        return;
+      }
+
       const result = await createConversation({
         participantId: userId
       });
