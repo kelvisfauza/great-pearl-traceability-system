@@ -43,6 +43,15 @@ export interface IncomingGroupCall {
   title: string | null;
 }
 
+export interface MissedGroupCall {
+  callId: string;
+  hostId: string;
+  hostName: string;
+  type: GroupCallType;
+  title: string | null;
+  at: number;
+}
+
 export interface GroupChatMessage {
   id: string;
   fromId: string;
@@ -76,6 +85,9 @@ interface GroupCallContextValue {
   sendChat: (text: string) => void;
   toggleScreenShare: () => Promise<void>;
   addParticipants: (invitees: { userId: string; name: string }[]) => Promise<void>;
+  missedGroupCalls: MissedGroupCall[];
+  rejoinGroupCall: (callId: string) => Promise<void>;
+  dismissMissed: (callId: string) => void;
 }
 
 const GroupCallContext = createContext<GroupCallContextValue | null>(null);
@@ -108,6 +120,7 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [unreadChat, setUnreadChat] = useState(0);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [screenSharerId, setScreenSharerId] = useState<string | null>(null);
+  const [missedGroupCalls, setMissedGroupCalls] = useState<MissedGroupCall[]>([]);
 
   const peersRef = useRef<Map<string, PeerEntry>>(new Map());
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -416,6 +429,54 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     await (supabase as any).from('group_call_participants').update({ status: 'declined' }).eq('call_id', callId).eq('user_id', myId);
   }, [incoming, myId]);
 
+  const dismissMissed = useCallback((callId: string) => {
+    setMissedGroupCalls(prev => prev.filter(m => m.callId !== callId));
+  }, []);
+
+  const joinExistingCall = useCallback(async (callId: string, hostId: string, type: GroupCallType, title: string | null, hostName: string) => {
+    if (!myId) return;
+    try {
+      await acquireLocalStream(type);
+    } catch (e: any) {
+      toast({ title: 'Camera/mic blocked', description: e?.message, variant: 'destructive' });
+      return;
+    }
+    nameByUserRef.current.set(myId, user?.user_metadata?.name || user?.email || 'You');
+    nameByUserRef.current.set(hostId, hostName);
+    setActive({ id: callId, hostId, type, title, conversationId: null });
+    activeRef.current = { id: callId, hostId, type, title, conversationId: null };
+    await (supabase as any).from('group_call_participants').upsert(
+      { call_id: callId, user_id: myId, status: 'joined', joined_at: new Date().toISOString() },
+      { onConflict: 'call_id,user_id' }
+    );
+    joinChannel(callId);
+  }, [acquireLocalStream, joinChannel, myId, toast, user]);
+
+  const rejoinGroupCall = useCallback(async (callId: string) => {
+    if (!myId) return;
+    if (active || incoming) {
+      toast({ title: 'Already in a call', variant: 'destructive' });
+      return;
+    }
+    const { data: call } = await (supabase as any)
+      .from('group_calls')
+      .select('id, host_id, call_type, status, title')
+      .eq('id', callId)
+      .maybeSingle();
+    if (!call || call.status === 'ended') {
+      toast({ title: 'Call already ended' });
+      dismissMissed(callId);
+      return;
+    }
+    let hostName = 'Host';
+    try {
+      const { data: emp } = await (supabase as any).from('employees').select('name').eq('auth_user_id', call.host_id).maybeSingle();
+      if (emp?.name) hostName = emp.name;
+    } catch {}
+    dismissMissed(callId);
+    await joinExistingCall(call.id, call.host_id, call.call_type, call.title, hostName);
+  }, [active, dismissMissed, incoming, joinExistingCall, myId, toast]);
+
   const leaveCall = useCallback(async () => {
     const cur = activeRef.current;
     if (!cur || !myId) return;
@@ -568,7 +629,6 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         async (payload) => {
           const row: any = payload.new;
           if (row.status !== 'ringing') return;
-          if (activeRef.current || incoming) return;
           const { data: call } = await (supabase as any)
             .from('group_calls')
             .select('id, host_id, call_type, status, title')
@@ -585,6 +645,14 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               .maybeSingle();
             if (emp?.name) hostName = emp.name;
           } catch {}
+          // If user is already busy → file it under missed so they can rejoin later
+          if (activeRef.current || incoming) {
+            setMissedGroupCalls(prev => prev.some(m => m.callId === call.id) ? prev : [
+              ...prev,
+              { callId: call.id, hostId: call.host_id, hostName, type: call.call_type, title: call.title, at: Date.now() },
+            ]);
+            return;
+          }
           setIncoming({
             callId: call.id,
             hostId: call.host_id,
@@ -597,6 +665,52 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [incoming, myId]);
+
+  // Seed missed calls on mount + when login changes: find ongoing calls where I never joined
+  useEffect(() => {
+    if (!myId) return;
+    let cancelled = false;
+    (async () => {
+      const { data: rows } = await (supabase as any)
+        .from('group_call_participants')
+        .select('call_id, status, group_calls!inner(id, host_id, call_type, status, title, started_at)')
+        .eq('user_id', myId)
+        .in('status', ['ringing', 'missed', 'declined'])
+        .in('group_calls.status', ['ringing', 'active']);
+      if (cancelled || !rows) return;
+      const hostIds = Array.from(new Set(rows.map((r: any) => r.group_calls?.host_id).filter(Boolean)));
+      const nameMap = new Map<string, string>();
+      if (hostIds.length) {
+        const { data: emps } = await (supabase as any).from('employees').select('auth_user_id, name').in('auth_user_id', hostIds);
+        (emps || []).forEach((e: any) => { if (e.auth_user_id) nameMap.set(e.auth_user_id, e.name); });
+      }
+      const missed: MissedGroupCall[] = rows.map((r: any) => ({
+        callId: r.group_calls.id,
+        hostId: r.group_calls.host_id,
+        hostName: nameMap.get(r.group_calls.host_id) || 'Host',
+        type: r.group_calls.call_type,
+        title: r.group_calls.title,
+        at: r.group_calls.started_at ? new Date(r.group_calls.started_at).getTime() : Date.now(),
+      }));
+      setMissedGroupCalls(missed);
+    })();
+    return () => { cancelled = true; };
+  }, [myId]);
+
+  // Drop missed entries when their call ends
+  useEffect(() => {
+    if (missedGroupCalls.length === 0) return;
+    const ch = supabase
+      .channel(`missed-group-calls:${myId}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'group_calls' }, (payload) => {
+        const row: any = payload.new;
+        if (row?.status === 'ended') {
+          setMissedGroupCalls(prev => prev.filter(m => m.callId !== row.id));
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [missedGroupCalls.length, myId]);
 
   // Watch active call row to detect end-for-all
   useEffect(() => {
@@ -625,6 +739,7 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       isScreenSharing, screenSharerId,
       startGroupCall, acceptIncoming, declineIncoming, leaveCall, endForAll, toggleMute, toggleCamera,
       toggleHand, sendChat, toggleScreenShare, addParticipants,
+      missedGroupCalls, rejoinGroupCall, dismissMissed,
     }}>
       {children}
     </GroupCallContext.Provider>
