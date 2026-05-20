@@ -3,12 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, X, MessageSquarePlus, ArrowLeft, Paperclip, Check, CheckCheck, Reply, Phone, Video, Mic, Lock, Trash2, ChevronUp } from 'lucide-react';
+import { Send, X, MessageSquarePlus, ArrowLeft, Paperclip, Check, CheckCheck, Reply, Phone, Video, Mic, Lock, Trash2, ChevronUp, Users } from 'lucide-react';
 import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePresenceList } from '@/hooks/usePresenceList';
 import { useCall } from '@/contexts/CallContext';
 import UserSelectorDialog from './UserSelectorDialog';
+import NewGroupCallDialog from '@/components/calls/NewGroupCallDialog';
 import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns';
 
 interface MessagingPanelProps {
@@ -35,6 +36,7 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [showUserSelector, setShowUserSelector] = useState(false);
+  const [showGroupCall, setShowGroupCall] = useState<null | { preset: { userId: string; name: string }[]; title?: string; conversationId?: string | null }>(null);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const { employee } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
