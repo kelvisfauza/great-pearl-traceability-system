@@ -26,7 +26,7 @@ interface Message {
   sender_name?: string;
   conversation_id: string;
   created_at: string;
-  type: 'text' | 'image' | 'file';
+  type: 'text' | 'image' | 'file' | 'call_recording';
   metadata?: any;
   read_at?: string;
   reply_to_id?: string;
@@ -562,7 +562,9 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                                 </div>
                               )}
                               
-                              {message.type === 'image' ? (
+                              {message.type === 'call_recording' ? (
+                                <CallRecordingBubble message={message} isOwnMessage={isOwnMessage} />
+                              ) : message.type === 'image' ? (
                                 <div>
                                   <img 
                                     src={message.content} 
