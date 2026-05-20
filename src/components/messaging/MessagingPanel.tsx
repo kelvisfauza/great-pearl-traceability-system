@@ -3,12 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, X, MessageSquarePlus, ArrowLeft, Paperclip, Check, CheckCheck, Reply, Phone, Video, Mic, Lock, Trash2, ChevronUp, Users } from 'lucide-react';
+import { Send, X, MessageSquarePlus, ArrowLeft, Paperclip, Check, CheckCheck, Reply, Phone, Video, Mic, Lock, Trash2, ChevronUp, Users, UsersRound } from 'lucide-react';
 import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePresenceList } from '@/hooks/usePresenceList';
 import { useCall } from '@/contexts/CallContext';
 import UserSelectorDialog from './UserSelectorDialog';
+import NewGroupChatDialog from './NewGroupChatDialog';
 import NewGroupCallDialog from '@/components/calls/NewGroupCallDialog';
 import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns';
 
@@ -36,6 +37,7 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [showUserSelector, setShowUserSelector] = useState(false);
+  const [showNewGroup, setShowNewGroup] = useState(false);
   const [showGroupCall, setShowGroupCall] = useState<null | { preset: { userId: string; name: string }[]; title?: string; conversationId?: string | null }>(null);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const { employee } = useAuth();
@@ -184,7 +186,8 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
     sendMessage,
     sendFile,
     fetchMessages,
-    createConversation
+    createConversation,
+    createGroupConversation,
   } = messagesData;
 
   useEffect(() => {
@@ -458,6 +461,16 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                     onClick={() => setShowGroupCall({ preset: [] })}
                   >
                     <Users className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 hover:bg-primary-foreground/10"
+                    aria-label="New group chat"
+                    title="New group chat"
+                    onClick={() => setShowNewGroup(true)}
+                  >
+                    <UsersRound className="h-5 w-5" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -884,6 +897,16 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
         open={showUserSelector}
         onClose={() => setShowUserSelector(false)}
         onSelectUser={handleSelectUser}
+      />
+
+      <NewGroupChatDialog
+        open={showNewGroup}
+        onClose={() => setShowNewGroup(false)}
+        onCreate={async ({ name, participantIds }) => {
+          const result = await createGroupConversation({ name, participantIds });
+          if (result?.id) setSelectedConversation(result.id);
+          return result;
+        }}
       />
 
       <NewGroupCallDialog
