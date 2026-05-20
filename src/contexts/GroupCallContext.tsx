@@ -729,8 +729,8 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
     let hostName = 'Host';
     try {
-      const { data: emp } = await (supabase as any).from('employees').select('name').eq('auth_user_id', call.host_id).maybeSingle();
-      if (emp?.name) hostName = emp.name;
+      const { data: nm } = await supabase.rpc('get_employee_display_name' as any, { _auth_user_id: call.host_id });
+      if (typeof nm === 'string' && nm.trim()) hostName = nm;
     } catch {}
     dismissMissed(callId);
     await joinExistingCall(call.id, call.host_id, call.call_type, call.title, hostName);
@@ -1005,15 +1005,11 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             .eq('id', row.call_id)
             .maybeSingle();
           if (!call || (call.status !== 'ringing' && call.status !== 'active')) return;
-          // Look up host name
+          // Look up host name via SECURITY DEFINER RPC (RLS-safe for all staff)
           let hostName = 'Someone';
           try {
-            const { data: emp } = await (supabase as any)
-              .from('employees')
-              .select('name')
-              .eq('auth_user_id', call.host_id)
-              .maybeSingle();
-            if (emp?.name) hostName = emp.name;
+            const { data: nm } = await supabase.rpc('get_employee_display_name' as any, { _auth_user_id: call.host_id });
+            if (typeof nm === 'string' && nm.trim()) hostName = nm;
           } catch {}
           // If user is already busy → file it under missed so they can rejoin later
           if (activeRef.current || incoming) {
@@ -1067,12 +1063,14 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         .in('status', ['ringing', 'missed', 'declined'])
         .in('group_calls.status', ['ringing', 'active']);
       if (cancelled || !rows) return;
-      const hostIds = Array.from(new Set(rows.map((r: any) => r.group_calls?.host_id).filter(Boolean)));
+      const hostIds = Array.from(new Set(rows.map((r: any) => r.group_calls?.host_id).filter(Boolean))) as string[];
       const nameMap = new Map<string, string>();
-      if (hostIds.length) {
-        const { data: emps } = await (supabase as any).from('employees').select('auth_user_id, name').in('auth_user_id', hostIds);
-        (emps || []).forEach((e: any) => { if (e.auth_user_id) nameMap.set(e.auth_user_id, e.name); });
-      }
+      await Promise.all(hostIds.map(async (hid) => {
+        try {
+          const { data: nm } = await supabase.rpc('get_employee_display_name' as any, { _auth_user_id: hid });
+          if (typeof nm === 'string' && nm.trim()) nameMap.set(hid, nm);
+        } catch {}
+      }));
       const missed: MissedGroupCall[] = rows.map((r: any) => ({
         callId: r.group_calls.id,
         hostId: r.group_calls.host_id,
