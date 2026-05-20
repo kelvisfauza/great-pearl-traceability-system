@@ -406,6 +406,14 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                     className="h-8 w-8 hover:bg-primary-foreground/10"
                     aria-label="Voice call"
                     onClick={() => {
+                      const isGroup = (currentConversation as any)?.type === 'group';
+                      if (isGroup) {
+                        const preset = (currentConversation?.participants || [])
+                          .filter((p: any) => p.user_id !== employee?.authUserId && p.user_id)
+                          .map((p: any) => ({ userId: p.user_id, name: p.employee_name || 'User' }));
+                        setShowGroupCall({ preset, title: getConversationName(currentConversation), conversationId: currentConversation?.id });
+                        return;
+                      }
                       const other = currentConversation?.participants?.find(
                         (p: any) => p.user_id !== employee?.authUserId
                       );
@@ -420,6 +428,14 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                     className="h-8 w-8 hover:bg-primary-foreground/10"
                     aria-label="Video call"
                     onClick={() => {
+                      const isGroup = (currentConversation as any)?.type === 'group';
+                      if (isGroup) {
+                        const preset = (currentConversation?.participants || [])
+                          .filter((p: any) => p.user_id !== employee?.authUserId && p.user_id)
+                          .map((p: any) => ({ userId: p.user_id, name: p.employee_name || 'User' }));
+                        setShowGroupCall({ preset, title: getConversationName(currentConversation), conversationId: currentConversation?.id });
+                        return;
+                      }
                       const other = currentConversation?.participants?.find(
                         (p: any) => p.user_id !== employee?.authUserId
                       );
@@ -433,14 +449,25 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
             ) : (
               <>
                 <h3 className="text-lg font-semibold">Messages</h3>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="ml-auto h-8 w-8 hover:bg-primary-foreground/10"
-                  onClick={() => setShowUserSelector(true)}
-                >
-                  <MessageSquarePlus className="h-5 w-5" />
-                </Button>
+                <div className="ml-auto flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 hover:bg-primary-foreground/10"
+                    aria-label="New group call"
+                    onClick={() => setShowGroupCall({ preset: [] })}
+                  >
+                    <Users className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 hover:bg-primary-foreground/10"
+                    onClick={() => setShowUserSelector(true)}
+                  >
+                    <MessageSquarePlus className="h-5 w-5" />
+                  </Button>
+                </div>
               </>
             )}
           </div>
