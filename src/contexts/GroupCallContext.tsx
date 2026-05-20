@@ -69,6 +69,7 @@ interface GroupCallContextValue {
   localStream: MediaStream | null;
   handsRaised: Set<string>;
   myHandRaised: boolean;
+  mutedPeers: Set<string>;
   chatMessages: GroupChatMessage[];
   unreadChat: number;
   markChatRead: () => void;
