@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff, Users,
   Hand, MessageSquare, MonitorUp, MonitorOff, UserPlus, X, Send,
-  Maximize2, Minimize2, Crown, Volume2,
+  Maximize2, Minimize2, Crown, Volume2, UserX,
 } from 'lucide-react';
 import { useGroupCall, GroupParticipant } from '@/contexts/GroupCallContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -72,7 +72,7 @@ const useIsSpeaking = (stream: MediaStream | null, enabled: boolean) => {
   return speaking;
 };
 
-const Tile = ({ stream, name, muted, isLocal, isVideo, handRaised, sharing, micMuted, isHost }: { stream: MediaStream | null; name: string; muted?: boolean; isLocal?: boolean; isVideo: boolean; handRaised?: boolean; sharing?: boolean; micMuted?: boolean; isHost?: boolean; }) => {
+const Tile = ({ stream, name, muted, isLocal, isVideo, handRaised, sharing, micMuted, isHost, onForceMute, onKick }: { stream: MediaStream | null; name: string; muted?: boolean; isLocal?: boolean; isVideo: boolean; handRaised?: boolean; sharing?: boolean; micMuted?: boolean; isHost?: boolean; onForceMute?: () => void; onKick?: () => void; }) => {
   const ref = useRef<HTMLVideoElement | null>(null);
   useEffect(() => {
     if (ref.current && stream && ref.current.srcObject !== stream) {
@@ -120,6 +120,31 @@ const Tile = ({ stream, name, muted, isLocal, isVideo, handRaised, sharing, micM
       {handRaised && (
         <div className="absolute top-2 left-2 text-xs text-white bg-amber-500/90 px-2 py-0.5 rounded-full flex items-center gap-1">
           <Hand className="h-3 w-3" /> Raised
+        </div>
+      )}
+      {(onForceMute || onKick) && (
+        <div className="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover/tile:opacity-100 transition-opacity">
+          {onForceMute && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onForceMute(); }}
+              className="bg-black/70 hover:bg-black/90 text-white rounded-md p-1.5"
+              title={micMuted ? 'Already muted' : 'Mute this participant'}
+              disabled={micMuted}
+            >
+              <MicOff className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {onKick && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onKick(); }}
+              className="bg-red-600/90 hover:bg-red-700 text-white rounded-md p-1.5"
+              title="Remove from call"
+            >
+              <UserX className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       )}
       {sharing && (
