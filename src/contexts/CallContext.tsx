@@ -133,7 +133,7 @@ function useRingtone() {
 }
 
 export const CallProvider = ({ children }: { children: React.ReactNode }) => {
-  const { user } = useAuth();
+  const { user, employee } = useAuth();
   const { toast } = useToast();
   const myId = user?.id || null;
 
