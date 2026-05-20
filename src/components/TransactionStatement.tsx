@@ -38,6 +38,8 @@ const ENTRY_CONFIG: Record<string, { label: string; icon: React.ElementType; col
   LOAN_RECOVERY: { label: 'Loan Recovery (Wallet)', icon: ArrowUpRight, color: 'text-red-600', badgeClass: 'bg-red-100 text-red-800' },
   MONTHLY_SALARY: { label: 'Monthly Salary', icon: Briefcase, color: 'text-green-700', badgeClass: 'bg-green-100 text-green-800' },
   ADVANCE_RECOVERY: { label: 'Salary Advance Recovery', icon: ArrowUpRight, color: 'text-orange-700', badgeClass: 'bg-orange-100 text-orange-800' },
+  HOST_MEETING_BONUS: { label: 'Meeting Host Bonus', icon: Gift, color: 'text-emerald-700', badgeClass: 'bg-emerald-100 text-emerald-800' },
+  MEETING_ATTENDANCE_BONUS: { label: 'Meeting Attendance Bonus', icon: Gift, color: 'text-emerald-600', badgeClass: 'bg-emerald-100 text-emerald-800' },
 };
 
 const DEFAULT_CONFIG = { label: 'Transaction', icon: FileText, color: 'text-gray-600', badgeClass: 'bg-gray-100 text-gray-800' };
@@ -64,7 +66,7 @@ interface TransactionStatementProps {
 }
 
 const DISPLAY_LIMIT = 10;
-const WALLET_TYPES = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY'];
+const WALLET_TYPES = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY', 'HOST_MEETING_BONUS', 'MEETING_ATTENDANCE_BONUS'];
 
 export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open, onOpenChange, currentBalance, spendableBalance, balanceBroughtForward = 0, thisMonthEarnings = 0 }) => {
   const { user, employee } = useAuth();
