@@ -14,6 +14,22 @@ import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import AddParticipantsDialog from './AddParticipantsDialog';
 
+// Persistent audio sink that survives tile re-layouts (e.g. when someone
+// starts screen-sharing and remote tiles move from grid -> spotlight strip).
+// Without this, freshly-mounted <video> elements lose the user-gesture chain
+// and the browser blocks audio autoplay, so the presenter cannot hear others.
+const RemoteAudioSink = ({ stream }: { stream: MediaStream | null }) => {
+  const ref = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    if (ref.current && stream && ref.current.srcObject !== stream) {
+      ref.current.srcObject = stream;
+      const p = ref.current.play();
+      if (p && typeof (p as any).catch === 'function') (p as any).catch(() => {});
+    }
+  }, [stream]);
+  return <audio ref={ref} autoPlay playsInline className="hidden" />;
+};
+
 const Tile = ({ stream, name, muted, isLocal, isVideo, handRaised, sharing, micMuted }: { stream: MediaStream | null; name: string; muted?: boolean; isLocal?: boolean; isVideo: boolean; handRaised?: boolean; sharing?: boolean; micMuted?: boolean; }) => {
   const ref = useRef<HTMLVideoElement | null>(null);
   useEffect(() => {
