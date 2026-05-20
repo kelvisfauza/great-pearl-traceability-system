@@ -228,6 +228,10 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Track when the active call was answered so we can report duration
   const answeredAtRef = useRef<number | null>(null);
+  // Set to true when the caller has abandoned (timed out). Used to
+  // ignore any late "answer/track" signals that might otherwise flip
+  // the call back to active after we've already declared it unavailable.
+  const abandonedRef = useRef(false);
 
   // Request OS-level notification permission once (so we can pop up
   // an incoming-call notification even when the tab is in the background).
@@ -264,6 +268,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     setCameraOff(false);
     setRemoteHasVideo(false);
     answeredAtRef.current = null;
+    abandonedRef.current = false;
     remoteStreamRef.current = null;
     setRemoteStreamVersion(v => v + 1);
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
@@ -316,6 +321,8 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
 
     pc.ontrack = (ev) => {
       const [remote] = ev.streams;
+      // Caller already gave up — ignore any late media arrival.
+      if (abandonedRef.current) return;
       // Remote media is flowing — stop the caller-side ringback.
       try { ringback.stop(); } catch {}
       // Save the remote stream; an effect attaches it to the audio/
@@ -481,36 +488,41 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Ringback / timeout
     setTimeout(async () => {
-      const cur = pcRef.current;
-      if (!cur) return;
-      const { data: latest } = await supabase
-        .from('call_sessions')
-        .select('status')
-        .eq('id', row.id)
-        .maybeSingle();
-      if (latest?.status === 'ringing') {
+      // If we never got remote media, treat this as unanswered — no
+      // matter what the DB row currently says. This prevents the call
+      // from "ringing forever" or auto-picking up at the last second.
+      if (answeredAtRef.current) return;
+      if (!pcRef.current) return;
+
+      // Mark abandoned FIRST so any in-flight ontrack/ready signals
+      // arriving in the next few ms are ignored.
+      abandonedRef.current = true;
+      // Stop the ringback immediately so the caller doesn't keep
+      // hearing "ring ring" while the unavailable banner shows.
+      try { ringback.stop(); } catch {}
+
+      try {
         await supabase
           .from('call_sessions')
           .update({ status: 'missed', ended_at: new Date().toISOString() })
           .eq('id', row.id);
-        sendSignal('hangup', {});
-        logCallToChat(calleeAuthId, type, 'missed');
-        cleanup();
-        // Loud, prominent unavailable banner + spoken announcement
-        const message = `${calleeName} is currently unavailable, please try again later.`;
-        setUnavailable(message);
-        try {
-          if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            const u = new SpeechSynthesisUtterance(message);
-            u.volume = 1;
-            u.rate = 1;
-            u.pitch = 1;
-            window.speechSynthesis.speak(u);
-          }
-        } catch {}
-        window.setTimeout(() => setUnavailable(null), 6000);
-      }
+      } catch {}
+      try { sendSignal('hangup', {}); } catch {}
+      logCallToChat(calleeAuthId, type, 'missed');
+      cleanup();
+
+      // Loud, prominent unavailable banner + spoken announcement
+      const message = `${calleeName} is currently unavailable, please try again later.`;
+      setUnavailable(message);
+      try {
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(message);
+          u.volume = 1; u.rate = 1; u.pitch = 1;
+          window.speechSynthesis.speak(u);
+        }
+      } catch {}
+      window.setTimeout(() => setUnavailable(null), 6000);
     }, 10000);
   }, [myId, active, incoming, toast, setupPeer, joinChannel, cleanup, sendSignal, logCallToChat]);
 
@@ -567,7 +579,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
         { event: 'UPDATE', schema: 'public', table: 'call_sessions', filter: `id=eq.${active.id}` },
         (payload) => {
           const row = payload.new as CallRow;
-          if (row.status === 'active' && !answeredAtRef.current) {
+          if (row.status === 'active' && !answeredAtRef.current && !abandonedRef.current) {
             answeredAtRef.current = Date.now();
             // Reflect the answered state locally so the caller's UI
             // stops showing "Ringing…" and switches to "Connected".
