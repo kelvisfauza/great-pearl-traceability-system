@@ -228,6 +228,10 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Track when the active call was answered so we can report duration
   const answeredAtRef = useRef<number | null>(null);
+  // Set to true when the caller has abandoned (timed out). Used to
+  // ignore any late "answer/track" signals that might otherwise flip
+  // the call back to active after we've already declared it unavailable.
+  const abandonedRef = useRef(false);
 
   // Request OS-level notification permission once (so we can pop up
   // an incoming-call notification even when the tab is in the background).
@@ -264,6 +268,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     setCameraOff(false);
     setRemoteHasVideo(false);
     answeredAtRef.current = null;
+    abandonedRef.current = false;
     remoteStreamRef.current = null;
     setRemoteStreamVersion(v => v + 1);
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
