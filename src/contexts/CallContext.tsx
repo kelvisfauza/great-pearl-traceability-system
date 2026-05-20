@@ -476,6 +476,9 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     }
     joinChannel(row.id);
 
+    // Start caller-side ringback so the caller hears "ring ring" while waiting.
+    try { ringback.start(); } catch {}
+
     // Ringback / timeout
     setTimeout(async () => {
       const cur = pcRef.current;
