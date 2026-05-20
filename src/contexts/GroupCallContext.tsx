@@ -114,6 +114,8 @@ interface GroupCallContextValue {
   missedGroupCalls: MissedGroupCall[];
   rejoinGroupCall: (callId: string) => Promise<void>;
   dismissMissed: (callId: string) => void;
+  forceMuteParticipant: (userId: string) => void;
+  removeParticipantFromCall: (userId: string) => Promise<void>;
 }
 
 const GroupCallContext = createContext<GroupCallContextValue | null>(null);
@@ -405,6 +407,33 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           if (payload.muted) next.add(payload.from); else next.delete(payload.from);
           return next;
         });
+      })
+      .on('broadcast', { event: 'force_mute' }, ({ payload }) => {
+        if (payload.to !== myId) return;
+        const s = localStreamRef.current;
+        if (!s) return;
+        const anyEnabled = s.getAudioTracks().some(t => t.enabled);
+        if (anyEnabled) {
+          s.getAudioTracks().forEach(t => (t.enabled = false));
+          setMuted(true);
+          sendSignal('mute', { from: myId, muted: true });
+          toast({ title: 'You were muted by the host' });
+        }
+      })
+      .on('broadcast', { event: 'kick' }, ({ payload }) => {
+        if (payload.to !== myId) return;
+        toast({ title: 'Removed from the call', description: 'The host removed you from this meeting.', variant: 'destructive' });
+        (async () => {
+          try {
+            await (supabase as any)
+              .from('group_call_participants')
+              .update({ status: 'left', left_at: new Date().toISOString() })
+              .eq('call_id', activeRef.current?.id)
+              .eq('user_id', myId);
+          } catch {}
+          try { sendSignal('leave', { from: myId }); } catch {}
+          cleanupAll();
+        })();
       })
       .on('broadcast', { event: 'chat' }, ({ payload }) => {
         setChatMessages(prev => [...prev, {
@@ -804,6 +833,36 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const markChatRead = useCallback(() => setUnreadChat(0), []);
 
+  const forceMuteParticipant = useCallback((userId: string) => {
+    const cur = activeRef.current;
+    if (!cur || !myId || cur.hostId !== myId || userId === myId) return;
+    sendSignal('force_mute', { from: myId, to: userId });
+    setMutedPeers(prev => {
+      const next = new Set(prev);
+      next.add(userId);
+      return next;
+    });
+    const name = nameByUserRef.current.get(userId) || 'Participant';
+    toast({ title: `Muted ${name}` });
+  }, [myId, sendSignal, toast]);
+
+  const removeParticipantFromCall = useCallback(async (userId: string) => {
+    const cur = activeRef.current;
+    if (!cur || !myId || cur.hostId !== myId || userId === myId) return;
+    sendSignal('kick', { from: myId, to: userId });
+    try {
+      await (supabase as any)
+        .from('group_call_participants')
+        .update({ status: 'left', left_at: new Date().toISOString() })
+        .eq('call_id', cur.id)
+        .eq('user_id', userId);
+    } catch {}
+    cleanupPeer(userId);
+    removeParticipant(userId);
+    const name = nameByUserRef.current.get(userId) || 'Participant';
+    toast({ title: `Removed ${name} from the call` });
+  }, [cleanupPeer, myId, removeParticipant, sendSignal, toast]);
+
   const replaceVideoTrackOnPeers = useCallback((track: MediaStreamTrack | null) => {
     peersRef.current.forEach(entry => {
       const sender = entry.pc.getSenders().find(s => s.track && s.track.kind === 'video');
@@ -1029,6 +1088,7 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       startGroupCall, acceptIncoming, declineIncoming, leaveCall, endForAll, toggleMute, toggleCamera,
       toggleHand, sendChat, toggleScreenShare, addParticipants,
       missedGroupCalls, rejoinGroupCall, dismissMissed,
+      forceMuteParticipant, removeParticipantFromCall,
     }}>
       {children}
     </GroupCallContext.Provider>
