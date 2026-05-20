@@ -45,6 +45,7 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
   const audioChunksRef = useRef<Blob[]>([]);
   const recordStartRef = useRef<number>(0);
   const recordTimerRef = useRef<number | null>(null);
+  const sendingRef = useRef(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
@@ -206,6 +207,8 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
+    if (sendingRef.current) return;
+    sendingRef.current = true;
 
     const content = newMessage;
     const reply = replyingTo;
@@ -224,6 +227,8 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
       console.error('Failed to send message:', error);
       setNewMessage(content);
       setReplyingTo(reply);
+    } finally {
+      sendingRef.current = false;
     }
   };
 
