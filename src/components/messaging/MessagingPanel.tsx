@@ -387,7 +387,12 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                             : 'bg-muted-foreground/60'
                           }`}
                         />
-                        <span className="truncate">{label}</span>
+                        <span className="overflow-hidden whitespace-nowrap flex-1 min-w-0">
+                          <span className="marquee-track">
+                            <span className="px-4">{label}</span>
+                            <span className="px-4">{label}</span>
+                          </span>
+                        </span>
                       </p>
                     );
                   })()}
@@ -420,9 +425,6 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                     }}
                   >
                     <Video className="h-5 w-5" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary-foreground/10">
-                    <MoreVertical className="h-5 w-5" />
                   </Button>
                 </div>
               </>
