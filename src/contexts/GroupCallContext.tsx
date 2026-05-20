@@ -501,6 +501,7 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     unique.forEach(i => updateParticipant(i.userId, { name: i.name, joined: false }));
     joinChannel(callRow.id);
     await (supabase as any).from('group_calls').update({ status: 'active' }).eq('id', callRow.id);
+    awardMeetingLoyalty(myId, title || null, callRow.id);
   }, [active, acquireLocalStream, incoming, joinChannel, myId, toast, updateParticipant, user]);
 
   const acceptIncoming = useCallback(async () => {
@@ -520,6 +521,7 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     activeRef.current = { id: inc.callId, hostId: inc.hostId, type: inc.type, title: inc.title, conversationId: null };
     await (supabase as any).from('group_call_participants').update({ status: 'joined', joined_at: new Date().toISOString() }).eq('call_id', inc.callId).eq('user_id', myId);
     joinChannel(inc.callId);
+    awardMeetingLoyalty(myId, inc.title, inc.callId);
   }, [acquireLocalStream, incoming, joinChannel, myId, toast, user]);
 
   const declineIncoming = useCallback(async () => {
@@ -550,6 +552,7 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       { onConflict: 'call_id,user_id' }
     );
     joinChannel(callId);
+    awardMeetingLoyalty(myId, title, callId);
   }, [acquireLocalStream, joinChannel, myId, toast, user]);
 
   const rejoinGroupCall = useCallback(async (callId: string) => {
