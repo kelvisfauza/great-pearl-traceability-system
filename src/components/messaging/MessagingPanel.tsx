@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, X, MessageSquarePlus, ArrowLeft, Paperclip, Check, CheckCheck, Reply, Phone, Video, Mic, Lock, Trash2, ChevronUp, Users, UsersRound } from 'lucide-react';
+import { Send, X, MessageSquarePlus, ArrowLeft, Paperclip, Check, CheckCheck, Reply, Phone, Video, Mic, Lock, Trash2, ChevronUp, Users, UsersRound, PhoneCall } from 'lucide-react';
 import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePresenceList } from '@/hooks/usePresenceList';
@@ -459,9 +459,10 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                     size="icon"
                     className="h-8 w-8 hover:bg-primary-foreground/10"
                     aria-label="New group call"
+                    title="New group call"
                     onClick={() => setShowGroupCall({ preset: [] })}
                   >
-                    <Users className="h-5 w-5" />
+                    <PhoneCall className="h-5 w-5" />
                   </Button>
                   <Button
                     variant="ghost"
