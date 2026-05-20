@@ -162,8 +162,6 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const rejoinChannelRef = useRef<() => void>(() => {});
   const interactedRef = useRef<boolean>(false);
 
-  const markInteracted = useCallback(() => { interactedRef.current = true; }, []);
-
   useEffect(() => { activeRef.current = active; }, [active]);
   useEffect(() => { localStreamRef.current = localStream; }, [localStream]);
 
