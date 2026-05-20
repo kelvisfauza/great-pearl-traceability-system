@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import AddParticipantsDialog from './AddParticipantsDialog';
 
-const Tile = ({ stream, name, muted, isLocal, isVideo, handRaised, sharing }: { stream: MediaStream | null; name: string; muted?: boolean; isLocal?: boolean; isVideo: boolean; handRaised?: boolean; sharing?: boolean; }) => {
+const Tile = ({ stream, name, muted, isLocal, isVideo, handRaised, sharing, micMuted }: { stream: MediaStream | null; name: string; muted?: boolean; isLocal?: boolean; isVideo: boolean; handRaised?: boolean; sharing?: boolean; micMuted?: boolean; }) => {
   const ref = useRef<HTMLVideoElement | null>(null);
   useEffect(() => {
     if (ref.current && stream && ref.current.srcObject !== stream) {
@@ -41,7 +41,10 @@ const Tile = ({ stream, name, muted, isLocal, isVideo, handRaised, sharing }: { 
         </div>
       )}
       <div className="absolute bottom-2 left-2 text-xs text-white bg-black/60 px-2 py-0.5 rounded">
-        {name}{isLocal ? ' (you)' : ''}
+        <span className="inline-flex items-center gap-1">
+          {micMuted && <MicOff className="h-3 w-3 text-red-400" />}
+          {name}{isLocal ? ' (you)' : ''}
+        </span>
       </div>
       {handRaised && (
         <div className="absolute top-2 left-2 text-xs text-white bg-amber-500/90 px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -68,6 +71,7 @@ const GroupCallDialog = () => {
     handsRaised, myHandRaised, toggleHand,
     chatMessages, unreadChat, markChatRead, sendChat,
     isScreenSharing, screenSharerId, toggleScreenShare,
+    mutedPeers,
   } = useGroupCall();
   const { user, employee } = useAuth();
   const [panel, setPanel] = useState<null | 'chat' | 'people'>(null);
@@ -113,7 +117,12 @@ const GroupCallDialog = () => {
   return (
     <Dialog open onOpenChange={() => {}}>
       <DialogContent
-        className="max-w-5xl w-[95vw] h-[90vh] p-0 bg-background border-none flex flex-col"
+        className={cn(
+          'p-0 bg-background border-none flex flex-col',
+          fullView
+            ? 'max-w-none w-screen h-screen rounded-none top-0 left-0 translate-x-0 translate-y-0'
+            : 'max-w-5xl w-[95vw] h-[90vh]'
+        )}
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
         hideCloseButton
@@ -144,6 +153,7 @@ const GroupCallDialog = () => {
                     isVideo
                     handRaised={handsRaised.has(spotlightTile.userId)}
                     sharing
+                    micMuted={spotlightTile.isLocal ? muted : mutedPeers.has(spotlightTile.userId)}
                   />
                 </div>
               </div>
@@ -157,6 +167,7 @@ const GroupCallDialog = () => {
                     isVideo={isVideo || isScreenSharing}
                     handRaised={myHandRaised}
                     sharing={isScreenSharing}
+                    micMuted={muted}
                   />
                   {others.map(p => (
                     <Tile
@@ -166,6 +177,7 @@ const GroupCallDialog = () => {
                       isVideo={isVideo || screenSharerId === p.userId}
                       handRaised={handsRaised.has(p.userId)}
                       sharing={screenSharerId === p.userId}
+                      micMuted={mutedPeers.has(p.userId)}
                     />
                   ))}
                 </div>
@@ -183,6 +195,7 @@ const GroupCallDialog = () => {
                       muted={t.isLocal}
                       isVideo={isVideo}
                       handRaised={handsRaised.has(t.userId)}
+                      micMuted={t.isLocal ? muted : mutedPeers.has(t.userId)}
                     />
                   </div>
                 ))}
@@ -205,15 +218,22 @@ const GroupCallDialog = () => {
 
                 <TabsContent value="people" className="flex-1 overflow-hidden m-0">
                   <div className="p-2 border-b">
-                    <Button size="sm" variant="outline" className="w-full" onClick={() => setAddOpen(true)}>
-                      <UserPlus className="h-4 w-4 mr-2" /> Add people
-                    </Button>
+                    {isHost ? (
+                      <Button size="sm" variant="outline" className="w-full" onClick={() => setAddOpen(true)}>
+                        <UserPlus className="h-4 w-4 mr-2" /> Add people
+                      </Button>
+                    ) : (
+                      <p className="text-xs text-muted-foreground text-center py-1">Only the host can add people</p>
+                    )}
                   </div>
                   <ScrollArea className="flex-1 h-full">
                     <ul className="divide-y">
                       <li className="flex items-center justify-between px-3 py-2 text-sm">
                         <span className="font-medium">{myName} (you){isHost ? ' · Host' : ''}</span>
-                        {myHandRaised && <Hand className="h-4 w-4 text-amber-500" />}
+                        <div className="flex items-center gap-2">
+                          {muted && <MicOff className="h-4 w-4 text-red-500" />}
+                          {myHandRaised && <Hand className="h-4 w-4 text-amber-500" />}
+                        </div>
                       </li>
                       {others.map(p => (
                         <li key={p.userId} className="flex items-center justify-between px-3 py-2 text-sm">
@@ -222,6 +242,7 @@ const GroupCallDialog = () => {
                             <p className="text-xs text-muted-foreground">{p.joined ? 'Connected' : 'Connecting…'}</p>
                           </div>
                           <div className="flex items-center gap-2">
+                            {mutedPeers.has(p.userId) && <MicOff className="h-4 w-4 text-red-500" />}
                             {screenSharerId === p.userId && <MonitorUp className="h-4 w-4 text-emerald-600" />}
                             {handsRaised.has(p.userId) && <Hand className="h-4 w-4 text-amber-500" />}
                           </div>
@@ -301,9 +322,11 @@ const GroupCallDialog = () => {
           <Button size="lg" variant="secondary" onClick={() => setPanel(p => p === 'people' ? null : 'people')} className="rounded-full h-12 w-12 p-0" title="People">
             <Users className="h-5 w-5" />
           </Button>
-          <Button size="lg" variant="secondary" onClick={() => setAddOpen(true)} className="rounded-full h-12 w-12 p-0" title="Add people">
-            <UserPlus className="h-5 w-5" />
-          </Button>
+          {isHost && (
+            <Button size="lg" variant="secondary" onClick={() => setAddOpen(true)} className="rounded-full h-12 w-12 p-0" title="Add people">
+              <UserPlus className="h-5 w-5" />
+            </Button>
+          )}
           <Button size="lg" variant="destructive" onClick={leaveCall} className="rounded-full h-12 px-6">
             <PhoneOff className="h-5 w-5 mr-2" /> Leave
           </Button>
