@@ -3514,6 +3514,80 @@ export type Database = {
         }
         Relationships: []
       }
+      group_call_participants: {
+        Row: {
+          call_id: string
+          created_at: string
+          id: string
+          joined_at: string | null
+          left_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          call_id: string
+          created_at?: string
+          id?: string
+          joined_at?: string | null
+          left_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          call_id?: string
+          created_at?: string
+          id?: string
+          joined_at?: string | null
+          left_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_call_participants_call_id_fkey"
+            columns: ["call_id"]
+            isOneToOne: false
+            referencedRelation: "group_calls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_calls: {
+        Row: {
+          call_type: string
+          conversation_id: string | null
+          created_at: string
+          ended_at: string | null
+          host_id: string
+          id: string
+          started_at: string
+          status: string
+          title: string | null
+        }
+        Insert: {
+          call_type: string
+          conversation_id?: string | null
+          created_at?: string
+          ended_at?: string | null
+          host_id: string
+          id?: string
+          started_at?: string
+          status?: string
+          title?: string | null
+        }
+        Update: {
+          call_type?: string
+          conversation_id?: string | null
+          created_at?: string
+          ended_at?: string | null
+          host_id?: string
+          id?: string
+          started_at?: string
+          status?: string
+          title?: string | null
+        }
+        Relationships: []
+      }
       instant_withdrawals: {
         Row: {
           amount: number
@@ -11008,6 +11082,10 @@ export type Database = {
       is_current_user_admin: { Args: never; Returns: boolean }
       is_current_user_admin_by_role: { Args: never; Returns: boolean }
       is_current_user_administrator: { Args: never; Returns: boolean }
+      is_group_call_participant: {
+        Args: { _call_id: string }
+        Returns: boolean
+      }
       is_ip_whitelisted: { Args: { check_ip: string }; Returns: boolean }
       is_manager_or_above: { Args: never; Returns: boolean }
       is_privileged_realtime_subscriber: {
