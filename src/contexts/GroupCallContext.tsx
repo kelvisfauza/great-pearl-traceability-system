@@ -156,6 +156,8 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const nameByUserRef = useRef<Map<string, string>>(new Map());
   const cameraTrackRef = useRef<MediaStreamTrack | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
+  const peerRetryTimersRef = useRef<Map<string, number>>(new Map());
+  const channelRetryTimerRef = useRef<number | null>(null);
 
   useEffect(() => { activeRef.current = active; }, [active]);
   useEffect(() => { localStreamRef.current = localStream; }, [localStream]);
@@ -188,6 +190,8 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       try { entry.pc.close(); } catch {}
       peersRef.current.delete(userId);
     }
+    const t = peerRetryTimersRef.current.get(userId);
+    if (t) { window.clearTimeout(t); peerRetryTimersRef.current.delete(userId); }
     removeParticipant(userId);
   }, [removeParticipant]);
 
