@@ -120,6 +120,7 @@ import MaintenanceRecovery from "./pages/MaintenanceRecovery";
 import QuickLoans from "./pages/QuickLoans";
 import ProfileCompletionModal from "./components/ProfileCompletionModal";
 import BirthdayNotification from "./components/BirthdayNotification";
+import MeetingRewardsTeaserPopup from "./components/MeetingRewardsTeaserPopup";
 import StatutoryInfoModal from "./components/StatutoryInfoModal";
 import SeasonalAdvisoryModal from "./components/SeasonalAdvisoryModal";
 import { useInactivityTimer } from './hooks/useInactivityTimer';
@@ -176,6 +177,7 @@ const App: React.ComponentType = () => {
               <MonthlyReportReminder />
               <ProfileCompletionModal />
               <BirthdayNotification />
+              <MeetingRewardsTeaserPopup />
               <StatutoryInfoModal />
               <SeasonalAdvisoryModal />
               
