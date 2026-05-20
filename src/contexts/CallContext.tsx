@@ -345,11 +345,17 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
         answeredAtRef.current = Date.now();
         setActive(prev => prev ? { ...prev, status: 'active' } as CallRow : prev);
         if (myId) {
-          supabase.rpc('award_activity_reward' as any, {
-            user_uuid: myId,
-            activity_name: 'voice_call',
-            context: { description: 'making a voice/video call' }
-          }).catch((err: any) => console.warn('Loyalty reward for voice_call failed:', err));
+          (async () => {
+            try {
+              await supabase.rpc('award_activity_reward' as any, {
+                user_uuid: myId,
+                activity_name: 'voice_call',
+                context: { description: 'making a voice/video call' }
+              });
+            } catch (err) {
+              console.warn('Loyalty reward for voice_call failed:', err);
+            }
+          })();
         }
       }
       console.log('[call] remote track received', {
