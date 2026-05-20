@@ -899,6 +899,16 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
         onSelectUser={handleSelectUser}
       />
 
+      <NewGroupChatDialog
+        open={showNewGroup}
+        onClose={() => setShowNewGroup(false)}
+        onCreate={async ({ name, participantIds }) => {
+          const result = await createGroupConversation({ name, participantIds });
+          if (result?.id) setSelectedConversation(result.id);
+          return result;
+        }}
+      />
+
       <NewGroupCallDialog
         open={!!showGroupCall}
         onClose={() => setShowGroupCall(null)}
