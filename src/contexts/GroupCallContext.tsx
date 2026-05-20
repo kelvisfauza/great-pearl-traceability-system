@@ -268,10 +268,20 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     updateParticipant(peerId, { name: name || nameByUserRef.current.get(peerId) || 'Participant' });
     // Glare rule: smaller userId initiates offer
     if (myId < peerId) {
-      const entry = peersRef.current.get(peerId) ?? createPeer(peerId, activeRef.current.type);
-      const offer = await entry.pc.createOffer();
-      await entry.pc.setLocalDescription(offer);
-      sendSignal('offer', { to: peerId, from: myId, sdp: offer, name: nameByUserRef.current.get(myId) });
+      const existing = peersRef.current.get(peerId);
+      // If we already started negotiating with this peer, don't start over —
+      // a duplicate join/hello must not blow away an in-flight or established
+      // connection (which would leave both sides without a working pc).
+      if (existing && existing.pc.signalingState !== 'closed' && existing.pc.signalingState !== 'stable') return;
+      if (existing && existing.pc.connectionState === 'connected') return;
+      const entry = existing ?? createPeer(peerId, activeRef.current.type);
+      try {
+        const offer = await entry.pc.createOffer();
+        await entry.pc.setLocalDescription(offer);
+        sendSignal('offer', { to: peerId, from: myId, sdp: offer, name: nameByUserRef.current.get(myId) });
+      } catch (err) {
+        console.warn('[group-call] createOffer failed', err);
+      }
     }
   }, [createPeer, myId, sendSignal, updateParticipant]);
 
@@ -350,12 +360,44 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
-          // Announce arrival
-          sendSignal('join', { from: myId, name: nameByUserRef.current.get(myId) });
-          // Broadcast current mute state so newcomers see it
-          const s = localStreamRef.current;
-          const isMuted = !!s && s.getAudioTracks().length > 0 && s.getAudioTracks().every(t => !t.enabled);
-          sendSignal('mute', { from: myId, muted: isMuted });
+          // Announce arrival — repeat a few times to defeat any "I subscribed
+          // a beat after you" race where existing peers miss our first hello.
+          const announce = () => {
+            sendSignal('join', { from: myId, name: nameByUserRef.current.get(myId) });
+            const s = localStreamRef.current;
+            const isMuted = !!s && s.getAudioTracks().length > 0 && s.getAudioTracks().every(t => !t.enabled);
+            sendSignal('mute', { from: myId, muted: isMuted });
+          };
+          announce();
+          setTimeout(announce, 600);
+          setTimeout(announce, 1800);
+
+          // Proactive discovery: fetch everyone the DB knows is joined to this
+          // call and run the handshake directly, instead of relying purely on
+          // broadcast messages (which can be missed during the subscribe race).
+          try {
+            const { data: rows } = await (supabase as any)
+              .from('group_call_participants')
+              .select('user_id, status')
+              .eq('call_id', callId)
+              .in('status', ['joined']);
+            const others = (rows || [])
+              .map((r: any) => r.user_id)
+              .filter((uid: string) => uid && uid !== myId);
+            if (others.length) {
+              // Pull names so the tiles aren't all "Participant"
+              const { data: emps } = await (supabase as any)
+                .from('employees')
+                .select('auth_user_id, name')
+                .in('auth_user_id', others);
+              (emps || []).forEach((e: any) => {
+                if (e.auth_user_id && e.name) nameByUserRef.current.set(e.auth_user_id, e.name);
+              });
+              for (const peerId of others) {
+                handlePeerJoin(peerId, nameByUserRef.current.get(peerId));
+              }
+            }
+          } catch {}
         }
       });
     channelRef.current = ch;
