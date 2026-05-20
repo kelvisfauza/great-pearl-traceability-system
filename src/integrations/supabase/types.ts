@@ -10837,6 +10837,7 @@ export type Database = {
         }
         Returns: Json
       }
+      current_user_email: { Args: never; Returns: string }
       deduct_from_inventory_batches: {
         Args: {
           p_coffee_type: string
