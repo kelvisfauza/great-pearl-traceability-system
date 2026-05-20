@@ -207,18 +207,23 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
 
+    const content = newMessage;
+    const reply = replyingTo;
+    // Clear the input immediately for a snappy UX; restore on failure.
+    setNewMessage('');
+    setReplyingTo(null);
+
     try {
       await sendMessage({
-        content: newMessage,
+        content,
         conversationId: selectedConversation,
-        replyToId: replyingTo?.id,
+        replyToId: reply?.id,
         senderName: employee?.name
       });
-      
-      setNewMessage('');
-      setReplyingTo(null);
     } catch (error) {
       console.error('Failed to send message:', error);
+      setNewMessage(content);
+      setReplyingTo(reply);
     }
   };
 
