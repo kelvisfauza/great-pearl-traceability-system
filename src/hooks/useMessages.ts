@@ -158,6 +158,21 @@ export const useMessages = () => {
 
       setConversations(conversationsWithParticipants);
       
+      // Mark inbound messages as delivered (recipient has now received them on this device).
+      // This powers the "two ticks" (delivered) state in chat. Fire-and-forget.
+      try {
+        if (conversationIds.length > 0) {
+          await (supabase as any)
+            .from('messages')
+            .update({ delivered_at: new Date().toISOString() })
+            .in('conversation_id', conversationIds)
+            .neq('sender_id', user.id)
+            .is('delivered_at', null);
+        }
+      } catch (e) {
+        console.warn('Failed to mark messages delivered:', e);
+      }
+
       // Calculate total unread count - count messages not sent by current user that are unread
       let totalUnread = 0;
       for (const conv of conversationsWithParticipants) {
