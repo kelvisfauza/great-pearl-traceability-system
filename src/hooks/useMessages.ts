@@ -673,16 +673,32 @@ export const useMessages = () => {
           
           console.log('📢 Calling toast NOW with:', { senderName, messagePreview });
           
-          // Play notification sound
+          // Play a short two-tone notification chime via WebAudio (no asset needed)
           try {
-            console.log('🔊 Attempting to play notification sound...');
-            const audio = new Audio('/notification-sound.mp3');
-            audio.volume = 1.0; // Set volume to 100%
-            audio.play()
-              .then(() => console.log('✅ Notification sound played successfully!'))
-              .catch(err => console.error('❌ Could not play notification sound:', err));
+            const AudioCtx: typeof AudioContext =
+              (window as any).AudioContext || (window as any).webkitAudioContext;
+            if (AudioCtx) {
+              const ctx = new AudioCtx();
+              const playTone = (freq: number, startAt: number, duration: number) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                const t0 = ctx.currentTime + startAt;
+                gain.gain.setValueAtTime(0.0001, t0);
+                gain.gain.exponentialRampToValueAtTime(0.35, t0 + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+                osc.start(t0);
+                osc.stop(t0 + duration + 0.02);
+              };
+              playTone(880, 0, 0.15);
+              playTone(1320, 0.16, 0.2);
+              setTimeout(() => ctx.close().catch(() => {}), 600);
+            }
           } catch (err) {
-            console.error('❌ Error creating audio element:', err);
+            console.warn('Notification chime failed:', err);
           }
           
           // Call toast directly
