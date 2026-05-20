@@ -1,0 +1,2 @@
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP WITH TIME ZONE;
+CREATE INDEX IF NOT EXISTS idx_messages_delivered_at ON public.messages(conversation_id) WHERE delivered_at IS NULL;

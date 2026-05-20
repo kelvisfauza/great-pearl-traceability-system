@@ -576,8 +576,10 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                                     {isOwnMessage && (
                                       message.read_at ? (
                                         <CheckCheck className="h-3 w-3 text-blue-400" />
+                                      ) : (message as any).delivered_at ? (
+                                        <CheckCheck className="h-3 w-3 opacity-70" />
                                       ) : (
-                                        <Check className="h-3 w-3" />
+                                        <Check className="h-3 w-3 opacity-70" />
                                       )
                                     )}
                                   </div>
@@ -593,8 +595,10 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                                     {isOwnMessage && (
                                       message.read_at ? (
                                         <CheckCheck className="h-3 w-3 text-blue-400" />
+                                      ) : (message as any).delivered_at ? (
+                                        <CheckCheck className="h-3 w-3 opacity-70" />
                                       ) : (
-                                        <Check className="h-3 w-3" />
+                                        <Check className="h-3 w-3 opacity-70" />
                                       )
                                     )}
                                   </div>
@@ -617,8 +621,10 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                                     {isOwnMessage && (
                                       message.read_at ? (
                                         <CheckCheck className="h-3 w-3 text-blue-400" />
+                                      ) : (message as any).delivered_at ? (
+                                        <CheckCheck className="h-3 w-3 opacity-70" />
                                       ) : (
-                                        <Check className="h-3 w-3" />
+                                        <Check className="h-3 w-3 opacity-70" />
                                       )
                                     )}
                                   </div>
@@ -634,8 +640,10 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                                     {isOwnMessage && (
                                       message.read_at ? (
                                         <CheckCheck className="h-3 w-3 text-blue-400" />
+                                      ) : (message as any).delivered_at ? (
+                                        <CheckCheck className="h-3 w-3 opacity-70" />
                                       ) : (
-                                        <Check className="h-3 w-3" />
+                                        <Check className="h-3 w-3 opacity-70" />
                                       )
                                     )}
                                   </div>
