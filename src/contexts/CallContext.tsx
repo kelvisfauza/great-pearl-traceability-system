@@ -488,36 +488,41 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Ringback / timeout
     setTimeout(async () => {
-      const cur = pcRef.current;
-      if (!cur) return;
-      const { data: latest } = await supabase
-        .from('call_sessions')
-        .select('status')
-        .eq('id', row.id)
-        .maybeSingle();
-      if (latest?.status === 'ringing') {
+      // If we never got remote media, treat this as unanswered — no
+      // matter what the DB row currently says. This prevents the call
+      // from "ringing forever" or auto-picking up at the last second.
+      if (answeredAtRef.current) return;
+      if (!pcRef.current) return;
+
+      // Mark abandoned FIRST so any in-flight ontrack/ready signals
+      // arriving in the next few ms are ignored.
+      abandonedRef.current = true;
+      // Stop the ringback immediately so the caller doesn't keep
+      // hearing "ring ring" while the unavailable banner shows.
+      try { ringback.stop(); } catch {}
+
+      try {
         await supabase
           .from('call_sessions')
           .update({ status: 'missed', ended_at: new Date().toISOString() })
           .eq('id', row.id);
-        sendSignal('hangup', {});
-        logCallToChat(calleeAuthId, type, 'missed');
-        cleanup();
-        // Loud, prominent unavailable banner + spoken announcement
-        const message = `${calleeName} is currently unavailable, please try again later.`;
-        setUnavailable(message);
-        try {
-          if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            const u = new SpeechSynthesisUtterance(message);
-            u.volume = 1;
-            u.rate = 1;
-            u.pitch = 1;
-            window.speechSynthesis.speak(u);
-          }
-        } catch {}
-        window.setTimeout(() => setUnavailable(null), 6000);
-      }
+      } catch {}
+      try { sendSignal('hangup', {}); } catch {}
+      logCallToChat(calleeAuthId, type, 'missed');
+      cleanup();
+
+      // Loud, prominent unavailable banner + spoken announcement
+      const message = `${calleeName} is currently unavailable, please try again later.`;
+      setUnavailable(message);
+      try {
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(message);
+          u.volume = 1; u.rate = 1; u.pitch = 1;
+          window.speechSynthesis.speak(u);
+        }
+      } catch {}
+      window.setTimeout(() => setUnavailable(null), 6000);
     }, 10000);
   }, [myId, active, incoming, toast, setupPeer, joinChannel, cleanup, sendSignal, logCallToChat]);
 
