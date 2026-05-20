@@ -1177,6 +1177,48 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
   }, [myId, incoming]);
 
+  // Watch the ringing group call so the invitee's popup dismisses when
+  // the host cancels/ends or the row otherwise leaves "ringing". Uses
+  // realtime UPDATE plus a 2s poll because Edge sometimes drops events.
+  useEffect(() => {
+    if (!incoming) return;
+    const callId = incoming.callId;
+    const dismiss = (status?: string | null) => {
+      if (!status) return false;
+      if (status === 'ended' || status === 'cancelled' || status === 'canceled') {
+        setIncoming(null);
+        toast({ title: 'Call canceled', description: 'The host ended the call.' });
+        return true;
+      }
+      return false;
+    };
+    const ch = supabase
+      .channel(`gc-incoming-watch:${callId}`)
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'group_calls', filter: `id=eq.${callId}` },
+        (payload) => { dismiss((payload.new as any)?.status); }
+      )
+      .subscribe();
+    let stopped = false;
+    const poll = async () => {
+      if (stopped) return;
+      try {
+        const { data } = await (supabase as any)
+          .from('group_calls')
+          .select('status')
+          .eq('id', callId)
+          .maybeSingle();
+        dismiss(data?.status);
+      } catch {}
+    };
+    const id = window.setInterval(poll, 2000);
+    return () => {
+      stopped = true;
+      window.clearInterval(id);
+      supabase.removeChannel(ch);
+    };
+  }, [incoming, toast]);
+
   // Watch active call row to detect end-for-all
   useEffect(() => {
     if (!active) return;
