@@ -64,7 +64,7 @@ project_id = "pudfybkyfedeggmokhco"
   [functions.check-network-access]
     verify_jwt = true
   [functions.check-unread-messages]
-    verify_jwt = true
+    verify_jwt = false
   [functions.check-withdrawal-status]
     verify_jwt = true
   [functions.cleanup-users]
