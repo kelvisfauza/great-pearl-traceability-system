@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff, Users,
   Hand, MessageSquare, MonitorUp, MonitorOff, UserPlus, X, Send,
-  Maximize2, Minimize2, Crown, Volume2, UserX,
+  Maximize2, Minimize2, Crown, Volume2, UserX, ChevronUp,
 } from 'lucide-react';
 import { useGroupCall, GroupParticipant } from '@/contexts/GroupCallContext';
 import { useAuth } from '@/contexts/AuthContext';
