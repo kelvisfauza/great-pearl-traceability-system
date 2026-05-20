@@ -277,6 +277,19 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const ch = supabase
       .channel(`group-call:${callId}`, { config: { broadcast: { ack: false, self: false } } })
       .on('broadcast', { event: 'join' }, ({ payload }) => {
+        if (payload.from === myId) return;
+        handlePeerJoin(payload.from, payload.name);
+        // Reply directly so the newcomer learns we exist — the glare
+        // rule (smaller userId offers) only works if BOTH sides know
+        // about each other.
+        channelRef.current?.send({
+          type: 'broadcast',
+          event: 'hello',
+          payload: { from: myId, to: payload.from, name: nameByUserRef.current.get(myId) },
+        });
+      })
+      .on('broadcast', { event: 'hello' }, ({ payload }) => {
+        if (payload.to !== myId || payload.from === myId) return;
         handlePeerJoin(payload.from, payload.name);
       })
       .on('broadcast', { event: 'offer' }, ({ payload }) => {
