@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePresenceList } from '@/hooks/usePresenceList';
 import { useCall } from '@/contexts/CallContext';
 import UserSelectorDialog from './UserSelectorDialog';
+import NewGroupChatDialog from './NewGroupChatDialog';
 import NewGroupCallDialog from '@/components/calls/NewGroupCallDialog';
 import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns';
 
@@ -36,6 +37,7 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [showUserSelector, setShowUserSelector] = useState(false);
+  const [showNewGroup, setShowNewGroup] = useState(false);
   const [showGroupCall, setShowGroupCall] = useState<null | { preset: { userId: string; name: string }[]; title?: string; conversationId?: string | null }>(null);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const { employee } = useAuth();
@@ -184,7 +186,8 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
     sendMessage,
     sendFile,
     fetchMessages,
-    createConversation
+    createConversation,
+    createGroupConversation,
   } = messagesData;
 
   useEffect(() => {
