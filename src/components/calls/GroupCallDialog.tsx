@@ -77,6 +77,8 @@ const Tile = ({ stream, name, muted, isLocal, isVideo, handRaised, sharing, micM
   useEffect(() => {
     if (ref.current && stream && ref.current.srcObject !== stream) {
       ref.current.srcObject = stream;
+      const p = ref.current.play();
+      if (p && typeof (p as any).catch === 'function') (p as any).catch(() => {});
     }
   }, [stream]);
   const speaking = useIsSpeaking(stream, !micMuted);
