@@ -77,34 +77,51 @@ export const useMessages = () => {
 
       if (conversationsError) throw conversationsError;
 
+      // Collect all participant user_ids across conversations and fetch their info in one batch
+      const allParticipants = await Promise.all(
+        (conversationsData || []).map(async (conv) => {
+          const { data } = await supabase
+            .from('conversation_participants')
+            .select('conversation_id, user_id, last_read_at')
+            .eq('conversation_id', conv.id);
+          return data || [];
+        })
+      );
+      const uniqueUserIds = Array.from(
+        new Set(allParticipants.flat().map((p: any) => p.user_id))
+      );
+
+      const infoMap = new Map<string, { name: string; email: string; avatar_url?: string }>();
+      if (uniqueUserIds.length > 0) {
+        const { data: infoRows } = await (supabase.rpc as any)(
+          'get_chat_participants_info',
+          { _user_ids: uniqueUserIds }
+        );
+        (infoRows || []).forEach((r: any) => {
+          infoMap.set(r.auth_user_id, {
+            name: r.name,
+            email: r.email,
+            avatar_url: r.avatar_url || undefined,
+          });
+        });
+      }
+
       // Get participants for each conversation
       const conversationsWithParticipants = await Promise.all(
         (conversationsData || []).map(async (conv) => {
-          const { data: participants } = await supabase
-            .from('conversation_participants')
-            .select(`
-              user_id,
-              last_read_at
-            `)
-            .eq('conversation_id', conv.id);
+          const participants = allParticipants
+            .flat()
+            .filter((p: any) => p.conversation_id === conv.id);
 
-          // Get employee details for participants
-          const participantDetails = await Promise.all(
-            (participants || []).map(async (p) => {
-              const { data: employee } = await supabase
-                .from('employees')
-                .select('name, email, auth_user_id, avatar_url')
-                .eq('auth_user_id', p.user_id)
-                .single();
-
-              return {
-                user_id: p.user_id,
-                employee_name: employee?.name || 'Unknown',
-                employee_email: employee?.email || '',
-                avatar_url: employee?.avatar_url || undefined
-              };
-            })
-          );
+          const participantDetails = participants.map((p: any) => {
+            const info = infoMap.get(p.user_id);
+            return {
+              user_id: p.user_id,
+              employee_name: info?.name || 'Unknown',
+              employee_email: info?.email || '',
+              avatar_url: info?.avatar_url,
+            };
+          });
 
           // Get last message
           const { data: lastMsg } = await supabase
