@@ -161,6 +161,32 @@ const Tile = ({ stream, name, muted, isLocal, isVideo, handRaised, sharing, micM
   );
 };
 
+const MiniTile = ({ stream, name, isLocal, micMuted }: { stream: MediaStream | null; name: string; isLocal?: boolean; micMuted?: boolean }) => {
+  const ref = useRef<HTMLVideoElement | null>(null);
+  useEffect(() => {
+    if (ref.current && stream && ref.current.srcObject !== stream) {
+      ref.current.srcObject = stream;
+    }
+  }, [stream]);
+  const initials = name.split(' ').map(s => s[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || 'U';
+  return (
+    <div className="relative bg-black/80 rounded overflow-hidden aspect-video flex items-center justify-center">
+      {stream && stream.getVideoTracks().length > 0 ? (
+        <video ref={ref} autoPlay playsInline muted className="w-full h-full object-cover" />
+      ) : (
+        <div className="h-7 w-7 rounded-full bg-primary/40 text-primary-foreground flex items-center justify-center text-[10px] font-semibold">
+          {initials}
+        </div>
+      )}
+      {micMuted && (
+        <div className="absolute bottom-0.5 right-0.5 bg-black/70 rounded-full p-0.5">
+          <MicOff className="h-2.5 w-2.5 text-red-400" />
+        </div>
+      )}
+    </div>
+  );
+};
+
 const GroupCallDialog = () => {
   const {
     active, participants, localStream, muted, cameraOff,
