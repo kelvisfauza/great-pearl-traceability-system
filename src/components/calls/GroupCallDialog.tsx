@@ -14,6 +14,22 @@ import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import AddParticipantsDialog from './AddParticipantsDialog';
 
+// Persistent audio sink that survives tile re-layouts (e.g. when someone
+// starts screen-sharing and remote tiles move from grid -> spotlight strip).
+// Without this, freshly-mounted <video> elements lose the user-gesture chain
+// and the browser blocks audio autoplay, so the presenter cannot hear others.
+const RemoteAudioSink = ({ stream }: { stream: MediaStream | null }) => {
+  const ref = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    if (ref.current && stream && ref.current.srcObject !== stream) {
+      ref.current.srcObject = stream;
+      const p = ref.current.play();
+      if (p && typeof (p as any).catch === 'function') (p as any).catch(() => {});
+    }
+  }, [stream]);
+  return <audio ref={ref} autoPlay playsInline className="hidden" />;
+};
+
 const Tile = ({ stream, name, muted, isLocal, isVideo, handRaised, sharing, micMuted }: { stream: MediaStream | null; name: string; muted?: boolean; isLocal?: boolean; isVideo: boolean; handRaised?: boolean; sharing?: boolean; micMuted?: boolean; }) => {
   const ref = useRef<HTMLVideoElement | null>(null);
   useEffect(() => {
@@ -29,7 +45,7 @@ const Tile = ({ stream, name, muted, isLocal, isVideo, handRaised, sharing, micM
           ref={ref}
           autoPlay
           playsInline
-          muted={!!muted || !!isLocal}
+          muted
           className={cn('w-full h-full', sharing ? 'object-contain bg-black' : 'object-cover')}
         />
       ) : (
@@ -56,10 +72,8 @@ const Tile = ({ stream, name, muted, isLocal, isVideo, handRaised, sharing, micM
           <MonitorUp className="h-3 w-3" /> Sharing
         </div>
       )}
-      {/* Hidden audio sink to force loudspeaker on mobile */}
-      {stream && !isVideo && !isLocal && (
-        <video ref={ref} autoPlay playsInline className="absolute w-0 h-0 opacity-0 pointer-events-none" />
-      )}
+      {/* Audio for remote peers is played by RemoteAudioSink mounted at the
+          dialog root so screen-share layout swaps don't break playback. */}
     </div>
   );
 };
@@ -128,6 +142,10 @@ const GroupCallDialog = () => {
         onEscapeKeyDown={(e) => e.preventDefault()}
         hideCloseButton
       >
+        {/* Persistent audio sinks — keep remote audio playing across layout changes */}
+        {others.map(p => (
+          <RemoteAudioSink key={`sink-${p.userId}`} stream={p.stream} />
+        ))}
         <div className={cn('flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground', fullView && 'hidden')}>
           <div className="flex items-center gap-2">
             <Users className="h-5 w-5" />
