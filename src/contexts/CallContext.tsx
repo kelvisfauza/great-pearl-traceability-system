@@ -269,7 +269,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
-  }, [ringtone]);
+  }, [ringtone, ringback]);
 
   const sendSignal = useCallback((event: string, payload: any) => {
     channelRef.current?.send({ type: 'broadcast', event, payload });
