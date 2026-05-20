@@ -1,0 +1,462 @@
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import type { RealtimeChannel } from '@supabase/supabase-js';
+
+export type GroupCallType = 'audio' | 'video';
+
+const ICE_CONFIG: RTCConfiguration = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+  ],
+  iceCandidatePoolSize: 4,
+};
+
+export const GROUP_CALL_SOFT_LIMIT = 6;
+export const GROUP_CALL_HARD_LIMIT = 8;
+
+export interface GroupParticipant {
+  userId: string;
+  name: string;
+  stream: MediaStream | null;
+  joined: boolean;
+}
+
+export interface GroupCall {
+  id: string;
+  hostId: string;
+  type: GroupCallType;
+  title: string | null;
+  conversationId: string | null;
+}
+
+export interface IncomingGroupCall {
+  callId: string;
+  hostId: string;
+  hostName: string;
+  type: GroupCallType;
+  title: string | null;
+}
+
+interface GroupCallContextValue {
+  active: GroupCall | null;
+  participants: Map<string, GroupParticipant>;
+  incoming: IncomingGroupCall | null;
+  muted: boolean;
+  cameraOff: boolean;
+  localStream: MediaStream | null;
+  startGroupCall: (opts: { type: GroupCallType; invitees: { userId: string; name: string }[]; title?: string; conversationId?: string | null; }) => Promise<void>;
+  acceptIncoming: () => Promise<void>;
+  declineIncoming: () => Promise<void>;
+  leaveCall: () => Promise<void>;
+  endForAll: () => Promise<void>;
+  toggleMute: () => void;
+  toggleCamera: () => void;
+}
+
+const GroupCallContext = createContext<GroupCallContextValue | null>(null);
+
+export const useGroupCall = () => {
+  const ctx = useContext(GroupCallContext);
+  if (!ctx) throw new Error('useGroupCall must be used within GroupCallProvider');
+  return ctx;
+};
+
+interface PeerEntry {
+  pc: RTCPeerConnection;
+  pendingIce: RTCIceCandidateInit[];
+  remoteSet: boolean;
+}
+
+export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const myId = user?.id || null;
+
+  const [active, setActive] = useState<GroupCall | null>(null);
+  const [participants, setParticipants] = useState<Map<string, GroupParticipant>>(new Map());
+  const [incoming, setIncoming] = useState<IncomingGroupCall | null>(null);
+  const [muted, setMuted] = useState(false);
+  const [cameraOff, setCameraOff] = useState(false);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+
+  const peersRef = useRef<Map<string, PeerEntry>>(new Map());
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const activeRef = useRef<GroupCall | null>(null);
+  const nameByUserRef = useRef<Map<string, string>>(new Map());
+
+  useEffect(() => { activeRef.current = active; }, [active]);
+  useEffect(() => { localStreamRef.current = localStream; }, [localStream]);
+
+  const updateParticipant = useCallback((userId: string, patch: Partial<GroupParticipant>) => {
+    setParticipants(prev => {
+      const next = new Map(prev);
+      const existing = next.get(userId) || {
+        userId,
+        name: nameByUserRef.current.get(userId) || 'Participant',
+        stream: null,
+        joined: false,
+      };
+      next.set(userId, { ...existing, ...patch });
+      return next;
+    });
+  }, []);
+
+  const removeParticipant = useCallback((userId: string) => {
+    setParticipants(prev => {
+      const next = new Map(prev);
+      next.delete(userId);
+      return next;
+    });
+  }, []);
+
+  const cleanupPeer = useCallback((userId: string) => {
+    const entry = peersRef.current.get(userId);
+    if (entry) {
+      try { entry.pc.close(); } catch {}
+      peersRef.current.delete(userId);
+    }
+    removeParticipant(userId);
+  }, [removeParticipant]);
+
+  const cleanupAll = useCallback(() => {
+    peersRef.current.forEach((_, id) => cleanupPeer(id));
+    peersRef.current.clear();
+    if (channelRef.current) {
+      try { supabase.removeChannel(channelRef.current); } catch {}
+      channelRef.current = null;
+    }
+    localStreamRef.current?.getTracks().forEach(t => t.stop());
+    localStreamRef.current = null;
+    setLocalStream(null);
+    setParticipants(new Map());
+    setActive(null);
+    setMuted(false);
+    setCameraOff(false);
+  }, [cleanupPeer]);
+
+  const sendSignal = useCallback((event: string, payload: any) => {
+    channelRef.current?.send({ type: 'broadcast', event, payload });
+  }, []);
+
+  const createPeer = useCallback((peerId: string, callType: GroupCallType): PeerEntry => {
+    const pc = new RTCPeerConnection(ICE_CONFIG);
+    const entry: PeerEntry = { pc, pendingIce: [], remoteSet: false };
+    peersRef.current.set(peerId, entry);
+
+    // Add local tracks
+    const local = localStreamRef.current;
+    if (local) local.getTracks().forEach(t => pc.addTrack(t, local));
+
+    pc.ontrack = (ev) => {
+      const [stream] = ev.streams;
+      updateParticipant(peerId, { stream, joined: true });
+    };
+
+    pc.onicecandidate = (ev) => {
+      if (ev.candidate) {
+        sendSignal('ice', { to: peerId, from: myId, candidate: ev.candidate.toJSON() });
+      }
+    };
+
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+        // peer dropped
+      }
+    };
+
+    return entry;
+  }, [myId, sendSignal, updateParticipant]);
+
+  const handleOffer = useCallback(async (fromId: string, sdp: RTCSessionDescriptionInit) => {
+    if (!myId || !activeRef.current) return;
+    let entry = peersRef.current.get(fromId);
+    if (!entry) entry = createPeer(fromId, activeRef.current.type);
+    await entry.pc.setRemoteDescription(new RTCSessionDescription(sdp));
+    entry.remoteSet = true;
+    for (const c of entry.pendingIce) {
+      try { await entry.pc.addIceCandidate(new RTCIceCandidate(c)); } catch {}
+    }
+    entry.pendingIce = [];
+    const answer = await entry.pc.createAnswer();
+    await entry.pc.setLocalDescription(answer);
+    sendSignal('answer', { to: fromId, from: myId, sdp: answer });
+    updateParticipant(fromId, { joined: true });
+  }, [createPeer, myId, sendSignal, updateParticipant]);
+
+  const handleAnswer = useCallback(async (fromId: string, sdp: RTCSessionDescriptionInit) => {
+    const entry = peersRef.current.get(fromId);
+    if (!entry) return;
+    await entry.pc.setRemoteDescription(new RTCSessionDescription(sdp));
+    entry.remoteSet = true;
+    for (const c of entry.pendingIce) {
+      try { await entry.pc.addIceCandidate(new RTCIceCandidate(c)); } catch {}
+    }
+    entry.pendingIce = [];
+    updateParticipant(fromId, { joined: true });
+  }, [updateParticipant]);
+
+  const handleIce = useCallback(async (fromId: string, candidate: RTCIceCandidateInit) => {
+    const entry = peersRef.current.get(fromId);
+    if (!entry) return;
+    if (!entry.remoteSet) {
+      entry.pendingIce.push(candidate);
+      return;
+    }
+    try { await entry.pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch {}
+  }, []);
+
+  const handlePeerJoin = useCallback(async (peerId: string, name?: string) => {
+    if (!myId || peerId === myId || !activeRef.current) return;
+    if (name) nameByUserRef.current.set(peerId, name);
+    updateParticipant(peerId, { name: name || nameByUserRef.current.get(peerId) || 'Participant' });
+    // Glare rule: smaller userId initiates offer
+    if (myId < peerId) {
+      const entry = peersRef.current.get(peerId) ?? createPeer(peerId, activeRef.current.type);
+      const offer = await entry.pc.createOffer();
+      await entry.pc.setLocalDescription(offer);
+      sendSignal('offer', { to: peerId, from: myId, sdp: offer, name: nameByUserRef.current.get(myId) });
+    }
+  }, [createPeer, myId, sendSignal, updateParticipant]);
+
+  const joinChannel = useCallback((callId: string) => {
+    if (!myId) return;
+    const ch = supabase
+      .channel(`group-call:${callId}`, { config: { broadcast: { ack: false, self: false } } })
+      .on('broadcast', { event: 'join' }, ({ payload }) => {
+        handlePeerJoin(payload.from, payload.name);
+      })
+      .on('broadcast', { event: 'offer' }, ({ payload }) => {
+        if (payload.to !== myId) return;
+        if (payload.name) nameByUserRef.current.set(payload.from, payload.name);
+        handleOffer(payload.from, payload.sdp);
+      })
+      .on('broadcast', { event: 'answer' }, ({ payload }) => {
+        if (payload.to !== myId) return;
+        handleAnswer(payload.from, payload.sdp);
+      })
+      .on('broadcast', { event: 'ice' }, ({ payload }) => {
+        if (payload.to !== myId) return;
+        handleIce(payload.from, payload.candidate);
+      })
+      .on('broadcast', { event: 'leave' }, ({ payload }) => {
+        cleanupPeer(payload.from);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          // Announce arrival
+          sendSignal('join', { from: myId, name: nameByUserRef.current.get(myId) });
+        }
+      });
+    channelRef.current = ch;
+  }, [cleanupPeer, handleAnswer, handleIce, handleOffer, handlePeerJoin, myId, sendSignal]);
+
+  const acquireLocalStream = useCallback(async (type: GroupCallType) => {
+    const constraints: MediaStreamConstraints = type === 'video'
+      ? { audio: true, video: { width: { ideal: 640 }, height: { ideal: 360 } } }
+      : { audio: true, video: false };
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    setLocalStream(stream);
+    localStreamRef.current = stream;
+    return stream;
+  }, []);
+
+  const startGroupCall = useCallback<GroupCallContextValue['startGroupCall']>(async ({ type, invitees, title, conversationId }) => {
+    if (!myId) {
+      toast({ title: 'Not signed in', variant: 'destructive' });
+      return;
+    }
+    if (active || incoming) {
+      toast({ title: 'Already in a call', variant: 'destructive' });
+      return;
+    }
+    const unique = Array.from(new Map(invitees.filter(i => i.userId !== myId).map(i => [i.userId, i])).values());
+    if (unique.length === 0) {
+      toast({ title: 'Pick at least one participant', variant: 'destructive' });
+      return;
+    }
+    if (unique.length + 1 > GROUP_CALL_HARD_LIMIT) {
+      toast({ title: `Group calls support up to ${GROUP_CALL_HARD_LIMIT} people`, variant: 'destructive' });
+      return;
+    }
+    if (unique.length + 1 > GROUP_CALL_SOFT_LIMIT) {
+      toast({ title: 'Heads up', description: `Mesh group calls work best up to ${GROUP_CALL_SOFT_LIMIT}. Expect choppy ${type}.` });
+    }
+
+    // Stash names for later
+    unique.forEach(i => nameByUserRef.current.set(i.userId, i.name));
+    nameByUserRef.current.set(myId, user?.user_metadata?.name || user?.email || 'You');
+
+    // Create the group_calls row
+    const { data: callRow, error: callErr } = await (supabase as any)
+      .from('group_calls')
+      .insert({ host_id: myId, call_type: type, title: title || null, conversation_id: conversationId || null, status: 'ringing' })
+      .select()
+      .single();
+    if (callErr || !callRow) {
+      toast({ title: 'Failed to start call', description: callErr?.message, variant: 'destructive' });
+      return;
+    }
+
+    // Insert participants (host joins immediately, others ringing)
+    const rows = [
+      { call_id: callRow.id, user_id: myId, status: 'joined', joined_at: new Date().toISOString() },
+      ...unique.map(i => ({ call_id: callRow.id, user_id: i.userId, status: 'ringing' })),
+    ];
+    const { error: pErr } = await (supabase as any).from('group_call_participants').insert(rows);
+    if (pErr) {
+      await (supabase as any).from('group_calls').update({ status: 'ended', ended_at: new Date().toISOString() }).eq('id', callRow.id);
+      toast({ title: 'Failed to invite participants', description: pErr.message, variant: 'destructive' });
+      return;
+    }
+
+    try {
+      await acquireLocalStream(type);
+    } catch (e: any) {
+      await (supabase as any).from('group_calls').update({ status: 'ended', ended_at: new Date().toISOString() }).eq('id', callRow.id);
+      toast({ title: 'Camera/mic blocked', description: e?.message, variant: 'destructive' });
+      return;
+    }
+
+    setActive({ id: callRow.id, hostId: myId, type, title: title || null, conversationId: conversationId || null });
+    activeRef.current = { id: callRow.id, hostId: myId, type, title: title || null, conversationId: conversationId || null };
+    // Pre-fill participants in UI
+    unique.forEach(i => updateParticipant(i.userId, { name: i.name, joined: false }));
+    joinChannel(callRow.id);
+    await (supabase as any).from('group_calls').update({ status: 'active' }).eq('id', callRow.id);
+  }, [active, acquireLocalStream, incoming, joinChannel, myId, toast, updateParticipant, user]);
+
+  const acceptIncoming = useCallback(async () => {
+    if (!incoming || !myId) return;
+    const inc = incoming;
+    setIncoming(null);
+    try {
+      await acquireLocalStream(inc.type);
+    } catch (e: any) {
+      toast({ title: 'Camera/mic blocked', description: e?.message, variant: 'destructive' });
+      await (supabase as any).from('group_call_participants').update({ status: 'declined' }).eq('call_id', inc.callId).eq('user_id', myId);
+      return;
+    }
+    nameByUserRef.current.set(myId, user?.user_metadata?.name || user?.email || 'You');
+    nameByUserRef.current.set(inc.hostId, inc.hostName);
+    setActive({ id: inc.callId, hostId: inc.hostId, type: inc.type, title: inc.title, conversationId: null });
+    activeRef.current = { id: inc.callId, hostId: inc.hostId, type: inc.type, title: inc.title, conversationId: null };
+    await (supabase as any).from('group_call_participants').update({ status: 'joined', joined_at: new Date().toISOString() }).eq('call_id', inc.callId).eq('user_id', myId);
+    joinChannel(inc.callId);
+  }, [acquireLocalStream, incoming, joinChannel, myId, toast, user]);
+
+  const declineIncoming = useCallback(async () => {
+    if (!incoming || !myId) return;
+    const callId = incoming.callId;
+    setIncoming(null);
+    await (supabase as any).from('group_call_participants').update({ status: 'declined' }).eq('call_id', callId).eq('user_id', myId);
+  }, [incoming, myId]);
+
+  const leaveCall = useCallback(async () => {
+    const cur = activeRef.current;
+    if (!cur || !myId) return;
+    try { sendSignal('leave', { from: myId }); } catch {}
+    await (supabase as any).from('group_call_participants').update({ status: 'left', left_at: new Date().toISOString() }).eq('call_id', cur.id).eq('user_id', myId);
+    cleanupAll();
+  }, [cleanupAll, myId, sendSignal]);
+
+  const endForAll = useCallback(async () => {
+    const cur = activeRef.current;
+    if (!cur || !myId) return;
+    try { sendSignal('leave', { from: myId }); } catch {}
+    if (cur.hostId === myId) {
+      await (supabase as any).from('group_calls').update({ status: 'ended', ended_at: new Date().toISOString() }).eq('id', cur.id);
+    }
+    cleanupAll();
+  }, [cleanupAll, myId, sendSignal]);
+
+  const toggleMute = useCallback(() => {
+    const s = localStreamRef.current;
+    if (!s) return;
+    const enabled = s.getAudioTracks().some(t => t.enabled);
+    s.getAudioTracks().forEach(t => (t.enabled = !enabled));
+    setMuted(enabled);
+  }, []);
+
+  const toggleCamera = useCallback(() => {
+    const s = localStreamRef.current;
+    if (!s) return;
+    const enabled = s.getVideoTracks().some(t => t.enabled);
+    s.getVideoTracks().forEach(t => (t.enabled = !enabled));
+    setCameraOff(enabled);
+  }, []);
+
+  // Incoming detection
+  useEffect(() => {
+    if (!myId) return;
+    const ch = supabase
+      .channel(`incoming-group-calls:${myId}`)
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'group_call_participants', filter: `user_id=eq.${myId}` },
+        async (payload) => {
+          const row: any = payload.new;
+          if (row.status !== 'ringing') return;
+          if (activeRef.current || incoming) return;
+          const { data: call } = await (supabase as any)
+            .from('group_calls')
+            .select('id, host_id, call_type, status, title')
+            .eq('id', row.call_id)
+            .maybeSingle();
+          if (!call || (call.status !== 'ringing' && call.status !== 'active')) return;
+          // Look up host name
+          let hostName = 'Someone';
+          try {
+            const { data: emp } = await (supabase as any)
+              .from('employees')
+              .select('name')
+              .eq('auth_user_id', call.host_id)
+              .maybeSingle();
+            if (emp?.name) hostName = emp.name;
+          } catch {}
+          setIncoming({
+            callId: call.id,
+            hostId: call.host_id,
+            hostName,
+            type: call.call_type,
+            title: call.title,
+          });
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [incoming, myId]);
+
+  // Watch active call row to detect end-for-all
+  useEffect(() => {
+    if (!active) return;
+    const ch = supabase
+      .channel(`gc-watch:${active.id}`)
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'group_calls', filter: `id=eq.${active.id}` },
+        (payload) => {
+          const row: any = payload.new;
+          if (row.status === 'ended') {
+            toast({ title: 'Call ended' });
+            cleanupAll();
+          }
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [active, cleanupAll, toast]);
+
+  return (
+    <GroupCallContext.Provider value={{
+      active, participants, incoming, muted, cameraOff, localStream,
+      startGroupCall, acceptIncoming, declineIncoming, leaveCall, endForAll, toggleMute, toggleCamera,
+    }}>
+      {children}
+    </GroupCallContext.Provider>
+  );
+};

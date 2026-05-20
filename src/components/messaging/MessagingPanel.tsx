@@ -3,12 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, X, MessageSquarePlus, ArrowLeft, Paperclip, Check, CheckCheck, Reply, Phone, Video, Mic, Lock, Trash2, ChevronUp } from 'lucide-react';
+import { Send, X, MessageSquarePlus, ArrowLeft, Paperclip, Check, CheckCheck, Reply, Phone, Video, Mic, Lock, Trash2, ChevronUp, Users } from 'lucide-react';
 import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePresenceList } from '@/hooks/usePresenceList';
 import { useCall } from '@/contexts/CallContext';
 import UserSelectorDialog from './UserSelectorDialog';
+import NewGroupCallDialog from '@/components/calls/NewGroupCallDialog';
 import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns';
 
 interface MessagingPanelProps {
@@ -35,6 +36,7 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [showUserSelector, setShowUserSelector] = useState(false);
+  const [showGroupCall, setShowGroupCall] = useState<null | { preset: { userId: string; name: string }[]; title?: string; conversationId?: string | null }>(null);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const { employee } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -404,6 +406,14 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                     className="h-8 w-8 hover:bg-primary-foreground/10"
                     aria-label="Voice call"
                     onClick={() => {
+                      const isGroup = (currentConversation as any)?.type === 'group';
+                      if (isGroup) {
+                        const preset = (currentConversation?.participants || [])
+                          .filter((p: any) => p.user_id !== employee?.authUserId && p.user_id)
+                          .map((p: any) => ({ userId: p.user_id, name: p.employee_name || 'User' }));
+                        setShowGroupCall({ preset, title: getConversationName(currentConversation), conversationId: currentConversation?.id });
+                        return;
+                      }
                       const other = currentConversation?.participants?.find(
                         (p: any) => p.user_id !== employee?.authUserId
                       );
@@ -418,6 +428,14 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                     className="h-8 w-8 hover:bg-primary-foreground/10"
                     aria-label="Video call"
                     onClick={() => {
+                      const isGroup = (currentConversation as any)?.type === 'group';
+                      if (isGroup) {
+                        const preset = (currentConversation?.participants || [])
+                          .filter((p: any) => p.user_id !== employee?.authUserId && p.user_id)
+                          .map((p: any) => ({ userId: p.user_id, name: p.employee_name || 'User' }));
+                        setShowGroupCall({ preset, title: getConversationName(currentConversation), conversationId: currentConversation?.id });
+                        return;
+                      }
                       const other = currentConversation?.participants?.find(
                         (p: any) => p.user_id !== employee?.authUserId
                       );
@@ -431,14 +449,25 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
             ) : (
               <>
                 <h3 className="text-lg font-semibold">Messages</h3>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="ml-auto h-8 w-8 hover:bg-primary-foreground/10"
-                  onClick={() => setShowUserSelector(true)}
-                >
-                  <MessageSquarePlus className="h-5 w-5" />
-                </Button>
+                <div className="ml-auto flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 hover:bg-primary-foreground/10"
+                    aria-label="New group call"
+                    onClick={() => setShowGroupCall({ preset: [] })}
+                  >
+                    <Users className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 hover:bg-primary-foreground/10"
+                    onClick={() => setShowUserSelector(true)}
+                  >
+                    <MessageSquarePlus className="h-5 w-5" />
+                  </Button>
+                </div>
               </>
             )}
           </div>
@@ -855,6 +884,14 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
         open={showUserSelector}
         onClose={() => setShowUserSelector(false)}
         onSelectUser={handleSelectUser}
+      />
+
+      <NewGroupCallDialog
+        open={!!showGroupCall}
+        onClose={() => setShowGroupCall(null)}
+        presetInvitees={showGroupCall?.preset}
+        title={showGroupCall?.title}
+        conversationId={showGroupCall?.conversationId}
       />
     </>
   );

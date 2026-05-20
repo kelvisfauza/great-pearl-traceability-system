@@ -17,6 +17,9 @@ import { PriceProvider } from "@/contexts/PriceContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { LeaveEnforcementProvider } from "@/contexts/LeaveEnforcementContext";
 import { CallProvider } from "@/contexts/CallContext";
+import { GroupCallProvider } from "@/contexts/GroupCallContext";
+import GroupCallDialog from "@/components/calls/GroupCallDialog";
+import IncomingGroupCallToast from "@/components/calls/IncomingGroupCallToast";
 import { useGlobalErrorHandler } from "./hooks/useGlobalErrorHandler";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Index from "./pages/Index";
@@ -153,8 +156,11 @@ const App: React.ComponentType = () => {
         <PriceProvider>
           <TooltipProvider>
           <CallProvider>
+          <GroupCallProvider>
             <Toaster />
             <Sonner />
+            <GroupCallDialog />
+            <IncomingGroupCallToast />
             <BrowserRouter>
               <InactivityTimerInitializer />
               <OfflineSyncBoot />
@@ -477,6 +483,7 @@ const App: React.ComponentType = () => {
               </LocationPermissionGate>
               </MaintenanceGuard>
             </BrowserRouter>
+          </GroupCallProvider>
           </CallProvider>
           </TooltipProvider>
         </PriceProvider>
