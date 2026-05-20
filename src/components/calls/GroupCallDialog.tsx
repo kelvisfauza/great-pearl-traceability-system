@@ -332,6 +332,16 @@ const GroupCallDialog = () => {
               </p>
             </div>
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setMinimized(true)}
+            className="text-primary-foreground hover:bg-white/15 gap-1"
+            title="Minimize call to keep working"
+          >
+            <Minimize2 className="h-4 w-4" />
+            <span className="text-xs hidden sm:inline">Minimize</span>
+          </Button>
         </div>
 
         <div className="flex-1 flex min-h-0">
