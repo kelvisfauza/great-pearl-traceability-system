@@ -146,6 +146,9 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
   const [muted, setMuted] = useState(false);
   const [cameraOff, setCameraOff] = useState(false);
   const [remoteHasVideo, setRemoteHasVideo] = useState(false);
+  // Loud "unavailable" banner shown when the callee doesn't pick up
+  // within the ring timeout window.
+  const [unavailable, setUnavailable] = useState<string | null>(null);
 
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -457,17 +460,36 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     // Ringback / timeout
     setTimeout(async () => {
       const cur = pcRef.current;
-      if (cur && active?.id === row.id) {
-        const { data: latest } = await supabase.from('call_sessions').select('status').eq('id', row.id).maybeSingle();
-        if (latest?.status === 'ringing') {
-          await supabase.from('call_sessions').update({ status: 'missed', ended_at: new Date().toISOString() }).eq('id', row.id);
-          toast({ title: 'No answer', description: `${calleeName} did not pick up.` });
-          sendSignal('hangup', {});
-          logCallToChat(calleeAuthId, type, 'missed');
-          cleanup();
-        }
+      if (!cur) return;
+      const { data: latest } = await supabase
+        .from('call_sessions')
+        .select('status')
+        .eq('id', row.id)
+        .maybeSingle();
+      if (latest?.status === 'ringing') {
+        await supabase
+          .from('call_sessions')
+          .update({ status: 'missed', ended_at: new Date().toISOString() })
+          .eq('id', row.id);
+        sendSignal('hangup', {});
+        logCallToChat(calleeAuthId, type, 'missed');
+        cleanup();
+        // Loud, prominent unavailable banner + spoken announcement
+        const message = `${calleeName} is currently unavailable, please try again later.`;
+        setUnavailable(message);
+        try {
+          if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(message);
+            u.volume = 1;
+            u.rate = 1;
+            u.pitch = 1;
+            window.speechSynthesis.speak(u);
+          }
+        } catch {}
+        window.setTimeout(() => setUnavailable(null), 6000);
       }
-    }, 45000);
+    }, 10000);
   }, [myId, active, incoming, toast, setupPeer, joinChannel, cleanup, sendSignal, logCallToChat]);
 
   // Incoming call detection
