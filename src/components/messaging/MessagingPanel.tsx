@@ -891,6 +891,7 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                                const mime = lastMessage.metadata?.mimeType || '';
                                if (mime.startsWith('audio/')) return '🎤 Voice message';
                                if (mime.startsWith('image/') || lastMessage.type === 'image') return '📷 Photo';
+                               if (lastMessage.type === 'call_recording') return '🎙️ Call recording';
                                if (lastMessage.type === 'file') return `📎 ${lastMessage.metadata?.fileName || 'File'}`;
                                return lastMessage.content;
                              })()}
