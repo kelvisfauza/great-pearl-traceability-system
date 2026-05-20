@@ -43,6 +43,14 @@ export interface IncomingGroupCall {
   title: string | null;
 }
 
+export interface GroupChatMessage {
+  id: string;
+  fromId: string;
+  fromName: string;
+  text: string;
+  at: number;
+}
+
 interface GroupCallContextValue {
   active: GroupCall | null;
   participants: Map<string, GroupParticipant>;
@@ -50,6 +58,13 @@ interface GroupCallContextValue {
   muted: boolean;
   cameraOff: boolean;
   localStream: MediaStream | null;
+  handsRaised: Set<string>;
+  myHandRaised: boolean;
+  chatMessages: GroupChatMessage[];
+  unreadChat: number;
+  markChatRead: () => void;
+  isScreenSharing: boolean;
+  screenSharerId: string | null;
   startGroupCall: (opts: { type: GroupCallType; invitees: { userId: string; name: string }[]; title?: string; conversationId?: string | null; }) => Promise<void>;
   acceptIncoming: () => Promise<void>;
   declineIncoming: () => Promise<void>;
@@ -57,6 +72,10 @@ interface GroupCallContextValue {
   endForAll: () => Promise<void>;
   toggleMute: () => void;
   toggleCamera: () => void;
+  toggleHand: () => void;
+  sendChat: (text: string) => void;
+  toggleScreenShare: () => Promise<void>;
+  addParticipants: (invitees: { userId: string; name: string }[]) => Promise<void>;
 }
 
 const GroupCallContext = createContext<GroupCallContextValue | null>(null);
@@ -84,12 +103,19 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [muted, setMuted] = useState(false);
   const [cameraOff, setCameraOff] = useState(false);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [handsRaised, setHandsRaised] = useState<Set<string>>(new Set());
+  const [chatMessages, setChatMessages] = useState<GroupChatMessage[]>([]);
+  const [unreadChat, setUnreadChat] = useState(0);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [screenSharerId, setScreenSharerId] = useState<string | null>(null);
 
   const peersRef = useRef<Map<string, PeerEntry>>(new Map());
   const channelRef = useRef<RealtimeChannel | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const activeRef = useRef<GroupCall | null>(null);
   const nameByUserRef = useRef<Map<string, string>>(new Map());
+  const cameraTrackRef = useRef<MediaStreamTrack | null>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => { activeRef.current = active; }, [active]);
   useEffect(() => { localStreamRef.current = localStream; }, [localStream]);
@@ -134,11 +160,19 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
     localStreamRef.current?.getTracks().forEach(t => t.stop());
     localStreamRef.current = null;
+    screenStreamRef.current?.getTracks().forEach(t => t.stop());
+    screenStreamRef.current = null;
+    cameraTrackRef.current = null;
     setLocalStream(null);
     setParticipants(new Map());
     setActive(null);
     setMuted(false);
     setCameraOff(false);
+    setHandsRaised(new Set());
+    setChatMessages([]);
+    setUnreadChat(0);
+    setIsScreenSharing(false);
+    setScreenSharerId(null);
   }, [cleanupPeer]);
 
   const sendSignal = useCallback((event: string, payload: any) => {
@@ -247,6 +281,30 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       })
       .on('broadcast', { event: 'leave' }, ({ payload }) => {
         cleanupPeer(payload.from);
+      })
+      .on('broadcast', { event: 'hand' }, ({ payload }) => {
+        setHandsRaised(prev => {
+          const next = new Set(prev);
+          if (payload.raised) next.add(payload.from); else next.delete(payload.from);
+          return next;
+        });
+      })
+      .on('broadcast', { event: 'chat' }, ({ payload }) => {
+        setChatMessages(prev => [...prev, {
+          id: `${payload.from}-${payload.at}-${Math.random().toString(36).slice(2,7)}`,
+          fromId: payload.from,
+          fromName: payload.name || nameByUserRef.current.get(payload.from) || 'Participant',
+          text: String(payload.text || ''),
+          at: payload.at || Date.now(),
+        }]);
+        setUnreadChat(c => c + 1);
+      })
+      .on('broadcast', { event: 'screen' }, ({ payload }) => {
+        if (payload.on) {
+          setScreenSharerId(payload.from);
+        } else {
+          setScreenSharerId(prev => (prev === payload.from ? null : prev));
+        }
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
@@ -392,6 +450,114 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setCameraOff(enabled);
   }, []);
 
+  const toggleHand = useCallback(() => {
+    if (!myId) return;
+    setHandsRaised(prev => {
+      const next = new Set(prev);
+      const raised = !next.has(myId);
+      if (raised) next.add(myId); else next.delete(myId);
+      sendSignal('hand', { from: myId, raised });
+      return next;
+    });
+  }, [myId, sendSignal]);
+
+  const sendChat = useCallback((text: string) => {
+    if (!myId || !text.trim()) return;
+    const at = Date.now();
+    const name = nameByUserRef.current.get(myId) || 'You';
+    sendSignal('chat', { from: myId, name, text: text.trim(), at });
+    setChatMessages(prev => [...prev, {
+      id: `${myId}-${at}`,
+      fromId: myId,
+      fromName: name,
+      text: text.trim(),
+      at,
+    }]);
+  }, [myId, sendSignal]);
+
+  const markChatRead = useCallback(() => setUnreadChat(0), []);
+
+  const replaceVideoTrackOnPeers = useCallback((track: MediaStreamTrack | null) => {
+    peersRef.current.forEach(entry => {
+      const sender = entry.pc.getSenders().find(s => s.track && s.track.kind === 'video');
+      if (sender) {
+        try { sender.replaceTrack(track); } catch {}
+      } else if (track) {
+        try { entry.pc.addTrack(track); } catch {}
+      }
+    });
+  }, []);
+
+  const stopScreenShare = useCallback(() => {
+    const s = localStreamRef.current;
+    const cam = cameraTrackRef.current;
+    screenStreamRef.current?.getTracks().forEach(t => t.stop());
+    screenStreamRef.current = null;
+    if (s && cam) {
+      // Swap screen track back to camera in local stream
+      s.getVideoTracks().forEach(t => { try { s.removeTrack(t); } catch {} });
+      s.addTrack(cam);
+      setLocalStream(new MediaStream(s.getTracks()));
+      replaceVideoTrackOnPeers(cam);
+    } else {
+      replaceVideoTrackOnPeers(null);
+    }
+    cameraTrackRef.current = null;
+    setIsScreenSharing(false);
+    if (myId) sendSignal('screen', { from: myId, on: false });
+    setScreenSharerId(prev => (prev === myId ? null : prev));
+  }, [myId, replaceVideoTrackOnPeers, sendSignal]);
+
+  const toggleScreenShare = useCallback(async () => {
+    if (!activeRef.current || !myId) return;
+    if (isScreenSharing) { stopScreenShare(); return; }
+    if (screenSharerId && screenSharerId !== myId) {
+      toast({ title: 'Someone else is sharing', description: 'Ask them to stop first.', variant: 'destructive' });
+      return;
+    }
+    try {
+      const display = await (navigator.mediaDevices as any).getDisplayMedia({ video: true, audio: false });
+      const screenTrack: MediaStreamTrack = display.getVideoTracks()[0];
+      screenStreamRef.current = display;
+      const s = localStreamRef.current;
+      if (s) {
+        const currentVideo = s.getVideoTracks()[0] || null;
+        cameraTrackRef.current = currentVideo;
+        if (currentVideo) { try { s.removeTrack(currentVideo); } catch {} }
+        s.addTrack(screenTrack);
+        setLocalStream(new MediaStream(s.getTracks()));
+      }
+      replaceVideoTrackOnPeers(screenTrack);
+      screenTrack.onended = () => stopScreenShare();
+      setIsScreenSharing(true);
+      setScreenSharerId(myId);
+      sendSignal('screen', { from: myId, on: true });
+    } catch (e: any) {
+      toast({ title: 'Screen share failed', description: e?.message, variant: 'destructive' });
+    }
+  }, [isScreenSharing, myId, replaceVideoTrackOnPeers, screenSharerId, sendSignal, stopScreenShare, toast]);
+
+  const addParticipants = useCallback<GroupCallContextValue['addParticipants']>(async (invitees) => {
+    const cur = activeRef.current;
+    if (!cur) return;
+    const unique = Array.from(new Map(invitees.filter(i => i.userId && i.userId !== myId).map(i => [i.userId, i])).values());
+    if (unique.length === 0) return;
+    const currentCount = participants.size + 1;
+    if (currentCount + unique.length > GROUP_CALL_HARD_LIMIT) {
+      toast({ title: `Max ${GROUP_CALL_HARD_LIMIT} people per call`, variant: 'destructive' });
+      return;
+    }
+    unique.forEach(i => nameByUserRef.current.set(i.userId, i.name));
+    const rows = unique.map(i => ({ call_id: cur.id, user_id: i.userId, status: 'ringing' }));
+    const { error } = await (supabase as any).from('group_call_participants').insert(rows);
+    if (error) {
+      toast({ title: 'Failed to invite', description: error.message, variant: 'destructive' });
+      return;
+    }
+    unique.forEach(i => updateParticipant(i.userId, { name: i.name, joined: false }));
+    toast({ title: `Invited ${unique.length} more` });
+  }, [myId, participants, toast, updateParticipant]);
+
   // Incoming detection
   useEffect(() => {
     if (!myId) return;
@@ -454,7 +620,11 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   return (
     <GroupCallContext.Provider value={{
       active, participants, incoming, muted, cameraOff, localStream,
+      handsRaised, myHandRaised: myId ? handsRaised.has(myId) : false,
+      chatMessages, unreadChat, markChatRead,
+      isScreenSharing, screenSharerId,
       startGroupCall, acceptIncoming, declineIncoming, leaveCall, endForAll, toggleMute, toggleCamera,
+      toggleHand, sendChat, toggleScreenShare, addParticipants,
     }}>
       {children}
     </GroupCallContext.Provider>
