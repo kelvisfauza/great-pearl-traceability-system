@@ -5,6 +5,7 @@ import ChatButton from "./messaging/ChatButton";
 import NotificationButton from "./notifications/NotificationButton";
 import { AccountButton } from "./AccountButton";
 import NotificationPanel from "./notifications/NotificationPanel";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { ThemeToggle } from "./ThemeToggle";
 import GlobalSearch from "./GlobalSearch";
 import { useMessages } from "@/hooks/useMessages";
@@ -134,11 +135,13 @@ const DashboardLayout = ({ children, title, subtitle, showMessageButton = true }
       </div>
 
       {/* Panels */}
-      <MessagingPanel 
-        isOpen={isMessagingOpen}
-        onClose={() => setIsMessagingOpen(false)}
-        messagesData={messagesData}
-      />
+      <ErrorBoundary>
+        <MessagingPanel 
+          isOpen={isMessagingOpen}
+          onClose={() => setIsMessagingOpen(false)}
+          messagesData={messagesData}
+        />
+      </ErrorBoundary>
       
       <NotificationPanel 
         isOpen={isNotificationOpen}
