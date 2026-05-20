@@ -960,6 +960,17 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
         onSelectUser={handleSelectUser}
       />
 
+      {currentConversation && (currentConversation as any).type === 'group' && (
+        <GroupSettingsDialog
+          open={showGroupSettings}
+          onClose={() => setShowGroupSettings(false)}
+          conversationId={currentConversation.id}
+          initialName={getConversationName(currentConversation)}
+          initialAvatarUrl={(currentConversation as any).avatar_url}
+          onSaved={() => { try { (messagesData as any).fetchConversations?.(); } catch {} }}
+        />
+      )}
+
       <NewGroupChatDialog
         open={showNewGroup}
         onClose={() => setShowNewGroup(false)}
