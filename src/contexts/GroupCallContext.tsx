@@ -699,6 +699,21 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       } catch (err) {
         console.warn('Attendance bonus failed:', err);
       }
+      // Offer rejoin if the meeting is still ongoing
+      try {
+        const { data: stillOn } = await (supabase as any)
+          .from('group_calls')
+          .select('id, host_id, call_type, title, status')
+          .eq('id', cur.id)
+          .maybeSingle();
+        if (stillOn && stillOn.status !== 'ended') {
+          const hostName = nameByUserRef.current.get(stillOn.host_id) || 'Host';
+          setMissedGroupCalls(prev => prev.some(m => m.callId === stillOn.id) ? prev : [
+            ...prev,
+            { callId: stillOn.id, hostId: stillOn.host_id, hostName, type: stillOn.call_type, title: stillOn.title, at: Date.now() },
+          ]);
+        }
+      } catch {}
     }
     cleanupAll();
   }, [cleanupAll, myId, sendSignal, toast]);
@@ -716,6 +731,16 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
       } catch (err) {
         console.warn('Host meeting bonus failed:', err);
+      }
+      // Auto-award all qualifying attendees so they don't have to leave manually
+      try {
+        const { data: bulk } = await supabase.rpc('award_all_meeting_attendance_bonuses' as any, { _call_id: cur.id });
+        const n = Number((bulk as any)?.awarded || 0);
+        if (n > 0) {
+          toast({ title: 'Attendance bonuses sent', description: `${n} participant${n === 1 ? '' : 's'} awarded for this meeting.` });
+        }
+      } catch (err) {
+        console.warn('Bulk attendance award failed:', err);
       }
     } else {
       await (supabase as any).from('group_call_participants').update({ status: 'left', left_at: new Date().toISOString() }).eq('call_id', cur.id).eq('user_id', myId);
