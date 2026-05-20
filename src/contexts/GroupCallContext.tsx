@@ -408,6 +408,33 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           return next;
         });
       })
+      .on('broadcast', { event: 'force_mute' }, ({ payload }) => {
+        if (payload.to !== myId) return;
+        const s = localStreamRef.current;
+        if (!s) return;
+        const anyEnabled = s.getAudioTracks().some(t => t.enabled);
+        if (anyEnabled) {
+          s.getAudioTracks().forEach(t => (t.enabled = false));
+          setMuted(true);
+          sendSignal('mute', { from: myId, muted: true });
+          toast({ title: 'You were muted by the host' });
+        }
+      })
+      .on('broadcast', { event: 'kick' }, ({ payload }) => {
+        if (payload.to !== myId) return;
+        toast({ title: 'Removed from the call', description: 'The host removed you from this meeting.', variant: 'destructive' });
+        (async () => {
+          try {
+            await (supabase as any)
+              .from('group_call_participants')
+              .update({ status: 'left', left_at: new Date().toISOString() })
+              .eq('call_id', activeRef.current?.id)
+              .eq('user_id', myId);
+          } catch {}
+          try { sendSignal('leave', { from: myId }); } catch {}
+          cleanupAll();
+        })();
+      })
       .on('broadcast', { event: 'chat' }, ({ payload }) => {
         setChatMessages(prev => [...prev, {
           id: `${payload.from}-${payload.at}-${Math.random().toString(36).slice(2,7)}`,
