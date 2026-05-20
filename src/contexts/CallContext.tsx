@@ -5,8 +5,9 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, PhoneIncoming } from 'lucide-react';
+import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, PhoneIncoming, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import EscalateCallDialog from '@/components/calls/EscalateCallDialog';
 
 type CallType = 'audio' | 'video';
 type CallStatus = 'ringing' | 'active' | 'ended' | 'declined' | 'missed';
@@ -149,6 +150,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
   // Loud "unavailable" banner shown when the callee doesn't pick up
   // within the ring timeout window.
   const [unavailable, setUnavailable] = useState<string | null>(null);
+  const [escalateOpen, setEscalateOpen] = useState(false);
 
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -923,9 +925,30 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
             >
               <PhoneOff className="h-5 w-5" />
             </Button>
+            <Button
+              variant="secondary"
+              onClick={() => setEscalateOpen(true)}
+              className="rounded-full h-12 w-12 p-0"
+              aria-label="Add person to call"
+              title="Invite someone else"
+            >
+              <UserPlus className="h-5 w-5" />
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Escalate 1:1 call -> group call by inviting more people */}
+      <EscalateCallDialog
+        open={escalateOpen}
+        onClose={() => setEscalateOpen(false)}
+        currentPeer={active && activePeer ? {
+          userId: active.caller_id === myId ? active.callee_id : active.caller_id,
+          name: activePeer.name,
+        } : null}
+        callType={(active?.call_type as 'audio' | 'video') || 'audio'}
+        onEscalate={() => { setEscalateOpen(false); hangup(); }}
+      />
 
       {/* Unavailable banner — shown when ringing times out */}
       <Dialog open={!!unavailable} onOpenChange={(o) => { if (!o) setUnavailable(null); }}>
