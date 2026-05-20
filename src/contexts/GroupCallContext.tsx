@@ -678,8 +678,18 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!cur || !myId) return;
     try { sendSignal('leave', { from: myId }); } catch {}
     await (supabase as any).from('group_call_participants').update({ status: 'left', left_at: new Date().toISOString() }).eq('call_id', cur.id).eq('user_id', myId);
+    if (cur.hostId === myId) {
+      try {
+        const { data } = await supabase.rpc('award_host_meeting_bonus' as any, { _call_id: cur.id });
+        if ((data as any)?.success) {
+          toast({ title: 'Host bonus awarded', description: 'You earned UGX 3,000 for hosting a 10+ minute meeting.' });
+        }
+      } catch (err) {
+        console.warn('Host meeting bonus failed:', err);
+      }
+    }
     cleanupAll();
-  }, [cleanupAll, myId, sendSignal]);
+  }, [cleanupAll, myId, sendSignal, toast]);
 
   const endForAll = useCallback(async () => {
     const cur = activeRef.current;
@@ -687,9 +697,17 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     try { sendSignal('leave', { from: myId }); } catch {}
     if (cur.hostId === myId) {
       await (supabase as any).from('group_calls').update({ status: 'ended', ended_at: new Date().toISOString() }).eq('id', cur.id);
+      try {
+        const { data } = await supabase.rpc('award_host_meeting_bonus' as any, { _call_id: cur.id });
+        if ((data as any)?.success) {
+          toast({ title: 'Host bonus awarded', description: 'You earned UGX 3,000 for hosting a 10+ minute meeting.' });
+        }
+      } catch (err) {
+        console.warn('Host meeting bonus failed:', err);
+      }
     }
     cleanupAll();
-  }, [cleanupAll, myId, sendSignal]);
+  }, [cleanupAll, myId, sendSignal, toast]);
 
   const toggleMute = useCallback(() => {
     const s = localStreamRef.current;
