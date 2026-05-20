@@ -168,6 +168,8 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
   const callerSubscribedRef = useRef(false);
 
   const ringtone = useRingtone();
+  // Caller-side ringback tone (so the caller hears "ring ring" while waiting)
+  const ringback = useRingtone();
 
   // Log a call event as a message in the direct conversation between
   // the current user and the peer so missed/declined/ended calls show
@@ -313,6 +315,8 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
 
     pc.ontrack = (ev) => {
       const [remote] = ev.streams;
+      // Remote media is flowing — stop the caller-side ringback.
+      try { ringback.stop(); } catch {}
       // Save the remote stream; an effect attaches it to the audio/
       // video elements once they mount (the dialog may not be in the
       // DOM yet when ontrack fires).
