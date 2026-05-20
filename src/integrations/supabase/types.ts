@@ -702,6 +702,48 @@ export type Database = {
         }
         Relationships: []
       }
+      call_recordings: {
+        Row: {
+          call_id: string
+          created_at: string
+          duration_seconds: number
+          expires_at: string
+          host_id: string
+          id: string
+          message_id: string | null
+          mime_type: string | null
+          status: string
+          storage_path: string
+          transcript: string | null
+        }
+        Insert: {
+          call_id: string
+          created_at?: string
+          duration_seconds?: number
+          expires_at?: string
+          host_id: string
+          id?: string
+          message_id?: string | null
+          mime_type?: string | null
+          status?: string
+          storage_path: string
+          transcript?: string | null
+        }
+        Update: {
+          call_id?: string
+          created_at?: string
+          duration_seconds?: number
+          expires_at?: string
+          host_id?: string
+          id?: string
+          message_id?: string | null
+          mime_type?: string | null
+          status?: string
+          storage_path?: string
+          transcript?: string | null
+        }
+        Relationships: []
+      }
       call_sessions: {
         Row: {
           answered_at: string | null

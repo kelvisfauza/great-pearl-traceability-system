@@ -7,12 +7,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff, Users,
   Hand, MessageSquare, MonitorUp, MonitorOff, UserPlus, X, Send,
-  Maximize2, Minimize2, Crown, Volume2, UserX, ChevronUp,
+  Maximize2, Minimize2, Crown, Volume2, UserX, ChevronUp, Circle, Square, Loader2,
 } from 'lucide-react';
 import { useGroupCall, GroupParticipant } from '@/contexts/GroupCallContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import AddParticipantsDialog from './AddParticipantsDialog';
+import { useCallRecorder } from '@/hooks/useCallRecorder';
 
 // Persistent audio sink that survives tile re-layouts (e.g. when someone
 // starts screen-sharing and remote tiles move from grid -> spotlight strip).
@@ -206,6 +207,7 @@ const GroupCallDialog = () => {
   const [fullView, setFullView] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
+  const recorder = useCallRecorder();
 
   useEffect(() => {
     if (panel === 'chat') {
@@ -564,6 +566,52 @@ const GroupCallDialog = () => {
           {isHost && (
             <Button size="lg" variant="secondary" onClick={() => setAddOpen(true)} className="rounded-full h-12 w-12 p-0" title="Add people">
               <UserPlus className="h-5 w-5" />
+            </Button>
+          )}
+          {isHost && (
+            <Button
+              size="lg"
+              variant={recorder.isRecording ? 'destructive' : 'secondary'}
+              onClick={() => {
+                if (recorder.isRecording) {
+                  recorder.stop();
+                } else {
+                  recorder.start({
+                    callId: active.id,
+                    hostUserId: myId!,
+                    hostName: myName,
+                    title: active.title,
+                    getStreams: () => {
+                      const out: MediaStream[] = [];
+                      if (localStream) out.push(localStream);
+                      for (const p of others) {
+                        if (p.stream) out.push(p.stream);
+                      }
+                      return out;
+                    },
+                  });
+                }
+              }}
+              disabled={recorder.isUploading}
+              className="rounded-full h-12 px-4"
+              title={recorder.isRecording ? 'Stop recording' : 'Record call (host only)'}
+            >
+              {recorder.isUploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving…
+                </>
+              ) : recorder.isRecording ? (
+                <>
+                  <Square className="h-4 w-4 mr-2 fill-current" />
+                  Stop · {Math.floor(recorder.seconds / 60)}:{String(recorder.seconds % 60).padStart(2, '0')}
+                </>
+              ) : (
+                <>
+                  <Circle className="h-4 w-4 mr-2 text-red-500 fill-red-500" />
+                  Record
+                </>
+              )}
             </Button>
           )}
           <Button size="lg" variant="destructive" onClick={leaveCall} className="rounded-full h-12 px-6">

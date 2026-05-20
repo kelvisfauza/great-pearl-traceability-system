@@ -12,6 +12,7 @@ import UserSelectorDialog from './UserSelectorDialog';
 import NewGroupChatDialog from './NewGroupChatDialog';
 import NewGroupCallDialog from '@/components/calls/NewGroupCallDialog';
 import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns';
+import CallRecordingBubble from './CallRecordingBubble';
 
 interface MessagingPanelProps {
   isOpen: boolean;
@@ -26,7 +27,7 @@ interface Message {
   sender_name?: string;
   conversation_id: string;
   created_at: string;
-  type: 'text' | 'image' | 'file';
+  type: 'text' | 'image' | 'file' | 'call_recording';
   metadata?: any;
   read_at?: string;
   reply_to_id?: string;
@@ -562,7 +563,9 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                                 </div>
                               )}
                               
-                              {message.type === 'image' ? (
+                              {message.type === 'call_recording' ? (
+                                <CallRecordingBubble message={message} isOwnMessage={isOwnMessage} />
+                              ) : message.type === 'image' ? (
                                 <div>
                                   <img 
                                     src={message.content} 
@@ -888,6 +891,7 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                                const mime = lastMessage.metadata?.mimeType || '';
                                if (mime.startsWith('audio/')) return '🎤 Voice message';
                                if (mime.startsWith('image/') || lastMessage.type === 'image') return '📷 Photo';
+                               if (lastMessage.type === 'call_recording') return '🎙️ Call recording';
                                if (lastMessage.type === 'file') return `📎 ${lastMessage.metadata?.fileName || 'File'}`;
                                return lastMessage.content;
                              })()}
