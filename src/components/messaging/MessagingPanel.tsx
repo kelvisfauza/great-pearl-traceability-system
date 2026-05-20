@@ -431,7 +431,13 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                         const preset = (currentConversation?.participants || [])
                           .filter((p: any) => p.user_id !== employee?.authUserId && p.user_id)
                           .map((p: any) => ({ userId: p.user_id, name: p.employee_name || 'User' }));
-                        setShowGroupCall({ preset, title: getConversationName(currentConversation), conversationId: currentConversation?.id });
+                        if (preset.length === 0) return;
+                        startGroupCall({
+                          type: 'audio',
+                          invitees: preset,
+                          title: getConversationName(currentConversation),
+                          conversationId: currentConversation?.id || null,
+                        });
                         return;
                       }
                       const other = currentConversation?.participants?.find(
@@ -453,7 +459,13 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                         const preset = (currentConversation?.participants || [])
                           .filter((p: any) => p.user_id !== employee?.authUserId && p.user_id)
                           .map((p: any) => ({ userId: p.user_id, name: p.employee_name || 'User' }));
-                        setShowGroupCall({ preset, title: getConversationName(currentConversation), conversationId: currentConversation?.id });
+                        if (preset.length === 0) return;
+                        startGroupCall({
+                          type: 'video',
+                          invitees: preset,
+                          title: getConversationName(currentConversation),
+                          conversationId: currentConversation?.id || null,
+                        });
                         return;
                       }
                       const other = currentConversation?.participants?.find(
