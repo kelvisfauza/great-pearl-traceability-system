@@ -337,7 +337,7 @@ const GroupCallDialog = () => {
           )}
         </div>
 
-        <AddParticipantsDialog open={addOpen} onClose={() => setAddOpen(false)} />
+        {isHost && <AddParticipantsDialog open={addOpen} onClose={() => setAddOpen(false)} />}
       </DialogContent>
     </Dialog>
   );
