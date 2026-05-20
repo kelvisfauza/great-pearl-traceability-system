@@ -169,6 +169,7 @@ const GroupCallDialog = () => {
     chatMessages, unreadChat, markChatRead, sendChat,
     isScreenSharing, screenSharerId, toggleScreenShare,
     mutedPeers,
+    forceMuteParticipant, removeParticipantFromCall,
   } = useGroupCall();
   const { user, employee } = useAuth();
   const [panel, setPanel] = useState<null | 'chat' | 'people'>(null);
@@ -260,6 +261,8 @@ const GroupCallDialog = () => {
                     sharing
                     micMuted={spotlightTile.isLocal ? muted : mutedPeers.has(spotlightTile.userId)}
                     isHost={spotlightTile.userId === active.hostId}
+                    onForceMute={isHost && !spotlightTile.isLocal ? () => forceMuteParticipant(spotlightTile.userId) : undefined}
+                    onKick={isHost && !spotlightTile.isLocal ? () => removeParticipantFromCall(spotlightTile.userId) : undefined}
                   />
                 </div>
               </div>
@@ -286,6 +289,8 @@ const GroupCallDialog = () => {
                       sharing={screenSharerId === p.userId}
                       micMuted={mutedPeers.has(p.userId)}
                       isHost={p.userId === active.hostId}
+                      onForceMute={isHost ? () => forceMuteParticipant(p.userId) : undefined}
+                      onKick={isHost ? () => removeParticipantFromCall(p.userId) : undefined}
                     />
                   ))}
                 </div>
@@ -305,6 +310,8 @@ const GroupCallDialog = () => {
                       handRaised={handsRaised.has(t.userId)}
                       micMuted={t.isLocal ? muted : mutedPeers.has(t.userId)}
                       isHost={t.userId === active.hostId}
+                      onForceMute={isHost && !t.isLocal ? () => forceMuteParticipant(t.userId) : undefined}
+                      onKick={isHost && !t.isLocal ? () => removeParticipantFromCall(t.userId) : undefined}
                     />
                   </div>
                 ))}
