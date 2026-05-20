@@ -321,6 +321,8 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
 
     pc.ontrack = (ev) => {
       const [remote] = ev.streams;
+      // Caller already gave up — ignore any late media arrival.
+      if (abandonedRef.current) return;
       // Remote media is flowing — stop the caller-side ringback.
       try { ringback.stop(); } catch {}
       // Save the remote stream; an effect attaches it to the audio/
