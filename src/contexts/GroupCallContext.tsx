@@ -553,14 +553,30 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [active, myId, sendSignal]);
 
   const acquireLocalStream = useCallback(async (type: GroupCallType) => {
-    const constraints: MediaStreamConstraints = type === 'video'
-      ? { audio: true, video: { width: { ideal: 640 }, height: { ideal: 360 } } }
-      : { audio: true, video: false };
-    const stream = await navigator.mediaDevices.getUserMedia(constraints);
-    setLocalStream(stream);
-    localStreamRef.current = stream;
-    return stream;
-  }, []);
+    // Mobile Edge/Safari quirk: getUserMedia must run synchronously inside the
+    // user gesture. Callers must invoke this BEFORE any awaited DB/network work.
+    // Try video+audio first; if the device has no camera or denies it, fall
+    // back to audio-only so the user still joins the call.
+    const videoConstraints = { width: { ideal: 640 }, height: { ideal: 360 } };
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(
+        type === 'video' ? { audio: true, video: videoConstraints } : { audio: true, video: false }
+      );
+      setLocalStream(stream);
+      localStreamRef.current = stream;
+      return stream;
+    } catch (e: any) {
+      if (type === 'video' && (e?.name === 'NotFoundError' || e?.name === 'OverconstrainedError' || e?.name === 'NotReadableError')) {
+        // No usable camera — join with audio only.
+        const audioOnly = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        setLocalStream(audioOnly);
+        localStreamRef.current = audioOnly;
+        try { toast({ title: 'Camera unavailable', description: 'Joined with microphone only.' }); } catch {}
+        return audioOnly;
+      }
+      throw e;
+    }
+  }, [toast]);
 
   const startGroupCall = useCallback<GroupCallContextValue['startGroupCall']>(async ({ type, invitees, title, conversationId }) => {
     if (!myId) {
@@ -588,6 +604,21 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     unique.forEach(i => nameByUserRef.current.set(i.userId, i.name));
     nameByUserRef.current.set(myId, user?.user_metadata?.name || user?.email || 'You');
 
+    // IMPORTANT: acquire mic/camera FIRST so the browser keeps the user-gesture
+    // chain (Edge mobile blocks getUserMedia if it happens after awaited DB calls).
+    let acquiredStream: MediaStream | null = null;
+    try {
+      acquiredStream = await acquireLocalStream(type);
+    } catch (e: any) {
+      const msg = e?.name === 'NotAllowedError'
+        ? 'Permission denied. Allow microphone access in your browser settings, then try again.'
+        : e?.name === 'NotFoundError' ? 'No microphone found on this device.'
+        : e?.name === 'NotReadableError' ? 'Mic/camera is already in use by another app.'
+        : (e?.message || 'Unable to access microphone/camera.');
+      toast({ title: 'Mic/camera blocked', description: msg, variant: 'destructive' });
+      return;
+    }
+
     // Create the group_calls row
     const { data: callRow, error: callErr } = await (supabase as any)
       .from('group_calls')
@@ -595,6 +626,8 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       .select()
       .single();
     if (callErr || !callRow) {
+      try { acquiredStream?.getTracks().forEach(t => t.stop()); } catch {}
+      setLocalStream(null); localStreamRef.current = null;
       toast({ title: 'Failed to start call', description: callErr?.message, variant: 'destructive' });
       return;
     }
@@ -606,16 +639,10 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     ];
     const { error: pErr } = await (supabase as any).from('group_call_participants').insert(rows);
     if (pErr) {
+      try { acquiredStream?.getTracks().forEach(t => t.stop()); } catch {}
+      setLocalStream(null); localStreamRef.current = null;
       await (supabase as any).from('group_calls').update({ status: 'ended', ended_at: new Date().toISOString() }).eq('id', callRow.id);
       toast({ title: 'Failed to invite participants', description: pErr.message, variant: 'destructive' });
-      return;
-    }
-
-    try {
-      await acquireLocalStream(type);
-    } catch (e: any) {
-      await (supabase as any).from('group_calls').update({ status: 'ended', ended_at: new Date().toISOString() }).eq('id', callRow.id);
-      toast({ title: 'Camera/mic blocked', description: e?.message, variant: 'destructive' });
       return;
     }
 
@@ -635,7 +662,12 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     try {
       await acquireLocalStream(inc.type);
     } catch (e: any) {
-      toast({ title: 'Camera/mic blocked', description: e?.message, variant: 'destructive' });
+      const msg = e?.name === 'NotAllowedError'
+        ? 'Permission denied. Allow mic/camera in browser settings, then try again.'
+        : e?.name === 'NotFoundError' ? 'No microphone found on this device.'
+        : e?.name === 'NotReadableError' ? 'Mic/camera is already in use by another app.'
+        : (e?.message || 'Unable to access microphone/camera.');
+      toast({ title: 'Mic/camera blocked', description: msg, variant: 'destructive' });
       await (supabase as any).from('group_call_participants').update({ status: 'declined' }).eq('call_id', inc.callId).eq('user_id', myId);
       return;
     }
