@@ -45,7 +45,7 @@ const Tile = ({ stream, name, muted, isLocal, isVideo, handRaised, sharing, micM
           ref={ref}
           autoPlay
           playsInline
-          muted={!!muted || !!isLocal}
+          muted
           className={cn('w-full h-full', sharing ? 'object-contain bg-black' : 'object-cover')}
         />
       ) : (
@@ -72,10 +72,8 @@ const Tile = ({ stream, name, muted, isLocal, isVideo, handRaised, sharing, micM
           <MonitorUp className="h-3 w-3" /> Sharing
         </div>
       )}
-      {/* Hidden audio sink to force loudspeaker on mobile */}
-      {stream && !isVideo && !isLocal && (
-        <video ref={ref} autoPlay playsInline className="absolute w-0 h-0 opacity-0 pointer-events-none" />
-      )}
+      {/* Audio for remote peers is played by RemoteAudioSink mounted at the
+          dialog root so screen-share layout swaps don't break playback. */}
     </div>
   );
 };
