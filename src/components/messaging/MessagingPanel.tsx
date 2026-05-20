@@ -885,6 +885,14 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
         onClose={() => setShowUserSelector(false)}
         onSelectUser={handleSelectUser}
       />
+
+      <NewGroupCallDialog
+        open={!!showGroupCall}
+        onClose={() => setShowGroupCall(null)}
+        presetInvitees={showGroupCall?.preset}
+        title={showGroupCall?.title}
+        conversationId={showGroupCall?.conversationId}
+      />
     </>
   );
 };
