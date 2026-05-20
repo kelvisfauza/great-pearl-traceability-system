@@ -9,7 +9,7 @@ interface Message {
   sender_name?: string;
   conversation_id: string;
   created_at: string;
-  type: 'text' | 'image' | 'file';
+  type: 'text' | 'image' | 'file' | 'call_recording';
   metadata?: any;
   read_at?: string;
   delivered_at?: string;
@@ -149,7 +149,7 @@ export const useMessages = () => {
             participants: participantDetails,
             lastMessage: lastMsg ? {
               ...lastMsg,
-              type: lastMsg.type as 'text' | 'image' | 'file'
+              type: lastMsg.type as 'text' | 'image' | 'file' | 'call_recording'
             } : undefined,
             unread_count: unreadCount || 0
           };
@@ -218,10 +218,10 @@ export const useMessages = () => {
       if (error) throw error;
       const mappedMessages = (data || []).map(msg => ({
         ...msg,
-        type: msg.type as 'text' | 'image' | 'file',
+        type: msg.type as 'text' | 'image' | 'file' | 'call_recording',
         replied_message: msg.replied_message ? {
           ...msg.replied_message,
-          type: msg.replied_message.type as 'text' | 'image' | 'file'
+          type: msg.replied_message.type as 'text' | 'image' | 'file' | 'call_recording'
         } as Message : undefined
       }));
       setMessages(mappedMessages);
