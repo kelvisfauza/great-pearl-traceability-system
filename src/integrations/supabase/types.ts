@@ -10760,6 +10760,15 @@ export type Database = {
         Args: { user_uuid: string }
         Returns: number
       }
+      get_chat_participants_info: {
+        Args: { _user_ids: string[] }
+        Returns: {
+          auth_user_id: string
+          avatar_url: string
+          email: string
+          name: string
+        }[]
+      }
       get_current_employee: {
         Args: never
         Returns: {
