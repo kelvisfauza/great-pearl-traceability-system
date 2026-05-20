@@ -572,17 +572,28 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     }, 20000);
   }, [myId, active, incoming, toast, setupPeer, joinChannel, cleanup, sendSignal, logCallToChat]);
 
-  // Incoming call detection
-  useEffect(() => {
+  // Shared handler so realtime AND the polling fallback both go through
+  // the same code path. We dedupe via a processed-ids set so a single
+  // ringing row only ever fires the UI once even if realtime + poll
+  // both deliver it.
+  const processedIncomingRef = useRef<Set<string>>(new Set());
+  const activeRef = useRef<CallRow | null>(null);
+  const incomingRef = useRef<CallRow | null>(null);
+  useEffect(() => { activeRef.current = active; }, [active]);
+  useEffect(() => { incomingRef.current = incoming; }, [incoming]);
+
+  const handleIncomingRow = useCallback(async (row: CallRow) => {
     if (!myId) return;
-    const ch = supabase
-      .channel(`incoming-calls:${myId}`)
-      .on('postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'call_sessions', filter: `callee_id=eq.${myId}` },
-        async (payload) => {
-          const row = payload.new as CallRow;
-          if (row.status !== 'ringing') return;
-          if (active || incoming) {
+    if (row.status !== 'ringing') return;
+    if (processedIncomingRef.current.has(row.id)) return;
+    processedIncomingRef.current.add(row.id);
+    // Trim the set so it doesn't grow forever
+    if (processedIncomingRef.current.size > 200) {
+      processedIncomingRef.current = new Set(
+        Array.from(processedIncomingRef.current).slice(-100),
+      );
+    }
+    if (activeRef.current || incomingRef.current) {
             // Auto-decline — but first tell the caller we're busy so they
             // get a clear "on another call" message instead of a generic decline.
             try {
@@ -629,11 +640,58 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
             tag: `call-${row.id}`,
           });
           try { window.focus(); } catch {}
-        }
+  }, [myId, fetchPeer, ringtone]);
+
+  // Incoming call detection (realtime)
+  useEffect(() => {
+    if (!myId) return;
+    const ch = supabase
+      .channel(`incoming-calls:${myId}`)
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'call_sessions', filter: `callee_id=eq.${myId}` },
+        (payload) => handleIncomingRow(payload.new as CallRow),
       )
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [myId, active, incoming, fetchPeer, ringtone]);
+  }, [myId, handleIncomingRow]);
+
+  // Polling fallback — Edge (and Chrome with heavy throttling) can pause
+  // or lag the realtime websocket when the tab is backgrounded, so the
+  // INSERT event sometimes arrives many seconds late. Poll every 3s for
+  // any ringing call addressed to me in the last 60s and run it through
+  // the same handler (deduped via processedIncomingRef).
+  useEffect(() => {
+    if (!myId) return;
+    let stopped = false;
+    const poll = async () => {
+      if (stopped) return;
+      if (incomingRef.current || activeRef.current) return;
+      try {
+        const since = new Date(Date.now() - 60_000).toISOString();
+        const { data } = await supabase
+          .from('call_sessions')
+          .select('*')
+          .eq('callee_id', myId)
+          .eq('status', 'ringing')
+          .gte('started_at', since)
+          .order('started_at', { ascending: false })
+          .limit(1);
+        const row = data?.[0] as CallRow | undefined;
+        if (row) await handleIncomingRow(row);
+      } catch {}
+    };
+    const id = window.setInterval(poll, 3000);
+    const onVis = () => { if (!document.hidden) poll(); };
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('focus', onVis);
+    poll();
+    return () => {
+      stopped = true;
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('focus', onVis);
+    };
+  }, [myId, handleIncomingRow]);
 
   // Watch active call for remote-side changes
   useEffect(() => {
