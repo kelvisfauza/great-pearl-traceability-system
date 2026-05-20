@@ -238,14 +238,11 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
   // the call back to active after we've already declared it unavailable.
   const abandonedRef = useRef(false);
 
-  // Request OS-level notification permission once (so we can pop up
-  // an incoming-call notification even when the tab is in the background).
-  useEffect(() => {
-    if (typeof window === 'undefined' || !('Notification' in window)) return;
-    if (Notification.permission === 'default') {
-      try { Notification.requestPermission(); } catch {}
-    }
-  }, []);
+  // Request OS-level notification permission on the first user gesture
+  // (browsers ignore requestPermission() without a gesture). Once granted,
+  // we can pop up an incoming-call notification even when the tab is in
+  // the background — e.g. the user is watching a movie on YouTube.
+  useEffect(() => { ensureNotificationPermission(); }, []);
 
   const cleanup = useCallback(() => {
     try { pcRef.current?.close(); } catch {}
