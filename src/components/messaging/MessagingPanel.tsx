@@ -851,6 +851,8 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                   const unreadCount = conversation.unread_count || 0;
                   const conversationName = getConversationName(conversation);
           const { status: presenceStatus } = getOtherParticipantPresence(conversation);
+          const isGroup = (conversation as any)?.type === 'group';
+          const isUnread = unreadCount > 0;
 
                   return (
                     <button
@@ -861,32 +863,42 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                       <div className="relative flex-shrink-0">
                         <Avatar className="h-12 w-12">
                           <AvatarImage src={getConversationAvatar(conversation)} alt={conversationName} />
-                          <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                            {conversationName?.charAt(0).toUpperCase()}
+                          <AvatarFallback className={`font-semibold ${isGroup ? 'bg-accent text-accent-foreground' : 'bg-primary/10 text-primary'}`}>
+                            {isGroup ? <UsersRound className="h-6 w-6" /> : conversationName?.charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
-                        <span
-                          aria-label={presenceStatus}
-                          className={`absolute bottom-0 right-0 h-3 w-3 rounded-full ring-2 ring-background ${
-                            presenceStatus === 'online' ? 'bg-green-500'
-                            : presenceStatus === 'away' ? 'bg-yellow-400'
-                            : 'bg-muted-foreground/50'
-                          }`}
-                        />
+                        {isGroup ? (
+                          <span
+                            aria-label="Group chat"
+                            className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full ring-2 ring-background bg-primary text-primary-foreground flex items-center justify-center"
+                          >
+                            <Users className="h-2.5 w-2.5" />
+                          </span>
+                        ) : (
+                          <span
+                            aria-label={presenceStatus}
+                            className={`absolute bottom-0 right-0 h-3 w-3 rounded-full ring-2 ring-background ${
+                              presenceStatus === 'online' ? 'bg-green-500'
+                              : presenceStatus === 'away' ? 'bg-yellow-400'
+                              : 'bg-muted-foreground/50'
+                            }`}
+                          />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-0.5">
-                          <p className="font-semibold text-sm truncate">
-                            {conversationName}
+                          <p className={`text-sm truncate flex items-center gap-1.5 ${isUnread ? 'font-bold text-foreground' : 'font-semibold'}`}>
+                            {isGroup && <UsersRound className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />}
+                            <span className="truncate">{conversationName}</span>
                           </p>
                           {lastMessage && (
-                            <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
+                            <span className={`text-xs flex-shrink-0 ml-2 ${isUnread ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
                               {format(new Date(lastMessage.created_at), 'HH:mm')}
                             </span>
                           )}
                         </div>
                          <div className="flex items-center justify-between gap-2">
-                           <p className="text-sm text-muted-foreground truncate flex-1">
+                           <p className={`text-sm truncate flex-1 ${isUnread ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
                              {(() => {
                                if (!lastMessage) return 'Tap to start chatting';
                                const mime = lastMessage.metadata?.mimeType || '';
