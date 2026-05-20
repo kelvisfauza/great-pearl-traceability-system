@@ -7,12 +7,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff, Users,
   Hand, MessageSquare, MonitorUp, MonitorOff, UserPlus, X, Send,
-  Maximize2, Minimize2, Crown, Volume2, UserX, ChevronUp,
+  Maximize2, Minimize2, Crown, Volume2, UserX, ChevronUp, Circle, Square, Loader2,
 } from 'lucide-react';
 import { useGroupCall, GroupParticipant } from '@/contexts/GroupCallContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import AddParticipantsDialog from './AddParticipantsDialog';
+import { useCallRecorder } from '@/hooks/useCallRecorder';
 
 // Persistent audio sink that survives tile re-layouts (e.g. when someone
 // starts screen-sharing and remote tiles move from grid -> spotlight strip).
@@ -206,6 +207,7 @@ const GroupCallDialog = () => {
   const [fullView, setFullView] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
+  const recorder = useCallRecorder();
 
   useEffect(() => {
     if (panel === 'chat') {
