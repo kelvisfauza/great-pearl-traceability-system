@@ -20,6 +20,7 @@ import { CallProvider } from "@/contexts/CallContext";
 import { GroupCallProvider } from "@/contexts/GroupCallContext";
 import GroupCallDialog from "@/components/calls/GroupCallDialog";
 import IncomingGroupCallToast from "@/components/calls/IncomingGroupCallToast";
+import MissedGroupCallsBanner from "@/components/calls/MissedGroupCallsBanner";
 import { useGlobalErrorHandler } from "./hooks/useGlobalErrorHandler";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Index from "./pages/Index";
@@ -161,6 +162,7 @@ const App: React.ComponentType = () => {
             <Sonner />
             <GroupCallDialog />
             <IncomingGroupCallToast />
+            <MissedGroupCallsBanner />
             <BrowserRouter>
               <InactivityTimerInitializer />
               <OfflineSyncBoot />
