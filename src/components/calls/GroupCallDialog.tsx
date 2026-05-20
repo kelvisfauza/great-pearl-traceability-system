@@ -142,6 +142,10 @@ const GroupCallDialog = () => {
         onEscapeKeyDown={(e) => e.preventDefault()}
         hideCloseButton
       >
+        {/* Persistent audio sinks — keep remote audio playing across layout changes */}
+        {others.map(p => (
+          <RemoteAudioSink key={`sink-${p.userId}`} stream={p.stream} />
+        ))}
         <div className={cn('flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground', fullView && 'hidden')}>
           <div className="flex items-center gap-2">
             <Users className="h-5 w-5" />
