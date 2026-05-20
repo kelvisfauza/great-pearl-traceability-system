@@ -483,6 +483,7 @@ const App: React.ComponentType = () => {
               </LocationPermissionGate>
               </MaintenanceGuard>
             </BrowserRouter>
+          </GroupCallProvider>
           </CallProvider>
           </TooltipProvider>
         </PriceProvider>
