@@ -833,6 +833,36 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const markChatRead = useCallback(() => setUnreadChat(0), []);
 
+  const forceMuteParticipant = useCallback((userId: string) => {
+    const cur = activeRef.current;
+    if (!cur || !myId || cur.hostId !== myId || userId === myId) return;
+    sendSignal('force_mute', { from: myId, to: userId });
+    setMutedPeers(prev => {
+      const next = new Set(prev);
+      next.add(userId);
+      return next;
+    });
+    const name = nameByUserRef.current.get(userId) || 'Participant';
+    toast({ title: `Muted ${name}` });
+  }, [myId, sendSignal, toast]);
+
+  const removeParticipantFromCall = useCallback(async (userId: string) => {
+    const cur = activeRef.current;
+    if (!cur || !myId || cur.hostId !== myId || userId === myId) return;
+    sendSignal('kick', { from: myId, to: userId });
+    try {
+      await (supabase as any)
+        .from('group_call_participants')
+        .update({ status: 'left', left_at: new Date().toISOString() })
+        .eq('call_id', cur.id)
+        .eq('user_id', userId);
+    } catch {}
+    cleanupPeer(userId);
+    removeParticipant(userId);
+    const name = nameByUserRef.current.get(userId) || 'Participant';
+    toast({ title: `Removed ${name} from the call` });
+  }, [cleanupPeer, myId, removeParticipant, sendSignal, toast]);
+
   const replaceVideoTrackOnPeers = useCallback((track: MediaStreamTrack | null) => {
     peersRef.current.forEach(entry => {
       const sender = entry.pc.getSenders().find(s => s.track && s.track.kind === 'video');
@@ -1058,6 +1088,7 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       startGroupCall, acceptIncoming, declineIncoming, leaveCall, endForAll, toggleMute, toggleCamera,
       toggleHand, sendChat, toggleScreenShare, addParticipants,
       missedGroupCalls, rejoinGroupCall, dismissMissed,
+      forceMuteParticipant, removeParticipantFromCall,
     }}>
       {children}
     </GroupCallContext.Provider>
