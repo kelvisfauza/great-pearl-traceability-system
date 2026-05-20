@@ -12,6 +12,7 @@ import UserSelectorDialog from './UserSelectorDialog';
 import NewGroupChatDialog from './NewGroupChatDialog';
 import NewGroupCallDialog from '@/components/calls/NewGroupCallDialog';
 import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns';
+import CallRecordingBubble from './CallRecordingBubble';
 
 interface MessagingPanelProps {
   isOpen: boolean;
