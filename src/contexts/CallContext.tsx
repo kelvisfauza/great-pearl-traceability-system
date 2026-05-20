@@ -619,23 +619,15 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
           setIncomingPeer(peer);
           ringtone.start();
 
-          // Surface an OS-level notification when the user isn't actively
-          // looking at the tab, and try to bring the window to focus.
-          try {
-            if (typeof document !== 'undefined' && document.hidden &&
-                'Notification' in window && Notification.permission === 'granted') {
-              const n = new Notification(`Incoming ${row.call_type} call`, {
-                body: `${peer.name} is calling you`,
-                icon: '/favicon.ico',
-                tag: `call-${row.id}`,
-                requireInteraction: true,
-              });
-              n.onclick = () => {
-                try { window.focus(); } catch {}
-                n.close();
-              };
-            }
-          } catch (e) { console.warn('[call] notification failed', e); }
+          // Surface an OS-level notification so the user sees the call
+          // even when this tab is in the background (e.g. watching a movie
+          // on another site). The in-app ringing dialog still shows when
+          // they return to the tab.
+          showCallNotification({
+            title: `Incoming ${row.call_type} call`,
+            body: `${peer.name} is calling you`,
+            tag: `call-${row.id}`,
+          });
           try { window.focus(); } catch {}
         }
       )
