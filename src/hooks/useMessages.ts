@@ -620,6 +620,51 @@ export const useMessages = () => {
     }
   };
 
+  const createGroupConversation = async ({ name, participantIds }: {
+    name: string;
+    participantIds: string[];
+  }) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+      const cleanName = name.trim();
+      if (!cleanName) throw new Error('Group name is required');
+      const memberIds = Array.from(new Set(participantIds.filter(id => id && id !== user.id)));
+      if (memberIds.length === 0) throw new Error('Pick at least one member');
+
+      // Create the group conversation
+      const { data: conversation, error: convError } = await supabase
+        .from('conversations')
+        .insert({ type: 'group', name: cleanName, created_by: user.id })
+        .select()
+        .single();
+      if (convError) throw convError;
+
+      // Add participants (creator + selected members)
+      const rows = [user.id, ...memberIds].map(uid => ({
+        conversation_id: conversation.id,
+        user_id: uid,
+      }));
+      const { error: participantsError } = await supabase
+        .from('conversation_participants')
+        .insert(rows);
+      if (participantsError) throw participantsError;
+
+      // Refresh so the new group shows up in the sidebar
+      fetchConversations();
+      toast({ title: 'Group created', description: cleanName });
+      return { id: conversation.id };
+    } catch (error: any) {
+      console.error('Error creating group conversation:', error);
+      toast({
+        title: 'Could not create group',
+        description: error?.message || 'Please try again',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
   // Fetch conversations on mount and set up aggressive polling
   useEffect(() => {
     console.log('🚀 useMessages hook initialized');
