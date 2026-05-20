@@ -195,6 +195,8 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
   useEffect(() => {
     if (selectedConversation) {
       fetchMessages(selectedConversation);
+      // Auto-focus the input so the user can start typing right away
+      setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [selectedConversation, fetchMessages]);
 
