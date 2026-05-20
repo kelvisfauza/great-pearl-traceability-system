@@ -20,7 +20,7 @@ interface User {
 interface UserSelectorDialogProps {
   open: boolean;
   onClose: () => void;
-  onSelectUser: (userId: string) => void;
+  onSelectUser: (userId: string, user?: User) => void;
 }
 
 const UserSelectorDialog = ({ open, onClose, onSelectUser }: UserSelectorDialogProps) => {
@@ -52,26 +52,29 @@ const UserSelectorDialog = ({ open, onClose, onSelectUser }: UserSelectorDialogP
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      
+
       const { data: { user } } = await supabase.auth.getUser();
-      
-      let query = supabase
-        .from('employees')
-        .select('id, auth_user_id, name, email, department, position')
-        .eq('status', 'Active')
-        .not('auth_user_id', 'is', null)
-        .order('name');
 
-      // Exclude current user by auth_user_id
-      if (user?.id) {
-        query = query.neq('auth_user_id', user.id);
-      }
-
-      const { data, error } = await query;
-
+      // Use the SECURITY DEFINER RPC so non-admins can also see the staff directory
+      // (regular RLS on employees only lets users see their own row).
+      const { data, error } = await (supabase as any).rpc('get_employee_directory');
       if (error) throw error;
-      setUsers(data || []);
-      setFilteredUsers(data || []);
+
+      const mapped: User[] = ((data as any[]) || []).map((e) => ({
+        id: e.id,
+        auth_user_id: e.auth_user_id,
+        name: e.name,
+        email: e.email,
+        department: e.department,
+        position: e.job_position ?? e.position ?? '',
+      }));
+
+      const filtered = user?.id
+        ? mapped.filter((u) => u.auth_user_id !== user.id)
+        : mapped;
+
+      setUsers(filtered);
+      setFilteredUsers(filtered);
     } catch (error) {
       console.error('Error fetching users:', error);
     } finally {
@@ -79,8 +82,8 @@ const UserSelectorDialog = ({ open, onClose, onSelectUser }: UserSelectorDialogP
     }
   };
 
-  const handleSelectUser = (userId: string) => {
-    onSelectUser(userId);
+  const handleSelectUser = (userId: string, user?: User) => {
+    onSelectUser(userId, user);
     onClose();
     setSearchTerm('');
   };
@@ -122,7 +125,7 @@ const UserSelectorDialog = ({ open, onClose, onSelectUser }: UserSelectorDialogP
                     key={user.id}
                     variant="ghost"
                     className="w-full justify-start h-auto py-3 px-3"
-                    onClick={() => handleSelectUser(user.auth_user_id)}
+                    onClick={() => handleSelectUser(user.auth_user_id, user)}
                   >
                     <div className="flex items-center gap-3 w-full">
                       <Avatar className="h-10 w-10">

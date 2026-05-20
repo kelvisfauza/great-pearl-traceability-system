@@ -520,9 +520,10 @@ export const useMessages = () => {
     }
   };
 
-  const createConversation = async ({ participantId, type = 'direct' }: {
+  const createConversation = async ({ participantId, type = 'direct', otherUser }: {
     participantId: string;
     type?: 'direct' | 'group';
+    otherUser?: { name?: string; email?: string; avatar_url?: string };
   }) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -569,28 +570,26 @@ export const useMessages = () => {
 
       if (participantsError) throw participantsError;
 
-      // Optimistically add the new conversation locally so the UI can open it immediately,
-      // instead of waiting for the full conversations refetch.
-      try {
-        const [{ data: meEmp }, { data: otherEmp }] = await Promise.all([
-          supabase.from('employees').select('name,email,avatar_url').eq('auth_user_id', user.id).maybeSingle(),
-          supabase.from('employees').select('name,email,avatar_url').eq('auth_user_id', participantId).maybeSingle(),
-        ]);
-        const optimistic: Conversation = {
-          id: conversation.id,
-          type: (conversation as any).type || type,
-          created_at: (conversation as any).created_at || new Date().toISOString(),
-          participants: [
-            { user_id: user.id, employee_name: meEmp?.name || '', employee_email: meEmp?.email || '', avatar_url: meEmp?.avatar_url || undefined },
-            { user_id: participantId, employee_name: otherEmp?.name || '', employee_email: otherEmp?.email || '', avatar_url: otherEmp?.avatar_url || undefined },
-          ],
-          unread_count: 0,
-        };
-        setConversations(prev => (prev.some(c => c.id === optimistic.id) ? prev : [optimistic, ...prev]));
-      } catch (e) {
-        console.warn('Optimistic conversation insert failed', e);
-      }
-      // Refresh in the background; don't block the UI.
+      // Optimistically add the new conversation locally so the UI opens instantly.
+      // We use the participant info provided by the caller (no extra round trips).
+      const optimistic: Conversation = {
+        id: conversation.id,
+        type: (conversation as any).type || type,
+        created_at: (conversation as any).created_at || new Date().toISOString(),
+        participants: [
+          { user_id: user.id, employee_name: '', employee_email: '', avatar_url: undefined },
+          {
+            user_id: participantId,
+            employee_name: otherUser?.name || '',
+            employee_email: otherUser?.email || '',
+            avatar_url: otherUser?.avatar_url,
+          },
+        ],
+        unread_count: 0,
+      };
+      setConversations(prev => (prev.some(c => c.id === optimistic.id) ? prev : [optimistic, ...prev]));
+
+      // Refresh in the background to fill in any missing details; never block the UI.
       fetchConversations();
       return { id: conversation.id };
     } catch (error) {

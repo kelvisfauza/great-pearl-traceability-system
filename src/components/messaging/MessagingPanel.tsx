@@ -230,7 +230,7 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
     setReplyingTo(null);
   };
 
-  const handleSelectUser = async (userId: string) => {
+  const handleSelectUser = async (userId: string, user?: { name: string; email: string; avatar_url?: string }) => {
     try {
       // Optimistically open existing conversation if it's already in the local list
       const existing = conversations.find((c: any) =>
@@ -244,8 +244,11 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
       }
 
       const result = await createConversation({
-        participantId: userId
-      });
+        participantId: userId,
+        otherUser: user
+          ? { name: user.name, email: user.email, avatar_url: user.avatar_url }
+          : undefined,
+      } as any);
       setSelectedConversation(result.id);
     } catch (error) {
       console.error('Failed to create conversation:', error);
