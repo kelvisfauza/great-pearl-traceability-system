@@ -160,6 +160,9 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const channelRetryTimerRef = useRef<number | null>(null);
   const reconnectPeerRef = useRef<(peerId: string) => void>(() => {});
   const rejoinChannelRef = useRef<() => void>(() => {});
+  const interactedRef = useRef<boolean>(false);
+
+  const markInteracted = useCallback(() => { interactedRef.current = true; }, []);
 
   useEffect(() => { activeRef.current = active; }, [active]);
   useEffect(() => { localStreamRef.current = localStream; }, [localStream]);
@@ -220,6 +223,7 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setUnreadChat(0);
     setIsScreenSharing(false);
     setScreenSharerId(null);
+    interactedRef.current = false;
   }, [cleanupPeer]);
 
   const sendSignal = useCallback((event: string, payload: any) => {
@@ -682,10 +686,20 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       try {
         const { data } = await supabase.rpc('award_host_meeting_bonus' as any, { _call_id: cur.id });
         if ((data as any)?.success) {
-          toast({ title: 'Host bonus awarded', description: 'You earned UGX 3,000 for hosting a 10+ minute meeting.' });
+          toast({ title: 'Host bonus awarded', description: 'You earned UGX 4,000 for hosting a 10+ minute meeting.' });
         }
       } catch (err) {
         console.warn('Host meeting bonus failed:', err);
+      }
+    } else {
+      try {
+        const { data } = await supabase.rpc('award_meeting_attendance_bonus' as any, { _call_id: cur.id, _interacted: interactedRef.current });
+        if ((data as any)?.success) {
+          const amt = (data as any).reward_given;
+          toast({ title: 'Attendance bonus awarded', description: `You earned UGX ${Number(amt).toLocaleString()} for attending this meeting${interactedRef.current ? ' with active participation' : ''}.` });
+        }
+      } catch (err) {
+        console.warn('Attendance bonus failed:', err);
       }
     }
     cleanupAll();
@@ -700,10 +714,21 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       try {
         const { data } = await supabase.rpc('award_host_meeting_bonus' as any, { _call_id: cur.id });
         if ((data as any)?.success) {
-          toast({ title: 'Host bonus awarded', description: 'You earned UGX 3,000 for hosting a 10+ minute meeting.' });
+          toast({ title: 'Host bonus awarded', description: 'You earned UGX 4,000 for hosting a 10+ minute meeting.' });
         }
       } catch (err) {
         console.warn('Host meeting bonus failed:', err);
+      }
+    } else {
+      await (supabase as any).from('group_call_participants').update({ status: 'left', left_at: new Date().toISOString() }).eq('call_id', cur.id).eq('user_id', myId);
+      try {
+        const { data } = await supabase.rpc('award_meeting_attendance_bonus' as any, { _call_id: cur.id, _interacted: interactedRef.current });
+        if ((data as any)?.success) {
+          const amt = (data as any).reward_given;
+          toast({ title: 'Attendance bonus awarded', description: `You earned UGX ${Number(amt).toLocaleString()} for attending this meeting${interactedRef.current ? ' with active participation' : ''}.` });
+        }
+      } catch (err) {
+        console.warn('Attendance bonus failed:', err);
       }
     }
     cleanupAll();
@@ -715,6 +740,7 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const enabled = s.getAudioTracks().some(t => t.enabled);
     s.getAudioTracks().forEach(t => (t.enabled = !enabled));
     setMuted(enabled);
+    interactedRef.current = true;
     if (myId) sendSignal('mute', { from: myId, muted: enabled });
   }, [myId, sendSignal]);
 
@@ -735,6 +761,7 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       sendSignal('hand', { from: myId, raised });
       return next;
     });
+    interactedRef.current = true;
   }, [myId, sendSignal]);
 
   const sendChat = useCallback((text: string) => {
@@ -742,6 +769,7 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const at = Date.now();
     const name = nameByUserRef.current.get(myId) || 'You';
     sendSignal('chat', { from: myId, name, text: text.trim(), at });
+    interactedRef.current = true;
     setChatMessages(prev => [...prev, {
       id: `${myId}-${at}`,
       fromId: myId,
