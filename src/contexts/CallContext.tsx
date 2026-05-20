@@ -21,6 +21,7 @@ interface CallRow {
   started_at: string;
   answered_at: string | null;
   ended_at: string | null;
+  caller_name?: string | null;
 }
 
 interface PeerInfo {
@@ -132,7 +133,7 @@ function useRingtone() {
 }
 
 export const CallProvider = ({ children }: { children: React.ReactNode }) => {
-  const { user } = useAuth();
+  const { user, employee } = useAuth();
   const { toast } = useToast();
   const myId = user?.id || null;
 
@@ -502,7 +503,13 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     }
     const { data, error } = await supabase
       .from('call_sessions')
-      .insert({ caller_id: myId, callee_id: calleeAuthId, call_type: type, status: 'ringing' })
+      .insert({
+        caller_id: myId,
+        callee_id: calleeAuthId,
+        call_type: type,
+        status: 'ringing',
+        caller_name: employee?.name || user?.user_metadata?.name || user?.email || null,
+      } as any)
       .select()
       .single();
     if (error || !data) {
@@ -595,7 +602,21 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
             await supabase.from('call_sessions').update({ status: 'declined', ended_at: new Date().toISOString() }).eq('id', row.id);
             return;
           }
-          const peer = await fetchPeer(row.caller_id);
+          let peer: PeerInfo;
+          const embeddedName = (row as any).caller_name as string | undefined;
+          if (embeddedName && embeddedName.trim()) {
+            const safeName = embeddedName.trim();
+            const initials = safeName
+              .split(' ')
+              .map(s => s[0])
+              .filter(Boolean)
+              .slice(0, 2)
+              .join('')
+              .toUpperCase() || 'U';
+            peer = { name: safeName, avatarInitials: initials };
+          } else {
+            peer = await fetchPeer(row.caller_id);
+          }
           setIncoming(row);
           setIncomingPeer(peer);
           ringtone.start();
