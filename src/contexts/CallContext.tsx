@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, PhoneIncoming, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import EscalateCallDialog from '@/components/calls/EscalateCallDialog';
+import { ensureNotificationPermission, showCallNotification } from '@/lib/callNotifications';
 
 type CallType = 'audio' | 'video';
 type CallStatus = 'ringing' | 'active' | 'ended' | 'declined' | 'missed';
@@ -238,14 +239,11 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
   // the call back to active after we've already declared it unavailable.
   const abandonedRef = useRef(false);
 
-  // Request OS-level notification permission once (so we can pop up
-  // an incoming-call notification even when the tab is in the background).
-  useEffect(() => {
-    if (typeof window === 'undefined' || !('Notification' in window)) return;
-    if (Notification.permission === 'default') {
-      try { Notification.requestPermission(); } catch {}
-    }
-  }, []);
+  // Request OS-level notification permission on the first user gesture
+  // (browsers ignore requestPermission() without a gesture). Once granted,
+  // we can pop up an incoming-call notification even when the tab is in
+  // the background — e.g. the user is watching a movie on YouTube.
+  useEffect(() => { ensureNotificationPermission(); }, []);
 
   const cleanup = useCallback(() => {
     try { pcRef.current?.close(); } catch {}
@@ -621,23 +619,15 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
           setIncomingPeer(peer);
           ringtone.start();
 
-          // Surface an OS-level notification when the user isn't actively
-          // looking at the tab, and try to bring the window to focus.
-          try {
-            if (typeof document !== 'undefined' && document.hidden &&
-                'Notification' in window && Notification.permission === 'granted') {
-              const n = new Notification(`Incoming ${row.call_type} call`, {
-                body: `${peer.name} is calling you`,
-                icon: '/favicon.ico',
-                tag: `call-${row.id}`,
-                requireInteraction: true,
-              });
-              n.onclick = () => {
-                try { window.focus(); } catch {}
-                n.close();
-              };
-            }
-          } catch (e) { console.warn('[call] notification failed', e); }
+          // Surface an OS-level notification so the user sees the call
+          // even when this tab is in the background (e.g. watching a movie
+          // on another site). The in-app ringing dialog still shows when
+          // they return to the tab.
+          showCallNotification({
+            title: `Incoming ${row.call_type} call`,
+            body: `${peer.name} is calling you`,
+            tag: `call-${row.id}`,
+          });
           try { window.focus(); } catch {}
         }
       )

@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { ensureNotificationPermission, showCallNotification } from '@/lib/callNotifications';
 
 export type GroupCallType = 'audio' | 'video';
 
@@ -147,6 +148,10 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [mutedPeers, setMutedPeers] = useState<Set<string>>(new Set());
   const [chatMessages, setChatMessages] = useState<GroupChatMessage[]>([]);
   const [unreadChat, setUnreadChat] = useState(0);
+
+  // Hook the first user gesture to request OS notification permission so
+  // incoming group calls can surface even when the tab is backgrounded.
+  useEffect(() => { ensureNotificationPermission(); }, []);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [screenSharerId, setScreenSharerId] = useState<string | null>(null);
   const [missedGroupCalls, setMissedGroupCalls] = useState<MissedGroupCall[]>([]);
@@ -1045,6 +1050,14 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             type: call.call_type,
             title: call.title,
           });
+          // OS-level notification so the call surfaces even when the user
+          // is in another tab or app (browser still open).
+          showCallNotification({
+            title: `Incoming group ${call.call_type} call`,
+            body: call.title ? `${hostName}: ${call.title}` : `${hostName} is calling`,
+            tag: `group-call-${call.id}`,
+          });
+          try { window.focus(); } catch {}
         }
       )
       .subscribe();
