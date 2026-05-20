@@ -936,11 +936,21 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     unique.forEach(i => nameByUserRef.current.set(i.userId, i.name));
     const rows = unique.map(i => ({ call_id: cur.id, user_id: i.userId, status: 'ringing', joined_at: null, left_at: null }));
     // Upsert so re-inviting someone who previously declined/missed/left doesn't violate the (call_id,user_id) unique constraint
-    const { error } = await (supabase as any)
-      .from('group_call_participants')
-      .upsert(rows, { onConflict: 'call_id,user_id' });
-    if (error) {
-      toast({ title: 'Failed to invite', description: error.message, variant: 'destructive' });
+    // Retry on transient upstream/network errors (e.g. PostgREST cold-start "upstream connect error … connection timeout")
+    let lastError: any = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { error } = await (supabase as any)
+        .from('group_call_participants')
+        .upsert(rows, { onConflict: 'call_id,user_id' });
+      if (!error) { lastError = null; break; }
+      lastError = error;
+      const msg = String(error?.message || '').toLowerCase();
+      const transient = msg.includes('upstream') || msg.includes('timeout') || msg.includes('network') || msg.includes('failed to fetch') || msg.includes('disconnect');
+      if (!transient) break;
+      await new Promise(r => setTimeout(r, 600 * (attempt + 1)));
+    }
+    if (lastError) {
+      toast({ title: 'Failed to invite', description: 'Network hiccup, please try again in a moment.', variant: 'destructive' });
       return;
     }
     unique.forEach(i => updateParticipant(i.userId, { name: i.name, joined: false }));
