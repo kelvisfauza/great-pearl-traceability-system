@@ -292,12 +292,12 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
     );
     return {
       status: (presenceUser?.status || 'offline') as 'online' | 'away' | 'offline',
-      lastSeen: presenceUser?.online_at || null,
+      lastSeen: presenceUser?.online_at || presenceUser?.last_login || null,
     };
   };
 
   const formatLastSeen = (iso: string | null) => {
-    if (!iso) return 'offline';
+    if (!iso) return 'last seen a while ago';
     const d = new Date(iso);
     if (isToday(d)) return `last seen today at ${format(d, 'HH:mm')}`;
     if (isYesterday(d)) return `last seen yesterday at ${format(d, 'HH:mm')}`;
@@ -376,7 +376,7 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                     const { status, lastSeen } = getOtherParticipantPresence(currentConversation);
                     const label =
                       status === 'online' ? 'online'
-                      : status === 'away' ? 'away'
+                      : status === 'away' ? (lastSeen ? `away — ${formatLastSeen(lastSeen)}` : 'away')
                       : formatLastSeen(lastSeen);
                     return (
                       <p className="text-xs opacity-80 flex items-center gap-1.5">
