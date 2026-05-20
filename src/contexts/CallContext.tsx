@@ -579,7 +579,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
         { event: 'UPDATE', schema: 'public', table: 'call_sessions', filter: `id=eq.${active.id}` },
         (payload) => {
           const row = payload.new as CallRow;
-          if (row.status === 'active' && !answeredAtRef.current) {
+          if (row.status === 'active' && !answeredAtRef.current && !abandonedRef.current) {
             answeredAtRef.current = Date.now();
             // Reflect the answered state locally so the caller's UI
             // stops showing "Ringing…" and switches to "Connected".
