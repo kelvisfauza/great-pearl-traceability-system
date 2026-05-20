@@ -785,6 +785,7 @@ export const useMessages = () => {
     fetchMessages,
     sendMessage,
     sendFile,
-    createConversation
+    createConversation,
+    createGroupConversation,
   };
 };
