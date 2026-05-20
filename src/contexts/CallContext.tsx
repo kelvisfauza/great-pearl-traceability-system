@@ -287,14 +287,20 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
   // Fetch peer info (name) by auth_user_id
   const fetchPeer = useCallback(async (authUserId: string): Promise<PeerInfo> => {
     try {
-      const { data } = await supabase
-        .from('employees')
-        .select('name')
-        .eq('auth_user_id', authUserId)
-        .maybeSingle();
-      const name = data?.name || 'Unknown user';
-      const initials = name.split(' ').map(s => s[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || 'U';
-      return { name, avatarInitials: initials };
+      const { data } = await supabase.rpc('get_employee_display_name' as any, {
+        _auth_user_id: authUserId,
+      });
+
+      const safeName = typeof data === 'string' && data.trim() ? data.trim() : 'Unknown user';
+      const initials = safeName
+        .split(' ')
+        .map(s => s[0])
+        .filter(Boolean)
+        .slice(0, 2)
+        .join('')
+        .toUpperCase() || 'U';
+
+      return { name: safeName, avatarInitials: initials };
     } catch {
       return { name: 'Unknown user', avatarInitials: 'U' };
     }
