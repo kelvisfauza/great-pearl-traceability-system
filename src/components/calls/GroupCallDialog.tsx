@@ -83,7 +83,7 @@ const Tile = ({ stream, name, muted, isLocal, isVideo, handRaised, sharing, micM
   const initials = name.split(' ').map(s => s[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || 'U';
   return (
     <div className={cn(
-      'relative bg-black/80 rounded-lg overflow-hidden aspect-video flex items-center justify-center transition-shadow',
+      'group/tile relative bg-black/80 rounded-lg overflow-hidden aspect-video flex items-center justify-center transition-shadow',
       speaking && 'ring-4 ring-emerald-400 shadow-[0_0_24px_rgba(16,185,129,0.55)]'
     )}>
       {stream && isVideo ? (
