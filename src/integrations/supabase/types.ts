@@ -4987,6 +4987,7 @@ export type Database = {
           content: string
           conversation_id: string | null
           created_at: string
+          delivered_at: string | null
           id: string
           metadata: Json | null
           read_at: string | null
@@ -5002,6 +5003,7 @@ export type Database = {
           content: string
           conversation_id?: string | null
           created_at?: string
+          delivered_at?: string | null
           id?: string
           metadata?: Json | null
           read_at?: string | null
@@ -5017,6 +5019,7 @@ export type Database = {
           content?: string
           conversation_id?: string | null
           created_at?: string
+          delivered_at?: string | null
           id?: string
           metadata?: Json | null
           read_at?: string | null
