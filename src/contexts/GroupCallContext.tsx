@@ -633,6 +633,9 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     unique.forEach(i => nameByUserRef.current.set(i.userId, i.name));
     nameByUserRef.current.set(myId, user?.user_metadata?.name || user?.email || 'You');
 
+    // Refresh ICE servers (TURN credentials) before any peer connection is created.
+    await ensureIceServers();
+
     // IMPORTANT: acquire mic/camera FIRST so the browser keeps the user-gesture
     // chain (Edge mobile blocks getUserMedia if it happens after awaited DB calls).
     let acquiredStream: MediaStream | null = null;
