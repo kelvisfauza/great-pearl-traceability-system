@@ -41,27 +41,41 @@ const ICE_CONFIG: RTCConfiguration = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    // Free public TURN relays (Open Relay Project) — required so audio/
-    // video actually flow when peers are behind NAT, mobile data, or
-    // corporate firewalls where STUN alone is not enough.
-    {
-      urls: 'turn:openrelay.metered.ca:80',
-      username: 'openrelayproject',
-      credential: 'openrelayproject',
-    },
-    {
-      urls: 'turn:openrelay.metered.ca:443',
-      username: 'openrelayproject',
-      credential: 'openrelayproject',
-    },
-    {
-      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-      username: 'openrelayproject',
-      credential: 'openrelayproject',
-    },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun.cloudflare.com:3478' },
+    { urls: 'stun:global.stun.twilio.com:3478' },
+    // Free public TURN relays — needed for NAT/firewall traversal.
+    // We also fetch fresh/credentialed servers from the get-ice-servers
+    // edge function (see fetchIceServers below); this list is the
+    // last-resort fallback if that call fails.
+    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turns:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
   ],
   iceCandidatePoolSize: 4,
 };
+
+// Fetch fresh ICE servers (with TURN credentials) from our edge function.
+// Falls back to the static ICE_CONFIG list if the call fails so calls still
+// try to connect.
+let cachedIce: { servers: RTCIceServer[]; expires: number } | null = null;
+async function fetchIceServers(): Promise<RTCIceServer[]> {
+  if (cachedIce && cachedIce.expires > Date.now()) return cachedIce.servers;
+  try {
+    const { data, error } = await supabase.functions.invoke('get-ice-servers');
+    if (error) throw error;
+    const servers = (data as any)?.iceServers as RTCIceServer[] | undefined;
+    if (servers && Array.isArray(servers) && servers.length > 0) {
+      // Cache for 10 minutes (Metered creds are valid much longer).
+      cachedIce = { servers, expires: Date.now() + 10 * 60 * 1000 };
+      return servers;
+    }
+  } catch (e) {
+    console.warn('get-ice-servers failed, using static fallback', e);
+  }
+  return ICE_CONFIG.iceServers as RTCIceServer[];
+}
 
 // Classic dual-tone phone ringtone (440Hz + 480Hz, 2s on / 4s off cadence)
 function useRingtone() {
@@ -324,7 +338,8 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     localStreamRef.current = stream;
     if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
-    const pc = new RTCPeerConnection(ICE_CONFIG);
+    const iceServers = await fetchIceServers();
+    const pc = new RTCPeerConnection({ iceServers, iceCandidatePoolSize: 4 });
     pcRef.current = pc;
     stream.getTracks().forEach(t => pc.addTrack(t, stream));
 
