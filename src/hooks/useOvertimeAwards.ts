@@ -34,9 +34,21 @@ export const useOvertimeAwards = () => {
 
   const fetchAllAwards = async () => {
     try {
-      console.log('Fetching all overtime awards...');
-      console.log('Current employee:', employee);
-      
+      // Only privileged roles need the full list (RLS would filter for others anyway).
+      const role = employee?.role;
+      const perms = (employee as any)?.permissions || [];
+      const canSeeAll =
+        role === 'Super Admin' ||
+        role === 'Administrator' ||
+        role === 'Managing Director' ||
+        role === 'Manager' ||
+        perms.includes('Human Resources') ||
+        perms.includes('Finance');
+      if (!canSeeAll) {
+        setAwards([]);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('overtime_awards')
         .select('*')
@@ -46,16 +58,9 @@ export const useOvertimeAwards = () => {
         console.error('Error fetching all awards:', error);
         throw error;
       }
-      console.log('All awards fetched:', data);
-      console.log('Number of awards:', data?.length);
       setAwards((data || []) as OvertimeAward[]);
     } catch (error) {
       console.error('Error fetching overtime awards:', error);
-      toast({
-        title: "Error Loading Awards",
-        description: "Failed to load overtime awards. Check console for details.",
-        variant: "destructive"
-      });
     }
   };
 
