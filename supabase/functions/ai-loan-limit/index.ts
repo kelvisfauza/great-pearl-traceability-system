@@ -12,6 +12,29 @@ serve(async (req) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // ---- AuthN/AuthZ: caller must be the employee themselves or Finance/Admin ----
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const token = authHeader.replace('Bearer ', '');
+    const { data: userData, error: userErr } = await supabase.auth.getUser(token);
+    if (userErr || !userData?.user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const { data: caller } = await supabase
+      .from('employees')
+      .select('email, role, status, permissions')
+      .eq('auth_user_id', userData.user.id)
+      .maybeSingle();
+    if (!caller || caller.status !== 'Active') {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     const { employee_email } = await req.json();
     if (!employee_email) {
       return new Response(JSON.stringify({ error: "employee_email required" }), {
@@ -20,12 +43,15 @@ serve(async (req) => {
       });
     }
 
+    const isAdmin = ['Super Admin', 'Administrator'].includes(caller.role);
+    const isFinance = Array.isArray(caller.permissions) && caller.permissions.includes('Finance');
+    const isSelf = (caller.email || '').toLowerCase() === String(employee_email).toLowerCase();
+    if (!isAdmin && !isFinance && !isSelf) {
+      return new Response(JSON.stringify({ error: 'Forbidden — can only query your own loan limit' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // 1. Get employee data
     const { data: emp } = await supabase
