@@ -19,22 +19,22 @@ const ICE_CONFIG: RTCConfiguration = {
 };
 
 let cachedIce: { servers: RTCIceServer[]; at: number } | null = null;
-async function getIceConfig(): Promise<RTCConfiguration> {
+function currentIceConfig(): RTCConfiguration {
+  if (cachedIce) return { iceServers: cachedIce.servers, iceCandidatePoolSize: 4 };
+  return ICE_CONFIG;
+}
+async function ensureIceServers(): Promise<void> {
   try {
-    if (cachedIce && Date.now() - cachedIce.at < 60 * 60 * 1000) {
-      return { iceServers: cachedIce.servers, iceCandidatePoolSize: 4 };
-    }
+    if (cachedIce && Date.now() - cachedIce.at < 60 * 60 * 1000) return;
     const { data } = await supabase.functions.invoke('get-ice-servers');
     const turn = (data?.iceServers ?? []) as RTCIceServer[];
     if (turn.length) {
       const merged = [...(ICE_CONFIG.iceServers ?? []), ...turn];
       cachedIce = { servers: merged, at: Date.now() };
-      return { iceServers: merged, iceCandidatePoolSize: 4 };
     }
   } catch (e) {
     console.warn('[ICE] dynamic fetch failed, using static', e);
   }
-  return ICE_CONFIG;
 }
 
 export const GROUP_CALL_SOFT_LIMIT = 6;
