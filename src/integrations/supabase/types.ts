@@ -1908,6 +1908,42 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_role_locks: {
+        Row: {
+          created_at: string
+          department: string | null
+          email: string
+          locked_by: string | null
+          permissions: string[]
+          position: string | null
+          reason: string | null
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          department?: string | null
+          email: string
+          locked_by?: string | null
+          permissions?: string[]
+          position?: string | null
+          reason?: string | null
+          role: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          department?: string | null
+          email?: string
+          locked_by?: string | null
+          permissions?: string[]
+          position?: string | null
+          reason?: string | null
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       employee_salary_advances: {
         Row: {
           created_at: string
@@ -3323,8 +3359,11 @@ export type Database = {
       }
       finance_coffee_lots: {
         Row: {
+          advance_recovered_ugx: number
+          amount_paid_ugx: number
           assessed_at: string
           assessed_by: string
+          balance_ugx: number | null
           batch_number: string | null
           coffee_record_id: string | null
           created_at: string
@@ -3334,6 +3373,7 @@ export type Database = {
           grn_file_url: string | null
           grn_number: string | null
           id: string
+          payment_status: string
           quality_assessment_id: string | null
           quality_json: Json
           quantity_kg: number
@@ -3343,8 +3383,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          advance_recovered_ugx?: number
+          amount_paid_ugx?: number
           assessed_at?: string
           assessed_by: string
+          balance_ugx?: number | null
           batch_number?: string | null
           coffee_record_id?: string | null
           created_at?: string
@@ -3354,6 +3397,7 @@ export type Database = {
           grn_file_url?: string | null
           grn_number?: string | null
           id?: string
+          payment_status?: string
           quality_assessment_id?: string | null
           quality_json: Json
           quantity_kg: number
@@ -3363,8 +3407,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          advance_recovered_ugx?: number
+          amount_paid_ugx?: number
           assessed_at?: string
           assessed_by?: string
+          balance_ugx?: number | null
           batch_number?: string | null
           coffee_record_id?: string | null
           created_at?: string
@@ -3374,6 +3421,7 @@ export type Database = {
           grn_file_url?: string | null
           grn_number?: string | null
           id?: string
+          payment_status?: string
           quality_assessment_id?: string | null
           quality_json?: Json
           quantity_kg?: number
@@ -3490,6 +3538,196 @@ export type Database = {
           grade?: string | null
           id?: string
           notes?: string | null
+        }
+        Relationships: []
+      }
+      finance_reconciliation_items: {
+        Row: {
+          advance_id: string | null
+          amount_ugx: number
+          cash_transaction_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          item_type: string
+          kilograms: number
+          lot_id: string | null
+          payment_id: string | null
+          reconciliation_id: string
+          reference: string | null
+          supplier_id: string | null
+        }
+        Insert: {
+          advance_id?: string | null
+          amount_ugx?: number
+          cash_transaction_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          item_type: string
+          kilograms?: number
+          lot_id?: string | null
+          payment_id?: string | null
+          reconciliation_id: string
+          reference?: string | null
+          supplier_id?: string | null
+        }
+        Update: {
+          advance_id?: string | null
+          amount_ugx?: number
+          cash_transaction_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          item_type?: string
+          kilograms?: number
+          lot_id?: string | null
+          payment_id?: string | null
+          reconciliation_id?: string
+          reference?: string | null
+          supplier_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_reconciliation_items_advance_id_fkey"
+            columns: ["advance_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_advances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_reconciliation_items_cash_transaction_id_fkey"
+            columns: ["cash_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "finance_cash_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_reconciliation_items_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "finance_coffee_lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_reconciliation_items_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "pending_payments_aging"
+            referencedColumns: ["lot_id"]
+          },
+          {
+            foreignKeyName: "finance_reconciliation_items_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_reconciliation_items_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_payments_report"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_reconciliation_items_reconciliation_id_fkey"
+            columns: ["reconciliation_id"]
+            isOneToOne: false
+            referencedRelation: "finance_reconciliations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_reconciliation_items_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_reconciliation_items_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_reconciliations: {
+        Row: {
+          actual_closing_cash_ugx: number
+          advances_issued_ugx: number
+          approved_at: string | null
+          approved_by: string | null
+          cash_topups_ugx: number
+          created_at: string
+          difference_ugx: number
+          expected_closing_cash_ugx: number
+          expenses_ugx: number
+          id: string
+          notes: string | null
+          opening_cash_ugx: number
+          period_type: string
+          prepared_by: string
+          reconciliation_date: string
+          status: string
+          supplier_payments_ugx: number
+          total_advances_outstanding_ugx: number
+          total_advances_recovered_ugx: number
+          total_coffee_payable_ugx: number
+          total_paid_to_suppliers_ugx: number
+          total_supplier_balances_ugx: number
+          updated_at: string
+        }
+        Insert: {
+          actual_closing_cash_ugx?: number
+          advances_issued_ugx?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          cash_topups_ugx?: number
+          created_at?: string
+          difference_ugx?: number
+          expected_closing_cash_ugx?: number
+          expenses_ugx?: number
+          id?: string
+          notes?: string | null
+          opening_cash_ugx?: number
+          period_type?: string
+          prepared_by: string
+          reconciliation_date?: string
+          status?: string
+          supplier_payments_ugx?: number
+          total_advances_outstanding_ugx?: number
+          total_advances_recovered_ugx?: number
+          total_coffee_payable_ugx?: number
+          total_paid_to_suppliers_ugx?: number
+          total_supplier_balances_ugx?: number
+          updated_at?: string
+        }
+        Update: {
+          actual_closing_cash_ugx?: number
+          advances_issued_ugx?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          cash_topups_ugx?: number
+          created_at?: string
+          difference_ugx?: number
+          expected_closing_cash_ugx?: number
+          expenses_ugx?: number
+          id?: string
+          notes?: string | null
+          opening_cash_ugx?: number
+          period_type?: string
+          prepared_by?: string
+          reconciliation_date?: string
+          status?: string
+          supplier_payments_ugx?: number
+          total_advances_outstanding_ugx?: number
+          total_advances_recovered_ugx?: number
+          total_coffee_payable_ugx?: number
+          total_paid_to_suppliers_ugx?: number
+          total_supplier_balances_ugx?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -8731,6 +8969,186 @@ export type Database = {
           },
         ]
       }
+      supplier_ledger_entries: {
+        Row: {
+          advance_id: string | null
+          bags: number
+          balance_after_ugx: number
+          created_at: string
+          created_by: string | null
+          credit_ugx: number
+          debit_ugx: number
+          description: string | null
+          entry_date: string
+          entry_type: string
+          id: string
+          kilograms: number
+          lot_id: string | null
+          payment_id: string | null
+          reference: string | null
+          supplier_id: string
+        }
+        Insert: {
+          advance_id?: string | null
+          bags?: number
+          balance_after_ugx?: number
+          created_at?: string
+          created_by?: string | null
+          credit_ugx?: number
+          debit_ugx?: number
+          description?: string | null
+          entry_date?: string
+          entry_type: string
+          id?: string
+          kilograms?: number
+          lot_id?: string | null
+          payment_id?: string | null
+          reference?: string | null
+          supplier_id: string
+        }
+        Update: {
+          advance_id?: string | null
+          bags?: number
+          balance_after_ugx?: number
+          created_at?: string
+          created_by?: string | null
+          credit_ugx?: number
+          debit_ugx?: number
+          description?: string | null
+          entry_date?: string
+          entry_type?: string
+          id?: string
+          kilograms?: number
+          lot_id?: string | null
+          payment_id?: string | null
+          reference?: string | null
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_ledger_entries_advance_id_fkey"
+            columns: ["advance_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_advances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_ledger_entries_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "finance_coffee_lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_ledger_entries_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "pending_payments_aging"
+            referencedColumns: ["lot_id"]
+          },
+          {
+            foreignKeyName: "supplier_ledger_entries_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_ledger_entries_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_payments_report"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_ledger_entries_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_ledger_entries_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_payment_allocations: {
+        Row: {
+          allocated_amount_ugx: number
+          created_at: string
+          created_by: string | null
+          id: string
+          lot_id: string
+          payment_id: string
+          supplier_id: string
+        }
+        Insert: {
+          allocated_amount_ugx: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lot_id: string
+          payment_id: string
+          supplier_id: string
+        }
+        Update: {
+          allocated_amount_ugx?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lot_id?: string
+          payment_id?: string
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_payment_allocations_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "finance_coffee_lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payment_allocations_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "pending_payments_aging"
+            referencedColumns: ["lot_id"]
+          },
+          {
+            foreignKeyName: "supplier_payment_allocations_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payment_allocations_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_payments_report"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payment_allocations_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payment_allocations_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_payments: {
         Row: {
           advance_recovered_ugx: number
@@ -8837,6 +9255,66 @@ export type Database = {
           },
           {
             foreignKeyName: "supplier_payments_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_statement_prints: {
+        Row: {
+          closing_balance_ugx: number
+          id: string
+          notes: string | null
+          opening_balance_ugx: number
+          printed_at: string
+          printed_by: string
+          statement_from: string | null
+          statement_to: string | null
+          supplier_id: string
+          total_advance_recoveries_ugx: number
+          total_deliveries_ugx: number
+          total_payments_ugx: number
+        }
+        Insert: {
+          closing_balance_ugx?: number
+          id?: string
+          notes?: string | null
+          opening_balance_ugx?: number
+          printed_at?: string
+          printed_by: string
+          statement_from?: string | null
+          statement_to?: string | null
+          supplier_id: string
+          total_advance_recoveries_ugx?: number
+          total_deliveries_ugx?: number
+          total_payments_ugx?: number
+        }
+        Update: {
+          closing_balance_ugx?: number
+          id?: string
+          notes?: string | null
+          opening_balance_ugx?: number
+          printed_at?: string
+          printed_by?: string
+          statement_from?: string | null
+          statement_to?: string | null
+          supplier_id?: string
+          total_advance_recoveries_ugx?: number
+          total_deliveries_ugx?: number
+          total_payments_ugx?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_statement_prints_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_statement_prints_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
