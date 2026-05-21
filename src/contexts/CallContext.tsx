@@ -44,13 +44,28 @@ const ICE_CONFIG: RTCConfiguration = {
     { urls: 'stun:stun2.l.google.com:19302' },
     { urls: 'stun:stun.cloudflare.com:3478' },
     { urls: 'stun:global.stun.twilio.com:3478' },
-    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turns:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
   ],
   iceCandidatePoolSize: 4,
 };
+
+let cachedIce: { servers: RTCIceServer[]; at: number } | null = null;
+async function getIceConfig(): Promise<RTCConfiguration> {
+  try {
+    if (cachedIce && Date.now() - cachedIce.at < 60 * 60 * 1000) {
+      return { iceServers: cachedIce.servers, iceCandidatePoolSize: 4 };
+    }
+    const { data } = await supabase.functions.invoke('get-ice-servers');
+    const turn = (data?.iceServers ?? []) as RTCIceServer[];
+    if (turn.length) {
+      const merged = [...(ICE_CONFIG.iceServers ?? []), ...turn];
+      cachedIce = { servers: merged, at: Date.now() };
+      return { iceServers: merged, iceCandidatePoolSize: 4 };
+    }
+  } catch (e) {
+    console.warn('[ICE] dynamic fetch failed, using static', e);
+  }
+  return ICE_CONFIG;
+}
 
 // Classic dual-tone phone ringtone (440Hz + 480Hz, 2s on / 4s off cadence)
 function useRingtone() {
