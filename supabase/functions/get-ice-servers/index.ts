@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
   try {
-    const apiKey = Deno.env.get('METERED_API_KEY');
+    const apiKey = (Deno.env.get('METERED_API_KEY') || '').trim();
     const subdomain = 'greatagrocoffee';
     if (!apiKey) {
       return new Response(JSON.stringify({ ok: false, error: 'METERED_API_KEY missing', iceServers: [] }), {
@@ -17,7 +17,8 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    const url = `https://${subdomain}.metered.live/api/v1/turn/credentials?apiKey=${apiKey}`;
+    console.log('Using key len=', apiKey.length, 'prefix=', apiKey.slice(0, 4), 'suffix=', apiKey.slice(-4));
+    const url = `https://${subdomain}.metered.live/api/v1/turn/credentials?apiKey=${encodeURIComponent(apiKey)}`;
     const r = await fetch(url);
     if (!r.ok) {
       const txt = await r.text();
