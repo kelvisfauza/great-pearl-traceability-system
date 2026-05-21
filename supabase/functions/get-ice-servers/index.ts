@@ -9,27 +9,47 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
   try {
-    const apiKey = (Deno.env.get('METERED_API_KEY') || '').trim();
+    const secretKey = (Deno.env.get('METERED_API_KEY') || '').trim();
     const subdomain = 'greatagrocoffee';
-    if (!apiKey) {
+    if (!secretKey) {
       return new Response(JSON.stringify({ ok: false, error: 'METERED_API_KEY missing', iceServers: [] }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    console.log('Using key len=', apiKey.length, 'prefix=', apiKey.slice(0, 4), 'suffix=', apiKey.slice(-4));
-    const url = `https://${subdomain}.metered.live/api/v1/turn/credentials?apiKey=${encodeURIComponent(apiKey)}`;
-    const r = await fetch(url);
-    if (!r.ok) {
-      const txt = await r.text();
-      console.error('Metered API error', r.status, txt);
-      return new Response(JSON.stringify({ ok: false, error: `Metered ${r.status}: ${txt}`, iceServers: [] }), {
+    // Step 1: create a short-lived TURN credential using the account Secret Key
+    const createUrl = `https://${subdomain}.metered.live/api/v1/turn/credential?secretKey=${encodeURIComponent(secretKey)}`;
+    const createRes = await fetch(createUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expiryInSeconds: 86400, label: 'webrtc-call' }),
+    });
+    if (!createRes.ok) {
+      const txt = await createRes.text();
+      console.error('Metered create credential failed', createRes.status, txt);
+      return new Response(JSON.stringify({ ok: false, error: `Metered create ${createRes.status}: ${txt}`, iceServers: [] }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    const iceServers = await r.json();
-    console.log('Fetched', Array.isArray(iceServers) ? iceServers.length : 0, 'ICE servers');
+    const cred = await createRes.json();
+    const username = cred.username;
+    const password = cred.password;
+    if (!username || !password) {
+      return new Response(JSON.stringify({ ok: false, error: 'Missing username/password in Metered response', iceServers: [] }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    // Step 2: build standard ICE servers array
+    const iceServers = [
+      { urls: 'stun:stun.relay.metered.ca:80' },
+      { urls: 'turn:global.relay.metered.ca:80', username, credential: password },
+      { urls: 'turn:global.relay.metered.ca:80?transport=tcp', username, credential: password },
+      { urls: 'turn:global.relay.metered.ca:443', username, credential: password },
+      { urls: 'turns:global.relay.metered.ca:443?transport=tcp', username, credential: password },
+    ];
+    console.log('Issued TURN credential for user', username);
     return new Response(JSON.stringify({ ok: true, iceServers }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
