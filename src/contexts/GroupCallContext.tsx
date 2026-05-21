@@ -691,6 +691,7 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!incoming || !myId) return;
     const inc = incoming;
     setIncoming(null);
+    await ensureIceServers();
     try {
       await acquireLocalStream(inc.type);
     } catch (e: any) {
@@ -725,6 +726,7 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const joinExistingCall = useCallback(async (callId: string, hostId: string, type: GroupCallType, title: string | null, hostName: string) => {
     if (!myId) return;
+    await ensureIceServers();
     try {
       await acquireLocalStream(type);
     } catch (e: any) {
