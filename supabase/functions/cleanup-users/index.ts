@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
 
     console.log(`👥 Found ${users.length} total users`);
 
-    const usersToDelete = users.filter(user => user.email !== MAIN_ACCOUNT_EMAIL);
+    const usersToDelete = users.filter(user => (user.email || '').toLowerCase() !== MAIN_ACCOUNT_EMAIL);
     
     console.log(`🗑️ Users to delete: ${usersToDelete.length}`);
 
@@ -143,9 +143,8 @@ Deno.serve(async (req) => {
 
     const result = {
       success: true,
-      message: `User cleanup completed. Deleted ${deletedCount} users, kept main account: ${MAIN_ACCOUNT_EMAIL}`,
+      message: `User cleanup completed. Deleted ${deletedCount} users, kept configured main account.`,
       deletedCount,
-      mainAccountKept: MAIN_ACCOUNT_EMAIL,
       errors: errors.length > 0 ? errors : undefined
     };
 
