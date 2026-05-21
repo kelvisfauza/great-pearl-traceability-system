@@ -1908,6 +1908,42 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_role_locks: {
+        Row: {
+          created_at: string
+          department: string | null
+          email: string
+          locked_by: string | null
+          permissions: string[]
+          position: string | null
+          reason: string | null
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          department?: string | null
+          email: string
+          locked_by?: string | null
+          permissions?: string[]
+          position?: string | null
+          reason?: string | null
+          role: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          department?: string | null
+          email?: string
+          locked_by?: string | null
+          permissions?: string[]
+          position?: string | null
+          reason?: string | null
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       employee_salary_advances: {
         Row: {
           created_at: string
