@@ -22,25 +22,7 @@ const ICE_CONFIG: RTCConfiguration = {
   iceCandidatePoolSize: 4,
 };
 
-// Cached ICE servers from the get-ice-servers edge function. Refreshed
-// per call (see ensureIceServers). createPeer is synchronous and reads
-// from currentIceServers so we must populate it before the first peer.
-let currentIceServers: RTCIceServer[] = ICE_CONFIG.iceServers as RTCIceServer[];
-let iceFetchedAt = 0;
-async function ensureIceServers(): Promise<void> {
-  if (Date.now() - iceFetchedAt < 10 * 60 * 1000) return;
-  try {
-    const { data, error } = await supabase.functions.invoke('get-ice-servers');
-    if (error) throw error;
-    const servers = (data as any)?.iceServers as RTCIceServer[] | undefined;
-    if (servers && Array.isArray(servers) && servers.length > 0) {
-      currentIceServers = servers;
-      iceFetchedAt = Date.now();
-    }
-  } catch (e) {
-    console.warn('get-ice-servers failed, using static fallback', e);
-  }
-}
+async function ensureIceServers(): Promise<void> { /* no-op: using static ICE_CONFIG */ }
 
 export const GROUP_CALL_SOFT_LIMIT = 6;
 export const GROUP_CALL_HARD_LIMIT = 8;
@@ -260,7 +242,7 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, []);
 
   const createPeer = useCallback((peerId: string, callType: GroupCallType): PeerEntry => {
-    const pc = new RTCPeerConnection({ iceServers: currentIceServers, iceCandidatePoolSize: 4 });
+    const pc = new RTCPeerConnection(ICE_CONFIG);
     const entry: PeerEntry = { pc, pendingIce: [], remoteSet: false };
     peersRef.current.set(peerId, entry);
 
