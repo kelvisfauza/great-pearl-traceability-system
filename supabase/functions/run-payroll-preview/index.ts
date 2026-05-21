@@ -11,10 +11,34 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+
+    // ---- AuthN/AuthZ: only Finance/Admin can create payroll runs ----
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ ok: false, error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const token = authHeader.replace('Bearer ', '');
+    const { data: userData, error: userErr } = await supabase.auth.getUser(token);
+    if (userErr || !userData?.user) {
+      return new Response(JSON.stringify({ ok: false, error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const { data: caller } = await supabase
+      .from('employees')
+      .select('role, status, permissions, email')
+      .eq('auth_user_id', userData.user.id)
+      .maybeSingle();
+    const isAdmin = caller && ['Super Admin', 'Administrator'].includes(caller.role);
+    const isFinance = Array.isArray(caller?.permissions) && caller!.permissions.includes('Finance');
+    if (!caller || caller.status !== 'Active' || (!isAdmin && !isFinance)) {
+      return new Response(JSON.stringify({ ok: false, error: 'Forbidden — Finance or Administrator role required' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     const body = await req.json().catch(() => ({}));
-    const month: string = body.month || new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
-    const createdBy: string = body.createdBy || 'System';
-    const createdByEmail: string = body.createdByEmail || '';
+    const rawMonth: string = body.month || new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    // Validate month format (letters, digits, space only) to avoid injection
+    const month: string = /^[A-Za-z0-9 ]{3,32}$/.test(rawMonth) ? rawMonth : new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    const createdBy: string = caller.email || body.createdBy || 'System';
+    const createdByEmail: string = caller.email || userData.user.email || '';
 
     const { data: employees, error } = await supabase
       .from('employees')
