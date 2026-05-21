@@ -11170,6 +11170,14 @@ export type Database = {
         }
         Returns: string
       }
+      mark_messages_delivered: {
+        Args: { p_conversation_id: string }
+        Returns: undefined
+      }
+      mark_messages_read: {
+        Args: { p_conversation_id: string }
+        Returns: undefined
+      }
       migrate_approved_assessments_to_finance: { Args: never; Returns: number }
       migrate_batch_numbers_to_new_format: { Args: never; Returns: Json }
       process_daily_salary_credits: { Args: never; Returns: Json }
