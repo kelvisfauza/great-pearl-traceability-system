@@ -338,7 +338,8 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     localStreamRef.current = stream;
     if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
-    const pc = new RTCPeerConnection(ICE_CONFIG);
+    const iceServers = await fetchIceServers();
+    const pc = new RTCPeerConnection({ iceServers, iceCandidatePoolSize: 4 });
     pcRef.current = pc;
     stream.getTracks().forEach(t => pc.addTrack(t, stream));
 
