@@ -14,15 +14,28 @@ const ICE_CONFIG: RTCConfiguration = {
     { urls: 'stun:stun2.l.google.com:19302' },
     { urls: 'stun:stun.cloudflare.com:3478' },
     { urls: 'stun:global.stun.twilio.com:3478' },
-    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turns:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
   ],
   iceCandidatePoolSize: 4,
 };
 
-async function ensureIceServers(): Promise<void> { /* no-op: using static ICE_CONFIG */ }
+let cachedIce: { servers: RTCIceServer[]; at: number } | null = null;
+async function getIceConfig(): Promise<RTCConfiguration> {
+  try {
+    if (cachedIce && Date.now() - cachedIce.at < 60 * 60 * 1000) {
+      return { iceServers: cachedIce.servers, iceCandidatePoolSize: 4 };
+    }
+    const { data } = await supabase.functions.invoke('get-ice-servers');
+    const turn = (data?.iceServers ?? []) as RTCIceServer[];
+    if (turn.length) {
+      const merged = [...(ICE_CONFIG.iceServers ?? []), ...turn];
+      cachedIce = { servers: merged, at: Date.now() };
+      return { iceServers: merged, iceCandidatePoolSize: 4 };
+    }
+  } catch (e) {
+    console.warn('[ICE] dynamic fetch failed, using static', e);
+  }
+  return ICE_CONFIG;
+}
 
 export const GROUP_CALL_SOFT_LIMIT = 6;
 export const GROUP_CALL_HARD_LIMIT = 8;
