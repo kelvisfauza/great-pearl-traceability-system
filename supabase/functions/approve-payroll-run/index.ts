@@ -10,6 +10,26 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+
+    // ---- AuthN/AuthZ: only Super Admin / Administrator may approve payroll ----
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ ok: false, error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const token = authHeader.replace('Bearer ', '');
+    const { data: userData, error: userErr } = await supabase.auth.getUser(token);
+    if (userErr || !userData?.user) {
+      return new Response(JSON.stringify({ ok: false, error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const { data: caller } = await supabase
+      .from('employees')
+      .select('role, status, email')
+      .eq('auth_user_id', userData.user.id)
+      .maybeSingle();
+    if (!caller || caller.status !== 'Active' || !['Super Admin', 'Administrator'].includes(caller.role)) {
+      return new Response(JSON.stringify({ ok: false, error: 'Forbidden — Administrator role required' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     const { runId, approvedBy, approvedByEmail, disburse = true } = await req.json();
     if (!runId) return new Response(JSON.stringify({ ok: false, error: 'runId required' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
@@ -18,14 +38,16 @@ Deno.serve(async (req) => {
     if (run.status === 'disbursed') {
       return new Response(JSON.stringify({ ok: false, error: 'Already disbursed' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
-    if (run.created_by_email && approvedByEmail && run.created_by_email.toLowerCase() === String(approvedByEmail).toLowerCase()) {
+    // Use verified caller email — ignore client-supplied identity for SoD check
+    const verifiedEmail = (caller.email || userData.user.email || '').toLowerCase();
+    if (run.created_by_email && verifiedEmail && run.created_by_email.toLowerCase() === verifiedEmail) {
       return new Response(JSON.stringify({ ok: false, error: 'Creator cannot approve their own payroll run' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     await supabase.from('payroll_runs').update({
       status: 'approved',
-      approved_by: approvedBy || 'Admin',
-      approved_by_email: approvedByEmail || null,
+      approved_by: approvedBy || caller.email || 'Admin',
+      approved_by_email: verifiedEmail || null,
       approved_at: new Date().toISOString(),
     }).eq('id', runId);
 

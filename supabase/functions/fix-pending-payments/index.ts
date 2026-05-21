@@ -16,6 +16,35 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // ---- AuthN/AuthZ: only Super Admin / Administrator can run this maintenance job ----
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : '';
+    if (!token) {
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    // Allow direct service-role/cron invocation
+    if (token !== serviceKey) {
+      const { data: userData, error: userErr } = await supabaseClient.auth.getUser(token);
+      if (userErr || !userData?.user) {
+        return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const { data: caller } = await supabaseClient
+        .from('employees')
+        .select('role, status')
+        .eq('auth_user_id', userData.user.id)
+        .maybeSingle();
+      if (!caller || caller.status !== 'Active' || !['Super Admin', 'Administrator'].includes(caller.role)) {
+        return new Response(JSON.stringify({ success: false, error: 'Forbidden — Administrator role required' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     console.log('🔧 Starting to fix pending payments...');
 
     // Get all pending payment records

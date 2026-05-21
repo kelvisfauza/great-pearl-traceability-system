@@ -67,9 +67,17 @@ Deno.serve(async (req) => {
       )
     }
 
-    const MAIN_ACCOUNT_EMAIL = 'nicholusscottlangz@gmail.com';
+    // Email of the single account to preserve during cleanup. Configurable via
+    // CLEANUP_PRESERVE_EMAIL secret so no personal address is hardcoded.
+    const MAIN_ACCOUNT_EMAIL = (Deno.env.get('CLEANUP_PRESERVE_EMAIL') || '').toLowerCase().trim();
+    if (!MAIN_ACCOUNT_EMAIL) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'CLEANUP_PRESERVE_EMAIL secret is not configured. Refusing to run destructive cleanup.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    console.log(`📋 Main account to keep: ${MAIN_ACCOUNT_EMAIL}`);
+    console.log('📋 Cleanup will preserve the configured main account.');
 
     const { data: { users }, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
     
@@ -80,7 +88,7 @@ Deno.serve(async (req) => {
 
     console.log(`👥 Found ${users.length} total users`);
 
-    const usersToDelete = users.filter(user => user.email !== MAIN_ACCOUNT_EMAIL);
+    const usersToDelete = users.filter(user => (user.email || '').toLowerCase() !== MAIN_ACCOUNT_EMAIL);
     
     console.log(`🗑️ Users to delete: ${usersToDelete.length}`);
 
@@ -135,9 +143,8 @@ Deno.serve(async (req) => {
 
     const result = {
       success: true,
-      message: `User cleanup completed. Deleted ${deletedCount} users, kept main account: ${MAIN_ACCOUNT_EMAIL}`,
+      message: `User cleanup completed. Deleted ${deletedCount} users, kept configured main account.`,
       deletedCount,
-      mainAccountKept: MAIN_ACCOUNT_EMAIL,
       errors: errors.length > 0 ? errors : undefined
     };
 
