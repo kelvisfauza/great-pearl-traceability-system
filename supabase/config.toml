@@ -173,6 +173,8 @@ project_id = "pudfybkyfedeggmokhco"
     verify_jwt = false
   [functions.handle-email-suppression]
     verify_jwt = false
+  [functions.get-ice-servers]
+    verify_jwt = false
 
 [inbucket]
   enabled = true
