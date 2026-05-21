@@ -11,12 +11,36 @@ const ICE_CONFIG: RTCConfiguration = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun.cloudflare.com:3478' },
+    { urls: 'stun:global.stun.twilio.com:3478' },
     { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
     { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
     { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turns:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
   ],
   iceCandidatePoolSize: 4,
 };
+
+// Cached ICE servers from the get-ice-servers edge function. Refreshed
+// per call (see ensureIceServers). createPeer is synchronous and reads
+// from currentIceServers so we must populate it before the first peer.
+let currentIceServers: RTCIceServer[] = ICE_CONFIG.iceServers as RTCIceServer[];
+let iceFetchedAt = 0;
+async function ensureIceServers(): Promise<void> {
+  if (Date.now() - iceFetchedAt < 10 * 60 * 1000) return;
+  try {
+    const { data, error } = await supabase.functions.invoke('get-ice-servers');
+    if (error) throw error;
+    const servers = (data as any)?.iceServers as RTCIceServer[] | undefined;
+    if (servers && Array.isArray(servers) && servers.length > 0) {
+      currentIceServers = servers;
+      iceFetchedAt = Date.now();
+    }
+  } catch (e) {
+    console.warn('get-ice-servers failed, using static fallback', e);
+  }
+}
 
 export const GROUP_CALL_SOFT_LIMIT = 6;
 export const GROUP_CALL_HARD_LIMIT = 8;
