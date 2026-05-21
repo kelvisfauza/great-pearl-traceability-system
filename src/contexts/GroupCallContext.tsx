@@ -255,7 +255,7 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, []);
 
   const createPeer = useCallback((peerId: string, callType: GroupCallType): PeerEntry => {
-    const pc = new RTCPeerConnection(ICE_CONFIG);
+    const pc = new RTCPeerConnection(currentIceConfig());
     const entry: PeerEntry = { pc, pendingIce: [], remoteSet: false };
     peersRef.current.set(peerId, entry);
 
