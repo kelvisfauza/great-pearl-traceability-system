@@ -780,6 +780,36 @@ export type Database = {
         }
         Relationships: []
       }
+      call_signals: {
+        Row: {
+          call_id: string
+          created_at: string
+          id: string
+          payload: Json
+          receiver_id: string | null
+          sender_id: string
+          signal_type: string
+        }
+        Insert: {
+          call_id: string
+          created_at?: string
+          id?: string
+          payload: Json
+          receiver_id?: string | null
+          sender_id: string
+          signal_type: string
+        }
+        Update: {
+          call_id?: string
+          created_at?: string
+          id?: string
+          payload?: Json
+          receiver_id?: string | null
+          sender_id?: string
+          signal_type?: string
+        }
+        Relationships: []
+      }
       chart_of_accounts: {
         Row: {
           account_code: string

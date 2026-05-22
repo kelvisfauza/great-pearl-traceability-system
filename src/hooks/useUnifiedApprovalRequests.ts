@@ -204,6 +204,67 @@ export const useUnifiedApprovalRequests = () => {
         console.error('Error fetching withdrawal requests:', error);
       }
 
+      // 2.6. Fetch pending INSTANT withdrawals (Yo Payments fallback approvals)
+      // These are auto-sent to Yo but our system can't always poll status reliably.
+      // Admin manually confirms whether the disbursement actually reached the user.
+      try {
+        const { data: instantWds, error: instantErr } = await supabase
+          .from('instant_withdrawals' as any)
+          .select('*')
+          .eq('payout_status', 'pending_approval')
+          .order('created_at', { ascending: false });
+
+        if (!instantErr && instantWds && instantWds.length > 0) {
+          const enrichedInstant = await Promise.all(
+            instantWds.map(async (wd: any) => {
+              let empName = wd.user_id;
+              let empEmail = wd.user_id;
+              let empPhone = wd.phone_number || '';
+              const { data: empData } = await supabase
+                .from('employees')
+                .select('name, email, phone')
+                .or(`auth_user_id.eq.${wd.user_id},id.eq.${wd.user_id}`)
+                .maybeSingle();
+              if (empData) {
+                empName = empData.name;
+                empEmail = empData.email;
+                empPhone = empPhone || empData.phone || '';
+              }
+              return {
+                id: `instant-${wd.id}`,
+                type: 'general' as const,
+                source: 'supabase' as const,
+                department: 'Wallet',
+                requestType: 'Instant Withdrawal',
+                title: `⚡ Instant Withdrawal - UGX ${Number(wd.amount).toLocaleString()}`,
+                description: `${empName} instantly withdrew UGX ${Number(wd.amount).toLocaleString()} to ${empPhone || 'Mobile Money'}. Approve if money reached the user, reject to refund their wallet.`,
+                amount: wd.amount,
+                requestedBy: empEmail,
+                dateRequested: new Date(wd.created_at).toLocaleDateString(),
+                priority: Number(wd.amount) > 100000 ? 'High' : 'Medium',
+                status: 'Pending',
+                details: {
+                  instant_withdrawal_id: wd.id,
+                  ledger_reference: wd.ledger_reference,
+                  payout_ref: wd.payout_ref,
+                  phone_number: empPhone,
+                  requester_name: empName,
+                  requester_email: empEmail,
+                  user_id: wd.user_id,
+                  is_instant_withdrawal: true,
+                },
+                createdAt: wd.created_at,
+                updatedAt: wd.created_at,
+              };
+            })
+          );
+          allRequests.push(...enrichedInstant);
+          console.log('Fetched instant withdrawals for admin approval:', enrichedInstant.length);
+        }
+      } catch (error) {
+        console.error('Error fetching instant withdrawals:', error);
+      }
+
       // 3. Fetch Supabase deletion requests (original numbering continues)
       try {
         const { data: deletionRequests, error: deletionError } = await supabase
@@ -326,7 +387,91 @@ export const useUnifiedApprovalRequests = () => {
         }
       }
 
-      // Handle withdrawal request approvals separately
+      // Handle INSTANT withdrawal admin confirmation (Yo Payments fallback)
+      // Approve = money reached user (mark success). Reject = refund wallet.
+      if (request.details?.is_instant_withdrawal) {
+        const iwId = request.details.instant_withdrawal_id;
+        const adminName = employee?.name || employee?.email || 'Admin';
+
+        // Self-approval guard
+        const currentUserEmail = employee?.email;
+        if (request.details.requester_email === currentUserEmail) {
+          return { blocked: true, reason: 'You cannot approve your own instant withdrawal.' };
+        }
+
+        const { data: currentIW, error: iwFetchErr } = await supabase
+          .from('instant_withdrawals' as any)
+          .select('*')
+          .eq('id', iwId)
+          .maybeSingle();
+
+        if (iwFetchErr || !currentIW) {
+          return { blocked: true, reason: 'Instant withdrawal record not found.' };
+        }
+        if ((currentIW as any).payout_status !== 'pending_approval') {
+          return { blocked: true, reason: 'This instant withdrawal has already been processed.' };
+        }
+
+        const newStatus = status === 'Approved' ? 'success' : 'failed';
+        const { data: updated, error: updErr } = await supabase
+          .from('instant_withdrawals' as any)
+          .update({ payout_status: newStatus, completed_at: new Date().toISOString() })
+          .eq('id', iwId)
+          .eq('payout_status', 'pending_approval')
+          .select('id');
+
+        if (updErr) {
+          return { blocked: true, reason: `Failed to update: ${updErr.message}` };
+        }
+        if (!updated || updated.length === 0) {
+          return { blocked: true, reason: 'Already processed by another admin.' };
+        }
+
+        // On reject -> refund wallet
+        if (status === 'Rejected' && (currentIW as any).ledger_reference) {
+          const refundRef = `REFUND-${(currentIW as any).ledger_reference}`;
+          const { error: refundErr } = await supabase.from('ledger_entries' as any).insert({
+            user_id: (currentIW as any).user_id,
+            entry_type: 'DEPOSIT',
+            amount: (currentIW as any).amount,
+            reference: refundRef,
+            source_category: 'SYSTEM_AWARD',
+            metadata: {
+              type: 'instant_withdrawal_refund',
+              original_ref: (currentIW as any).payout_ref,
+              reason: rejectionReason || 'Rejected by admin - money did not reach user',
+              rejected_by: adminName,
+              description: 'Instant withdrawal refund (admin rejected)',
+            },
+          });
+          if (refundErr && refundErr.code !== '23505') {
+            console.error('Refund error:', refundErr);
+          }
+        }
+
+        // SMS to requester
+        try {
+          const { data: emp } = await supabase
+            .from('employees')
+            .select('phone, name')
+            .eq('email', request.details.requester_email)
+            .maybeSingle();
+          if (emp?.phone) {
+            const amt = Number((currentIW as any).amount).toLocaleString();
+            const msg = status === 'Approved'
+              ? `Dear ${emp.name}, your instant withdrawal of UGX ${amt} has been CONFIRMED received. Great Agro Coffee.`
+              : `Dear ${emp.name}, your instant withdrawal of UGX ${amt} was DECLINED by Mobile Money. UGX ${amt} has been refunded to your wallet. Great Agro Coffee.`;
+            await supabase.functions.invoke('send-sms', {
+              body: { phone: emp.phone, message: msg, userName: emp.name, messageType: 'withdrawal_approval' }
+            });
+          }
+        } catch (e) { console.error('SMS error (non-blocking):', e); }
+
+        await fetchAllRequests(true);
+        return true;
+      }
+
+      // Handle regular withdrawal request approvals separately (continued)
       if (request.details?.is_withdrawal) {
         const withdrawalId = request.details.withdrawal_id || request.id;
         const adminName = employee?.name || employee?.email || 'Admin';
