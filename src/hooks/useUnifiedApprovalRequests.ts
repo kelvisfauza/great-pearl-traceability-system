@@ -204,6 +204,67 @@ export const useUnifiedApprovalRequests = () => {
         console.error('Error fetching withdrawal requests:', error);
       }
 
+      // 2.6. Fetch pending INSTANT withdrawals (Yo Payments fallback approvals)
+      // These are auto-sent to Yo but our system can't always poll status reliably.
+      // Admin manually confirms whether the disbursement actually reached the user.
+      try {
+        const { data: instantWds, error: instantErr } = await supabase
+          .from('instant_withdrawals' as any)
+          .select('*')
+          .eq('payout_status', 'pending_approval')
+          .order('created_at', { ascending: false });
+
+        if (!instantErr && instantWds && instantWds.length > 0) {
+          const enrichedInstant = await Promise.all(
+            instantWds.map(async (wd: any) => {
+              let empName = wd.user_id;
+              let empEmail = wd.user_id;
+              let empPhone = wd.phone_number || '';
+              const { data: empData } = await supabase
+                .from('employees')
+                .select('name, email, phone')
+                .or(`auth_user_id.eq.${wd.user_id},id.eq.${wd.user_id}`)
+                .maybeSingle();
+              if (empData) {
+                empName = empData.name;
+                empEmail = empData.email;
+                empPhone = empPhone || empData.phone || '';
+              }
+              return {
+                id: `instant-${wd.id}`,
+                type: 'general' as const,
+                source: 'supabase' as const,
+                department: 'Wallet',
+                requestType: 'Instant Withdrawal',
+                title: `⚡ Instant Withdrawal - UGX ${Number(wd.amount).toLocaleString()}`,
+                description: `${empName} instantly withdrew UGX ${Number(wd.amount).toLocaleString()} to ${empPhone || 'Mobile Money'}. Approve if money reached the user, reject to refund their wallet.`,
+                amount: wd.amount,
+                requestedBy: empEmail,
+                dateRequested: new Date(wd.created_at).toLocaleDateString(),
+                priority: Number(wd.amount) > 100000 ? 'High' : 'Medium',
+                status: 'Pending',
+                details: {
+                  instant_withdrawal_id: wd.id,
+                  ledger_reference: wd.ledger_reference,
+                  payout_ref: wd.payout_ref,
+                  phone_number: empPhone,
+                  requester_name: empName,
+                  requester_email: empEmail,
+                  user_id: wd.user_id,
+                  is_instant_withdrawal: true,
+                },
+                createdAt: wd.created_at,
+                updatedAt: wd.created_at,
+              };
+            })
+          );
+          allRequests.push(...enrichedInstant);
+          console.log('Fetched instant withdrawals for admin approval:', enrichedInstant.length);
+        }
+      } catch (error) {
+        console.error('Error fetching instant withdrawals:', error);
+      }
+
       // 3. Fetch Supabase deletion requests (original numbering continues)
       try {
         const { data: deletionRequests, error: deletionError } = await supabase
