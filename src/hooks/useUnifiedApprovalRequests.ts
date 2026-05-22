@@ -387,13 +387,6 @@ export const useUnifiedApprovalRequests = () => {
         }
       }
 
-      // Handle withdrawal request approvals separately
-      if (request.details?.is_withdrawal) {
-        const withdrawalId = request.details.withdrawal_id || request.id;
-        const adminName = employee?.name || employee?.email || 'Admin';
-
-      }
-
       // Handle INSTANT withdrawal admin confirmation (Yo Payments fallback)
       // Approve = money reached user (mark success). Reject = refund wallet.
       if (request.details?.is_instant_withdrawal) {
