@@ -391,6 +391,97 @@ export const useUnifiedApprovalRequests = () => {
       if (request.details?.is_withdrawal) {
         const withdrawalId = request.details.withdrawal_id || request.id;
         const adminName = employee?.name || employee?.email || 'Admin';
+
+      }
+
+      // Handle INSTANT withdrawal admin confirmation (Yo Payments fallback)
+      // Approve = money reached user (mark success). Reject = refund wallet.
+      if (request.details?.is_instant_withdrawal) {
+        const iwId = request.details.instant_withdrawal_id;
+        const adminName = employee?.name || employee?.email || 'Admin';
+
+        // Self-approval guard
+        const currentUserEmail = employee?.email;
+        if (request.details.requester_email === currentUserEmail) {
+          return { blocked: true, reason: 'You cannot approve your own instant withdrawal.' };
+        }
+
+        const { data: currentIW, error: iwFetchErr } = await supabase
+          .from('instant_withdrawals' as any)
+          .select('*')
+          .eq('id', iwId)
+          .maybeSingle();
+
+        if (iwFetchErr || !currentIW) {
+          return { blocked: true, reason: 'Instant withdrawal record not found.' };
+        }
+        if ((currentIW as any).payout_status !== 'pending_approval') {
+          return { blocked: true, reason: 'This instant withdrawal has already been processed.' };
+        }
+
+        const newStatus = status === 'Approved' ? 'success' : 'failed';
+        const { data: updated, error: updErr } = await supabase
+          .from('instant_withdrawals' as any)
+          .update({ payout_status: newStatus, completed_at: new Date().toISOString() })
+          .eq('id', iwId)
+          .eq('payout_status', 'pending_approval')
+          .select('id');
+
+        if (updErr) {
+          return { blocked: true, reason: `Failed to update: ${updErr.message}` };
+        }
+        if (!updated || updated.length === 0) {
+          return { blocked: true, reason: 'Already processed by another admin.' };
+        }
+
+        // On reject -> refund wallet
+        if (status === 'Rejected' && (currentIW as any).ledger_reference) {
+          const refundRef = `REFUND-${(currentIW as any).ledger_reference}`;
+          const { error: refundErr } = await supabase.from('ledger_entries' as any).insert({
+            user_id: (currentIW as any).user_id,
+            entry_type: 'DEPOSIT',
+            amount: (currentIW as any).amount,
+            reference: refundRef,
+            source_category: 'SYSTEM_AWARD',
+            metadata: {
+              type: 'instant_withdrawal_refund',
+              original_ref: (currentIW as any).payout_ref,
+              reason: rejectionReason || 'Rejected by admin - money did not reach user',
+              rejected_by: adminName,
+              description: 'Instant withdrawal refund (admin rejected)',
+            },
+          });
+          if (refundErr && refundErr.code !== '23505') {
+            console.error('Refund error:', refundErr);
+          }
+        }
+
+        // SMS to requester
+        try {
+          const { data: emp } = await supabase
+            .from('employees')
+            .select('phone, name')
+            .eq('email', request.details.requester_email)
+            .maybeSingle();
+          if (emp?.phone) {
+            const amt = Number((currentIW as any).amount).toLocaleString();
+            const msg = status === 'Approved'
+              ? `Dear ${emp.name}, your instant withdrawal of UGX ${amt} has been CONFIRMED received. Great Agro Coffee.`
+              : `Dear ${emp.name}, your instant withdrawal of UGX ${amt} was DECLINED by Mobile Money. UGX ${amt} has been refunded to your wallet. Great Agro Coffee.`;
+            await supabase.functions.invoke('send-sms', {
+              body: { phone: emp.phone, message: msg, userName: emp.name, messageType: 'withdrawal_approval' }
+            });
+          }
+        } catch (e) { console.error('SMS error (non-blocking):', e); }
+
+        await fetchAllRequests(true);
+        return true;
+      }
+
+      // Handle regular withdrawal request approvals separately (continued)
+      if (request.details?.is_withdrawal) {
+        const withdrawalId = request.details.withdrawal_id || request.id;
+        const adminName = employee?.name || employee?.email || 'Admin';
         
         // Fetch current withdrawal state
         const { data: currentWithdrawal, error: wFetchError } = await supabase
