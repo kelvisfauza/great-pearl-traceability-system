@@ -41,6 +41,19 @@ interface LatestMessageNotification {
   timestamp: string;
 }
 
+const formatReadableName = (value?: string | null) => {
+  if (!value) return '';
+
+  return value
+    .split('@')[0]
+    .replace(/[._-]+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ')
+    .trim();
+};
+
 export const useMessages = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -94,17 +107,45 @@ export const useMessages = () => {
 
       const infoMap = new Map<string, { name: string; email: string; avatar_url?: string }>();
       if (uniqueUserIds.length > 0) {
-        const { data: infoRows } = await (supabase.rpc as any)(
-          'get_chat_participants_info',
-          { _user_ids: uniqueUserIds }
-        );
-        (infoRows || []).forEach((r: any) => {
-          infoMap.set(r.auth_user_id, {
-            name: r.name,
-            email: r.email,
-            avatar_url: r.avatar_url || undefined,
+        try {
+          const { data: infoRows, error: infoError } = await (supabase.rpc as any)(
+            'get_chat_participants_info',
+            { _user_ids: uniqueUserIds }
+          );
+
+          if (infoError) {
+            console.warn('get_chat_participants_info failed, falling back to employee directory:', infoError);
+          }
+
+          (infoRows || []).forEach((r: any) => {
+            infoMap.set(r.auth_user_id, {
+              name: r.name,
+              email: r.email,
+              avatar_url: r.avatar_url || undefined,
+            });
           });
-        });
+        } catch (rpcError) {
+          console.warn('get_chat_participants_info threw, falling back to employee directory:', rpcError);
+        }
+
+        const missingUserIds = uniqueUserIds.filter((id) => !infoMap.has(id));
+        if (missingUserIds.length > 0) {
+          const { data: directoryRows, error: directoryError } = await (supabase as any).rpc('get_employee_directory');
+
+          if (directoryError) {
+            console.warn('get_employee_directory fallback failed:', directoryError);
+          }
+
+          ((directoryRows as any[]) || [])
+            .filter((row) => row?.auth_user_id && missingUserIds.includes(row.auth_user_id))
+            .forEach((row: any) => {
+              infoMap.set(row.auth_user_id, {
+                name: row.name,
+                email: row.email,
+                avatar_url: row.avatar_url || undefined,
+              });
+            });
+        }
       }
 
       // Get participants for each conversation
@@ -116,9 +157,10 @@ export const useMessages = () => {
 
           const participantDetails = participants.map((p: any) => {
             const info = infoMap.get(p.user_id);
+            const readableFallback = formatReadableName(info?.email) || formatReadableName(p.user_id);
             return {
               user_id: p.user_id,
-              employee_name: info?.name || 'Unknown',
+              employee_name: info?.name || readableFallback || 'Member',
               employee_email: info?.email || '',
               avatar_url: info?.avatar_url,
             };
