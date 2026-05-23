@@ -209,6 +209,21 @@ const ComparisonCharts = () => {
           .print-area, .print-area * { visibility: visible !important; }
           .print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 0 12px; }
           .no-print { display: none !important; }
+          /* Force all text to solid black for legibility */
+          .print-area, .print-area * {
+            color: #000 !important;
+            opacity: 1 !important;
+            text-shadow: none !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .print-area .text-muted-foreground,
+          .print-area .text-foreground\\/80,
+          .print-area .text-chart-1,
+          .print-area .text-chart-2,
+          .print-area .text-amber-700 { color: #000 !important; }
+          .print-area .border-border\\/40,
+          .print-area .border { border-color: #000 !important; }
           /* Force charts to print in high-contrast black/grey */
           .print-area .recharts-surface text { fill: #000 !important; }
           .print-area .recharts-cartesian-axis-line,
