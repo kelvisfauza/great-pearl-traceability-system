@@ -203,14 +203,14 @@ const ComparisonCharts = () => {
 
   return (
     <>
-      <div className="print-only p-6">
-        <StandardPrintHeader
-          title="Comparison Charts Report"
-          subtitle="14-day weekly comparison across key operations"
-          additionalInfo={`Generated: ${format(new Date(), "PPP 'at' pp")}`}
-          includeDate
-        />
-      </div>
+      <style>{`
+        @media print {
+          body * { visibility: hidden !important; }
+          .print-area, .print-area * { visibility: visible !important; }
+          .print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 0 12px; }
+          .no-print { display: none !important; }
+        }
+      `}</style>
 
       <Layout title="Comparison Charts" subtitle="Weekly comparisons across the business — 8-week window">
         <div className="space-y-6 no-print">
@@ -228,7 +228,16 @@ const ComparisonCharts = () => {
           ) : null}
         </div>
 
-        <div className="grid gap-6 grid-cols-1">
+        <div className="print-area">
+          <div className="hidden print:block mb-4">
+            <StandardPrintHeader
+              title="Comparison Charts Report"
+              subtitle="8-week comparison across key operations"
+              additionalInfo={`Generated: ${format(new Date(), "PPP 'at' pp")}`}
+              includeDate
+            />
+          </div>
+          <div className="grid gap-6 grid-cols-1">
           {chartCards.map((c, idx) => {
             const Icon = c.icon;
             const s = c.summary;
@@ -326,6 +335,7 @@ const ComparisonCharts = () => {
               </Card>
             );
           })}
+        </div>
         </div>
       </Layout>
     </>
