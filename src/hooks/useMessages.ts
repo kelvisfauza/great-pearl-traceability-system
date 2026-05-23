@@ -41,6 +41,19 @@ interface LatestMessageNotification {
   timestamp: string;
 }
 
+const formatReadableName = (value?: string | null) => {
+  if (!value) return '';
+
+  return value
+    .split('@')[0]
+    .replace(/[._-]+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ')
+    .trim();
+};
+
 export const useMessages = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
