@@ -336,6 +336,7 @@ const ComparisonCharts = () => {
             );
           })}
         </div>
+        </div>
       </Layout>
     </>
   );
