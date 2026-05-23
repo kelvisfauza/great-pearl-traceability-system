@@ -11682,10 +11682,12 @@ export type Database = {
       is_current_user_admin: { Args: never; Returns: boolean }
       is_current_user_admin_by_role: { Args: never; Returns: boolean }
       is_current_user_administrator: { Args: never; Returns: boolean }
+      is_finance_or_admin: { Args: never; Returns: boolean }
       is_group_call_participant: {
         Args: { _call_id: string }
         Returns: boolean
       }
+      is_hr_or_admin: { Args: never; Returns: boolean }
       is_ip_whitelisted: { Args: { check_ip: string }; Returns: boolean }
       is_manager_or_above: { Args: never; Returns: boolean }
       is_privileged_realtime_subscriber: {
