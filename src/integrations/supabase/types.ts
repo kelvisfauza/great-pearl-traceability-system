@@ -1319,6 +1319,13 @@ export type Database = {
             foreignKeyName: "conversation_participants_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
+            referencedRelation: "conversation_list_view"
+            referencedColumns: ["conversation_id"]
+          },
+          {
+            foreignKeyName: "conversation_participants_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
             referencedRelation: "conversations"
             referencedColumns: ["id"]
           },
@@ -5392,6 +5399,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_list_view"
+            referencedColumns: ["conversation_id"]
+          },
           {
             foreignKeyName: "messages_conversation_id_fkey"
             columns: ["conversation_id"]
@@ -11123,6 +11137,50 @@ export type Database = {
       }
     }
     Views: {
+      chat_conversation_names: {
+        Row: {
+          avatar_url: string | null
+          conversation_id: string | null
+          display_name: string | null
+          email: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_participants_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_list_view"
+            referencedColumns: ["conversation_id"]
+          },
+          {
+            foreignKeyName: "conversation_participants_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversation_list_view: {
+        Row: {
+          conversation_id: string | null
+          conversation_name: string | null
+          created_at: string | null
+          created_by: string | null
+          last_message: string | null
+          last_message_at: string | null
+          last_message_type: string | null
+          last_sender_id: string | null
+          participant_avatar_url: string | null
+          participant_email: string | null
+          participant_name: string | null
+          participant_user_id: string | null
+          type: string | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
       daily_finance_summary: {
         Row: {
           date: string | null
@@ -11792,6 +11850,7 @@ export type Database = {
         Args: { p_request_id: string }
         Returns: undefined
       }
+      is_conversation_member: { Args: { conv_id: string }; Returns: boolean }
       is_current_user_admin: { Args: never; Returns: boolean }
       is_current_user_admin_by_role: { Args: never; Returns: boolean }
       is_current_user_administrator: { Args: never; Returns: boolean }
