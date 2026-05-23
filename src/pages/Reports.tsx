@@ -63,6 +63,13 @@ const Reports = () => {
       color: "text-teal-600"
     },
     {
+      title: "Comparison Charts",
+      description: "Visual week-over-week graphs (printable)",
+      icon: TrendingUp,
+      path: "/reports/comparison-charts",
+      color: "text-emerald-600"
+    },
+    {
       title: "Store Reports",
       description: "Inventory and store management",
       icon: Store,
