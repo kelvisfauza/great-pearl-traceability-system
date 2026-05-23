@@ -680,6 +680,21 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     joinChannel(callRow.id);
     await (supabase as any).from('group_calls').update({ status: 'active' }).eq('id', callRow.id);
     awardMeetingLoyalty(myId, title || null, callRow.id);
+    // Fire-and-forget push notification to invitees (mobile/Flutter background ringing)
+    try {
+      supabase.functions.invoke('send-call-push', {
+        body: {
+          callId: callRow.id,
+          conversationId: conversationId || null,
+          callerName: nameByUserRef.current.get(myId) || 'Someone',
+          callerId: myId,
+          kind: type,
+          calleeUserIds: unique.map(i => i.userId),
+        },
+      }).catch((e) => console.warn('[group-call] send-call-push failed', e));
+    } catch (e) {
+      console.warn('[group-call] send-call-push invoke error', e);
+    }
   }, [active, acquireLocalStream, incoming, joinChannel, myId, toast, updateParticipant, user]);
 
   const acceptIncoming = useCallback(async () => {
