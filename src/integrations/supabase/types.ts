@@ -5298,6 +5298,50 @@ export type Database = {
         }
         Relationships: []
       }
+      meeting_attendance: {
+        Row: {
+          created_at: string
+          id: string
+          joined_at: string | null
+          left_at: string | null
+          prompted_at: string | null
+          scheduled_meeting_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          joined_at?: string | null
+          left_at?: string | null
+          prompted_at?: string | null
+          scheduled_meeting_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          joined_at?: string | null
+          left_at?: string | null
+          prompted_at?: string | null
+          scheduled_meeting_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_attendance_scheduled_meeting_id_fkey"
+            columns: ["scheduled_meeting_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
@@ -8110,6 +8154,62 @@ export type Database = {
           weight?: number
         }
         Relationships: []
+      }
+      scheduled_meetings: {
+        Row: {
+          call_id: string | null
+          created_at: string
+          department: string | null
+          ended_at: string | null
+          host_user_id: string
+          id: string
+          kind: string
+          scheduled_date: string
+          scheduled_for: string
+          started_at: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          call_id?: string | null
+          created_at?: string
+          department?: string | null
+          ended_at?: string | null
+          host_user_id: string
+          id?: string
+          kind: string
+          scheduled_date: string
+          scheduled_for: string
+          started_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          call_id?: string | null
+          created_at?: string
+          department?: string | null
+          ended_at?: string | null
+          host_user_id?: string
+          id?: string
+          kind?: string
+          scheduled_date?: string
+          scheduled_for?: string
+          started_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_meetings_call_id_fkey"
+            columns: ["call_id"]
+            isOneToOne: false
+            referencedRelation: "group_calls"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       search_history: {
         Row: {
@@ -11396,6 +11496,19 @@ export type Database = {
       expire_old_bookings: { Args: never; Returns: undefined }
       fix_denis_auth_final: { Args: never; Returns: Json }
       generate_verification_code: { Args: never; Returns: string }
+      get_active_scheduled_meeting_for_user: {
+        Args: { _user_id: string }
+        Returns: {
+          attendance_status: string
+          call_id: string
+          department: string
+          kind: string
+          meeting_id: string
+          scheduled_for: string
+          started_at: string
+          title: string
+        }[]
+      }
       get_all_active_codes: {
         Args: { _lookup: string }
         Returns: {
@@ -11707,6 +11820,7 @@ export type Database = {
         }
         Returns: string
       }
+      mark_meeting_no_shows: { Args: { _meeting_id: string }; Returns: number }
       mark_messages_delivered: {
         Args: { p_conversation_id: string }
         Returns: undefined
@@ -11777,6 +11891,10 @@ export type Database = {
           old_paid: number
           out_loan_id: string
         }[]
+      }
+      record_meeting_attendance: {
+        Args: { _meeting_id: string; _status: string }
+        Returns: Json
       }
       record_treasury_entry: {
         Args: {
