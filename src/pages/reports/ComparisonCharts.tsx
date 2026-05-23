@@ -6,7 +6,7 @@ import { ArrowLeft, Printer, TrendingUp, TrendingDown, Activity, Wallet, Package
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line, PieChart, Pie, Cell } from "recharts";
 import StandardPrintHeader from "@/components/print/StandardPrintHeader";
 import { format } from "date-fns";
 
@@ -209,6 +209,19 @@ const ComparisonCharts = () => {
           .print-area, .print-area * { visibility: visible !important; }
           .print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 0 12px; }
           .no-print { display: none !important; }
+          /* Force charts to print in high-contrast black/grey */
+          .print-area .recharts-surface text { fill: #000 !important; }
+          .print-area .recharts-cartesian-axis-line,
+          .print-area .recharts-cartesian-grid line { stroke: #555 !important; }
+          .print-area .recharts-bar-rectangle path,
+          .print-area .recharts-rectangle { fill: #000 !important; stroke: #000 !important; }
+          .print-area .recharts-bar:nth-of-type(2) .recharts-bar-rectangle path,
+          .print-area .recharts-bar:nth-of-type(2) .recharts-rectangle { fill: #888 !important; stroke: #888 !important; }
+          .print-area .recharts-line-curve { stroke: #000 !important; stroke-width: 2px !important; }
+          .print-area .recharts-line:nth-of-type(2) .recharts-line-curve { stroke: #666 !important; stroke-dasharray: 4 3 !important; }
+          .print-area .recharts-dot { fill: #000 !important; stroke: #000 !important; }
+          .print-area .recharts-pie-sector path { stroke: #000 !important; stroke-width: 1px !important; }
+          .print-area .recharts-legend-item-text { color: #000 !important; }
         }
       `}</style>
 
@@ -335,6 +348,90 @@ const ComparisonCharts = () => {
               </Card>
             );
           })}
+
+          {/* Pie chart distribution section */}
+          {!loading && weeks.length > 0 && (() => {
+            const totals = {
+              purchases: weeks.reduce((s, w) => s + w.purchasesKg, 0),
+              sales: weeks.reduce((s, w) => s + w.salesKg, 0),
+              revenue: weeks.reduce((s, w) => s + w.revenue, 0),
+              expenses: weeks.reduce((s, w) => s + w.expenses, 0),
+              milling: weeks.reduce((s, w) => s + w.millingKg, 0),
+            };
+            const PIE_COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
+            const pies: Array<{ id: string; title: string; description: string; insight: string; data: { name: string; value: number }[]; format: (n: number) => string; }> = [
+              {
+                id: "pie-pvs", title: "Purchases vs Sales Share (8 weeks)",
+                description: "Proportion of total kilograms purchased versus sold across the 8-week window.",
+                insight: "A larger Purchases slice indicates net stock accumulation; a larger Sales slice means inventory is being drawn down faster than replenished.",
+                data: [{ name: "Purchases", value: Math.round(totals.purchases) }, { name: "Sales", value: Math.round(totals.sales) }],
+                format: (n) => `${fmtNum(n)} kg`,
+              },
+              {
+                id: "pie-rve", title: "Revenue vs Expenses Share (8 weeks)",
+                description: "How the total cash inflow from sales compares to operating expenses recorded.",
+                insight: "When the Expenses slice is comparable to or larger than Revenue, the business is operating at thin or negative margins for the period.",
+                data: [{ name: "Revenue", value: Math.round(totals.revenue) }, { name: "Expenses", value: Math.round(totals.expenses) }],
+                format: fmtUGX,
+              },
+              {
+                id: "pie-weekly-purchases", title: "Weekly Purchases Distribution",
+                description: "Share of total green-coffee intake contributed by each of the last 8 weeks.",
+                insight: "Identifies which weeks dominated supply. Heavy concentration in a few weeks signals seasonality or bulk-delivery patterns from key suppliers.",
+                data: weeks.map(w => ({ name: w.label, value: Math.round(w.purchasesKg) })),
+                format: (n) => `${fmtNum(n)} kg`,
+              },
+              {
+                id: "pie-weekly-revenue", title: "Weekly Revenue Distribution",
+                description: "Share of total sales revenue earned in each week of the 8-week window.",
+                insight: "Highlights revenue concentration. A single dominant slice means the period's income depends heavily on one week — a risk if that pattern is not repeatable.",
+                data: weeks.map(w => ({ name: w.label, value: Math.round(w.revenue) })),
+                format: fmtUGX,
+              },
+            ];
+            return pies.map((p, i) => {
+              const total = p.data.reduce((s, d) => s + d.value, 0);
+              return (
+                <Card key={p.id} className="border-border/40 overflow-hidden print:break-after-page print:shadow-none">
+                  <div className="h-1 bg-gradient-to-r from-chart-2 via-chart-4 to-chart-1" />
+                  <CardHeader className="pb-3 pt-5 px-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-chart-2/10 rounded-lg">
+                        <Activity className="h-5 w-5 text-chart-2" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg font-bold">Pie {i + 1}: {p.title}</CardTitle>
+                        <p className="text-xs text-muted-foreground mt-1 max-w-2xl">{p.description}</p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="px-6 pb-6 pt-0 space-y-4">
+                    <ResponsiveContainer width="100%" height={340}>
+                      <PieChart>
+                        <Pie data={p.data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={120} label={(e: any) => `${e.name}: ${((e.value / (total || 1)) * 100).toFixed(1)}%`} labelLine={false}>
+                          {p.data.map((_, idx2) => (
+                            <Cell key={idx2} fill={PIE_COLORS[idx2 % PIE_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip contentStyle={tooltipStyle} formatter={(v: any, name: any) => [p.format(Number(v)), name]} />
+                        <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="grid md:grid-cols-2 gap-3">
+                      <div className="p-4 rounded-lg bg-chart-2/5 border border-chart-2/20">
+                        <div className="text-[10px] uppercase tracking-wide text-chart-2 font-bold mb-1">What this shows</div>
+                        <p className="text-xs text-foreground/80 leading-relaxed">{p.description} Total across all slices: <strong>{p.format(total)}</strong>.</p>
+                      </div>
+                      <div className="p-4 rounded-lg bg-amber-500/5 border border-amber-500/20">
+                        <div className="text-[10px] uppercase tracking-wide text-amber-700 font-bold mb-1">How to read it</div>
+                        <p className="text-xs text-foreground/80 leading-relaxed">{p.insight}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            });
+          })()}
         </div>
         </div>
       </Layout>
