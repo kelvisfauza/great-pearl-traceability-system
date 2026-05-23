@@ -533,6 +533,22 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     }
     joinChannel(row.id);
 
+    // Fire-and-forget push notification to callee (mobile/Flutter background ringing)
+    try {
+      supabase.functions.invoke('send-call-push', {
+        body: {
+          callId: row.id,
+          conversationId: null,
+          callerName: employee?.name || user?.user_metadata?.name || user?.email || 'Someone',
+          callerId: myId,
+          kind: type,
+          calleeUserIds: [calleeAuthId],
+        },
+      }).catch((e) => console.warn('[call] send-call-push failed', e));
+    } catch (e) {
+      console.warn('[call] send-call-push invoke error', e);
+    }
+
     // Start caller-side ringback so the caller hears "ring ring" while waiting.
     try { ringback.start(); } catch {}
 
