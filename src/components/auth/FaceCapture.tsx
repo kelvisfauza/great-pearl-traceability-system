@@ -13,6 +13,8 @@ interface FaceCaptureProps {
   disabled?: boolean;
   /** Whether the parent is currently processing the captured descriptor. */
   busy?: boolean;
+  /** When true, continuously scan the camera and auto-submit the first detected face. */
+  autoScan?: boolean;
 }
 
 /**
@@ -25,6 +27,7 @@ export const FaceCapture: React.FC<FaceCaptureProps> = ({
   actionLabel = 'Capture face',
   disabled,
   busy,
+  autoScan = false,
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -32,6 +35,8 @@ export const FaceCapture: React.FC<FaceCaptureProps> = ({
   const [cameraReady, setCameraReady] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [error, setError] = useState<string>('');
+  const [hint, setHint] = useState<string>('');
+  const scanLockRef = useRef(false);
 
   // Start camera + load models
   useEffect(() => {
@@ -111,6 +116,45 @@ export const FaceCapture: React.FC<FaceCaptureProps> = ({
 
   const ready = modelsReady && cameraReady;
 
+  // ── Auto-scan loop ──
+  // Continuously sample the camera every ~600ms. The very first frame that
+  // contains a face is submitted to the parent. While the parent is busy
+  // verifying we pause; if it comes back without success, we resume scanning.
+  useEffect(() => {
+    if (!autoScan || !ready || busy || disabled || capturing) return;
+    let cancelled = false;
+    setHint('Looking for your face…');
+
+    const tick = async () => {
+      if (cancelled || scanLockRef.current) return;
+      if (!videoRef.current) return;
+      scanLockRef.current = true;
+      try {
+        const descriptor = await getFaceDescriptor(videoRef.current);
+        if (cancelled) return;
+        if (descriptor) {
+          setHint('Face detected — verifying…');
+          setError('');
+          await onCapture(descriptor);
+        } else {
+          setHint('Looking for your face…');
+        }
+      } catch (e) {
+        console.error('auto-scan error:', e);
+      } finally {
+        scanLockRef.current = false;
+      }
+    };
+
+    const id = window.setInterval(tick, 700);
+    // fire one immediately too
+    tick();
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [autoScan, ready, busy, disabled, capturing, onCapture]);
+
   return (
     <div className="space-y-3">
       <div className="relative w-full overflow-hidden rounded-xl border bg-black/90 aspect-[4/3]">
@@ -132,6 +176,15 @@ export const FaceCapture: React.FC<FaceCaptureProps> = ({
             </span>
           </div>
         )}
+        {ready && autoScan && (
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/60 text-white text-[11px] px-3 py-1 rounded-full flex items-center gap-1.5">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
+            {busy ? 'Verifying…' : hint || 'Scanning…'}
+          </div>
+        )}
       </div>
 
       {error && (
@@ -141,28 +194,32 @@ export const FaceCapture: React.FC<FaceCaptureProps> = ({
         </Alert>
       )}
 
-      <Button
-        onClick={handleCapture}
-        disabled={!ready || disabled || capturing || busy}
-        className="w-full"
-        size="lg"
-      >
-        {capturing || busy ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            {busy ? 'Verifying…' : 'Analyzing…'}
-          </>
-        ) : (
-          <>
-            <ScanFace className="mr-2 h-5 w-5" />
-            {actionLabel}
-          </>
-        )}
-      </Button>
+      {!autoScan && (
+        <Button
+          onClick={handleCapture}
+          disabled={!ready || disabled || capturing || busy}
+          className="w-full"
+          size="lg"
+        >
+          {capturing || busy ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {busy ? 'Verifying…' : 'Analyzing…'}
+            </>
+          ) : (
+            <>
+              <ScanFace className="mr-2 h-5 w-5" />
+              {actionLabel}
+            </>
+          )}
+        </Button>
+      )}
 
       <p className="text-[11px] text-muted-foreground text-center leading-snug">
         <Camera className="inline h-3 w-3 mr-1" />
-        Look straight at the camera with good lighting. Remove glasses or masks if possible.
+        {autoScan
+          ? 'Glance at the camera — we’ll recognize you automatically. Good lighting helps.'
+          : 'Look straight at the camera with good lighting. Remove glasses or masks if possible.'}
       </p>
     </div>
   );
