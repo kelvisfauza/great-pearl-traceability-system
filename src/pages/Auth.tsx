@@ -367,7 +367,17 @@ const Auth = () => {
         title: 'Face recognized',
         description: `Welcome back, ${data.name || ''}. Signing you in…`,
       });
-      // Magic link signs the user in; the rest of the app flow takes over.
+
+      if (data?.token_hash) {
+        const nextUrl = new URL(window.location.href);
+        nextUrl.searchParams.set('post_auth', 'face');
+        nextUrl.searchParams.set('type', data.verification_type || 'magiclink');
+        nextUrl.searchParams.set('token_hash', data.token_hash);
+        window.location.href = nextUrl.toString();
+        return;
+      }
+
+      // Fallback for older responses.
       window.location.href = data.auth_url;
     } catch (err: any) {
       console.error('Face login failed:', err);
