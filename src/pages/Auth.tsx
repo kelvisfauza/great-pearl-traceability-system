@@ -485,9 +485,9 @@ const Auth = () => {
               Need help?
             </p>
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 text-sm" style={{ color: 'rgba(6,78,59,0.75)' }}>
-              <a href="tel:+256773318456" className="flex items-center gap-2 hover:underline">
+              <a href="tel:+256393001626" className="flex items-center gap-2 hover:underline">
                 <Phone className="h-3.5 w-3.5" style={{ color: '#c9a84c' }} />
-                +256 773 318 456
+                +256 393 001 626
               </a>
               <span className="hidden sm:inline" style={{ color: 'rgba(6,78,59,0.25)' }}>·</span>
               <a href="mailto:it.support@greatagrocoffee.com" className="flex items-center gap-2 hover:underline">
