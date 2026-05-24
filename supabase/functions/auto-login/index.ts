@@ -14,6 +14,10 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     const { token } = body;
+    const requestOrigin = req.headers.get('origin')?.trim();
+    const redirectTo = requestOrigin && /^https?:\/\//i.test(requestOrigin)
+      ? `${requestOrigin}/auth`
+      : 'https://greatpearlcoffeesystem.site/auth';
 
     console.log('Auto-login request for token:', token?.substring(0, 8) + '***');
     
@@ -85,6 +89,9 @@ Deno.serve(async (req) => {
       const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'magiclink',
         email: employee.email,
+        options: {
+          redirectTo,
+        },
       });
 
       if (sessionError) {
