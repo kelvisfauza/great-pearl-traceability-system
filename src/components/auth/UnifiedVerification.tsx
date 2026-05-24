@@ -366,7 +366,7 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
             )}
             {method !== 'biometric' && isBiometricAvailable && !biometricFailed && (
               <Button variant="ghost" size="sm" onClick={() => switchMethod('biometric')} className="w-full text-xs justify-start">
-                <Fingerprint className="mr-2 h-3.5 w-3.5" /> Fingerprint / Face ID
+                <Fingerprint className="mr-2 h-3.5 w-3.5" /> Device fingerprint
               </Button>
             )}
             {method !== 'dob' && (
