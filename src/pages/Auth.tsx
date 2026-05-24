@@ -212,12 +212,12 @@ const Auth = () => {
     return (
       <div
         className="min-h-screen flex items-center justify-center p-6"
-        style={{ background: '#064e3b', fontFamily: "'Work Sans', sans-serif" }}
+        style={{ background: '#03361b', fontFamily: "'Work Sans', sans-serif" }}
       >
         <div className="w-full max-w-lg">
           <div className="text-center mb-8">
             <div className="flex justify-center mb-5">
-              <div className="p-4 rounded-2xl shadow-xl" style={{ background: '#04392a', border: '1px solid rgba(201,168,76,0.25)' }}>
+              <div className="p-4 rounded-2xl shadow-xl" style={{ background: '#022911', border: '1px solid rgba(201,168,76,0.25)' }}>
                 <img src="/lovable-uploads/great-agro-coffee-logo.png" alt="Great Agro Coffee" className="h-16 w-auto object-contain" />
               </div>
             </div>
@@ -232,12 +232,12 @@ const Auth = () => {
 
           <div
             className="rounded-2xl p-6 space-y-3 shadow-2xl"
-            style={{ background: '#04392a', border: '1px solid rgba(201,168,76,0.2)' }}
+            style={{ background: '#022911', border: '1px solid rgba(201,168,76,0.2)' }}
           >
             <button
               onClick={() => handleSystemSelection('v1')}
               className="w-full h-20 rounded-xl text-lg font-medium transition-all hover:opacity-95 hover:-translate-y-0.5"
-              style={{ background: 'linear-gradient(135deg, #c9a84c 0%, #b08e2e 100%)', color: '#064e3b', fontFamily: "'Work Sans', sans-serif" }}
+              style={{ background: 'linear-gradient(135deg, #c9a84c 0%, #b08e2e 100%)', color: '#03361b', fontFamily: "'Work Sans', sans-serif" }}
             >
               Enter V1 System
             </button>
@@ -257,14 +257,14 @@ const Auth = () => {
   return (
     <div
       className="min-h-screen w-full grid lg:grid-cols-2 relative overflow-hidden"
-      style={{ background: '#04392a', fontFamily: "'Work Sans', sans-serif" }}
+      style={{ background: '#022911', fontFamily: "'Work Sans', sans-serif" }}
     >
       {/* LEFT — Brand panel */}
       <div
         className="relative hidden lg:flex flex-col justify-between p-12 overflow-hidden"
         style={{
           background:
-            'radial-gradient(1100px 700px at -10% -10%, rgba(201,168,76,0.18) 0%, transparent 60%), radial-gradient(800px 600px at 110% 110%, rgba(13,122,95,0.45) 0%, transparent 55%), linear-gradient(160deg, #04392a 0%, #064e3b 55%, #032a1f 100%)',
+            'radial-gradient(1100px 700px at -10% -10%, rgba(201,168,76,0.18) 0%, transparent 60%), radial-gradient(800px 600px at 110% 110%, rgba(10,90,48,0.45) 0%, transparent 55%), linear-gradient(160deg, #022911 0%, #03361b 55%, #021a0c 100%)',
         }}
       >
         {/* subtle gold grid */}
@@ -337,21 +337,21 @@ const Auth = () => {
         <div className="w-full max-w-md relative z-10">
           {/* Mobile-only brand header */}
           <div className="lg:hidden text-center mb-8">
-            <div className="inline-flex p-3 rounded-2xl mb-3" style={{ background: '#064e3b' }}>
+            <div className="inline-flex p-3 rounded-2xl mb-3" style={{ background: '#03361b' }}>
               <img src="/lovable-uploads/great-agro-coffee-logo.png" alt="Great Agro Coffee" className="h-12 w-auto object-contain" />
             </div>
-            <h1 className="text-3xl" style={{ fontFamily: "'Instrument Serif', serif", color: '#064e3b' }}>
+            <h1 className="text-3xl" style={{ fontFamily: "'Instrument Serif', serif", color: '#03361b' }}>
               Great Agro Coffee
             </h1>
           </div>
 
           <div className="mb-8">
-            <p className="text-xs uppercase tracking-[0.25em] mb-3" style={{ color: '#0d7a5f' }}>
+            <p className="text-xs uppercase tracking-[0.25em] mb-3" style={{ color: '#0a5a30' }}>
               Sign in
             </p>
             <h1
               className="text-5xl mb-3"
-              style={{ fontFamily: "'Instrument Serif', serif", color: '#064e3b', letterSpacing: '-0.02em', lineHeight: 1.05 }}
+              style={{ fontFamily: "'Instrument Serif', serif", color: '#03361b', letterSpacing: '-0.02em', lineHeight: 1.05 }}
             >
               Welcome back.
             </h1>
@@ -359,18 +359,18 @@ const Auth = () => {
           </div>
 
           {isHoliday && holiday && (
-            <div className="mb-6 p-3 rounded-xl text-center" style={{ background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.4)', color: '#064e3b' }}>
+            <div className="mb-6 p-3 rounded-xl text-center" style={{ background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.4)', color: '#03361b' }}>
               <p className="text-sm font-medium">{holiday.emoji} {holiday.greeting_title}</p>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <label htmlFor="email" className="text-xs uppercase tracking-wider font-medium" style={{ color: '#064e3b' }}>
+              <label htmlFor="email" className="text-xs uppercase tracking-wider font-medium" style={{ color: '#03361b' }}>
                 Email
               </label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: '#0d7a5f' }} />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: '#0a5a30' }} />
                 <input
                   id="email"
                   type="email"
@@ -383,7 +383,7 @@ const Auth = () => {
                   style={{
                     background: '#ffffff',
                     border: '1px solid rgba(6,78,59,0.15)',
-                    color: '#064e3b',
+                    color: '#03361b',
                     fontFamily: "'Work Sans', sans-serif",
                   }}
                 />
@@ -392,20 +392,20 @@ const Auth = () => {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label htmlFor="password" className="text-xs uppercase tracking-wider font-medium" style={{ color: '#064e3b' }}>
+                <label htmlFor="password" className="text-xs uppercase tracking-wider font-medium" style={{ color: '#03361b' }}>
                   Password
                 </label>
                 <button
                   type="button"
                   className="text-xs font-medium hover:underline"
-                  style={{ color: '#0d7a5f' }}
+                  style={{ color: '#0a5a30' }}
                   onClick={() => setShowForgotPassword(true)}
                 >
                   Forgot?
                 </button>
               </div>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: '#0d7a5f' }} />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: '#0a5a30' }} />
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
@@ -418,7 +418,7 @@ const Auth = () => {
                   style={{
                     background: '#ffffff',
                     border: '1px solid rgba(6,78,59,0.15)',
-                    color: '#064e3b',
+                    color: '#03361b',
                     fontFamily: "'Work Sans', sans-serif",
                   }}
                 />
@@ -426,7 +426,7 @@ const Auth = () => {
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
                   className="absolute right-4 top-1/2 -translate-y-1/2"
-                  style={{ color: '#0d7a5f' }}
+                  style={{ color: '#0a5a30' }}
                   tabIndex={-1}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
@@ -448,7 +448,7 @@ const Auth = () => {
             {loading && !error && (
               <div
                 className="flex items-center gap-2 p-3 rounded-xl text-sm"
-                style={{ background: 'rgba(13,122,95,0.08)', border: '1px solid rgba(13,122,95,0.25)', color: '#064e3b' }}
+                style={{ background: 'rgba(10,90,48,0.08)', border: '1px solid rgba(10,90,48,0.25)', color: '#03361b' }}
               >
                 <Loader2 className="h-4 w-4 animate-spin" />
                 <span>
@@ -462,7 +462,7 @@ const Auth = () => {
               disabled={loading}
               className="w-full h-12 rounded-xl font-medium transition-all hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60 disabled:translate-y-0 flex items-center justify-center gap-2"
               style={{
-                background: 'linear-gradient(135deg, #064e3b 0%, #0d7a5f 100%)',
+                background: 'linear-gradient(135deg, #03361b 0%, #0a5a30 100%)',
                 color: '#f5f0e0',
                 fontFamily: "'Work Sans', sans-serif",
                 boxShadow: '0 10px 30px -10px rgba(6,78,59,0.5)',
