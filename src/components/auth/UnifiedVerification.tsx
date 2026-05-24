@@ -3,11 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Mail, Loader2, AlertCircle, CheckCircle2, Fingerprint, Calendar, MessageSquare, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { Mail, Loader2, AlertCircle, CheckCircle2, Fingerprint, Calendar, MessageSquare, ArrowLeft, ShieldCheck, ScanFace } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { FaceCapture } from '@/components/auth/FaceCapture';
 
-type VerificationMethod = 'email' | 'sms' | 'biometric' | 'dob';
+type VerificationMethod = 'email' | 'sms' | 'biometric' | 'dob' | 'face';
 
 interface UnifiedVerificationProps {
   email: string;
@@ -28,12 +29,24 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
   const [smsFailed, setSmsFailed] = useState(false);
   const [biometricFailed, setBiometricFailed] = useState(false);
   const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
+  const [isFaceAvailable, setIsFaceAvailable] = useState(false);
+  const [faceFailed, setFaceFailed] = useState(false);
+  const [emailCodeSent, setEmailCodeSent] = useState(false);
   const { toast } = useToast();
 
-  // Send email code on mount
+  // On mount: check if user has Face ID registered; if so, prefer it and skip
+  // sending the email code until the user explicitly falls back to email.
   useEffect(() => {
-    sendEmailCode();
-    checkBiometric();
+    (async () => {
+      const faceAvailable = await checkFace();
+      checkBiometric();
+      if (faceAvailable) {
+        setMethod('face');
+      } else {
+        sendEmailCode();
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Countdown
@@ -62,6 +75,43 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
     } catch { /* ignore */ }
   };
 
+  // Returns true if the user has a registered face descriptor.
+  const checkFace = async (): Promise<boolean> => {
+    try {
+      const { data } = await supabase.rpc('has_face_credential' as any, { p_email: email });
+      const available = !!data;
+      setIsFaceAvailable(available);
+      return available;
+    } catch {
+      return false;
+    }
+  };
+
+  const verifyFace = async (descriptor: number[]) => {
+    setIsVerifying(true);
+    setError('');
+    try {
+      const { data, error: rpcErr } = await supabase.rpc('verify_face_descriptor' as any, {
+        p_email: email,
+        p_descriptor: descriptor as any,
+      });
+      if (rpcErr) throw rpcErr;
+      if (data) {
+        toast({ title: 'Verified!', description: 'Face recognized successfully.' });
+        onVerificationComplete();
+      } else {
+        setError('Face did not match. Try again or use another method.');
+        setFaceFailed(true);
+      }
+    } catch (err) {
+      console.error('Face verify failed:', err);
+      setError('Face verification failed. Try another method.');
+      setFaceFailed(true);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
   const sendEmailCode = async () => {
     setIsSending(true);
     setError('');
@@ -74,6 +124,7 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
         toast({ title: "Code Sent", description: "A 4-digit code has been sent to your email." });
         setCountdown(60);
         setCanResend(false);
+        setEmailCodeSent(true);
       } else if (data?.error) {
         setError(data.error);
       }
@@ -193,8 +244,8 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
     setError('');
     setCode('');
     setDobInput('');
-    if (newMethod === 'email') {
-      setEmailFailed(true);
+    if (newMethod === 'email' && !emailCodeSent) {
+      sendEmailCode();
     }
   };
 
@@ -203,6 +254,7 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
     sms: <MessageSquare className="h-8 w-8 text-primary" />,
     biometric: <Fingerprint className="h-8 w-8 text-primary" />,
     dob: <Calendar className="h-8 w-8 text-primary" />,
+    face: <ScanFace className="h-8 w-8 text-primary" />,
   };
 
   const methodTitle = {
@@ -210,6 +262,7 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
     sms: 'SMS Verification',
     biometric: 'Biometric Verification',
     dob: 'Date of Birth Verification',
+    face: 'Face ID Verification',
   };
 
   return (
@@ -226,6 +279,7 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
           {method === 'sms' && 'Enter the SMS code sent to your phone'}
           {method === 'biometric' && 'Use fingerprint or face ID to verify'}
           {method === 'dob' && 'Enter your date of birth to verify your identity'}
+          {method === 'face' && <>Look at the camera to sign in as <strong>{email}</strong></>}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -270,6 +324,15 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
           </Button>
         )}
 
+        {/* FACE ID METHOD */}
+        {method === 'face' && (
+          <FaceCapture
+            onCapture={verifyFace}
+            actionLabel="Scan my face"
+            busy={isVerifying}
+          />
+        )}
+
         {/* DOB METHOD */}
         {method === 'dob' && (
           <>
@@ -291,6 +354,11 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
         <div className="border-t pt-3 space-y-2">
           <p className="text-xs text-muted-foreground text-center">Having trouble? Try another method:</p>
           <div className="flex flex-col gap-1.5">
+            {method !== 'face' && isFaceAvailable && !faceFailed && (
+              <Button variant="ghost" size="sm" onClick={() => switchMethod('face')} className="w-full text-xs justify-start">
+                <ScanFace className="mr-2 h-3.5 w-3.5" /> Face ID (camera)
+              </Button>
+            )}
             {method !== 'email' && (
               <Button variant="ghost" size="sm" onClick={() => { switchMethod('email'); sendEmailCode(); }} className="w-full text-xs justify-start">
                 <Mail className="mr-2 h-3.5 w-3.5" /> Email verification code
@@ -298,7 +366,7 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
             )}
             {method !== 'biometric' && isBiometricAvailable && !biometricFailed && (
               <Button variant="ghost" size="sm" onClick={() => switchMethod('biometric')} className="w-full text-xs justify-start">
-                <Fingerprint className="mr-2 h-3.5 w-3.5" /> Fingerprint / Face ID
+                <Fingerprint className="mr-2 h-3.5 w-3.5" /> Device fingerprint
               </Button>
             )}
             {method !== 'dob' && (
