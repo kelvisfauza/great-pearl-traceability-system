@@ -298,7 +298,7 @@ const Auth = () => {
             className="text-6xl xl:text-7xl leading-[1.05] mb-6"
             style={{ fontFamily: "'Instrument Serif', serif", color: '#f5f0e0', letterSpacing: '-0.02em' }}
           >
-            From cherry to <em style={{ color: '#c9a84c', fontStyle: 'italic' }}>cup</em>, <br />
+            From farm to <em style={{ color: '#c9a84c', fontStyle: 'italic' }}>export</em>, <br />
             every step traced.
           </h2>
           <p className="text-lg leading-relaxed" style={{ color: 'rgba(245,240,224,0.7)' }}>
