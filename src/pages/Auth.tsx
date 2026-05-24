@@ -33,6 +33,8 @@ const Auth = () => {
   const [pendingLoginEmail, setPendingLoginEmail] = useState('');
   
   const [showSystemSelection, setShowSystemSelection] = useState(false);
+  const [showWelcomeSplash, setShowWelcomeSplash] = useState(false);
+  const [welcomeName, setWelcomeName] = useState('');
   
   const { signIn } = useAuth();
   const navigate = useNavigate();
@@ -164,7 +166,34 @@ const Auth = () => {
   const handleEmailVerificationComplete = async () => {
     setShowEmailVerification(false);
     console.log('✅ Verification complete, proceeding...');
-    setShowSystemSelection(true);
+
+    // Resolve a display name for the welcome splash
+    let displayName = '';
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const metaName = (user?.user_metadata?.full_name || user?.user_metadata?.name || '').trim();
+      if (metaName) {
+        displayName = metaName;
+      } else if (pendingLoginEmail) {
+        const { data: emp } = await supabase
+          .from('employees')
+          .select('name')
+          .ilike('email', pendingLoginEmail)
+          .maybeSingle();
+        if (emp?.name) displayName = emp.name;
+      }
+    } catch (e) {
+      console.warn('Could not resolve welcome name:', e);
+    }
+    if (!displayName) {
+      displayName = (pendingLoginEmail || email).split('@')[0].replace(/[._-]+/g, ' ');
+    }
+    setWelcomeName(displayName);
+    setShowWelcomeSplash(true);
+    setTimeout(() => {
+      setShowWelcomeSplash(false);
+      setShowSystemSelection(true);
+    }, 2800);
   };
 
   const handleEmailVerificationCancel = async () => {
@@ -203,6 +232,87 @@ const Auth = () => {
           onVerificationComplete={handleEmailVerificationComplete}
           onCancel={handleEmailVerificationCancel}
         />
+      </div>
+    );
+  }
+
+  // Welcome splash — shown after successful verification, before system selection
+  if (showWelcomeSplash) {
+    return (
+      <div
+        className="min-h-screen w-full flex items-center justify-center relative overflow-hidden"
+        style={{
+          background:
+            'radial-gradient(900px 600px at 50% 30%, rgba(201,168,76,0.18) 0%, transparent 60%), linear-gradient(160deg, #022911 0%, #03361b 55%, #021a0c 100%)',
+          fontFamily: "'Work Sans', sans-serif",
+        }}
+      >
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-[0.06] pointer-events-none"
+          style={{
+            backgroundImage:
+              'linear-gradient(rgba(201,168,76,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(201,168,76,0.6) 1px, transparent 1px)',
+            backgroundSize: '56px 56px',
+          }}
+        />
+        <div className="relative z-10 flex flex-col items-center text-center px-6 splash-fade-in">
+          <div
+            className="p-6 rounded-3xl shadow-2xl mb-8 splash-logo-pop"
+            style={{ background: '#022911', border: '1px solid rgba(201,168,76,0.3)' }}
+          >
+            <img
+              src="/lovable-uploads/great-agro-coffee-logo.png"
+              alt="Great Agro Coffee"
+              className="h-28 w-auto object-contain"
+            />
+          </div>
+          <p
+            className="text-xs uppercase tracking-[0.4em] mb-3"
+            style={{ color: 'rgba(201,168,76,0.9)' }}
+          >
+            Welcome to
+          </p>
+          <h1
+            className="text-5xl md:text-6xl mb-6"
+            style={{
+              fontFamily: "'Instrument Serif', serif",
+              color: '#f5f0e0',
+              letterSpacing: '-0.02em',
+              lineHeight: 1.05,
+            }}
+          >
+            Great Agro <em style={{ color: '#c9a84c', fontStyle: 'italic' }}>Coffee</em>
+          </h1>
+          <div
+            className="h-px w-32 mb-6"
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(201,168,76,0.6), transparent)' }}
+          />
+          <p
+            className="text-2xl md:text-3xl capitalize"
+            style={{ fontFamily: "'Instrument Serif', serif", color: 'rgba(245,240,224,0.92)' }}
+          >
+            Hello, {welcomeName}
+          </p>
+          <div className="mt-10 flex items-center gap-2 text-xs uppercase tracking-widest" style={{ color: 'rgba(245,240,224,0.5)' }}>
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Preparing your workspace
+          </div>
+        </div>
+
+        <style>{`
+          @keyframes splashFadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes splashLogoPop {
+            0% { opacity: 0; transform: scale(0.85); }
+            60% { opacity: 1; transform: scale(1.04); }
+            100% { opacity: 1; transform: scale(1); }
+          }
+          .splash-fade-in { animation: splashFadeIn 700ms ease-out both; }
+          .splash-logo-pop { animation: splashLogoPop 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+        `}</style>
       </div>
     );
   }
