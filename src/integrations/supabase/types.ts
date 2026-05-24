@@ -11906,8 +11906,8 @@ export type Database = {
         Args: { p_descriptor: Json }
         Returns: {
           distance: number
-          email: string
-          user_id: string
+          matched_email: string
+          matched_user_id: string
         }[]
       }
       insert_quality_assessment: {
