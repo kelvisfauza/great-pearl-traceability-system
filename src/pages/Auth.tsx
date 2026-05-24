@@ -210,263 +210,296 @@ const Auth = () => {
   // Show system selection screen after successful login
   if (showSystemSelection) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-6">
-            <div className="flex justify-center mb-4">
-              <div className="p-4 bg-[#0d3d1f] rounded-2xl shadow-lg">
-                <img 
-                  src="/lovable-uploads/great-agro-coffee-logo.png" 
-                  alt="Great Agro Coffee" 
-                  className="h-20 w-auto object-contain"
-                />
+      <div
+        className="min-h-screen flex items-center justify-center p-6"
+        style={{ background: '#064e3b', fontFamily: "'Work Sans', sans-serif" }}
+      >
+        <div className="w-full max-w-lg">
+          <div className="text-center mb-8">
+            <div className="flex justify-center mb-5">
+              <div className="p-4 rounded-2xl shadow-xl" style={{ background: '#04392a', border: '1px solid rgba(201,168,76,0.25)' }}>
+                <img src="/lovable-uploads/great-agro-coffee-logo.png" alt="Great Agro Coffee" className="h-16 w-auto object-contain" />
               </div>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              Welcome to Great Agro Coffee
+            <h1
+              className="text-4xl mb-2"
+              style={{ fontFamily: "'Instrument Serif', serif", color: '#f5f0e0', letterSpacing: '-0.01em' }}
+            >
+              Welcome back
             </h1>
-            <p className="text-gray-600">
-              Please select your system version
-            </p>
+            <p style={{ color: 'rgba(245,240,224,0.7)' }}>Choose which workspace to enter</p>
           </div>
 
-          <Card>
-            <CardHeader className="text-center">
-              <CardTitle className="text-xl">
-                Choose System Version
-              </CardTitle>
-              <CardDescription>
-                Select which version of the system you want to use
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button
-                onClick={() => handleSystemSelection('v1')}
-                className="w-full h-20 text-lg"
-                variant="default"
-              >
-                Use V1 System
-              </Button>
-              <Button
-                onClick={() => handleSystemSelection('v2')}
-                className="w-full h-20 text-lg"
-                variant="outline"
-              >
-                Use V2 System
-              </Button>
-            </CardContent>
-          </Card>
+          <div
+            className="rounded-2xl p-6 space-y-3 shadow-2xl"
+            style={{ background: '#04392a', border: '1px solid rgba(201,168,76,0.2)' }}
+          >
+            <button
+              onClick={() => handleSystemSelection('v1')}
+              className="w-full h-20 rounded-xl text-lg font-medium transition-all hover:opacity-95 hover:-translate-y-0.5"
+              style={{ background: 'linear-gradient(135deg, #c9a84c 0%, #b08e2e 100%)', color: '#064e3b', fontFamily: "'Work Sans', sans-serif" }}
+            >
+              Enter V1 System
+            </button>
+            <button
+              onClick={() => handleSystemSelection('v2')}
+              className="w-full h-20 rounded-xl text-lg font-medium transition-all hover:bg-[rgba(201,168,76,0.08)]"
+              style={{ border: '1px solid rgba(201,168,76,0.4)', color: '#f5f0e0', background: 'transparent', fontFamily: "'Work Sans', sans-serif" }}
+            >
+              Enter V2 System
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`min-h-screen flex items-center justify-center p-4 relative overflow-hidden ${
-      isHoliday 
-        ? `bg-gradient-to-br from-${holiday.bg_gradient_from} via-background to-${holiday.bg_gradient_to}` 
-        : 'bg-gradient-to-br from-green-50 to-amber-50'
-    }`}>
-      {/* Floating emoji background for holidays */}
-      {isHoliday && (
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          {Array.from({ length: 15 }).map((_, i) => (
-            <div
-              key={i}
-              className="absolute animate-fall opacity-40"
-              style={{
-                left: `${Math.random() * 100}%`,
-                animationDuration: `${6 + Math.random() * 8}s`,
-                animationDelay: `${Math.random() * 5}s`,
-                fontSize: `${16 + Math.random() * 20}px`,
-              }}
-            >
-              {holiday.emoji}
-            </div>
-          ))}
-        </div>
-      )}
+    <div
+      className="min-h-screen w-full grid lg:grid-cols-2 relative overflow-hidden"
+      style={{ background: '#04392a', fontFamily: "'Work Sans', sans-serif" }}
+    >
+      {/* LEFT — Brand panel */}
+      <div
+        className="relative hidden lg:flex flex-col justify-between p-12 overflow-hidden"
+        style={{
+          background:
+            'radial-gradient(1100px 700px at -10% -10%, rgba(201,168,76,0.18) 0%, transparent 60%), radial-gradient(800px 600px at 110% 110%, rgba(13,122,95,0.45) 0%, transparent 55%), linear-gradient(160deg, #04392a 0%, #064e3b 55%, #032a1f 100%)',
+        }}
+      >
+        {/* subtle gold grid */}
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-[0.06] pointer-events-none"
+          style={{
+            backgroundImage:
+              'linear-gradient(rgba(201,168,76,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(201,168,76,0.6) 1px, transparent 1px)',
+            backgroundSize: '56px 56px',
+          }}
+        />
+        {/* gold orb */}
+        <div
+          aria-hidden
+          className="absolute -bottom-32 -left-24 w-[480px] h-[480px] rounded-full blur-3xl opacity-25"
+          style={{ background: 'radial-gradient(circle, #c9a84c 0%, transparent 70%)' }}
+        />
 
-      <div className="w-full max-w-md relative z-10">
-        <div className="text-center mb-6">
-          {isHoliday && (
-            <div className={`mb-4 p-3 bg-gradient-to-r from-${holiday.gradient_from} to-${holiday.gradient_to} rounded-xl text-white animate-fade-in shadow-lg`}>
-              <p className="text-lg font-bold flex items-center justify-center gap-2">
-                {holiday.greeting_title}
-              </p>
-              <p className="text-sm opacity-90">{holiday.greeting_message}</p>
-            </div>
-          )}
-          <div className="flex justify-center mb-4">
-            <div className="p-4 bg-[#0d3d1f] rounded-2xl shadow-lg relative">
-              <img 
-                src="/lovable-uploads/great-agro-coffee-logo.png" 
-                alt="Great Agro Coffee" 
-                className="h-24 w-auto object-contain"
-              />
-              {isHoliday && (
-                <span className="absolute -top-3 -right-3 text-2xl animate-bounce">{holiday.emoji}</span>
-              )}
-            </div>
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="p-2 rounded-xl" style={{ background: 'rgba(245,240,224,0.06)', border: '1px solid rgba(201,168,76,0.3)' }}>
+            <img src="/lovable-uploads/great-agro-coffee-logo.png" alt="Great Agro Coffee" className="h-10 w-auto object-contain" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground mb-2">
+          <span className="text-sm tracking-widest uppercase" style={{ color: 'rgba(245,240,224,0.7)' }}>
             Great Agro Coffee
-          </h1>
-          <p className="text-muted-foreground">
-            {isHoliday ? `${holiday.emoji} ${holiday.name}` : 'Coffee Management System'}
+          </span>
+        </div>
+
+        <div className="relative z-10 max-w-lg">
+          <h2
+            className="text-6xl xl:text-7xl leading-[1.05] mb-6"
+            style={{ fontFamily: "'Instrument Serif', serif", color: '#f5f0e0', letterSpacing: '-0.02em' }}
+          >
+            From cherry to <em style={{ color: '#c9a84c', fontStyle: 'italic' }}>cup</em>, <br />
+            every step traced.
+          </h2>
+          <p className="text-lg leading-relaxed" style={{ color: 'rgba(245,240,224,0.7)' }}>
+            The internal operations workspace for procurement, quality, finance and field teams — built around precision, accountability and craft.
           </p>
         </div>
 
-        <Card className={isHoliday ? `relative overflow-visible border-2 border-${holiday.gradient_from.replace('500','200')} shadow-xl` : ""}>
-          {isHoliday && (
-            <>
-              <div className="absolute -top-5 -right-3 text-3xl animate-bounce" style={{ animationDuration: '2s' }}>
-                {holiday.emoji}
-              </div>
-              <div className="absolute -top-4 -left-3 text-2xl animate-pulse">
-                {holiday.emoji}
-              </div>
-            </>
-          )}
-          <CardHeader className="text-center">
-            <CardTitle className="text-xl flex items-center justify-center gap-2">
-              {isHoliday && <span>{holiday.emoji}</span>}
-              Sign In
-              {isHoliday && <span>{holiday.emoji}</span>}
-            </CardTitle>
-            <CardDescription>
-              {isHoliday 
-                ? `${holiday.emoji} Enter your credentials ${holiday.emoji}` 
-                : "Enter your credentials to access your account"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="relative z-10 flex items-center justify-between text-xs uppercase tracking-widest" style={{ color: 'rgba(245,240,224,0.5)' }}>
+          <span>EUDR Ready</span>
+          <span className="h-px flex-1 mx-4" style={{ background: 'rgba(201,168,76,0.3)' }} />
+          <span>Est. Uganda</span>
+        </div>
+      </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email" className="flex items-center gap-2">
-                  {isHoliday && <span className="text-sm">{holiday.emoji}</span>}
-                  Email
-                </Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={loading}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password" className="flex items-center gap-2">
-                  {isHoliday && <span className="text-sm">{holiday.emoji}</span>}
-                  Password
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={loading}
-                    className="pl-10 pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
-                    tabIndex={-1}
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-              {error && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-              
-              {loading && !error && (
-                <Alert>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <AlertDescription>
-                    {window.location.search.includes('login_token') 
-                      ? 'Processing automatic login...' 
-                      : 'Signing you in...'}
-                  </AlertDescription>
-                </Alert>
-              )}
-              
-              <Button
-                type="submit"
-                className={`w-full ${isHoliday ? `bg-gradient-to-r from-${holiday.gradient_from} to-${holiday.gradient_to} hover:opacity-90 shadow-lg` : ''}`}
-                disabled={loading}
+      {/* RIGHT — Form panel */}
+      <div className="flex items-center justify-center p-6 sm:p-10 relative" style={{ background: '#f5f0e0' }}>
+        {isHoliday && holiday && (
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div
+                key={i}
+                className="absolute animate-fall opacity-30"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  animationDuration: `${6 + Math.random() * 8}s`,
+                  animationDelay: `${Math.random() * 5}s`,
+                  fontSize: `${16 + Math.random() * 20}px`,
+                }}
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing in...
-                  </>
-                ) : (
-                  'Sign In'
-                )}
-              </Button>
-
-              <div className="text-center">
-                <Button
-                  type="button"
-                  variant="link"
-                  className="text-sm text-muted-foreground hover:text-primary"
-                  onClick={() => setShowForgotPassword(true)}
-                >
-                  Forgot Password?
-                </Button>
+                {holiday.emoji}
               </div>
-            </form>
-          </CardContent>
-        </Card>
+            ))}
+          </div>
+        )}
 
-        {/* IT Support Contact */}
-        <Card className="mt-4">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <MessageCircle className="h-5 w-5" />
-              Having Login Issues?
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Contact IT Department for technical support:
+        <div className="w-full max-w-md relative z-10">
+          {/* Mobile-only brand header */}
+          <div className="lg:hidden text-center mb-8">
+            <div className="inline-flex p-3 rounded-2xl mb-3" style={{ background: '#064e3b' }}>
+              <img src="/lovable-uploads/great-agro-coffee-logo.png" alt="Great Agro Coffee" className="h-12 w-auto object-contain" />
+            </div>
+            <h1 className="text-3xl" style={{ fontFamily: "'Instrument Serif', serif", color: '#064e3b' }}>
+              Great Agro Coffee
+            </h1>
+          </div>
+
+          <div className="mb-8">
+            <p className="text-xs uppercase tracking-[0.25em] mb-3" style={{ color: '#0d7a5f' }}>
+              Sign in
             </p>
+            <h1
+              className="text-5xl mb-3"
+              style={{ fontFamily: "'Instrument Serif', serif", color: '#064e3b', letterSpacing: '-0.02em', lineHeight: 1.05 }}
+            >
+              Welcome back.
+            </h1>
+            <p style={{ color: 'rgba(6,78,59,0.65)' }}>Enter your credentials to access your workspace.</p>
+          </div>
+
+          {isHoliday && holiday && (
+            <div className="mb-6 p-3 rounded-xl text-center" style={{ background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.4)', color: '#064e3b' }}>
+              <p className="text-sm font-medium">{holiday.emoji} {holiday.greeting_title}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm">
-                <Phone className="h-4 w-4 text-blue-600" />
-                <span>IT Support: +256773318456</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Mail className="h-4 w-4 text-blue-600" />
-                <span>it.support@greatagrocoffee.com</span>
+              <label htmlFor="email" className="text-xs uppercase tracking-wider font-medium" style={{ color: '#064e3b' }}>
+                Email
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: '#0d7a5f' }} />
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="you@greatagrocoffee.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="w-full h-12 pl-11 pr-4 rounded-xl outline-none transition-all focus:ring-2"
+                  style={{
+                    background: '#ffffff',
+                    border: '1px solid rgba(6,78,59,0.15)',
+                    color: '#064e3b',
+                    fontFamily: "'Work Sans', sans-serif",
+                  }}
+                />
               </div>
             </div>
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-xs">
-                New employees: Your account will be created by the administrator. Contact IT Support for login issues.
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-        </Card>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label htmlFor="password" className="text-xs uppercase tracking-wider font-medium" style={{ color: '#064e3b' }}>
+                  Password
+                </label>
+                <button
+                  type="button"
+                  className="text-xs font-medium hover:underline"
+                  style={{ color: '#0d7a5f' }}
+                  onClick={() => setShowForgotPassword(true)}
+                >
+                  Forgot?
+                </button>
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: '#0d7a5f' }} />
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="w-full h-12 pl-11 pr-11 rounded-xl outline-none transition-all focus:ring-2"
+                  style={{
+                    background: '#ffffff',
+                    border: '1px solid rgba(6,78,59,0.15)',
+                    color: '#064e3b',
+                    fontFamily: "'Work Sans', sans-serif",
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2"
+                  style={{ color: '#0d7a5f' }}
+                  tabIndex={-1}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div
+                className="flex items-start gap-2 p-3 rounded-xl text-sm"
+                style={{ background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.25)', color: '#991b1b' }}
+              >
+                <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {loading && !error && (
+              <div
+                className="flex items-center gap-2 p-3 rounded-xl text-sm"
+                style={{ background: 'rgba(13,122,95,0.08)', border: '1px solid rgba(13,122,95,0.25)', color: '#064e3b' }}
+              >
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>
+                  {window.location.search.includes('login_token') ? 'Processing automatic login…' : 'Signing you in…'}
+                </span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-12 rounded-xl font-medium transition-all hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60 disabled:translate-y-0 flex items-center justify-center gap-2"
+              style={{
+                background: 'linear-gradient(135deg, #064e3b 0%, #0d7a5f 100%)',
+                color: '#f5f0e0',
+                fontFamily: "'Work Sans', sans-serif",
+                boxShadow: '0 10px 30px -10px rgba(6,78,59,0.5)',
+              }}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Signing in…
+                </>
+              ) : (
+                'Sign in'
+              )}
+            </button>
+          </form>
+
+          {/* IT support — minimal footer */}
+          <div className="mt-10 pt-6" style={{ borderTop: '1px solid rgba(6,78,59,0.12)' }}>
+            <p className="text-xs uppercase tracking-widest mb-3" style={{ color: 'rgba(6,78,59,0.5)' }}>
+              Need help?
+            </p>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 text-sm" style={{ color: 'rgba(6,78,59,0.75)' }}>
+              <a href="tel:+256773318456" className="flex items-center gap-2 hover:underline">
+                <Phone className="h-3.5 w-3.5" style={{ color: '#c9a84c' }} />
+                +256 773 318 456
+              </a>
+              <span className="hidden sm:inline" style={{ color: 'rgba(6,78,59,0.25)' }}>·</span>
+              <a href="mailto:it.support@greatagrocoffee.com" className="flex items-center gap-2 hover:underline">
+                <Mail className="h-3.5 w-3.5" style={{ color: '#c9a84c' }} />
+                it.support@greatagrocoffee.com
+              </a>
+            </div>
+            <p className="text-xs mt-3" style={{ color: 'rgba(6,78,59,0.45)' }}>
+              New employees: accounts are created by your administrator.
+            </p>
+          </div>
+        </div>
       </div>
 
       <PasswordChangeModal
