@@ -20,6 +20,11 @@ Deno.serve(async (req) => {
   }
 
    try {
+      const requestOrigin = req.headers.get('origin')?.trim();
+      const redirectTo = requestOrigin && /^https?:\/\//i.test(requestOrigin)
+        ? `${requestOrigin}/auth`
+        : 'https://greatpearlcoffeesystem.site/auth';
+
      const { email, descriptor } = await req.json().catch(() => ({}));
 
      if (
@@ -107,6 +112,9 @@ Deno.serve(async (req) => {
      const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
        type: 'magiclink',
        email: employee?.email ?? resolvedEmail!,
+        options: {
+          redirectTo,
+        },
      });
 
     if (linkErr || !linkData?.properties?.action_link) {
@@ -117,12 +125,15 @@ Deno.serve(async (req) => {
       );
     }
 
+      const authUrl = new URL(linkData.properties.action_link);
+      authUrl.searchParams.set('redirect_to', redirectTo);
+
      console.log('✅ Face-login succeeded for', resolvedEmail);
 
     return new Response(
       JSON.stringify({
         ok: true,
-        auth_url: linkData.properties.action_link,
+         auth_url: authUrl.toString(),
          name: employee?.name ?? resolvedEmail!.split('@')[0],
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
