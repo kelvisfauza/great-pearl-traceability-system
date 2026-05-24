@@ -646,6 +646,35 @@ const Auth = () => {
                 'Sign in'
               )}
             </button>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3 py-1">
+              <div className="flex-1 h-px" style={{ background: 'rgba(6,78,59,0.15)' }} />
+              <span className="text-[11px] uppercase tracking-[0.2em]" style={{ color: 'rgba(6,78,59,0.5)' }}>
+                or
+              </span>
+              <div className="flex-1 h-px" style={{ background: 'rgba(6,78,59,0.15)' }} />
+            </div>
+
+            {/* Face ID sign-in */}
+            <button
+              type="button"
+              onClick={openFaceLogin}
+              disabled={loading}
+              className="w-full h-12 rounded-xl font-medium transition-all hover:-translate-y-0.5 hover:shadow-md disabled:opacity-60 flex items-center justify-center gap-2"
+              style={{
+                background: '#ffffff',
+                color: '#03361b',
+                border: '1px solid rgba(6,78,59,0.2)',
+                fontFamily: "'Work Sans', sans-serif",
+              }}
+            >
+              <ScanFace className="h-5 w-5" style={{ color: '#0a5a30' }} />
+              Sign in with Face ID
+            </button>
+            <p className="text-[11px] text-center" style={{ color: 'rgba(6,78,59,0.55)' }}>
+              Register your face once in Settings, then sign in instantly without a password.
+            </p>
           </form>
 
           {/* IT support — minimal footer */}
