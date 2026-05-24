@@ -50,6 +50,7 @@ const Auth = () => {
   const isHoliday = !!holiday;
   const splashTimeoutRef = useRef<number | null>(null);
   const postAuthHandoffStartedRef = useRef(false);
+  const [postAuthSource, setPostAuthSource] = useState<string | null>(null);
 
   // Check for auto-login token
   React.useEffect(() => {
@@ -61,6 +62,78 @@ const Auth = () => {
       handleAutoLogin(loginToken);
       return;
     }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const handleAuthCallback = async () => {
+      const url = new URL(window.location.href);
+      const hash = window.location.hash.startsWith('#')
+        ? window.location.hash.substring(1)
+        : window.location.hash;
+      const hashParams = new URLSearchParams(hash);
+
+      const callbackSource = url.searchParams.get('post_auth') || hashParams.get('post_auth');
+      const callbackType = hashParams.get('type') || url.searchParams.get('type');
+      const code = url.searchParams.get('code');
+      const tokenHash = url.searchParams.get('token_hash') || hashParams.get('token_hash');
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+
+      const isMagicLinkCallback = Boolean(
+        code ||
+        (accessToken && refreshToken) ||
+        (tokenHash && callbackType === 'magiclink') ||
+        callbackSource ||
+        callbackType === 'magiclink'
+      );
+
+      if (!isMagicLinkCallback) return;
+
+      setPostAuthSource(callbackSource || 'magiclink');
+      setLoading(true);
+      setError('');
+
+      try {
+        if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(window.location.href);
+          if (exchangeError) throw exchangeError;
+        } else if (accessToken && refreshToken) {
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          if (sessionError) throw sessionError;
+        } else if (tokenHash && callbackType === 'magiclink') {
+          const { error: verifyError } = await supabase.auth.verifyOtp({
+            type: 'magiclink',
+            token_hash: tokenHash,
+          } as any);
+          if (verifyError) throw verifyError;
+        }
+
+        if (!cancelled) {
+          window.history.replaceState({}, document.title, `${window.location.pathname}?post_auth=${callbackSource || 'magiclink'}`);
+        }
+      } catch (callbackError: any) {
+        console.error('Auth callback handling failed:', callbackError);
+        if (!cancelled) {
+          setError(callbackError?.message || 'Face sign-in could not be completed. Please try again.');
+          setPostAuthSource(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    handleAuthCallback();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -77,8 +150,9 @@ const Auth = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const postAuth = urlParams.get('post_auth');
     const type = urlParams.get('type');
+    const code = urlParams.get('code');
     const tokenHash = urlParams.get('token_hash');
-    const isMagicLinkReturn = postAuth === 'face' || postAuth === 'auto' || type === 'magiclink' || !!tokenHash;
+    const isMagicLinkReturn = !!postAuthSource || postAuth === 'face' || postAuth === 'auto' || type === 'magiclink' || !!tokenHash || !!code;
 
     if (!isMagicLinkReturn) return;
 
@@ -101,7 +175,7 @@ const Auth = () => {
       setShowWelcomeSplash(false);
       navigate('/', { replace: true });
     }, 2400);
-  }, [authLoading, user, employee, navigate]);
+  }, [authLoading, user, employee, navigate, postAuthSource]);
 
   const handleAutoLogin = async (token: string) => {
     try {
