@@ -124,8 +124,10 @@ const Auth = () => {
       } catch (callbackError: any) {
         console.error('Auth callback handling failed:', callbackError);
         if (!cancelled) {
+          setShowWelcomeSplash(false);
           setError(callbackError?.message || 'Face sign-in could not be completed. Please try again.');
           setPostAuthSource(null);
+          window.history.replaceState({}, document.title, window.location.pathname);
         }
       } finally {
         if (!cancelled) {
@@ -150,7 +152,7 @@ const Auth = () => {
   }, []);
 
   useEffect(() => {
-    if (authLoading || !user || !employee || postAuthHandoffStartedRef.current) return;
+    if (authLoading || !user || postAuthHandoffStartedRef.current) return;
 
     const urlParams = new URLSearchParams(window.location.search);
     const postAuth = urlParams.get('post_auth');
@@ -167,10 +169,10 @@ const Auth = () => {
     setShowSystemSelection(false);
     setFaceError('');
     setError('');
-    setPendingLoginEmail(employee.email || user.email || '');
+    const fallbackName = String(user.user_metadata?.full_name || user.user_metadata?.name || user.email || 'User');
+    setPendingLoginEmail(employee?.email || user.email || '');
     setWelcomeName(
-      employee.name ||
-      String(user.user_metadata?.full_name || user.user_metadata?.name || user.email || 'User')
+      employee?.name || fallbackName
     );
     setShowWelcomeSplash(true);
 
