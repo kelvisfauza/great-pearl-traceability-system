@@ -186,6 +186,7 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const channelRetryTimerRef = useRef<number | null>(null);
   const reconnectPeerRef = useRef<(peerId: string) => void>(() => {});
   const rejoinChannelRef = useRef<() => void>(() => {});
+  const leaveCallRef = useRef<() => Promise<void>>(async () => {});
   const interactedRef = useRef<boolean>(false);
 
   useEffect(() => { activeRef.current = active; }, [active]);
