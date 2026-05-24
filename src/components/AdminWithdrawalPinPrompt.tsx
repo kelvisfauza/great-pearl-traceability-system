@@ -27,7 +27,7 @@ const AdminWithdrawalPinPrompt = () => {
 
     const { data } = await supabase
       .from('admin_initiated_withdrawals' as any)
-      .select('*')
+      .select('id, employee_id, employee_email, employee_name, amount, reason, initiated_by, initiated_by_name, status, pin_expires_at, created_at')
       .eq('employee_email', user.email)
       .eq('status', 'pending_pin')
       .gt('pin_expires_at', new Date().toISOString())
