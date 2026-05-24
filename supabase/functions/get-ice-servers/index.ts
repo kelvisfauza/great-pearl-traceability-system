@@ -8,14 +8,55 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
+  const json = (body: unknown) =>
+    new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
+  // Helper: fetch Cloudflare Calls TURN credentials as fallback
+  const getCloudflareIce = async (): Promise<any[] | null> => {
+    const tokenId = (Deno.env.get('CLOUDFLARE_TURN_TOKEN_ID') || '').trim();
+    const apiToken = (Deno.env.get('CLOUDFLARE_TURN_API_TOKEN') || '').trim();
+    if (!tokenId || !apiToken) return null;
+    try {
+      const res = await fetch(
+        `https://rtc.live.cloudflare.com/v1/turn/keys/${tokenId}/credentials/generate`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ ttl: 86400 }),
+        }
+      );
+      if (!res.ok) {
+        console.error('Cloudflare TURN failed', res.status, await res.text());
+        return null;
+      }
+      const data = await res.json();
+      // Cloudflare returns { iceServers: { urls: [...], username, credential } }
+      const cf = data.iceServers;
+      if (!cf) return null;
+      console.log('Issued Cloudflare TURN credential');
+      return [
+        { urls: 'stun:stun.cloudflare.com:3478' },
+        { urls: cf.urls, username: cf.username, credential: cf.credential },
+      ];
+    } catch (e) {
+      console.error('Cloudflare TURN exception', e);
+      return null;
+    }
+  };
+
   try {
     const secretKey = (Deno.env.get('METERED_API_KEY') || '').trim();
     const subdomain = 'greatagrocoffee';
     if (!secretKey) {
-      return new Response(JSON.stringify({ ok: false, error: 'METERED_API_KEY missing', iceServers: [] }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      const cfIce = await getCloudflareIce();
+      if (cfIce) return json({ ok: true, iceServers: cfIce, provider: 'cloudflare' });
+      return json({ ok: false, error: 'METERED_API_KEY missing and no Cloudflare fallback', iceServers: [] });
     }
     // Step 1: create a short-lived TURN credential using the account Secret Key
     const createUrl = `https://${subdomain}.metered.live/api/v1/turn/credential?secretKey=${encodeURIComponent(secretKey)}`;
@@ -27,19 +68,17 @@ Deno.serve(async (req) => {
     if (!createRes.ok) {
       const txt = await createRes.text();
       console.error('Metered create credential failed', createRes.status, txt);
-      return new Response(JSON.stringify({ ok: false, error: `Metered create ${createRes.status}: ${txt}`, iceServers: [] }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      const cfIce = await getCloudflareIce();
+      if (cfIce) return json({ ok: true, iceServers: cfIce, provider: 'cloudflare-fallback' });
+      return json({ ok: false, error: `Metered create ${createRes.status}: ${txt}`, iceServers: [] });
     }
     const cred = await createRes.json();
     const username = cred.username;
     const password = cred.password;
     if (!username || !password) {
-      return new Response(JSON.stringify({ ok: false, error: 'Missing username/password in Metered response', iceServers: [] }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      const cfIce = await getCloudflareIce();
+      if (cfIce) return json({ ok: true, iceServers: cfIce, provider: 'cloudflare-fallback' });
+      return json({ ok: false, error: 'Missing username/password in Metered response', iceServers: [] });
     }
     // Step 2: build standard ICE servers array
     const iceServers = [
@@ -49,16 +88,15 @@ Deno.serve(async (req) => {
       { urls: 'turn:global.relay.metered.ca:443', username, credential: password },
       { urls: 'turns:global.relay.metered.ca:443?transport=tcp', username, credential: password },
     ];
+    // Also append Cloudflare relays for extra resiliency across networks
+    const cfIce = await getCloudflareIce();
+    if (cfIce) iceServers.push(...cfIce);
     console.log('Issued TURN credential for user', username);
-    return new Response(JSON.stringify({ ok: true, iceServers }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return json({ ok: true, iceServers, provider: cfIce ? 'metered+cloudflare' : 'metered' });
   } catch (e) {
     console.error('get-ice-servers exception', e);
-    return new Response(JSON.stringify({ ok: false, error: String(e), iceServers: [] }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    const cfIce = await getCloudflareIce();
+    if (cfIce) return json({ ok: true, iceServers: cfIce, provider: 'cloudflare-fallback' });
+    return json({ ok: false, error: String(e), iceServers: [] });
   }
 });
