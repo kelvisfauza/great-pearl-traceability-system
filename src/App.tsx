@@ -53,6 +53,7 @@ import Approvals from "./pages/Approvals";
 import Verify from "./pages/Verify";
 import CoffeeBookings from "./pages/CoffeeBookings";
 import PriceDisplay from "./pages/PriceDisplay";
+import IdleDocumentary from "./pages/IdleDocumentary";
 import ApproveAction from "./pages/ApproveAction";
 import VerifyDevice from "./pages/VerifyDevice";
 import ResetPassword from "./pages/ResetPassword";
@@ -200,8 +201,10 @@ const App: React.ComponentType = () => {
                 <Route path="/approve-action" element={<ApproveAction />} />
                 <Route path="/verify-device" element={<VerifyDevice />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
-                {/* Public price display for monitors - no auth required */}
-                <Route path="/display" element={<PriceDisplay />} />
+                {/* Idle / inactive display — plays Great Agro Coffee documentary */}
+                <Route path="/display" element={<IdleDocumentary />} />
+                {/* Legacy price display TV (kept available on a dedicated route) */}
+                <Route path="/price-display" element={<PriceDisplay />} />
                 {/* Public employee profile - QR code scan destination */}
                 <Route path="/employee/:id" element={<EmployeeProfile />} />
                 
