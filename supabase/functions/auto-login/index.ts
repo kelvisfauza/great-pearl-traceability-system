@@ -105,6 +105,9 @@ Deno.serve(async (req) => {
         );
       }
 
+      const authUrl = new URL(sessionData.properties?.action_link ?? '');
+      authUrl.searchParams.set('redirect_to', redirectTo);
+
       console.log('✅ Auto-login successful for:', employee.email);
 
       return new Response(
@@ -112,7 +115,7 @@ Deno.serve(async (req) => {
           success: true,
           message: 'Auto-login successful',
           user_name: employee.name,
-          auth_url: sessionData.properties?.action_link,
+          auth_url: authUrl.toString(),
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

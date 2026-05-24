@@ -125,12 +125,15 @@ Deno.serve(async (req) => {
       );
     }
 
+      const authUrl = new URL(linkData.properties.action_link);
+      authUrl.searchParams.set('redirect_to', redirectTo);
+
      console.log('✅ Face-login succeeded for', resolvedEmail);
 
     return new Response(
       JSON.stringify({
         ok: true,
-        auth_url: linkData.properties.action_link,
+         auth_url: authUrl.toString(),
          name: employee?.name ?? resolvedEmail!.split('@')[0],
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
