@@ -179,7 +179,7 @@ const Auth = () => {
     splashTimeoutRef.current = window.setTimeout(() => {
       setShowWelcomeSplash(false);
       navigate('/', { replace: true });
-    }, 2400);
+    }, 3200);
   }, [authLoading, user, employee, navigate, postAuthSource]);
 
   const handleAutoLogin = async (token: string) => {
