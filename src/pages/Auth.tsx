@@ -93,6 +93,11 @@ const Auth = () => {
 
       setPostAuthSource(callbackSource || 'magiclink');
       setLoading(true);
+      // Show the welcome splash immediately so face-ID users see the logo
+      // while we exchange the token in the background.
+      if (callbackSource === 'face' || callbackSource === 'auto' || tokenHash || code) {
+        setShowWelcomeSplash(true);
+      }
       setError('');
 
       try {
