@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, AlertCircle, Phone, Mail, MessageCircle, Lock, KeyRound, Eye, EyeOff } from 'lucide-react';
+import { Loader2, AlertCircle, Phone, Mail, MessageCircle, Lock, KeyRound, Eye, EyeOff, ScanFace, X } from 'lucide-react';
 import PasswordChangeModal from '@/components/PasswordChangeModal';
 import { UnifiedVerification } from '@/components/auth/UnifiedVerification';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,6 +15,7 @@ import { smsService } from '@/services/smsService';
 import { useToast } from '@/hooks/use-toast';
 import { Heart } from 'lucide-react';
 import { useHolidayTheme } from '@/hooks/useHolidayTheme';
+import { FaceCapture } from '@/components/auth/FaceCapture';
 
 
 const Auth = () => {
@@ -35,6 +36,12 @@ const Auth = () => {
   const [showSystemSelection, setShowSystemSelection] = useState(false);
   const [showWelcomeSplash, setShowWelcomeSplash] = useState(false);
   const [welcomeName, setWelcomeName] = useState('');
+
+  // Face-ID sign-in
+  const [showFaceLogin, setShowFaceLogin] = useState(false);
+  const [faceLoginEmail, setFaceLoginEmail] = useState('');
+  const [faceBusy, setFaceBusy] = useState(false);
+  const [faceError, setFaceError] = useState('');
   
   const { signIn } = useAuth();
   const navigate = useNavigate();
@@ -219,6 +226,44 @@ const Auth = () => {
       navigate('/v2');
     } else {
       navigate('/');
+    }
+  };
+
+  const openFaceLogin = () => {
+    const seed = email.trim().toLowerCase();
+    setFaceLoginEmail(seed);
+    setFaceError('');
+    setShowFaceLogin(true);
+  };
+
+  const handleFaceCapture = async (descriptor: number[]) => {
+    const targetEmail = faceLoginEmail.trim().toLowerCase();
+    if (!targetEmail || !targetEmail.includes('@')) {
+      setFaceError('Please enter your email above the camera.');
+      return;
+    }
+    setFaceBusy(true);
+    setFaceError('');
+    try {
+      const { data, error } = await supabase.functions.invoke('face-login', {
+        body: { email: targetEmail, descriptor },
+      });
+      if (error) throw error;
+      if (!data?.ok) {
+        setFaceError(data?.error || 'Face not recognized. Try again or use your password.');
+        return;
+      }
+      toast({
+        title: 'Face recognized',
+        description: `Welcome back, ${data.name || ''}. Signing you in…`,
+      });
+      // Magic link signs the user in; the rest of the app flow takes over.
+      window.location.href = data.auth_url;
+    } catch (err: any) {
+      console.error('Face login failed:', err);
+      setFaceError(err?.message || 'Face sign-in failed. Please try again.');
+    } finally {
+      setFaceBusy(false);
     }
   };
 
@@ -601,6 +646,35 @@ const Auth = () => {
                 'Sign in'
               )}
             </button>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3 py-1">
+              <div className="flex-1 h-px" style={{ background: 'rgba(6,78,59,0.15)' }} />
+              <span className="text-[11px] uppercase tracking-[0.2em]" style={{ color: 'rgba(6,78,59,0.5)' }}>
+                or
+              </span>
+              <div className="flex-1 h-px" style={{ background: 'rgba(6,78,59,0.15)' }} />
+            </div>
+
+            {/* Face ID sign-in */}
+            <button
+              type="button"
+              onClick={openFaceLogin}
+              disabled={loading}
+              className="w-full h-12 rounded-xl font-medium transition-all hover:-translate-y-0.5 hover:shadow-md disabled:opacity-60 flex items-center justify-center gap-2"
+              style={{
+                background: '#ffffff',
+                color: '#03361b',
+                border: '1px solid rgba(6,78,59,0.2)',
+                fontFamily: "'Work Sans', sans-serif",
+              }}
+            >
+              <ScanFace className="h-5 w-5" style={{ color: '#0a5a30' }} />
+              Sign in with Face ID
+            </button>
+            <p className="text-[11px] text-center" style={{ color: 'rgba(6,78,59,0.55)' }}>
+              Register your face once in Settings, then sign in instantly without a password.
+            </p>
           </form>
 
           {/* IT support — minimal footer */}
@@ -630,6 +704,69 @@ const Auth = () => {
         open={showPasswordChange}
         onPasswordChanged={handlePasswordChangeComplete}
       />
+
+      {/* Face ID Sign-in Dialog */}
+      {showFaceLogin && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md relative">
+            <button
+              type="button"
+              onClick={() => { if (!faceBusy) setShowFaceLogin(false); }}
+              className="absolute right-3 top-3 rounded-full p-1.5 hover:bg-muted transition-colors"
+              aria-label="Close"
+              disabled={faceBusy}
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ScanFace className="h-5 w-5" style={{ color: '#0a5a30' }} />
+                Sign in with Face ID
+              </CardTitle>
+              <CardDescription>
+                Enter your email, then look at the camera. If your face matches the one you
+                registered in Settings, you'll be signed in instantly — no password needed.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="face-email">Email</Label>
+                <Input
+                  id="face-email"
+                  type="email"
+                  placeholder="you@greatagrocoffee.com"
+                  value={faceLoginEmail}
+                  onChange={(e) => setFaceLoginEmail(e.target.value)}
+                  disabled={faceBusy}
+                  autoFocus
+                />
+              </div>
+
+              {faceError && (
+                <div
+                  className="flex items-start gap-2 p-3 rounded-md text-xs"
+                  style={{ background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.25)', color: '#991b1b' }}
+                >
+                  <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span>{faceError}</span>
+                </div>
+              )}
+
+              <FaceCapture
+                onCapture={handleFaceCapture}
+                actionLabel="Sign in with my face"
+                busy={faceBusy}
+                disabled={!faceLoginEmail.includes('@')}
+              />
+
+              <p className="text-[11px] text-muted-foreground text-center">
+                Haven't registered your face yet? Sign in with your password once and set it up
+                under <strong>Settings → Profile</strong>.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Forgot Password Dialog */}
       {showForgotPassword && (
