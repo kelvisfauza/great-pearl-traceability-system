@@ -229,6 +229,44 @@ const Auth = () => {
     }
   };
 
+  const openFaceLogin = () => {
+    const seed = email.trim().toLowerCase();
+    setFaceLoginEmail(seed);
+    setFaceError('');
+    setShowFaceLogin(true);
+  };
+
+  const handleFaceCapture = async (descriptor: number[]) => {
+    const targetEmail = faceLoginEmail.trim().toLowerCase();
+    if (!targetEmail || !targetEmail.includes('@')) {
+      setFaceError('Please enter your email above the camera.');
+      return;
+    }
+    setFaceBusy(true);
+    setFaceError('');
+    try {
+      const { data, error } = await supabase.functions.invoke('face-login', {
+        body: { email: targetEmail, descriptor },
+      });
+      if (error) throw error;
+      if (!data?.ok) {
+        setFaceError(data?.error || 'Face not recognized. Try again or use your password.');
+        return;
+      }
+      toast({
+        title: 'Face recognized',
+        description: `Welcome back, ${data.name || ''}. Signing you in…`,
+      });
+      // Magic link signs the user in; the rest of the app flow takes over.
+      window.location.href = data.auth_url;
+    } catch (err: any) {
+      console.error('Face login failed:', err);
+      setFaceError(err?.message || 'Face sign-in failed. Please try again.');
+    } finally {
+      setFaceBusy(false);
+    }
+  };
+
 
   // Show unified verification screen (email → biometric → DOB fallbacks)
   if (showEmailVerification) {
