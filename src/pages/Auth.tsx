@@ -230,27 +230,21 @@ const Auth = () => {
   };
 
   const openFaceLogin = () => {
-    const seed = email.trim().toLowerCase();
-    setFaceLoginEmail(seed);
     setFaceError('');
     setShowFaceLogin(true);
   };
 
   const handleFaceCapture = async (descriptor: number[]) => {
-    const targetEmail = faceLoginEmail.trim().toLowerCase();
-    if (!targetEmail || !targetEmail.includes('@')) {
-      setFaceError('Please enter your email above the camera.');
-      return;
-    }
     setFaceBusy(true);
     setFaceError('');
     try {
+      // Auto-identify: server searches all enrolled faces, no email needed.
       const { data, error } = await supabase.functions.invoke('face-login', {
-        body: { email: targetEmail, descriptor },
+        body: { descriptor },
       });
       if (error) throw error;
       if (!data?.ok) {
-        setFaceError(data?.error || 'Face not recognized. Try again or use your password.');
+        setFaceError(data?.error || "We couldn't recognize you. Try again, or sign in with your password.");
         return;
       }
       toast({
@@ -724,24 +718,11 @@ const Auth = () => {
                 Sign in with Face ID
               </CardTitle>
               <CardDescription>
-                Enter your email, then look at the camera. If your face matches the one you
-                registered in Settings, you'll be signed in instantly — no password needed.
+                Just look at the camera. We'll automatically recognize you and sign you in —
+                no email or password needed.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="face-email">Email</Label>
-                <Input
-                  id="face-email"
-                  type="email"
-                  placeholder="you@greatagrocoffee.com"
-                  value={faceLoginEmail}
-                  onChange={(e) => setFaceLoginEmail(e.target.value)}
-                  disabled={faceBusy}
-                  autoFocus
-                />
-              </div>
-
               {faceError && (
                 <div
                   className="flex items-start gap-2 p-3 rounded-md text-xs"
@@ -754,9 +735,8 @@ const Auth = () => {
 
               <FaceCapture
                 onCapture={handleFaceCapture}
-                actionLabel="Sign in with my face"
+                actionLabel="Scan my face & sign me in"
                 busy={faceBusy}
-                disabled={!faceLoginEmail.includes('@')}
               />
 
               <p className="text-[11px] text-muted-foreground text-center">

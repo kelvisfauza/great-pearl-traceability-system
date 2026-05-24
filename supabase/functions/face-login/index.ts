@@ -19,57 +19,81 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
-  try {
-    const { email, descriptor } = await req.json().catch(() => ({}));
+   try {
+     const { email, descriptor } = await req.json().catch(() => ({}));
 
-    if (
-      typeof email !== 'string' ||
-      !email.includes('@') ||
-      !Array.isArray(descriptor) ||
-      descriptor.length !== 128 ||
-      !descriptor.every((n) => typeof n === 'number' && Number.isFinite(n))
-    ) {
-      return new Response(
-        JSON.stringify({ ok: false, error: 'Invalid request payload' }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
-    }
+     if (
+       !Array.isArray(descriptor) ||
+       descriptor.length !== 128 ||
+       !descriptor.every((n) => typeof n === 'number' && Number.isFinite(n))
+     ) {
+       return new Response(
+         JSON.stringify({ ok: false, error: 'Invalid face data. Please try again.' }),
+         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+       );
+     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+     const normalizedEmail =
+       typeof email === 'string' && email.includes('@') ? email.toLowerCase().trim() : null;
 
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      { auth: { autoRefreshToken: false, persistSession: false } },
-    );
+     const supabaseAdmin = createClient(
+       Deno.env.get('SUPABASE_URL') ?? '',
+       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+       { auth: { autoRefreshToken: false, persistSession: false } },
+     );
 
-    // 1. Verify the face descriptor server-side (Euclidean distance ≤ 0.5)
-    const { data: matchedUserId, error: verifyErr } = await supabaseAdmin.rpc(
-      'verify_face_descriptor',
-      { p_email: normalizedEmail, p_descriptor: descriptor },
-    );
+     let resolvedEmail: string | null = null;
 
-    if (verifyErr) {
-      console.error('Face verify RPC failed:', verifyErr);
-      return new Response(
-        JSON.stringify({ ok: false, error: 'Verification failed. Please try again.' }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
-    }
+     if (normalizedEmail) {
+       // Targeted verification against a specific email
+       const { data: matchedUserId, error: verifyErr } = await supabaseAdmin.rpc(
+         'verify_face_descriptor',
+         { p_email: normalizedEmail, p_descriptor: descriptor },
+       );
+       if (verifyErr) {
+         console.error('Face verify RPC failed:', verifyErr);
+         return new Response(
+           JSON.stringify({ ok: false, error: 'Verification failed. Please try again.' }),
+           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+         );
+       }
+       if (!matchedUserId) {
+         return new Response(
+           JSON.stringify({ ok: false, error: 'Face not recognized.' }),
+           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+         );
+       }
+       resolvedEmail = normalizedEmail;
+     } else {
+       // Auto-identify: search all enrolled faces for the closest match
+       const { data: idRows, error: idErr } = await supabaseAdmin.rpc(
+         'identify_face_descriptor',
+         { p_descriptor: descriptor },
+       );
+       if (idErr) {
+         console.error('Face identify RPC failed:', idErr);
+         return new Response(
+           JSON.stringify({ ok: false, error: 'Verification failed. Please try again.' }),
+           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+         );
+       }
+       const match = Array.isArray(idRows) ? idRows[0] : null;
+       if (!match?.email) {
+         return new Response(
+           JSON.stringify({ ok: false, error: 'Face not recognized. Try again or sign in with email.' }),
+           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+         );
+       }
+       resolvedEmail = String(match.email).toLowerCase().trim();
+       console.log('🤖 Auto-identified face as', resolvedEmail, 'distance=', match.distance);
+     }
 
-    if (!matchedUserId) {
-      return new Response(
-        JSON.stringify({ ok: false, error: 'Face not recognized.' }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
-    }
-
-    // 2. Block disabled accounts (matches the rest of the app's auth policy)
-    const { data: employee } = await supabaseAdmin
-      .from('employees')
-      .select('name, email, disabled')
-      .ilike('email', normalizedEmail)
-      .maybeSingle();
+     // Block disabled accounts (matches the rest of the app's auth policy)
+     const { data: employee } = await supabaseAdmin
+       .from('employees')
+       .select('name, email, disabled')
+       .ilike('email', resolvedEmail!)
+       .maybeSingle();
 
     if (employee?.disabled === true) {
       return new Response(
@@ -78,11 +102,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 3. Generate a one-time magic link to sign the user in
-    const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'magiclink',
-      email: employee?.email ?? normalizedEmail,
-    });
+     // Generate a one-time magic link to sign the user in
+     const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
+       type: 'magiclink',
+       email: employee?.email ?? resolvedEmail!,
+     });
 
     if (linkErr || !linkData?.properties?.action_link) {
       console.error('Magic link generation failed:', linkErr);
@@ -92,13 +116,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('✅ Face-login succeeded for', normalizedEmail);
+     console.log('✅ Face-login succeeded for', resolvedEmail);
 
     return new Response(
       JSON.stringify({
         ok: true,
         auth_url: linkData.properties.action_link,
-        name: employee?.name ?? normalizedEmail.split('@')[0],
+         name: employee?.name ?? resolvedEmail!.split('@')[0],
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
