@@ -705,6 +705,69 @@ const Auth = () => {
         onPasswordChanged={handlePasswordChangeComplete}
       />
 
+      {/* Face ID Sign-in Dialog */}
+      {showFaceLogin && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md relative">
+            <button
+              type="button"
+              onClick={() => { if (!faceBusy) setShowFaceLogin(false); }}
+              className="absolute right-3 top-3 rounded-full p-1.5 hover:bg-muted transition-colors"
+              aria-label="Close"
+              disabled={faceBusy}
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ScanFace className="h-5 w-5" style={{ color: '#0a5a30' }} />
+                Sign in with Face ID
+              </CardTitle>
+              <CardDescription>
+                Enter your email, then look at the camera. If your face matches the one you
+                registered in Settings, you'll be signed in instantly — no password needed.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="face-email">Email</Label>
+                <Input
+                  id="face-email"
+                  type="email"
+                  placeholder="you@greatagrocoffee.com"
+                  value={faceLoginEmail}
+                  onChange={(e) => setFaceLoginEmail(e.target.value)}
+                  disabled={faceBusy}
+                  autoFocus
+                />
+              </div>
+
+              {faceError && (
+                <div
+                  className="flex items-start gap-2 p-3 rounded-md text-xs"
+                  style={{ background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.25)', color: '#991b1b' }}
+                >
+                  <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span>{faceError}</span>
+                </div>
+              )}
+
+              <FaceCapture
+                onCapture={handleFaceCapture}
+                actionLabel="Sign in with my face"
+                busy={faceBusy}
+                disabled={!faceLoginEmail.includes('@')}
+              />
+
+              <p className="text-[11px] text-muted-foreground text-center">
+                Haven't registered your face yet? Sign in with your password once and set it up
+                under <strong>Settings → Profile</strong>.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Forgot Password Dialog */}
       {showForgotPassword && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
