@@ -9,6 +9,7 @@ import UserManagement from '@/components/settings/UserManagement';
 import UserProfile from '@/components/settings/UserProfile';
 import PaymentSlipGenerator from '@/components/settings/PaymentSlipGenerator';
 import ContractGenerator from '@/components/settings/ContractGenerator';
+import FaceEnrollment from '@/components/settings/FaceEnrollment';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import UserPresencePanel from '@/components/admin/UserPresencePanel';
@@ -60,6 +61,7 @@ const Settings = () => {
 
           <TabsContent value="profile" className="space-y-4 md:space-y-6">
             <UserProfile employee={employee} />
+            <FaceEnrollment />
           </TabsContent>
 
           {canManageEmployees() && (
