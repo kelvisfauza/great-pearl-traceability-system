@@ -737,6 +737,7 @@ const Auth = () => {
                 onCapture={handleFaceCapture}
                 actionLabel="Scan my face & sign me in"
                 busy={faceBusy}
+                autoScan
               />
 
               <p className="text-[11px] text-muted-foreground text-center">
