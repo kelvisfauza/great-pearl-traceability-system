@@ -251,6 +251,9 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [cleanupPeer]);
 
   const sendSignal = useCallback((event: string, payload: any) => {
+    try {
+      console.log('[gc-signal] >', event, { to: payload?.to, from: payload?.from });
+    } catch {}
     channelRef.current?.send({ type: 'broadcast', event, payload });
   }, []);
 
