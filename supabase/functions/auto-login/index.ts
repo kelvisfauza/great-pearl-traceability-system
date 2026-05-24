@@ -16,8 +16,8 @@ Deno.serve(async (req) => {
     const { token } = body;
     const requestOrigin = req.headers.get('origin')?.trim();
     const redirectTo = requestOrigin && /^https?:\/\//i.test(requestOrigin)
-      ? `${requestOrigin}/auth`
-      : 'https://greatpearlcoffeesystem.site/auth';
+      ? `${requestOrigin}/auth?post_auth=auto`
+      : 'https://greatpearlcoffeesystem.site/auth?post_auth=auto';
 
     console.log('Auto-login request for token:', token?.substring(0, 8) + '***');
     
