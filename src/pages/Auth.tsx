@@ -718,24 +718,11 @@ const Auth = () => {
                 Sign in with Face ID
               </CardTitle>
               <CardDescription>
-                Enter your email, then look at the camera. If your face matches the one you
-                registered in Settings, you'll be signed in instantly — no password needed.
+                Just look at the camera. We'll automatically recognize you and sign you in —
+                no email or password needed.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="face-email">Email</Label>
-                <Input
-                  id="face-email"
-                  type="email"
-                  placeholder="you@greatagrocoffee.com"
-                  value={faceLoginEmail}
-                  onChange={(e) => setFaceLoginEmail(e.target.value)}
-                  disabled={faceBusy}
-                  autoFocus
-                />
-              </div>
-
               {faceError && (
                 <div
                   className="flex items-start gap-2 p-3 rounded-md text-xs"
@@ -748,9 +735,8 @@ const Auth = () => {
 
               <FaceCapture
                 onCapture={handleFaceCapture}
-                actionLabel="Sign in with my face"
+                actionLabel="Scan my face & sign me in"
                 busy={faceBusy}
-                disabled={!faceLoginEmail.includes('@')}
               />
 
               <p className="text-[11px] text-muted-foreground text-center">
