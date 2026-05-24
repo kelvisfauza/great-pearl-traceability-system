@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, AlertCircle, Phone, Mail, MessageCircle, Lock, KeyRound, Eye, EyeOff } from 'lucide-react';
+import { Loader2, AlertCircle, Phone, Mail, MessageCircle, Lock, KeyRound, Eye, EyeOff, ScanFace, X } from 'lucide-react';
 import PasswordChangeModal from '@/components/PasswordChangeModal';
 import { UnifiedVerification } from '@/components/auth/UnifiedVerification';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,6 +15,7 @@ import { smsService } from '@/services/smsService';
 import { useToast } from '@/hooks/use-toast';
 import { Heart } from 'lucide-react';
 import { useHolidayTheme } from '@/hooks/useHolidayTheme';
+import { FaceCapture } from '@/components/auth/FaceCapture';
 
 
 const Auth = () => {
@@ -35,6 +36,12 @@ const Auth = () => {
   const [showSystemSelection, setShowSystemSelection] = useState(false);
   const [showWelcomeSplash, setShowWelcomeSplash] = useState(false);
   const [welcomeName, setWelcomeName] = useState('');
+
+  // Face-ID sign-in
+  const [showFaceLogin, setShowFaceLogin] = useState(false);
+  const [faceLoginEmail, setFaceLoginEmail] = useState('');
+  const [faceBusy, setFaceBusy] = useState(false);
+  const [faceError, setFaceError] = useState('');
   
   const { signIn } = useAuth();
   const navigate = useNavigate();
