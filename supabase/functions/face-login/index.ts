@@ -133,8 +133,10 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         ok: true,
-         auth_url: authUrl.toString(),
-         name: employee?.name ?? resolvedEmail!.split('@')[0],
+        auth_url: authUrl.toString(),
+        token_hash: linkData.properties.hashed_token,
+        verification_type: linkData.properties.verification_type,
+        name: employee?.name ?? resolvedEmail!.split('@')[0],
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
