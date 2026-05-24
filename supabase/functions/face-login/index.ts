@@ -22,8 +22,8 @@ Deno.serve(async (req) => {
    try {
       const requestOrigin = req.headers.get('origin')?.trim();
       const redirectTo = requestOrigin && /^https?:\/\//i.test(requestOrigin)
-        ? `${requestOrigin}/auth`
-        : 'https://greatpearlcoffeesystem.site/auth';
+        ? `${requestOrigin}/auth?post_auth=face`
+        : 'https://greatpearlcoffeesystem.site/auth?post_auth=face';
 
      const { email, descriptor } = await req.json().catch(() => ({}));
 

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -43,11 +43,13 @@ const Auth = () => {
   const [faceBusy, setFaceBusy] = useState(false);
   const [faceError, setFaceError] = useState('');
   
-  const { signIn } = useAuth();
+  const { signIn, user, employee, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: holiday } = useHolidayTheme();
   const isHoliday = !!holiday;
+  const splashTimeoutRef = useRef<number | null>(null);
+  const postAuthHandoffStartedRef = useRef(false);
 
   // Check for auto-login token
   React.useEffect(() => {
@@ -60,6 +62,46 @@ const Auth = () => {
       return;
     }
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (splashTimeoutRef.current) {
+        window.clearTimeout(splashTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (authLoading || !user || !employee || postAuthHandoffStartedRef.current) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const postAuth = urlParams.get('post_auth');
+    const type = urlParams.get('type');
+    const tokenHash = urlParams.get('token_hash');
+    const isMagicLinkReturn = postAuth === 'face' || postAuth === 'auto' || type === 'magiclink' || !!tokenHash;
+
+    if (!isMagicLinkReturn) return;
+
+    postAuthHandoffStartedRef.current = true;
+    setShowFaceLogin(false);
+    setShowEmailVerification(false);
+    setShowSystemSelection(false);
+    setFaceError('');
+    setError('');
+    setPendingLoginEmail(employee.email || user.email || '');
+    setWelcomeName(
+      employee.name ||
+      String(user.user_metadata?.full_name || user.user_metadata?.name || user.email || 'User')
+    );
+    setShowWelcomeSplash(true);
+
+    window.history.replaceState({}, document.title, window.location.pathname);
+
+    splashTimeoutRef.current = window.setTimeout(() => {
+      setShowWelcomeSplash(false);
+      navigate('/', { replace: true });
+    }, 2400);
+  }, [authLoading, user, employee, navigate]);
 
   const handleAutoLogin = async (token: string) => {
     try {
