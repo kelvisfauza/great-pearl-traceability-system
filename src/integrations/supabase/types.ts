@@ -2694,6 +2694,39 @@ export type Database = {
         }
         Relationships: []
       }
+      face_credentials: {
+        Row: {
+          created_at: string
+          descriptor: Json
+          device_label: string | null
+          email: string
+          id: string
+          last_used_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          descriptor: Json
+          device_label?: string | null
+          email: string
+          id?: string
+          last_used_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          descriptor?: Json
+          device_label?: string | null
+          email?: string
+          id?: string
+          last_used_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       facilitation_requests: {
         Row: {
           amount_requested: number
@@ -11861,6 +11894,7 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: boolean
       }
+      has_face_credential: { Args: { p_email: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -12122,6 +12156,10 @@ export type Database = {
       verify_email_otp: {
         Args: { _code: string; _email: string }
         Returns: Json
+      }
+      verify_face_descriptor: {
+        Args: { p_descriptor: Json; p_email: string }
+        Returns: string
       }
       verify_login_otp: {
         Args: { _code: string; _user_id: string }
