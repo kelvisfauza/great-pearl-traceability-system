@@ -186,6 +186,7 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const channelRetryTimerRef = useRef<number | null>(null);
   const reconnectPeerRef = useRef<(peerId: string) => void>(() => {});
   const rejoinChannelRef = useRef<() => void>(() => {});
+  const leaveCallRef = useRef<() => Promise<void>>(async () => {});
   const interactedRef = useRef<boolean>(false);
 
   useEffect(() => { activeRef.current = active; }, [active]);
@@ -251,6 +252,9 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [cleanupPeer]);
 
   const sendSignal = useCallback((event: string, payload: any) => {
+    try {
+      console.log('[gc-signal] >', event, { to: payload?.to, from: payload?.from });
+    } catch {}
     channelRef.current?.send({ type: 'broadcast', event, payload });
   }, []);
 
@@ -823,6 +827,8 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     cleanupAll();
   }, [cleanupAll, myId, sendSignal, toast]);
 
+  useEffect(() => { leaveCallRef.current = leaveCall; }, [leaveCall]);
+
   const endForAll = useCallback(async () => {
     const cur = activeRef.current;
     if (!cur || !myId) return;
@@ -1274,7 +1280,36 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
       )
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    // Polling fallback in case realtime drops — also catches the
+    // last-participant case (everyone else left → end the call locally).
+    let stopped = false;
+    const poll = async () => {
+      if (stopped || !activeRef.current || activeRef.current.id !== active.id) return;
+      try {
+        const [{ data: callRow }, { data: parts }] = await Promise.all([
+          (supabase as any).from('group_calls').select('status').eq('id', active.id).maybeSingle(),
+          (supabase as any).from('group_call_participants').select('user_id, status').eq('call_id', active.id),
+        ]);
+        if (callRow?.status === 'ended') {
+          toast({ title: 'Call ended' });
+          cleanupAll();
+          return;
+        }
+        const joinedOthers = (parts || []).filter((p: any) => p.user_id !== myId && p.status === 'joined');
+        // If I'm not the host and nobody else is joined any more, leave.
+        if (active.hostId !== myId && joinedOthers.length === 0) {
+          // Give peers a brief grace period for "joined" to land before bailing.
+          const ageMs = Date.now() - (activeRef.current as any)._startedAt;
+          if (!isNaN(ageMs) && ageMs > 15000) {
+            toast({ title: 'Everyone left the call' });
+            await leaveCallRef.current?.();
+          }
+        }
+      } catch {}
+    };
+    (activeRef.current as any)._startedAt = Date.now();
+    const id = window.setInterval(poll, 5000);
+    return () => { stopped = true; window.clearInterval(id); supabase.removeChannel(ch); };
   }, [active, cleanupAll, toast]);
 
   return (
