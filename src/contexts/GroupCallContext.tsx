@@ -827,6 +827,8 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     cleanupAll();
   }, [cleanupAll, myId, sendSignal, toast]);
 
+  useEffect(() => { leaveCallRef.current = leaveCall; }, [leaveCall]);
+
   const endForAll = useCallback(async () => {
     const cur = activeRef.current;
     if (!cur || !myId) return;
