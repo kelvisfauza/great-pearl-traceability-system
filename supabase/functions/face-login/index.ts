@@ -20,6 +20,11 @@ Deno.serve(async (req) => {
   }
 
    try {
+      const requestOrigin = req.headers.get('origin')?.trim();
+      const redirectTo = requestOrigin && /^https?:\/\//i.test(requestOrigin)
+        ? `${requestOrigin}/auth`
+        : 'https://greatpearlcoffeesystem.site/auth';
+
      const { email, descriptor } = await req.json().catch(() => ({}));
 
      if (
@@ -107,6 +112,9 @@ Deno.serve(async (req) => {
      const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
        type: 'magiclink',
        email: employee?.email ?? resolvedEmail!,
+        options: {
+          redirectTo,
+        },
      });
 
     if (linkErr || !linkData?.properties?.action_link) {

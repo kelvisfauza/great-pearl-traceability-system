@@ -34,17 +34,12 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
   const [emailCodeSent, setEmailCodeSent] = useState(false);
   const { toast } = useToast();
 
-  // On mount: check if user has Face ID registered; if so, prefer it and skip
-  // sending the email code until the user explicitly falls back to email.
+  // On mount: keep password login on the normal email-code path.
+  // Face ID stays available only as an optional fallback.
   useEffect(() => {
     (async () => {
-      const faceAvailable = await checkFace();
-      checkBiometric();
-      if (faceAvailable) {
-        setMethod('face');
-      } else {
-        sendEmailCode();
-      }
+      await Promise.all([checkFace(), checkBiometric()]);
+      sendEmailCode();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
