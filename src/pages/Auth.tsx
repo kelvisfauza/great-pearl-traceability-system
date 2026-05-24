@@ -230,27 +230,21 @@ const Auth = () => {
   };
 
   const openFaceLogin = () => {
-    const seed = email.trim().toLowerCase();
-    setFaceLoginEmail(seed);
     setFaceError('');
     setShowFaceLogin(true);
   };
 
   const handleFaceCapture = async (descriptor: number[]) => {
-    const targetEmail = faceLoginEmail.trim().toLowerCase();
-    if (!targetEmail || !targetEmail.includes('@')) {
-      setFaceError('Please enter your email above the camera.');
-      return;
-    }
     setFaceBusy(true);
     setFaceError('');
     try {
+      // Auto-identify: server searches all enrolled faces, no email needed.
       const { data, error } = await supabase.functions.invoke('face-login', {
-        body: { email: targetEmail, descriptor },
+        body: { descriptor },
       });
       if (error) throw error;
       if (!data?.ok) {
-        setFaceError(data?.error || 'Face not recognized. Try again or use your password.');
+        setFaceError(data?.error || "We couldn't recognize you. Try again, or sign in with your password.");
         return;
       }
       toast({
