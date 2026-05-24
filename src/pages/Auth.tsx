@@ -284,6 +284,20 @@ const Auth = () => {
           style={{ background: 'radial-gradient(circle, #c9a84c 0%, transparent 70%)' }}
         />
 
+        {/* Logo cover — large watermark filling the green panel */}
+        <div
+          aria-hidden
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: "url('/lovable-uploads/great-agro-coffee-logo.png')",
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'center',
+            backgroundSize: 'contain',
+            opacity: 0.18,
+            filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.4))',
+          }}
+        />
+
         <div className="relative z-10 flex items-center gap-3">
           <div className="p-2 rounded-xl" style={{ background: 'rgba(245,240,224,0.06)', border: '1px solid rgba(201,168,76,0.3)' }}>
             <img src="/lovable-uploads/great-agro-coffee-logo.png" alt="Great Agro Coffee" className="h-10 w-auto object-contain" />
