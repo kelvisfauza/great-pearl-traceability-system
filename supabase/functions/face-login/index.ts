@@ -78,13 +78,14 @@ Deno.serve(async (req) => {
          );
        }
        const match = Array.isArray(idRows) ? idRows[0] : null;
-       if (!match?.email) {
+       const matchedEmail = match?.matched_email ?? match?.email;
+       if (!matchedEmail) {
          return new Response(
            JSON.stringify({ ok: false, error: 'Face not recognized. Try again or sign in with email.' }),
            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
          );
        }
-       resolvedEmail = String(match.email).toLowerCase().trim();
+        resolvedEmail = String(matchedEmail).toLowerCase().trim();
        console.log('🤖 Auto-identified face as', resolvedEmail, 'distance=', match.distance);
      }
 
