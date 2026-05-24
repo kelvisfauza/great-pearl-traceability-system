@@ -11902,6 +11902,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      identify_face_descriptor: {
+        Args: { p_descriptor: Json }
+        Returns: {
+          distance: number
+          email: string
+          user_id: string
+        }[]
+      }
       insert_quality_assessment: {
         Args: { assessment_data: Json }
         Returns: Json
