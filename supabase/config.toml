@@ -153,6 +153,8 @@ project_id = "pudfybkyfedeggmokhco"
     verify_jwt = false
   [functions.send-sms]
     verify_jwt = false
+  [functions.admin-send-termination]
+    verify_jwt = false
   [functions.send-whatsapp]
     verify_jwt = false
   [functions.sms-login-link]
