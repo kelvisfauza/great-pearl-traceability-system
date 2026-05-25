@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
     entry_type: "REVERSAL",
     amount: 60000,
     reference: reversalRef,
-    source_category: "WITHDRAWAL_REVERSAL",
+    source_category: "WITHDRAWAL",
     metadata: {
       description: "Refund: instant withdrawal rejected — Yo Payments never registered the transaction (StatusCode -30). Admin reversal.",
       original_payout_ref: payoutRef,
