@@ -430,15 +430,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
 
     ch.on('broadcast', { event: 'ready' }, async () => {
       // Callee signals they're ready; caller creates offer
-      const pc = pcRef.current;
-      if (!pc) return;
-      // If we've already created/sent an offer, ignore duplicate readys
-      if (pc.localDescription) return;
-      try {
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        sendSignal('offer', { sdp: offer });
-      } catch (e) { console.error('[call] offer error', e); }
+      await sendOfferIfNeeded('callee-ready');
     });
 
     ch.on('broadcast', { event: 'offer' }, async ({ payload }) => {
@@ -450,6 +442,10 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
         readyRetryRef.current = null;
       }
       try {
+        if (pc.signalingState !== 'stable') {
+          console.warn('[call] ignoring offer in non-stable state', pc.signalingState);
+          return;
+        }
         await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
         remoteSetRef.current = true;
         for (const c of pendingIceRef.current) {
@@ -466,6 +462,10 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
       const pc = pcRef.current;
       if (!pc) return;
       try {
+        if (pc.signalingState !== 'have-local-offer') {
+          console.warn('[call] ignoring answer without local offer', pc.signalingState);
+          return;
+        }
         await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
         remoteSetRef.current = true;
         for (const c of pendingIceRef.current) {
@@ -512,12 +512,20 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     ch.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
         callerSubscribedRef.current = true;
+        const current = activeRef.current;
+        if (current?.caller_id === myId) {
+          if (offerRetryRef.current) window.clearInterval(offerRetryRef.current);
+          offerRetryRef.current = window.setInterval(() => {
+            void sendOfferIfNeeded('subscription-retry');
+          }, 800);
+          window.setTimeout(() => { void sendOfferIfNeeded('subscribed'); }, 150);
+        }
         if (onReady) onReady();
       }
     });
 
     channelRef.current = ch;
-  }, [cleanup, sendSignal, toast]);
+  }, [cleanup, myId, sendOfferIfNeeded, sendSignal, toast]);
 
   // Outgoing call
   const startCall = useCallback(async (calleeAuthId: string, calleeName: string, type: CallType) => {
