@@ -334,7 +334,18 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     const pc = pcRef.current;
     const current = activeRef.current;
     if (!pc || !current || !myId || current.caller_id !== myId || abandonedRef.current) return false;
-    if (remoteSetRef.current || pc.localDescription || pc.signalingState !== 'stable') return false;
+    if (remoteSetRef.current) return false;
+    if (pc.localDescription?.type === 'offer') {
+      try {
+        console.log('[call] re-sending offer', { reason, state: pc.signalingState });
+        sendSignal('offer', { sdp: pc.localDescription.toJSON() });
+        return true;
+      } catch (e) {
+        console.error('[call] offer resend error', e);
+        return false;
+      }
+    }
+    if (pc.signalingState !== 'stable') return false;
     try {
       console.log('[call] creating offer', { reason, status: current.status, state: pc.signalingState });
       const offer = await pc.createOffer();
@@ -551,6 +562,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
       .select()
       .single();
     if (error || !data) {
+      localStream.getTracks().forEach(t => t.stop());
       toast({ title: 'Failed to start call', description: error?.message, variant: 'destructive' });
       return;
     }
