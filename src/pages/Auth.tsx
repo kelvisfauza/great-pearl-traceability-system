@@ -126,7 +126,8 @@ const Auth = () => {
 
       try {
         if (code) {
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(window.location.href);
+          // Use the original URL (we already cleaned `window.location`).
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(url.toString());
           if (exchangeError) throw exchangeError;
         } else if (accessToken && refreshToken) {
           const { error: sessionError } = await supabase.auth.setSession({
