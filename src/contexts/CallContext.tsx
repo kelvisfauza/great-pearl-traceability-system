@@ -537,6 +537,8 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
       toast({ title: 'Already in a call', variant: 'destructive' });
       return;
     }
+    const localStream = await acquireLocalStream(type);
+    if (!localStream) return;
     const { data, error } = await supabase
       .from('call_sessions')
       .insert({
@@ -558,7 +560,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     setActivePeer({ name: calleeName, avatarInitials: initials });
     setIsInitiator(true);
 
-    const stream = await setupPeer(row.id, type);
+    const stream = await setupPeer(row.id, type, localStream);
     if (!stream) {
       // Mark as ended
       await supabase.from('call_sessions').update({ status: 'ended', ended_at: new Date().toISOString() }).eq('id', row.id);
@@ -624,7 +626,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
       } catch {}
       window.setTimeout(() => setUnavailable(null), 6000);
     }, 20000);
-  }, [myId, active, incoming, toast, setupPeer, joinChannel, cleanup, sendSignal, logCallToChat]);
+  }, [myId, active, incoming, toast, acquireLocalStream, setupPeer, joinChannel, cleanup, sendSignal, logCallToChat, employee?.name, user?.user_metadata?.name, user?.email]);
 
   // Shared handler so realtime AND the polling fallback both go through
   // the same code path. We dedupe via a processed-ids set so a single
@@ -844,7 +846,8 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     setIncoming(null);
     setIncomingPeer(null);
 
-    const stream = await setupPeer(row.id, row.call_type);
+    const localStream = await acquireLocalStream(row.call_type);
+    const stream = await setupPeer(row.id, row.call_type, localStream);
     if (!stream) {
       await supabase.from('call_sessions').update({ status: 'declined', ended_at: new Date().toISOString() }).eq('id', row.id);
       cleanup();
@@ -870,7 +873,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
         sendSignal('ready', {});
       }, 600);
     });
-  }, [incoming, incomingPeer, ringtone, setupPeer, joinChannel, sendSignal, cleanup]);
+  }, [incoming, incomingPeer, ringtone, acquireLocalStream, setupPeer, joinChannel, sendSignal, cleanup]);
 
   const declineIncoming = useCallback(async () => {
     if (!incoming) return;
