@@ -325,17 +325,38 @@ serve(async (req) => {
       // Previously this was only LOGGED as redirected_to_email but no email
       // was ever sent — callers assumed the redirect happened.
       let emailSent = false
-      if (recipientEmail) {
+      // Auto-lookup email by phone when caller didn't provide one
+      let resolvedEmail = recipientEmail as string | undefined
+      let resolvedName = userName as string | undefined
+      if (!resolvedEmail && phone) {
+        try {
+          const phoneVariants = [phone, phone.replace(/^\+?256/, '0'), phone.replace(/^0/, '+256')]
+          const { data: empByPhone } = await supabase
+            .from('employees')
+            .select('email, name, disabled')
+            .in('phone', phoneVariants)
+            .limit(1)
+            .maybeSingle()
+          if ((empByPhone as any)?.email) {
+            resolvedEmail = (empByPhone as any).email
+            resolvedName = resolvedName || (empByPhone as any).name
+            console.log(`🔎 Resolved email by phone ${phone} → ${resolvedEmail}`)
+          }
+        } catch (lookupErr) {
+          console.error('Phone→email lookup failed:', lookupErr)
+        }
+      }
+      if (resolvedEmail) {
         try {
           // Check disabled flag — never email a disabled account.
           const { data: emp } = await supabase
             .from('employees')
             .select('disabled')
-            .ilike('email', recipientEmail)
+            .ilike('email', resolvedEmail)
             .maybeSingle()
 
           if ((emp as any)?.disabled === true) {
-            console.log(`🚫 Skipping email redirect — recipient disabled: ${recipientEmail}`)
+            console.log(`🚫 Skipping email redirect — recipient disabled: ${resolvedEmail}`)
           } else {
             const titleMap: Record<string, string> = {
               salary_approval: 'Salary Approved',
@@ -351,12 +372,12 @@ serve(async (req) => {
             const { error: emailErr } = await supabase.functions.invoke('send-transactional-email', {
               body: {
                 templateName: 'general-notification',
-                recipientEmail,
-                idempotencyKey: `sms-redirect-${messageType || 'general'}-${recipientEmail}-${Date.now()}`,
+                recipientEmail: resolvedEmail,
+                idempotencyKey: `sms-redirect-${messageType || 'general'}-${resolvedEmail}-${Date.now()}`,
                 templateData: {
                   title,
                   message,
-                  recipientName: userName || 'Team',
+                  recipientName: resolvedName || 'Team',
                 },
               },
             })
@@ -364,7 +385,7 @@ serve(async (req) => {
               console.error('SMS→email redirect failed to invoke send-transactional-email:', emailErr)
             } else {
               emailSent = true
-              console.log(`📧 SMS redirected to email for ${recipientEmail}`)
+              console.log(`📧 SMS redirected to email for ${resolvedEmail}`)
             }
           }
         } catch (redirectErr) {
@@ -378,8 +399,8 @@ serve(async (req) => {
       try {
         await supabase.from('sms_logs').insert({
           recipient_phone: phone,
-          recipient_name: userName,
-          recipient_email: recipientEmail,
+          recipient_name: resolvedName || userName,
+          recipient_email: resolvedEmail,
           message_content: message?.substring(0, 50) + (emailSent ? '... [redirected to email]' : '... [blocked - no email sent]'),
           message_type: messageType || 'general',
           status: emailSent ? 'redirected_to_email' : 'blocked_no_email',
