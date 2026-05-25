@@ -25,7 +25,6 @@ function currentIceConfig(): RTCConfiguration {
 }
 async function ensureIceServers(): Promise<void> {
   try {
-    if (cachedIce && Date.now() - cachedIce.at < 60 * 60 * 1000) return;
     const { data } = await supabase.functions.invoke('get-ice-servers');
     const turn = (data?.iceServers ?? []) as RTCIceServer[];
     if (turn.length) {
