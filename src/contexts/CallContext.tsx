@@ -174,6 +174,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
   const remoteSetRef = useRef(false);
   const readyRetryRef = useRef<number | null>(null);
   const callerSubscribedRef = useRef(false);
+  const offerRetryRef = useRef<number | null>(null);
   const activePeerRef = useRef<PeerInfo | null>(null);
   useEffect(() => { activePeerRef.current = activePeer; }, [activePeer]);
 
@@ -264,6 +265,10 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     pendingIceRef.current = [];
     remoteSetRef.current = false;
     callerSubscribedRef.current = false;
+    if (offerRetryRef.current) {
+      window.clearInterval(offerRetryRef.current);
+      offerRetryRef.current = null;
+    }
     if (readyRetryRef.current) {
       window.clearInterval(readyRetryRef.current);
       readyRetryRef.current = null;
@@ -309,11 +314,9 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
-  // Build PC, attach local stream, set up signaling channel
-  const setupPeer = useCallback(async (callId: string, type: CallType): Promise<MediaStream | null> => {
-    let stream: MediaStream;
+  const acquireLocalStream = useCallback(async (type: CallType): Promise<MediaStream | null> => {
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
+      return await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: type === 'video',
       });
@@ -325,6 +328,29 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
       });
       return null;
     }
+  }, [toast]);
+
+  const sendOfferIfNeeded = useCallback(async (reason: string) => {
+    const pc = pcRef.current;
+    const current = activeRef.current;
+    if (!pc || !current || !myId || current.caller_id !== myId || abandonedRef.current) return false;
+    if (remoteSetRef.current || pc.localDescription || pc.signalingState !== 'stable') return false;
+    try {
+      console.log('[call] creating offer', { reason, status: current.status, state: pc.signalingState });
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      sendSignal('offer', { sdp: offer });
+      return true;
+    } catch (e) {
+      console.error('[call] offer error', e);
+      return false;
+    }
+  }, [myId, sendSignal]);
+
+  // Build PC, attach local stream, set up signaling channel
+  const setupPeer = useCallback(async (_callId: string, type: CallType, existingStream?: MediaStream | null): Promise<MediaStream | null> => {
+    const stream = existingStream ?? await acquireLocalStream(type);
+    if (!stream) return null;
     localStreamRef.current = stream;
     if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
@@ -396,7 +422,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     return stream;
-  }, [sendSignal, toast]);
+  }, [acquireLocalStream, sendSignal, toast]);
 
   // Join the per-call broadcast channel
   const joinChannel = useCallback((callId: string, onReady?: () => void) => {
