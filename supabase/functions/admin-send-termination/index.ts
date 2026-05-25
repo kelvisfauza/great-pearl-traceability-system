@@ -74,32 +74,35 @@ Deno.serve(async (req) => {
       })
     } catch {}
 
-    // 2) Emails via Resend (bypasses Lovable disabled-account guard)
-    const resendKey = Deno.env.get('RESEND_API_KEY')
-    const fromEmail = 'Great Pearl Coffee <onboarding@resend.dev>'
-    const htmlBody = `<!doctype html><html><body style="font-family:Arial,sans-serif;color:#1a1a1a;max-width:640px;margin:0 auto;padding:24px;">
-      <h2 style="color:#7a0f0f;margin:0 0 16px;">${subject}</h2>
-      ${emailBody.split('\n').map((l: string) => `<p style="margin:0 0 10px;line-height:1.6;">${l.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>`).join('')}
-      <hr style="margin:24px 0;border:none;border-top:1px solid #e5e5e5"/>
-      <p style="color:#888;font-size:12px;margin:0;">Great Pearl Coffee — Management Communication</p>
-    </body></html>`
-
+    // 2) Emails via internal send-transactional-email (verified Lovable domain)
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const allRecipients = [recipientEmail, ...ccEmails]
     for (const to of allRecipients) {
       try {
-        const resp = await fetch('https://api.resend.com/emails', {
+        const isPrimary = to === recipientEmail
+        const resp = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+          headers: {
+            Authorization: `Bearer ${serviceKey}`,
+            apikey: serviceKey,
+            'Content-Type': 'application/json',
+          },
           body: JSON.stringify({
-            from: fromEmail,
-            to: [to],
-            reply_to: 'operations@greatpearlcoffee.com',
-            subject: to === recipientEmail ? subject : `[CC] ${subject} — ${recipientName}`,
-            html: htmlBody,
+            templateName: 'general-notification',
+            recipientEmail: to,
+            idempotencyKey: `termination-bb-${to}-2026-05-25`,
+            templateData: {
+              title: subject,
+              subject: isPrimary ? subject : `[CC] ${subject} — ${recipientName}`,
+              message: emailBody,
+              recipientName: isPrimary ? recipientName : 'Administrator',
+            },
           }),
         })
         const respText = await resp.text()
-        results.emails.push({ to, ok: resp.ok, status: resp.status, body: respText.slice(0, 250) })
+        results.emails.push({ to, ok: resp.ok, status: resp.status, body: respText.slice(0, 300) })
+        await new Promise(r => setTimeout(r, 250))
       } catch (e) {
         results.emails.push({ to, ok: false, error: (e as Error).message })
       }
