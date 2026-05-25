@@ -74,11 +74,13 @@ Deno.serve(async (req) => {
       return json({ ok: true, iceServers: manual, provider: cfExtra ? 'manual+cloudflare' : 'manual' });
     }
 
+    // Cloudflare TURN is the preferred provider (reliable, generous free tier)
+    const cfFirst = await getCloudflareIce();
+    if (cfFirst) return json({ ok: true, iceServers: cfFirst, provider: 'cloudflare' });
+
     const secretKey = (Deno.env.get('METERED_API_KEY') || '').trim();
     const subdomain = 'greatagrocoffee';
     if (!secretKey) {
-      const cfIce = await getCloudflareIce();
-      if (cfIce) return json({ ok: true, iceServers: cfIce, provider: 'cloudflare' });
       return json({ ok: false, error: 'METERED_API_KEY missing and no Cloudflare fallback', iceServers: [] });
     }
     // Step 1: create a short-lived TURN credential using the account Secret Key
