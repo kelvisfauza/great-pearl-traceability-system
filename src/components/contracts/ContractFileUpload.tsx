@@ -95,6 +95,24 @@ export const ContractFileUpload = ({
     }
   };
 
+  const handleView = async (fileUrl: string) => {
+    try {
+      // Legacy rows may hold a full public URL — extract the storage path.
+      let path = fileUrl;
+      const marker = '/contract-documents/';
+      const idx = fileUrl.indexOf(marker);
+      if (idx !== -1) path = fileUrl.substring(idx + marker.length);
+
+      const { data, error } = await supabase.storage
+        .from('contract-documents')
+        .createSignedUrl(path, 300);
+      if (error || !data?.signedUrl) throw error || new Error('Could not sign URL');
+      window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+    } catch (err: any) {
+      toast({ title: 'Could not open file', description: err.message, variant: 'destructive' });
+    }
+  };
+
   return (
     <div className="space-y-3">
       <Label className="flex items-center gap-2">
@@ -123,10 +141,8 @@ export const ContractFileUpload = ({
                   <span className="text-sm truncate">{file.file_name}</span>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <Button variant="ghost" size="sm" asChild>
-                    <a href={file.file_url} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
+                  <Button variant="ghost" size="sm" onClick={() => handleView(file.file_url)}>
+                    <ExternalLink className="h-3.5 w-3.5" />
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => handleDelete(file.id)}>
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
