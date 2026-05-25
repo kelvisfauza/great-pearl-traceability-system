@@ -53,7 +53,7 @@ const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
         { name: "My Deductions", icon: Shield, path: "/my-deductions", permission: null },
         { name: "My Daily Reports", icon: FileCheck, path: "/user-daily-reports", permission: null },
         { name: "Reports", icon: FileText, path: "/reports", permission: "Reports" },
-        { name: "Settings", icon: Settings, path: "/settings", permission: "Reports" },
+        { name: "Settings", icon: Settings, path: "/settings", permission: null },
         { name: "Logistics", icon: Truck, path: "/logistics", permission: "Logistics" },
       ]
     }
