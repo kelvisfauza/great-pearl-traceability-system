@@ -14,6 +14,21 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
+  // Helper: build manual TURN entries from env secrets (TURN_URLS, TURN_USERNAME, TURN_CREDENTIAL)
+  const getManualTurn = (): any[] | null => {
+    const urlsRaw = (Deno.env.get('TURN_URLS') || '').trim();
+    const username = (Deno.env.get('TURN_USERNAME') || '').trim();
+    const credential = (Deno.env.get('TURN_CREDENTIAL') || '').trim();
+    if (!urlsRaw || !username || !credential) return null;
+    const urls = urlsRaw.split(',').map((u) => u.trim()).filter(Boolean);
+    if (urls.length === 0) return null;
+    console.log('Using manual TURN credentials from env', { urlCount: urls.length, username });
+    return [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls, username, credential },
+    ];
+  };
+
   // Helper: fetch Cloudflare Calls TURN credentials as fallback
   const getCloudflareIce = async (): Promise<any[] | null> => {
     const tokenId = (Deno.env.get('CLOUDFLARE_TURN_TOKEN_ID') || '').trim();
@@ -51,6 +66,14 @@ Deno.serve(async (req) => {
   };
 
   try {
+    // Manual TURN env vars take highest priority (user-controlled, always reliable)
+    const manual = getManualTurn();
+    if (manual) {
+      const cfExtra = await getCloudflareIce();
+      if (cfExtra) manual.push(...cfExtra);
+      return json({ ok: true, iceServers: manual, provider: cfExtra ? 'manual+cloudflare' : 'manual' });
+    }
+
     const secretKey = (Deno.env.get('METERED_API_KEY') || '').trim();
     const subdomain = 'greatagrocoffee';
     if (!secretKey) {
