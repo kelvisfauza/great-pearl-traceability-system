@@ -53,17 +53,14 @@ export const ContractFileUpload = ({
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('contract-documents')
-        .getPublicUrl(path);
-
       const { error: dbError } = await supabase
         .from('contract_files')
         .insert({
           buyer: buyerName,
           buyer_ref: contractRef,
           file_name: file.name,
-          file_url: publicUrl,
+          // Store the storage path (bucket is private — signed URLs are issued on view)
+          file_url: path,
           status: 'uploaded',
           uploaded_at: new Date().toISOString(),
           buyer_contract_id: contractType === 'buyer' ? contractId : null,
