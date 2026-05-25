@@ -174,6 +174,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
   const remoteSetRef = useRef(false);
   const readyRetryRef = useRef<number | null>(null);
   const callerSubscribedRef = useRef(false);
+  const offerRetryRef = useRef<number | null>(null);
   const activePeerRef = useRef<PeerInfo | null>(null);
   useEffect(() => { activePeerRef.current = activePeer; }, [activePeer]);
 
@@ -264,6 +265,10 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     pendingIceRef.current = [];
     remoteSetRef.current = false;
     callerSubscribedRef.current = false;
+    if (offerRetryRef.current) {
+      window.clearInterval(offerRetryRef.current);
+      offerRetryRef.current = null;
+    }
     if (readyRetryRef.current) {
       window.clearInterval(readyRetryRef.current);
       readyRetryRef.current = null;
@@ -309,11 +314,9 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
-  // Build PC, attach local stream, set up signaling channel
-  const setupPeer = useCallback(async (callId: string, type: CallType): Promise<MediaStream | null> => {
-    let stream: MediaStream;
+  const acquireLocalStream = useCallback(async (type: CallType): Promise<MediaStream | null> => {
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
+      return await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: type === 'video',
       });
@@ -325,6 +328,40 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
       });
       return null;
     }
+  }, [toast]);
+
+  const sendOfferIfNeeded = useCallback(async (reason: string) => {
+    const pc = pcRef.current;
+    const current = activeRef.current;
+    if (!pc || !current || !myId || current.caller_id !== myId || abandonedRef.current) return false;
+    if (remoteSetRef.current) return false;
+    if (pc.localDescription?.type === 'offer') {
+      try {
+        console.log('[call] re-sending offer', { reason, state: pc.signalingState });
+        sendSignal('offer', { sdp: pc.localDescription.toJSON() });
+        return true;
+      } catch (e) {
+        console.error('[call] offer resend error', e);
+        return false;
+      }
+    }
+    if (pc.signalingState !== 'stable') return false;
+    try {
+      console.log('[call] creating offer', { reason, status: current.status, state: pc.signalingState });
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      sendSignal('offer', { sdp: offer });
+      return true;
+    } catch (e) {
+      console.error('[call] offer error', e);
+      return false;
+    }
+  }, [myId, sendSignal]);
+
+  // Build PC, attach local stream, set up signaling channel
+  const setupPeer = useCallback(async (_callId: string, type: CallType, existingStream?: MediaStream | null): Promise<MediaStream | null> => {
+    const stream = existingStream ?? await acquireLocalStream(type);
+    if (!stream) return null;
     localStreamRef.current = stream;
     if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
@@ -396,7 +433,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     return stream;
-  }, [sendSignal, toast]);
+  }, [acquireLocalStream, sendSignal, toast]);
 
   // Join the per-call broadcast channel
   const joinChannel = useCallback((callId: string, onReady?: () => void) => {
@@ -404,15 +441,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
 
     ch.on('broadcast', { event: 'ready' }, async () => {
       // Callee signals they're ready; caller creates offer
-      const pc = pcRef.current;
-      if (!pc) return;
-      // If we've already created/sent an offer, ignore duplicate readys
-      if (pc.localDescription) return;
-      try {
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        sendSignal('offer', { sdp: offer });
-      } catch (e) { console.error('[call] offer error', e); }
+      await sendOfferIfNeeded('callee-ready');
     });
 
     ch.on('broadcast', { event: 'offer' }, async ({ payload }) => {
@@ -424,6 +453,10 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
         readyRetryRef.current = null;
       }
       try {
+        if (pc.signalingState !== 'stable') {
+          console.warn('[call] ignoring offer in non-stable state', pc.signalingState);
+          return;
+        }
         await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
         remoteSetRef.current = true;
         for (const c of pendingIceRef.current) {
@@ -440,6 +473,10 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
       const pc = pcRef.current;
       if (!pc) return;
       try {
+        if (pc.signalingState !== 'have-local-offer') {
+          console.warn('[call] ignoring answer without local offer', pc.signalingState);
+          return;
+        }
         await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
         remoteSetRef.current = true;
         for (const c of pendingIceRef.current) {
@@ -486,12 +523,20 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     ch.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
         callerSubscribedRef.current = true;
+        const current = activeRef.current;
+        if (current?.caller_id === myId) {
+          if (offerRetryRef.current) window.clearInterval(offerRetryRef.current);
+          offerRetryRef.current = window.setInterval(() => {
+            void sendOfferIfNeeded('subscription-retry');
+          }, 800);
+          window.setTimeout(() => { void sendOfferIfNeeded('subscribed'); }, 150);
+        }
         if (onReady) onReady();
       }
     });
 
     channelRef.current = ch;
-  }, [cleanup, sendSignal, toast]);
+  }, [cleanup, myId, sendOfferIfNeeded, sendSignal, toast]);
 
   // Outgoing call
   const startCall = useCallback(async (calleeAuthId: string, calleeName: string, type: CallType) => {
@@ -503,6 +548,8 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
       toast({ title: 'Already in a call', variant: 'destructive' });
       return;
     }
+    const localStream = await acquireLocalStream(type);
+    if (!localStream) return;
     const { data, error } = await supabase
       .from('call_sessions')
       .insert({
@@ -515,6 +562,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
       .select()
       .single();
     if (error || !data) {
+      localStream.getTracks().forEach(t => t.stop());
       toast({ title: 'Failed to start call', description: error?.message, variant: 'destructive' });
       return;
     }
@@ -524,7 +572,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     setActivePeer({ name: calleeName, avatarInitials: initials });
     setIsInitiator(true);
 
-    const stream = await setupPeer(row.id, type);
+    const stream = await setupPeer(row.id, type, localStream);
     if (!stream) {
       // Mark as ended
       await supabase.from('call_sessions').update({ status: 'ended', ended_at: new Date().toISOString() }).eq('id', row.id);
@@ -590,7 +638,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
       } catch {}
       window.setTimeout(() => setUnavailable(null), 6000);
     }, 20000);
-  }, [myId, active, incoming, toast, setupPeer, joinChannel, cleanup, sendSignal, logCallToChat]);
+  }, [myId, active, incoming, toast, acquireLocalStream, setupPeer, joinChannel, cleanup, sendSignal, logCallToChat, employee?.name, user?.user_metadata?.name, user?.email]);
 
   // Shared handler so realtime AND the polling fallback both go through
   // the same code path. We dedupe via a processed-ids set so a single
@@ -601,6 +649,14 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
   const incomingRef = useRef<CallRow | null>(null);
   useEffect(() => { activeRef.current = active; }, [active]);
   useEffect(() => { incomingRef.current = incoming; }, [incoming]);
+
+  useEffect(() => {
+    if (!remoteSetRef.current && !answeredAtRef.current) return;
+    if (offerRetryRef.current) {
+      window.clearInterval(offerRetryRef.current);
+      offerRetryRef.current = null;
+    }
+  }, [active?.status, remoteStreamVersion]);
 
   const handleIncomingRow = useCallback(async (row: CallRow) => {
     if (!myId) return;
@@ -810,7 +866,8 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     setIncoming(null);
     setIncomingPeer(null);
 
-    const stream = await setupPeer(row.id, row.call_type);
+    const localStream = await acquireLocalStream(row.call_type);
+    const stream = await setupPeer(row.id, row.call_type, localStream);
     if (!stream) {
       await supabase.from('call_sessions').update({ status: 'declined', ended_at: new Date().toISOString() }).eq('id', row.id);
       cleanup();
@@ -836,7 +893,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
         sendSignal('ready', {});
       }, 600);
     });
-  }, [incoming, incomingPeer, ringtone, setupPeer, joinChannel, sendSignal, cleanup]);
+  }, [incoming, incomingPeer, ringtone, acquireLocalStream, setupPeer, joinChannel, sendSignal, cleanup]);
 
   const declineIncoming = useCallback(async () => {
     if (!incoming) return;
