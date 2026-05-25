@@ -91,6 +91,30 @@ const Auth = () => {
 
       if (!isMagicLinkCallback) return;
 
+      // Guard against double-consumption (StrictMode re-mount, back-nav,
+      // refresh) — magic-link tokens are single-use and Supabase will
+      // immediately reject the second call as "link expired".
+      const w = window as any;
+      if (w.__lovableMagicLinkConsumed) return;
+      w.__lovableMagicLinkConsumed = true;
+
+      // Strip the single-use credentials from the URL *before* we exchange
+      // them, so any later re-render/reload cannot replay an already-spent
+      // token (which is what produced the "link expired" toast).
+      try {
+        const cleanParams = new URLSearchParams(url.search);
+        cleanParams.delete('code');
+        cleanParams.delete('token_hash');
+        cleanParams.delete('type');
+        if (!cleanParams.get('post_auth')) {
+          cleanParams.set('post_auth', callbackSource || 'magiclink');
+        }
+        const cleanUrl = `${url.pathname}${cleanParams.toString() ? `?${cleanParams.toString()}` : ''}`;
+        window.history.replaceState({}, document.title, cleanUrl);
+      } catch {
+        /* noop */
+      }
+
       setPostAuthSource(callbackSource || 'magiclink');
       setLoading(true);
       // Show the welcome splash immediately so face-ID users see the logo
@@ -102,7 +126,8 @@ const Auth = () => {
 
       try {
         if (code) {
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(window.location.href);
+          // Use the original URL (we already cleaned `window.location`).
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(url.toString());
           if (exchangeError) throw exchangeError;
         } else if (accessToken && refreshToken) {
           const { error: sessionError } = await supabase.auth.setSession({
