@@ -580,11 +580,16 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
         readyRetryRef.current = null;
       }
       try {
+        const remoteDescription = normalizeSessionDescription(payload, 'offer');
+        if (!remoteDescription) {
+          console.warn('[call] ignoring malformed offer payload', payload);
+          return;
+        }
         if (pc.signalingState !== 'stable') {
           console.warn('[call] ignoring offer in non-stable state', pc.signalingState);
           return;
         }
-        await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+        await pc.setRemoteDescription(new RTCSessionDescription(remoteDescription));
         remoteSetRef.current = true;
         for (const c of pendingIceRef.current) {
           try { await pc.addIceCandidate(c); } catch {}
@@ -600,11 +605,16 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
       const pc = pcRef.current;
       if (!pc) return;
       try {
+        const remoteDescription = normalizeSessionDescription(payload, 'answer');
+        if (!remoteDescription) {
+          console.warn('[call] ignoring malformed answer payload', payload);
+          return;
+        }
         if (pc.signalingState !== 'have-local-offer') {
           console.warn('[call] ignoring answer without local offer', pc.signalingState);
           return;
         }
-        await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+        await pc.setRemoteDescription(new RTCSessionDescription(remoteDescription));
         remoteSetRef.current = true;
         for (const c of pendingIceRef.current) {
           try { await pc.addIceCandidate(c); } catch {}
@@ -616,7 +626,11 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     ch.on('broadcast', { event: 'ice' }, async ({ payload }) => {
       const pc = pcRef.current;
       if (!pc) return;
-      const cand = payload.candidate as RTCIceCandidateInit;
+      const cand = normalizeIceCandidate(payload);
+      if (!cand) {
+        console.warn('[call] ignoring malformed ice payload', payload);
+        return;
+      }
       if (!remoteSetRef.current) {
         pendingIceRef.current.push(cand);
         return;
