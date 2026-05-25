@@ -638,6 +638,14 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => { activeRef.current = active; }, [active]);
   useEffect(() => { incomingRef.current = incoming; }, [incoming]);
 
+  useEffect(() => {
+    if (!remoteSetRef.current && !answeredAtRef.current) return;
+    if (offerRetryRef.current) {
+      window.clearInterval(offerRetryRef.current);
+      offerRetryRef.current = null;
+    }
+  }, [active?.status, remoteStreamVersion]);
+
   const handleIncomingRow = useCallback(async (row: CallRow) => {
     if (!myId) return;
     if (row.status !== 'ringing') return;
