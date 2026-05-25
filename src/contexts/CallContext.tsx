@@ -51,9 +51,6 @@ const ICE_CONFIG: RTCConfiguration = {
 let cachedIce: { servers: RTCIceServer[]; at: number } | null = null;
 async function getIceConfig(): Promise<RTCConfiguration> {
   try {
-    if (cachedIce && Date.now() - cachedIce.at < 60 * 60 * 1000) {
-      return { iceServers: cachedIce.servers, iceCandidatePoolSize: 4 };
-    }
     const { data } = await supabase.functions.invoke('get-ice-servers');
     const turn = (data?.iceServers ?? []) as RTCIceServer[];
     if (turn.length) {
@@ -64,7 +61,129 @@ async function getIceConfig(): Promise<RTCConfiguration> {
   } catch (e) {
     console.warn('[ICE] dynamic fetch failed, using static', e);
   }
+  if (cachedIce) {
+    return { iceServers: cachedIce.servers, iceCandidatePoolSize: 4 };
+  }
   return ICE_CONFIG;
+}
+
+function normalizeSessionDescription(payload: any, fallbackType: 'offer' | 'answer'): RTCSessionDescriptionInit | null {
+  const raw = payload?.sdp ?? payload?.description ?? payload?.sessionDescription ?? payload?.offer ?? payload?.answer;
+  if (!raw) return null;
+  if (typeof raw === 'string') return { type: fallbackType, sdp: raw };
+  const normalized = typeof raw?.toJSON === 'function' ? raw.toJSON() : raw;
+  if (typeof normalized?.sdp !== 'string') return null;
+  return {
+    type: (normalized.type || fallbackType) as RTCSdpType,
+    sdp: normalized.sdp,
+  };
+}
+
+function normalizeIceCandidate(payload: any): RTCIceCandidateInit | null {
+  const raw = payload?.candidate ?? payload?.iceCandidate ?? payload?.ice_candidate;
+  if (raw && typeof raw === 'object' && typeof raw.candidate === 'string') {
+    return {
+      candidate: raw.candidate,
+      sdpMid: raw.sdpMid ?? payload?.sdpMid ?? payload?.sdp_mid ?? null,
+      sdpMLineIndex: raw.sdpMLineIndex ?? payload?.sdpMLineIndex ?? payload?.sdp_m_line_index ?? null,
+      usernameFragment: raw.usernameFragment ?? payload?.usernameFragment ?? payload?.ufrag,
+    };
+  }
+  const candidateText =
+    (typeof raw === 'string' ? raw : null) ??
+    payload?.candidateText ??
+    payload?.candidate_text ??
+    null;
+  if (typeof candidateText !== 'string' || !candidateText.trim()) return null;
+  return {
+    candidate: candidateText,
+    sdpMid: payload?.sdpMid ?? payload?.sdp_mid ?? null,
+    sdpMLineIndex: payload?.sdpMLineIndex ?? payload?.sdp_m_line_index ?? null,
+    usernameFragment: payload?.usernameFragment ?? payload?.ufrag,
+  };
+}
+
+function augmentSignalPayload(event: string, payload: any, currentUserId: string | null, peerId: string | null) {
+  const next = { ...payload };
+  const description = normalizeSessionDescription(payload, event === 'answer' ? 'answer' : 'offer');
+  const candidate = normalizeIceCandidate(payload);
+  const fromId =
+    payload?.from ??
+    payload?.senderId ??
+    payload?.sender_id ??
+    payload?.userId ??
+    payload?.user_id ??
+    payload?.authUserId ??
+    payload?.auth_user_id ??
+    currentUserId ??
+    undefined;
+  const toId =
+    payload?.to ??
+    payload?.target ??
+    payload?.targetId ??
+    payload?.target_id ??
+    payload?.targetUserId ??
+    payload?.target_user_id ??
+    payload?.receiverId ??
+    payload?.receiver_id ??
+    payload?.peerId ??
+    payload?.participantId ??
+    peerId ??
+    undefined;
+
+  next.signalType = payload?.signalType ?? payload?.signal_type ?? event;
+  next.signal_type = payload?.signal_type ?? payload?.signalType ?? event;
+
+  if (fromId) {
+    Object.assign(next, {
+      from: fromId,
+      senderId: fromId,
+      sender_id: fromId,
+      userId: fromId,
+      user_id: fromId,
+      authUserId: fromId,
+      auth_user_id: fromId,
+    });
+  }
+
+  if (toId) {
+    Object.assign(next, {
+      to: toId,
+      target: toId,
+      targetId: toId,
+      target_id: toId,
+      targetUserId: toId,
+      target_user_id: toId,
+      receiverId: toId,
+      receiver_id: toId,
+      peerId: toId,
+      participantId: toId,
+    });
+  }
+
+  if (description) {
+    Object.assign(next, {
+      sdp: description,
+      description,
+      sessionDescription: description,
+    });
+    if (event === 'offer') next.offer = description;
+    if (event === 'answer') next.answer = description;
+  }
+
+  if (candidate) {
+    Object.assign(next, {
+      candidate,
+      iceCandidate: candidate,
+      ice_candidate: candidate,
+      candidateText: candidate.candidate,
+      candidate_text: candidate.candidate,
+      sdpMid: candidate.sdpMid ?? payload?.sdpMid ?? null,
+      sdpMLineIndex: candidate.sdpMLineIndex ?? payload?.sdpMLineIndex ?? null,
+    });
+  }
+
+  return next;
 }
 
 // Classic dual-tone phone ringtone (440Hz + 480Hz, 2s on / 4s off cadence)
@@ -288,9 +407,17 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
   }, [ringtone, ringback]);
 
-  const sendSignal = useCallback((event: string, payload: any) => {
-    channelRef.current?.send({ type: 'broadcast', event, payload });
-  }, []);
+  const sendSignal = useCallback((event: string, payload: any = {}) => {
+    const current = activeRef.current;
+    const peerId = current
+      ? (current.caller_id === myId ? current.callee_id : current.caller_id)
+      : null;
+    channelRef.current?.send({
+      type: 'broadcast',
+      event,
+      payload: augmentSignalPayload(event, payload, myId, peerId),
+    });
+  }, [myId]);
 
   // Fetch peer info (name) by auth_user_id
   const fetchPeer = useCallback(async (authUserId: string): Promise<PeerInfo> => {
