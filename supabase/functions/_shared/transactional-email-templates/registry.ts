@@ -67,6 +67,7 @@ import { template as walletDepositCredited } from './wallet-deposit-credited.tsx
 import { template as labourDay2026 } from './labour-day-2026.tsx'
 import { template as passwordResetTemp } from './password-reset-temp.tsx'
 import { template as payrollDeductionsNotice } from './payroll-deductions-notice.tsx'
+import { template as publicHolidayClosure } from './public-holiday-closure.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'verification-code': verificationCode,
@@ -127,4 +128,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'labour-day-2026': labourDay2026,
   'password-reset-temp': passwordResetTemp,
   'payroll-deductions-notice': payrollDeductionsNotice,
+  'public-holiday-closure': publicHolidayClosure,
 }
