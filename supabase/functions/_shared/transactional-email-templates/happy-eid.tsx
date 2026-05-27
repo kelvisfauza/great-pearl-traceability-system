@@ -7,12 +7,15 @@ import {
 import type { TemplateEntry } from './registry.ts'
 import { SITE_NAME } from './brand.ts'
 
-const POSTER_URL = 'https://great-pearl-traceability-system.lovable.app/lovable-uploads/happy-eid-poster.jpg'
-const PDF_URL = 'https://great-pearl-traceability-system.lovable.app/lovable-uploads/happy-eid-poster.pdf'
+const DEFAULT_POSTER_URL = 'https://great-pearl-traceability-system.lovable.app/lovable-uploads/happy-eid-poster.jpg'
+const DEFAULT_PDF_URL = 'https://great-pearl-traceability-system.lovable.app/lovable-uploads/happy-eid-poster.pdf'
 
-interface HappyEidProps { name?: string }
+interface HappyEidProps { name?: string; image_url?: string; pdf_url?: string }
 
-const HappyEidEmail = ({ name }: HappyEidProps) => (
+const HappyEidEmail = ({ name, image_url, pdf_url }: HappyEidProps) => {
+  const POSTER_URL = image_url || DEFAULT_POSTER_URL
+  const PDF_URL = pdf_url || DEFAULT_PDF_URL
+  return (
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>Eid Mubarak from the Great Agro Coffee family — download & share your poster</Preview>
@@ -63,7 +66,8 @@ const HappyEidEmail = ({ name }: HappyEidProps) => (
       </Container>
     </Body>
   </Html>
-)
+  )
+}
 
 export const template = {
   component: HappyEidEmail,
