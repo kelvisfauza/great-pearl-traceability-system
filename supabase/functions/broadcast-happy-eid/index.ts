@@ -1,9 +1,15 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { POSTER_B64, PDF_B64 } from './assets.ts'
 
-const POSTER_SRC = 'https://great-pearl-traceability-system.lovable.app/lovable-uploads/happy-eid-poster.jpg'
-const PDF_SRC = 'https://great-pearl-traceability-system.lovable.app/lovable-uploads/happy-eid-poster.pdf'
 const BUCKET = 'profile_pictures'
+
+function b64ToBytes(b64: string): Uint8Array {
+  const bin = atob(b64)
+  const arr = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i)
+  return arr
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -13,26 +19,18 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   )
 
-  // Mirror assets to public storage so URLs are live immediately
-  async function mirror(srcUrl: string, key: string, contentType: string): Promise<string> {
-    const res = await fetch(srcUrl)
-    if (!res.ok) throw new Error(`Failed to fetch ${srcUrl}: ${res.status}`)
-    const buf = new Uint8Array(await res.arrayBuffer())
-    await supabase.storage.from(BUCKET).upload(key, buf, {
+  // Upload embedded assets to public storage so URLs are live immediately
+  async function uploadAsset(b64: string, key: string, contentType: string): Promise<string> {
+    const bytes = b64ToBytes(b64)
+    await supabase.storage.from(BUCKET).upload(key, bytes, {
       contentType, upsert: true, cacheControl: '3600',
     })
     const { data } = supabase.storage.from(BUCKET).getPublicUrl(key)
     return data.publicUrl
   }
 
-  let image_url = POSTER_SRC
-  let pdf_url = PDF_SRC
-  try {
-    image_url = await mirror(POSTER_SRC, 'broadcasts/happy-eid-2026.jpg', 'image/jpeg')
-    pdf_url = await mirror(PDF_SRC, 'broadcasts/happy-eid-2026.pdf', 'application/pdf')
-  } catch (e) {
-    console.warn('Mirror failed, falling back to source URLs:', e)
-  }
+  const image_url = await uploadAsset(POSTER_B64, 'broadcasts/happy-eid-2026.jpg', 'image/jpeg')
+  const pdf_url = await uploadAsset(PDF_B64, 'broadcasts/happy-eid-2026.pdf', 'application/pdf')
 
   const { data: employees, error } = await supabase
     .from('employees')
