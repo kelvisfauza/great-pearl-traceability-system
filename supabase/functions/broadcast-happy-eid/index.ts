@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
       const { error: sendErr } = await supabase.functions.invoke('send-transactional-email', {
         body: {
           templateName: 'happy-eid',
-          to: emp.email,
+          recipientEmail: emp.email,
           data: { name: emp.name?.split(' ')[0] || 'Team', image_url, pdf_url },
           idempotencyKey: `happy-eid-2026-${emp.id}`,
         },
