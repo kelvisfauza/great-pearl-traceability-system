@@ -203,6 +203,16 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
       return;
     }
 
+    const instantLimitCheck = await validateLimits(user?.id, withdrawalAmount);
+    if (!instantLimitCheck.ok) {
+      toast({
+        title: 'Withdrawal limit reached',
+        description: instantLimitCheck.reason || 'This amount exceeds the configured withdrawal limit.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setInstantLoading(true);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
