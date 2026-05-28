@@ -44,7 +44,7 @@ export const useSalaryAdvanceApprovals = () => {
           priority: 'High',
            status: 'Pending Admin',
            approval_stage: 'pending_admin',
-          details: JSON.stringify({
+          details: {
             advance_type: 'salary_advance',
             employee_email: data.employee_email,
             employee_name: data.employee_name,
@@ -52,8 +52,8 @@ export const useSalaryAdvanceApprovals = () => {
             employee_position: data.position,
             advance_amount: data.amount,
             minimum_payment: data.minimum_payment,
-            reason: data.reason
-          })
+            reason: data.reason,
+          } as any,
         })
         .select()
         .single();
