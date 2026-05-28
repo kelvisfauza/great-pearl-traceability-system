@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import V2Navigation from "@/components/v2/V2Navigation";
 import PriceTicker from "@/components/PriceTicker";
-import { Users, Calendar, Award, Clock, MessageSquare, CreditCard, AlertTriangle, Gift, Ban, ShieldAlert, Calculator } from "lucide-react";
+import { Users, Calendar, Award, Clock, MessageSquare, CreditCard, AlertTriangle, Gift, Ban, ShieldAlert, Calculator, Gauge } from "lucide-react";
 import AllocateBonusDialog from "@/components/v2/hr/AllocateBonusDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useWithdrawalControl } from "@/hooks/useWithdrawalControl";
+import { useWithdrawalLimits } from "@/hooks/useWithdrawalLimits";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useSMSNotifications } from "@/hooks/useSMSNotifications";
@@ -23,10 +24,13 @@ const HRDashboard = () => {
   const { employee } = useAuth();
   const { toast } = useToast();
   const { control, loading: controlLoading, updateControl } = useWithdrawalControl();
+  const { limits, updateLimits } = useWithdrawalLimits();
   const { sendWithdrawalEnabledSMS } = useSMSNotifications();
   const [withdrawDisabled, setWithdrawDisabled] = useState(false);
   const [withdrawUntil, setWithdrawUntil] = useState("");
   const [withdrawReason, setWithdrawReason] = useState("");
+  const [perTxnLimit, setPerTxnLimit] = useState<string>("");
+  const [dailyLimit, setDailyLimit] = useState<string>("");
 
   useEffect(() => {
     if (control) {
@@ -35,6 +39,13 @@ const HRDashboard = () => {
       setWithdrawReason(control.disabled_reason || "");
     }
   }, [control]);
+
+  useEffect(() => {
+    if (limits) {
+      setPerTxnLimit(limits.per_transaction != null ? String(limits.per_transaction) : "");
+      setDailyLimit(limits.daily != null ? String(limits.daily) : "");
+    }
+  }, [limits]);
 
   const { data: stats } = useQuery({
     queryKey: ["hr-v2-stats"],
@@ -301,6 +312,69 @@ const HRDashboard = () => {
                   variant={withdrawDisabled ? "destructive" : "default"}
                 >
                   {updateControl.isPending ? "Saving..." : "Save Settings"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Withdrawal Limits */}
+            <Card className="border-2 border-amber-200 bg-amber-50/50 dark:bg-amber-950/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                  <Gauge className="h-5 w-5" />
+                  Withdrawal Limits
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Company-wide caps applied to every employee withdrawal. Leave a field blank to disable that limit.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="limit-per-txn">Per-transaction limit (UGX)</Label>
+                  <Input
+                    id="limit-per-txn"
+                    type="number"
+                    min={0}
+                    step={500}
+                    value={perTxnLimit}
+                    onChange={(e) => setPerTxnLimit(e.target.value)}
+                    placeholder="e.g. 500000"
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Maximum amount allowed in a single withdrawal.</p>
+                </div>
+                <div>
+                  <Label htmlFor="limit-daily">Daily limit (UGX)</Label>
+                  <Input
+                    id="limit-daily"
+                    type="number"
+                    min={0}
+                    step={1000}
+                    value={dailyLimit}
+                    onChange={(e) => setDailyLimit(e.target.value)}
+                    placeholder="e.g. 1000000"
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Total amount one employee can withdraw across all requests in a single day.</p>
+                </div>
+                <Button
+                  onClick={() => {
+                    const per = perTxnLimit.trim() === "" ? null : Math.max(0, Number(perTxnLimit));
+                    const daily = dailyLimit.trim() === "" ? null : Math.max(0, Number(dailyLimit));
+                    if ((per !== null && Number.isNaN(per)) || (daily !== null && Number.isNaN(daily))) {
+                      toast({ title: "Invalid number", description: "Please enter valid numeric amounts.", variant: "destructive" });
+                      return;
+                    }
+                    updateLimits.mutate(
+                      { per_transaction: per, daily },
+                      {
+                        onSuccess: () => toast({ title: "Limits saved", description: "New withdrawal limits are now active for all employees." }),
+                        onError: (err: any) => toast({ title: "Save failed", description: String(err?.message || err), variant: "destructive" }),
+                      },
+                    );
+                  }}
+                  disabled={updateLimits.isPending}
+                >
+                  {updateLimits.isPending ? "Saving..." : "Save Limits"}
                 </Button>
               </CardContent>
             </Card>

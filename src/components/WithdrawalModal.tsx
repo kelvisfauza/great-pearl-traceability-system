@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useWithdrawalControl } from '@/hooks/useWithdrawalControl';
+import { useWithdrawalLimits } from '@/hooks/useWithdrawalLimits';
 import {
   InputOTP,
   InputOTPGroup,
@@ -73,6 +74,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const { toast } = useToast();
   const { isWithdrawalDisabled } = useWithdrawalControl();
   const withdrawalStatus = isWithdrawalDisabled();
+  const { validateAmount: validateLimits } = useWithdrawalLimits();
   const isWalletFrozen = !!(employee as any)?.wallet_frozen;
   
   // Instant withdrawal state
@@ -196,6 +198,16 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
       toast({
         title: '🧊 Wallet Frozen',
         description: 'Your wallet is currently frozen. Withdrawals are not allowed.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const instantLimitCheck = await validateLimits(user?.id, withdrawalAmount);
+    if (!instantLimitCheck.ok) {
+      toast({
+        title: 'Withdrawal limit reached',
+        description: instantLimitCheck.reason || 'This amount exceeds the configured withdrawal limit.',
         variant: 'destructive',
       });
       return;
@@ -405,6 +417,17 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
       toast({
         title: "Invalid Cash Amount",
         description: "Cash withdrawals must be in round figures (multiples of 500). E.g. 2000, 2500, 5000.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Enforce HR-configured global withdrawal limits (per-transaction + daily)
+    const limitCheck = await validateLimits(user?.id, withdrawalAmount);
+    if (!limitCheck.ok) {
+      toast({
+        title: "Withdrawal limit reached",
+        description: limitCheck.reason || "This amount exceeds the configured withdrawal limit.",
         variant: "destructive",
       });
       return;
