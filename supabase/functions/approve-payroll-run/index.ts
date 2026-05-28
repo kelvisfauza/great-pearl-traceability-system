@@ -54,14 +54,14 @@ Deno.serve(async (req) => {
     }
 
     // Disburse: invoke process-auto-salaries with payroll_run_id (extends existing logic to apply NSSF + PAYE)
-    // Use direct fetch with service-role bearer to avoid SDK auth-header quirks at the gateway.
+    // IMPORTANT: Supabase Edge gateway expects a JWT in Authorization. Service keys are API keys,
+    // so pass them only via `apikey` for this service-to-service call.
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const invokeResp = await fetch(`${supabaseUrl}/functions/v1/process-auto-salaries`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${serviceKey}`,
         apikey: serviceKey,
       },
       body: JSON.stringify({ payrollRunId: runId, month: run.month }),
