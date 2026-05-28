@@ -400,17 +400,25 @@ const Auth = () => {
         description: `Welcome back, ${data.name || ''}. Signing you in…`,
       });
 
+      // Prefer the full Supabase action URL so the auth server completes the
+      // single-use magic-link exchange itself. The token_hash shortcut was
+      // causing the callback to be replayed and end up as an expired email link.
+      if (data?.auth_url) {
+        window.location.replace(data.auth_url);
+        return;
+      }
+
+      // Fallback for older responses that only return the token hash.
       if (data?.token_hash) {
         const nextUrl = new URL(window.location.href);
         nextUrl.searchParams.set('post_auth', 'face');
         nextUrl.searchParams.set('type', data.verification_type || 'magiclink');
         nextUrl.searchParams.set('token_hash', data.token_hash);
-        window.location.href = nextUrl.toString();
+        window.location.replace(nextUrl.toString());
         return;
       }
 
-      // Fallback for older responses.
-      window.location.href = data.auth_url;
+      throw new Error('Face sign-in response was incomplete. Please try again.');
     } catch (err: any) {
       console.error('Face login failed:', err);
       setFaceError(err?.message || 'Face sign-in failed. Please try again.');
