@@ -145,6 +145,63 @@ Deno.serve(async (req) => {
 
         const netSalary = Math.max(0, stat.net - totalAdvanceDeduction);
 
+        // 2b. Salary remittance agreement (e.g. portion of net sent to a third party via Yo Payments)
+        let remittanceAmount = 0;
+        let remittanceInfo: any = null;
+        try {
+          const { data: agreement } = await supabase
+            .from('salary_remittance_agreements')
+            .select('*')
+            .eq('employee_email', emp.email)
+            .eq('status', 'active')
+            .maybeSingle();
+
+          if (agreement && netSalary > 0) {
+            const pct = Number(agreement.percentage) || 0;
+            remittanceAmount = Math.round((netSalary * pct) / 100);
+            if (remittanceAmount > 0) {
+              const recipientPhone = normalizePhone(agreement.recipient_phone);
+              const narrative = `Salary remittance - ${emp.name} - ${currentMonth}`;
+              const payout = await yoPayout({ phone: recipientPhone, amount: remittanceAmount, narrative });
+
+              remittanceInfo = {
+                recipient_name: agreement.recipient_name,
+                recipient_phone: agreement.recipient_phone,
+                percentage: pct,
+                amount: remittanceAmount,
+                yo_status: payout.success ? 'success' : 'failed',
+                yo_reference: payout.transactionRef || null,
+                yo_error: payout.errorMessage || null,
+              };
+
+              await supabase.from('salary_remittance_payments').insert({
+                agreement_id: agreement.id,
+                payroll_run_id: payrollRunId,
+                employee_email: emp.email,
+                month: currentMonth,
+                net_salary: netSalary,
+                percentage: pct,
+                amount: remittanceAmount,
+                yo_reference: payout.transactionRef || null,
+                yo_status: payout.success ? 'success' : 'failed',
+                yo_raw_response: payout.rawResponse ? { raw: payout.rawResponse, error: payout.errorMessage || null } : { error: payout.errorMessage || null },
+              });
+
+              if (!payout.success) {
+                // Payout failed — do NOT deduct from wallet; credit full net instead
+                console.error(`❌ Remittance payout failed for ${emp.name}: ${payout.errorMessage}`);
+                remittanceAmount = 0;
+              } else {
+                console.log(`💸 Remittance sent: UGX ${remittanceAmount.toLocaleString()} to ${agreement.recipient_name} (${recipientPhone})`);
+              }
+            }
+          }
+        } catch (remErr) {
+          console.error(`⚠️ Remittance processing error for ${emp.name}:`, remErr);
+        }
+
+        const walletCredit = Math.max(0, netSalary - remittanceAmount);
+
         // 3. Create salary payment record
         const { data: paymentRecord, error: paymentError } = await supabase
           .from('employee_salary_payments')
@@ -220,13 +277,13 @@ Deno.serve(async (req) => {
         }
 
         if (ledgerUserId) {
-          const salaryDescription = `Monthly Salary - ${currentMonth}${totalAdvanceDeduction > 0 ? ` (Advance deduction: UGX ${totalAdvanceDeduction.toLocaleString()})` : ''}`;
+          const salaryDescription = `Monthly Salary - ${currentMonth}${totalAdvanceDeduction > 0 ? ` (Advance deduction: UGX ${totalAdvanceDeduction.toLocaleString()})` : ''}${remittanceAmount > 0 ? ` (Remittance: UGX ${remittanceAmount.toLocaleString()})` : ''}`;
           const { error: ledgerError } = await supabase
             .from('ledger_entries')
             .insert({
               user_id: ledgerUserId,
               entry_type: 'DEPOSIT',
-              amount: netSalary,
+              amount: walletCredit,
               reference: `SAL-${paymentRecord.id}`,
               metadata: {
                 description: salaryDescription,
@@ -236,6 +293,9 @@ Deno.serve(async (req) => {
                 gross_salary: grossSalary,
                 advance_deduction: totalAdvanceDeduction,
                 net_salary: netSalary,
+                remittance_amount: remittanceAmount,
+                remittance: remittanceInfo,
+                wallet_credited: walletCredit,
               },
             });
 
@@ -243,7 +303,7 @@ Deno.serve(async (req) => {
             console.error(`❌ Failed to credit wallet for ${emp.name}:`, ledgerError);
             errors.push({ employee: emp.name, error: `Ledger: ${ledgerError.message}` });
           } else {
-            console.log(`💰 Credited ${emp.name}: UGX ${netSalary.toLocaleString()} (Gross: ${grossSalary.toLocaleString()}, Advance deduction: ${totalAdvanceDeduction.toLocaleString()})`);
+            console.log(`💰 Credited ${emp.name}: UGX ${walletCredit.toLocaleString()} (Gross: ${grossSalary.toLocaleString()}, Advance: ${totalAdvanceDeduction.toLocaleString()}, Remittance: ${remittanceAmount.toLocaleString()})`);
           }
         } else {
           console.warn(`⚠️ No auth user found for ${emp.name} (${emp.email}) - wallet not credited`);
@@ -315,6 +375,12 @@ Deno.serve(async (req) => {
                   department: emp.department || '',
                   transactionId: `AUTO-SAL-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-${emp.name.replace(/\s/g, '').substring(0, 6).toUpperCase()}`,
                   payslipUrl: payslipUrl,
+                  hasRemittance: remittanceAmount > 0,
+                  remittanceAmount: remittanceAmount.toLocaleString(),
+                  remittanceRecipient: remittanceInfo?.recipient_name || '',
+                  remittancePhone: remittanceInfo?.recipient_phone || '',
+                  remittancePercentage: remittanceInfo?.percentage || 0,
+                  walletCredited: walletCredit.toLocaleString(),
                 },
               },
             });
