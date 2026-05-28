@@ -11790,6 +11790,15 @@ export type Database = {
           server_now: string
         }[]
       }
+      get_my_fraud_lock: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          is_locked: boolean
+          user_name: string
+        }[]
+      }
       get_or_create_inventory_batch_for_day: {
         Args: { p_batch_date: string; p_coffee_type: string }
         Returns: string
@@ -12168,6 +12177,10 @@ export type Database = {
       verify_face_descriptor: {
         Args: { p_descriptor: Json; p_email: string }
         Returns: string
+      }
+      verify_fraud_unlock_code: {
+        Args: { _code: string; _lock_id: string }
+        Returns: boolean
       }
       verify_login_otp: {
         Args: { _code: string; _user_id: string }
