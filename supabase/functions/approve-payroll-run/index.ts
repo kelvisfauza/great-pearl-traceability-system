@@ -54,10 +54,22 @@ Deno.serve(async (req) => {
     }
 
     // Disburse: invoke process-auto-salaries with payroll_run_id (extends existing logic to apply NSSF + PAYE)
-    const { data: result, error: invokeErr } = await supabase.functions.invoke('process-auto-salaries', {
-      body: { payrollRunId: runId, month: run.month },
+    // Use direct fetch with service-role bearer to avoid SDK auth-header quirks at the gateway.
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const invokeResp = await fetch(`${supabaseUrl}/functions/v1/process-auto-salaries`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${serviceKey}`,
+        apikey: serviceKey,
+      },
+      body: JSON.stringify({ payrollRunId: runId, month: run.month }),
     });
-    if (invokeErr) throw invokeErr;
+    const result = await invokeResp.json().catch(() => ({}));
+    if (!invokeResp.ok) {
+      throw new Error(`process-auto-salaries failed (${invokeResp.status}): ${JSON.stringify(result)}`);
+    }
 
     await supabase.from('payroll_runs').update({
       status: 'disbursed',
