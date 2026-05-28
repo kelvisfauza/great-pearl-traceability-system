@@ -81,11 +81,13 @@ const fetchDirectoryViaEmployeesTable = async () => {
 export const loadEmployeeDirectory = async ({
   currentUserId,
   excludeUserIds = [],
+  includeCurrentUser = false,
 }: {
   currentUserId?: string | null;
   excludeUserIds?: Array<string | null | undefined>;
+  includeCurrentUser?: boolean;
 } = {}): Promise<DirectoryUser[]> => {
-  const resolvedUserId = await resolveCurrentUserId(currentUserId);
+  const resolvedUserId = includeCurrentUser ? null : await resolveCurrentUserId(currentUserId);
   const filteredExcludeIds = excludeUserIds.filter(Boolean) as string[];
 
   let lastError: unknown = null;
