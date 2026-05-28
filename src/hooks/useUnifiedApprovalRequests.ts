@@ -866,9 +866,19 @@ export const useUnifiedApprovalRequests = () => {
               updateData.admin_final_approval = true;
               updateData.admin_final_approval_at = new Date().toISOString();
               updateData.admin_final_approval_by = adminName;
-              updateData.status = 'Pending Finance';
-              updateData.approval_stage = 'pending_finance';
-              console.log('✅ 3-tier: Admin 2 approved - sent to Finance for final approval');
+              // Monthly Allowance Prepayment is auto-finalized after 2 admin approvals (no Finance step)
+              if (request.requestType === 'Monthly Allowance Prepayment') {
+                updateData.status = 'Approved';
+                updateData.approval_stage = 'approved';
+                updateData.finance_approved = true;
+                updateData.finance_approved_by = 'AUTO (2 Admins)';
+                updateData.finance_approved_at = new Date().toISOString();
+                console.log('✅ Monthly Allowance Prepayment auto-approved after 2nd admin');
+              } else {
+                updateData.status = 'Pending Finance';
+                updateData.approval_stage = 'pending_finance';
+                console.log('✅ 3-tier: Admin 2 approved - sent to Finance for final approval');
+              }
             }
           } else {
             // Standard 2-tier: single admin approval → send to Finance

@@ -54,19 +54,8 @@ Deno.serve(async (req) => {
         .map((e: string) => String(e).toLowerCase())
     )
 
-    // Idempotency: was this approval already processed?
-    const { data: alreadyRan } = await supabase
-      .from('monthly_allowance_log')
-      .select('id')
-      .eq('month_year', TARGET_MONTH)
-      .eq('ledger_reference', `PREPAY-${requestId}`)
-      .limit(1)
-      .maybeSingle()
-    if (alreadyRan) {
-      return new Response(JSON.stringify({ ok: true, alreadyProcessed: true }), {
-        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
+    // Per-email idempotency is enforced inside the loop, so reruns
+    // safely retry only recipients that have not yet been processed.
 
     // Build recipient list from active monthly_allowances (any row qualifies the employee)
     const { data: configs } = await supabase
