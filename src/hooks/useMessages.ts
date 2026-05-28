@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { loadEmployeeDirectory } from '@/lib/employeeDirectory';
 
 interface Message {
   id: string;
@@ -130,21 +131,21 @@ export const useMessages = () => {
 
         const missingUserIds = uniqueUserIds.filter((id) => !infoMap.has(id));
         if (missingUserIds.length > 0) {
-          const { data: directoryRows, error: directoryError } = await (supabase as any).rpc('get_employee_directory');
+          try {
+            const directoryRows = await loadEmployeeDirectory({ includeCurrentUser: true });
 
-          if (directoryError) {
+            directoryRows
+              .filter((row) => row?.auth_user_id && missingUserIds.includes(row.auth_user_id))
+              .forEach((row) => {
+                infoMap.set(row.auth_user_id, {
+                  name: row.name,
+                  email: row.email,
+                  avatar_url: row.avatar_url || undefined,
+                });
+              });
+          } catch (directoryError) {
             console.warn('get_employee_directory fallback failed:', directoryError);
           }
-
-          ((directoryRows as any[]) || [])
-            .filter((row) => row?.auth_user_id && missingUserIds.includes(row.auth_user_id))
-            .forEach((row: any) => {
-              infoMap.set(row.auth_user_id, {
-                name: row.name,
-                email: row.email,
-                avatar_url: row.avatar_url || undefined,
-              });
-            });
         }
       }
 
