@@ -16,12 +16,20 @@ interface Props {
   position?: string
   transactionId?: string
   payslipUrl?: string
+  hasRemittance?: boolean
+  remittanceAmount?: string
+  remittanceRecipient?: string
+  remittancePhone?: string
+  remittancePercentage?: number
+  walletCredited?: string
 }
 
 const SalaryCreditedEmail = ({
   employeeName, month = '', grossSalary = '0', advanceDeduction = '0',
   netSalary = '0', hasDeductions = false, department = '', position = '',
   transactionId = '', payslipUrl = '',
+  hasRemittance = false, remittanceAmount = '0', remittanceRecipient = '',
+  remittancePhone = '', remittancePercentage = 0, walletCredited = '0',
 }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
@@ -57,8 +65,20 @@ const SalaryCreditedEmail = ({
                 <tr><td style={labelCell}>Advance Deduction:</td><td style={{...valueCell, color: '#c62828'}}>- UGX {advanceDeduction}</td></tr>
               )}
               <tr><td style={labelCell}><strong>Net Credited:</strong></td><td style={valueBold}>UGX {netSalary}</td></tr>
+              {hasRemittance && (
+                <tr><td style={labelCell}>Remittance ({remittancePercentage}%) → {remittanceRecipient}:</td><td style={{...valueCell, color: '#c62828'}}>- UGX {remittanceAmount}</td></tr>
+              )}
+              {hasRemittance && (
+                <tr><td style={labelCell}><strong>Wallet Credited:</strong></td><td style={valueBold}>UGX {walletCredited}</td></tr>
+              )}
             </table>
           </Section>
+
+          {hasRemittance && (
+            <Section style={noteBox}>
+              <Text style={noteText}>💸 As per your standing agreement, <strong>{remittancePercentage}%</strong> of your net salary (UGX {remittanceAmount}) was sent directly via Mobile Money to <strong>{remittanceRecipient}</strong> ({remittancePhone}). The remaining UGX {walletCredited} was credited to your wallet.</Text>
+            </Section>
+          )}
 
           {hasDeductions && (
             <Section style={noteBox}>
