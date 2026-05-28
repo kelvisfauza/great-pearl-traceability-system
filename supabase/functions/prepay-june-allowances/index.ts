@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
     // Verify the approval request is actually approved
     const { data: appReq } = await supabase
       .from('approval_requests')
-      .select('id, type, status, approval_stage')
+      .select('id, type, status, approval_stage, details')
       .eq('id', requestId)
       .maybeSingle()
 
@@ -45,6 +45,14 @@ Deno.serve(async (req) => {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+
+    // Optional exclusion list from approval details
+    let details: any = appReq.details
+    if (typeof details === 'string') { try { details = JSON.parse(details) } catch { details = {} } }
+    const excludedEmails = new Set<string>(
+      (Array.isArray(details?.excluded_emails) ? details.excluded_emails : [])
+        .map((e: string) => String(e).toLowerCase())
+    )
 
     // Idempotency: was this approval already processed?
     const { data: alreadyRan } = await supabase
@@ -76,6 +84,7 @@ Deno.serve(async (req) => {
     const sentPhones = new Set<string>()
 
     for (const [email, name] of uniqueEmails) {
+      if (excludedEmails.has(email.toLowerCase())) { skipped++; results.push({ email, status: 'skipped_excluded' }); continue }
       const amount = PRIORITY_EMAILS.has(email.toLowerCase()) ? 20000 : 10000
 
       // Skip if already credited for June via cron or prior run
