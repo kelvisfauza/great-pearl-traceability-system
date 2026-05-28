@@ -28,30 +28,17 @@ const FraudLockScreen = ({ lockId, userName, onUnlocked }: FraudLockScreenProps)
     setError('');
 
     try {
-      // Verify the code against the lock record
-      const { data, error: fetchError } = await supabase
-        .from('user_fraud_locks')
-        .select('*')
-        .eq('id', lockId)
-        .eq('unlock_code', code.trim())
-        .eq('is_locked', true)
-        .maybeSingle();
+      // Verify the code & unlock via SECURITY DEFINER RPC (no plaintext leaves the server)
+      const { data, error: rpcError } = await supabase.rpc('verify_fraud_unlock_code', {
+        _lock_id: lockId,
+        _code: code.trim(),
+      });
 
-      if (fetchError || !data) {
+      if (rpcError || data !== true) {
         setError('Invalid unlock code. Please contact an administrator.');
         setLoading(false);
         return;
       }
-
-      // Unlock the user
-      await supabase
-        .from('user_fraud_locks')
-        .update({
-          is_locked: false,
-          unlocked_at: new Date().toISOString(),
-          unlocked_by: 'admin_code'
-        })
-        .eq('id', lockId);
 
       setSuccess(true);
       setTimeout(() => onUnlocked(), 1500);
