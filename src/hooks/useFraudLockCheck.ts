@@ -16,17 +16,11 @@ export const useFraudLockCheck = () => {
     }
 
     try {
-      const { data } = await supabase
-        .from('user_fraud_locks')
-        .select('id, user_name')
-        .eq('user_id', user.id)
-        .eq('is_locked', true)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (data) {
-        setLockData({ id: data.id, user_name: data.user_name || employee?.name || '' });
+      // Use SECURITY DEFINER RPC — owner SELECT on user_fraud_locks is restricted
+      const { data } = await supabase.rpc('get_my_fraud_lock');
+      const row = Array.isArray(data) ? data[0] : null;
+      if (row) {
+        setLockData({ id: row.id, user_name: row.user_name || employee?.name || '' });
       } else {
         setLockData(null);
       }
