@@ -8083,6 +8083,119 @@ export type Database = {
         }
         Relationships: []
       }
+      salary_remittance_agreements: {
+        Row: {
+          agreement_date: string
+          created_at: string
+          created_by: string | null
+          employee_email: string
+          employee_id: string | null
+          employee_name: string | null
+          id: string
+          notes: string | null
+          percentage: number
+          recipient_name: string
+          recipient_phone: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          agreement_date?: string
+          created_at?: string
+          created_by?: string | null
+          employee_email: string
+          employee_id?: string | null
+          employee_name?: string | null
+          id?: string
+          notes?: string | null
+          percentage: number
+          recipient_name: string
+          recipient_phone: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          agreement_date?: string
+          created_at?: string
+          created_by?: string | null
+          employee_email?: string
+          employee_id?: string | null
+          employee_name?: string | null
+          id?: string
+          notes?: string | null
+          percentage?: number
+          recipient_name?: string
+          recipient_phone?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      salary_remittance_payments: {
+        Row: {
+          agreement_id: string | null
+          amount: number
+          created_at: string
+          employee_email: string
+          employee_name: string | null
+          id: string
+          month: string
+          net_salary: number
+          payroll_run_id: string | null
+          percentage: number
+          recipient_name: string | null
+          recipient_phone: string
+          updated_at: string
+          yo_raw_response: string | null
+          yo_reference: string | null
+          yo_status: string | null
+        }
+        Insert: {
+          agreement_id?: string | null
+          amount: number
+          created_at?: string
+          employee_email: string
+          employee_name?: string | null
+          id?: string
+          month: string
+          net_salary: number
+          payroll_run_id?: string | null
+          percentage: number
+          recipient_name?: string | null
+          recipient_phone: string
+          updated_at?: string
+          yo_raw_response?: string | null
+          yo_reference?: string | null
+          yo_status?: string | null
+        }
+        Update: {
+          agreement_id?: string | null
+          amount?: number
+          created_at?: string
+          employee_email?: string
+          employee_name?: string | null
+          id?: string
+          month?: string
+          net_salary?: number
+          payroll_run_id?: string | null
+          percentage?: number
+          recipient_name?: string | null
+          recipient_phone?: string
+          updated_at?: string
+          yo_raw_response?: string | null
+          yo_reference?: string | null
+          yo_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_remittance_payments_agreement_id_fkey"
+            columns: ["agreement_id"]
+            isOneToOne: false
+            referencedRelation: "salary_remittance_agreements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_contracts: {
         Row: {
           contract_date: string
