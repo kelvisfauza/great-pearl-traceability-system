@@ -1040,6 +1040,22 @@ export const useUnifiedApprovalRequests = () => {
           }
         }
 
+        // Trigger June 2026 airtime & data prepayment after admin approval
+        if (status === 'Approved' && request.requestType === 'Monthly Allowance Prepayment' && updateData.status === 'Approved') {
+          try {
+            const { data, error } = await supabase.functions.invoke('prepay-june-allowances', {
+              body: { requestId: request.id },
+            });
+            if (error) {
+              console.error('Prepay June allowances invocation error:', error);
+            } else {
+              console.log('✅ June prepayment dispatched:', data);
+            }
+          } catch (prepayErr) {
+            console.error('Prepay June allowances error (non-blocking):', prepayErr);
+          }
+        }
+
         // Only handle deletions/edits for non-financial requests
         // Financial requests and salary advances are handled above
         if (status === 'Approved' && !['Money Request', 'Salary Payment', 'Requisition', 'Expense', 'Salary Advance', 'Salary Request'].includes(request.requestType)) {
