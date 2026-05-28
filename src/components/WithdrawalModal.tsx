@@ -74,6 +74,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const { toast } = useToast();
   const { isWithdrawalDisabled } = useWithdrawalControl();
   const withdrawalStatus = isWithdrawalDisabled();
+  const { validateAmount: validateLimits } = useWithdrawalLimits();
   const isWalletFrozen = !!(employee as any)?.wallet_frozen;
   
   // Instant withdrawal state
@@ -406,6 +407,17 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
       toast({
         title: "Invalid Cash Amount",
         description: "Cash withdrawals must be in round figures (multiples of 500). E.g. 2000, 2500, 5000.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Enforce HR-configured global withdrawal limits (per-transaction + daily)
+    const limitCheck = await validateLimits(user?.id, withdrawalAmount);
+    if (!limitCheck.ok) {
+      toast({
+        title: "Withdrawal limit reached",
+        description: limitCheck.reason || "This amount exceeds the configured withdrawal limit.",
         variant: "destructive",
       });
       return;
