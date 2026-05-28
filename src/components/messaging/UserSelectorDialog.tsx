@@ -5,17 +5,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Search, MessageSquare } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { loadEmployeeDirectory, type DirectoryUser } from '@/lib/employeeDirectory';
 
-interface User {
-  id: string;
-  auth_user_id: string;
-  name: string;
-  email: string;
-  department: string;
-  position: string;
-}
+type User = DirectoryUser;
 
 interface UserSelectorDialogProps {
   open: boolean;
@@ -52,31 +45,13 @@ const UserSelectorDialog = ({ open, onClose, onSelectUser }: UserSelectorDialogP
   const fetchUsers = async () => {
     try {
       setLoading(true);
-
-      const { data: { user } } = await supabase.auth.getUser();
-
-      // Use the SECURITY DEFINER RPC so non-admins can also see the staff directory
-      // (regular RLS on employees only lets users see their own row).
-      const { data, error } = await (supabase as any).rpc('get_employee_directory');
-      if (error) throw error;
-
-      const mapped: User[] = ((data as any[]) || []).map((e) => ({
-        id: e.id,
-        auth_user_id: e.auth_user_id,
-        name: e.name,
-        email: e.email,
-        department: e.department,
-        position: e.job_position ?? e.position ?? '',
-      }));
-
-      const filtered = user?.id
-        ? mapped.filter((u) => u.auth_user_id !== user.id)
-        : mapped;
-
-      setUsers(filtered);
-      setFilteredUsers(filtered);
+      const directoryUsers = await loadEmployeeDirectory({ currentUserId: employee?.authUserId });
+      setUsers(directoryUsers);
+      setFilteredUsers(directoryUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
+      setUsers([]);
+      setFilteredUsers([]);
     } finally {
       setLoading(false);
     }

@@ -6,17 +6,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Search, UserPlus } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGroupCall, GROUP_CALL_HARD_LIMIT } from '@/contexts/GroupCallContext';
-
-interface DirectoryUser {
-  id: string;
-  auth_user_id: string;
-  name: string;
-  email: string;
-  department?: string;
-}
+import { loadEmployeeDirectory, type DirectoryUser } from '@/lib/employeeDirectory';
 
 interface Props {
   open: boolean;
@@ -40,10 +32,14 @@ const EscalateCallDialog = ({ open, onClose, currentPeer, callType, onEscalate }
     (async () => {
       setLoading(true);
       try {
-        const { data } = await (supabase as any).rpc('get_employee_directory');
-        setUsers((data || []).filter((u: any) =>
-          u.auth_user_id && u.auth_user_id !== user?.id && u.auth_user_id !== currentPeer?.userId
-        ));
+        const directoryUsers = await loadEmployeeDirectory({
+          currentUserId: user?.id,
+          excludeUserIds: [currentPeer?.userId],
+        });
+        setUsers(directoryUsers);
+      } catch (error) {
+        console.error('Failed to load escalation recipients:', error);
+        setUsers([]);
       } finally { setLoading(false); }
     })();
   }, [open, user?.id, currentPeer?.userId]);

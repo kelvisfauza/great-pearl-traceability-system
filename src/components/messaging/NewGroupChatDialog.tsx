@@ -6,17 +6,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Search, Users } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface DirectoryUser {
-  id: string;
-  auth_user_id: string;
-  name: string;
-  email: string;
-  department?: string;
-  position?: string;
-}
+import { loadEmployeeDirectory, type DirectoryUser } from '@/lib/employeeDirectory';
 
 interface Props {
   open: boolean;
@@ -50,18 +41,11 @@ const NewGroupChatDialog = ({ open, onClose, onCreate }: Props) => {
     (async () => {
       setLoading(true);
       try {
-        const { data } = await (supabase as any).rpc('get_employee_directory');
-        const mapped: DirectoryUser[] = ((data as any[]) || [])
-          .filter((e) => e.auth_user_id && e.auth_user_id !== user?.id)
-          .map((e) => ({
-            id: e.id,
-            auth_user_id: e.auth_user_id,
-            name: e.name,
-            email: e.email,
-            department: e.department,
-            position: e.job_position ?? e.position ?? '',
-          }));
-        setUsers(mapped);
+        const directoryUsers = await loadEmployeeDirectory({ currentUserId: user?.id });
+        setUsers(directoryUsers);
+      } catch (error) {
+        console.error('Failed to load group chat members:', error);
+        setUsers([]);
       } finally {
         setLoading(false);
       }

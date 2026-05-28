@@ -6,17 +6,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Search, UserPlus } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGroupCall } from '@/contexts/GroupCallContext';
-
-interface DirectoryUser {
-  id: string;
-  auth_user_id: string;
-  name: string;
-  email: string;
-  department?: string;
-}
+import { loadEmployeeDirectory, type DirectoryUser } from '@/lib/employeeDirectory';
 
 const AddParticipantsDialog = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
   const { user } = useAuth();
@@ -32,10 +24,14 @@ const AddParticipantsDialog = ({ open, onClose }: { open: boolean; onClose: () =
     (async () => {
       setLoading(true);
       try {
-        const { data } = await (supabase as any).rpc('get_employee_directory');
-        setUsers((data || []).filter((u: any) =>
-          u.auth_user_id && u.auth_user_id !== user?.id && !participants.has(u.auth_user_id)
-        ));
+        const directoryUsers = await loadEmployeeDirectory({
+          currentUserId: user?.id,
+          excludeUserIds: Array.from(participants.keys()),
+        });
+        setUsers(directoryUsers);
+      } catch (error) {
+        console.error('Failed to load additional participants:', error);
+        setUsers([]);
       } finally { setLoading(false); }
     })();
   }, [open, participants, user?.id]);
