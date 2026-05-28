@@ -78,14 +78,16 @@ Deno.serve(async (req) => {
           continue
         }
 
-        // Get borrower's wallet balance
-        const { data: walletEntries } = await supabase
-          .from('ledger_entries')
-          .select('amount')
-          .eq('user_id', borrowerUserId)
-
-        const walletBalance = (walletEntries || []).reduce((sum: number, e: any) => sum + Number(e.amount), 0)
-        console.log(`  Wallet balance: UGX ${walletBalance}`)
+        // Get borrower's EFFECTIVE wallet balance (matches what the UI shows —
+        // excludes airtime/data allowances and PAYOUT entries so we never
+        // overdraw the wallet by treating non-cash credits as spendable).
+        const { data: walletBalRaw, error: walletBalErr } = await supabase
+          .rpc('get_effective_wallet_balance', { p_user_id: borrowerUserId })
+        if (walletBalErr) {
+          console.error('  ❌ get_effective_wallet_balance failed:', walletBalErr)
+        }
+        const walletBalance = Math.max(0, Number(walletBalRaw || 0))
+        console.log(`  Effective wallet balance: UGX ${walletBalance}`)
 
         let remainingAmount = totalOwed
         let deductedFromWallet = 0
@@ -138,12 +140,10 @@ Deno.serve(async (req) => {
           const { data: guarantorUserId } = await supabase.rpc('get_unified_user_id', { input_email: guarantorEmail })
 
           if (guarantorUserId) {
-            const { data: guarantorEntries } = await supabase
-              .from('ledger_entries')
-              .select('amount')
-              .eq('user_id', guarantorUserId)
-
-            const guarantorBalance = (guarantorEntries || []).reduce((sum: number, e: any) => sum + Number(e.amount), 0)
+            const { data: gBalRaw } = await supabase
+              .rpc('get_effective_wallet_balance', { p_user_id: guarantorUserId })
+            const guarantorBalance = Math.max(0, Number(gBalRaw || 0))
+            console.log(`  Guarantor effective wallet balance: UGX ${guarantorBalance}`)
 
             if (guarantorBalance > 0) {
               deductedFromGuarantor = Math.min(guarantorBalance, remainingAmount)
