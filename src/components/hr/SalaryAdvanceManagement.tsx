@@ -27,6 +27,9 @@ import {
   Search,
   Send
 } from 'lucide-react';
+import { Download, FileText } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { generateSalaryAdvanceFormPdf } from '@/utils/salaryAdvanceFormPdf';
 
 interface Employee {
   id: string;
@@ -48,6 +51,15 @@ const SalaryAdvanceManagement = () => {
   const [payments, setPayments] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [showFormFillDialog, setShowFormFillDialog] = useState(false);
+  const [formFill, setFormFill] = useState({
+    employeeEmail: '',
+    amount: '',
+    minPayment: '40000',
+    period: '4',
+    reason: '',
+    method: 'Mobile Money',
+  });
 
   // Form state for new advance
   const [newAdvance, setNewAdvance] = useState({
@@ -177,6 +189,29 @@ const SalaryAdvanceManagement = () => {
           <Plus className="h-4 w-4" />
           Award New Advance
         </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="gap-2 ml-2">
+              <Download className="h-4 w-4" />
+              Download Form
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56 bg-popover">
+            <DropdownMenuItem
+              onClick={() => {
+                generateSalaryAdvanceFormPdf({}, 'Salary_Advance_Form_Blank.pdf');
+                toast({ title: 'Blank form downloaded' });
+              }}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Blank Form (print & fill)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShowFormFillDialog(true)}>
+              <FileText className="h-4 w-4 mr-2" />
+              Prefill for Employee
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Stats Cards */}
