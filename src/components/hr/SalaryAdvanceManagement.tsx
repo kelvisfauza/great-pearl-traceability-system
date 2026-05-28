@@ -185,13 +185,14 @@ const SalaryAdvanceManagement = () => {
           </h2>
           <p className="text-muted-foreground">Award and track salary advances for employees</p>
         </div>
+        <div className="flex items-center gap-2">
         <Button onClick={() => setShowAddModal(true)} className="gap-2">
           <Plus className="h-4 w-4" />
           Award New Advance
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="gap-2 ml-2">
+            <Button variant="outline" className="gap-2">
               <Download className="h-4 w-4" />
               Download Form
             </Button>
@@ -212,6 +213,7 @@ const SalaryAdvanceManagement = () => {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       </div>
 
       {/* Stats Cards */}
