@@ -15,6 +15,8 @@ interface FaceCaptureProps {
   busy?: boolean;
   /** When true, continuously scan the camera and auto-submit the first detected face. */
   autoScan?: boolean;
+  /** When true, show a green success ring and stop scanning. */
+  verified?: boolean;
 }
 
 /**
@@ -28,6 +30,7 @@ export const FaceCapture: React.FC<FaceCaptureProps> = ({
   disabled,
   busy,
   autoScan = false,
+  verified = false,
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -121,7 +124,7 @@ export const FaceCapture: React.FC<FaceCaptureProps> = ({
   // contains a face is submitted to the parent. While the parent is busy
   // verifying we pause; if it comes back without success, we resume scanning.
   useEffect(() => {
-    if (!autoScan || !ready || busy || disabled || capturing) return;
+    if (!autoScan || !ready || busy || disabled || capturing || verified) return;
     let cancelled = false;
     setHint('Looking for your face…');
 
@@ -153,7 +156,16 @@ export const FaceCapture: React.FC<FaceCaptureProps> = ({
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [autoScan, ready, busy, disabled, capturing, onCapture]);
+  }, [autoScan, ready, busy, disabled, capturing, verified, onCapture]);
+
+  // Stop the camera as soon as we're verified — frees the webcam and
+  // guarantees no further frames can be submitted.
+  useEffect(() => {
+    if (verified && streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+  }, [verified]);
 
   return (
     <div className="space-y-3">
@@ -166,8 +178,22 @@ export const FaceCapture: React.FC<FaceCaptureProps> = ({
         />
         {/* Framing oval */}
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="w-[58%] h-[78%] rounded-[50%] border-2 border-white/70 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
+          <div
+            className={`w-[58%] h-[78%] rounded-[50%] border-[3px] shadow-[0_0_0_9999px_rgba(0,0,0,0.35)] transition-all duration-300 ${
+              verified
+                ? 'border-emerald-400 shadow-[0_0_0_9999px_rgba(0,0,0,0.35),0_0_40px_8px_rgba(16,185,129,0.6)] animate-pulse'
+                : 'border-white/70'
+            }`}
+          />
         </div>
+        {verified && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-xs font-medium px-3 py-1 rounded-full flex items-center gap-1.5 shadow-lg">
+            <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+            </svg>
+            Verified — signing you in
+          </div>
+        )}
         {!ready && !error && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/60 text-white text-sm">
             <Loader2 className="h-6 w-6 animate-spin" />

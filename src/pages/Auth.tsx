@@ -42,6 +42,8 @@ const Auth = () => {
   const [faceLoginEmail, setFaceLoginEmail] = useState('');
   const [faceBusy, setFaceBusy] = useState(false);
   const [faceError, setFaceError] = useState('');
+  const [faceVerified, setFaceVerified] = useState(false);
+  const faceVerifiedRef = useRef(false);
   
   const { signIn, user, employee, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -383,6 +385,8 @@ const Auth = () => {
   };
 
   const handleFaceCapture = async (descriptor: number[]) => {
+    // Hard guard: never submit twice in a single session.
+    if (faceVerifiedRef.current) return;
     setFaceBusy(true);
     setFaceError('');
     try {
@@ -395,6 +399,10 @@ const Auth = () => {
         setFaceError(data?.error || "We couldn't recognize you. Try again, or sign in with your password.");
         return;
       }
+      // Lock immediately so the autoScan loop can't fire again while we
+      // exchange the magic-link token below.
+      faceVerifiedRef.current = true;
+      setFaceVerified(true);
       toast({
         title: 'Face recognized',
         description: `Welcome back, ${data.name || ''}. Signing you in…`,
@@ -425,6 +433,8 @@ const Auth = () => {
     } catch (err: any) {
       console.error('Face login failed:', err);
       setFaceError(err?.message || 'Face sign-in failed. Please try again.');
+      faceVerifiedRef.current = false;
+      setFaceVerified(false);
     } finally {
       setFaceBusy(false);
     }
@@ -906,6 +916,7 @@ const Auth = () => {
                 onCapture={handleFaceCapture}
                 actionLabel="Scan my face & sign me in"
                 busy={faceBusy}
+                verified={faceVerified}
                 autoScan
               />
 
