@@ -1,23 +1,31 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
+import { TrendingUp, Clock, CheckCircle, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { useInvestments } from '@/hooks/useInvestments';
 import { format, differenceInDays } from 'date-fns';
 
 export const InvestmentsCard = () => {
   const { activeInvestments, investments, totalInvested, totalExpectedReturn, withdrawEarly } = useInvestments();
+  const [expanded, setExpanded] = useState(false);
 
   if (investments.length === 0) return null;
+
+  const visibleInvestments = expanded ? investments : investments.slice(0, 1);
 
   return (
     <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <TrendingUp className="h-4 w-4 text-blue-600" />
-          Investments
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-blue-600" />
+            Investments
+            <Badge variant="secondary" className="bg-blue-100 text-blue-800 ml-1">
+              {investments.length}
+            </Badge>
+          </CardTitle>
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {activeInvestments.length > 0 && (
@@ -33,7 +41,7 @@ export const InvestmentsCard = () => {
           </div>
         )}
 
-        {investments.slice(0, 5).map(inv => {
+        {visibleInvestments.map(inv => {
           const daysLeft = Math.max(0, differenceInDays(new Date(inv.maturity_date), new Date()));
           const progress = Math.min(100, ((differenceInDays(new Date(), new Date(inv.start_date))) / (differenceInDays(new Date(inv.maturity_date), new Date(inv.start_date)))) * 100);
 
@@ -81,6 +89,21 @@ export const InvestmentsCard = () => {
             </div>
           );
         })}
+
+        {investments.length > 1 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full text-xs h-8 text-blue-700 hover:bg-blue-100/50"
+            onClick={() => setExpanded(!expanded)}
+          >
+            {expanded ? (
+              <><ChevronUp className="h-3 w-3 mr-1" /> Show less</>
+            ) : (
+              <><ChevronDown className="h-3 w-3 mr-1" /> Show all {investments.length} investments</>
+            )}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
