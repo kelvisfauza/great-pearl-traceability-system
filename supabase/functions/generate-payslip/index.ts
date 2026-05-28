@@ -298,16 +298,22 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to upload payslip: ${uploadError.message}`);
     }
 
-    const { data: urlData } = supabase.storage
+    // 'statements' bucket is private — use a long-lived signed URL so recipients can view their payslip
+    const { data: signedData, error: signedError } = await supabase.storage
       .from('statements')
-      .getPublicUrl(fileName);
+      .createSignedUrl(fileName, 60 * 60 * 24 * 365); // 1 year
 
-    console.log(`\u2705 Payslip PDF generated for ${body.employeeName}: ${urlData.publicUrl}`);
+    if (signedError) {
+      console.error('Signed URL error:', signedError);
+      throw new Error(`Failed to create signed URL: ${signedError.message}`);
+    }
 
-    return new Response(JSON.stringify({ 
-      success: true, 
-      url: urlData.publicUrl,
-      fileName 
+    console.log(`\u2705 Payslip PDF generated for ${body.employeeName}: ${signedData.signedUrl}`);
+
+    return new Response(JSON.stringify({
+      success: true,
+      url: signedData.signedUrl,
+      fileName
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
