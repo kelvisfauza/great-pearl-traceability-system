@@ -400,21 +400,24 @@ const Auth = () => {
         description: `Welcome back, ${data.name || ''}. Signing you in…`,
       });
 
-      // Prefer the full Supabase action URL so the auth server completes the
-      // single-use magic-link exchange itself. The token_hash shortcut was
-      // causing the callback to be replayed and end up as an expired email link.
-      if (data?.auth_url) {
-        window.location.replace(data.auth_url);
+      // Consume the magic-link token in-place via verifyOtp so we never leave
+      // this origin. Using auth_url would route through Supabase's verify
+      // endpoint and fall back to the configured Site URL (wrong system) when
+      // the current origin isn't in the redirect allow-list.
+      if (data?.token_hash) {
+        const { error: otpErr } = await supabase.auth.verifyOtp({
+          token_hash: data.token_hash,
+          type: (data.verification_type as any) || 'magiclink',
+        });
+        if (otpErr) throw otpErr;
+        // Clean URL and let the auth state listener route us into the app.
+        window.history.replaceState({}, document.title, `${window.location.pathname}?post_auth=face`);
         return;
       }
 
-      // Fallback for older responses that only return the token hash.
-      if (data?.token_hash) {
-        const nextUrl = new URL(window.location.href);
-        nextUrl.searchParams.set('post_auth', 'face');
-        nextUrl.searchParams.set('type', data.verification_type || 'magiclink');
-        nextUrl.searchParams.set('token_hash', data.token_hash);
-        window.location.replace(nextUrl.toString());
+      // Last-resort fallback: full action URL (may bounce via Site URL).
+      if (data?.auth_url) {
+        window.location.replace(data.auth_url);
         return;
       }
 
