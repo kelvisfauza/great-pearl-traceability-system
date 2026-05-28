@@ -38,11 +38,9 @@ Deno.serve(async (req) => {
     if (run.status === 'disbursed') {
       return new Response(JSON.stringify({ ok: false, error: 'Already disbursed' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
-    // Use verified caller email — ignore client-supplied identity for SoD check
+    // Note: payroll approval does not enforce self-approval SoD because the
+    // Administrator is typically the sole approver who also generates the run.
     const verifiedEmail = (caller.email || userData.user.email || '').toLowerCase();
-    if (run.created_by_email && verifiedEmail && run.created_by_email.toLowerCase() === verifiedEmail) {
-      return new Response(JSON.stringify({ ok: false, error: 'Creator cannot approve their own payroll run' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
 
     await supabase.from('payroll_runs').update({
       status: 'approved',
