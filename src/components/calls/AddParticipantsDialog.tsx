@@ -26,7 +26,7 @@ const AddParticipantsDialog = ({ open, onClose }: { open: boolean; onClose: () =
       try {
         const directoryUsers = await loadEmployeeDirectory({
           currentUserId: user?.id,
-          excludeUserIds: Array.from(participants),
+          excludeUserIds: Array.from(participants.keys()),
         });
         setUsers(directoryUsers);
       } catch (error) {
