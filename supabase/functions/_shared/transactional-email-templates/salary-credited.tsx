@@ -22,6 +22,13 @@ interface Props {
   remittancePhone?: string
   remittancePercentage?: number
   walletCredited?: string
+  nssfEmployee?: string
+  nssfEmployer?: string
+  paye?: string
+  totalDeductions?: string
+  signatureUrl?: string
+  signedByName?: string
+  signedByTitle?: string
 }
 
 const SalaryCreditedEmail = ({
@@ -30,6 +37,10 @@ const SalaryCreditedEmail = ({
   transactionId = '', payslipUrl = '',
   hasRemittance = false, remittanceAmount = '0', remittanceRecipient = '',
   remittancePhone = '', remittancePercentage = 0, walletCredited = '0',
+  nssfEmployee = '0', nssfEmployer = '0', paye = '0', totalDeductions = '0',
+  signatureUrl = 'https://great-pearl-traceability-system.lovable.app/finance-signature.png',
+  signedByName = 'Mukobi Godwin',
+  signedByTitle = 'Finance Officer',
 }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
@@ -57,14 +68,23 @@ const SalaryCreditedEmail = ({
           </Section>
 
           <Section style={summaryCard}>
-            <Text style={cardTitle}>💰 SALARY BREAKDOWN</Text>
+            <Text style={cardTitle}>SALARY BREAKDOWN</Text>
             <Hr style={cardDivider} />
             <table style={detailTable}>
               <tr><td style={labelCell}>Gross Salary:</td><td style={valueCell}>UGX {grossSalary}</td></tr>
-              {hasDeductions && (
-                <tr><td style={labelCell}>Advance Deduction:</td><td style={{...valueCell, color: '#c62828'}}>- UGX {advanceDeduction}</td></tr>
+              {nssfEmployee !== '0' && (
+                <tr><td style={labelCell}>NSSF Employee (5%):</td><td style={{...valueCell, color: '#c62828'}}>- UGX {nssfEmployee}</td></tr>
               )}
-              <tr><td style={labelCell}><strong>Net Credited:</strong></td><td style={valueBold}>UGX {netSalary}</td></tr>
+              {paye !== '0' && (
+                <tr><td style={labelCell}>PAYE (URA Tax):</td><td style={{...valueCell, color: '#c62828'}}>- UGX {paye}</td></tr>
+              )}
+              {hasDeductions && (
+                <tr><td style={labelCell}>Salary Advance / Loan Recovery:</td><td style={{...valueCell, color: '#c62828'}}>- UGX {advanceDeduction}</td></tr>
+              )}
+              {totalDeductions !== '0' && (
+                <tr><td style={{...labelCell, borderTop:'1px solid #ddd', paddingTop:'8px'}}><strong>Total Deductions:</strong></td><td style={{...valueCell, color:'#c62828', borderTop:'1px solid #ddd', paddingTop:'8px', fontWeight:'bold' as const}}>- UGX {totalDeductions}</td></tr>
+              )}
+              <tr><td style={labelCell}><strong>Net Salary:</strong></td><td style={valueBold}>UGX {netSalary}</td></tr>
               {hasRemittance && (
                 <tr><td style={labelCell}>Remittance ({remittancePercentage}%) → {remittanceRecipient}:</td><td style={{...valueCell, color: '#c62828'}}>- UGX {remittanceAmount}</td></tr>
               )}
@@ -72,6 +92,11 @@ const SalaryCreditedEmail = ({
                 <tr><td style={labelCell}><strong>Wallet Credited:</strong></td><td style={valueBold}>UGX {walletCredited}</td></tr>
               )}
             </table>
+            {nssfEmployer !== '0' && (
+              <Text style={employerNoteText}>
+                + Employer NSSF Contribution (10%): UGX {nssfEmployer} — paid by employer, not deducted from your salary.
+              </Text>
+            )}
           </Section>
 
           {hasRemittance && (
@@ -100,7 +125,13 @@ const SalaryCreditedEmail = ({
 
           <Hr style={divider} />
           <Text style={closingText}>Log in to your dashboard to view your updated wallet balance and transaction history.</Text>
-          <Text style={closing}>Best regards,<br /><strong>{SITE_NAME} Finance Department</strong></Text>
+
+          <Section style={signatureBlock}>
+            <Text style={signatureLabel}>Authorized & Approved by:</Text>
+            <img src={signatureUrl} alt={`${signedByName} signature`} width="220" height="80" style={signatureImage} />
+            <Text style={signedByNameStyle}>{signedByName}</Text>
+            <Text style={signedByTitleStyle}>{signedByTitle} — {SITE_NAME}</Text>
+          </Section>
         </Section>
         <Section style={footerSection}>
           <Text style={footerText}>© 2026 {SITE_NAME} • Monthly salary notification</Text>
