@@ -888,6 +888,39 @@ export const useMessages = () => {
     };
   }, []); // Empty deps - only run once!
 
+  const markAllConversationsRead = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: parts } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', user.id);
+      const ids = (parts || []).map((p: any) => p.conversation_id);
+      if (ids.length === 0) return;
+
+      const nowIso = new Date().toISOString();
+
+      await (supabase as any)
+        .from('messages')
+        .update({ read_at: nowIso })
+        .in('conversation_id', ids)
+        .neq('sender_id', user.id)
+        .is('read_at', null);
+
+      await (supabase as any)
+        .from('conversation_participants')
+        .update({ last_read_at: nowIso })
+        .eq('user_id', user.id);
+
+      setConversations(prev => prev.map(c => ({ ...c, unread_count: 0 })));
+      setUnreadCount(0);
+    } catch (e) {
+      console.warn('markAllConversationsRead failed:', e);
+    }
+  }, []);
+
   return {
     conversations,
     messages,
@@ -901,5 +934,6 @@ export const useMessages = () => {
     sendFile,
     createConversation,
     createGroupConversation,
+    markAllConversationsRead,
   };
 };
