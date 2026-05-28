@@ -585,6 +585,111 @@ const SalaryAdvanceManagement = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Prefill form for employee */}
+      <Dialog open={showFormFillDialog} onOpenChange={setShowFormFillDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Prefill Salary Advance Form</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Employee *</Label>
+              <Select
+                value={formFill.employeeEmail}
+                onValueChange={(val) => setFormFill({ ...formFill, employeeEmail: val })}
+              >
+                <SelectTrigger><SelectValue placeholder="Select employee" /></SelectTrigger>
+                <SelectContent>
+                  {employees.map((e) => (
+                    <SelectItem key={e.id} value={e.email}>
+                      {e.name} — {e.department}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Advance Amount (UGX) *</Label>
+                <Input
+                  type="number"
+                  value={formFill.amount}
+                  onChange={(e) => setFormFill({ ...formFill, amount: e.target.value })}
+                  placeholder="800000"
+                />
+              </div>
+              <div>
+                <Label>Minimum Monthly Payment (UGX)</Label>
+                <Input
+                  type="number"
+                  value={formFill.minPayment}
+                  onChange={(e) => setFormFill({ ...formFill, minPayment: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Repayment Period (months)</Label>
+                <Input
+                  value={formFill.period}
+                  onChange={(e) => setFormFill({ ...formFill, period: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Disbursement Method</Label>
+                <Input
+                  value={formFill.method}
+                  onChange={(e) => setFormFill({ ...formFill, method: e.target.value })}
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Reason</Label>
+              <Textarea
+                rows={2}
+                value={formFill.reason}
+                onChange={(e) => setFormFill({ ...formFill, reason: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowFormFillDialog(false)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                const emp = employees.find((e) => e.email === formFill.employeeEmail);
+                if (!emp) {
+                  toast({ title: 'Select an employee', variant: 'destructive' });
+                  return;
+                }
+                const ref = `HR-SA-${new Date().getFullYear()}-${Math.floor(Math.random() * 9000 + 1000)}`;
+                generateSalaryAdvanceFormPdf(
+                  {
+                    ref,
+                    date: new Date().toLocaleDateString('en-GB'),
+                    name: emp.name,
+                    empId: emp.id?.slice(0, 12),
+                    department: emp.department,
+                    position: emp.position,
+                    email: emp.email,
+                    salary: emp.salary ? Number(emp.salary).toLocaleString() : '',
+                    amount: formFill.amount ? Number(formFill.amount).toLocaleString() : '',
+                    minPayment: formFill.minPayment ? Number(formFill.minPayment).toLocaleString() : '',
+                    period: formFill.period ? `${formFill.period} months` : '',
+                    reason: formFill.reason,
+                    method: formFill.method,
+                    hrName: currentUser?.name,
+                  },
+                  `Salary_Advance_${emp.name.replace(/\s+/g, '_')}.pdf`
+                );
+                setShowFormFillDialog(false);
+                toast({ title: 'Form downloaded', description: `Prefilled for ${emp.name}` });
+              }}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Generate & Download
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
