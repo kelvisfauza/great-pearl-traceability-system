@@ -195,6 +195,14 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
     createConversation,
     createGroupConversation,
   } = messagesData;
+  const markAllConversationsRead = (messagesData as any).markAllConversationsRead as (() => Promise<void>) | undefined;
+
+  // Auto-mark every conversation as read whenever the panel opens.
+  useEffect(() => {
+    if (isOpen && markAllConversationsRead) {
+      markAllConversationsRead();
+    }
+  }, [isOpen, markAllConversationsRead]);
 
   useEffect(() => {
     if (selectedConversation) {
