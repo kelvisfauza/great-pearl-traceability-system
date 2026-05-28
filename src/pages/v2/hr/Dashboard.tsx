@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import V2Navigation from "@/components/v2/V2Navigation";
 import PriceTicker from "@/components/PriceTicker";
-import { Users, Calendar, Award, Clock, MessageSquare, CreditCard, AlertTriangle, Gift, Ban, ShieldAlert, Calculator } from "lucide-react";
+import { Users, Calendar, Award, Clock, MessageSquare, CreditCard, AlertTriangle, Gift, Ban, ShieldAlert, Calculator, Gauge } from "lucide-react";
 import AllocateBonusDialog from "@/components/v2/hr/AllocateBonusDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useWithdrawalControl } from "@/hooks/useWithdrawalControl";
+import { useWithdrawalLimits } from "@/hooks/useWithdrawalLimits";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useSMSNotifications } from "@/hooks/useSMSNotifications";
@@ -23,10 +24,13 @@ const HRDashboard = () => {
   const { employee } = useAuth();
   const { toast } = useToast();
   const { control, loading: controlLoading, updateControl } = useWithdrawalControl();
+  const { limits, updateLimits } = useWithdrawalLimits();
   const { sendWithdrawalEnabledSMS } = useSMSNotifications();
   const [withdrawDisabled, setWithdrawDisabled] = useState(false);
   const [withdrawUntil, setWithdrawUntil] = useState("");
   const [withdrawReason, setWithdrawReason] = useState("");
+  const [perTxnLimit, setPerTxnLimit] = useState<string>("");
+  const [dailyLimit, setDailyLimit] = useState<string>("");
 
   useEffect(() => {
     if (control) {
@@ -35,6 +39,13 @@ const HRDashboard = () => {
       setWithdrawReason(control.disabled_reason || "");
     }
   }, [control]);
+
+  useEffect(() => {
+    if (limits) {
+      setPerTxnLimit(limits.per_transaction != null ? String(limits.per_transaction) : "");
+      setDailyLimit(limits.daily != null ? String(limits.daily) : "");
+    }
+  }, [limits]);
 
   const { data: stats } = useQuery({
     queryKey: ["hr-v2-stats"],
