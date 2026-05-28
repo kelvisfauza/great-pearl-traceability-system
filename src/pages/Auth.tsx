@@ -42,6 +42,8 @@ const Auth = () => {
   const [faceLoginEmail, setFaceLoginEmail] = useState('');
   const [faceBusy, setFaceBusy] = useState(false);
   const [faceError, setFaceError] = useState('');
+  const [faceVerified, setFaceVerified] = useState(false);
+  const faceVerifiedRef = useRef(false);
   
   const { signIn, user, employee, loading: authLoading } = useAuth();
   const navigate = useNavigate();
