@@ -1,0 +1,1 @@
+UPDATE public.payroll_runs SET status = 'pending_approval', approved_at = NULL, approved_by = NULL, approved_by_email = NULL WHERE id = '70fe1b86-5342-47dd-94a4-d02d5b6bb3c2';
