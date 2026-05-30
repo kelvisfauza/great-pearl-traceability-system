@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Printer, Search, FileText, ArrowDownCircle, ArrowUpCircle, Wallet } from "lucide-react";
+import { Printer, Search, FileText, ArrowDownCircle, ArrowUpCircle, Wallet, ArrowLeft } from "lucide-react";
 
 type Entry = {
   id: string;
@@ -54,6 +55,7 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 const UserStatement = () => {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -226,6 +228,9 @@ const UserStatement = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-6">
+        <Button variant="ghost" size="sm" className="mb-2" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back
+        </Button>
         <div className="mb-6 flex items-center gap-3">
           <FileText className="h-7 w-7 text-primary" />
           <div>
