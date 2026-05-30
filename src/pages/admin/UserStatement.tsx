@@ -241,9 +241,9 @@ const UserStatement = () => {
               {filteredEmployees.map((e: any) => (
                 <button
                   key={e.id}
-                  onClick={() => setSelectedUserId(e.auth_user_id)}
+                  onClick={() => setSelectedUserId(e.auth_user_id || e.email)}
                   className={`w-full text-left p-2 rounded text-sm hover:bg-muted ${
-                    selectedUserId === e.auth_user_id ? "bg-muted font-medium" : ""
+                    selectedUserId === (e.auth_user_id || e.email) ? "bg-muted font-medium" : ""
                   }`}
                 >
                   <div className="truncate">{e.name}</div>
