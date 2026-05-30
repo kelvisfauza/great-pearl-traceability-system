@@ -12234,6 +12234,31 @@ export type Database = {
         Args: { p_coffee_record_id: string }
         Returns: Json
       }
+      update_own_employee_profile: {
+        Args: {
+          _account_name?: string
+          _account_number?: string
+          _address?: string
+          _avatar_url?: string
+          _bank_email?: string
+          _bank_name?: string
+          _bank_phone?: string
+          _date_of_birth?: string
+          _district?: string
+          _emergency_contact?: string
+          _gender?: string
+          _marital_status?: string
+          _national_id_name?: string
+          _national_id_number?: string
+          _next_of_kin_name?: string
+          _next_of_kin_phone?: string
+          _next_of_kin_relationship?: string
+          _phone?: string
+          _profile_completed?: boolean
+          _tribe?: string
+        }
+        Returns: Json
+      }
       user_can: {
         Args: { action_name: string; module_name: string }
         Returns: boolean
