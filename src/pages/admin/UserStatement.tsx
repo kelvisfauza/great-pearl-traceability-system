@@ -25,7 +25,7 @@ const fmt = (n: number) => `UGX ${Number(n || 0).toLocaleString()}`;
 // Must match TransactionStatement.tsx (employee view) so admin numbers
 // reconcile exactly with what the employee sees.
 const WALLET_TYPES = [
-  'LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT',
+  'LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'REVERSAL',
   'MONTHLY_SALARY', 'ADVANCE_RECOVERY',
   'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY',
   'HOST_MEETING_BONUS', 'MEETING_ATTENDANCE_BONUS',
@@ -35,7 +35,9 @@ const isDirectAllowancePayout = (entry: { entry_type: string; metadata: any }) =
   const meta = entry.metadata
     ? (typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata)
     : null;
-  return ['airtime_allowance', 'data_allowance', 'airtime_data_prepayment'].includes(meta?.allowance_type)
+    // Mirror get_effective_wallet_balance RPC exactly: only airtime_allowance /
+    // data_allowance DEPOSIT/PAYOUT are excluded from wallet math.
+    return ['airtime_allowance', 'data_allowance'].includes(meta?.allowance_type)
     && ['DEPOSIT', 'PAYOUT'].includes(entry.entry_type);
 };
 
@@ -109,20 +111,32 @@ const UserStatement = () => {
     queryKey: ["admin-statement-entries", resolvedUserId, typeFilter, from, to],
     enabled: !!resolvedUserId,
     queryFn: async () => {
-      let q = supabase
-        .from("ledger_entries")
-        .select("id, created_at, entry_type, source_category, amount, reference, metadata")
-        .eq("user_id", resolvedUserId!)
-        .in("entry_type", WALLET_TYPES)
-        .order("created_at", { ascending: true })
-        .limit(5000);
+      // Paginate to bypass PostgREST's 1000-row cap so high-activity wallets
+      // (e.g. Fauza with 1500+ entries) reconcile exactly with the user's
+      // own TransactionStatement.
+      const PAGE = 1000;
+      const all: Entry[] = [];
+      for (let offset = 0; ; offset += PAGE) {
+        let q = supabase
+          .from("ledger_entries")
+          .select("id, created_at, entry_type, source_category, amount, reference, metadata")
+          .eq("user_id", resolvedUserId!)
+          .in("entry_type", WALLET_TYPES)
+          .order("created_at", { ascending: true })
+          .range(offset, offset + PAGE - 1);
 
-      if (typeFilter !== "all") q = q.eq("entry_type", typeFilter);
-      if (from) q = q.gte("created_at", from);
-      if (to) q = q.lte("created_at", `${to}T23:59:59`);
+        if (typeFilter !== "all") q = q.eq("entry_type", typeFilter);
+        if (from) q = q.gte("created_at", from);
+        if (to) q = q.lte("created_at", `${to}T23:59:59`);
 
-      const { data } = await q;
-      return ((data || []) as Entry[]).filter((entry) => !isDirectAllowancePayout(entry));
+        const { data, error } = await q;
+        if (error) throw error;
+        const batch = (data || []) as Entry[];
+        all.push(...batch);
+        if (batch.length < PAGE) break;
+        if (offset > 50000) break; // safety
+      }
+      return all.filter((entry) => !isDirectAllowancePayout(entry));
     },
   });
 
