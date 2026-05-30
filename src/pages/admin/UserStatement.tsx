@@ -22,6 +22,23 @@ type Entry = {
 
 const fmt = (n: number) => `UGX ${Number(n || 0).toLocaleString()}`;
 
+// Must match TransactionStatement.tsx (employee view) so admin numbers
+// reconcile exactly with what the employee sees.
+const WALLET_TYPES = [
+  'LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT',
+  'MONTHLY_SALARY', 'ADVANCE_RECOVERY',
+  'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY',
+  'HOST_MEETING_BONUS', 'MEETING_ATTENDANCE_BONUS',
+];
+
+const isDirectAllowancePayout = (entry: { entry_type: string; metadata: any }) => {
+  const meta = entry.metadata
+    ? (typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata)
+    : null;
+  return ['airtime_allowance', 'data_allowance', 'airtime_data_prepayment'].includes(meta?.allowance_type)
+    && ['DEPOSIT', 'PAYOUT'].includes(entry.entry_type);
+};
+
 const TYPE_COLORS: Record<string, string> = {
   LOYALTY_REWARD: "bg-purple-100 text-purple-800",
   BONUS: "bg-amber-100 text-amber-800",
@@ -50,7 +67,9 @@ const UserStatement = () => {
         .select("id, name, email, department, auth_user_id")
         .eq("status", "Active")
         .order("name");
-      return (data || []).filter((e: any) => e.auth_user_id) as any[];
+      // Don't drop employees missing auth_user_id — we resolve via email
+      // through get_unified_user_id so they still get a statement.
+      return (data || []) as any[];
     },
   });
 
@@ -64,17 +83,37 @@ const UserStatement = () => {
     );
   }, [employees, search]);
 
-  const selectedEmployee = employees.find((e: any) => e.auth_user_id === selectedUserId);
+  const selectedEmployee = employees.find(
+    (e: any) => (e.auth_user_id || e.email) === selectedUserId
+  );
+
+  // Resolve the unified user_id by email (same path used by the employee's
+  // own TransactionStatement). This is why other users were getting blank
+  // statements — their auth_user_id on employees didn't match ledger user_id.
+  const { data: resolvedUserId } = useQuery({
+    queryKey: ["admin-statement-resolved-uid", selectedEmployee?.email, selectedEmployee?.auth_user_id],
+    enabled: !!selectedEmployee,
+    queryFn: async () => {
+      if (selectedEmployee?.email) {
+        const { data } = await supabase.rpc('get_unified_user_id', {
+          input_email: selectedEmployee.email,
+        });
+        if (data) return data as string;
+      }
+      return selectedEmployee?.auth_user_id || null;
+    },
+  });
 
   // Ledger entries for selected user
   const { data: entries = [], isLoading } = useQuery({
-    queryKey: ["admin-statement-entries", selectedUserId, typeFilter, from, to],
-    enabled: !!selectedUserId,
+    queryKey: ["admin-statement-entries", resolvedUserId, typeFilter, from, to],
+    enabled: !!resolvedUserId,
     queryFn: async () => {
       let q = supabase
         .from("ledger_entries")
         .select("id, created_at, entry_type, source_category, amount, reference, metadata")
-        .eq("user_id", selectedUserId!)
+        .eq("user_id", resolvedUserId!)
+        .in("entry_type", WALLET_TYPES)
         .order("created_at", { ascending: true })
         .limit(5000);
 
@@ -83,13 +122,7 @@ const UserStatement = () => {
       if (to) q = q.lte("created_at", `${to}T23:59:59`);
 
       const { data } = await q;
-      return ((data || []) as Entry[]).filter((entry) => {
-        const allowanceType = entry.metadata?.allowance_type;
-        return !(
-          ['airtime_allowance', 'data_allowance'].includes(allowanceType)
-          && ['DEPOSIT', 'PAYOUT'].includes(entry.entry_type)
-        );
-      });
+      return ((data || []) as Entry[]).filter((entry) => !isDirectAllowancePayout(entry));
     },
   });
 
@@ -208,9 +241,9 @@ const UserStatement = () => {
               {filteredEmployees.map((e: any) => (
                 <button
                   key={e.id}
-                  onClick={() => setSelectedUserId(e.auth_user_id)}
+                  onClick={() => setSelectedUserId(e.auth_user_id || e.email)}
                   className={`w-full text-left p-2 rounded text-sm hover:bg-muted ${
-                    selectedUserId === e.auth_user_id ? "bg-muted font-medium" : ""
+                    selectedUserId === (e.auth_user_id || e.email) ? "bg-muted font-medium" : ""
                   }`}
                 >
                   <div className="truncate">{e.name}</div>
