@@ -55,6 +55,7 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 const UserStatement = () => {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>("all");
