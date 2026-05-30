@@ -142,32 +142,31 @@ const ProfileCompletionModal = () => {
 
     setIsSaving(true);
     try {
-      const { error } = await supabase
-        .from('employees')
-        .update({
-          national_id_name: formData.national_id_name.trim(),
-          national_id_number: formData.national_id_number.trim(),
-          date_of_birth: formData.date_of_birth,
-          gender: formData.gender,
-          marital_status: formData.marital_status,
-          tribe: formData.tribe,
-          district: formData.district,
-          phone: formData.phone.trim(),
-          address: formData.address.trim(),
-          next_of_kin_name: formData.next_of_kin_name.trim(),
-          next_of_kin_phone: formData.next_of_kin_phone.trim(),
-          next_of_kin_relationship: formData.next_of_kin_relationship.trim(),
-          emergency_contact: formData.emergency_contact.trim(),
-          account_number: formData.account_number.trim(),
-          bank_name: formData.bank_name.trim(),
-          account_name: formData.account_name.trim(),
-          avatar_url: formData.avatar_url,
-          profile_completed: true,
-          updated_at: new Date().toISOString()
-        } as any)
-        .eq('auth_user_id', employee.authUserId);
+      const { data, error } = await (supabase as any).rpc('update_own_employee_profile', {
+        _national_id_name: formData.national_id_name.trim(),
+        _national_id_number: formData.national_id_number.trim(),
+        _date_of_birth: formData.date_of_birth,
+        _gender: formData.gender,
+        _marital_status: formData.marital_status,
+        _tribe: formData.tribe,
+        _district: formData.district,
+        _phone: formData.phone.trim(),
+        _address: formData.address.trim(),
+        _next_of_kin_name: formData.next_of_kin_name.trim(),
+        _next_of_kin_phone: formData.next_of_kin_phone.trim(),
+        _next_of_kin_relationship: formData.next_of_kin_relationship.trim(),
+        _emergency_contact: formData.emergency_contact.trim(),
+        _account_number: formData.account_number.trim(),
+        _bank_name: formData.bank_name.trim(),
+        _account_name: formData.account_name.trim(),
+        _avatar_url: formData.avatar_url,
+        _profile_completed: true,
+      });
 
       if (error) throw error;
+      if (data && (data as any).success === false) {
+        throw new Error((data as any).error || 'Failed to save profile');
+      }
 
       toast({ title: '🎉 Profile Complete!', description: 'Thank you for completing your profile.' });
       setIsOpen(false);
