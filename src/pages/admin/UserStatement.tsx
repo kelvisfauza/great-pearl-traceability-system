@@ -228,6 +228,9 @@ const UserStatement = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-6">
+        <Button variant="ghost" size="sm" className="mb-2" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back
+        </Button>
         <div className="mb-6 flex items-center gap-3">
           <FileText className="h-7 w-7 text-primary" />
           <div>
