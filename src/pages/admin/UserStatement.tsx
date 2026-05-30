@@ -25,7 +25,7 @@ const fmt = (n: number) => `UGX ${Number(n || 0).toLocaleString()}`;
 // Must match TransactionStatement.tsx (employee view) so admin numbers
 // reconcile exactly with what the employee sees.
 const WALLET_TYPES = [
-  'LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT',
+  'LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'REVERSAL',
   'MONTHLY_SALARY', 'ADVANCE_RECOVERY',
   'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY',
   'HOST_MEETING_BONUS', 'MEETING_ATTENDANCE_BONUS',
@@ -35,7 +35,9 @@ const isDirectAllowancePayout = (entry: { entry_type: string; metadata: any }) =
   const meta = entry.metadata
     ? (typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata)
     : null;
-  return ['airtime_allowance', 'data_allowance', 'airtime_data_prepayment'].includes(meta?.allowance_type)
+    // Mirror get_effective_wallet_balance RPC exactly: only airtime_allowance /
+    // data_allowance DEPOSIT/PAYOUT are excluded from wallet math.
+    return ['airtime_allowance', 'data_allowance'].includes(meta?.allowance_type)
     && ['DEPOSIT', 'PAYOUT'].includes(entry.entry_type);
 };
 
