@@ -197,24 +197,45 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       const periodStart = `${dateFrom}T00:00:00`;
       const periodEnd = `${dateTo}T23:59:59`;
 
-      // 2. Fetch all wallet-affecting entries up to the statement end date so balances are period-correct
-      const { data: allEntries, error } = await supabase
+      const ENTRY_TYPES = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY', 'HOST_MEETING_BONUS', 'MEETING_ATTENDANCE_BONUS'];
+
+      // 2a. Fetch entries WITHIN the selected period (high limit so we don't hit the default 1000-row cap)
+      const { data: periodEntries, error } = await supabase
         .from('ledger_entries')
         .select('*')
         .eq('user_id', unifiedUserId)
-        .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY', 'HOST_MEETING_BONUS', 'MEETING_ATTENDANCE_BONUS'])
+        .in('entry_type', ENTRY_TYPES)
+        .gte('created_at', periodStart)
         .lte('created_at', periodEnd)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .limit(10000);
 
       if (error) throw error;
 
-      const upToEndEntries = ((allEntries || []) as LedgerEntry[]).filter((entry) => !isDirectAllowancePayout(entry));
-      const fetchedEntries = upToEndEntries.filter((entry) => entry.created_at >= periodStart && entry.created_at <= periodEnd);
+      // 2b. Compute opening balance from ALL wallet entries strictly before the period.
+      // Paginate to avoid the 1000-row cap for high-activity accounts.
+      let runBal = 0;
+      const PAGE = 1000;
+      let from = 0;
+      while (true) {
+        const { data: page, error: openErr } = await supabase
+          .from('ledger_entries')
+          .select('amount, entry_type, metadata')
+          .eq('user_id', unifiedUserId)
+          .in('entry_type', WALLET_TYPES)
+          .lt('created_at', periodStart)
+          .order('created_at', { ascending: true })
+          .range(from, from + PAGE - 1);
+        if (openErr) throw openErr;
+        const rows = (page || []) as any[];
+        for (const r of rows) {
+          if (!isDirectAllowancePayout(r as any)) runBal += Number(r.amount) || 0;
+        }
+        if (rows.length < PAGE) break;
+        from += PAGE;
+      }
 
-      // Build running balances from the actual opening balance at the start of the selected period
-      let runBal = upToEndEntries
-        .filter((entry) => entry.created_at < periodStart && WALLET_TYPES.includes(entry.entry_type))
-        .reduce((sum, entry) => sum + entry.amount, 0);
+      const fetchedEntries = ((periodEntries || []) as LedgerEntry[]).filter((entry) => !isDirectAllowancePayout(entry));
       
       const transactionsAsc = fetchedEntries.map(e => {
         const affectsWallet = WALLET_TYPES.includes(e.entry_type);
