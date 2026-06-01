@@ -11,6 +11,8 @@ import { useEmployeeContracts, EmployeeContract } from '@/hooks/useEmployeeContr
 import { useSupabaseEmployees } from '@/hooks/useSupabaseEmployees';
 import { format, differenceInDays, differenceInMonths } from 'date-fns';
 import { FileText, AlertTriangle, Clock, RefreshCw, Plus, Calendar, User, Building2, Search } from 'lucide-react';
+import { Download, FileDown } from 'lucide-react';
+import { generateContractRenewalFormPdf } from '@/utils/contractRenewalFormPdf';
 
 const EmployeeContractsManager = () => {
   const { contracts, loading, addContract, renewContract, getExpiringContracts, getExpiredContracts } = useEmployeeContracts();
@@ -39,6 +41,42 @@ const EmployeeContractsManager = () => {
 
   const expiringContracts = getExpiringContracts(30);
   const expiredContracts = getExpiredContracts();
+
+  const downloadRenewalForm = (c: EmployeeContract) => {
+    const months = differenceInMonths(new Date(), new Date(c.contract_start_date));
+    const years = Math.floor(months / 12);
+    const tenure = years > 0 ? `${years}y ${months % 12}m` : `${months}m`;
+    const emp = employees.find(e => e.id === c.employee_id) as any;
+    const ref = `CR-${(c.employee_gac_id || c.id.slice(0, 6)).toUpperCase()}-${new Date().getFullYear()}`;
+    generateContractRenewalFormPdf(
+      {
+        ref,
+        date: new Date().toLocaleDateString('en-GB'),
+        employeeName: c.employee_name,
+        employeeId: c.employee_gac_id || undefined,
+        nin: emp?.nin || emp?.national_id || undefined,
+        phone: emp?.phone || emp?.phone_number || undefined,
+        email: c.employee_email,
+        department: c.department,
+        position: c.position,
+        dateJoined: c.contract_start_date ? format(new Date(c.contract_start_date), 'dd MMM yyyy') : undefined,
+        currentContractType: c.contract_type,
+        currentStartDate: c.contract_start_date ? format(new Date(c.contract_start_date), 'dd MMM yyyy') : undefined,
+        currentEndDate: c.contract_end_date ? format(new Date(c.contract_end_date), 'dd MMM yyyy') : 'Permanent',
+        currentSalary: c.salary ? Number(c.salary).toLocaleString() : undefined,
+        tenure,
+        renewalCount: c.renewal_count || 0,
+      },
+      `Renewal_Form_${c.employee_name.replace(/\s+/g, '_')}.pdf`
+    );
+  };
+
+  const downloadAllExpiredForms = () => {
+    const all = [...activeButExpired, ...expiringContracts];
+    const seen = new Set<string>();
+    all.filter(c => { if (seen.has(c.id)) return false; seen.add(c.id); return true; })
+      .forEach((c, i) => setTimeout(() => downloadRenewalForm(c), i * 400));
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -130,12 +168,20 @@ const EmployeeContractsManager = () => {
                       <span>{c.employee_name} ({c.employee_gac_id}) - {c.contract_type}</span>
                       <div className="flex items-center gap-2">
                         <span className="text-destructive">Expired {format(new Date(c.contract_end_date!), 'dd MMM yyyy')}</span>
+                        <Button size="sm" variant="outline" onClick={() => downloadRenewalForm(c)}>
+                          <FileDown className="h-3 w-3 mr-1" /> Renewal Form
+                        </Button>
                         <Button size="sm" variant="outline" onClick={() => { setSelectedContract(c); setShowRenewModal(true); }}>
                           <RefreshCw className="h-3 w-3 mr-1" /> Renew
                         </Button>
                       </div>
                     </div>
                   ))}
+                </div>
+                <div className="mt-3 flex justify-end">
+                  <Button size="sm" onClick={downloadAllExpiredForms}>
+                    <Download className="h-3 w-3 mr-1" /> Download All Renewal Forms (CC Operations)
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -155,6 +201,9 @@ const EmployeeContractsManager = () => {
                         <span>{c.employee_name} ({c.employee_gac_id}) - {c.contract_type}</span>
                         <div className="flex items-center gap-2">
                           <span className="text-yellow-700 font-medium">{days} days remaining</span>
+                          <Button size="sm" variant="outline" onClick={() => downloadRenewalForm(c)}>
+                            <FileDown className="h-3 w-3 mr-1" /> Renewal Form
+                          </Button>
                           <Button size="sm" variant="outline" onClick={() => { setSelectedContract(c); setShowRenewModal(true); }}>
                             <RefreshCw className="h-3 w-3 mr-1" /> Renew
                           </Button>
@@ -306,9 +355,14 @@ const EmployeeContractsManager = () => {
                         </div>
                       </div>
                       {contract.status === 'Active' && contract.contract_end_date && (
-                        <Button size="sm" variant="outline" onClick={() => { setSelectedContract(contract); setShowRenewModal(true); }}>
-                          <RefreshCw className="h-3 w-3 mr-1" /> Renew
-                        </Button>
+                        <div className="flex flex-col gap-2">
+                          <Button size="sm" variant="outline" onClick={() => downloadRenewalForm(contract)}>
+                            <FileDown className="h-3 w-3 mr-1" /> Renewal Form
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => { setSelectedContract(contract); setShowRenewModal(true); }}>
+                            <RefreshCw className="h-3 w-3 mr-1" /> Renew
+                          </Button>
+                        </div>
                       )}
                     </div>
                   </div>
