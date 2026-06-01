@@ -34,6 +34,8 @@ import StandardPrintHeader from "@/components/print/StandardPrintHeader";
 import { useReactToPrint } from "react-to-print";
 import { getStandardPrintStyles } from "@/utils/printStyles";
 import { FixPendingPaymentsButton } from "@/components/finance/FixPendingPaymentsButton";
+import SupplierPerformanceRanking from "@/components/suppliers/SupplierPerformanceRanking";
+import { Trophy, List } from "lucide-react";
 
 interface SupplierTransaction {
   id: string;
@@ -59,6 +61,7 @@ const Suppliers = () => {
   const [transactions, setTransactions] = useState<SupplierTransaction[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [view, setView] = useState<'list' | 'ranking'>('list');
   
   // Filters
   const [dateFrom, setDateFrom] = useState("");
@@ -596,6 +599,11 @@ const Suppliers = () => {
             </p>
           </div>
           <div className="flex gap-2">
+            {!selectedSupplier && (
+              <Button variant={view === 'ranking' ? 'default' : 'outline'} onClick={() => setView(view === 'ranking' ? 'list' : 'ranking')}>
+                {view === 'ranking' ? <><List className="h-4 w-4 mr-2" /> Supplier List</> : <><Trophy className="h-4 w-4 mr-2" /> Performance Ranking</>}
+              </Button>
+            )}
             {!selectedSupplier && canManageSuppliers && suppliers.length > 0 && (
               <>
                 <MigrateSupplierCodesButton onComplete={refetchSuppliers} />
@@ -628,7 +636,11 @@ const Suppliers = () => {
         </div>
 
         {/* List View */}
-        {!selectedSupplier && (
+        {!selectedSupplier && view === 'ranking' && (
+          <SupplierPerformanceRanking />
+        )}
+
+        {!selectedSupplier && view === 'list' && (
           <div className="space-y-4">
             {/* Search */}
             <Card>
