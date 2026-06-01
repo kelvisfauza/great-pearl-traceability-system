@@ -719,11 +719,51 @@ const ExpenseTemplateDownload = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
+            {activeTemplate?.type === 'salary-request' && (
+              <div>
+                <Label htmlFor="payee-select">Pay To (Select Employee)</Label>
+                <Select
+                  value={selectedPayeeId}
+                  onValueChange={(val) => {
+                    setSelectedPayeeId(val);
+                    const p = employees.find((e) => e.id === val);
+                    if (p) {
+                      setBeneficiaryName(p.name);
+                      setBeneficiaryPhone(p.phone || '');
+                    }
+                  }}
+                >
+                  <SelectTrigger id="payee-select">
+                    <SelectValue placeholder={employees.length ? 'Choose the employee to be paid' : 'Loading employees…'} />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {employees.map((e) => (
+                      <SelectItem key={e.id} value={e.id}>
+                        {e.name}{e.position ? ` — ${e.position}` : ''}{e.department ? ` (${e.department})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  The selected employee's name, position and department will appear on the printed form.
+                </p>
+              </div>
+            )}
             <div>
               <Label htmlFor="ben-name">
-                {activeTemplate?.type === 'fuel-ledger' ? 'Service Provider (e.g. Total Energies)' : 'Recipient / Service Provider Name'}
+                {activeTemplate?.type === 'fuel-ledger'
+                  ? 'Service Provider (e.g. Total Energies)'
+                  : activeTemplate?.type === 'salary-request'
+                    ? 'Beneficiary Name (auto-filled)'
+                    : 'Recipient / Service Provider Name'}
               </Label>
-              <Input id="ben-name" value={beneficiaryName} onChange={(e) => setBeneficiaryName(e.target.value)} placeholder={activeTemplate?.type === 'fuel-ledger' ? 'Total Energies Kasese' : 'e.g. John Mukasa'} />
+              <Input
+                id="ben-name"
+                value={beneficiaryName}
+                onChange={(e) => setBeneficiaryName(e.target.value)}
+                placeholder={activeTemplate?.type === 'fuel-ledger' ? 'Total Energies Kasese' : 'e.g. John Mukasa'}
+                readOnly={activeTemplate?.type === 'salary-request' && !!selectedPayeeId}
+              />
             </div>
             <div>
               <Label htmlFor="ben-phone">
@@ -746,7 +786,7 @@ const ExpenseTemplateDownload = () => {
           </div>
           <DialogFooter className="gap-2 flex-wrap">
             <Button variant="ghost" onClick={() => runGenerate({})} disabled={submitting}>Print blank only</Button>
-            <Button variant="outline" onClick={() => runGenerate({ beneficiaryName, beneficiaryPhone, reason })} disabled={submitting}>
+            <Button variant="outline" onClick={() => runGenerate(buildPrefill())} disabled={submitting}>
               Print without submitting
             </Button>
             <Button onClick={submitForApproval} disabled={submitting}>
