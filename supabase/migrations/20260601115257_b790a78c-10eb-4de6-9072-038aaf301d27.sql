@@ -1,0 +1,1 @@
+DELETE FROM public.employees WHERE id IN ('e56f6fb1-057c-47e2-b8b3-45ae710d4221','c016358d-25d3-410f-bfba-694ae5d620ef');
