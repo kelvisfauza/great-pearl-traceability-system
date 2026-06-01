@@ -368,6 +368,41 @@ const generatePDF = async (
   doc.text('REQUEST DETAILS', margin + 4, y + 5);
   y += 12;
 
+  // Pay-To / Beneficiary block (used by salary-request and any prefill that names a payee)
+  if (prefill.beneficiaryName) {
+    const payToH = 22;
+    doc.setFillColor(252, 248, 235);
+    doc.setDrawColor(192, 144, 0);
+    doc.setLineWidth(0.4);
+    doc.roundedRect(margin, y, contentW, payToH, 1.5, 1.5, 'FD');
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(140, 90, 0);
+    doc.text('PAY TO (BENEFICIARY)', margin + 4, y + 5);
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(20, 20, 20);
+    doc.text(prefill.beneficiaryName, margin + 4, y + 11.5);
+
+    const meta: string[] = [];
+    if (prefill.payeePosition) meta.push(prefill.payeePosition);
+    if (prefill.payeeDepartment) meta.push(prefill.payeeDepartment);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
+    if (meta.length) doc.text(meta.join('  •  '), margin + 4, y + 16);
+
+    const contactParts: string[] = [];
+    if (prefill.beneficiaryPhone) contactParts.push(`Phone/Acct: ${prefill.beneficiaryPhone}`);
+    if (prefill.payeeEmail) contactParts.push(prefill.payeeEmail);
+    if (contactParts.length) {
+      doc.text(contactParts.join('   '), margin + 4, y + 20);
+    }
+    y += payToH + 5;
+  }
+
   // Form fields
   template.fields.forEach((field) => {
     const lines = field.lines || 1;
