@@ -1,0 +1,1 @@
+UPDATE public.employees SET name = 'Bbosa Sserunkuma Taufiq', updated_at = now() WHERE id = 'bdb0cc7f-6636-42e6-a8fb-a925e51d1c03';
