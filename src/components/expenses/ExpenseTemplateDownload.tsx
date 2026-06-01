@@ -663,7 +663,7 @@ const ExpenseTemplateDownload = () => {
       if (error) throw error;
 
       toast({ title: 'Submitted for approval', description: 'Generating your printable copy now…' });
-      await runGenerate({ beneficiaryName, beneficiaryPhone, reason });
+      await runGenerate(buildPrefill());
     } catch (err: any) {
       console.error('Submit for approval error:', err);
       toast({ title: 'Submission failed', description: err?.message || 'Could not submit for approval.', variant: 'destructive' });
