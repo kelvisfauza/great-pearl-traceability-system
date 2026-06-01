@@ -524,12 +524,65 @@ const ExpenseTemplateDownload = () => {
   const [reason, setReason] = useState('');
   const [amount, setAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [employees, setEmployees] = useState<Array<{ id: string; name: string; phone?: string; email?: string; position?: string; department?: string }>>([]);
+  const [selectedPayeeId, setSelectedPayeeId] = useState<string>('');
+
+  // Load active employees once (used by the Salary Request payee selector)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('employees')
+          .select('id, name, phone, email, position, department, disabled')
+          .order('name', { ascending: true });
+        if (cancelled) return;
+        const list = (data || [])
+          .filter((e: any) => !e.disabled && e.name)
+          .map((e: any) => ({
+            id: e.id,
+            name: e.name,
+            phone: e.phone || '',
+            email: e.email || '',
+            position: e.position || '',
+            department: e.department || '',
+          }));
+        setEmployees(list);
+      } catch (err) {
+        console.warn('Could not load employees for payee selector:', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const selectedPayee = useMemo(
+    () => employees.find((e) => e.id === selectedPayeeId),
+    [employees, selectedPayeeId],
+  );
+
+  const buildPrefill = (): PrefillData => ({
+    beneficiaryName,
+    beneficiaryPhone,
+    reason,
+    payeePosition: selectedPayee?.position,
+    payeeDepartment: selectedPayee?.department,
+    payeeEmail: selectedPayee?.email,
+  });
 
   const handleDownload = (template: TemplateConfig) => {
     if (!employee) return;
     setActiveTemplate(template);
-    setBeneficiaryName('');
-    setBeneficiaryPhone('');
+    // For Salary Request, default the payee to the current user so it's never blank
+    if (template.type === 'salary-request') {
+      const me = employees.find((e) => e.email && employee.email && e.email.toLowerCase() === employee.email.toLowerCase());
+      setSelectedPayeeId(me?.id || '');
+      setBeneficiaryName(me?.name || employee.name || '');
+      setBeneficiaryPhone(me?.phone || '');
+    } else {
+      setSelectedPayeeId('');
+      setBeneficiaryName('');
+      setBeneficiaryPhone('');
+    }
     setReason('');
     setAmount('');
     setPrefillOpen(true);
