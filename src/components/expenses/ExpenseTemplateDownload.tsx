@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -136,6 +137,9 @@ interface PrefillData {
   beneficiaryName?: string;
   beneficiaryPhone?: string;
   reason?: string;
+  payeePosition?: string;
+  payeeDepartment?: string;
+  payeeEmail?: string;
 }
 
 const generatePDF = async (
@@ -364,6 +368,41 @@ const generatePDF = async (
   doc.text('REQUEST DETAILS', margin + 4, y + 5);
   y += 12;
 
+  // Pay-To / Beneficiary block (used by salary-request and any prefill that names a payee)
+  if (prefill.beneficiaryName) {
+    const payToH = 22;
+    doc.setFillColor(252, 248, 235);
+    doc.setDrawColor(192, 144, 0);
+    doc.setLineWidth(0.4);
+    doc.roundedRect(margin, y, contentW, payToH, 1.5, 1.5, 'FD');
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(140, 90, 0);
+    doc.text('PAY TO (BENEFICIARY)', margin + 4, y + 5);
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(20, 20, 20);
+    doc.text(prefill.beneficiaryName, margin + 4, y + 11.5);
+
+    const meta: string[] = [];
+    if (prefill.payeePosition) meta.push(prefill.payeePosition);
+    if (prefill.payeeDepartment) meta.push(prefill.payeeDepartment);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
+    if (meta.length) doc.text(meta.join('  •  '), margin + 4, y + 16);
+
+    const contactParts: string[] = [];
+    if (prefill.beneficiaryPhone) contactParts.push(`Phone/Acct: ${prefill.beneficiaryPhone}`);
+    if (prefill.payeeEmail) contactParts.push(prefill.payeeEmail);
+    if (contactParts.length) {
+      doc.text(contactParts.join('   '), margin + 4, y + 20);
+    }
+    y += payToH + 5;
+  }
+
   // Form fields
   template.fields.forEach((field) => {
     const lines = field.lines || 1;
@@ -485,12 +524,65 @@ const ExpenseTemplateDownload = () => {
   const [reason, setReason] = useState('');
   const [amount, setAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [employees, setEmployees] = useState<Array<{ id: string; name: string; phone?: string; email?: string; position?: string; department?: string }>>([]);
+  const [selectedPayeeId, setSelectedPayeeId] = useState<string>('');
+
+  // Load active employees once (used by the Salary Request payee selector)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('employees')
+          .select('id, name, phone, email, position, department, disabled')
+          .order('name', { ascending: true });
+        if (cancelled) return;
+        const list = (data || [])
+          .filter((e: any) => !e.disabled && e.name)
+          .map((e: any) => ({
+            id: e.id,
+            name: e.name,
+            phone: e.phone || '',
+            email: e.email || '',
+            position: e.position || '',
+            department: e.department || '',
+          }));
+        setEmployees(list);
+      } catch (err) {
+        console.warn('Could not load employees for payee selector:', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const selectedPayee = useMemo(
+    () => employees.find((e) => e.id === selectedPayeeId),
+    [employees, selectedPayeeId],
+  );
+
+  const buildPrefill = (): PrefillData => ({
+    beneficiaryName,
+    beneficiaryPhone,
+    reason,
+    payeePosition: selectedPayee?.position,
+    payeeDepartment: selectedPayee?.department,
+    payeeEmail: selectedPayee?.email,
+  });
 
   const handleDownload = (template: TemplateConfig) => {
     if (!employee) return;
     setActiveTemplate(template);
-    setBeneficiaryName('');
-    setBeneficiaryPhone('');
+    // For Salary Request, default the payee to the current user so it's never blank
+    if (template.type === 'salary-request') {
+      const me = employees.find((e) => e.email && employee.email && e.email.toLowerCase() === employee.email.toLowerCase());
+      setSelectedPayeeId(me?.id || '');
+      setBeneficiaryName(me?.name || employee.name || '');
+      setBeneficiaryPhone(me?.phone || '');
+    } else {
+      setSelectedPayeeId('');
+      setBeneficiaryName('');
+      setBeneficiaryPhone('');
+    }
     setReason('');
     setAmount('');
     setPrefillOpen(true);
@@ -571,7 +663,7 @@ const ExpenseTemplateDownload = () => {
       if (error) throw error;
 
       toast({ title: 'Submitted for approval', description: 'Generating your printable copy now…' });
-      await runGenerate({ beneficiaryName, beneficiaryPhone, reason });
+      await runGenerate(buildPrefill());
     } catch (err: any) {
       console.error('Submit for approval error:', err);
       toast({ title: 'Submission failed', description: err?.message || 'Could not submit for approval.', variant: 'destructive' });
@@ -627,11 +719,51 @@ const ExpenseTemplateDownload = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
+            {activeTemplate?.type === 'salary-request' && (
+              <div>
+                <Label htmlFor="payee-select">Pay To (Select Employee)</Label>
+                <Select
+                  value={selectedPayeeId}
+                  onValueChange={(val) => {
+                    setSelectedPayeeId(val);
+                    const p = employees.find((e) => e.id === val);
+                    if (p) {
+                      setBeneficiaryName(p.name);
+                      setBeneficiaryPhone(p.phone || '');
+                    }
+                  }}
+                >
+                  <SelectTrigger id="payee-select">
+                    <SelectValue placeholder={employees.length ? 'Choose the employee to be paid' : 'Loading employees…'} />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {employees.map((e) => (
+                      <SelectItem key={e.id} value={e.id}>
+                        {e.name}{e.position ? ` — ${e.position}` : ''}{e.department ? ` (${e.department})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  The selected employee's name, position and department will appear on the printed form.
+                </p>
+              </div>
+            )}
             <div>
               <Label htmlFor="ben-name">
-                {activeTemplate?.type === 'fuel-ledger' ? 'Service Provider (e.g. Total Energies)' : 'Recipient / Service Provider Name'}
+                {activeTemplate?.type === 'fuel-ledger'
+                  ? 'Service Provider (e.g. Total Energies)'
+                  : activeTemplate?.type === 'salary-request'
+                    ? 'Beneficiary Name (auto-filled)'
+                    : 'Recipient / Service Provider Name'}
               </Label>
-              <Input id="ben-name" value={beneficiaryName} onChange={(e) => setBeneficiaryName(e.target.value)} placeholder={activeTemplate?.type === 'fuel-ledger' ? 'Total Energies Kasese' : 'e.g. John Mukasa'} />
+              <Input
+                id="ben-name"
+                value={beneficiaryName}
+                onChange={(e) => setBeneficiaryName(e.target.value)}
+                placeholder={activeTemplate?.type === 'fuel-ledger' ? 'Total Energies Kasese' : 'e.g. John Mukasa'}
+                readOnly={activeTemplate?.type === 'salary-request' && !!selectedPayeeId}
+              />
             </div>
             <div>
               <Label htmlFor="ben-phone">
@@ -654,7 +786,7 @@ const ExpenseTemplateDownload = () => {
           </div>
           <DialogFooter className="gap-2 flex-wrap">
             <Button variant="ghost" onClick={() => runGenerate({})} disabled={submitting}>Print blank only</Button>
-            <Button variant="outline" onClick={() => runGenerate({ beneficiaryName, beneficiaryPhone, reason })} disabled={submitting}>
+            <Button variant="outline" onClick={() => runGenerate(buildPrefill())} disabled={submitting}>
               Print without submitting
             </Button>
             <Button onClick={submitForApproval} disabled={submitting}>
