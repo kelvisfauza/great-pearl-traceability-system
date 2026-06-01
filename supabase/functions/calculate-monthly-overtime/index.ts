@@ -30,20 +30,14 @@ Deno.serve(async (req) => {
       "July", "August", "September", "October", "November", "December",
     ];
 
-    // Check if already calculated
-    const { data: existing } = await supabase
+    // Fetch already-existing reviews for this month so we can skip those employees
+    // (don't recompute employees who have already been processed/approved).
+    const { data: existingReviews } = await supabase
       .from("monthly_overtime_reviews")
-      .select("id")
+      .select("employee_id")
       .eq("month", targetMonth)
-      .eq("year", targetYear)
-      .limit(1);
-
-    if (existing && existing.length > 0) {
-      return new Response(
-        JSON.stringify({ message: `Overtime already calculated for ${monthNames[targetMonth]} ${targetYear}` }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+      .eq("year", targetYear);
+    const existingEmployeeIds = new Set((existingReviews || []).map((r: any) => r.employee_id));
 
     // Aggregate overtime and late minutes per employee
     // IMPORTANT: only count rows where the employee actually attended that day.
@@ -112,6 +106,8 @@ Deno.serve(async (req) => {
     const records = Object.values(empMap)
       // Only include employees who actually attended at least one day in the month
       .filter((emp) => emp.qualifying_days > 0 && emp.total_overtime > 0)
+      // Skip employees already in the review table (approved or otherwise processed)
+      .filter((emp) => !existingEmployeeIds.has(emp.employee_id))
       .map((emp) => {
         const netOT = Math.max(0, emp.total_overtime - emp.total_late);
         const hours = Math.ceil(netOT / 60);
