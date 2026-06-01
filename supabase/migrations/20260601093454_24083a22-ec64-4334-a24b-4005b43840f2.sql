@@ -1,0 +1,1 @@
+DELETE FROM monthly_overtime_reviews WHERE month=5 AND year=2026 AND status='pending';
