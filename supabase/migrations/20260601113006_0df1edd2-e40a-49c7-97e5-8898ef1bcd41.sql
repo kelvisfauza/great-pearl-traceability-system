@@ -1,0 +1,2 @@
+INSERT INTO public.employees (name, email, phone, position, department, salary, role, status, disabled)
+VALUES ('Mami Solanji', 'mamisolanji@greatpearlcoffee.com', '0782135334', 'Care Taker', 'Operations', 0, 'User', 'Active', false);
