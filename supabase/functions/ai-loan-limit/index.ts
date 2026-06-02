@@ -164,11 +164,11 @@ Loan History:
 - Outstanding Balance: UGX ${outstandingBalance.toLocaleString()}
 
 Rules:
-- Loan limit MUST NOT exceed 2x monthly salary (UGX ${((emp.salary || 0) * 2).toLocaleString()})
+- Loan limit MUST NOT exceed 5x monthly salary (UGX ${((emp.salary || 0) * 5).toLocaleString()})
 - Subtract outstanding balance from the limit
 - Higher earnings consistency = higher limit
 - Defaults dramatically reduce the limit
-- New employees (< 3 months) get max 1x salary
+- New employees (< 3 months) get max 2x salary
 - Poor attendance (< 70%) reduces limit by 50%
 
 Return ONLY the JSON object, no explanation.`;
@@ -214,7 +214,7 @@ Return ONLY the JSON object, no explanation.`;
       parsed = JSON.parse(jsonMatch ? jsonMatch[0] : content);
     } catch {
       // Fallback: simple salary-based calculation
-      const fallbackLimit = Math.max(0, (emp.salary || 0) * 2 - outstandingBalance);
+      const fallbackLimit = Math.max(0, (emp.salary || 0) * 5 - outstandingBalance);
       parsed = {
         risk_score: 50,
         loan_limit: fallbackLimit,
