@@ -197,7 +197,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       const periodStart = `${dateFrom}T00:00:00`;
       const periodEnd = `${dateTo}T23:59:59`;
 
-      const ENTRY_TYPES = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY', 'HOST_MEETING_BONUS', 'MEETING_ATTENDANCE_BONUS'];
+      const ENTRY_TYPES = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY', 'HOST_MEETING_BONUS', 'MEETING_ATTENDANCE_BONUS', 'REVERSAL', 'PAYOUT'];
 
       // 2a. Fetch entries WITHIN the selected period (high limit so we don't hit the default 1000-row cap)
       const { data: periodEntries, error } = await supabase
