@@ -8,7 +8,7 @@ import {
 import { 
   Wallet, DollarSign, TrendingUp, Plus, Smartphone, Printer, Send,
   Clock, CheckCircle, XCircle, AlertCircle, Star, Zap, Award, Gift, FileText,
-  Landmark, Eye, EyeOff, Ban
+  Landmark, Eye, EyeOff, Ban, CreditCard
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -54,6 +54,7 @@ export const AccountButton = () => {
   });
   const [activeLoanTotal, setActiveLoanTotal] = useState(0);
   const [activeLoanCount, setActiveLoanCount] = useState(0);
+  const [overdraft, setOverdraft] = useState<{ status: string; limit: number; outstanding: number; available: number } | null>(null);
   const [ledgerUserId, setLedgerUserId] = useState<string | null>(null);
   const [breakdown, setBreakdown] = useState({
     lastMonthLoyalty: 0,
@@ -159,9 +160,34 @@ export const AccountButton = () => {
     } catch {}
   };
 
+  const fetchOverdraft = async () => {
+    const email = employee?.email || user?.email;
+    if (!email) return;
+    try {
+      const { data } = await (supabase as any)
+        .from('overdraft_accounts')
+        .select('status, approved_limit, outstanding_balance')
+        .eq('employee_email', email)
+        .maybeSingle();
+      if (data) {
+        const limit = Number(data.approved_limit || 0);
+        const outstanding = Number(data.outstanding_balance || 0);
+        setOverdraft({
+          status: data.status,
+          limit,
+          outstanding,
+          available: Math.max(0, limit - outstanding),
+        });
+      } else {
+        setOverdraft(null);
+      }
+    } catch {}
+  };
+
   useEffect(() => {
     fetchLedgerTotals();
     fetchActiveLoans();
+    fetchOverdraft();
   }, [user?.id, user?.email, employee?.email, withdrawalRequests.length]);
 
   // Real-time subscription for ledger changes
