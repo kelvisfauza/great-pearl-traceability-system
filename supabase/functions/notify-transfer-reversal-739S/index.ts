@@ -74,6 +74,15 @@ const HTML = (name: string, role: 'sender' | 'receiver' | 'ops') => {
 </body></html>`
 }
 
+const TEXT = (name: string, role: 'sender' | 'receiver' | 'ops') => {
+  const lead = role === 'sender'
+    ? `${AMOUNT} has been returned to your wallet. Admin reversed the transfer you sent to ${RECEIVER.name}.`
+    : role === 'receiver'
+      ? `${AMOUNT} has been reversed from your wallet. Admin reversed the transfer you received from ${SENDER.name}.`
+      : `Transfer of ${AMOUNT} from ${SENDER.name} to ${RECEIVER.name} has been reversed by admin.`
+  return `Dear ${name},\n\n${lead}\n\nAmount: ${AMOUNT}\nFrom: ${SENDER.name}\nTo: ${RECEIVER.name}\nOriginal Ref: ${REF}\nReversed At: ${new Date().toISOString()}\n\n— Great Agro Coffee`
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
   const apiKey = Deno.env.get('LOVABLE_API_KEY')
@@ -96,7 +105,7 @@ Deno.serve(async (req) => {
       const idem = `transfer-reversal-${REF}-${t.role}-${t.email.toLowerCase()}-${stamp}`
       await sendLovableEmail(
         { to: t.email, from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`, sender_domain: SENDER_DOMAIN,
-          subject: t.subject, html: HTML(t.name, t.role),
+          subject: t.subject, html: HTML(t.name, t.role), text: TEXT(t.name, t.role),
           purpose: 'transactional', label: 'transfer-reversal-confirmation',
           idempotency_key: idem, unsubscribe_token: token() },
         { apiKey, idempotencyKey: idem }
