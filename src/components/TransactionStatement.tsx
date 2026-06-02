@@ -459,11 +459,15 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
   }, [open, user?.id]);
 
   const getActivityLabel = (entry: LedgerEntry) => {
-    const meta = entry.metadata ? (typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata) : null;
+    const meta = parseMetadata(entry.metadata);
     
-    if (meta?.type === 'wallet_transfer') {
+    if (meta?.type === 'wallet_transfer' || meta?.type === 'internal_transfer_credit') {
       if (entry.amount < 0) return `to ${meta.to_name || meta.to_email || 'Unknown'}`;
       return `from ${meta.from_name || meta.from_email || 'Unknown'}`;
+    }
+
+    if (entry.entry_type === 'REVERSAL') {
+      return meta?.description || 'Wallet reversal';
     }
     
     if (entry.entry_type === 'LOYALTY_REWARD' && meta) {
@@ -510,9 +514,9 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
   };
 
   const getEntryLabel = (entry: LedgerEntry) => {
-    const meta = entry.metadata ? (typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata) : null;
+    const meta = parseMetadata(entry.metadata);
     const config = ENTRY_CONFIG[entry.entry_type] || DEFAULT_CONFIG;
-    if (meta?.type === 'wallet_transfer') {
+    if (meta?.type === 'wallet_transfer' || meta?.type === 'internal_transfer_credit') {
       if (entry.amount < 0) return '📤 Sent Money';
       return '📥 Received Money';
     }
@@ -605,7 +609,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
             const transferMeta = getTransferMeta(entry);
             const isTransferOut = transferMeta && entry.amount < 0;
             const isTransferIn = transferMeta && entry.amount > 0;
-            const meta = entry.metadata ? (typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata) : null;
+            const meta = parseMetadata(entry.metadata);
             const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
             const canReverse = isTransferOut && meta?.reversed !== 'true' && new Date(entry.created_at) > twoHoursAgo;
             const isReversed = meta?.reversed === 'true';
