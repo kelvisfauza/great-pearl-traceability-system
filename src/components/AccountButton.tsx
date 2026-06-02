@@ -355,7 +355,10 @@ export const AccountButton = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-green-700">
-                  {balanceHidden ? '••••••' : formatCurrency(availableLoyalty)}
+                  {balanceHidden ? '••••••' : formatCurrency(walletBalance)}
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  Available to spend: {formatCurrency(availableLoyalty)}
                 </div>
                 
                 <div className="mt-3 space-y-1 text-xs">
