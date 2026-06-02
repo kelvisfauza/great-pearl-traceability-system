@@ -40,15 +40,19 @@ Deno.serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // 5% fee charged only when user actually goes into the overdraft (per draw)
+    const drawFee = Math.round(drawAmount * 0.05);
+    const totalDebt = drawAmount + drawFee; // both principal + fee added to outstanding
+
     const available = Number(account.approved_limit) - Number(account.outstanding_balance);
-    if (drawAmount > available) {
+    if (totalDebt > available) {
       return new Response(JSON.stringify({
         ok: false,
-        error: `Draw exceeds available overdraft. Available: UGX ${available.toLocaleString()}`,
+        error: `Draw + 5% fee exceeds available overdraft. Available: UGX ${available.toLocaleString()}, required: UGX ${totalDebt.toLocaleString()}`,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const newOutstanding = Number(account.outstanding_balance) + drawAmount;
+    const newOutstanding = Number(account.outstanding_balance) + totalDebt;
 
     // Credit user's wallet (positive ledger entry, tagged so trigger ignores it)
     const { data: ledger, error: ledgerErr } = await admin
@@ -88,7 +92,19 @@ Deno.serve(async (req) => {
       balance_after: newOutstanding,
       ledger_entry_id: ledger.id,
       reference: `OD-DRAW-${Date.now()}`,
-      metadata: { reason: reason || null },
+      metadata: { reason: reason || null, fee_rate: 0.05, fee_amount: drawFee },
+    });
+
+    // Log fee as separate overdraft_transactions row for visibility
+    await admin.from("overdraft_transactions").insert({
+      account_id: account.id,
+      user_id: userId,
+      transaction_type: "fee",
+      amount: drawFee,
+      balance_after: newOutstanding,
+      ledger_entry_id: null,
+      reference: `OD-FEE-${Date.now()}`,
+      metadata: { fee_rate: 0.05, draw_amount: drawAmount, note: "5% fee on draw, added to outstanding" },
     });
 
     // Confirmation email
@@ -101,7 +117,8 @@ Deno.serve(async (req) => {
           html: `<p>Dear ${account.employee_name || user_email},</p>
             <p>You have drawn UGX ${drawAmount.toLocaleString()} from your overdraft.</p>
             <ul>
-              <li><strong>New outstanding overdraft:</strong> UGX ${newOutstanding.toLocaleString()}</li>
+              <li><strong>5% fee on this draw:</strong> UGX ${drawFee.toLocaleString()} (added to outstanding)</li>
+              <li><strong>New outstanding overdraft:</strong> UGX ${newOutstanding.toLocaleString()} (principal + fee)</li>
               <li><strong>Remaining overdraft available:</strong> UGX ${(Number(account.approved_limit) - newOutstanding).toLocaleString()}</li>
               <li><strong>Reason:</strong> ${reason || "—"}</li>
             </ul>
@@ -114,6 +131,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({
       ok: true,
       drawn: drawAmount,
+      fee: drawFee,
       new_outstanding: newOutstanding,
       remaining_available: Number(account.approved_limit) - newOutstanding,
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
