@@ -5,6 +5,22 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Download, ShoppingCart, Coffee, Wallet, Info, Truck, Fuel, FileText } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { jsPDF } from 'jspdf';
+import {
+  Document as DocxDocument,
+  Packer,
+  Paragraph,
+  TextRun,
+  ImageRun,
+  Table as DocxTable,
+  TableRow as DocxTableRow,
+  TableCell as DocxTableCell,
+  WidthType,
+  BorderStyle,
+  AlignmentType,
+  HeadingLevel,
+  Footer,
+  ShadingType,
+} from 'docx';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
