@@ -72,6 +72,7 @@ export const AccountButton = () => {
   });
 
   const withdrawalStatus = isWithdrawalDisabled();
+  const BALANCE_ENTRY_TYPES = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'REVERSAL', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY', 'HOST_MEETING_BONUS', 'MEETING_ATTENDANCE_BONUS'];
 
   // Fetch detailed breakdown from ledger
   const fetchLedgerTotals = async () => {
@@ -105,7 +106,7 @@ export const AccountButton = () => {
       .from('ledger_entries')
       .select('amount, entry_type, created_at, metadata')
       .eq('user_id', resolvedUserId)
-      .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY']);
+      .in('entry_type', BALANCE_ENTRY_TYPES);
 
     if (error) {
       console.error('Error loading account breakdown ledger entries:', error);
@@ -126,15 +127,31 @@ export const AccountButton = () => {
     const lastMonthBonuses = sumByType(before, 'BONUS');
     const lastMonthDeposits = sumByType(before, 'DEPOSIT');
     const lastMonthWithdrawals = sumByType(before, 'WITHDRAWAL');
-    const lastMonthAdjustments = sumByType(before, 'ADJUSTMENT');
-    const balanceBroughtForward = lastMonthLoyalty + lastMonthBonuses + lastMonthDeposits + lastMonthWithdrawals + lastMonthAdjustments;
+    const lastMonthAdjustments = sumByType(before, 'ADJUSTMENT')
+      + sumByType(before, 'REVERSAL')
+      + sumByType(before, 'ADVANCE_RECOVERY')
+      + sumByType(before, 'LOAN_REPAYMENT')
+      + sumByType(before, 'LOAN_RECOVERY');
+    const balanceBroughtForward = lastMonthLoyalty + lastMonthBonuses + lastMonthDeposits + lastMonthWithdrawals + lastMonthAdjustments
+      + sumByType(before, 'MONTHLY_SALARY')
+      + sumByType(before, 'LOAN_DISBURSEMENT')
+      + sumByType(before, 'HOST_MEETING_BONUS')
+      + sumByType(before, 'MEETING_ATTENDANCE_BONUS');
 
     const thisMonthLoyalty = sumByType(current, 'LOYALTY_REWARD');
     const thisMonthBonuses = sumByType(current, 'BONUS');
     const thisMonthDeposits = sumByType(current, 'DEPOSIT');
     const thisMonthWithdrawals = sumByType(current, 'WITHDRAWAL');
-    const thisMonthAdjustments = sumByType(current, 'ADJUSTMENT');
-    const thisMonthNet = thisMonthLoyalty + thisMonthBonuses + thisMonthDeposits + thisMonthWithdrawals + thisMonthAdjustments;
+    const thisMonthAdjustments = sumByType(current, 'ADJUSTMENT')
+      + sumByType(current, 'REVERSAL')
+      + sumByType(current, 'ADVANCE_RECOVERY')
+      + sumByType(current, 'LOAN_REPAYMENT')
+      + sumByType(current, 'LOAN_RECOVERY');
+    const thisMonthNet = thisMonthLoyalty + thisMonthBonuses + thisMonthDeposits + thisMonthWithdrawals + thisMonthAdjustments
+      + sumByType(current, 'MONTHLY_SALARY')
+      + sumByType(current, 'LOAN_DISBURSEMENT')
+      + sumByType(current, 'HOST_MEETING_BONUS')
+      + sumByType(current, 'MEETING_ATTENDANCE_BONUS');
 
     setBreakdown({
       lastMonthLoyalty, lastMonthBonuses, lastMonthDeposits, lastMonthWithdrawals, lastMonthAdjustments,
