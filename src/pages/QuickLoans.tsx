@@ -25,8 +25,8 @@ type LoanType = 'quick' | 'long_term';
 type RepaymentFrequency = 'weekly' | 'monthly' | 'bullet';
 
 const LOAN_TYPE_CONFIG: Record<LoanType, { label: string; monthlyRate: number; maxRate: number; description: string; frequencies: RepaymentFrequency[] }> = {
-  quick: { label: 'Quick Loan', monthlyRate: 15, maxRate: 15, description: '15%/month – Short-term, weekly repayments', frequencies: ['weekly'] },
-  long_term: { label: 'Long-Term Loan', monthlyRate: 10, maxRate: 30, description: '10%/month – Flexible repayment, monthly or bullet (cap 30%)', frequencies: ['monthly', 'bullet'] },
+  quick: { label: 'Quick Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Short-term, weekly repayments (total interest cap 35%)', frequencies: ['weekly'] },
+  long_term: { label: 'Long-Term Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Flexible repayment, monthly or bullet (total interest cap 35%)', frequencies: ['monthly', 'bullet'] },
 };
 
 // Helper: calculate daily interest rate from monthly rate
