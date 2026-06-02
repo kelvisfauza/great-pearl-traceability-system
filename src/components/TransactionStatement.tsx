@@ -33,6 +33,7 @@ const ENTRY_CONFIG: Record<string, { label: string; icon: React.ElementType; col
   WITHDRAWAL: { label: 'Withdrawal', icon: ArrowUpRight, color: 'text-red-600', badgeClass: 'bg-red-100 text-red-800' },
   BONUS: { label: 'Bonus', icon: Gift, color: 'text-purple-600', badgeClass: 'bg-purple-100 text-purple-800' },
   ADJUSTMENT: { label: 'Adjustment', icon: Minus, color: 'text-gray-600', badgeClass: 'bg-gray-100 text-gray-800' },
+  REVERSAL: { label: 'Reversal', icon: RotateCcw, color: 'text-emerald-600', badgeClass: 'bg-emerald-100 text-emerald-800' },
   LOAN_DISBURSEMENT: { label: 'Loan Disbursement', icon: Briefcase, color: 'text-blue-600', badgeClass: 'bg-blue-100 text-blue-800' },
   LOAN_REPAYMENT: { label: 'Loan Repayment', icon: ArrowUpRight, color: 'text-orange-600', badgeClass: 'bg-orange-100 text-orange-800' },
   LOAN_RECOVERY: { label: 'Loan Recovery (Wallet)', icon: ArrowUpRight, color: 'text-red-600', badgeClass: 'bg-red-100 text-red-800' },
@@ -44,14 +45,21 @@ const ENTRY_CONFIG: Record<string, { label: string; icon: React.ElementType; col
 
 const DEFAULT_CONFIG = { label: 'Transaction', icon: FileText, color: 'text-gray-600', badgeClass: 'bg-gray-100 text-gray-800' };
 
+const CANONICAL_WALLET_TYPES = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'REVERSAL', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY', 'HOST_MEETING_BONUS', 'MEETING_ATTENDANCE_BONUS'];
+
+const parseMetadata = (metadata: unknown) => {
+  if (!metadata) return null;
+  return typeof metadata === 'string' ? JSON.parse(metadata) : metadata;
+};
+
 const getTransferMeta = (entry: LedgerEntry) => {
-  const meta = entry.metadata ? (typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata) : null;
-  if (meta?.type === 'wallet_transfer') return meta;
+  const meta = parseMetadata(entry.metadata);
+  if (meta?.type === 'wallet_transfer' || meta?.type === 'internal_transfer_credit') return meta;
   return null;
 };
 
 const isDirectAllowancePayout = (entry: Pick<LedgerEntry, 'entry_type' | 'metadata'>) => {
-  const meta = entry.metadata ? (typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata) : null;
+  const meta = parseMetadata(entry.metadata);
   return ['airtime_allowance', 'data_allowance'].includes(meta?.allowance_type)
     && ['DEPOSIT', 'PAYOUT'].includes(entry.entry_type);
 };
@@ -66,8 +74,6 @@ interface TransactionStatementProps {
 }
 
 const DISPLAY_LIMIT = 10;
-const WALLET_TYPES = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY', 'HOST_MEETING_BONUS', 'MEETING_ATTENDANCE_BONUS', 'REVERSAL'];
-
 export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open, onOpenChange, currentBalance, spendableBalance, balanceBroughtForward = 0, thisMonthEarnings = 0 }) => {
   const { user, employee } = useAuth();
   const { toast } = useToast();
@@ -88,11 +94,11 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
   const entriesWithBalance = React.useMemo(() => {
     if (entries.length === 0) return [];
     const chronological = [...entries].reverse();
-    const walletSum = chronological.filter(e => WALLET_TYPES.includes(e.entry_type)).reduce((s, e) => s + e.amount, 0);
+    const walletSum = chronological.filter(e => CANONICAL_WALLET_TYPES.includes(e.entry_type)).reduce((s, e) => s + e.amount, 0);
     let runningBalance = currentBalance - walletSum;
     
     const withBalance = chronological.map(e => {
-      const affectsWallet = WALLET_TYPES.includes(e.entry_type);
+      const affectsWallet = CANONICAL_WALLET_TYPES.includes(e.entry_type);
       if (affectsWallet) runningBalance += e.amount;
       return { ...e, runningBalance: affectsWallet ? runningBalance : null };
     });
@@ -162,7 +168,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         .from('ledger_entries')
         .select('*')
         .eq('user_id', unifiedUserId)
-        .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY', 'HOST_MEETING_BONUS', 'MEETING_ATTENDANCE_BONUS'])
+        .in('entry_type', CANONICAL_WALLET_TYPES)
         .order('created_at', { ascending: false })
         .limit(2000);
 
@@ -197,14 +203,12 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       const periodStart = `${dateFrom}T00:00:00`;
       const periodEnd = `${dateTo}T23:59:59`;
 
-      const ENTRY_TYPES = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY', 'HOST_MEETING_BONUS', 'MEETING_ATTENDANCE_BONUS', 'REVERSAL'];
-
       // 2a. Fetch entries WITHIN the selected period (high limit so we don't hit the default 1000-row cap)
       const { data: periodEntries, error } = await supabase
         .from('ledger_entries')
         .select('*')
         .eq('user_id', unifiedUserId)
-        .in('entry_type', ENTRY_TYPES)
+        .in('entry_type', CANONICAL_WALLET_TYPES)
         .gte('created_at', periodStart)
         .lte('created_at', periodEnd)
         .order('created_at', { ascending: true })
@@ -222,7 +226,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
           .from('ledger_entries')
           .select('amount, entry_type, metadata')
           .eq('user_id', unifiedUserId)
-          .in('entry_type', WALLET_TYPES)
+          .in('entry_type', CANONICAL_WALLET_TYPES)
           .lt('created_at', periodStart)
           .order('created_at', { ascending: true })
           .range(from, from + PAGE - 1);
@@ -238,9 +242,9 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       const fetchedEntries = ((periodEntries || []) as LedgerEntry[]).filter((entry) => !isDirectAllowancePayout(entry));
       
       const transactionsAsc = fetchedEntries.map(e => {
-        const affectsWallet = WALLET_TYPES.includes(e.entry_type);
+        const affectsWallet = CANONICAL_WALLET_TYPES.includes(e.entry_type);
         if (affectsWallet) runBal += e.amount;
-        const meta = e.metadata ? (typeof e.metadata === 'string' ? JSON.parse(e.metadata) : e.metadata) : null;
+        const meta = parseMetadata(e.metadata);
         const typeLabel = (e.entry_type === 'WITHDRAWAL' && meta?.source === 'statement_fee') 
           ? '📄 Transaction Charge' 
           : getEntryLabel(e);
