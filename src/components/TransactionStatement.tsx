@@ -140,7 +140,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         <div style="margin-bottom:12px;font-size:13px">
           <strong>Employee:</strong> ${employee?.name || user?.email || 'N/A'}<br/>
           <strong>Date:</strong> ${format(new Date(), 'MMMM dd, yyyy')}<br/>
-          <strong>Balance from last month:</strong> UGX ${Math.max(0, balanceBroughtForward).toLocaleString()}<br/>
+          <strong>Balance from last month:</strong> UGX ${balanceBroughtForward.toLocaleString()}<br/>
           <strong>This month:</strong> UGX ${thisMonthEarnings.toLocaleString()}<br/>
           <strong>Wallet Balance:</strong> UGX ${currentBalance.toLocaleString()}${spendableBalance != null ? `<br/><strong>Available to spend:</strong> UGX ${spendableBalance.toLocaleString()}` : ''}
         </div>
@@ -568,7 +568,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       <div className="text-sm space-y-0.5">
         <div className="flex justify-between text-muted-foreground">
           <span>Balance from last month:</span>
-          <span className="font-medium text-foreground">UGX {Math.max(0, balanceBroughtForward).toLocaleString()}</span>
+          <span className="font-medium text-foreground">UGX {balanceBroughtForward.toLocaleString()}</span>
         </div>
         <div className="flex justify-between text-muted-foreground">
           <span>This month:</span>
