@@ -77,28 +77,20 @@ const Overdraft = () => {
 
   // Admin: all pending applications
   const { data: allApplications = [] } = useQuery({
-    queryKey: ['all-overdraft-apps'],
-    enabled: isAdmin,
+    queryKey: ['all-overdraft-apps', email],
+    enabled: isAdmin && !!email,
     queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from('overdraft_applications')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100);
+      const { data } = await (supabase as any).rpc('list_overdraft_applications_admin', { p_email: email });
       return data || [];
     },
   });
 
   // Admin: all active accounts
   const { data: allAccounts = [] } = useQuery({
-    queryKey: ['all-overdraft-accounts'],
-    enabled: isAdmin,
+    queryKey: ['all-overdraft-accounts', email],
+    enabled: isAdmin && !!email,
     queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from('overdraft_accounts')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(200);
+      const { data } = await (supabase as any).rpc('list_overdraft_accounts_admin', { p_email: email });
       return data || [];
     },
   });
