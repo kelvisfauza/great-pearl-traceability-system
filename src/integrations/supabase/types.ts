@@ -11812,6 +11812,15 @@ export type Database = {
         }
       }
       admin_delete_all_system_data: { Args: never; Returns: Json }
+      apply_overdraft_recovery: {
+        Args: {
+          p_credit_amount: number
+          p_ledger_id: string
+          p_source: string
+          p_user_id: string
+        }
+        Returns: number
+      }
       approve_transfer_reversal: {
         Args: { p_notes?: string; p_request_id: string }
         Returns: Json
