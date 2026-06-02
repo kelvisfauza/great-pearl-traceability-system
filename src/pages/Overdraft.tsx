@@ -16,7 +16,8 @@ import { Wallet, ArrowDownCircle, CheckCircle, XCircle, Clock, Loader2, ShieldAl
 import DashboardLayout from '@/components/DashboardLayout';
 
 const Overdraft = () => {
-  const { employee, user, isAdmin } = useAuth();
+  const { employee, user, isAdmin: isAdminFn } = useAuth();
+  const isAdmin = typeof isAdminFn === 'function' ? isAdminFn() : !!isAdminFn;
   const { toast } = useToast();
   const qc = useQueryClient();
   const email = employee?.email || user?.email || '';
