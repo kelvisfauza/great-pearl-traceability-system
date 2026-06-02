@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Printer, Search, FileText, ArrowDownCircle, ArrowUpCircle, Wallet, ArrowLeft } from "lucide-react";
+import { AlertTriangle, Info } from "lucide-react";
 
 type Entry = {
   id: string;
@@ -153,6 +154,30 @@ const UserStatement = () => {
     });
     return { credits, debits, net: credits - debits, enriched };
   }, [entries]);
+
+  // Negative-balance analysis: surface to admins so they can answer staff
+  // queries like "why does my statement go negative?" without confusion.
+  const negativeAnalysis = useMemo(() => {
+    const negs = totals.enriched.filter((e) => e.running < 0);
+    if (negs.length === 0) return null;
+    const min = negs.reduce((m, e) => (e.running < m.running ? e : m), negs[0]);
+    const first = negs[0];
+    const last = negs[negs.length - 1];
+    // Find the entry that first pushed the balance below zero
+    const triggerIdx = totals.enriched.findIndex((e) => e.running < 0);
+    const trigger = triggerIdx >= 0 ? totals.enriched[triggerIdx] : first;
+    const beforeTrigger = triggerIdx > 0 ? totals.enriched[triggerIdx - 1].running : 0;
+    return {
+      count: negs.length,
+      firstDate: first.created_at,
+      lastDate: last.created_at,
+      lowest: min.running,
+      lowestDate: min.created_at,
+      trigger,
+      beforeTrigger,
+      currentlyNegative: totals.enriched.length > 0 && totals.enriched[totals.enriched.length - 1].running < 0,
+    };
+  }, [totals.enriched]);
 
   // Group by type
   const byType = useMemo(() => {
@@ -359,6 +384,58 @@ const UserStatement = () => {
                 </Card>
 
                 <Tabs defaultValue="entries">
+                  {negativeAnalysis && (
+                    <Card className={`mb-2 border ${negativeAnalysis.currentlyNegative ? "border-orange-300 bg-orange-50" : "border-amber-200 bg-amber-50"}`}>
+                      <CardContent className="py-4">
+                        <div className="flex items-start gap-3">
+                          {negativeAnalysis.currentlyNegative ? (
+                            <AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5" />
+                          ) : (
+                            <Info className="h-5 w-5 text-amber-600 mt-0.5" />
+                          )}
+                          <div className="flex-1 text-sm">
+                            <div className="font-semibold text-foreground mb-1">
+                              {negativeAnalysis.currentlyNegative
+                                ? "Wallet is currently overdrawn"
+                                : "Historical negative balance (now recovered)"}
+                            </div>
+                            <p className="text-muted-foreground mb-2">
+                              The running balance went below zero <strong>{negativeAnalysis.count.toLocaleString()}</strong> time(s)
+                              between <strong>{new Date(negativeAnalysis.firstDate).toLocaleDateString()}</strong> and{" "}
+                              <strong>{new Date(negativeAnalysis.lastDate).toLocaleDateString()}</strong>.
+                              The lowest point was <strong className="text-orange-700">{fmt(negativeAnalysis.lowest)}</strong> on{" "}
+                              {new Date(negativeAnalysis.lowestDate).toLocaleDateString()}.
+                            </p>
+                            <div className="rounded bg-white/70 border border-amber-200 p-2 mb-2">
+                              <div className="text-xs text-muted-foreground">First trigger entry</div>
+                              <div className="font-medium">
+                                {new Date(negativeAnalysis.trigger.created_at).toLocaleString()} ·{" "}
+                                <Badge variant="outline" className="ml-1">{negativeAnalysis.trigger.entry_type}</Badge>
+                              </div>
+                              <div className="text-xs mt-1">
+                                Balance before: <strong>{fmt(negativeAnalysis.beforeTrigger)}</strong> →
+                                {" "}entry amount: <strong className={Number(negativeAnalysis.trigger.amount) < 0 ? "text-red-700" : "text-emerald-700"}>{fmt(Number(negativeAnalysis.trigger.amount))}</strong> →
+                                {" "}resulting balance: <strong className="text-orange-700">{fmt(negativeAnalysis.trigger.running)}</strong>
+                              </div>
+                              {negativeAnalysis.trigger.metadata?.description && (
+                                <div className="text-xs text-muted-foreground mt-1 italic">
+                                  "{negativeAnalysis.trigger.metadata.description}"
+                                </div>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              <strong>Why this can happen:</strong> approved transfers, withdrawals, loan recoveries,
+                              salary advance recoveries or adjustments can be posted before matching credits
+                              (salary, bonus, reversals) land. The running column shows the true ledger state at
+                              each point in time — it is not a bug. The <strong>Net</strong> figure above reflects the
+                              current effective wallet balance after all later credits and reversals.
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   <TabsList>
                     <TabsTrigger value="entries">Entries</TabsTrigger>
                     <TabsTrigger value="breakdown">Breakdown by type</TabsTrigger>
