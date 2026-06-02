@@ -373,6 +373,81 @@ const generatePDF = async (
     doc.text('TOTAL LITRES: __________', margin, y + 5);
     doc.text('TOTAL AMOUNT (UGX): __________________', margin + contentW / 2, y + 5);
     y += 10;
+  } else if (template.type === 'department-report') {
+    // ===== DEPARTMENT REPORT BRANCH =====
+    // Meta block (Report By / Position / Department / Period / Subject)
+    const drawMetaRow = (label1: string, val1: string, label2: string, val2: string, rowY: number) => {
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.3);
+      doc.rect(margin, rowY, contentW, 8);
+      doc.line(margin + contentW / 2, rowY, margin + contentW / 2, rowY + 8);
+
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(80, 80, 80);
+      doc.text(label1, margin + 3, rowY + 5.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(20, 20, 20);
+      doc.text(val1 || '', margin + 32, rowY + 5.5);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(80, 80, 80);
+      doc.text(label2, margin + contentW / 2 + 3, rowY + 5.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(20, 20, 20);
+      doc.text(val2 || '', margin + contentW / 2 + 32, rowY + 5.5);
+    };
+
+    // Section header
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.5);
+    doc.rect(margin, y, contentW, 7);
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('REPORT DETAILS', margin + 4, y + 5);
+    y += 7;
+
+    const subject = prefill.reason || '';
+    drawMetaRow('Report By:', employeeName, 'Position:', position, y); y += 8;
+    drawMetaRow('Department:', department, 'Period:', prefill.beneficiaryPhone || '', y); y += 8;
+    drawMetaRow('Date:', dateStr, 'Subject:', prefill.beneficiaryName || subject.slice(0, 60), y); y += 12;
+
+    // Body section header
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.5);
+    doc.rect(margin, y, contentW, 7);
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('REPORT BODY', margin + 4, y + 5);
+    y += 10;
+
+    // Lined writing area
+    const bodyBottom = 250;
+    const lineGap = 7;
+    doc.setDrawColor(190, 190, 190);
+    doc.setLineWidth(0.25);
+    let ly = y + 4;
+    while (ly < bodyBottom) {
+      doc.line(margin, ly, margin + contentW, ly);
+      ly += lineGap;
+    }
+
+    // If subject/reason supplied, write it on the first lines
+    if (subject) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(20, 20, 20);
+      const wrapped = doc.splitTextToSize(subject, contentW - 2);
+      let wy = y + 2;
+      for (let i = 0; i < wrapped.length && wy < bodyBottom; i++) {
+        doc.text(wrapped[i], margin + 1, wy);
+        wy += lineGap;
+      }
+    }
+
+    y = bodyBottom + 4;
   } else {
   // Request Details section (outlined, no fill)
   doc.setDrawColor(0, 0, 0);
