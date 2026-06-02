@@ -5,6 +5,22 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Download, ShoppingCart, Coffee, Wallet, Info, Truck, Fuel, FileText } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { jsPDF } from 'jspdf';
+import {
+  Document as DocxDocument,
+  Packer,
+  Paragraph,
+  TextRun,
+  ImageRun,
+  Table as DocxTable,
+  TableRow as DocxTableRow,
+  TableCell as DocxTableCell,
+  WidthType,
+  BorderStyle,
+  AlignmentType,
+  HeadingLevel,
+  Footer,
+  ShadingType,
+} from 'docx';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -116,10 +132,10 @@ const templates: TemplateConfig[] = [
   },
   {
     type: 'department-report',
-    title: 'Departmental Report Template',
+    title: 'Departmental Report Template (Word)',
     prefix: 'RPT',
     icon: <FileText className="h-5 w-5" />,
-    description: 'Printable report template with company header — Report By, Department, Subject, Period and a lined writing area',
+    description: 'Editable Word (.docx) report cover with company letterhead, reference, Report By, Department, Subject and Period — write your report inside Word',
     approvalType: 'Department Report',
     fields: [
       { label: 'Report Subject / Title' },
@@ -147,6 +163,263 @@ const loadImageAsBase64 = (url: string): Promise<string> => {
     img.onerror = () => reject(new Error('Failed to load logo'));
     img.src = url;
   });
+};
+
+const loadImageAsUint8 = async (url: string): Promise<Uint8Array | null> => {
+  try {
+    const res = await fetch(url);
+    const buf = await res.arrayBuffer();
+    return new Uint8Array(buf);
+  } catch {
+    return null;
+  }
+};
+
+const downloadBlob = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
+const generateDepartmentReportDocx = async (
+  template: TemplateConfig,
+  employeeName: string,
+  department: string,
+  position: string,
+  prefill: PrefillData = {},
+  employeeEmail?: string,
+) => {
+  const refNo = generateRefNumber(template.prefix);
+  try {
+    await supabase.from('expense_template_refs' as any).insert({
+      ref: refNo,
+      template_type: template.type,
+      approval_type: template.approvalType,
+      employee_email: employeeEmail || null,
+      employee_name: employeeName,
+    });
+  } catch (e) {
+    console.warn('Could not log expense template ref:', e);
+  }
+
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
+  const subject = prefill.reason || prefill.beneficiaryName || '';
+  const period = prefill.beneficiaryPhone || '';
+
+  const logoBytes = await loadImageAsUint8(LOGO_URL);
+
+  const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+  const allNoBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder };
+
+  const thin = { style: BorderStyle.SINGLE, size: 4, color: '888888' };
+  const cellBorders = { top: thin, bottom: thin, left: thin, right: thin };
+
+  // ===== Header table (company name + logo) =====
+  const headerCells: DocxTableCell[] = [
+    new DocxTableCell({
+      width: { size: 7560, type: WidthType.DXA },
+      borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
+      margins: { top: 80, bottom: 80, left: 120, right: 120 },
+      children: [
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [new TextRun({ text: 'GREAT AGRO COFFEE LTD', bold: true, size: 36, font: 'Calibri' })],
+        }),
+      ],
+    }),
+  ];
+  if (logoBytes) {
+    headerCells.push(
+      new DocxTableCell({
+        width: { size: 1800, type: WidthType.DXA },
+        borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
+        margins: { top: 80, bottom: 80, left: 120, right: 120 },
+        children: [
+          new Paragraph({
+            alignment: AlignmentType.RIGHT,
+            children: [new ImageRun({ type: 'png', data: logoBytes, transformation: { width: 70, height: 70 } } as any)],
+          }),
+        ],
+      }),
+    );
+  } else {
+    headerCells[0] = new DocxTableCell({
+      width: { size: 9360, type: WidthType.DXA },
+      borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
+      margins: { top: 80, bottom: 80, left: 120, right: 120 },
+      children: [
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [new TextRun({ text: 'GREAT AGRO COFFEE LTD', bold: true, size: 36, font: 'Calibri' })],
+        }),
+      ],
+    });
+  }
+
+  const headerTable = new DocxTable({
+    width: { size: 9360, type: WidthType.DXA },
+    columnWidths: logoBytes ? [7560, 1800] : [9360],
+    borders: { ...allNoBorders, bottom: { style: BorderStyle.SINGLE, size: 8, color: '000000' } },
+    rows: [new DocxTableRow({ children: headerCells })],
+  });
+
+  const contactPara = (text: string) => new Paragraph({
+    spacing: { after: 40 },
+    children: [new TextRun({ text, size: 20, font: 'Calibri' })],
+  });
+
+  // ===== Meta block (Our Ref / Your Ref / Date) =====
+  const metaRow = (label: string, value: string) =>
+    new DocxTableRow({
+      children: [
+        new DocxTableCell({
+          width: { size: 1800, type: WidthType.DXA },
+          borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
+          margins: { top: 40, bottom: 40, left: 0, right: 80 },
+          children: [new Paragraph({ children: [new TextRun({ text: label, bold: true, size: 22, font: 'Calibri' })] })],
+        }),
+        new DocxTableCell({
+          width: { size: 7560, type: WidthType.DXA },
+          borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
+          margins: { top: 40, bottom: 40, left: 0, right: 0 },
+          children: [new Paragraph({ children: [new TextRun({ text: value || '________________________________', size: 22, font: 'Calibri' })] })],
+        }),
+      ],
+    });
+
+  const metaTable = new DocxTable({
+    width: { size: 9360, type: WidthType.DXA },
+    columnWidths: [1800, 7560],
+    borders: allNoBorders,
+    rows: [
+      metaRow('Our Ref:', refNo),
+      metaRow('Your Ref:', ''),
+      metaRow('Date:', dateStr),
+    ],
+  });
+
+  // ===== Report details block =====
+  const detailRow = (l1: string, v1: string, l2: string, v2: string) =>
+    new DocxTableRow({
+      children: [
+        new DocxTableCell({
+          width: { size: 1700, type: WidthType.DXA },
+          borders: cellBorders,
+          margins: { top: 80, bottom: 80, left: 120, right: 120 },
+          shading: { fill: 'F2F2F2', type: ShadingType.CLEAR, color: 'auto' },
+          children: [new Paragraph({ children: [new TextRun({ text: l1, bold: true, size: 20, font: 'Calibri' })] })],
+        }),
+        new DocxTableCell({
+          width: { size: 2980, type: WidthType.DXA },
+          borders: cellBorders,
+          margins: { top: 80, bottom: 80, left: 120, right: 120 },
+          children: [new Paragraph({ children: [new TextRun({ text: v1 || '', size: 20, font: 'Calibri' })] })],
+        }),
+        new DocxTableCell({
+          width: { size: 1700, type: WidthType.DXA },
+          borders: cellBorders,
+          margins: { top: 80, bottom: 80, left: 120, right: 120 },
+          shading: { fill: 'F2F2F2', type: ShadingType.CLEAR, color: 'auto' },
+          children: [new Paragraph({ children: [new TextRun({ text: l2, bold: true, size: 20, font: 'Calibri' })] })],
+        }),
+        new DocxTableCell({
+          width: { size: 2980, type: WidthType.DXA },
+          borders: cellBorders,
+          margins: { top: 80, bottom: 80, left: 120, right: 120 },
+          children: [new Paragraph({ children: [new TextRun({ text: v2 || '', size: 20, font: 'Calibri' })] })],
+        }),
+      ],
+    });
+
+  const detailsTable = new DocxTable({
+    width: { size: 9360, type: WidthType.DXA },
+    columnWidths: [1700, 2980, 1700, 2980],
+    rows: [
+      detailRow('Report By:', employeeName, 'Position:', position),
+      detailRow('Department:', department, 'Period:', period),
+      detailRow('Subject:', subject, 'Date:', dateStr),
+    ],
+  });
+
+  // ===== Footer =====
+  const footerCell = (heading: string, value: string) => new DocxTableCell({
+    width: { size: 2340, type: WidthType.DXA },
+    borders: { top: { style: BorderStyle.SINGLE, size: 6, color: '000000' }, bottom: noBorder, left: noBorder, right: noBorder },
+    margins: { top: 80, bottom: 40, left: 60, right: 60 },
+    children: [
+      new Paragraph({ children: [new TextRun({ text: heading, bold: true, size: 16, font: 'Calibri' })] }),
+      new Paragraph({ children: [new TextRun({ text: value, size: 16, font: 'Calibri' })] }),
+    ],
+  });
+
+  const footerTable = new DocxTable({
+    width: { size: 9360, type: WidthType.DXA },
+    columnWidths: [2340, 2340, 2340, 2340],
+    borders: allNoBorders,
+    rows: [
+      new DocxTableRow({
+        children: [
+          footerCell('Great Agro Coffee Ltd', 'Kasese, Uganda'),
+          footerCell('Telephone', '0393001626'),
+          footerCell('Email', 'operations@greatpearlcoffee.com'),
+          footerCell('Website', 'www.greatpearlcoffee.com'),
+        ],
+      }),
+    ],
+  });
+
+  const doc = new DocxDocument({
+    creator: 'Great Agro Coffee',
+    title: `${template.title} - ${refNo}`,
+    styles: {
+      default: { document: { run: { font: 'Calibri', size: 22 } } },
+    },
+    sections: [{
+      properties: {
+        page: {
+          size: { width: 11906, height: 16838 }, // A4
+          margin: { top: 1080, right: 1080, bottom: 1440, left: 1080 },
+        },
+      },
+      footers: {
+        default: new Footer({ children: [footerTable] }),
+      },
+      children: [
+        headerTable,
+        new Paragraph({ spacing: { after: 120 }, children: [new TextRun({ text: '' })] }),
+        contactPara('Kasese, Uganda'),
+        contactPara('0393001626'),
+        contactPara('operations@greatpearlcoffee.com'),
+        contactPara('www.greatpearlcoffee.com'),
+        new Paragraph({ spacing: { before: 200, after: 120 }, children: [new TextRun({ text: '' })] }),
+        metaTable,
+        new Paragraph({ spacing: { before: 200, after: 80 }, children: [new TextRun({ text: '' })] }),
+        detailsTable,
+        new Paragraph({ spacing: { before: 320, after: 80 }, children: [new TextRun({ text: 'REPORT', bold: true, size: 24, font: 'Calibri' })] }),
+        new Paragraph({ children: [new TextRun({ text: subject || 'Type your report below…', italics: !subject, color: subject ? '000000' : '888888', size: 22, font: 'Calibri' })] }),
+        new Paragraph({ children: [new TextRun({ text: '' })] }),
+        new Paragraph({ children: [new TextRun({ text: '' })] }),
+        new Paragraph({ children: [new TextRun({ text: '' })] }),
+        new Paragraph({ children: [new TextRun({ text: '' })] }),
+        new Paragraph({ children: [new TextRun({ text: '' })] }),
+        new Paragraph({ children: [new TextRun({ text: '' })] }),
+        new Paragraph({ children: [new TextRun({ text: '' })] }),
+        new Paragraph({ spacing: { before: 600 }, children: [new TextRun({ text: 'Prepared by:', bold: true, size: 22, font: 'Calibri' })] }),
+        new Paragraph({ children: [new TextRun({ text: `${employeeName}  —  ${position}`, size: 22, font: 'Calibri' })] }),
+        new Paragraph({ children: [new TextRun({ text: `${department} Department`, size: 22, font: 'Calibri' })] }),
+        new Paragraph({ spacing: { before: 280 }, children: [new TextRun({ text: 'Signature: ______________________________   Date: ____________________', size: 22, font: 'Calibri' })] }),
+      ],
+    }],
+  });
+
+  const blob = await Packer.toBlob(doc);
+  downloadBlob(blob, `${template.prefix}-${refNo}.docx`);
 };
 
 interface PrefillData {
@@ -686,16 +959,27 @@ const ExpenseTemplateDownload = () => {
     setPrefillOpen(false);
 
     try {
-      await generatePDF(
-        template,
-        employee.name || 'N/A',
-        employee.department || 'N/A',
-        employee.position || 'N/A',
-        prefill,
-        employee.email,
-      );
+      if (template.type === 'department-report') {
+        await generateDepartmentReportDocx(
+          template,
+          employee.name || 'N/A',
+          employee.department || 'N/A',
+          employee.position || 'N/A',
+          prefill,
+          employee.email,
+        );
+      } else {
+        await generatePDF(
+          template,
+          employee.name || 'N/A',
+          employee.department || 'N/A',
+          employee.position || 'N/A',
+          prefill,
+          employee.email,
+        );
+      }
     } catch (err) {
-      console.error('PDF generation error:', err);
+      console.error('Template generation error:', err);
     } finally {
       setTimeout(() => setDownloading(null), 500);
     }
