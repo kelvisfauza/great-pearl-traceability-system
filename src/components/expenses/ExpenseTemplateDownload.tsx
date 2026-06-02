@@ -959,16 +959,27 @@ const ExpenseTemplateDownload = () => {
     setPrefillOpen(false);
 
     try {
-      await generatePDF(
-        template,
-        employee.name || 'N/A',
-        employee.department || 'N/A',
-        employee.position || 'N/A',
-        prefill,
-        employee.email,
-      );
+      if (template.type === 'department-report') {
+        await generateDepartmentReportDocx(
+          template,
+          employee.name || 'N/A',
+          employee.department || 'N/A',
+          employee.position || 'N/A',
+          prefill,
+          employee.email,
+        );
+      } else {
+        await generatePDF(
+          template,
+          employee.name || 'N/A',
+          employee.department || 'N/A',
+          employee.position || 'N/A',
+          prefill,
+          employee.email,
+        );
+      }
     } catch (err) {
-      console.error('PDF generation error:', err);
+      console.error('Template generation error:', err);
     } finally {
       setTimeout(() => setDownloading(null), 500);
     }
