@@ -132,10 +132,10 @@ const templates: TemplateConfig[] = [
   },
   {
     type: 'department-report',
-    title: 'Departmental Report Template',
+    title: 'Departmental Report Template (Word)',
     prefix: 'RPT',
     icon: <FileText className="h-5 w-5" />,
-    description: 'Printable report template with company header — Report By, Department, Subject, Period and a lined writing area',
+    description: 'Editable Word (.docx) report cover with company letterhead, reference, Report By, Department, Subject and Period — write your report inside Word',
     approvalType: 'Department Report',
     fields: [
       { label: 'Report Subject / Title' },
