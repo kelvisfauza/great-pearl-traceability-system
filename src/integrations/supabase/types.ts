@@ -12257,6 +12257,61 @@ export type Database = {
       is_super_admin: { Args: { _uid: string }; Returns: boolean }
       is_supervisor_or_above: { Args: never; Returns: boolean }
       is_user_role: { Args: never; Returns: boolean }
+      list_overdraft_accounts_admin: {
+        Args: { p_email: string }
+        Returns: {
+          activation_fee: number
+          activation_fee_paid: boolean
+          application_id: string | null
+          approved_at: string | null
+          approved_by: string | null
+          approved_limit: number
+          closed_at: string | null
+          created_at: string
+          employee_email: string
+          employee_name: string | null
+          id: string
+          last_used_at: string | null
+          outstanding_balance: number
+          status: string
+          total_drawn: number
+          total_recovered: number
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "overdraft_accounts"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      list_overdraft_applications_admin: {
+        Args: { p_email: string }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          approved_limit: number | null
+          calculated_limit: number
+          created_at: string
+          employee_email: string
+          employee_name: string | null
+          factors: Json | null
+          id: string
+          reason: string | null
+          rejection_reason: string | null
+          requested_amount: number
+          status: string
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "overdraft_applications"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       log_audit_action: {
         Args: {
           p_action: string
