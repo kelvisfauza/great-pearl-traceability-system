@@ -25,8 +25,8 @@ type LoanType = 'quick' | 'long_term';
 type RepaymentFrequency = 'weekly' | 'monthly' | 'bullet';
 
 const LOAN_TYPE_CONFIG: Record<LoanType, { label: string; monthlyRate: number; maxRate: number; description: string; frequencies: RepaymentFrequency[] }> = {
-  quick: { label: 'Quick Loan', monthlyRate: 15, maxRate: 15, description: '15%/month – Short-term, weekly repayments', frequencies: ['weekly'] },
-  long_term: { label: 'Long-Term Loan', monthlyRate: 10, maxRate: 30, description: '10%/month – Flexible repayment, monthly or bullet (cap 30%)', frequencies: ['monthly', 'bullet'] },
+  quick: { label: 'Quick Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Short-term, weekly repayments (total interest cap 35%)', frequencies: ['weekly'] },
+  long_term: { label: 'Long-Term Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Flexible repayment, monthly or bullet (total interest cap 35%)', frequencies: ['monthly', 'bullet'] },
 };
 
 // Helper: calculate daily interest rate from monthly rate
@@ -292,9 +292,9 @@ const QuickLoans = () => {
     const { totalDays, totalWeeks } = getLoanSchedule(months);
     const freq = repaymentFrequency;
 
-    // Bullet payments attract a flat 30% interest; monthly uses capped rate
+    // Bullet payments attract a flat 35% interest cap; monthly uses capped rate
     const interest = freq === 'bullet'
-      ? amount * 0.30
+      ? amount * 0.35
       : getCappedInterest(amount, monthlyRate, months, maxRate);
     const total = Math.ceil(amount + interest);
 
@@ -341,7 +341,7 @@ const QuickLoans = () => {
     const maxRate = LOAN_TYPE_CONFIG[loanType].maxRate;
     const { totalWeeks } = getLoanSchedule(months);
     const freq = repaymentFrequency;
-    const interest = freq === 'bullet' ? amount * 0.30 : getCappedInterest(amount, monthlyRate, months, maxRate);
+    const interest = freq === 'bullet' ? amount * 0.35 : getCappedInterest(amount, monthlyRate, months, maxRate);
     const total = Math.ceil(amount + interest);
     const numInstallments = freq === 'bullet' ? 1 : freq === 'monthly' ? months : totalWeeks;
     const weekly = numInstallments > 0 ? Math.ceil(total / numInstallments) : 0;
@@ -1373,7 +1373,7 @@ const QuickLoans = () => {
 
     // Check limit
     const salary = employee.salary || 0;
-    const maxLoan = salary * 2;
+    const maxLoan = salary * 5;
     const otherOutstanding = myLoans
       .filter(l => l.id !== modifyLoan.id && ['active', 'pending_guarantor', 'pending_admin'].includes(l.status))
       .reduce((s: number, l: any) => s + (l.remaining_balance || l.loan_amount || 0), 0);
@@ -1467,9 +1467,9 @@ const QuickLoans = () => {
     // New principal = remaining balance of old loan + additional amount
     const newPrincipal = (topUpLoan.remaining_balance || 0) + additionalAmount;
     
-    // Check 2x salary limit
+    // Check 5x salary limit
     const salary = employee.salary || 0;
-    const maxLoan = salary * 2;
+    const maxLoan = salary * 5;
     // Exclude the parent loan's outstanding from the calculation since it's being rolled over
     const otherOutstanding = myLoans
       .filter(l => l.id !== topUpLoan.id && ['active', 'pending_guarantor', 'pending_admin'].includes(l.status))
@@ -1566,7 +1566,7 @@ const QuickLoans = () => {
 
         // Recalculate loan terms with new amount
         const interest = freq === 'bullet'
-          ? newAmount * 0.30
+          ? newAmount * 0.35
           : getCappedInterest(newAmount, monthlyRate, months, maxRate);
         const total = Math.ceil(newAmount + interest);
         const { totalWeeks } = getLoanSchedule(months);
@@ -1830,7 +1830,7 @@ const QuickLoans = () => {
     return <Badge variant={s.variant}>{s.label}</Badge>;
   };
 
-  // Calculate loan limit - always 2x salary minus outstanding
+  // Calculate loan limit - always 5x salary minus outstanding
   const getLoanLimit = (empEmail: string, empSalary: number, empAuthId?: string) => {
     const empLoans = (loans.length > 0 ? loans : myLoans).filter(l => l.employee_email === empEmail && ['active', 'pending_guarantor', 'pending_admin'].includes(l.status));
     const outstanding = empLoans.reduce((s: number, l: any) => s + (l.remaining_balance || l.loan_amount || 0), 0);
@@ -1868,7 +1868,7 @@ const QuickLoans = () => {
                   <div>
                     <Label>Loan Amount (UGX)</Label>
                     <Input type="number" value={loanAmount} onChange={e => setLoanAmount(e.target.value)} placeholder="e.g. 500000" />
-                    <p className="text-xs text-muted-foreground mt-1">Max: UGX {(myLimit?.availableLimit || (employee?.salary || 0) * 2).toLocaleString()} (2x salary)</p>
+                    <p className="text-xs text-muted-foreground mt-1">Max: UGX {(myLimit?.availableLimit || (employee?.salary || 0) * 5).toLocaleString()} (5x salary)</p>
                   </div>
                   <div>
                     <Label>Loan Type</Label>
@@ -2339,7 +2339,7 @@ const QuickLoans = () => {
 
                   // Calculate available limit excluding the parent loan
                   const salary = employee?.salary || 0;
-                  const maxLoan = salary * 2;
+                  const maxLoan = salary * 5;
                   const otherOutstanding = myLoans
                     .filter(l => l.id !== topUpLoan.id && ['active', 'pending_guarantor', 'pending_admin'].includes(l.status))
                     .reduce((s: number, l: any) => s + (l.remaining_balance || l.loan_amount || 0), 0);
@@ -2587,7 +2587,7 @@ const QuickLoans = () => {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Active loans: {myLimit.activeCount}/3 • Limit: 2x salary minus outstanding
+                  Active loans: {myLimit.activeCount}/3 • Limit: 5x salary minus outstanding
                 </p>
               </CardContent>
             </Card>

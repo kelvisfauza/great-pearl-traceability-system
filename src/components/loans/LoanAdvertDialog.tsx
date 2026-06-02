@@ -109,7 +109,7 @@ const LoanAdvertDialog = () => {
 
   const deselectAll = () => setSelectedEmployees(new Set());
 
-  const getLoanLimit = (salary: number, outstanding: number = 0) => Math.max(0, (salary || 0) * 2 - outstanding);
+  const getLoanLimit = (salary: number, outstanding: number = 0) => Math.max(0, (salary || 0) * 5 - outstanding);
 
   const getTenureMonths = (joinDate: string | null) => {
     if (!joinDate) return 0;
@@ -120,7 +120,7 @@ const LoanAdvertDialog = () => {
 
   const getMultiplier = (joinDate: string | null) => {
     const tenure = getTenureMonths(joinDate);
-    return tenure >= 3 ? '2x' : '1x';
+    return tenure >= 3 ? '5x' : '2x';
   };
 
   const getPreviewMessage = () => {

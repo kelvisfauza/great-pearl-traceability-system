@@ -145,7 +145,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
   const totalMonthlyAfterApproval = totalMonthlyObligations + (isWeekly ? installmentAmount * 4 : installmentAmount);
   const salary = borrowerDetails?.salary || 0;
   const debtToIncomeRatio = salary > 0 ? ((totalMonthlyAfterApproval / salary) * 100).toFixed(1) : 'N/A';
-  const loanLimit = salary * 2;
+  const loanLimit = salary * 5;
   const availableLoanLimit = Math.max(0, loanLimit - totalOutstanding);
 
   const tenureMonths = borrowerDetails?.join_date
@@ -203,7 +203,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
   if (tenureMonths < 3) riskFlags.push({ label: `Short tenure: ${tenureMonths} months`, severity: 'high' });
   else if (tenureMonths < 6) riskFlags.push({ label: `Tenure: ${tenureMonths} months`, severity: 'medium' });
   if (borrowerWalletBalance < 0) riskFlags.push({ label: `Negative wallet: UGX ${borrowerWalletBalance.toLocaleString()}`, severity: 'high' });
-  if (loan.loan_amount > salary * 2) riskFlags.push({ label: 'Loan exceeds 2x salary', severity: 'medium' });
+  if (loan.loan_amount > salary * 5) riskFlags.push({ label: 'Loan exceeds 5x salary', severity: 'medium' });
 
   const paidOffLoans = borrowerLoans.filter(l => l.status === 'paid_off' || l.status === 'completed');
 
@@ -544,7 +544,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
                     <p className="text-xs font-semibold mb-2">📊 Loan Eligibility</p>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                       <div>
-                        <p className="text-muted-foreground text-xs">Max Loan Limit (2x Salary)</p>
+                        <p className="text-muted-foreground text-xs">Max Loan Limit (5x Salary)</p>
                         <p className="font-bold">UGX {loanLimit.toLocaleString()}</p>
                       </div>
                       <div>
