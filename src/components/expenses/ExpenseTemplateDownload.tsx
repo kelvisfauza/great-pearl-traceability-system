@@ -704,6 +704,12 @@ const ExpenseTemplateDownload = () => {
   const submitForApproval = async () => {
     if (!employee || !activeTemplate) return;
     const isFuel = activeTemplate.type === 'fuel-ledger';
+    const isReport = activeTemplate.type === 'department-report';
+    if (isReport) {
+      // Reports are printable only — no approval workflow
+      await runGenerate(buildPrefill());
+      return;
+    }
     const amt = parseFloat(amount);
     if (!isFuel && (!amt || amt <= 0)) {
       toast({ title: 'Amount required', description: 'Please enter a valid amount before submitting for approval.', variant: 'destructive' });
