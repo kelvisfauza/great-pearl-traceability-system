@@ -155,6 +155,30 @@ const UserStatement = () => {
     return { credits, debits, net: credits - debits, enriched };
   }, [entries]);
 
+  // Negative-balance analysis: surface to admins so they can answer staff
+  // queries like "why does my statement go negative?" without confusion.
+  const negativeAnalysis = useMemo(() => {
+    const negs = totals.enriched.filter((e) => e.running < 0);
+    if (negs.length === 0) return null;
+    const min = negs.reduce((m, e) => (e.running < m.running ? e : m), negs[0]);
+    const first = negs[0];
+    const last = negs[negs.length - 1];
+    // Find the entry that first pushed the balance below zero
+    const triggerIdx = totals.enriched.findIndex((e) => e.running < 0);
+    const trigger = triggerIdx >= 0 ? totals.enriched[triggerIdx] : first;
+    const beforeTrigger = triggerIdx > 0 ? totals.enriched[triggerIdx - 1].running : 0;
+    return {
+      count: negs.length,
+      firstDate: first.created_at,
+      lastDate: last.created_at,
+      lowest: min.running,
+      lowestDate: min.created_at,
+      trigger,
+      beforeTrigger,
+      currentlyNegative: totals.enriched.length > 0 && totals.enriched[totals.enriched.length - 1].running < 0,
+    };
+  }, [totals.enriched]);
+
   // Group by type
   const byType = useMemo(() => {
     const map = new Map<string, { credits: number; debits: number; count: number }>();
