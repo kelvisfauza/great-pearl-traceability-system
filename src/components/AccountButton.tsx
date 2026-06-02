@@ -8,7 +8,7 @@ import {
 import { 
   Wallet, DollarSign, TrendingUp, Plus, Smartphone, Printer, Send,
   Clock, CheckCircle, XCircle, AlertCircle, Star, Zap, Award, Gift, FileText,
-  Landmark, Eye, EyeOff, Ban
+  Landmark, Eye, EyeOff, Ban, CreditCard
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -54,6 +54,7 @@ export const AccountButton = () => {
   });
   const [activeLoanTotal, setActiveLoanTotal] = useState(0);
   const [activeLoanCount, setActiveLoanCount] = useState(0);
+  const [overdraft, setOverdraft] = useState<{ status: string; limit: number; outstanding: number; available: number } | null>(null);
   const [ledgerUserId, setLedgerUserId] = useState<string | null>(null);
   const [breakdown, setBreakdown] = useState({
     lastMonthLoyalty: 0,
@@ -159,9 +160,34 @@ export const AccountButton = () => {
     } catch {}
   };
 
+  const fetchOverdraft = async () => {
+    const email = employee?.email || user?.email;
+    if (!email) return;
+    try {
+      const { data } = await (supabase as any)
+        .from('overdraft_accounts')
+        .select('status, approved_limit, outstanding_balance')
+        .eq('employee_email', email)
+        .maybeSingle();
+      if (data) {
+        const limit = Number(data.approved_limit || 0);
+        const outstanding = Number(data.outstanding_balance || 0);
+        setOverdraft({
+          status: data.status,
+          limit,
+          outstanding,
+          available: Math.max(0, limit - outstanding),
+        });
+      } else {
+        setOverdraft(null);
+      }
+    } catch {}
+  };
+
   useEffect(() => {
     fetchLedgerTotals();
     fetchActiveLoans();
+    fetchOverdraft();
   }, [user?.id, user?.email, employee?.email, withdrawalRequests.length]);
 
   // Real-time subscription for ledger changes
@@ -438,6 +464,90 @@ export const AccountButton = () => {
 
             {/* Investments Card */}
             <InvestmentsCard />
+
+            {/* Overdraft Card */}
+            {overdraft && (
+              <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-indigo-50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <CreditCard className="h-4 w-4 text-purple-600" />
+                    Overdraft
+                    <Badge variant="secondary" className="ml-auto text-[10px] capitalize">
+                      {overdraft.status}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {overdraft.status === 'active' ? (
+                    <>
+                      <div className="flex items-end justify-between">
+                        <div>
+                          <div className="text-xs text-muted-foreground">Available</div>
+                          <div className="text-2xl font-bold text-purple-700">
+                            {balanceHidden ? '••••••' : formatCurrency(overdraft.available)}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs text-muted-foreground">Limit</div>
+                          <div className="text-sm font-semibold">{formatCurrency(overdraft.limit)}</div>
+                        </div>
+                      </div>
+                      {overdraft.outstanding > 0 && (
+                        <div className="mt-2 flex justify-between text-xs">
+                          <span className="text-muted-foreground">Outstanding (auto-recovers)</span>
+                          <span className="font-medium text-red-600">-{formatCurrency(overdraft.outstanding)}</span>
+                        </div>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-3 w-full text-xs border-purple-200 text-purple-700 hover:bg-purple-100"
+                        onClick={() => window.location.href = '/overdraft'}
+                      >
+                        Draw / Manage
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-xs text-muted-foreground">
+                        Application status: <span className="font-medium capitalize">{overdraft.status}</span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-3 w-full text-xs border-purple-200 text-purple-700 hover:bg-purple-100"
+                        onClick={() => window.location.href = '/overdraft'}
+                      >
+                        View Overdraft
+                      </Button>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Overdraft Apply CTA (when no account exists) */}
+            {!overdraft && (
+              <Card className="border-dashed border-purple-200">
+                <CardContent className="pt-4 pb-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4 text-purple-600" />
+                    <div>
+                      <div className="text-sm font-medium">Need extra cash?</div>
+                      <div className="text-xs text-muted-foreground">Apply for an overdraft on your wallet</div>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs border-purple-200 text-purple-700 hover:bg-purple-100"
+                    onClick={() => window.location.href = '/overdraft'}
+                  >
+                    Apply
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Auto-Invest from Salary */}
             <SalaryAutoInvestCard />
