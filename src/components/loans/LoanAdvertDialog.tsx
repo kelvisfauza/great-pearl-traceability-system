@@ -120,7 +120,7 @@ const LoanAdvertDialog = () => {
 
   const getMultiplier = (joinDate: string | null) => {
     const tenure = getTenureMonths(joinDate);
-    return tenure >= 3 ? '2x' : '1x';
+    return tenure >= 3 ? '5x' : '2x';
   };
 
   const getPreviewMessage = () => {
