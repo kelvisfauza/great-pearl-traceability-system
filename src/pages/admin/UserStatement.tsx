@@ -11,6 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Printer, Search, FileText, ArrowDownCircle, ArrowUpCircle, Wallet, ArrowLeft } from "lucide-react";
 import { AlertTriangle, Info } from "lucide-react";
+import { Mail } from "lucide-react";
+import { toast } from "sonner";
 
 type Entry = {
   id: string;
