@@ -812,7 +812,9 @@ const ExpenseTemplateDownload = () => {
             <DialogDescription>
               {activeTemplate?.type === 'fuel-ledger'
                 ? 'Enter the service provider details. The printable ledger has 10 blank rows for the station to fill in (date, truck, driver, phone, litres, amount, signature) plus our reference and approval block.'
-                : 'Enter who the money is for, the amount, and the reason. Submit for approval and a printable copy will be generated.'}
+                : activeTemplate?.type === 'department-report'
+                  ? 'Enter the report subject and period. A printable report sheet with the company header, your name, department and a lined writing area will be generated.'
+                  : 'Enter who the money is for, the amount, and the reason. Submit for approval and a printable copy will be generated.'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -852,23 +854,46 @@ const ExpenseTemplateDownload = () => {
                   ? 'Service Provider (e.g. Total Energies)'
                   : activeTemplate?.type === 'salary-request'
                     ? 'Beneficiary Name (auto-filled)'
-                    : 'Recipient / Service Provider Name'}
+                    : activeTemplate?.type === 'department-report'
+                      ? 'Report Subject / Title'
+                      : 'Recipient / Service Provider Name'}
               </Label>
               <Input
                 id="ben-name"
                 value={beneficiaryName}
                 onChange={(e) => setBeneficiaryName(e.target.value)}
-                placeholder={activeTemplate?.type === 'fuel-ledger' ? 'Total Energies Kasese' : 'e.g. John Mukasa'}
+                placeholder={
+                  activeTemplate?.type === 'fuel-ledger'
+                    ? 'Total Energies Kasese'
+                    : activeTemplate?.type === 'department-report'
+                      ? 'e.g. Weekly Quality Department Report'
+                      : 'e.g. John Mukasa'
+                }
                 readOnly={activeTemplate?.type === 'salary-request' && !!selectedPayeeId}
               />
             </div>
             <div>
               <Label htmlFor="ben-phone">
-                {activeTemplate?.type === 'fuel-ledger' ? 'Branch / Location' : 'Phone / Account Number'}
+                {activeTemplate?.type === 'fuel-ledger'
+                  ? 'Branch / Location'
+                  : activeTemplate?.type === 'department-report'
+                    ? 'Reporting Period (e.g. May 2026)'
+                    : 'Phone / Account Number'}
               </Label>
-              <Input id="ben-phone" value={beneficiaryPhone} onChange={(e) => setBeneficiaryPhone(e.target.value)} placeholder={activeTemplate?.type === 'fuel-ledger' ? 'e.g. Kasese Town Branch' : 'e.g. 0772 123 456'} />
+              <Input
+                id="ben-phone"
+                value={beneficiaryPhone}
+                onChange={(e) => setBeneficiaryPhone(e.target.value)}
+                placeholder={
+                  activeTemplate?.type === 'fuel-ledger'
+                    ? 'e.g. Kasese Town Branch'
+                    : activeTemplate?.type === 'department-report'
+                      ? 'e.g. May 2026 / Week 22'
+                      : 'e.g. 0772 123 456'
+                }
+              />
             </div>
-            {activeTemplate?.type !== 'fuel-ledger' && (
+            {activeTemplate?.type !== 'fuel-ledger' && activeTemplate?.type !== 'department-report' && (
             <div>
               <Label htmlFor="ben-amount">Amount (UGX)</Label>
               <Input id="ben-amount" type="number" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g. 50000" />
@@ -876,9 +901,25 @@ const ExpenseTemplateDownload = () => {
             )}
             <div>
               <Label htmlFor="ben-reason">
-                {activeTemplate?.type === 'fuel-ledger' ? 'Period Covered (optional)' : 'Reason'}
+                {activeTemplate?.type === 'fuel-ledger'
+                  ? 'Period Covered (optional)'
+                  : activeTemplate?.type === 'department-report'
+                    ? 'Report Summary / Opening Paragraph (optional)'
+                    : 'Reason'}
               </Label>
-              <Textarea id="ben-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={activeTemplate?.type === 'fuel-ledger' ? 'e.g. May 2026' : 'Why is this payment needed?'} rows={activeTemplate?.type === 'fuel-ledger' ? 1 : 3} />
+              <Textarea
+                id="ben-reason"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder={
+                  activeTemplate?.type === 'fuel-ledger'
+                    ? 'e.g. May 2026'
+                    : activeTemplate?.type === 'department-report'
+                      ? 'Optional — a few opening lines that will be printed at the top of the body area'
+                      : 'Why is this payment needed?'
+                }
+                rows={activeTemplate?.type === 'fuel-ledger' ? 1 : 3}
+              />
             </div>
           </div>
           <DialogFooter className="gap-2 flex-wrap">
@@ -886,9 +927,11 @@ const ExpenseTemplateDownload = () => {
             <Button variant="outline" onClick={() => runGenerate(buildPrefill())} disabled={submitting}>
               Print without submitting
             </Button>
-            <Button onClick={submitForApproval} disabled={submitting}>
-              {submitting ? 'Submitting…' : activeTemplate?.type === 'fuel-ledger' ? 'Log & Print Ledger' : 'Submit for Approval & Print'}
-            </Button>
+            {activeTemplate?.type !== 'department-report' && (
+              <Button onClick={submitForApproval} disabled={submitting}>
+                {submitting ? 'Submitting…' : activeTemplate?.type === 'fuel-ledger' ? 'Log & Print Ledger' : 'Submit for Approval & Print'}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
