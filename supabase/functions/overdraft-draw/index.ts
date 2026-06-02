@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
 
     // Confirmation email
     try {
-      await admin.functions.invoke("send-email-direct", {
+      await admin.functions.invoke("send-transactional-email", {
         body: {
           to: user_email,
           cc: "operations@greatpearlcoffee.com",

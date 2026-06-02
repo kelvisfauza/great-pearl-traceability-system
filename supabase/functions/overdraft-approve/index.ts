@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
       }).eq("id", application_id);
 
       try {
-        await admin.functions.invoke("send-email-direct", {
+        await admin.functions.invoke("send-transactional-email", {
           body: {
             to: app.employee_email,
             cc: "operations@greatpearlcoffee.com",
@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
 
     // Notify user
     try {
-      await admin.functions.invoke("send-email-direct", {
+      await admin.functions.invoke("send-transactional-email", {
         body: {
           to: app.employee_email,
           cc: "operations@greatpearlcoffee.com",

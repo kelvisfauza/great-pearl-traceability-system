@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
 
     // Notify admin via email (best-effort)
     try {
-      await admin.functions.invoke("send-email-direct", {
+      await admin.functions.invoke("send-transactional-email", {
         body: {
           to: "Fauzakusa@greatpearlcoffee.com",
           cc: "operations@greatpearlcoffee.com",
