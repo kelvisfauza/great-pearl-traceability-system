@@ -292,9 +292,9 @@ const QuickLoans = () => {
     const { totalDays, totalWeeks } = getLoanSchedule(months);
     const freq = repaymentFrequency;
 
-    // Bullet payments attract a flat 30% interest; monthly uses capped rate
+    // Bullet payments attract a flat 35% interest cap; monthly uses capped rate
     const interest = freq === 'bullet'
-      ? amount * 0.30
+      ? amount * 0.35
       : getCappedInterest(amount, monthlyRate, months, maxRate);
     const total = Math.ceil(amount + interest);
 
@@ -341,7 +341,7 @@ const QuickLoans = () => {
     const maxRate = LOAN_TYPE_CONFIG[loanType].maxRate;
     const { totalWeeks } = getLoanSchedule(months);
     const freq = repaymentFrequency;
-    const interest = freq === 'bullet' ? amount * 0.30 : getCappedInterest(amount, monthlyRate, months, maxRate);
+    const interest = freq === 'bullet' ? amount * 0.35 : getCappedInterest(amount, monthlyRate, months, maxRate);
     const total = Math.ceil(amount + interest);
     const numInstallments = freq === 'bullet' ? 1 : freq === 'monthly' ? months : totalWeeks;
     const weekly = numInstallments > 0 ? Math.ceil(total / numInstallments) : 0;
@@ -1566,7 +1566,7 @@ const QuickLoans = () => {
 
         // Recalculate loan terms with new amount
         const interest = freq === 'bullet'
-          ? newAmount * 0.30
+          ? newAmount * 0.35
           : getCappedInterest(newAmount, monthlyRate, months, maxRate);
         const total = Math.ceil(newAmount + interest);
         const { totalWeeks } = getLoanSchedule(months);
