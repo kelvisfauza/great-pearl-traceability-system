@@ -121,6 +121,7 @@ import MaintenanceGuard from "./components/MaintenanceGuard";
 import LocationPermissionGate from "./components/LocationPermissionGate";
 import MaintenanceRecovery from "./pages/MaintenanceRecovery";
 import QuickLoans from "./pages/QuickLoans";
+import Overdraft from "./pages/Overdraft";
 import ProfileCompletionModal from "./components/ProfileCompletionModal";
 import BirthdayNotification from "./components/BirthdayNotification";
 import MeetingRewardsTeaserPopup from "./components/MeetingRewardsTeaserPopup";
@@ -358,6 +359,11 @@ const App: React.ComponentType = () => {
                 <Route path="/quick-loans" element={
                   <ProtectedRoute>
                     <QuickLoans />
+                  </ProtectedRoute>
+                } />
+                <Route path="/overdraft" element={
+                  <ProtectedRoute>
+                    <Overdraft />
                   </ProtectedRoute>
                 } />
                 <Route path="/user-daily-reports" element={

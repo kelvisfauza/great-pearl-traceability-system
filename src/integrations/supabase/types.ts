@@ -6212,6 +6212,178 @@ export type Database = {
         }
         Relationships: []
       }
+      overdraft_accounts: {
+        Row: {
+          activation_fee: number
+          activation_fee_paid: boolean
+          application_id: string | null
+          approved_at: string | null
+          approved_by: string | null
+          approved_limit: number
+          closed_at: string | null
+          created_at: string
+          employee_email: string
+          employee_name: string | null
+          id: string
+          last_used_at: string | null
+          outstanding_balance: number
+          status: string
+          total_drawn: number
+          total_recovered: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activation_fee?: number
+          activation_fee_paid?: boolean
+          application_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_limit?: number
+          closed_at?: string | null
+          created_at?: string
+          employee_email: string
+          employee_name?: string | null
+          id?: string
+          last_used_at?: string | null
+          outstanding_balance?: number
+          status?: string
+          total_drawn?: number
+          total_recovered?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activation_fee?: number
+          activation_fee_paid?: boolean
+          application_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_limit?: number
+          closed_at?: string | null
+          created_at?: string
+          employee_email?: string
+          employee_name?: string | null
+          id?: string
+          last_used_at?: string | null
+          outstanding_balance?: number
+          status?: string
+          total_drawn?: number
+          total_recovered?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "overdraft_accounts_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "overdraft_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      overdraft_applications: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          approved_limit: number | null
+          calculated_limit: number
+          created_at: string
+          employee_email: string
+          employee_name: string | null
+          factors: Json | null
+          id: string
+          reason: string | null
+          rejection_reason: string | null
+          requested_amount: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_limit?: number | null
+          calculated_limit?: number
+          created_at?: string
+          employee_email: string
+          employee_name?: string | null
+          factors?: Json | null
+          id?: string
+          reason?: string | null
+          rejection_reason?: string | null
+          requested_amount?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_limit?: number | null
+          calculated_limit?: number
+          created_at?: string
+          employee_email?: string
+          employee_name?: string | null
+          factors?: Json | null
+          id?: string
+          reason?: string | null
+          rejection_reason?: string | null
+          requested_amount?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      overdraft_transactions: {
+        Row: {
+          account_id: string
+          amount: number
+          balance_after: number
+          created_at: string
+          id: string
+          ledger_entry_id: string | null
+          metadata: Json | null
+          reference: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          balance_after: number
+          created_at?: string
+          id?: string
+          ledger_entry_id?: string | null
+          metadata?: Json | null
+          reference?: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          balance_after?: number
+          created_at?: string
+          id?: string
+          ledger_entry_id?: string | null
+          metadata?: Json | null
+          reference?: string | null
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "overdraft_transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "overdraft_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       overtime_awards: {
         Row: {
           claimed_at: string | null
@@ -11640,6 +11812,15 @@ export type Database = {
         }
       }
       admin_delete_all_system_data: { Args: never; Returns: Json }
+      apply_overdraft_recovery: {
+        Args: {
+          p_credit_amount: number
+          p_ledger_id: string
+          p_source: string
+          p_user_id: string
+        }
+        Returns: number
+      }
       approve_transfer_reversal: {
         Args: { p_notes?: string; p_request_id: string }
         Returns: Json
@@ -11915,6 +12096,19 @@ export type Database = {
       get_or_create_inventory_batch_for_day: {
         Args: { p_batch_date: string; p_coffee_type: string }
         Returns: string
+      }
+      get_overdraft_account: {
+        Args: { user_email: string }
+        Returns: {
+          approved_at: string
+          approved_limit: number
+          available_overdraft: number
+          id: string
+          last_used_at: string
+          outstanding_balance: number
+          status: string
+          user_id: string
+        }[]
       }
       get_payment_summary_by_date: {
         Args: { end_date: string; start_date: string }
