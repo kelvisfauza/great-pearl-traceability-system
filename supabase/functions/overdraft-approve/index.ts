@@ -68,9 +68,7 @@ Deno.serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const activationFee = Math.round(finalLimit * 0.05);
-
-    // Create the active overdraft account
+    // Create the active overdraft account (no fee at approval — fee is charged per draw)
     const { data: account, error: accErr } = await admin
       .from("overdraft_accounts")
       .insert({
@@ -79,8 +77,8 @@ Deno.serve(async (req) => {
         employee_name: app.employee_name,
         approved_limit: finalLimit,
         outstanding_balance: 0,
-        activation_fee: activationFee,
-        activation_fee_paid: false,
+        activation_fee: 0,
+        activation_fee_paid: true,
         status: "active",
         approved_by: approver_email || "Admin",
         approved_at: new Date().toISOString(),
@@ -93,39 +91,6 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: false, error: accErr.message }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-
-    // Charge the 5% activation fee from wallet (debit ledger entry)
-    const { data: feeLedger } = await admin
-      .from("ledger_entries")
-      .insert({
-        user_id: app.user_id,
-        entry_type: "WITHDRAWAL",
-        amount: -activationFee,
-        reference: `OD-FEE-${account.id}`,
-        source_category: "OVERDRAFT_FEE",
-        metadata: {
-          type: "overdraft_fee",
-          overdraft_account_id: account.id,
-          fee_rate: 0.05,
-          approved_limit: finalLimit,
-          description: `Overdraft activation fee (5% of UGX ${finalLimit.toLocaleString()})`,
-        },
-      })
-      .select()
-      .single();
-
-    await admin.from("overdraft_transactions").insert({
-      account_id: account.id,
-      user_id: app.user_id,
-      transaction_type: "fee",
-      amount: activationFee,
-      balance_after: 0,
-      ledger_entry_id: feeLedger?.id || null,
-      reference: "ACTIVATION_FEE",
-      metadata: { fee_rate: 0.05 },
-    });
-
-    await admin.from("overdraft_accounts").update({ activation_fee_paid: true }).eq("id", account.id);
 
     await admin.from("overdraft_applications").update({
       status: "approved",
@@ -145,7 +110,7 @@ Deno.serve(async (req) => {
             <p>Good news! Your overdraft has been activated.</p>
             <ul>
               <li><strong>Approved Limit:</strong> UGX ${finalLimit.toLocaleString()}</li>
-              <li><strong>Activation Fee (5%):</strong> UGX ${activationFee.toLocaleString()} (deducted from wallet)</li>
+              <li><strong>Fee:</strong> No upfront charge. A 5% fee is added to the outstanding only when you actually draw from the overdraft.</li>
               <li><strong>Repayment:</strong> Automatically recovered from any future wallet credit (salary, loyalty, deposits) until cleared.</li>
             </ul>
             <p>You may now draw up to UGX ${finalLimit.toLocaleString()} above your wallet balance.</p>
@@ -154,7 +119,7 @@ Deno.serve(async (req) => {
       });
     } catch (_) { /* ignore */ }
 
-    return new Response(JSON.stringify({ ok: true, account, activation_fee: activationFee }),
+    return new Response(JSON.stringify({ ok: true, account, activation_fee: 0 }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {
     return new Response(JSON.stringify({ ok: false, error: e.message || String(e) }),
