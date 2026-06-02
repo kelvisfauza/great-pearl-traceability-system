@@ -1,0 +1,3 @@
+INSERT INTO public.ledger_entries (user_id, entry_type, amount, source_category, reference, metadata) VALUES
+('5ac019de-199c-4a3f-97de-96de786f55dc','WITHDRAWAL',-5900,'INTERNAL_TRANSFER','SEND-1780385495096-739S-REVERSE-OUT', jsonb_build_object('description','Reversal: UGX 5,900 returned to Bwambale Benson (admin reversal)','reverses','SEND-1780385495096-739S-IN-3351495c','type','internal_transfer_reversal','bypass_treasury_check',true)),
+('eba97d3e-f098-467a-ad78-d0b9639d76a8','DEPOSIT',5900,'INTERNAL_TRANSFER','SEND-1780385495096-739S-REVERSE-IN', jsonb_build_object('description','Reversal: UGX 5,900 refunded from Bbosa Sserunkuma Taufiq (admin reversal)','reverses','SEND-1780385495096-739S-OUT-9d29e868','type','internal_transfer_reversal'));
