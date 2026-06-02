@@ -361,6 +361,11 @@ const App: React.ComponentType = () => {
                     <QuickLoans />
                   </ProtectedRoute>
                 } />
+                <Route path="/overdraft" element={
+                  <ProtectedRoute>
+                    <Overdraft />
+                  </ProtectedRoute>
+                } />
                 <Route path="/user-daily-reports" element={
                   <ProtectedRoute>
                     <UserDailyReports />
