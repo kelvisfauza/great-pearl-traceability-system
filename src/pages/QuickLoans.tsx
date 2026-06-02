@@ -1373,7 +1373,7 @@ const QuickLoans = () => {
 
     // Check limit
     const salary = employee.salary || 0;
-    const maxLoan = salary * 2;
+    const maxLoan = salary * 5;
     const otherOutstanding = myLoans
       .filter(l => l.id !== modifyLoan.id && ['active', 'pending_guarantor', 'pending_admin'].includes(l.status))
       .reduce((s: number, l: any) => s + (l.remaining_balance || l.loan_amount || 0), 0);
@@ -1467,9 +1467,9 @@ const QuickLoans = () => {
     // New principal = remaining balance of old loan + additional amount
     const newPrincipal = (topUpLoan.remaining_balance || 0) + additionalAmount;
     
-    // Check 2x salary limit
+    // Check 5x salary limit
     const salary = employee.salary || 0;
-    const maxLoan = salary * 2;
+    const maxLoan = salary * 5;
     // Exclude the parent loan's outstanding from the calculation since it's being rolled over
     const otherOutstanding = myLoans
       .filter(l => l.id !== topUpLoan.id && ['active', 'pending_guarantor', 'pending_admin'].includes(l.status))
@@ -1830,7 +1830,7 @@ const QuickLoans = () => {
     return <Badge variant={s.variant}>{s.label}</Badge>;
   };
 
-  // Calculate loan limit - always 2x salary minus outstanding
+  // Calculate loan limit - always 5x salary minus outstanding
   const getLoanLimit = (empEmail: string, empSalary: number, empAuthId?: string) => {
     const empLoans = (loans.length > 0 ? loans : myLoans).filter(l => l.employee_email === empEmail && ['active', 'pending_guarantor', 'pending_admin'].includes(l.status));
     const outstanding = empLoans.reduce((s: number, l: any) => s + (l.remaining_balance || l.loan_amount || 0), 0);
@@ -1868,7 +1868,7 @@ const QuickLoans = () => {
                   <div>
                     <Label>Loan Amount (UGX)</Label>
                     <Input type="number" value={loanAmount} onChange={e => setLoanAmount(e.target.value)} placeholder="e.g. 500000" />
-                    <p className="text-xs text-muted-foreground mt-1">Max: UGX {(myLimit?.availableLimit || (employee?.salary || 0) * 2).toLocaleString()} (2x salary)</p>
+                    <p className="text-xs text-muted-foreground mt-1">Max: UGX {(myLimit?.availableLimit || (employee?.salary || 0) * 5).toLocaleString()} (5x salary)</p>
                   </div>
                   <div>
                     <Label>Loan Type</Label>
@@ -2339,7 +2339,7 @@ const QuickLoans = () => {
 
                   // Calculate available limit excluding the parent loan
                   const salary = employee?.salary || 0;
-                  const maxLoan = salary * 2;
+                  const maxLoan = salary * 5;
                   const otherOutstanding = myLoans
                     .filter(l => l.id !== topUpLoan.id && ['active', 'pending_guarantor', 'pending_admin'].includes(l.status))
                     .reduce((s: number, l: any) => s + (l.remaining_balance || l.loan_amount || 0), 0);
@@ -2587,7 +2587,7 @@ const QuickLoans = () => {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Active loans: {myLimit.activeCount}/3 • Limit: 2x salary minus outstanding
+                  Active loans: {myLimit.activeCount}/3 • Limit: 5x salary minus outstanding
                 </p>
               </CardContent>
             </Card>
