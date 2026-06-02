@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Download, ShoppingCart, Coffee, Wallet, Info, Truck, Fuel } from 'lucide-react';
+import { Download, ShoppingCart, Coffee, Wallet, Info, Truck, Fuel, FileText } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { jsPDF } from 'jspdf';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -24,7 +24,7 @@ const generateRefNumber = (prefix: string) => {
   return `${prefix}-${yr}${mo}${dy}-${rand}`;
 };
 
-type TemplateType = 'cash-requisition' | 'personal-expense' | 'salary-request' | 'service-provider-requisition' | 'fuel-ledger';
+type TemplateType = 'cash-requisition' | 'personal-expense' | 'salary-request' | 'service-provider-requisition' | 'fuel-ledger' | 'department-report';
 
 interface TemplateConfig {
   type: TemplateType;
@@ -112,6 +112,22 @@ const templates: TemplateConfig[] = [
       { label: 'Service Provider (e.g. Total Energies)' },
       { label: 'Station Branch / Location' },
       { label: 'Period Covered' },
+    ],
+  },
+  {
+    type: 'department-report',
+    title: 'Departmental Report Template',
+    prefix: 'RPT',
+    icon: <FileText className="h-5 w-5" />,
+    description: 'Printable report template with company header — Report By, Department, Subject, Period and a lined writing area',
+    approvalType: 'Department Report',
+    fields: [
+      { label: 'Report Subject / Title' },
+      { label: 'Report By (Full Name)' },
+      { label: 'Position / Role' },
+      { label: 'Department' },
+      { label: 'Reporting Period (e.g. May 2026 / Week 22)' },
+      { label: 'Date of Report' },
     ],
   },
 ];
@@ -357,6 +373,81 @@ const generatePDF = async (
     doc.text('TOTAL LITRES: __________', margin, y + 5);
     doc.text('TOTAL AMOUNT (UGX): __________________', margin + contentW / 2, y + 5);
     y += 10;
+  } else if (template.type === 'department-report') {
+    // ===== DEPARTMENT REPORT BRANCH =====
+    // Meta block (Report By / Position / Department / Period / Subject)
+    const drawMetaRow = (label1: string, val1: string, label2: string, val2: string, rowY: number) => {
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.3);
+      doc.rect(margin, rowY, contentW, 8);
+      doc.line(margin + contentW / 2, rowY, margin + contentW / 2, rowY + 8);
+
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(80, 80, 80);
+      doc.text(label1, margin + 3, rowY + 5.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(20, 20, 20);
+      doc.text(val1 || '', margin + 32, rowY + 5.5);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(80, 80, 80);
+      doc.text(label2, margin + contentW / 2 + 3, rowY + 5.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(20, 20, 20);
+      doc.text(val2 || '', margin + contentW / 2 + 32, rowY + 5.5);
+    };
+
+    // Section header
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.5);
+    doc.rect(margin, y, contentW, 7);
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('REPORT DETAILS', margin + 4, y + 5);
+    y += 7;
+
+    const subject = prefill.reason || '';
+    drawMetaRow('Report By:', employeeName, 'Position:', position, y); y += 8;
+    drawMetaRow('Department:', department, 'Period:', prefill.beneficiaryPhone || '', y); y += 8;
+    drawMetaRow('Date:', dateStr, 'Subject:', prefill.beneficiaryName || subject.slice(0, 60), y); y += 12;
+
+    // Body section header
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.5);
+    doc.rect(margin, y, contentW, 7);
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('REPORT BODY', margin + 4, y + 5);
+    y += 10;
+
+    // Lined writing area
+    const bodyBottom = 250;
+    const lineGap = 7;
+    doc.setDrawColor(190, 190, 190);
+    doc.setLineWidth(0.25);
+    let ly = y + 4;
+    while (ly < bodyBottom) {
+      doc.line(margin, ly, margin + contentW, ly);
+      ly += lineGap;
+    }
+
+    // If subject/reason supplied, write it on the first lines
+    if (subject) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(20, 20, 20);
+      const wrapped = doc.splitTextToSize(subject, contentW - 2);
+      let wy = y + 2;
+      for (let i = 0; i < wrapped.length && wy < bodyBottom; i++) {
+        doc.text(wrapped[i], margin + 1, wy);
+        wy += lineGap;
+      }
+    }
+
+    y = bodyBottom + 4;
   } else {
   // Request Details section (outlined, no fill)
   doc.setDrawColor(0, 0, 0);
@@ -613,6 +704,12 @@ const ExpenseTemplateDownload = () => {
   const submitForApproval = async () => {
     if (!employee || !activeTemplate) return;
     const isFuel = activeTemplate.type === 'fuel-ledger';
+    const isReport = activeTemplate.type === 'department-report';
+    if (isReport) {
+      // Reports are printable only — no approval workflow
+      await runGenerate(buildPrefill());
+      return;
+    }
     const amt = parseFloat(amount);
     if (!isFuel && (!amt || amt <= 0)) {
       toast({ title: 'Amount required', description: 'Please enter a valid amount before submitting for approval.', variant: 'destructive' });
@@ -715,7 +812,9 @@ const ExpenseTemplateDownload = () => {
             <DialogDescription>
               {activeTemplate?.type === 'fuel-ledger'
                 ? 'Enter the service provider details. The printable ledger has 10 blank rows for the station to fill in (date, truck, driver, phone, litres, amount, signature) plus our reference and approval block.'
-                : 'Enter who the money is for, the amount, and the reason. Submit for approval and a printable copy will be generated.'}
+                : activeTemplate?.type === 'department-report'
+                  ? 'Enter the report subject and period. A printable report sheet with the company header, your name, department and a lined writing area will be generated.'
+                  : 'Enter who the money is for, the amount, and the reason. Submit for approval and a printable copy will be generated.'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -755,23 +854,46 @@ const ExpenseTemplateDownload = () => {
                   ? 'Service Provider (e.g. Total Energies)'
                   : activeTemplate?.type === 'salary-request'
                     ? 'Beneficiary Name (auto-filled)'
-                    : 'Recipient / Service Provider Name'}
+                    : activeTemplate?.type === 'department-report'
+                      ? 'Report Subject / Title'
+                      : 'Recipient / Service Provider Name'}
               </Label>
               <Input
                 id="ben-name"
                 value={beneficiaryName}
                 onChange={(e) => setBeneficiaryName(e.target.value)}
-                placeholder={activeTemplate?.type === 'fuel-ledger' ? 'Total Energies Kasese' : 'e.g. John Mukasa'}
+                placeholder={
+                  activeTemplate?.type === 'fuel-ledger'
+                    ? 'Total Energies Kasese'
+                    : activeTemplate?.type === 'department-report'
+                      ? 'e.g. Weekly Quality Department Report'
+                      : 'e.g. John Mukasa'
+                }
                 readOnly={activeTemplate?.type === 'salary-request' && !!selectedPayeeId}
               />
             </div>
             <div>
               <Label htmlFor="ben-phone">
-                {activeTemplate?.type === 'fuel-ledger' ? 'Branch / Location' : 'Phone / Account Number'}
+                {activeTemplate?.type === 'fuel-ledger'
+                  ? 'Branch / Location'
+                  : activeTemplate?.type === 'department-report'
+                    ? 'Reporting Period (e.g. May 2026)'
+                    : 'Phone / Account Number'}
               </Label>
-              <Input id="ben-phone" value={beneficiaryPhone} onChange={(e) => setBeneficiaryPhone(e.target.value)} placeholder={activeTemplate?.type === 'fuel-ledger' ? 'e.g. Kasese Town Branch' : 'e.g. 0772 123 456'} />
+              <Input
+                id="ben-phone"
+                value={beneficiaryPhone}
+                onChange={(e) => setBeneficiaryPhone(e.target.value)}
+                placeholder={
+                  activeTemplate?.type === 'fuel-ledger'
+                    ? 'e.g. Kasese Town Branch'
+                    : activeTemplate?.type === 'department-report'
+                      ? 'e.g. May 2026 / Week 22'
+                      : 'e.g. 0772 123 456'
+                }
+              />
             </div>
-            {activeTemplate?.type !== 'fuel-ledger' && (
+            {activeTemplate?.type !== 'fuel-ledger' && activeTemplate?.type !== 'department-report' && (
             <div>
               <Label htmlFor="ben-amount">Amount (UGX)</Label>
               <Input id="ben-amount" type="number" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g. 50000" />
@@ -779,9 +901,25 @@ const ExpenseTemplateDownload = () => {
             )}
             <div>
               <Label htmlFor="ben-reason">
-                {activeTemplate?.type === 'fuel-ledger' ? 'Period Covered (optional)' : 'Reason'}
+                {activeTemplate?.type === 'fuel-ledger'
+                  ? 'Period Covered (optional)'
+                  : activeTemplate?.type === 'department-report'
+                    ? 'Report Summary / Opening Paragraph (optional)'
+                    : 'Reason'}
               </Label>
-              <Textarea id="ben-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={activeTemplate?.type === 'fuel-ledger' ? 'e.g. May 2026' : 'Why is this payment needed?'} rows={activeTemplate?.type === 'fuel-ledger' ? 1 : 3} />
+              <Textarea
+                id="ben-reason"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder={
+                  activeTemplate?.type === 'fuel-ledger'
+                    ? 'e.g. May 2026'
+                    : activeTemplate?.type === 'department-report'
+                      ? 'Optional — a few opening lines that will be printed at the top of the body area'
+                      : 'Why is this payment needed?'
+                }
+                rows={activeTemplate?.type === 'fuel-ledger' ? 1 : 3}
+              />
             </div>
           </div>
           <DialogFooter className="gap-2 flex-wrap">
@@ -789,9 +927,11 @@ const ExpenseTemplateDownload = () => {
             <Button variant="outline" onClick={() => runGenerate(buildPrefill())} disabled={submitting}>
               Print without submitting
             </Button>
-            <Button onClick={submitForApproval} disabled={submitting}>
-              {submitting ? 'Submitting…' : activeTemplate?.type === 'fuel-ledger' ? 'Log & Print Ledger' : 'Submit for Approval & Print'}
-            </Button>
+            {activeTemplate?.type !== 'department-report' && (
+              <Button onClick={submitForApproval} disabled={submitting}>
+                {submitting ? 'Submitting…' : activeTemplate?.type === 'fuel-ledger' ? 'Log & Print Ledger' : 'Submit for Approval & Print'}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
