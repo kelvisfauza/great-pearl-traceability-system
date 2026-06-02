@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Download, ShoppingCart, Coffee, Wallet, Info, Truck, Fuel } from 'lucide-react';
+import { Download, ShoppingCart, Coffee, Wallet, Info, Truck, Fuel, FileText } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { jsPDF } from 'jspdf';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -24,7 +24,7 @@ const generateRefNumber = (prefix: string) => {
   return `${prefix}-${yr}${mo}${dy}-${rand}`;
 };
 
-type TemplateType = 'cash-requisition' | 'personal-expense' | 'salary-request' | 'service-provider-requisition' | 'fuel-ledger';
+type TemplateType = 'cash-requisition' | 'personal-expense' | 'salary-request' | 'service-provider-requisition' | 'fuel-ledger' | 'department-report';
 
 interface TemplateConfig {
   type: TemplateType;
@@ -112,6 +112,22 @@ const templates: TemplateConfig[] = [
       { label: 'Service Provider (e.g. Total Energies)' },
       { label: 'Station Branch / Location' },
       { label: 'Period Covered' },
+    ],
+  },
+  {
+    type: 'department-report',
+    title: 'Departmental Report Template',
+    prefix: 'RPT',
+    icon: <FileText className="h-5 w-5" />,
+    description: 'Printable report template with company header — Report By, Department, Subject, Period and a lined writing area',
+    approvalType: 'Department Report',
+    fields: [
+      { label: 'Report Subject / Title' },
+      { label: 'Report By (Full Name)' },
+      { label: 'Position / Role' },
+      { label: 'Department' },
+      { label: 'Reporting Period (e.g. May 2026 / Week 22)' },
+      { label: 'Date of Report' },
     ],
   },
 ];
