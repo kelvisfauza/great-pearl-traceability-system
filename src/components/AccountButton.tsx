@@ -308,6 +308,10 @@ export const AccountButton = () => {
   const walletBalance = account?.wallet_balance || 0;
   const availableLoyalty = Math.max(0, walletBalance - pendingAmount);
 
+  // Overdraft headroom is added to withdrawal capacity when the account is active and not frozen.
+  const overdraftHeadroom = overdraft && overdraft.status === 'active' ? Number(overdraft.available || 0) : 0;
+  const availableForWithdrawal = availableLoyalty + overdraftHeadroom;
+
   return (
     <>
       <Sheet>
@@ -634,6 +638,11 @@ export const AccountButton = () => {
                   <div className="text-lg font-bold text-blue-600">
                     {formatCurrency(availableLoyalty)}
                   </div>
+                  {overdraftHeadroom > 0 && (
+                    <div className="text-[10px] text-muted-foreground mt-1">
+                      +{formatCurrency(overdraftHeadroom)} overdraft
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -648,7 +657,7 @@ export const AccountButton = () => {
                 variant="outline"
                 onClick={() => setShowWithdrawal(true)}
                 className="flex items-center gap-2"
-                disabled={availableLoyalty <= 0 || withdrawalStatus.disabled}
+                disabled={availableForWithdrawal <= 0 || withdrawalStatus.disabled}
               >
                 <DollarSign className="h-4 w-4" />
                 Withdraw
@@ -790,7 +799,7 @@ export const AccountButton = () => {
       <WithdrawalModal 
         open={showWithdrawal} 
         onOpenChange={setShowWithdrawal}
-        availableAmount={availableLoyalty}
+        availableAmount={availableForWithdrawal}
       />
       <DepositModal open={showDeposit} onOpenChange={setShowDeposit} />
       <SendMoneyModal open={showSendMoney} onOpenChange={setShowSendMoney} availableBalance={availableLoyalty} />
