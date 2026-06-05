@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
     // Pull active employees
     const { data: employees, error: empErr } = await admin
       .from("employees")
-      .select("id, name, email, salary, disabled, employment_type")
+      .select("id, name, email, salary, disabled")
       .or("disabled.is.null,disabled.eq.false")
       .limit(5000);
     if (empErr) throw empErr;
