@@ -243,13 +243,32 @@ const Overdraft = () => {
           <CardContent className="pt-4 text-sm flex gap-3">
             <Info className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <p><strong>How it works:</strong> Your limit is set from your wallet activity (avg monthly inflow × 0.5).</p>
+              <p><strong>How it works:</strong> The system reviews every member on the 1st of each month and assigns an eligible overdraft limit from your wallet activity (avg monthly inflow × 0.5, capped at 50% of salary and UGX 2,000,000).</p>
               <p><strong>Activation fee:</strong> Flat 5% of approved limit, charged once on approval.</p>
               <p><strong>Repayment:</strong> Auto-recovered from any future wallet credit (salary, loyalty, deposits) until cleared.</p>
               <p><strong>Approval:</strong> Admin (Fauza) only — fast track.</p>
             </div>
           </CardContent>
         </Card>
+
+        {/* System-assigned monthly eligibility */}
+        {myEligibility && (
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="pt-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">System-assigned limit · {myEligibility.period}</p>
+                <p className="text-2xl font-bold text-primary">UGX {Number(myEligibility.computed_limit).toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground mt-1">Reviewed monthly on the 1st. Apply for any amount up to this limit.</p>
+              </div>
+              {isAdmin && (
+                <Button variant="outline" size="sm" onClick={handleRecompute} disabled={recomputing}>
+                  {recomputing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
+                  Recompute all limits
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Tabs defaultValue="my">
           <TabsList>
