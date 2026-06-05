@@ -638,6 +638,11 @@ export const AccountButton = () => {
                   <div className="text-lg font-bold text-blue-600">
                     {formatCurrency(availableLoyalty)}
                   </div>
+                  {overdraftHeadroom > 0 && (
+                    <div className="text-[10px] text-muted-foreground mt-1">
+                      +{formatCurrency(overdraftHeadroom)} overdraft
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -652,7 +657,7 @@ export const AccountButton = () => {
                 variant="outline"
                 onClick={() => setShowWithdrawal(true)}
                 className="flex items-center gap-2"
-                disabled={availableLoyalty <= 0 || withdrawalStatus.disabled}
+                disabled={availableForWithdrawal <= 0 || withdrawalStatus.disabled}
               >
                 <DollarSign className="h-4 w-4" />
                 Withdraw
