@@ -6337,6 +6337,45 @@ export type Database = {
         }
         Relationships: []
       }
+      overdraft_eligibility: {
+        Row: {
+          computed_at: string
+          computed_limit: number
+          created_at: string
+          employee_email: string
+          employee_name: string | null
+          factors: Json
+          id: string
+          period: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          computed_at?: string
+          computed_limit?: number
+          created_at?: string
+          employee_email: string
+          employee_name?: string | null
+          factors?: Json
+          id?: string
+          period: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          computed_at?: string
+          computed_limit?: number
+          created_at?: string
+          employee_email?: string
+          employee_name?: string | null
+          factors?: Json
+          id?: string
+          period?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       overdraft_transactions: {
         Row: {
           account_id: string
