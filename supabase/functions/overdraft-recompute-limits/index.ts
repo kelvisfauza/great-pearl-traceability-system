@@ -38,7 +38,11 @@ Deno.serve(async (req) => {
       if (!emp.email) continue;
       // Resolve unified user_id
       const { data: uidData } = await admin.rpc("get_unified_user_id", { input_email: emp.email });
-      const userId = uidData as string | null;
+      let userId = uidData as string | null;
+      // Only accept valid UUID; otherwise treat as null
+      if (userId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+        userId = null;
+      }
 
       let totalInflow = 0;
       if (userId) {
