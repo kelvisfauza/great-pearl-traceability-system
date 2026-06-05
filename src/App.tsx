@@ -122,6 +122,7 @@ import LocationPermissionGate from "./components/LocationPermissionGate";
 import MaintenanceRecovery from "./pages/MaintenanceRecovery";
 import QuickLoans from "./pages/QuickLoans";
 import Overdraft from "./pages/Overdraft";
+import OverdraftAdmin from "./pages/admin/OverdraftAdmin";
 import ProfileCompletionModal from "./components/ProfileCompletionModal";
 import BirthdayNotification from "./components/BirthdayNotification";
 import MeetingRewardsTeaserPopup from "./components/MeetingRewardsTeaserPopup";
@@ -364,6 +365,11 @@ const App: React.ComponentType = () => {
                 <Route path="/overdraft" element={
                   <ProtectedRoute>
                     <Overdraft />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/overdraft" element={
+                  <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
+                    <OverdraftAdmin />
                   </ProtectedRoute>
                 } />
                 <Route path="/user-daily-reports" element={
