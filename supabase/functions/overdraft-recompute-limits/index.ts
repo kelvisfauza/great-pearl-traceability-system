@@ -89,8 +89,15 @@ Deno.serve(async (req) => {
       if (error) throw error;
     }
 
+    // Mirror this month's limits into active overdraft accounts (auto_managed only)
+    let synced: any = null;
+    try {
+      const { data } = await admin.rpc("overdraft_sync_active_limits");
+      synced = data;
+    } catch (_) { /* ignore */ }
+
     return new Response(
-      JSON.stringify({ ok: true, period, processed, written: rows.length }),
+      JSON.stringify({ ok: true, period, processed, written: rows.length, accounts_synced: synced }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e: any) {

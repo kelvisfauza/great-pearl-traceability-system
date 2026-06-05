@@ -217,13 +217,40 @@ serve(async (req) => {
     // Authoritative spendable balance: ledger balance minus pending withdrawal_requests
     // minus in-flight instant withdrawals minus loan reserve.
     const baseAvailable = Math.min(availableBalance, walletBalance - pendingWithdrawals);
-    const spendable = Math.max(0, baseAvailable - inFlightInstant - reserve);
+    const walletSpendable = Math.max(0, baseAvailable - inFlightInstant - reserve);
+
+    // Add any opt-in overdraft headroom for this user.
+    let odAvailable = 0;
+    let odAccountId: string | null = null;
+    let odFrozen = false;
+    try {
+      const { data: spend } = await supabase.rpc('get_overdraft_spendable', { p_user_id: resolvedUserId });
+      odAvailable = Number((spend as any)?.overdraft_available || 0);
+      odFrozen = !!(spend as any)?.frozen;
+      if ((spend as any)?.has_overdraft) {
+        const { data: acc } = await supabase
+          .from('overdraft_accounts')
+          .select('id')
+          .eq('user_id', resolvedUserId)
+          .eq('status', 'active')
+          .maybeSingle();
+        odAccountId = acc?.id || null;
+      }
+    } catch (_) { /* non-fatal */ }
+
+    const spendable = walletSpendable + odAvailable;
     if (numAmount > spendable) {
       const msg = reserve > 0
         ? `You have an active loan (as borrower or guarantor). UGX ${reserve.toLocaleString()} must remain in your wallet. Available to withdraw: UGX ${spendable.toLocaleString()}.`
-        : `Insufficient wallet balance. Available: UGX ${spendable.toLocaleString()} (wallet ${walletBalance.toLocaleString()}, pending ${(pendingWithdrawals + inFlightInstant).toLocaleString()}).`;
+        : odFrozen
+          ? `Insufficient funds. Your overdraft is frozen (outstanding not cleared within 30 days). Wallet available: UGX ${walletSpendable.toLocaleString()}.`
+          : `Insufficient funds. Available: UGX ${spendable.toLocaleString()} (wallet ${walletSpendable.toLocaleString()}${odAvailable>0?`, overdraft ${odAvailable.toLocaleString()}`:''}).`;
       return respond(false, { error: msg });
     }
+
+    // Compute how much of this withdrawal is overdraft-funded
+    const overdraftPortion = Math.max(0, numAmount - walletSpendable);
+    const walletPortion = numAmount - overdraftPortion;
 
     // Fetch employee name early for narrative
     const { data: empData } = await supabase
@@ -347,24 +374,26 @@ serve(async (req) => {
 
     // Deduct from wallet via ledger (deduct immediately even if pending approval)
     const ledgerRef = `INSTANT-WD-${instantRecord.id}`;
-    const { error: ledgerErr } = await supabase.from('ledger_entries').insert({
+    const { data: ledgerRow, error: ledgerErr } = await supabase.from('ledger_entries').insert({
       user_id: resolvedUserId,
       entry_type: 'WITHDRAWAL',
       amount: -numAmount,
       reference: ledgerRef,
-      source_category: 'WITHDRAWAL',
+      source_category: overdraftPortion > 0 ? 'OVERDRAFT_DRAW' : 'WITHDRAWAL',
       metadata: {
         type: 'instant_withdrawal',
         phone: cleanPhone,
         payout_ref: txRef,
         instant_withdrawal_id: instantRecord.id,
         yo_status: txStatus,
+        wallet_portion: walletPortion,
+        overdraft_portion: overdraftPortion,
         // Yo payout has ALREADY succeeded at this point — the treasury/float
         // check must not block recording the user-side debit, otherwise the
         // user keeps the cash AND the wallet balance (real money leak).
         bypass_treasury_check: true,
       },
-    });
+    }).select('id').single();
 
     if (ledgerErr) {
       // Critical: payout already left Yo, but we couldn't debit the wallet.
@@ -412,6 +441,36 @@ serve(async (req) => {
         completed_at: isPending ? null : new Date().toISOString(),
       })
       .eq('id', instantRecord.id);
+
+    // Sync overdraft account if this draw consumed overdraft
+    if (overdraftPortion > 0 && odAccountId) {
+      try {
+        const { data: acc2 } = await supabase
+          .from('overdraft_accounts')
+          .select('outstanding_balance, total_drawn')
+          .eq('id', odAccountId)
+          .single();
+        const newOut = Number(acc2?.outstanding_balance || 0) + overdraftPortion;
+        await supabase.from('overdraft_accounts').update({
+          outstanding_balance: newOut,
+          total_drawn: Number(acc2?.total_drawn || 0) + overdraftPortion,
+          last_used_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }).eq('id', odAccountId);
+        await supabase.from('overdraft_transactions').insert({
+          account_id: odAccountId,
+          user_id: resolvedUserId,
+          transaction_type: 'draw',
+          amount: overdraftPortion,
+          balance_after: newOut,
+          ledger_entry_id: ledgerRow?.id || null,
+          reference: ledgerRef,
+          metadata: { source: 'instant_withdrawal', wallet_portion: walletPortion },
+        });
+      } catch (e) {
+        console.error('[instant-withdrawal] overdraft sync failed:', (e as Error).message);
+      }
+    }
 
     console.log(`[instant-withdrawal] ${finalStatus}! Ref: ${txRef}`);
 

@@ -6220,15 +6220,21 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           approved_limit: number
+          auto_managed: boolean
           closed_at: string | null
           created_at: string
           employee_email: string
           employee_name: string | null
+          first_negative_at: string | null
+          frozen: boolean
           id: string
+          interest_rate_bps: number
+          last_interest_at: string | null
           last_used_at: string | null
           outstanding_balance: number
           status: string
           total_drawn: number
+          total_interest: number
           total_recovered: number
           updated_at: string
           user_id: string
@@ -6240,15 +6246,21 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           approved_limit?: number
+          auto_managed?: boolean
           closed_at?: string | null
           created_at?: string
           employee_email: string
           employee_name?: string | null
+          first_negative_at?: string | null
+          frozen?: boolean
           id?: string
+          interest_rate_bps?: number
+          last_interest_at?: string | null
           last_used_at?: string | null
           outstanding_balance?: number
           status?: string
           total_drawn?: number
+          total_interest?: number
           total_recovered?: number
           updated_at?: string
           user_id: string
@@ -6260,15 +6272,21 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           approved_limit?: number
+          auto_managed?: boolean
           closed_at?: string | null
           created_at?: string
           employee_email?: string
           employee_name?: string | null
+          first_negative_at?: string | null
+          frozen?: boolean
           id?: string
+          interest_rate_bps?: number
+          last_interest_at?: string | null
           last_used_at?: string | null
           outstanding_balance?: number
           status?: string
           total_drawn?: number
+          total_interest?: number
           total_recovered?: number
           updated_at?: string
           user_id?: string
@@ -11851,6 +11869,18 @@ export type Database = {
         }
       }
       admin_delete_all_system_data: { Args: never; Returns: Json }
+      admin_overdraft_close: {
+        Args: { p_account_id: string; p_admin_email: string }
+        Returns: Json
+      }
+      admin_overdraft_set_limit: {
+        Args: { p_account_id: string; p_admin_email: string; p_limit: number }
+        Returns: Json
+      }
+      admin_overdraft_unfreeze: {
+        Args: { p_account_id: string; p_admin_email: string }
+        Returns: Json
+      }
       apply_overdraft_recovery: {
         Args: {
           p_credit_amount: number
@@ -11917,6 +11947,16 @@ export type Database = {
           p_approval_role: string
           p_confirmed_by: string
           p_transaction_id: string
+        }
+        Returns: Json
+      }
+      consume_spendable: {
+        Args: {
+          p_amount: number
+          p_metadata?: Json
+          p_reference?: string
+          p_source: string
+          p_user_id: string
         }
         Returns: Json
       }
@@ -12142,13 +12182,19 @@ export type Database = {
           approved_at: string
           approved_limit: number
           available_overdraft: number
+          days_negative: number
+          first_negative_at: string
+          frozen: boolean
           id: string
+          interest_rate_bps: number
           last_used_at: string
           outstanding_balance: number
           status: string
+          total_interest: number
           user_id: string
         }[]
       }
+      get_overdraft_spendable: { Args: { p_user_id: string }; Returns: Json }
       get_payment_summary_by_date: {
         Args: { end_date: string; start_date: string }
         Returns: {
@@ -12305,15 +12351,21 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           approved_limit: number
+          auto_managed: boolean
           closed_at: string | null
           created_at: string
           employee_email: string
           employee_name: string | null
+          first_negative_at: string | null
+          frozen: boolean
           id: string
+          interest_rate_bps: number
+          last_interest_at: string | null
           last_used_at: string | null
           outstanding_balance: number
           status: string
           total_drawn: number
+          total_interest: number
           total_recovered: number
           updated_at: string
           user_id: string
@@ -12372,6 +12424,10 @@ export type Database = {
       }
       migrate_approved_assessments_to_finance: { Args: never; Returns: number }
       migrate_batch_numbers_to_new_format: { Args: never; Returns: Json }
+      overdraft_activate: { Args: { p_email: string }; Returns: Json }
+      overdraft_daily_maintenance: { Args: never; Returns: Json }
+      overdraft_deactivate: { Args: { p_email: string }; Returns: Json }
+      overdraft_sync_active_limits: { Args: never; Returns: Json }
       process_daily_salary_credits: { Args: never; Returns: Json }
       process_monthly_payroll: { Args: { p_month?: string }; Returns: Json }
       process_salary_credits_for_date: {

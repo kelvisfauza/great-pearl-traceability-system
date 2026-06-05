@@ -1,45 +1,94 @@
-## Group calls (mesh WebRTC) — implementation plan
 
-### Scope
-- Group voice & video calls inside the existing messaging system.
-- Two entry points: (1) "Call group" button in a group conversation header, (2) "New group call" dialog where the caller picks 2–N people ad-hoc.
-- Mesh topology: each participant opens one `RTCPeerConnection` per other participant. Hard cap **8** (audio-only allowed up to 12); UI warns above 6 that quality will degrade. 20-person calls will not be reliable on mesh — flagged in UI.
+# Overdraft v2 — MTN-style Opt-In Overdraft
 
-### Data model (new migration)
-- `group_calls` — one row per group call session
-  - `host_id` (auth user), `call_type` ('audio'|'video'), `status` ('ringing'|'active'|'ended'), `conversation_id` (nullable, links to messaging conversation if any), `started_at`, `ended_at`, `title` (nullable)
-- `group_call_participants` — one row per invitee
-  - `call_id` → `group_calls.id`, `user_id`, `status` ('ringing'|'joined'|'declined'|'left'|'missed'), `joined_at`, `left_at`
-- RLS: only the host or any invited participant can read/update their own row.
-- Realtime enabled on both tables.
+Rebuild the overdraft so it works like MTN MoKash: members opt in once, then it transparently funds wallet debits when the wallet runs out, accrues daily interest, and auto-recovers from any future credit.
 
-### Signaling
-- One Supabase realtime channel per call: `group-call:{call_id}`.
-- Broadcast events between peers:
-  - `join` — new peer announces presence (payload: `{ userId }`)
-  - `offer` / `answer` — targeted (payload: `{ to, from, sdp }`)
-  - `ice` — targeted ICE candidate
-  - `leave` — peer leaving
-- Glare rule: the peer with the **lexicographically smaller userId** creates the offer when two peers see each other.
+## Chosen parameters
+- **Activation:** opt-in (one-tap, no admin approval)
+- **Fee:** none (no activation fee)
+- **Daily interest:** 0.5% on outstanding balance (~15%/month, between MTN's ~9% and your 2%/day suggestion)
+- **30-day freeze:** yes — if outstanding has not cleared for 30 days, new draws blocked until repaid (incoming credits still apply to recovery)
+
+## What changes
+
+### Activation
+- Remove the "apply + admin approve" path. Members see their system-assigned monthly limit and a single **Activate Overdraft** button.
+- Activation creates an `overdraft_accounts` row with `approved_limit = current month's eligibility` and `status='active'`. No fee.
+- Monthly recompute cron also updates each active account's `approved_limit` to the new month's eligibility figure.
+- Members can **Deactivate** anytime if outstanding = 0.
+
+### How it gets used (no explicit "draw")
+Any wallet debit (instant withdrawal, wallet-to-wallet transfer, loan repayment, USSD pay, service-provider payout, milling pay, etc.) calls a new RPC `consume_spendable(user_id, amount, source, metadata)`:
+1. Computes `spendable = wallet_balance + (limit − outstanding)`.
+2. If `amount > spendable` → reject as "insufficient funds".
+3. Else, debits wallet first; any shortfall is taken from overdraft (increases `outstanding_balance`, logs `overdraft_transactions` row type `draw`).
+4. If account is frozen (see below) → reject overdraft portion only; wallet-only debit still allowed.
+
+### Daily interest
+- New cron `overdraft-accrue-interest` runs daily at 00:30 UTC.
+- For every active account with `outstanding_balance > 0`: `outstanding += round(outstanding * 0.005)`, log a `overdraft_transactions` row `type='interest'`.
+
+### Recovery (unchanged behaviour, kept)
+- The existing `trigger_overdraft_recovery` on wallet credits diverts incoming money to clear outstanding (principal + accrued interest) first; remainder lands in wallet.
+
+### 30-day freeze
+- New columns: `first_negative_at`, `frozen` on `overdraft_accounts`.
+- Set `first_negative_at = now()` when balance goes from 0 → positive outstanding; clear it when it returns to 0.
+- Daily cron also flips `frozen = true` when `first_negative_at < now() - 30 days`. New overdraft draws blocked until cleared; recovery still applies and unfreezes on full clearance.
+
+### Monthly recompute (kept, extended)
+- 1st of each month at 06:00 UTC: recompute `overdraft_eligibility` AND mirror the new limit into each active `overdraft_accounts.approved_limit`.
+
+## UI changes
+
+### Member Overdraft page (`/overdraft`)
+- Drop the Apply dialog and applications history.
+- Show three cards: **System Limit** (from eligibility), **Outstanding** (with accrued interest breakdown), **Available** (limit − outstanding).
+- **Activate / Deactivate** button.
+- Activity table: draws, interest accruals, recoveries.
+- Info banner explains: auto-used on debit, 0.5%/day interest, 30-day freeze rule.
+
+### Admin Overdraft page (`/admin/overdraft`)
+- Drop pending applications section.
+- Show all active accounts with: member, limit, outstanding, frozen flag, days since first overdrawn.
+- Manual actions: adjust limit, unfreeze (override), force-close.
+- "Recompute all limits" button.
+
+### Wallet/withdrawal/transfer UIs
+- Replace "balance" guards with "spendable" (balance + available overdraft). Show a small "incl. UGX X overdraft available" hint when overdraft is active.
+
+## Technical details
+
+### DB migration
+- `overdraft_accounts`: add `frozen boolean default false`, `first_negative_at timestamptz`, `last_interest_at timestamptz`.
+- `overdraft_transactions`: ensure `transaction_type` allows `'interest'` (it's free-text today, so fine).
+- New RPC `public.consume_spendable(p_user_id uuid, p_amount numeric, p_source text, p_metadata jsonb)` returning `{ok, wallet_debit, overdraft_debit, new_outstanding}`.
+- New RPC `public.get_overdraft_spendable(p_user_id uuid)` returning `{wallet, limit, outstanding, available, frozen}`.
+- Trigger update: when `overdraft_accounts.outstanding_balance` transitions 0→positive set `first_negative_at`; positive→0 clear it and `frozen=false`.
+
+### Edge functions
+- New: `overdraft-activate`, `overdraft-deactivate`, `overdraft-accrue-interest` (cron target).
+- Modify (call `consume_spendable` instead of raw wallet debit + balance check):
+  - `instant-withdrawal`
+  - `service-provider-payout`
+  - `process-salary-auto-invest`
+  - `process-loan-repayments`
+  - `ussd-payment-success` (if debits wallet)
+  - wallet-to-wallet transfer function
+- Delete/disable: `overdraft-apply`, `overdraft-approve`, `overdraft-draw` (kept as no-ops returning error pointing to new flow, to avoid breaking old clients).
+
+### Cron jobs
+- Keep `overdraft-recompute-monthly` (1st @ 06:00 UTC), extend to push new limits into active accounts.
+- New `overdraft-accrue-interest-daily` (every day @ 00:30 UTC).
 
 ### Frontend
-- New `GroupCallContext.tsx` (separate from existing 1:1 `CallContext`) managing:
-  - `Map<peerId, RTCPeerConnection>`, `Map<peerId, MediaStream>`
-  - Local stream, mute/camera toggles, leave/end-for-all
-- New UI: `GroupCallDialog.tsx` — tiled grid of remote videos + self-view, controls bar (mute/cam/leave/end).
-- New `NewGroupCallDialog.tsx` — multi-select employee picker, audio/video toggle, "Start call" button.
-- Incoming-group-call ringer reuses the existing `useRingtone` hook, with accept/decline.
-- Add "Group call" buttons in `MessagingPanel` group-conversation header (voice + video icons).
+- Rewrite `src/pages/Overdraft.tsx` and `src/pages/admin/OverdraftAdmin.tsx`.
+- Update `useUnifiedApprovalRequests.ts` and `WithdrawalRequestsManager.tsx` balance guards to use `get_overdraft_spendable`.
+- Add a tiny `useSpendableBalance(email)` hook used by withdrawal/transfer forms.
 
-### Non-goals (this pass)
-- No TURN server change (keep current STUN/TURN config from 1:1).
-- No screen sharing, no recording, no waiting room, no host transfer.
-- No SFU. If 20-person quality is required, we'd swap to LiveKit later — the data model is compatible.
-
-### Files touched
-- New: migration, `src/contexts/GroupCallContext.tsx`, `src/components/calls/GroupCallDialog.tsx`, `src/components/calls/NewGroupCallDialog.tsx`, `src/components/calls/IncomingGroupCallToast.tsx`
-- Edited: `src/App.tsx` (wrap provider), `src/components/messaging/MessagingPanel.tsx` (add group-call buttons + entry to new-group-call dialog)
-
-### Risks / caveats called out in UI
-- "Mesh group calls work best up to 6 people. Above that, expect choppy video — switch to audio-only."
-- Browser tab must stay open to relay (no SFU). If host leaves, call ends for everyone else.
+## Rollout
+1. Migration (schema + RPCs + trigger).
+2. New edge functions + cron.
+3. Refactor existing edge functions one by one to use `consume_spendable`.
+4. Frontend rewrite + balance-guard updates.
+5. Verify with a test activation + small simulated debit.
