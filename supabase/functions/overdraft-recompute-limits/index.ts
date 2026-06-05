@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
     // Pull active employees
     const { data: employees, error: empErr } = await admin
       .from("employees")
-      .select("id, name, email, salary, disabled, employment_type")
+      .select("id, name, email, salary, disabled")
       .or("disabled.is.null,disabled.eq.false")
       .limit(5000);
     if (empErr) throw empErr;
@@ -38,7 +38,11 @@ Deno.serve(async (req) => {
       if (!emp.email) continue;
       // Resolve unified user_id
       const { data: uidData } = await admin.rpc("get_unified_user_id", { input_email: emp.email });
-      const userId = uidData as string | null;
+      let userId = uidData as string | null;
+      // Only accept valid UUID; otherwise treat as null
+      if (userId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+        userId = null;
+      }
 
       let totalInflow = 0;
       if (userId) {
@@ -54,7 +58,7 @@ Deno.serve(async (req) => {
 
       const monthlyAvg = totalInflow / 3;
       const fromInflow = Math.floor(monthlyAvg * 0.5);
-      const salaryCap = emp.salary ? Math.floor(Number(emp.salary) * 0.5) : Infinity;
+      const salaryCap = emp.salary ? Math.floor(Number(emp.salary) * 1.0) : Infinity;
       let limit = Math.max(0, Math.min(fromInflow, salaryCap, HARD_CAP));
       // Round down to nearest 1,000
       limit = Math.floor(limit / 1000) * 1000;
@@ -66,7 +70,7 @@ Deno.serve(async (req) => {
         period,
         computed_limit: limit,
         factors: {
-          method: "avg_monthly_inflow_x_0.5",
+          method: "min(inflow_x_0.5, salary_x_1.0, 2M)",
           last_90d_inflow: totalInflow,
           monthly_average: Math.round(monthlyAvg),
           from_inflow: fromInflow,
