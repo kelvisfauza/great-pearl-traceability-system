@@ -28,6 +28,8 @@ project_id = "pudfybkyfedeggmokhco"
 
 [functions]
   [functions.ai-loan-limit]
+  [functions.overdraft-recovery-notify]
+    verify_jwt = false
     verify_jwt = true
   [functions.weighbridge-upload-ticket]
     verify_jwt = false

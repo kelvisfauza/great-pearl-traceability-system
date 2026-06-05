@@ -107,22 +107,18 @@ Deno.serve(async (req) => {
       metadata: { fee_rate: 0.05, draw_amount: drawAmount, note: "5% fee on draw, added to outstanding" },
     });
 
-    // Confirmation email
+    // Confirmation email (MoMo-style)
     try {
+      const dateStr = new Date().toISOString().replace("T", " ").slice(0, 19);
+      const txnRef = `OD${Date.now()}`;
+      const available = Number(account.approved_limit) - newOutstanding;
       await admin.functions.invoke("send-transactional-email", {
         body: {
           to: user_email,
           cc: "operations@greatpearlcoffee.com",
-          subject: "Overdraft Draw Confirmation",
-          html: `<p>Dear ${account.employee_name || user_email},</p>
-            <p>You have drawn UGX ${drawAmount.toLocaleString()} from your overdraft.</p>
-            <ul>
-              <li><strong>5% fee on this draw:</strong> UGX ${drawFee.toLocaleString()} (added to outstanding)</li>
-              <li><strong>New outstanding overdraft:</strong> UGX ${newOutstanding.toLocaleString()} (principal + fee)</li>
-              <li><strong>Remaining overdraft available:</strong> UGX ${(Number(account.approved_limit) - newOutstanding).toLocaleString()}</li>
-              <li><strong>Reason:</strong> ${reason || "—"}</li>
-            </ul>
-            <p>This will be auto-recovered from your next incoming wallet credit(s).</p>
+          subject: "Overdraft used",
+          html: `<p>You have used UGX ${drawAmount.toLocaleString()} with access fee UGX ${drawFee.toLocaleString()} on ${dateStr} from OVERDRAFT. Your available OVERDRAFT balance is UGX ${available.toLocaleString()}. Transaction Id: ${txnRef}.</p>
+            <p style="color:#666;font-size:12px">Outstanding: UGX ${newOutstanding.toLocaleString()} · Reason: ${reason || "—"} · Auto-recovered from your next incoming credit(s).</p>
             <p>— Great Agro Coffee</p>`,
         },
       });
