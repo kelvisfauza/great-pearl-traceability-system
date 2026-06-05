@@ -60,6 +60,36 @@ const Overdraft = () => {
     },
   });
 
+  // My system-assigned monthly eligibility (latest period)
+  const { data: myEligibility } = useQuery({
+    queryKey: ['my-overdraft-eligibility', email],
+    enabled: !!email,
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from('overdraft_eligibility')
+        .select('*')
+        .eq('employee_email', email)
+        .order('period', { ascending: false })
+        .limit(1);
+      return data?.[0] || null;
+    },
+  });
+
+  const [recomputing, setRecomputing] = useState(false);
+  const handleRecompute = async () => {
+    setRecomputing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('overdraft-recompute-limits', { body: { trigger: 'manual' } });
+      if (error || !data?.ok) throw new Error(data?.error || error?.message || 'Failed');
+      toast({ title: 'Limits recomputed', description: `${data.written} employees updated for ${data.period}.` });
+      qc.invalidateQueries({ queryKey: ['my-overdraft-eligibility'] });
+    } catch (e: any) {
+      toast({ title: 'Recompute failed', description: e.message, variant: 'destructive' });
+    } finally {
+      setRecomputing(false);
+    }
+  };
+
   // My transactions
   const { data: myTransactions = [] } = useQuery({
     queryKey: ['my-overdraft-tx', myAccount?.id],
