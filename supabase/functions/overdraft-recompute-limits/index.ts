@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
 
       const monthlyAvg = totalInflow / 3;
       const fromInflow = Math.floor(monthlyAvg * 0.5);
-      const salaryCap = emp.salary ? Math.floor(Number(emp.salary) * 0.5) : Infinity;
+      const salaryCap = emp.salary ? Math.floor(Number(emp.salary) * 1.0) : Infinity;
       let limit = Math.max(0, Math.min(fromInflow, salaryCap, HARD_CAP));
       // Round down to nearest 1,000
       limit = Math.floor(limit / 1000) * 1000;
@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
         period,
         computed_limit: limit,
         factors: {
-          method: "avg_monthly_inflow_x_0.5",
+          method: "min(inflow_x_0.5, salary_x_1.0, 2M)",
           last_90d_inflow: totalInflow,
           monthly_average: Math.round(monthlyAvg),
           from_inflow: fromInflow,
