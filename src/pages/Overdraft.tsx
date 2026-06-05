@@ -5,63 +5,20 @@ import { useToast } from '@/hooks/use-toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Wallet, ArrowDownCircle, CheckCircle, XCircle, Clock, Loader2, ShieldAlert, TrendingDown, Info } from 'lucide-react';
+import { Wallet, TrendingDown, Info, ShieldAlert, Loader2, Lock, AlertTriangle } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 
 const Overdraft = () => {
-  const { employee, user, isAdmin: isAdminFn } = useAuth();
-  const isAdmin = typeof isAdminFn === 'function' ? isAdminFn() : !!isAdminFn;
+  const { employee, user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
   const email = employee?.email || user?.email || '';
+  const [busy, setBusy] = useState(false);
 
-  const [showApplyDialog, setShowApplyDialog] = useState(false);
-  const [requestedAmount, setRequestedAmount] = useState('');
-  const [applyReason, setApplyReason] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  const [showDrawDialog, setShowDrawDialog] = useState(false);
-  const [drawAmount, setDrawAmount] = useState('');
-  const [drawReason, setDrawReason] = useState('');
-
-  const [showApproveDialog, setShowApproveDialog] = useState(false);
-  const [reviewApp, setReviewApp] = useState<any>(null);
-  const [approveLimit, setApproveLimit] = useState('');
-  const [rejectReason, setRejectReason] = useState('');
-
-  // My account
-  const { data: myAccount } = useQuery({
-    queryKey: ['my-overdraft-account', email],
-    enabled: !!email,
-    queryFn: async () => {
-      const { data } = await (supabase as any).rpc('get_overdraft_account', { user_email: email });
-      return data?.[0] || null;
-    },
-  });
-
-  // My applications
-  const { data: myApplications = [] } = useQuery({
-    queryKey: ['my-overdraft-apps', email],
-    enabled: !!email,
-    queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from('overdraft_applications')
-        .select('*')
-        .eq('employee_email', email)
-        .order('created_at', { ascending: false });
-      return data || [];
-    },
-  });
-
-  // My system-assigned monthly eligibility (latest period)
-  const { data: myEligibility } = useQuery({
+  // Current month eligibility
+  const { data: eligibility } = useQuery({
     queryKey: ['my-overdraft-eligibility', email],
     enabled: !!email,
     queryFn: async () => {
@@ -75,263 +32,193 @@ const Overdraft = () => {
     },
   });
 
-  const [recomputing, setRecomputing] = useState(false);
-  const handleRecompute = async () => {
-    setRecomputing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('overdraft-recompute-limits', { body: { trigger: 'manual' } });
-      if (error || !data?.ok) throw new Error(data?.error || error?.message || 'Failed');
-      toast({ title: 'Limits recomputed', description: `${data.written} employees updated for ${data.period}.` });
-      qc.invalidateQueries({ queryKey: ['my-overdraft-eligibility'] });
-    } catch (e: any) {
-      toast({ title: 'Recompute failed', description: e.message, variant: 'destructive' });
-    } finally {
-      setRecomputing(false);
-    }
-  };
+  // Active account
+  const { data: account } = useQuery({
+    queryKey: ['my-overdraft-account', email],
+    enabled: !!email,
+    queryFn: async () => {
+      const { data } = await (supabase as any).rpc('get_overdraft_account', { user_email: email });
+      return data?.[0] || null;
+    },
+    refetchInterval: 15000,
+  });
 
-  // My transactions
-  const { data: myTransactions = [] } = useQuery({
-    queryKey: ['my-overdraft-tx', myAccount?.id],
-    enabled: !!myAccount?.id,
+  // Recent transactions
+  const { data: txs = [] } = useQuery({
+    queryKey: ['my-overdraft-tx', account?.id],
+    enabled: !!account?.id,
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from('overdraft_transactions')
         .select('*')
-        .eq('account_id', myAccount.id)
+        .eq('account_id', account.id)
         .order('created_at', { ascending: false })
         .limit(100);
       return data || [];
     },
   });
 
-  // Admin: all pending applications
-  const { data: allApplications = [] } = useQuery({
-    queryKey: ['all-overdraft-apps', email],
-    enabled: isAdmin && !!email,
-    queryFn: async () => {
-      const { data } = await (supabase as any).rpc('list_overdraft_applications_admin', { p_email: email });
-      return data || [];
-    },
-  });
-
-  // Admin: all active accounts
-  const { data: allAccounts = [] } = useQuery({
-    queryKey: ['all-overdraft-accounts', email],
-    enabled: isAdmin && !!email,
-    queryFn: async () => {
-      const { data } = await (supabase as any).rpc('list_overdraft_accounts_admin', { p_email: email });
-      return data || [];
-    },
-  });
-
-  const refreshAll = () => {
+  const refresh = () => {
     qc.invalidateQueries({ queryKey: ['my-overdraft-account'] });
-    qc.invalidateQueries({ queryKey: ['my-overdraft-apps'] });
     qc.invalidateQueries({ queryKey: ['my-overdraft-tx'] });
-    qc.invalidateQueries({ queryKey: ['all-overdraft-apps'] });
-    qc.invalidateQueries({ queryKey: ['all-overdraft-accounts'] });
+    qc.invalidateQueries({ queryKey: ['my-overdraft-eligibility'] });
   };
 
-  const handleApply = async () => {
-    if (!requestedAmount || Number(requestedAmount) <= 0) {
-      toast({ title: 'Enter a valid amount', variant: 'destructive' });
-      return;
-    }
-    setSubmitting(true);
+  const handleToggle = async (action: 'activate' | 'deactivate') => {
+    setBusy(true);
     try {
-      const { data, error } = await supabase.functions.invoke('overdraft-apply', {
-        body: { user_email: email, requested_amount: Number(requestedAmount), reason: applyReason },
+      const { data, error } = await supabase.functions.invoke('overdraft-activate', {
+        body: { user_email: email, action },
       });
-      if (error || !data?.ok) throw new Error(data?.error || error?.message || 'Failed to apply');
+      if (error || !(data as any)?.ok) {
+        throw new Error((data as any)?.error || error?.message || 'Failed');
+      }
       toast({
-        title: 'Application Submitted',
-        description: `AI-calculated limit: UGX ${Number(data.calculated_limit).toLocaleString()}. Admin will review.`,
+        title: action === 'activate' ? 'Overdraft Activated' : 'Overdraft Closed',
+        description: action === 'activate'
+          ? `Limit: UGX ${Number((data as any).limit || 0).toLocaleString()}. It will be used automatically when your wallet runs short.`
+          : 'Your overdraft account is now closed.',
       });
-      setShowApplyDialog(false);
-      setRequestedAmount('');
-      setApplyReason('');
-      refreshAll();
+      refresh();
     } catch (e: any) {
-      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+      toast({ title: 'Failed', description: e.message, variant: 'destructive' });
     } finally {
-      setSubmitting(false);
+      setBusy(false);
     }
   };
 
-  const handleDraw = async () => {
-    if (!drawAmount || Number(drawAmount) <= 0) {
-      toast({ title: 'Enter a valid amount', variant: 'destructive' });
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('overdraft-draw', {
-        body: { user_email: email, amount: Number(drawAmount), reason: drawReason },
-      });
-      if (error || !data?.ok) throw new Error(data?.error || error?.message || 'Failed');
-      toast({
-        title: 'Overdraft Drawn',
-        description: `UGX ${Number(data.drawn).toLocaleString()} credited to wallet. New outstanding: UGX ${Number(data.new_outstanding).toLocaleString()}`,
-      });
-      setShowDrawDialog(false);
-      setDrawAmount('');
-      setDrawReason('');
-      refreshAll();
-    } catch (e: any) {
-      toast({ title: 'Error', description: e.message, variant: 'destructive' });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleApprove = async (action: 'approve' | 'reject') => {
-    if (!reviewApp) return;
-    setSubmitting(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('overdraft-approve', {
-        body: {
-          application_id: reviewApp.id,
-          action,
-          approved_limit: action === 'approve' ? Number(approveLimit || reviewApp.calculated_limit) : undefined,
-          rejection_reason: action === 'reject' ? rejectReason : undefined,
-          approver_email: email,
-        },
-      });
-      if (error || !data?.ok) throw new Error(data?.error || error?.message || 'Failed');
-      toast({ title: action === 'approve' ? 'Overdraft Approved' : 'Application Rejected' });
-      setShowApproveDialog(false);
-      setReviewApp(null);
-      setApproveLimit('');
-      setRejectReason('');
-      refreshAll();
-    } catch (e: any) {
-      toast({ title: 'Error', description: e.message, variant: 'destructive' });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const statusBadge = (s: string) => {
-    const map: Record<string, string> = {
-      pending: 'bg-amber-100 text-amber-800',
-      approved: 'bg-emerald-100 text-emerald-800',
-      rejected: 'bg-red-100 text-red-800',
-      active: 'bg-emerald-100 text-emerald-800',
-      closed: 'bg-gray-100 text-gray-800',
-      suspended: 'bg-orange-100 text-orange-800',
-    };
-    return <Badge className={map[s] || 'bg-gray-100 text-gray-800'}>{s}</Badge>;
-  };
+  const fmt = (n: any) => `UGX ${Number(n || 0).toLocaleString()}`;
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto p-4 space-y-6 max-w-7xl">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <TrendingDown className="h-7 w-7 text-primary" /> Overdraft Program
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Draw more than your wallet balance — auto-recovered from future credits.
-            </p>
-          </div>
+      <div className="space-y-6 max-w-5xl mx-auto p-4 md:p-6">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <TrendingDown className="h-7 w-7 text-primary" /> Overdraft
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Spend up to your overdraft limit when your wallet runs short. No approval needed.
+          </p>
         </div>
 
-        {/* Info banner */}
+        {/* How it works */}
         <Card className="border-amber-200 bg-amber-50/50">
           <CardContent className="pt-4 text-sm flex gap-3">
             <Info className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <p><strong>How it works:</strong> The system reviews every member on the 1st of each month and assigns an eligible overdraft limit from your wallet activity (avg monthly inflow × 0.5, capped at 50% of salary and UGX 2,000,000).</p>
-              <p><strong>Activation fee:</strong> Flat 5% of approved limit, charged once on approval.</p>
-              <p><strong>Repayment:</strong> Auto-recovered from any future wallet credit (salary, loyalty, deposits) until cleared.</p>
-              <p><strong>Approval:</strong> Admin (Fauza) only — fast track.</p>
+              <p><strong>Auto-used:</strong> When you withdraw, transfer, or pay a loan and your wallet is short, the overdraft fills the gap automatically.</p>
+              <p><strong>Monthly limit:</strong> The system sets your limit on the 1st of each month from your wallet activity (50% of avg monthly inflow, capped at 50% of salary and UGX 2,000,000).</p>
+              <p><strong>Interest:</strong> 0.5% per day on the outstanding balance until cleared.</p>
+              <p><strong>Auto-recovery:</strong> Any future credit (salary, loyalty, deposits) clears outstanding first; the rest lands in your wallet.</p>
+              <p><strong>30-day rule:</strong> If outstanding is not cleared within 30 days, the overdraft is frozen until you repay.</p>
+              <p><strong>No fees</strong> for activation. Opt in below.</p>
             </div>
           </CardContent>
         </Card>
 
-        {/* System-assigned monthly eligibility */}
-        {myEligibility && (
+        {/* System-assigned limit */}
+        {eligibility && (
           <Card className="border-primary/30 bg-primary/5">
-            <CardContent className="pt-4 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">System-assigned limit · {myEligibility.period}</p>
-                <p className="text-2xl font-bold text-primary">UGX {Number(myEligibility.computed_limit).toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground mt-1">Reviewed monthly on the 1st. Apply for any amount up to this limit.</p>
-              </div>
-              {isAdmin && (
-                <Button variant="outline" size="sm" onClick={handleRecompute} disabled={recomputing}>
-                  {recomputing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
-                  Recompute all limits
-                </Button>
-              )}
+            <CardContent className="pt-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">System-assigned limit · {eligibility.period}</p>
+              <p className="text-2xl font-bold text-primary">{fmt(eligibility.computed_limit)}</p>
+              <p className="text-xs text-muted-foreground mt-1">Reviewed monthly on the 1st.</p>
             </CardContent>
           </Card>
         )}
 
-        <Tabs defaultValue="my">
-          <TabsList>
-            <TabsTrigger value="my">My Overdraft</TabsTrigger>
-            {isAdmin && <TabsTrigger value="admin">Admin Panel</TabsTrigger>}
-          </TabsList>
-
-          {/* MY TAB */}
-          <TabsContent value="my" className="space-y-6">
-            {myAccount ? (
-              <div className="grid md:grid-cols-3 gap-4">
-                <Card>
-                  <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Approved Limit</CardTitle></CardHeader>
-                  <CardContent><div className="text-2xl font-bold">UGX {Number(myAccount.approved_limit).toLocaleString()}</div></CardContent>
-                </Card>
-                <Card className="border-destructive/30">
-                  <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Outstanding</CardTitle></CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-destructive">UGX {Number(myAccount.outstanding_balance).toLocaleString()}</div>
-                    <p className="text-xs text-muted-foreground mt-1">Auto-recovered from next credits</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Available</CardTitle></CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-emerald-600">UGX {Number(myAccount.available_overdraft).toLocaleString()}</div>
-                    <Button className="mt-2 w-full" size="sm" onClick={() => setShowDrawDialog(true)} disabled={Number(myAccount.available_overdraft) <= 0}>
-                      <ArrowDownCircle className="h-4 w-4 mr-1" /> Draw Now
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-            ) : (
+        {/* Account state */}
+        {!account ? (
+          <Card>
+            <CardContent className="pt-6 text-center space-y-4">
+              <ShieldAlert className="h-12 w-12 mx-auto text-muted-foreground" />
+              <p className="text-muted-foreground">You haven't activated overdraft yet.</p>
+              <Button onClick={() => handleToggle('activate')} disabled={busy || !eligibility || Number(eligibility?.computed_limit || 0) <= 0}>
+                {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wallet className="h-4 w-4 mr-2" />}
+                Activate Overdraft
+              </Button>
+              {(!eligibility || Number(eligibility?.computed_limit || 0) <= 0) && (
+                <p className="text-xs text-muted-foreground">
+                  No limit available yet — build some wallet activity over a few weeks and try again on the 1st.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <div className="grid md:grid-cols-3 gap-4">
               <Card>
-                <CardContent className="pt-6 text-center space-y-4">
-                  <ShieldAlert className="h-12 w-12 mx-auto text-muted-foreground" />
-                  <p className="text-muted-foreground">You don't have an active overdraft.</p>
-                  <Button onClick={() => setShowApplyDialog(true)}>
-                    <Wallet className="h-4 w-4 mr-2" /> Apply for Overdraft
-                  </Button>
+                <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Limit</CardTitle></CardHeader>
+                <CardContent><div className="text-2xl font-bold">{fmt(account.approved_limit)}</div></CardContent>
+              </Card>
+              <Card className="border-destructive/30">
+                <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Outstanding</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-destructive">{fmt(account.outstanding_balance)}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {Number(account.total_interest || 0) > 0 ? `Includes ${fmt(account.total_interest)} interest. ` : ''}
+                    {Number(account.days_negative || 0) > 0 ? `Day ${account.days_negative}/30.` : 'Cleared.'}
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Available</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-emerald-600">{fmt(account.available_overdraft)}</div>
+                  {account.frozen && (
+                    <Badge variant="destructive" className="mt-2"><Lock className="h-3 w-3 mr-1" /> Frozen</Badge>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {account.frozen && (
+              <Card className="border-destructive bg-destructive/5">
+                <CardContent className="pt-4 flex gap-3 text-sm">
+                  <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold">Overdraft frozen</p>
+                    <p className="text-muted-foreground">Outstanding balance was not cleared within 30 days. New overdraft draws are paused; any incoming credits will be applied automatically until cleared.</p>
+                  </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* My Applications */}
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleToggle('deactivate')}
+                disabled={busy || Number(account.outstanding_balance || 0) > 0}
+              >
+                Close Overdraft Account
+              </Button>
+            </div>
+
             <Card>
-              <CardHeader><CardTitle>My Applications</CardTitle></CardHeader>
+              <CardHeader><CardTitle>Activity</CardTitle></CardHeader>
               <CardContent>
-                {myApplications.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No applications yet.</p>
+                {txs.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No activity yet.</p>
                 ) : (
                   <Table>
                     <TableHeader><TableRow>
-                      <TableHead>Date</TableHead><TableHead>Requested</TableHead><TableHead>AI Limit</TableHead><TableHead>Approved</TableHead><TableHead>Status</TableHead>
+                      <TableHead>Date</TableHead><TableHead>Type</TableHead><TableHead className="text-right">Amount</TableHead><TableHead className="text-right">Outstanding After</TableHead><TableHead>Ref</TableHead>
                     </TableRow></TableHeader>
                     <TableBody>
-                      {myApplications.map((a: any) => (
-                        <TableRow key={a.id}>
-                          <TableCell>{new Date(a.created_at).toLocaleDateString()}</TableCell>
-                          <TableCell>UGX {Number(a.requested_amount).toLocaleString()}</TableCell>
-                          <TableCell>UGX {Number(a.calculated_limit).toLocaleString()}</TableCell>
-                          <TableCell>{a.approved_limit ? `UGX ${Number(a.approved_limit).toLocaleString()}` : '—'}</TableCell>
-                          <TableCell>{statusBadge(a.status)}</TableCell>
+                      {txs.map((t: any) => (
+                        <TableRow key={t.id}>
+                          <TableCell className="text-xs">{new Date(t.created_at).toLocaleString()}</TableCell>
+                          <TableCell>
+                            <Badge variant={t.transaction_type === 'recovery' ? 'default' : t.transaction_type === 'interest' ? 'secondary' : 'outline'}>
+                              {t.transaction_type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className={`text-right ${t.transaction_type === 'recovery' ? 'text-emerald-700' : 'text-destructive'}`}>
+                            {fmt(t.amount)}
+                          </TableCell>
+                          <TableCell className="text-right">{fmt(t.balance_after)}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{t.reference || '—'}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -339,177 +226,8 @@ const Overdraft = () => {
                 )}
               </CardContent>
             </Card>
-
-            {/* My Transactions */}
-            {myAccount && (
-              <Card>
-                <CardHeader><CardTitle>Overdraft Activity</CardTitle></CardHeader>
-                <CardContent>
-                  {myTransactions.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No activity yet.</p>
-                  ) : (
-                    <Table>
-                      <TableHeader><TableRow>
-                        <TableHead>Date</TableHead><TableHead>Type</TableHead><TableHead>Amount</TableHead><TableHead>Outstanding After</TableHead>
-                      </TableRow></TableHeader>
-                      <TableBody>
-                        {myTransactions.map((t: any) => (
-                          <TableRow key={t.id}>
-                            <TableCell>{new Date(t.created_at).toLocaleString()}</TableCell>
-                            <TableCell><Badge variant="outline">{t.transaction_type}</Badge></TableCell>
-                            <TableCell className={t.transaction_type === 'recovery' ? 'text-emerald-700' : 'text-destructive'}>
-                              UGX {Number(t.amount).toLocaleString()}
-                            </TableCell>
-                            <TableCell>UGX {Number(t.balance_after).toLocaleString()}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          {/* ADMIN TAB */}
-          {isAdmin && (
-            <TabsContent value="admin" className="space-y-6">
-              <Card>
-                <CardHeader><CardTitle>Pending & Recent Applications</CardTitle></CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader><TableRow>
-                      <TableHead>Date</TableHead><TableHead>Employee</TableHead><TableHead>Requested</TableHead><TableHead>AI Limit</TableHead><TableHead>Status</TableHead><TableHead>Action</TableHead>
-                    </TableRow></TableHeader>
-                    <TableBody>
-                      {allApplications.map((a: any) => (
-                        <TableRow key={a.id}>
-                          <TableCell>{new Date(a.created_at).toLocaleDateString()}</TableCell>
-                          <TableCell>{a.employee_name || a.employee_email}</TableCell>
-                          <TableCell>UGX {Number(a.requested_amount).toLocaleString()}</TableCell>
-                          <TableCell>UGX {Number(a.calculated_limit).toLocaleString()}</TableCell>
-                          <TableCell>{statusBadge(a.status)}</TableCell>
-                          <TableCell>
-                            {a.status === 'pending' && (
-                              <Button size="sm" onClick={() => { setReviewApp(a); setApproveLimit(String(a.calculated_limit)); setShowApproveDialog(true); }}>Review</Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader><CardTitle>Active Overdraft Accounts</CardTitle></CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader><TableRow>
-                      <TableHead>Employee</TableHead><TableHead>Limit</TableHead><TableHead>Outstanding</TableHead><TableHead>Recovered</TableHead><TableHead>Status</TableHead>
-                    </TableRow></TableHeader>
-                    <TableBody>
-                      {allAccounts.map((a: any) => (
-                        <TableRow key={a.id}>
-                          <TableCell>{a.employee_name || a.employee_email}</TableCell>
-                          <TableCell>UGX {Number(a.approved_limit).toLocaleString()}</TableCell>
-                          <TableCell className={Number(a.outstanding_balance) > 0 ? 'text-destructive font-semibold' : ''}>
-                            UGX {Number(a.outstanding_balance).toLocaleString()}
-                          </TableCell>
-                          <TableCell>UGX {Number(a.total_recovered).toLocaleString()}</TableCell>
-                          <TableCell>{statusBadge(a.status)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          )}
-        </Tabs>
-
-        {/* Apply Dialog */}
-        <Dialog open={showApplyDialog} onOpenChange={setShowApplyDialog}>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Apply for Overdraft</DialogTitle></DialogHeader>
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">The system will calculate your limit from your wallet activity (avg monthly inflow × 0.5). A 5% activation fee applies on approval.</p>
-              <div>
-                <Label>Requested Amount (UGX)</Label>
-                <Input type="number" value={requestedAmount} onChange={e => setRequestedAmount(e.target.value)} placeholder="e.g. 200000" />
-              </div>
-              <div>
-                <Label>Reason (optional)</Label>
-                <Textarea value={applyReason} onChange={e => setApplyReason(e.target.value)} placeholder="What you need it for" />
-              </div>
-              <Button className="w-full" onClick={handleApply} disabled={submitting}>
-                {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Submit Application
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Draw Dialog */}
-        <Dialog open={showDrawDialog} onOpenChange={setShowDrawDialog}>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Draw from Overdraft</DialogTitle></DialogHeader>
-            <div className="space-y-4">
-              {myAccount && (
-                <div className="text-sm bg-muted p-3 rounded">
-                  <div className="flex justify-between"><span>Available:</span><strong>UGX {Number(myAccount.available_overdraft).toLocaleString()}</strong></div>
-                  <div className="flex justify-between"><span>Current outstanding:</span><strong className="text-destructive">UGX {Number(myAccount.outstanding_balance).toLocaleString()}</strong></div>
-                </div>
-              )}
-              <div>
-                <Label>Amount (UGX)</Label>
-                <Input type="number" value={drawAmount} onChange={e => setDrawAmount(e.target.value)} />
-              </div>
-              <div>
-                <Label>Reason</Label>
-                <Textarea value={drawReason} onChange={e => setDrawReason(e.target.value)} />
-              </div>
-              <Button className="w-full" onClick={handleDraw} disabled={submitting}>
-                {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Draw Now
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Admin Approve Dialog */}
-        <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Review Overdraft Application</DialogTitle></DialogHeader>
-            {reviewApp && (
-              <div className="space-y-4">
-                <div className="text-sm bg-muted p-3 rounded space-y-1">
-                  <div><strong>Employee:</strong> {reviewApp.employee_name || reviewApp.employee_email}</div>
-                  <div><strong>Requested:</strong> UGX {Number(reviewApp.requested_amount).toLocaleString()}</div>
-                  <div><strong>AI-calculated:</strong> UGX {Number(reviewApp.calculated_limit).toLocaleString()}</div>
-                  <div className="text-xs text-muted-foreground mt-2">
-                    <strong>Factors:</strong> {JSON.stringify(reviewApp.factors)}
-                  </div>
-                </div>
-                <div>
-                  <Label>Approved Limit (UGX)</Label>
-                  <Input type="number" value={approveLimit} onChange={e => setApproveLimit(e.target.value)} />
-                  <p className="text-xs text-muted-foreground mt-1">5% activation fee = UGX {Math.round((Number(approveLimit) || 0) * 0.05).toLocaleString()}</p>
-                </div>
-                <div>
-                  <Label>Rejection Reason (if rejecting)</Label>
-                  <Textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} />
-                </div>
-                <div className="flex gap-2">
-                  <Button className="flex-1" onClick={() => handleApprove('approve')} disabled={submitting}>
-                    <CheckCircle className="h-4 w-4 mr-1" /> Approve
-                  </Button>
-                  <Button className="flex-1" variant="destructive" onClick={() => handleApprove('reject')} disabled={submitting}>
-                    <XCircle className="h-4 w-4 mr-1" /> Reject
-                  </Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+          </>
+        )}
       </div>
     </DashboardLayout>
   );
