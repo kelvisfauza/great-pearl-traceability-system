@@ -12538,6 +12538,10 @@ export type Database = {
         Args: { p_admin_reason: string; p_ledger_entry_id: string }
         Returns: Json
       }
+      sync_overdraft_recovery_from_wallet: {
+        Args: { p_source_ledger_id?: string; p_user_id: string }
+        Returns: Json
+      }
       sync_unlinked_coffee_to_batches: {
         Args: { p_coffee_type?: string }
         Returns: {
