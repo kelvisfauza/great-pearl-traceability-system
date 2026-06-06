@@ -437,6 +437,12 @@ export const AccountButton = () => {
                       <span className="font-medium text-red-600">{breakdown.lastMonthWithdrawals.toLocaleString()}</span>
                     </div>
                   )}
+                  {breakdown.lastMonthOverdraftRecovery < 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Overdraft repaid</span>
+                      <span className="font-medium text-red-600">{breakdown.lastMonthOverdraftRecovery.toLocaleString()}</span>
+                    </div>
+                  )}
                   {breakdown.lastMonthAdjustments !== 0 && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Adjustments</span>
@@ -474,6 +480,12 @@ export const AccountButton = () => {
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Withdrawals</span>
                       <span className="font-medium text-red-600">{breakdown.thisMonthWithdrawals.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {breakdown.thisMonthOverdraftRecovery < 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Overdraft repaid</span>
+                      <span className="font-medium text-red-600">{breakdown.thisMonthOverdraftRecovery.toLocaleString()}</span>
                     </div>
                   )}
                   {breakdown.thisMonthAdjustments !== 0 && (
