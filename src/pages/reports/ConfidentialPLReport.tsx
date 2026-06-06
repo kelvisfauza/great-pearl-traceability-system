@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, subMonths } from "date-fns";
 import { ArrowLeft, FileLock, Printer, Loader2 } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -150,8 +150,35 @@ const ConfidentialPLReport = () => {
     const avgSell = salesKg > 0 ? salesRev / salesKg : 0;
     const grossProfit = salesRev - purchCost;
     const cashBasisProfit = salesRev - paymentsTotal;
-    return { purchKg, purchCost, salesKg, salesRev, paymentsTotal, avgBuy, avgSell, grossProfit, cashBasisProfit };
+    // Matched P&L: apply weighted-average buy price to kg actually sold
+    const cogs = salesKg * avgBuy;
+    const matchedProfit = salesRev - cogs;
+    const marginPct = salesRev > 0 ? (matchedProfit / salesRev) * 100 : 0;
+    const profitPerKg = salesKg > 0 ? matchedProfit / salesKg : 0;
+    const kgVariance = purchKg - salesKg; // + surplus stock, - sold from prior stock
+    return {
+      purchKg, purchCost, salesKg, salesRev, paymentsTotal,
+      avgBuy, avgSell, grossProfit, cashBasisProfit,
+      cogs, matchedProfit, marginPct, profitPerKg, kgVariance,
+    };
   })();
+
+  const applyPreset = (preset: string) => {
+    const now = new Date();
+    let from: Date, to: Date;
+    switch (preset) {
+      case "this-month": from = startOfMonth(now); to = endOfMonth(now); break;
+      case "last-month": {
+        const lm = subMonths(now, 1);
+        from = startOfMonth(lm); to = endOfMonth(lm); break;
+      }
+      case "this-quarter": from = startOfQuarter(now); to = endOfQuarter(now); break;
+      case "ytd": from = startOfYear(now); to = now; break;
+      default: return;
+    }
+    setDateFrom(format(from, "yyyy-MM-dd"));
+    setDateTo(format(to, "yyyy-MM-dd"));
+  };
 
   // Group purchases by supplier
   const supplierBreakdown = (() => {
@@ -327,9 +354,18 @@ const ConfidentialPLReport = () => {
           <tr><td>Less: Cost of Coffee Purchased (period)</td><td class="r">(${fmt(totals.purchCost)})</td></tr>
           <tr style="background:#dcfce7;font-weight:bold"><td>NET PROFIT (Accrual Basis)</td><td class="r">${fmt(totals.grossProfit)}</td></tr>
           <tr><td colspan="2" style="height:8px;border:none"></td></tr>
+          <tr><td>Kg Sold</td><td class="r">${totals.salesKg.toLocaleString()} kg</td></tr>
+          <tr><td>Weighted Avg Buy Price (period)</td><td class="r">${fmt(totals.avgBuy)} / kg</td></tr>
+          <tr><td>COGS = Kg Sold × Avg Buy Price</td><td class="r">(${fmt(totals.cogs)})</td></tr>
+          <tr><td>Weighted Avg Sell Price</td><td class="r">${fmt(totals.avgSell)} / kg</td></tr>
+          <tr><td>Profit per Kg Sold</td><td class="r">${fmt(totals.profitPerKg)}</td></tr>
+          <tr style="background:#fef3c7;font-weight:bold"><td>MATCHED PROFIT (Revenue − COGS) — Margin ${totals.marginPct.toFixed(2)}%</td><td class="r">${fmt(totals.matchedProfit)}</td></tr>
+          <tr><td colspan="2" style="height:8px;border:none"></td></tr>
           <tr><td>Sales Revenue</td><td class="r">${fmt(totals.salesRev)}</td></tr>
           <tr><td>Less: Cash Paid to Suppliers (period)</td><td class="r">(${fmt(totals.paymentsTotal)})</td></tr>
           <tr style="background:#dbeafe;font-weight:bold"><td>NET CASHFLOW (Cash Basis)</td><td class="r">${fmt(totals.cashBasisProfit)}</td></tr>
+          <tr><td colspan="2" style="height:8px;border:none"></td></tr>
+          <tr><td>Inventory Movement (Bought − Sold)</td><td class="r">${totals.kgVariance >= 0 ? "+" : ""}${totals.kgVariance.toLocaleString()} kg ${totals.kgVariance >= 0 ? "(stock added)" : "(sold from prior stock)"}</td></tr>
         </tbody>
       </table>
 
@@ -369,6 +405,12 @@ const ConfidentialPLReport = () => {
             <CardTitle>Report Period</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => applyPreset("this-month")}>This Month</Button>
+              <Button size="sm" variant="outline" onClick={() => applyPreset("last-month")}>Last Month</Button>
+              <Button size="sm" variant="outline" onClick={() => applyPreset("this-quarter")}>This Quarter</Button>
+              <Button size="sm" variant="outline" onClick={() => applyPreset("ytd")}>Year to Date</Button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="from">From</Label>
@@ -414,6 +456,39 @@ const ConfidentialPLReport = () => {
                 </CardContent>
               </Card>
             </div>
+
+            <Card className="border-2 border-amber-500 bg-amber-50/40">
+              <CardHeader>
+                <CardTitle className="text-amber-800">Matched P&amp;L — Purchases vs Sales Reconciliation</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div><p className="text-xs text-muted-foreground uppercase">Avg Buy / kg</p><p className="text-lg font-bold">{fmt(totals.avgBuy)}</p></div>
+                  <div><p className="text-xs text-muted-foreground uppercase">Avg Sell / kg</p><p className="text-lg font-bold">{fmt(totals.avgSell)}</p></div>
+                  <div><p className="text-xs text-muted-foreground uppercase">COGS (Kg Sold × Avg Buy)</p><p className="text-lg font-bold">{fmt(totals.cogs)}</p></div>
+                  <div><p className="text-xs text-muted-foreground uppercase">Profit / kg</p><p className="text-lg font-bold">{fmt(totals.profitPerKg)}</p></div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-amber-300 grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-xs uppercase text-muted-foreground">Matched Profit</p>
+                    <p className={`text-2xl font-bold ${totals.matchedProfit >= 0 ? "text-green-700" : "text-red-700"}`}>{fmt(totals.matchedProfit)}</p>
+                    <p className="text-xs text-muted-foreground">Margin {totals.marginPct.toFixed(2)}%</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase text-muted-foreground">Inventory Movement</p>
+                    <p className={`text-2xl font-bold ${totals.kgVariance >= 0 ? "text-blue-700" : "text-orange-700"}`}>
+                      {totals.kgVariance >= 0 ? "+" : ""}{totals.kgVariance.toLocaleString()} kg
+                    </p>
+                    <p className="text-xs text-muted-foreground">{totals.kgVariance >= 0 ? "Stock added (bought > sold)" : "Sold from prior stock"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase text-muted-foreground">Cash Net (Revenue − Payments)</p>
+                    <p className={`text-2xl font-bold ${totals.cashBasisProfit >= 0 ? "text-green-700" : "text-red-700"}`}>{fmt(totals.cashBasisProfit)}</p>
+                    <p className="text-xs text-muted-foreground">Cash basis</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             <Card>
               <CardHeader>
