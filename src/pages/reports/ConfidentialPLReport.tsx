@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, subMonths } from "date-fns";
-import { ArrowLeft, FileLock, Printer, Loader2 } from "lucide-react";
+import { ArrowLeft, FileLock, Printer, Loader2, AlertTriangle } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +37,16 @@ type PaymentRow = {
 const fmt = (n: number) => `UGX ${Math.round(n).toLocaleString()}`;
 const kg = (n: number) => `${Number(n || 0).toLocaleString()} kg`;
 
+const normalizeType = (t: string | null | undefined): "Arabica" | "Robusta" | "Other" => {
+  const v = (t || "").toString().trim().toLowerCase();
+  if (v.startsWith("arab")) return "Arabica";
+  if (v.startsWith("rob")) return "Robusta";
+  return "Other";
+};
+
+type Opening = Record<"Arabica" | "Robusta" | "Other", number>;
+const EMPTY_OPENING: Opening = { Arabica: 0, Robusta: 0, Other: 0 };
+
 const ConfidentialPLReport = () => {
   const navigate = useNavigate();
   const today = new Date();
@@ -46,6 +56,7 @@ const ConfidentialPLReport = () => {
   const [purchases, setPurchases] = useState<PurchaseRow[]>([]);
   const [sales, setSales] = useState<SaleRow[]>([]);
   const [payments, setPayments] = useState<PaymentRow[]>([]);
+  const [openingStock, setOpeningStock] = useState<Opening>(EMPTY_OPENING);
   const [generated, setGenerated] = useState(false);
 
   const load = async () => {
@@ -129,6 +140,41 @@ const ConfidentialPLReport = () => {
             amount_paid_ugx: Number(p.amount_paid_ugx) || 0,
           }))
       );
+
+      // Opening stock per coffee type (all history strictly before period)
+      const opening: Opening = { Arabica: 0, Robusta: 0, Other: 0 };
+      const PAGE = 1000;
+      // Purchases before period
+      for (let from = 0; from < 200000; from += PAGE) {
+        const { data, error } = await supabase
+          .from("coffee_records")
+          .select("coffee_type, kilograms")
+          .lt("date", dateFrom)
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        const rows = (data || []) as any[];
+        rows.forEach((r) => {
+          const t = normalizeType(r.coffee_type);
+          opening[t] += Number(r.kilograms) || 0;
+        });
+        if (rows.length < PAGE) break;
+      }
+      // Sales before period (deducted)
+      for (let from = 0; from < 200000; from += PAGE) {
+        const { data, error } = await supabase
+          .from("sales_transactions")
+          .select("coffee_type, weight")
+          .lt("date", dateFrom)
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        const rows = (data || []) as any[];
+        rows.forEach((r) => {
+          const t = normalizeType(r.coffee_type);
+          opening[t] -= Number(r.weight) || 0;
+        });
+        if (rows.length < PAGE) break;
+      }
+      setOpeningStock(opening);
 
       setGenerated(true);
       toast.success("Report generated");
