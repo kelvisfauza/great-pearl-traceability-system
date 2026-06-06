@@ -67,8 +67,7 @@ const Overdraft = () => {
   useEffect(() => {
     if (!email) return;
 
-    const channel = supabase
-      .channel(`overdraft-rt-${email}`)
+    const channel = supabase.channel(`overdraft-rt-${email}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -76,16 +75,20 @@ const Overdraft = () => {
         filter: `employee_email=eq.${email}`,
       }, () => {
         refresh();
-      })
-      .on('postgres_changes', {
+      });
+
+    if (account?.id) {
+      channel.on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'overdraft_transactions',
-        filter: account?.id ? `account_id=eq.${account.id}` : 'account_id=is.null',
+        filter: `account_id=eq.${account.id}`,
       }, () => {
         refresh();
-      })
-      .subscribe();
+      });
+    }
+
+    channel.subscribe();
 
     return () => {
       supabase.removeChannel(channel);
