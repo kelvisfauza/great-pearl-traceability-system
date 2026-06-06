@@ -234,7 +234,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
       if (!isUgandanMobileNumber(phoneToUse)) throw new Error('Enter a valid MTN or Airtel mobile money number to continue.');
 
       const { data, error } = await supabase.functions.invoke('instant-withdrawal', {
-        body: { amount: withdrawalAmount, depositPhone: phoneToUse },
+        body: { amount: withdrawalAmount, depositPhone: phoneToUse, acceptOverdraft: overdraftAccepted },
       });
 
       if (error) throw new Error(error.message || 'Instant withdrawal failed');
