@@ -323,6 +323,9 @@ export const AccountButton = () => {
   const pendingAmount = account?.pending_withdrawals || 0;
   
   const walletBalance = account?.wallet_balance || 0;
+  const overdraftOutstanding = overdraft && overdraft.status === 'active' ? Number(overdraft.outstanding || 0) : 0;
+  // Effective wallet balance reflects overdraft debt: when overdraft is in use, wallet shows negative.
+  const effectiveWalletBalance = walletBalance - overdraftOutstanding;
   const availableLoyalty = Math.max(0, walletBalance - pendingAmount);
 
   // Overdraft headroom is added to withdrawal capacity when the account is active and not frozen.
@@ -338,8 +341,8 @@ export const AccountButton = () => {
             <span className="truncate">
               {balanceHidden ? '••••' : (
                 <>
-                  <span className="sm:hidden">{formatCompact(availableLoyalty)}</span>
-                  <span className="hidden sm:inline">{formatCurrency(availableLoyalty)}</span>
+                  <span className="sm:hidden">{formatCompact(effectiveWalletBalance)}</span>
+                  <span className="hidden sm:inline">{formatCurrency(effectiveWalletBalance)}</span>
                 </>
               )}
             </span>
@@ -375,11 +378,14 @@ export const AccountButton = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-green-700">
-                  {balanceHidden ? '••••••' : formatCurrency(walletBalance)}
+                <div className={`text-3xl font-bold ${effectiveWalletBalance < 0 ? 'text-red-600' : 'text-green-700'}`}>
+                  {balanceHidden ? '••••••' : formatCurrency(effectiveWalletBalance)}
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">
-                  Available to spend: {formatCurrency(availableLoyalty)}
+                  Available to spend: {formatCurrency(availableForWithdrawal)}
+                  {overdraftOutstanding > 0 && (
+                    <span className="ml-1 text-red-600">(overdraft used: {formatCurrency(overdraftOutstanding)})</span>
+                  )}
                 </div>
                 
                 <div className="mt-3 space-y-1 text-xs">
