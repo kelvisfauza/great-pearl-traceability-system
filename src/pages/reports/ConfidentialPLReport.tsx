@@ -87,10 +87,63 @@ const ConfidentialPLReport = () => {
           qaMap.set(q.batch_number, { final_price: q.final_price, suggested_price: q.suggested_price })
         );
       }
+      // First pass: gather known prices to compute fallback per-type averages
+      const typeStats = new Map<string, { kg: number; cost: number }>();
+      (crData || []).forEach((r: any) => {
+        const q = qaMap.get(r.batch_number);
+        const p = Number(q?.final_price ?? q?.suggested_price ?? 0);
+        const kgV = Number(r.kilograms) || 0;
+        if (p > 0 && kgV > 0) {
+          const t = normalizeType(r.coffee_type);
+          const cur = typeStats.get(t) || { kg: 0, cost: 0 };
+          cur.kg += kgV;
+          cur.cost += kgV * p;
+          typeStats.set(t, cur);
+        }
+      });
+      const typeAvg = (t: string) => {
+        const s = typeStats.get(t);
+        return s && s.kg > 0 ? s.cost / s.kg : 0;
+      };
+      // Fallback: pull recent QA prices per type across all-time if period has none
+      const missingTypes = ["Arabica", "Robusta", "Other"].filter((t) => typeAvg(t) === 0);
+      if (missingTypes.length) {
+        const { data: histQa } = await supabase
+          .from("quality_assessments")
+          .select("batch_number, final_price, suggested_price")
+          .order("date_assessed", { ascending: false })
+          .limit(2000);
+        if (histQa && histQa.length) {
+          const batchTypeMap = new Map<string, string>();
+          const histBatches = histQa.map((q: any) => q.batch_number).filter(Boolean);
+          if (histBatches.length) {
+            const { data: histCr } = await supabase
+              .from("coffee_records")
+              .select("batch_number, coffee_type")
+              .in("batch_number", histBatches);
+            (histCr || []).forEach((r: any) => batchTypeMap.set(r.batch_number, normalizeType(r.coffee_type)));
+          }
+          const histStats = new Map<string, { sum: number; n: number }>();
+          histQa.forEach((q: any) => {
+            const p = Number(q.final_price ?? q.suggested_price ?? 0);
+            const t = batchTypeMap.get(q.batch_number);
+            if (p > 0 && t) {
+              const cur = histStats.get(t) || { sum: 0, n: 0 };
+              cur.sum += p; cur.n += 1;
+              histStats.set(t, cur);
+            }
+          });
+          missingTypes.forEach((t) => {
+            const h = histStats.get(t);
+            if (h && h.n > 0) typeStats.set(t, { kg: 1, cost: h.sum / h.n });
+          });
+        }
+      }
       const purchaseRows: PurchaseRow[] = (crData || []).map((r: any) => {
         const q = qaMap.get(r.batch_number);
-        const price = (q?.final_price ?? q?.suggested_price ?? 0) as number;
+        let price = Number(q?.final_price ?? q?.suggested_price ?? 0);
         const kgVal = Number(r.kilograms) || 0;
+        if (!price) price = typeAvg(normalizeType(r.coffee_type));
         return {
           id: r.id,
           date: r.date,
@@ -239,7 +292,8 @@ const ConfidentialPLReport = () => {
     const purchCost = purchases.reduce((s, p) => s + p.cost, 0);
     const salesKg = reportSales.reduce((s, p) => s + p.weight, 0);
     const salesRev = reportSales.reduce((s, p) => s + p.total_amount, 0);
-    const paymentsTotal = payments.reduce((s, p) => s + p.amount_paid_ugx, 0);
+    // Policy: all coffee bought is considered paid for P&L purposes
+    const paymentsTotal = purchases.reduce((s, p) => s + p.cost, 0);
     const avgBuy = purchKg > 0 ? purchCost / purchKg : 0;
     const avgSell = salesKg > 0 ? salesRev / salesKg : 0;
     // Matched P&L: apply weighted-average buy price to kg actually sold
