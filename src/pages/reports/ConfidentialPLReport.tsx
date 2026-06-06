@@ -359,6 +359,54 @@ const ConfidentialPLReport = () => {
       )
       .join("");
 
+    const typeBlocksHtml = byType
+      .map(
+        (t) => `
+      <div class="type-box">
+        <h3>${t.type}</h3>
+        <table>
+          <tbody>
+            <tr><td>Opening Stock</td><td class="r">${t.openStock.toLocaleString()} kg</td></tr>
+            <tr><td>+ Bought (period)</td><td class="r">${t.purchKg.toLocaleString()} kg @ ${fmt(t.avgBuy)}</td></tr>
+            <tr><td>− Sold (period)</td><td class="r">${t.salesKg.toLocaleString()} kg @ ${fmt(t.avgSell)}</td></tr>
+            <tr style="border-top:1px solid #999;font-weight:bold"><td>Closing Stock</td><td class="r" style="color:${t.closeStock < 0 ? "#b91c1c" : "#1a5632"}">${t.closeStock.toLocaleString()} kg</td></tr>
+            <tr><td colspan="2" style="height:6px;border:none"></td></tr>
+            <tr><td>Revenue</td><td class="r">${fmt(t.salesRev)}</td></tr>
+            <tr><td>COGS (sold × avg buy)</td><td class="r">(${fmt(t.cogs)})</td></tr>
+            <tr style="background:${t.matchedProfit >= 0 ? "#dcfce7" : "#fee2e2"};font-weight:bold"><td>Matched Profit (${t.marginPct.toFixed(1)}%)</td><td class="r">${fmt(t.matchedProfit)}</td></tr>
+          </tbody>
+        </table>
+      </div>`
+      )
+      .join("");
+
+    const dailyBlockHtml = (type: "Arabica" | "Robusta", rows: ReturnType<typeof dailyFlow>) =>
+      rows.length === 0
+        ? ""
+        : `<h2>${type} — Daily Flow & Running Stock</h2>
+      <table>
+        <thead><tr><th>Date</th><th class="r">Bought (kg)</th><th class="r">Sold (kg)</th><th class="r">Net</th><th class="r">Running Stock</th><th class="r">Revenue</th></tr></thead>
+        <tbody>${rows
+          .map(
+            (d) => `<tr style="${d.impossible ? "background:#fee2e2" : ""}">
+              <td>${format(new Date(d.date), "MMM dd, yyyy")}</td>
+              <td class="r">${d.bought.toLocaleString()}</td>
+              <td class="r">${d.sold.toLocaleString()}</td>
+              <td class="r">${(d.bought - d.sold >= 0 ? "+" : "") + (d.bought - d.sold).toLocaleString()}</td>
+              <td class="r" style="${d.impossible ? "color:#b91c1c;font-weight:bold" : ""}">${d.running.toLocaleString()}${d.impossible ? " ⚠" : ""}</td>
+              <td class="r">${d.revenue > 0 ? fmt(d.revenue) : "—"}</td>
+            </tr>`
+          )
+          .join("")}</tbody>
+      </table>`;
+
+    const impossibleHtml =
+      impossibleDays.length === 0
+        ? ""
+        : `<div style="border:2px solid #dc2626;background:#fee2e2;padding:8px;margin-top:10px;border-radius:4px">
+        <strong style="color:#b91c1c">DATA INTEGRITY ALERT:</strong> ${impossibleDays.length} day(s) recorded more sales than available stock. Please reconcile inventory.
+      </div>`;
+
     w.document.write(`<!DOCTYPE html><html><head><title>Confidential P&L — ${periodStr}</title>
     <style>
       @page { size: A4; margin: 14mm; }
@@ -401,6 +449,7 @@ const ConfidentialPLReport = () => {
       </div>
 
       <h2>Executive Summary</h2>
+      ${impossibleHtml}
       <div class="summary-grid">
         <div class="stat"><div class="lbl">Total Bought</div><div class="val">${totals.purchKg.toLocaleString()} kg</div></div>
         <div class="stat"><div class="lbl">Purchase Cost</div><div class="val">${fmt(totals.purchCost)}</div></div>
@@ -411,6 +460,12 @@ const ConfidentialPLReport = () => {
         <div class="stat"><div class="lbl">Cash Paid to Suppliers</div><div class="val">${fmt(totals.paymentsTotal)}</div></div>
         <div class="stat profit"><div class="lbl">Net Profit (Period)</div><div class="val">${fmt(totals.grossProfit)}</div></div>
       </div>
+
+      <h2>P&amp;L by Coffee Type</h2>
+      <div class="type-grid">${typeBlocksHtml}</div>
+
+      ${dailyBlockHtml("Arabica", arabicaDaily)}
+      ${dailyBlockHtml("Robusta", robustaDaily)}
 
       <h2>Supplier Deliveries (Purchases)</h2>
       <table>
