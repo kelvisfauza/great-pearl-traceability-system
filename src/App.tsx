@@ -449,6 +449,11 @@ const App: React.ComponentType = () => {
                     <StoreAuditComparison />
                   </ProtectedRoute>
                 } />
+                <Route path="/reports/confidential-pl" element={
+                  <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
+                    <ConfidentialPLReport />
+                  </ProtectedRoute>
+                } />
                 <Route path="/reports/eudr-dispatch" element={
                   <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
                     <EUDRDispatchReports />
