@@ -8,6 +8,8 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, RefreshCw, Unlock, X, Edit3 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { Link } from "react-router-dom";
+import { BarChart3 } from "lucide-react";
 
 type Account = {
   id: string;
@@ -114,6 +116,9 @@ export default function OverdraftAdmin() {
             <p className="text-sm text-muted-foreground">Opt-in overdraft accounts · 0.5%/day interest · 30-day freeze</p>
           </div>
           <div className="flex gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link to="/admin/overdraft-analytics"><BarChart3 className="h-4 w-4 mr-1" /> Analytics</Link>
+            </Button>
             <Button variant="outline" size="sm" onClick={accrueNow}><RefreshCw className="h-4 w-4 mr-1" /> Run maintenance now</Button>
             <Button size="sm" onClick={recompute} disabled={recomputing}>
               {recomputing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-1" />}
