@@ -352,6 +352,54 @@ const ConfidentialPLReport = () => {
       .sort((a, b) => b.cost - a.cost);
   })();
 
+  // Monthly summary: aggregate buys and sells per month
+  const monthlySummary = (() => {
+    type Row = { month: string; buyKg: number; buyCost: number; sellKg: number; sellRev: number; suppliers: Set<string>; batches: number };
+    const m = new Map<string, Row>();
+    const getRow = (key: string) => {
+      let r = m.get(key);
+      if (!r) { r = { month: key, buyKg: 0, buyCost: 0, sellKg: 0, sellRev: 0, suppliers: new Set(), batches: 0 }; m.set(key, r); }
+      return r;
+    };
+    purchases.forEach((p) => {
+      const key = (p.date || "").slice(0, 7);
+      if (!key) return;
+      const r = getRow(key);
+      r.buyKg += p.kilograms;
+      r.buyCost += p.cost;
+      r.suppliers.add(p.supplier_name);
+      r.batches += 1;
+    });
+    sales.forEach((s) => {
+      const key = (s.date || "").slice(0, 7);
+      if (!key) return;
+      const r = getRow(key);
+      r.sellKg += Number(s.weight) || 0;
+      r.sellRev += Number(s.total_amount) || 0;
+    });
+    return Array.from(m.values())
+      .map((r) => {
+        const avgBuy = r.buyKg > 0 ? r.buyCost / r.buyKg : 0;
+        const avgSell = r.sellKg > 0 ? r.sellRev / r.sellKg : 0;
+        const matchedKg = Math.min(r.buyKg, r.sellKg);
+        const profit = matchedKg * (avgSell - avgBuy);
+        return {
+          month: r.month,
+          buyKg: r.buyKg,
+          buyCost: r.buyCost,
+          sellKg: r.sellKg,
+          sellRev: r.sellRev,
+          avgBuy,
+          avgSell,
+          matchedKg,
+          profit,
+          suppliers: r.suppliers.size,
+          batches: r.batches,
+        };
+      })
+      .sort((a, b) => a.month.localeCompare(b.month));
+  })();
+
   const customerBreakdown = (() => {
     const m = new Map<string, { kg: number; revenue: number; orders: number }>();
     reportSales.forEach((s) => {
@@ -915,6 +963,61 @@ const ConfidentialPLReport = () => {
                 </Card>
               ))}
             </div>
+
+            {/* Monthly Summary — period averages */}
+            <Card className="border-2 border-indigo-300">
+              <CardHeader>
+                <CardTitle className="text-indigo-700">Monthly Summary — Average Buy vs Sell</CardTitle>
+              </CardHeader>
+              <CardContent className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b">
+                    <th className="text-left p-2">Month</th>
+                    <th className="text-right p-2">Suppliers</th>
+                    <th className="text-right p-2">Batches</th>
+                    <th className="text-right p-2">Bought (kg)</th>
+                    <th className="text-right p-2">Avg Buy</th>
+                    <th className="text-right p-2">Sold (kg)</th>
+                    <th className="text-right p-2">Avg Sell</th>
+                    <th className="text-right p-2">Margin / kg</th>
+                    <th className="text-right p-2">Profit</th>
+                  </tr></thead>
+                  <tbody>
+                    {monthlySummary.map((r) => (
+                      <tr key={r.month} className="border-b">
+                        <td className="p-2 font-medium">{r.month}</td>
+                        <td className="p-2 text-right">{r.suppliers}</td>
+                        <td className="p-2 text-right">{r.batches}</td>
+                        <td className="p-2 text-right">{r.buyKg.toLocaleString()}</td>
+                        <td className="p-2 text-right">{fmt(r.avgBuy)}</td>
+                        <td className="p-2 text-right">{r.sellKg.toLocaleString()}</td>
+                        <td className="p-2 text-right">{fmt(r.avgSell)}</td>
+                        <td className={`p-2 text-right ${r.avgSell - r.avgBuy >= 0 ? "text-green-700" : "text-red-700"}`}>{fmt(r.avgSell - r.avgBuy)}</td>
+                        <td className={`p-2 text-right font-bold ${r.profit >= 0 ? "text-green-700" : "text-red-700"}`}>{fmt(r.profit)}</td>
+                      </tr>
+                    ))}
+                    {monthlySummary.length === 0 && (
+                      <tr><td colSpan={9} className="p-4 text-center text-muted-foreground">No data in period</td></tr>
+                    )}
+                  </tbody>
+                  {monthlySummary.length > 0 && (
+                    <tfoot>
+                      <tr className="border-t-2 font-bold bg-muted/40">
+                        <td className="p-2">Total</td>
+                        <td className="p-2"></td>
+                        <td className="p-2 text-right">{monthlySummary.reduce((s, r) => s + r.batches, 0)}</td>
+                        <td className="p-2 text-right">{monthlySummary.reduce((s, r) => s + r.buyKg, 0).toLocaleString()}</td>
+                        <td className="p-2 text-right">{fmt(totals.avgBuy)}</td>
+                        <td className="p-2 text-right">{monthlySummary.reduce((s, r) => s + r.sellKg, 0).toLocaleString()}</td>
+                        <td className="p-2 text-right">{fmt(totals.avgSell)}</td>
+                        <td className={`p-2 text-right ${totals.avgSell - totals.avgBuy >= 0 ? "text-green-700" : "text-red-700"}`}>{fmt(totals.avgSell - totals.avgBuy)}</td>
+                        <td className={`p-2 text-right ${monthlySummary.reduce((s, r) => s + r.profit, 0) >= 0 ? "text-green-700" : "text-red-700"}`}>{fmt(monthlySummary.reduce((s, r) => s + r.profit, 0))}</td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </CardContent>
+            </Card>
 
             {/* Daily flow per type */}
             {TYPES.map((type) => {
