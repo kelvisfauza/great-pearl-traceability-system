@@ -550,6 +550,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     setCompletedAmount(0);
     setUseInstant(false);
     setInstantEligibility(null);
+    setOverdraftAccepted(false);
     onOpenChange(false);
     refreshAccount();
   };
