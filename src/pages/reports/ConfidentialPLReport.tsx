@@ -255,6 +255,51 @@ const ConfidentialPLReport = () => {
       .sort((a, b) => b.revenue - a.revenue);
   })();
 
+  // Per coffee-type matched P&L
+  const TYPES: Array<"Arabica" | "Robusta"> = ["Arabica", "Robusta"];
+  const byType = TYPES.map((type) => {
+    const tp = purchases.filter((p) => normalizeType(p.coffee_type) === type);
+    const ts = sales.filter((s) => normalizeType(s.coffee_type) === type);
+    const purchKg = tp.reduce((a, b) => a + b.kilograms, 0);
+    const purchCost = tp.reduce((a, b) => a + b.cost, 0);
+    const salesKg = ts.reduce((a, b) => a + b.weight, 0);
+    const salesRev = ts.reduce((a, b) => a + b.total_amount, 0);
+    const avgBuy = purchKg > 0 ? purchCost / purchKg : 0;
+    const avgSell = salesKg > 0 ? salesRev / salesKg : 0;
+    const cogs = salesKg * avgBuy;
+    const matchedProfit = salesRev - cogs;
+    const marginPct = salesRev > 0 ? (matchedProfit / salesRev) * 100 : 0;
+    const openStock = openingStock[type] || 0;
+    const closeStock = openStock + purchKg - salesKg;
+    return { type, purchKg, purchCost, salesKg, salesRev, avgBuy, avgSell, cogs, matchedProfit, marginPct, openStock, closeStock };
+  });
+
+  // Daily flow per type — running stock from opening, flags impossibilities (running < 0)
+  const dailyFlow = (type: "Arabica" | "Robusta") => {
+    const days = new Map<string, { bought: number; sold: number; cost: number; revenue: number }>();
+    purchases.filter((p) => normalizeType(p.coffee_type) === type).forEach((p) => {
+      const d = days.get(p.date) || { bought: 0, sold: 0, cost: 0, revenue: 0 };
+      d.bought += p.kilograms; d.cost += p.cost;
+      days.set(p.date, d);
+    });
+    sales.filter((s) => normalizeType(s.coffee_type) === type).forEach((s) => {
+      const d = days.get(s.date) || { bought: 0, sold: 0, cost: 0, revenue: 0 };
+      d.sold += s.weight; d.revenue += s.total_amount;
+      days.set(s.date, d);
+    });
+    let running = openingStock[type] || 0;
+    return Array.from(days.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, v]) => {
+        running += v.bought - v.sold;
+        return { date, ...v, running, impossible: running < -0.01, soldMoreThanDay: v.sold > v.bought && v.bought > 0 };
+      });
+  };
+
+  const arabicaDaily = generated ? dailyFlow("Arabica") : [];
+  const robustaDaily = generated ? dailyFlow("Robusta") : [];
+  const impossibleDays = [...arabicaDaily, ...robustaDaily].filter((d) => d.impossible);
+
   const handlePrint = () => {
     const w = window.open("", "_blank");
     if (!w) {
