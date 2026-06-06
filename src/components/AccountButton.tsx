@@ -37,6 +37,18 @@ const ACTIVITY_LABELS: Record<string, string> = {
   transaction: 'Transactions',
 };
 
+const parseLedgerMetadata = (metadata: unknown) => {
+  if (!metadata) return null;
+  if (typeof metadata === 'string') {
+    try {
+      return JSON.parse(metadata);
+    } catch {
+      return null;
+    }
+  }
+  return metadata;
+};
+
 export const AccountButton = () => {
   const { account, moneyRequests, withdrawalRequests, loading } = useUserAccount();
   const { stats, loading: statsLoading } = useLoyaltyStats();
@@ -61,11 +73,13 @@ export const AccountButton = () => {
     lastMonthBonuses: 0,
     lastMonthDeposits: 0,
     lastMonthWithdrawals: 0,
+    lastMonthOverdraftRecovery: 0,
     lastMonthAdjustments: 0,
     thisMonthLoyalty: 0,
     thisMonthBonuses: 0,
     thisMonthDeposits: 0,
     thisMonthWithdrawals: 0,
+    thisMonthOverdraftRecovery: 0,
     thisMonthAdjustments: 0,
     balanceBroughtForward: 0,
     thisMonthNet: 0,
@@ -113,8 +127,11 @@ export const AccountButton = () => {
       return;
     }
 
-    const entries = (allEntries || []).filter((entry: any) => {
-      const allowanceType = entry?.metadata?.allowance_type;
+    const entries = (allEntries || []).map((entry: any) => ({
+      ...entry,
+      parsedMetadata: parseLedgerMetadata(entry.metadata),
+    })).filter((entry: any) => {
+      const allowanceType = entry?.parsedMetadata?.allowance_type;
       return !['airtime_allowance', 'data_allowance'].includes(allowanceType);
     });
     const before = entries.filter(e => new Date(e.created_at) < monthStart);
@@ -122,17 +139,21 @@ export const AccountButton = () => {
 
     const sumByType = (arr: typeof entries, type: string) =>
       arr.filter(e => e.entry_type === type).reduce((s, e) => s + Number(e.amount), 0);
+    const isOverdraftRecovery = (entry: typeof entries[number]) => entry?.parsedMetadata?.type === 'overdraft_recovery';
+    const sumMatching = (arr: typeof entries, predicate: (entry: typeof entries[number]) => boolean) =>
+      arr.filter(predicate).reduce((s, e) => s + Number(e.amount), 0);
 
     const lastMonthLoyalty = sumByType(before, 'LOYALTY_REWARD');
     const lastMonthBonuses = sumByType(before, 'BONUS');
     const lastMonthDeposits = sumByType(before, 'DEPOSIT');
-    const lastMonthWithdrawals = sumByType(before, 'WITHDRAWAL');
+    const lastMonthWithdrawals = sumMatching(before, (entry) => entry.entry_type === 'WITHDRAWAL' && !isOverdraftRecovery(entry));
+    const lastMonthOverdraftRecovery = sumMatching(before, (entry) => entry.entry_type === 'WITHDRAWAL' && isOverdraftRecovery(entry));
     const lastMonthAdjustments = sumByType(before, 'ADJUSTMENT')
       + sumByType(before, 'REVERSAL')
       + sumByType(before, 'ADVANCE_RECOVERY')
       + sumByType(before, 'LOAN_REPAYMENT')
       + sumByType(before, 'LOAN_RECOVERY');
-    const balanceBroughtForward = lastMonthLoyalty + lastMonthBonuses + lastMonthDeposits + lastMonthWithdrawals + lastMonthAdjustments
+    const balanceBroughtForward = lastMonthLoyalty + lastMonthBonuses + lastMonthDeposits + lastMonthWithdrawals + lastMonthOverdraftRecovery + lastMonthAdjustments
       + sumByType(before, 'MONTHLY_SALARY')
       + sumByType(before, 'LOAN_DISBURSEMENT')
       + sumByType(before, 'HOST_MEETING_BONUS')
@@ -141,21 +162,22 @@ export const AccountButton = () => {
     const thisMonthLoyalty = sumByType(current, 'LOYALTY_REWARD');
     const thisMonthBonuses = sumByType(current, 'BONUS');
     const thisMonthDeposits = sumByType(current, 'DEPOSIT');
-    const thisMonthWithdrawals = sumByType(current, 'WITHDRAWAL');
+    const thisMonthWithdrawals = sumMatching(current, (entry) => entry.entry_type === 'WITHDRAWAL' && !isOverdraftRecovery(entry));
+    const thisMonthOverdraftRecovery = sumMatching(current, (entry) => entry.entry_type === 'WITHDRAWAL' && isOverdraftRecovery(entry));
     const thisMonthAdjustments = sumByType(current, 'ADJUSTMENT')
       + sumByType(current, 'REVERSAL')
       + sumByType(current, 'ADVANCE_RECOVERY')
       + sumByType(current, 'LOAN_REPAYMENT')
       + sumByType(current, 'LOAN_RECOVERY');
-    const thisMonthNet = thisMonthLoyalty + thisMonthBonuses + thisMonthDeposits + thisMonthWithdrawals + thisMonthAdjustments
+    const thisMonthNet = thisMonthLoyalty + thisMonthBonuses + thisMonthDeposits + thisMonthWithdrawals + thisMonthOverdraftRecovery + thisMonthAdjustments
       + sumByType(current, 'MONTHLY_SALARY')
       + sumByType(current, 'LOAN_DISBURSEMENT')
       + sumByType(current, 'HOST_MEETING_BONUS')
       + sumByType(current, 'MEETING_ATTENDANCE_BONUS');
 
     setBreakdown({
-      lastMonthLoyalty, lastMonthBonuses, lastMonthDeposits, lastMonthWithdrawals, lastMonthAdjustments,
-      thisMonthLoyalty, thisMonthBonuses, thisMonthDeposits, thisMonthWithdrawals, thisMonthAdjustments,
+      lastMonthLoyalty, lastMonthBonuses, lastMonthDeposits, lastMonthWithdrawals, lastMonthOverdraftRecovery, lastMonthAdjustments,
+      thisMonthLoyalty, thisMonthBonuses, thisMonthDeposits, thisMonthWithdrawals, thisMonthOverdraftRecovery, thisMonthAdjustments,
       balanceBroughtForward, thisMonthNet,
     });
   };
