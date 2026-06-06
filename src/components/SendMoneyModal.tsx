@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Send, CheckCircle, Smartphone, Users } from 'lucide-react';
+import { Loader2, Send, CheckCircle, Smartphone, Users, TrendingDown } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWithdrawalControl } from '@/hooks/useWithdrawalControl';
@@ -47,6 +47,8 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
   const [mobilePhone, setMobilePhone] = useState('');
   const [mobileAmount, setMobileAmount] = useState('');
   const [mobileLoading, setMobileLoading] = useState(false);
+  const [overdraftConfirmed, setOverdraftConfirmed] = useState(false);
+  const [overdraftConfirmedMobile, setOverdraftConfirmedMobile] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -57,6 +59,8 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
     setSuccess(false);
     setTxRef('');
     setSuccessMessage('');
+    setOverdraftConfirmed(false);
+    setOverdraftConfirmedMobile(false);
     setTab(restricted ? 'employee' : 'employee');
     const fetchEmployees = async () => {
       const { data } = await supabase.rpc('get_guarantor_candidates');
