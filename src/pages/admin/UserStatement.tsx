@@ -112,10 +112,18 @@ const UserStatement = () => {
     },
   });
 
+  const candidateUserIds = useMemo(() => {
+    return Array.from(new Set([
+      resolvedUserId,
+      selectedEmployee?.auth_user_id,
+      selectedEmployee?.id,
+    ].filter(Boolean) as string[]));
+  }, [resolvedUserId, selectedEmployee?.auth_user_id, selectedEmployee?.id]);
+
   // Ledger entries for selected user
   const { data: entries = [], isLoading } = useQuery({
-    queryKey: ["admin-statement-entries", resolvedUserId, typeFilter, from, to],
-    enabled: !!resolvedUserId,
+    queryKey: ["admin-statement-entries", candidateUserIds.join(','), typeFilter, from, to],
+    enabled: candidateUserIds.length > 0,
     queryFn: async () => {
       // Paginate to bypass PostgREST's 1000-row cap so high-activity wallets
       // (e.g. Fauza with 1500+ entries) reconcile exactly with the user's
@@ -126,7 +134,7 @@ const UserStatement = () => {
         let q = supabase
           .from("ledger_entries")
           .select("id, created_at, entry_type, source_category, amount, reference, metadata")
-          .eq("user_id", resolvedUserId!)
+          .in("user_id", candidateUserIds)
           .in("entry_type", WALLET_TYPES)
           .order("created_at", { ascending: true })
           .range(offset, offset + PAGE - 1);
@@ -142,7 +150,9 @@ const UserStatement = () => {
         if (batch.length < PAGE) break;
         if (offset > 50000) break; // safety
       }
-      return all.filter((entry) => !isDirectAllowancePayout(entry));
+      return all
+        .filter((entry) => !isDirectAllowancePayout(entry))
+        .filter((entry, index, arr) => arr.findIndex((candidate) => candidate.id === entry.id) === index);
     },
   });
 
