@@ -330,7 +330,9 @@ export const AccountButton = () => {
 
   // Overdraft headroom is added to withdrawal capacity when the account is active and not frozen.
   const overdraftHeadroom = overdraft && overdraft.status === 'active' ? Number(overdraft.available || 0) : 0;
-  const availableForWithdrawal = availableLoyalty + overdraftHeadroom;
+  // Net cash that's truly the user's (wallet minus what they owe on overdraft, minus pending).
+  const netOwnFunds = Math.max(0, walletBalance - overdraftOutstanding - pendingAmount);
+  const availableForWithdrawal = netOwnFunds + overdraftHeadroom;
 
   return (
     <>
