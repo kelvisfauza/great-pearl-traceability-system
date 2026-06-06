@@ -679,6 +679,22 @@ const ConfidentialPLReport = () => {
                     The following days show <strong>more coffee sold than available</strong> (running stock went negative).
                     This means a sale was recorded without a matching purchase — please reconcile.
                   </p>
+                  <div className="mb-3 flex items-center justify-between gap-2 border border-black/40 bg-black/5 p-2 rounded">
+                    <div className="text-xs text-black">
+                      <strong>Auto-Fill Missing Purchases:</strong> create synthetic purchase records on each
+                      deficit day, priced at the period's average buy price per coffee type. They will be tagged
+                      "SYSTEM AUTO-FILL" and a batch starting with <code>AUTOFILL-</code> so you can find/edit them.
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={handleAutoFill}
+                      disabled={autoFilling}
+                      className="gap-2 bg-black text-white hover:bg-black/80"
+                    >
+                      {autoFilling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                      {autoFilling ? "Filling..." : "Auto-Fill Missing Purchases"}
+                    </Button>
+                  </div>
                   <table className="w-full text-xs text-black">
                     <thead><tr className="border-b border-black text-black"><th className="text-left p-1">Date</th><th className="p-1">Type</th><th className="text-right p-1">Bought</th><th className="text-right p-1">Sold</th><th className="text-right p-1">Running Stock</th></tr></thead>
                     <tbody className="text-black">
