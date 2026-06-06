@@ -123,6 +123,7 @@ import MaintenanceRecovery from "./pages/MaintenanceRecovery";
 import QuickLoans from "./pages/QuickLoans";
 import Overdraft from "./pages/Overdraft";
 import OverdraftAdmin from "./pages/admin/OverdraftAdmin";
+import OverdraftAnalytics from "./pages/admin/OverdraftAnalytics";
 import ProfileCompletionModal from "./components/ProfileCompletionModal";
 import BirthdayNotification from "./components/BirthdayNotification";
 import MeetingRewardsTeaserPopup from "./components/MeetingRewardsTeaserPopup";
@@ -370,6 +371,11 @@ const App: React.ComponentType = () => {
                 <Route path="/admin/overdraft" element={
                   <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
                     <OverdraftAdmin />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/overdraft-analytics" element={
+                  <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
+                    <OverdraftAnalytics />
                   </ProtectedRoute>
                 } />
                 <Route path="/user-daily-reports" element={
