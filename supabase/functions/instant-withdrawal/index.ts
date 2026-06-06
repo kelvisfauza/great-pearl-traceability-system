@@ -132,8 +132,8 @@ serve(async (req) => {
       console.warn("[instant-withdrawal] kill-switch check failed:", (e as Error).message);
     }
 
-    const { amount, depositPhone } = await req.json();
-    console.log(`[instant-withdrawal] amount=${amount}, depositPhone=${depositPhone}`);
+    const { amount, depositPhone, acceptOverdraft } = await req.json();
+    console.log(`[instant-withdrawal] amount=${amount}, depositPhone=${depositPhone}, acceptOverdraft=${!!acceptOverdraft}`);
 
     if (!amount || !depositPhone) {
       return respond(false, { error: "Missing amount or depositPhone" });
