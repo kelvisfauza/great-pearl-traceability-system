@@ -290,23 +290,27 @@ const ConfidentialPLReport = () => {
   const totals = (() => {
     const purchKg = purchases.reduce((s, p) => s + p.kilograms, 0);
     const purchCost = purchases.reduce((s, p) => s + p.cost, 0);
-    const salesKg = reportSales.reduce((s, p) => s + p.weight, 0);
-    const salesRev = reportSales.reduce((s, p) => s + p.total_amount, 0);
+    // Actual totals (raw) for the summary cards
+    const salesKg = sales.reduce((s, p) => s + (Number(p.weight) || 0), 0);
+    const salesRev = sales.reduce((s, p) => s + (Number(p.total_amount) || 0), 0);
+    // Matched-only totals for COGS / matched P&L
+    const matchedSalesKg = reportSales.reduce((s, p) => s + p.weight, 0);
+    const matchedSalesRev = reportSales.reduce((s, p) => s + p.total_amount, 0);
     // Policy: all coffee bought is considered paid for P&L purposes
     const paymentsTotal = purchases.reduce((s, p) => s + p.cost, 0);
     const avgBuy = purchKg > 0 ? purchCost / purchKg : 0;
     const avgSell = salesKg > 0 ? salesRev / salesKg : 0;
     // Matched P&L: apply weighted-average buy price to kg actually sold
-    const cogs = salesKg * avgBuy;
-    const grossProfit = salesRev - cogs;
+    const cogs = matchedSalesKg * avgBuy;
+    const grossProfit = matchedSalesRev - cogs;
     const cashBasisProfit = salesRev - paymentsTotal;
-    const matchedProfit = salesRev - cogs;
-    const marginPct = salesRev > 0 ? (matchedProfit / salesRev) * 100 : 0;
-    const profitPerKg = salesKg > 0 ? matchedProfit / salesKg : 0;
+    const matchedProfit = matchedSalesRev - cogs;
+    const marginPct = matchedSalesRev > 0 ? (matchedProfit / matchedSalesRev) * 100 : 0;
+    const profitPerKg = matchedSalesKg > 0 ? matchedProfit / matchedSalesKg : 0;
     const kgVariance = purchKg - salesKg; // + surplus stock, - sold from prior stock
     return {
       purchKg, purchCost, salesKg, salesRev, paymentsTotal,
-      avgBuy, avgSell, grossProfit, cashBasisProfit,
+      avgBuy, avgSell, grossProfit, cashBasisProfit, matchedSalesKg, matchedSalesRev,
       cogs, matchedProfit, marginPct, profitPerKg, kgVariance,
     };
   })();
