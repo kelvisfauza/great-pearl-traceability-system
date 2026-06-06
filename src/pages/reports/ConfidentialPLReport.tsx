@@ -454,7 +454,7 @@ const ConfidentialPLReport = () => {
       </tr>`
       )
       .join("");
-    const salesRowsHtml = sales
+    const salesRowsHtml = reportSales
       .map(
         (s) => `
       <tr>
@@ -614,7 +614,7 @@ const ConfidentialPLReport = () => {
       <table>
         <thead><tr><th>Customer</th><th class="r">Orders</th><th class="r">Kg Sold</th><th class="r">Avg Price/kg</th><th class="r">Revenue</th></tr></thead>
         <tbody>${customerRowsHtml || `<tr><td colspan="5" style="text-align:center;color:#999">No sales in this period</td></tr>`}</tbody>
-        <tfoot><tr><td>TOTAL</td><td class="r">${sales.length}</td><td class="r">${totals.salesKg.toLocaleString()}</td><td class="r">${fmt(totals.avgSell)}</td><td class="r">${fmt(totals.salesRev)}</td></tr></tfoot>
+        <tfoot><tr><td>TOTAL</td><td class="r">${reportSales.length}</td><td class="r">${totals.salesKg.toLocaleString()}</td><td class="r">${fmt(totals.avgSell)}</td><td class="r">${fmt(totals.salesRev)}</td></tr></tfoot>
       </table>
 
       <h2>Detailed Purchases (Batch Level)</h2>
