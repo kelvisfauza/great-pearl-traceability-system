@@ -425,6 +425,9 @@ const ConfidentialPLReport = () => {
       td.r, th.r { text-align: right; }
       tfoot td { font-weight: bold; background: #f1f5f4; border-top: 2px solid #1a5632; }
       .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 12px 0; }
+      .type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 10px 0; }
+      .type-box { border: 1px solid #d4d4d4; padding: 10px; border-radius: 4px; background: #fafafa; }
+      .type-box h3 { margin: 0 0 6px 0; color: #1a5632; font-size: 13px; border-bottom: 1px solid #1a5632; padding-bottom: 3px; }
       .stat { border: 1px solid #d4d4d4; padding: 10px; border-radius: 4px; background: #fafafa; }
       .stat .lbl { font-size: 9px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
       .stat .val { font-size: 14px; font-weight: bold; color: #1a1a1a; margin-top: 4px; }
