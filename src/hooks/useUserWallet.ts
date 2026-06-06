@@ -61,9 +61,9 @@ export const useUserWallet = () => {
   const { data, isLoading, refetch } = useQuery({
     queryKey,
     enabled: !!walletOwnerEmail,
-    staleTime: 30_000,
+    staleTime: 5_000,
     refetchOnWindowFocus: false,
-    refetchInterval: 60_000,
+    refetchInterval: 10_000,
     queryFn: async () => {
       console.log('💰 Fetching wallet data for:', walletOwnerEmail);
 
