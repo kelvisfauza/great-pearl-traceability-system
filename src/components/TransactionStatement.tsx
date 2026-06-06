@@ -65,6 +65,68 @@ const getTransferMeta = (entry: LedgerEntry) => {
   return null;
 };
 
+const getBaseTransferReference = (reference?: string) => {
+  if (!reference) return '';
+  return reference.endsWith('-OD') ? reference.slice(0, -3) : reference;
+};
+
+const mergeStatementEntries = (sourceEntries: LedgerEntry[]) => {
+  const entryIds = new Set(sourceEntries.map((entry) => entry.id));
+  const baseReferences = new Set(sourceEntries.map((entry) => entry.reference).filter(Boolean));
+  const recoveryBySourceId = new Map<string, number>();
+
+  for (const entry of sourceEntries) {
+    const meta = parseMetadata(entry.metadata);
+    const recoveredFromLedgerId = meta?.recovered_from_ledger_id;
+    const isLinkedRecovery = (meta?.type === 'overdraft_recovery' || meta?.type === 'overdraft_repayment' || meta?.source === 'overdraft_repayment')
+      && typeof recoveredFromLedgerId === 'string'
+      && entryIds.has(recoveredFromLedgerId);
+
+    if (isLinkedRecovery) {
+      recoveryBySourceId.set(
+        recoveredFromLedgerId,
+        (recoveryBySourceId.get(recoveredFromLedgerId) || 0) + Math.abs(Number(entry.amount) || 0)
+      );
+    }
+  }
+
+  return sourceEntries.flatMap((entry) => {
+    const meta = parseMetadata(entry.metadata);
+    const recoveredFromLedgerId = meta?.recovered_from_ledger_id;
+    const isLinkedRecovery = (meta?.type === 'overdraft_recovery' || meta?.type === 'overdraft_repayment' || meta?.source === 'overdraft_repayment')
+      && typeof recoveredFromLedgerId === 'string'
+      && entryIds.has(recoveredFromLedgerId);
+
+    if (isLinkedRecovery) return [];
+
+    const baseReference = getBaseTransferReference(entry.reference);
+    const hasParentTransfer = entry.reference?.endsWith('-OD') && !!baseReference && baseReferences.has(baseReference);
+    if (meta?.type === 'overdraft_draw' && hasParentTransfer) return [];
+
+    let mergedAmount = Number(entry.amount) || 0;
+    let mergedMeta = meta ? { ...meta } : {};
+
+    if (mergedAmount < 0 && meta?.type !== 'overdraft_draw' && Number(meta?.overdraft_portion) > 0) {
+      mergedAmount -= Number(meta.overdraft_portion);
+    }
+
+    const overdraftRecoveryAmount = recoveryBySourceId.get(entry.id) || 0;
+    if (mergedAmount > 0 && overdraftRecoveryAmount > 0) {
+      mergedAmount -= overdraftRecoveryAmount;
+      mergedMeta = {
+        ...mergedMeta,
+        overdraft_recovery_amount: overdraftRecoveryAmount,
+      };
+    }
+
+    return [{
+      ...entry,
+      amount: mergedAmount,
+      metadata: mergedMeta,
+    }];
+  });
+};
+
 const isDirectAllowancePayout = (entry: Pick<LedgerEntry, 'entry_type' | 'metadata'>) => {
   const meta = parseMetadata(entry.metadata);
   return ['airtime_allowance', 'data_allowance'].includes(meta?.allowance_type)
@@ -181,8 +243,9 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
 
       if (error) throw error;
       const filteredEntries = ((data || []) as LedgerEntry[]).filter((entry) => !isDirectAllowancePayout(entry));
-      setTotalCount(filteredEntries.length);
-      setEntries(filteredEntries.slice(0, DISPLAY_LIMIT));
+      const mergedEntries = mergeStatementEntries(filteredEntries);
+      setTotalCount(mergedEntries.length);
+      setEntries(mergedEntries.slice(0, DISPLAY_LIMIT));
     } catch (err) {
       console.error('Error fetching ledger:', err);
     } finally {
@@ -246,7 +309,9 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         from += PAGE;
       }
 
-      const fetchedEntries = ((periodEntries || []) as LedgerEntry[]).filter((entry) => !isDirectAllowancePayout(entry));
+      const fetchedEntries = mergeStatementEntries(
+        ((periodEntries || []) as LedgerEntry[]).filter((entry) => !isDirectAllowancePayout(entry))
+      );
       
       const transactionsAsc = fetchedEntries.map(e => {
         const affectsWallet = CANONICAL_WALLET_TYPES.includes(e.entry_type);
@@ -664,6 +729,11 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
                     {meta?.overdraft_portion && Number(meta.overdraft_portion) > 0 && meta?.type !== 'overdraft_draw' && (
                       <Badge variant="outline" className="text-[9px] px-1 py-0 bg-amber-100 text-amber-800 border-amber-300">
                         +{Math.round(Number(meta.overdraft_portion)).toLocaleString()} via overdraft
+                      </Badge>
+                    )}
+                    {meta?.overdraft_recovery_amount && Number(meta.overdraft_recovery_amount) > 0 && (
+                      <Badge variant="outline" className="text-[9px] px-1 py-0 bg-emerald-100 text-emerald-800 border-emerald-300">
+                        {Math.round(Number(meta.overdraft_recovery_amount)).toLocaleString()} applied to overdraft
                       </Badge>
                     )}
                     {isReversed && (
