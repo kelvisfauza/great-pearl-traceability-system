@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -63,6 +63,34 @@ const Overdraft = () => {
     qc.invalidateQueries({ queryKey: ['my-overdraft-tx'] });
     qc.invalidateQueries({ queryKey: ['my-overdraft-eligibility'] });
   };
+
+  useEffect(() => {
+    if (!email) return;
+
+    const channel = supabase
+      .channel(`overdraft-rt-${email}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'overdraft_accounts',
+        filter: `employee_email=eq.${email}`,
+      }, () => {
+        refresh();
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'overdraft_transactions',
+        filter: account?.id ? `account_id=eq.${account.id}` : 'account_id=is.null',
+      }, () => {
+        refresh();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [email, account?.id]);
 
   const handleToggle = async (action: 'activate' | 'deactivate') => {
     setBusy(true);
@@ -157,7 +185,9 @@ const Overdraft = () => {
                   <div className="text-2xl font-bold text-destructive">{fmt(account.outstanding_balance)}</div>
                   <p className="text-xs text-muted-foreground mt-1">
                     {Number(account.total_interest || 0) > 0 ? `Includes ${fmt(account.total_interest)} interest. ` : ''}
-                    {Number(account.days_negative || 0) > 0 ? `Day ${account.days_negative}/30.` : 'Cleared.'}
+                    {Number(account.outstanding_balance || 0) > 0
+                      ? `Day ${Math.max(1, Number(account.days_negative || 0))}/30.`
+                      : 'Cleared.'}
                   </p>
                 </CardContent>
               </Card>
