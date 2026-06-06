@@ -253,11 +253,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     }
   };
 
-  // Statement fee temporarily waived for a 2-hour free window during reconciliation.
-  // After this timestamp, the normal fee resumes.
-  const FREE_UNTIL = new Date('2026-05-18T09:15:00Z');
-  const isFreeWindow = new Date() < FREE_UNTIL;
-  const STATEMENT_FEE = isFreeWindow ? 0 : 500;
+  const STATEMENT_FEE = 500;
 
   const handleSendStatement = async () => {
     if (!user?.email || !dateFrom || !dateTo) return;
@@ -267,8 +263,21 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         .rpc('get_unified_user_id', { input_email: user.email });
       const unifiedUserId = userIdData || user.id;
 
-      // Statement fee waived — no ledger charge
-      const statementRef = `STMT-FREE-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+      // Charge the UGX 500 statement fee to the user's wallet
+      const statementRef = `STMT-FEE-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+      const { error: feeError } = await supabase.from('ledger_entries').insert({
+        user_id: unifiedUserId,
+        entry_type: 'WITHDRAWAL',
+        source_category: 'WITHDRAWAL',
+        amount: -STATEMENT_FEE,
+        reference: statementRef,
+        metadata: {
+          source: 'statement_fee',
+          description: 'Transaction Statement Charge',
+          period: `${dateFrom} to ${dateTo}`,
+        },
+      });
+      if (feeError) throw feeError;
 
       const periodStart = `${dateFrom}T00:00:00`;
       const periodEnd = `${dateTo}T23:59:59`;
@@ -816,21 +825,12 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
                 <p className="text-sm text-muted-foreground">
                   Select the period for your statement. It will be sent to <span className="font-medium text-foreground">{user?.email}</span>
                 </p>
-                {isFreeWindow ? (
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-center gap-2">
-                    <span className="text-emerald-600 text-sm">✓</span>
-                    <p className="text-xs text-emerald-800">
-                      Statements are <span className="font-bold">free for the next 2 hours</span> — download as many as you need.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2">
-                    <span className="text-amber-600 text-sm">ℹ</span>
-                    <p className="text-xs text-amber-800">
-                      A UGX {STATEMENT_FEE.toLocaleString()} statement fee applies.
-                    </p>
-                  </div>
-                )}
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2">
+                  <span className="text-amber-600 text-sm">ℹ</span>
+                  <p className="text-xs text-amber-800">
+                    A UGX {STATEMENT_FEE.toLocaleString()} statement fee applies.
+                  </p>
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="dateFrom" className="text-xs">From</Label>
