@@ -242,7 +242,7 @@ const ConfidentialPLReport = () => {
     const paymentsTotal = payments.reduce((s, p) => s + p.amount_paid_ugx, 0);
     const avgBuy = purchKg > 0 ? purchCost / purchKg : 0;
     const avgSell = salesKg > 0 ? salesRev / salesKg : 0;
-    const grossProfit = salesRev - purchCost;
+    const grossProfit = salesRev - cogs;
     const cashBasisProfit = salesRev - paymentsTotal;
     // Matched P&L: apply weighted-average buy price to kg actually sold
     const cogs = salesKg * avgBuy;
@@ -594,7 +594,7 @@ const ConfidentialPLReport = () => {
         <div class="stat"><div class="lbl">Avg Buy Price/kg</div><div class="val">${fmt(totals.avgBuy)}</div></div>
         <div class="stat"><div class="lbl">Avg Sell Price/kg</div><div class="val">${fmt(totals.avgSell)}</div></div>
         <div class="stat"><div class="lbl">Cash Paid to Suppliers</div><div class="val">${fmt(totals.paymentsTotal)}</div></div>
-        <div class="stat profit"><div class="lbl">Net Profit (Period)</div><div class="val">${fmt(totals.grossProfit)}</div></div>
+        <div class="stat profit"><div class="lbl">Matched Profit (Period)</div><div class="val">${fmt(totals.grossProfit)}</div></div>
       </div>
 
       <h2>P&amp;L by Coffee Type</h2>
@@ -633,8 +633,8 @@ const ConfidentialPLReport = () => {
       <table>
         <tbody>
           <tr><td>Sales Revenue</td><td class="r">${fmt(totals.salesRev)}</td></tr>
-          <tr><td>Less: Cost of Coffee Purchased (period)</td><td class="r">(${fmt(totals.purchCost)})</td></tr>
-          <tr style="background:#dcfce7;font-weight:bold"><td>NET PROFIT (Accrual Basis)</td><td class="r">${fmt(totals.grossProfit)}</td></tr>
+          <tr><td>Less: Matched Coffee Cost (COGS)</td><td class="r">(${fmt(totals.cogs)})</td></tr>
+          <tr style="background:#dcfce7;font-weight:bold"><td>NET PROFIT (Matched Basis)</td><td class="r">${fmt(totals.grossProfit)}</td></tr>
           <tr><td colspan="2" style="height:8px;border:none"></td></tr>
           <tr><td>Kg Sold</td><td class="r">${totals.salesKg.toLocaleString()} kg</td></tr>
           <tr><td>Weighted Avg Buy Price (period)</td><td class="r">${fmt(totals.avgBuy)} / kg</td></tr>
