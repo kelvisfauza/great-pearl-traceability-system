@@ -214,6 +214,8 @@ const ADMIN_NAV = [
       { icon: FileText, label: "Backfill Trace", path: "/admin/backfill-trace" },
       { icon: ShieldAlert, label: "Wallet Audit", path: "/admin/wallet-audit" },
       { icon: Clock, label: "Balances @ Time", path: "/admin/point-in-time-balances" },
+      { icon: CreditCard, label: "Overdraft Admin", path: "/admin/overdraft" },
+      { icon: BarChart3, label: "Overdraft Analytics", path: "/admin/overdraft-analytics" },
       { icon: Cog, label: "System Settings", path: "/admin/system-settings" },
     ]
   }
