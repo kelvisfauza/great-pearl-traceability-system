@@ -964,6 +964,61 @@ const ConfidentialPLReport = () => {
               ))}
             </div>
 
+            {/* Monthly Summary — period averages */}
+            <Card className="border-2 border-indigo-300">
+              <CardHeader>
+                <CardTitle className="text-indigo-700">Monthly Summary — Average Buy vs Sell</CardTitle>
+              </CardHeader>
+              <CardContent className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b">
+                    <th className="text-left p-2">Month</th>
+                    <th className="text-right p-2">Suppliers</th>
+                    <th className="text-right p-2">Batches</th>
+                    <th className="text-right p-2">Bought (kg)</th>
+                    <th className="text-right p-2">Avg Buy</th>
+                    <th className="text-right p-2">Sold (kg)</th>
+                    <th className="text-right p-2">Avg Sell</th>
+                    <th className="text-right p-2">Margin / kg</th>
+                    <th className="text-right p-2">Profit</th>
+                  </tr></thead>
+                  <tbody>
+                    {monthlySummary.map((r) => (
+                      <tr key={r.month} className="border-b">
+                        <td className="p-2 font-medium">{r.month}</td>
+                        <td className="p-2 text-right">{r.suppliers}</td>
+                        <td className="p-2 text-right">{r.batches}</td>
+                        <td className="p-2 text-right">{r.buyKg.toLocaleString()}</td>
+                        <td className="p-2 text-right">{fmt(r.avgBuy)}</td>
+                        <td className="p-2 text-right">{r.sellKg.toLocaleString()}</td>
+                        <td className="p-2 text-right">{fmt(r.avgSell)}</td>
+                        <td className={`p-2 text-right ${r.avgSell - r.avgBuy >= 0 ? "text-green-700" : "text-red-700"}`}>{fmt(r.avgSell - r.avgBuy)}</td>
+                        <td className={`p-2 text-right font-bold ${r.profit >= 0 ? "text-green-700" : "text-red-700"}`}>{fmt(r.profit)}</td>
+                      </tr>
+                    ))}
+                    {monthlySummary.length === 0 && (
+                      <tr><td colSpan={9} className="p-4 text-center text-muted-foreground">No data in period</td></tr>
+                    )}
+                  </tbody>
+                  {monthlySummary.length > 0 && (
+                    <tfoot>
+                      <tr className="border-t-2 font-bold bg-muted/40">
+                        <td className="p-2">Total</td>
+                        <td className="p-2"></td>
+                        <td className="p-2 text-right">{monthlySummary.reduce((s, r) => s + r.batches, 0)}</td>
+                        <td className="p-2 text-right">{monthlySummary.reduce((s, r) => s + r.buyKg, 0).toLocaleString()}</td>
+                        <td className="p-2 text-right">{fmt(totals.avgBuy)}</td>
+                        <td className="p-2 text-right">{monthlySummary.reduce((s, r) => s + r.sellKg, 0).toLocaleString()}</td>
+                        <td className="p-2 text-right">{fmt(totals.avgSell)}</td>
+                        <td className={`p-2 text-right ${totals.avgSell - totals.avgBuy >= 0 ? "text-green-700" : "text-red-700"}`}>{fmt(totals.avgSell - totals.avgBuy)}</td>
+                        <td className={`p-2 text-right ${monthlySummary.reduce((s, r) => s + r.profit, 0) >= 0 ? "text-green-700" : "text-red-700"}`}>{fmt(monthlySummary.reduce((s, r) => s + r.profit, 0))}</td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </CardContent>
+            </Card>
+
             {/* Daily flow per type */}
             {TYPES.map((type) => {
               const rows = type === "Arabica" ? arabicaDaily : robustaDaily;
