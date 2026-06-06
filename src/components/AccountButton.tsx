@@ -802,7 +802,7 @@ export const AccountButton = () => {
         availableAmount={availableForWithdrawal}
       />
       <DepositModal open={showDeposit} onOpenChange={setShowDeposit} />
-      <SendMoneyModal open={showSendMoney} onOpenChange={setShowSendMoney} availableBalance={availableLoyalty} />
+      <SendMoneyModal open={showSendMoney} onOpenChange={setShowSendMoney} availableBalance={availableForWithdrawal} overdraftHeadroom={overdraftHeadroom} walletBalance={availableLoyalty} />
       <InvestmentModal open={showInvestment} onOpenChange={setShowInvestment} availableBalance={availableLoyalty} />
     </>
   );
