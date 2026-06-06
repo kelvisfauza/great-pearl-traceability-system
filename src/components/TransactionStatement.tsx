@@ -253,11 +253,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     }
   };
 
-  // Statement fee temporarily waived for a 2-hour free window during reconciliation.
-  // After this timestamp, the normal fee resumes.
-  const FREE_UNTIL = new Date('2026-05-18T09:15:00Z');
-  const isFreeWindow = new Date() < FREE_UNTIL;
-  const STATEMENT_FEE = isFreeWindow ? 0 : 500;
+  const STATEMENT_FEE = 500;
 
   const handleSendStatement = async () => {
     if (!user?.email || !dateFrom || !dateTo) return;
@@ -267,8 +263,21 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         .rpc('get_unified_user_id', { input_email: user.email });
       const unifiedUserId = userIdData || user.id;
 
-      // Statement fee waived — no ledger charge
-      const statementRef = `STMT-FREE-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+      // Charge the UGX 500 statement fee to the user's wallet
+      const statementRef = `STMT-FEE-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+      const { error: feeError } = await supabase.from('ledger_entries').insert({
+        user_id: unifiedUserId,
+        entry_type: 'WITHDRAWAL',
+        source_category: 'WITHDRAWAL',
+        amount: -STATEMENT_FEE,
+        reference: statementRef,
+        metadata: {
+          source: 'statement_fee',
+          description: 'Transaction Statement Charge',
+          period: `${dateFrom} to ${dateTo}`,
+        },
+      });
+      if (feeError) throw feeError;
 
       const periodStart = `${dateFrom}T00:00:00`;
       const periodEnd = `${dateTo}T23:59:59`;
