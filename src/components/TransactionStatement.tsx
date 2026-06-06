@@ -469,6 +469,20 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     if (entry.entry_type === 'REVERSAL') {
       return meta?.description || 'Wallet reversal';
     }
+
+    // Overdraft-related entries — make them unmistakable in the statement
+    if (meta?.type === 'overdraft_draw') {
+      return 'Overdraft used to top up this transaction';
+    }
+    if (meta?.source === 'overdraft_no_headroom') {
+      return 'Loan recovery via overdraft';
+    }
+    if (meta?.source === 'overdraft_repayment' || meta?.type === 'overdraft_repayment') {
+      return 'Repaid from wallet';
+    }
+    if (meta?.source === 'overdraft_fee' || meta?.type === 'overdraft_fee') {
+      return 'Overdraft interest / fee';
+    }
     
     if (entry.entry_type === 'LOYALTY_REWARD' && meta) {
       const activityMap: Record<string, string> = {
@@ -516,6 +530,11 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
   const getEntryLabel = (entry: LedgerEntry) => {
     const meta = parseMetadata(entry.metadata);
     const config = ENTRY_CONFIG[entry.entry_type] || DEFAULT_CONFIG;
+    // Overdraft labels take priority so users instantly recognise borrowed funds
+    if (meta?.type === 'overdraft_draw') return '🅾️ Overdraft Used';
+    if (meta?.source === 'overdraft_no_headroom') return '🏦 Loan Recovery (Overdraft)';
+    if (meta?.source === 'overdraft_repayment' || meta?.type === 'overdraft_repayment') return '↩️ Overdraft Repayment';
+    if (meta?.source === 'overdraft_fee' || meta?.type === 'overdraft_fee') return '⚠️ Overdraft Fee';
     if (meta?.type === 'wallet_transfer' || meta?.type === 'internal_transfer_credit') {
       if (entry.amount < 0) return '📤 Sent Money';
       return '📥 Received Money';
@@ -634,6 +653,11 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
                     </Badge>
                     {activityLabel && (
                       <span className="text-[10px] text-muted-foreground">{activityLabel}</span>
+                    )}
+                    {meta?.overdraft_portion && Number(meta.overdraft_portion) > 0 && meta?.type !== 'overdraft_draw' && (
+                      <Badge variant="outline" className="text-[9px] px-1 py-0 bg-amber-100 text-amber-800 border-amber-300">
+                        +{Math.round(Number(meta.overdraft_portion)).toLocaleString()} via overdraft
+                      </Badge>
                     )}
                     {isReversed && (
                       <Badge variant="outline" className="text-[9px] px-1 py-0 bg-destructive/10 text-destructive">
