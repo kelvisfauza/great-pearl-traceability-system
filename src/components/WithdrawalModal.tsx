@@ -719,6 +719,21 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                   </Alert>
                 )}
 
+                {/* Overdraft acceptance for instant withdraw */}
+                {instantEligibility?.eligible && usesOverdraft && parsedAmount >= 2000 && parsedAmount <= instantMaxAmount && (
+                  <div className="rounded-md border border-amber-300 bg-amber-50 p-3 space-y-2 text-xs text-amber-900">
+                    <div className="flex justify-between"><span>From wallet:</span><span>UGX {walletPortion.toLocaleString()}</span></div>
+                    <div className="flex justify-between text-emerald-700"><span>From overdraft:</span><span>UGX {odPortion.toLocaleString()}</span></div>
+                    <div className="flex justify-between font-semibold border-t border-amber-200 pt-1"><span>Total payout:</span><span>UGX {parsedAmount.toLocaleString()}</span></div>
+                    <div className="flex justify-between text-amber-800"><span>Upfront interest (0.5%):</span><span>UGX {upfrontInterest.toLocaleString()}</span></div>
+                    <p className="mt-1">Your wallet doesn't fully cover this. The shortfall (UGX {odPortion.toLocaleString()}) will be taken from your overdraft, and UGX {upfrontInterest.toLocaleString()} interest will be added to your outstanding balance immediately.</p>
+                    <label className="flex items-center gap-2 pt-1 cursor-pointer">
+                      <input type="checkbox" checked={overdraftAccepted} onChange={(e) => setOverdraftAccepted(e.target.checked)} className="h-4 w-4" />
+                      <span>I approve using my overdraft for this withdrawal.</span>
+                    </label>
+                  </div>
+                )}
+
                 <div className="flex justify-end space-x-2">
                   <Button type="button" variant="outline" onClick={handleClose} disabled={instantLoading}>
                     Cancel
@@ -727,7 +742,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                     <Button
                       type="button"
                       onClick={() => setShowInstantConfirm(true)}
-                      disabled={instantLoading || withdrawalStatus.disabled || isWalletFrozen || !amount || parsedAmount < 2000 || parsedAmount > instantMaxAmount || (needsInstantPhoneInput && !isValidMobileNumber)}
+                      disabled={instantLoading || withdrawalStatus.disabled || isWalletFrozen || !amount || parsedAmount < 2000 || parsedAmount > instantMaxAmount || (needsInstantPhoneInput && !isValidMobileNumber) || overdraftBlocked}
                       className="bg-green-600 hover:bg-green-700 text-white"
                     >
                       {instantLoading ? (
