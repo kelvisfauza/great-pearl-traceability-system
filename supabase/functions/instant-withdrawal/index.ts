@@ -476,13 +476,14 @@ serve(async (req) => {
       try {
         const { data: acc2 } = await supabase
           .from('overdraft_accounts')
-          .select('outstanding_balance, total_drawn')
+          .select('outstanding_balance, total_drawn, total_interest')
           .eq('id', odAccountId)
           .single();
-        const newOut = Number(acc2?.outstanding_balance || 0) + overdraftPortion;
+        const newOut = Number(acc2?.outstanding_balance || 0) + overdraftPortion + upfrontInterest;
         await supabase.from('overdraft_accounts').update({
           outstanding_balance: newOut,
           total_drawn: Number(acc2?.total_drawn || 0) + overdraftPortion,
+          total_interest: Number(acc2?.total_interest || 0) + upfrontInterest,
           last_used_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }).eq('id', odAccountId);
@@ -491,11 +492,28 @@ serve(async (req) => {
           user_id: resolvedUserId,
           transaction_type: 'draw',
           amount: overdraftPortion,
-          balance_after: newOut,
+          balance_after: Number(acc2?.outstanding_balance || 0) + overdraftPortion,
           ledger_entry_id: ledgerRow?.id || null,
           reference: ledgerRef,
-          metadata: { source: 'instant_withdrawal', wallet_portion: walletPortion },
+          metadata: { source: 'instant_withdrawal', wallet_portion: walletPortion, interest_charged: upfrontInterest },
         });
+        if (upfrontInterest > 0) {
+          await supabase.from('overdraft_transactions').insert({
+            account_id: odAccountId,
+            user_id: resolvedUserId,
+            transaction_type: 'interest',
+            amount: upfrontInterest,
+            balance_after: newOut,
+            ledger_entry_id: null,
+            reference: ledgerRef + '-INT',
+            metadata: {
+              source: 'instant_withdrawal',
+              rate_bps: odInterestRateBps,
+              draw_amount: overdraftPortion,
+              description: `Upfront interest on overdraft draw (${odInterestRateBps / 100}%)`,
+            },
+          });
+        }
       } catch (e) {
         console.error('[instant-withdrawal] overdraft sync failed:', (e as Error).message);
       }
