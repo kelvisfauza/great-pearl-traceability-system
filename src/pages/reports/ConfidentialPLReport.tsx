@@ -67,14 +67,22 @@ const ConfidentialPLReport = () => {
       const endISO = `${dateTo}T23:59:59`;
 
       // Purchases: coffee_records + quality_assessments (final_price)
-      const { data: crData, error: crErr } = await supabase
-        .from("coffee_records")
-        .select("id, date, supplier_name, supplier_id, batch_number, coffee_type, kilograms")
-        .gte("date", dateFrom)
-        .lte("date", dateTo)
-        .order("date", { ascending: true })
-        .limit(10000);
-      if (crErr) throw crErr;
+      // Paginate because Supabase REST caps responses (default 1000) regardless of .limit()
+      const PAGE_SIZE = 1000;
+      const crData: any[] = [];
+      for (let from = 0; from < 200000; from += PAGE_SIZE) {
+        const { data, error } = await supabase
+          .from("coffee_records")
+          .select("id, date, supplier_name, supplier_id, batch_number, coffee_type, kilograms")
+          .gte("date", dateFrom)
+          .lte("date", dateTo)
+          .order("date", { ascending: true })
+          .range(from, from + PAGE_SIZE - 1);
+        if (error) throw error;
+        const rows = (data || []) as any[];
+        crData.push(...rows);
+        if (rows.length < PAGE_SIZE) break;
+      }
 
       const batchNumbers = (crData || []).map((r: any) => r.batch_number).filter(Boolean);
       let qaMap = new Map<string, { final_price: number | null; suggested_price: number | null }>();
@@ -157,15 +165,21 @@ const ConfidentialPLReport = () => {
       });
       setPurchases(purchaseRows);
 
-      // Sales
-      const { data: sData, error: sErr } = await supabase
-        .from("sales_transactions")
-        .select("date, customer, coffee_type, weight, unit_price, total_amount")
-        .gte("date", dateFrom)
-        .lte("date", dateTo)
-        .order("date", { ascending: true })
-        .limit(10000);
-      if (sErr) throw sErr;
+      // Sales (paginated for same reason)
+      const sData: any[] = [];
+      for (let from = 0; from < 200000; from += PAGE_SIZE) {
+        const { data, error } = await supabase
+          .from("sales_transactions")
+          .select("date, customer, coffee_type, weight, unit_price, total_amount")
+          .gte("date", dateFrom)
+          .lte("date", dateTo)
+          .order("date", { ascending: true })
+          .range(from, from + PAGE_SIZE - 1);
+        if (error) throw error;
+        const rows = (data || []) as any[];
+        sData.push(...rows);
+        if (rows.length < PAGE_SIZE) break;
+      }
       setSales(
         (sData || []).map((s: any) => ({
           date: s.date,
@@ -177,14 +191,20 @@ const ConfidentialPLReport = () => {
         }))
       );
 
-      // Payments
-      const { data: pData, error: pErr } = await supabase
-        .from("supplier_payments")
-        .select("payment_date, processed_at, created_at, supplier_id, amount_paid_ugx, status")
-        .gte("created_at", startISO)
-        .lte("created_at", endISO)
-        .limit(10000);
-      if (pErr) throw pErr;
+      // Payments (paginated)
+      const pData: any[] = [];
+      for (let from = 0; from < 200000; from += PAGE_SIZE) {
+        const { data, error } = await supabase
+          .from("supplier_payments")
+          .select("payment_date, processed_at, created_at, supplier_id, amount_paid_ugx, status")
+          .gte("created_at", startISO)
+          .lte("created_at", endISO)
+          .range(from, from + PAGE_SIZE - 1);
+        if (error) throw error;
+        const rows = (data || []) as any[];
+        pData.push(...rows);
+        if (rows.length < PAGE_SIZE) break;
+      }
       setPayments(
         (pData || [])
           .filter((p: any) => (p.status || "").toLowerCase() !== "cancelled")
