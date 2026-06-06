@@ -49,7 +49,14 @@ const CANONICAL_WALLET_TYPES = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWA
 
 const parseMetadata = (metadata: unknown) => {
   if (!metadata) return null;
-  return typeof metadata === 'string' ? JSON.parse(metadata) : metadata;
+  if (typeof metadata === 'string') {
+    try {
+      return JSON.parse(metadata);
+    } catch {
+      return null;
+    }
+  }
+  return metadata;
 };
 
 const getTransferMeta = (entry: LedgerEntry) => {
@@ -477,7 +484,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     if (meta?.source === 'overdraft_no_headroom') {
       return 'Loan recovery via overdraft';
     }
-    if (meta?.source === 'overdraft_repayment' || meta?.type === 'overdraft_repayment') {
+    if (meta?.source === 'overdraft_repayment' || meta?.type === 'overdraft_repayment' || meta?.type === 'overdraft_recovery') {
       return 'Repaid from wallet';
     }
     if (meta?.source === 'overdraft_fee' || meta?.type === 'overdraft_fee') {
@@ -533,7 +540,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     // Overdraft labels take priority so users instantly recognise borrowed funds
     if (meta?.type === 'overdraft_draw') return '🅾️ Overdraft Used';
     if (meta?.source === 'overdraft_no_headroom') return '🏦 Loan Recovery (Overdraft)';
-    if (meta?.source === 'overdraft_repayment' || meta?.type === 'overdraft_repayment') return '↩️ Overdraft Repayment';
+    if (meta?.source === 'overdraft_repayment' || meta?.type === 'overdraft_repayment' || meta?.type === 'overdraft_recovery') return '↩️ Overdraft Repayment';
     if (meta?.source === 'overdraft_fee' || meta?.type === 'overdraft_fee') return '⚠️ Overdraft Fee';
     if (meta?.type === 'wallet_transfer' || meta?.type === 'internal_transfer_credit') {
       if (entry.amount < 0) return '📤 Sent Money';
