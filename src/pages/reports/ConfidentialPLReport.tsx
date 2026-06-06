@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, subMonths } from "date-fns";
+import { stripLegacySupplierSuffix } from "@/utils/supplierDisplay";
 import { ArrowLeft, FileLock, Printer, Loader2, AlertTriangle, Wand2 } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -359,16 +360,18 @@ const ConfidentialPLReport = () => {
 
   // Group purchases by supplier
   const supplierBreakdown = (() => {
-    const m = new Map<string, { kg: number; cost: number; batches: number }>();
+    const m = new Map<string, { name: string; kg: number; cost: number; batches: number }>();
     purchases.forEach((p) => {
-      const cur = m.get(p.supplier_name) || { kg: 0, cost: 0, batches: 0 };
+      const clean = stripLegacySupplierSuffix(p.supplier_name || "Unknown").trim() || "Unknown";
+      const key = clean.toLowerCase().replace(/\s+/g, " ");
+      const cur = m.get(key) || { name: clean, kg: 0, cost: 0, batches: 0 };
       cur.kg += p.kilograms;
       cur.cost += p.cost;
       cur.batches += 1;
-      m.set(p.supplier_name, cur);
+      m.set(key, cur);
     });
-    return Array.from(m.entries())
-      .map(([name, v]) => ({ name, ...v, avg: v.kg > 0 ? v.cost / v.kg : 0 }))
+    return Array.from(m.values())
+      .map((v) => ({ ...v, avg: v.kg > 0 ? v.cost / v.kg : 0 }))
       .sort((a, b) => b.cost - a.cost);
   })();
 
@@ -387,7 +390,7 @@ const ConfidentialPLReport = () => {
       const r = getRow(key);
       r.buyKg += p.kilograms;
       r.buyCost += p.cost;
-      r.suppliers.add(p.supplier_name);
+      r.suppliers.add(stripLegacySupplierSuffix(p.supplier_name || "").toLowerCase().trim());
       r.batches += 1;
     });
     sales.forEach((s) => {
