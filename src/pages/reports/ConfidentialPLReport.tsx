@@ -360,18 +360,31 @@ const ConfidentialPLReport = () => {
 
   // Group purchases by supplier
   const supplierBreakdown = (() => {
-    const m = new Map<string, { name: string; kg: number; cost: number; batches: number }>();
+    const m = new Map<string, { name: string; kg: number; cost: number; batches: number; variants: Set<string> }>();
+    const firstToken = (s: string) =>
+      s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w) => w.length >= 3)[0] || s.toLowerCase().trim();
     purchases.forEach((p) => {
       const clean = stripLegacySupplierSuffix(p.supplier_name || "Unknown").trim() || "Unknown";
-      const key = clean.toLowerCase().replace(/\s+/g, " ");
-      const cur = m.get(key) || { name: clean, kg: 0, cost: 0, batches: 0 };
+      // Group by supplier_id when present, else by first significant name token (merges "Godfrey", "Godfrey Kule", etc.)
+      const key = p.supplier_id ? `id:${p.supplier_id}` : `name:${firstToken(clean)}`;
+      const cur = m.get(key) || { name: clean, kg: 0, cost: 0, batches: 0, variants: new Set<string>() };
       cur.kg += p.kilograms;
       cur.cost += p.cost;
       cur.batches += 1;
+      cur.variants.add(clean);
+      // prefer the longest variant as display name
+      if (clean.length > cur.name.length) cur.name = clean;
       m.set(key, cur);
     });
     return Array.from(m.values())
-      .map((v) => ({ ...v, avg: v.kg > 0 ? v.cost / v.kg : 0 }))
+      .map((v) => ({
+        name: v.name,
+        kg: v.kg,
+        cost: v.cost,
+        batches: v.batches,
+        avg: v.kg > 0 ? v.cost / v.kg : 0,
+        aliases: Array.from(v.variants).filter((x) => x !== v.name),
+      }))
       .sort((a, b) => b.cost - a.cost);
   })();
 
