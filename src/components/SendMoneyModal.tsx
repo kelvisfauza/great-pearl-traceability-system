@@ -73,6 +73,13 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
   const selectedRecipient = employees.find(e => e.id === recipientId);
   const parsedMobileAmount = parseFloat(mobileAmount) || 0;
 
+  // Wallet-only balance (without overdraft). Defaults to availableBalance if not provided.
+  const walletOnly = typeof walletBalance === 'number' ? walletBalance : Math.max(0, availableBalance - overdraftHeadroom);
+  const employeeOdPortion = Math.max(0, Math.min(parsedAmount, availableBalance) - walletOnly);
+  const mobileOdPortion = Math.max(0, Math.min(parsedMobileAmount, availableBalance) - walletOnly);
+  const employeeNeedsOdConfirm = employeeOdPortion > 0 && !overdraftConfirmed;
+  const mobileNeedsOdConfirm = mobileOdPortion > 0 && !overdraftConfirmedMobile;
+
   const handleSendToEmployee = async () => {
     if (!selectedRecipient || parsedAmount <= 0) return;
 
