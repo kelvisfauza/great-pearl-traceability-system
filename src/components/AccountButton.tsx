@@ -324,14 +324,16 @@ export const AccountButton = () => {
   
   const walletBalance = account?.wallet_balance || 0;
   const overdraftOutstanding = overdraft && overdraft.status === 'active' ? Number(overdraft.outstanding || 0) : 0;
-  // Effective wallet balance reflects overdraft debt: when overdraft is in use, wallet shows negative.
-  const effectiveWalletBalance = walletBalance - overdraftOutstanding;
+  // Wallet balance already reflects overdraft draws (each draw posts a WITHDRAWAL ledger entry),
+  // so we display it as-is — it naturally goes negative when overdraft is in use.
+  const effectiveWalletBalance = walletBalance;
   const availableLoyalty = Math.max(0, walletBalance - pendingAmount);
 
   // Overdraft headroom is added to withdrawal capacity when the account is active and not frozen.
   const overdraftHeadroom = overdraft && overdraft.status === 'active' ? Number(overdraft.available || 0) : 0;
-  // Net cash that's truly the user's (wallet minus what they owe on overdraft, minus pending).
-  const netOwnFunds = Math.max(0, walletBalance - overdraftOutstanding - pendingAmount);
+  // Net cash that's truly the user's: positive wallet balance only (overdraft debt already
+  // sits in the wallet as a negative posting, so we just clamp at zero).
+  const netOwnFunds = Math.max(0, walletBalance - pendingAmount);
   const availableForWithdrawal = netOwnFunds + overdraftHeadroom;
 
   return (
