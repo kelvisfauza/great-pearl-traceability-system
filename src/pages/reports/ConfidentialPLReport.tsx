@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, subMonths } from "date-fns";
-import { ArrowLeft, FileLock, Printer, Loader2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, FileLock, Printer, Loader2, AlertTriangle, Wand2 } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
