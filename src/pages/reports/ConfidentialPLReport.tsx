@@ -352,6 +352,54 @@ const ConfidentialPLReport = () => {
       .sort((a, b) => b.cost - a.cost);
   })();
 
+  // Monthly summary: aggregate buys and sells per month
+  const monthlySummary = (() => {
+    type Row = { month: string; buyKg: number; buyCost: number; sellKg: number; sellRev: number; suppliers: Set<string>; batches: number };
+    const m = new Map<string, Row>();
+    const getRow = (key: string) => {
+      let r = m.get(key);
+      if (!r) { r = { month: key, buyKg: 0, buyCost: 0, sellKg: 0, sellRev: 0, suppliers: new Set(), batches: 0 }; m.set(key, r); }
+      return r;
+    };
+    purchases.forEach((p) => {
+      const key = (p.date || "").slice(0, 7);
+      if (!key) return;
+      const r = getRow(key);
+      r.buyKg += p.kilograms;
+      r.buyCost += p.cost;
+      r.suppliers.add(p.supplier_name);
+      r.batches += 1;
+    });
+    sales.forEach((s) => {
+      const key = (s.date || "").slice(0, 7);
+      if (!key) return;
+      const r = getRow(key);
+      r.sellKg += Number(s.weight) || 0;
+      r.sellRev += Number(s.total_amount) || 0;
+    });
+    return Array.from(m.values())
+      .map((r) => {
+        const avgBuy = r.buyKg > 0 ? r.buyCost / r.buyKg : 0;
+        const avgSell = r.sellKg > 0 ? r.sellRev / r.sellKg : 0;
+        const matchedKg = Math.min(r.buyKg, r.sellKg);
+        const profit = matchedKg * (avgSell - avgBuy);
+        return {
+          month: r.month,
+          buyKg: r.buyKg,
+          buyCost: r.buyCost,
+          sellKg: r.sellKg,
+          sellRev: r.sellRev,
+          avgBuy,
+          avgSell,
+          matchedKg,
+          profit,
+          suppliers: r.suppliers.size,
+          batches: r.batches,
+        };
+      })
+      .sort((a, b) => a.month.localeCompare(b.month));
+  })();
+
   const customerBreakdown = (() => {
     const m = new Map<string, { kg: number; revenue: number; orders: number }>();
     reportSales.forEach((s) => {
