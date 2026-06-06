@@ -252,6 +252,33 @@ serve(async (req) => {
     const overdraftPortion = Math.max(0, numAmount - walletSpendable);
     const walletPortion = numAmount - overdraftPortion;
 
+    // Upfront interest charged when the user accepts to dip into overdraft
+    let odInterestRateBps = 50; // 0.5% default
+    if (overdraftPortion > 0 && odAccountId) {
+      try {
+        const { data: odAcc } = await supabase
+          .from('overdraft_accounts')
+          .select('interest_rate_bps')
+          .eq('id', odAccountId)
+          .maybeSingle();
+        if (odAcc?.interest_rate_bps != null) odInterestRateBps = Number(odAcc.interest_rate_bps);
+      } catch (_) { /* keep default */ }
+    }
+    const upfrontInterest = overdraftPortion > 0
+      ? Math.round(overdraftPortion * odInterestRateBps) / 10000
+      : 0;
+
+    // Block draw if user hasn't explicitly approved using their overdraft
+    if (overdraftPortion > 0 && !acceptOverdraft) {
+      return respond(false, {
+        error: `This withdrawal exceeds your wallet by UGX ${overdraftPortion.toLocaleString()}. Approve using your overdraft (upfront interest UGX ${upfrontInterest.toLocaleString()}) to continue.`,
+        code: 'OVERDRAFT_NOT_ACCEPTED',
+        wallet_portion: walletPortion,
+        overdraft_portion: overdraftPortion,
+        upfront_interest: upfrontInterest,
+      });
+    }
+
     // Fetch employee name early for narrative
     const { data: empData } = await supabase
       .from('employees')
