@@ -181,24 +181,35 @@ export const AccountButton = () => {
     const email = employee?.email || user?.email;
     if (!email) return;
     try {
-      const { data } = await (supabase as any)
-        .from('overdraft_accounts')
-        .select('status, approved_limit, outstanding_balance')
-        .eq('employee_email', email)
-        .maybeSingle();
-      if (data) {
-        const limit = Number(data.approved_limit || 0);
-        const outstanding = Number(data.outstanding_balance || 0);
+      const { data, error } = await (supabase as any)
+        .rpc('get_overdraft_account', { user_email: email });
+
+      if (error) {
+        console.error('Error loading overdraft account:', error);
+        setOverdraft(null);
+        return;
+      }
+
+      const activeAccount = Array.isArray(data) ? data[0] : data;
+
+      if (activeAccount) {
+        const limit = Number(activeAccount.approved_limit || 0);
+        const outstanding = Number(activeAccount.outstanding_balance || 0);
+        const available = Number(activeAccount.available_overdraft ?? Math.max(0, limit - outstanding));
+
         setOverdraft({
-          status: data.status,
+          status: activeAccount.status,
           limit,
           outstanding,
-          available: Math.max(0, limit - outstanding),
+          available,
         });
       } else {
         setOverdraft(null);
       }
-    } catch {}
+    } catch (error) {
+      console.error('Unexpected overdraft fetch error:', error);
+      setOverdraft(null);
+    }
   };
 
   useEffect(() => {
@@ -206,6 +217,12 @@ export const AccountButton = () => {
     fetchActiveLoans();
     fetchOverdraft();
   }, [user?.id, user?.email, employee?.email, withdrawalRequests.length]);
+
+  useEffect(() => {
+    if (showSendMoney || showWithdrawal) {
+      fetchOverdraft();
+    }
+  }, [showSendMoney, showWithdrawal]);
 
   // Real-time subscription for ledger changes
   useEffect(() => {
@@ -636,11 +653,12 @@ export const AccountButton = () => {
                     <span className="text-xs text-muted-foreground">Available</span>
                   </div>
                   <div className="text-lg font-bold text-blue-600">
-                    {formatCurrency(availableLoyalty)}
+                    {formatCurrency(availableForWithdrawal)}
                   </div>
                   {overdraftHeadroom > 0 && (
-                    <div className="text-[10px] text-muted-foreground mt-1">
-                      +{formatCurrency(overdraftHeadroom)} overdraft
+                    <div className="space-y-0.5 mt-1 text-[10px] text-muted-foreground">
+                      <div>Wallet: {formatCurrency(availableLoyalty)}</div>
+                      <div>+{formatCurrency(overdraftHeadroom)} overdraft</div>
                     </div>
                   )}
                 </CardContent>
@@ -666,7 +684,7 @@ export const AccountButton = () => {
                 variant="outline"
                 onClick={() => setShowSendMoney(true)}
                 className="flex items-center gap-2"
-                disabled={availableLoyalty <= 0}
+                disabled={availableForWithdrawal <= 0}
               >
                 <Send className="h-4 w-4" />
                 Send Money
