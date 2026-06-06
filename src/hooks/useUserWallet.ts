@@ -61,9 +61,9 @@ export const useUserWallet = () => {
   const { data, isLoading, refetch } = useQuery({
     queryKey,
     enabled: !!walletOwnerEmail,
-    staleTime: 30_000,
+    staleTime: 5_000,
     refetchOnWindowFocus: false,
-    refetchInterval: 60_000,
+    refetchInterval: 10_000,
     queryFn: async () => {
       console.log('💰 Fetching wallet data for:', walletOwnerEmail);
 
@@ -158,6 +158,29 @@ export const useUserWallet = () => {
   const unifiedUserId = data?.unifiedUserId ?? null;
   const loading = isLoading;
   const fetchWalletData = () => { refetch(); };
+
+  // Real-time: refetch immediately on any ledger entry or withdrawal change for this user
+  useEffect(() => {
+    if (!walletOwnerEmail) return;
+    const channel = supabase
+      .channel(`wallet-rt-${walletOwnerEmail}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ledger_entries' }, (payload: any) => {
+        const row = payload.new || payload.old;
+        if (!row) return;
+        if (unifiedUserId && row.user_id === unifiedUserId) {
+          refetch();
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'withdrawal_requests' }, (payload: any) => {
+        const row = payload.new || payload.old;
+        if (unifiedUserId && row?.user_id === unifiedUserId) refetch();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'approval_requests', filter: `requestedby=eq.${walletOwnerEmail}` }, () => {
+        refetch();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [walletOwnerEmail, unifiedUserId, refetch]);
 
   const createWithdrawalRequest = async (amount: number, phoneNumber: string, channel: string = 'ZENGAPAY') => {
     const walletOwnerEmail = employee?.email || user?.email;
