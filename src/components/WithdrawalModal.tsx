@@ -566,6 +566,13 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const isDisbursementValid = channel === 'CASH' || (channel === 'MOBILE_MONEY' && isValidMobileNumber) || (channel === 'BANK' && bankName && accountNumber && accountName);
   const isAmountValid = amount && parsedAmount <= availableAmount && parsedAmount >= 2000 && isCashRoundAmount && !withdrawalStatus.disabled && !isWalletFrozen && isDisbursementValid;
 
+  // Overdraft portion for instant withdrawal
+  const odPortion = Math.max(0, parsedAmount - walletOnly);
+  const walletPortion = parsedAmount - odPortion;
+  const upfrontInterest = Math.round(odPortion * 0.005 * 100) / 100;
+  const usesOverdraft = odPortion > 0 && overdraftHeadroom > 0;
+  const overdraftBlocked = usesOverdraft && !overdraftAccepted;
+
   return (
     <>
     <Dialog open={open} onOpenChange={handleClose}>
