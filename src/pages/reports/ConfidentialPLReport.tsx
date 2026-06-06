@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, subMonths } from "date-fns";
-import { ArrowLeft, FileLock, Printer, Loader2 } from "lucide-react";
+import { ArrowLeft, FileLock, Printer, Loader2, AlertTriangle } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +37,16 @@ type PaymentRow = {
 const fmt = (n: number) => `UGX ${Math.round(n).toLocaleString()}`;
 const kg = (n: number) => `${Number(n || 0).toLocaleString()} kg`;
 
+const normalizeType = (t: string | null | undefined): "Arabica" | "Robusta" | "Other" => {
+  const v = (t || "").toString().trim().toLowerCase();
+  if (v.startsWith("arab")) return "Arabica";
+  if (v.startsWith("rob")) return "Robusta";
+  return "Other";
+};
+
+type Opening = Record<"Arabica" | "Robusta" | "Other", number>;
+const EMPTY_OPENING: Opening = { Arabica: 0, Robusta: 0, Other: 0 };
+
 const ConfidentialPLReport = () => {
   const navigate = useNavigate();
   const today = new Date();
@@ -46,6 +56,7 @@ const ConfidentialPLReport = () => {
   const [purchases, setPurchases] = useState<PurchaseRow[]>([]);
   const [sales, setSales] = useState<SaleRow[]>([]);
   const [payments, setPayments] = useState<PaymentRow[]>([]);
+  const [openingStock, setOpeningStock] = useState<Opening>(EMPTY_OPENING);
   const [generated, setGenerated] = useState(false);
 
   const load = async () => {
@@ -130,6 +141,41 @@ const ConfidentialPLReport = () => {
           }))
       );
 
+      // Opening stock per coffee type (all history strictly before period)
+      const opening: Opening = { Arabica: 0, Robusta: 0, Other: 0 };
+      const PAGE = 1000;
+      // Purchases before period
+      for (let from = 0; from < 200000; from += PAGE) {
+        const { data, error } = await supabase
+          .from("coffee_records")
+          .select("coffee_type, kilograms")
+          .lt("date", dateFrom)
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        const rows = (data || []) as any[];
+        rows.forEach((r) => {
+          const t = normalizeType(r.coffee_type);
+          opening[t] += Number(r.kilograms) || 0;
+        });
+        if (rows.length < PAGE) break;
+      }
+      // Sales before period (deducted)
+      for (let from = 0; from < 200000; from += PAGE) {
+        const { data, error } = await supabase
+          .from("sales_transactions")
+          .select("coffee_type, weight")
+          .lt("date", dateFrom)
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        const rows = (data || []) as any[];
+        rows.forEach((r) => {
+          const t = normalizeType(r.coffee_type);
+          opening[t] -= Number(r.weight) || 0;
+        });
+        if (rows.length < PAGE) break;
+      }
+      setOpeningStock(opening);
+
       setGenerated(true);
       toast.success("Report generated");
     } catch (err: any) {
@@ -209,6 +255,51 @@ const ConfidentialPLReport = () => {
       .sort((a, b) => b.revenue - a.revenue);
   })();
 
+  // Per coffee-type matched P&L
+  const TYPES: Array<"Arabica" | "Robusta"> = ["Arabica", "Robusta"];
+  const byType = TYPES.map((type) => {
+    const tp = purchases.filter((p) => normalizeType(p.coffee_type) === type);
+    const ts = sales.filter((s) => normalizeType(s.coffee_type) === type);
+    const purchKg = tp.reduce((a, b) => a + b.kilograms, 0);
+    const purchCost = tp.reduce((a, b) => a + b.cost, 0);
+    const salesKg = ts.reduce((a, b) => a + b.weight, 0);
+    const salesRev = ts.reduce((a, b) => a + b.total_amount, 0);
+    const avgBuy = purchKg > 0 ? purchCost / purchKg : 0;
+    const avgSell = salesKg > 0 ? salesRev / salesKg : 0;
+    const cogs = salesKg * avgBuy;
+    const matchedProfit = salesRev - cogs;
+    const marginPct = salesRev > 0 ? (matchedProfit / salesRev) * 100 : 0;
+    const openStock = openingStock[type] || 0;
+    const closeStock = openStock + purchKg - salesKg;
+    return { type, purchKg, purchCost, salesKg, salesRev, avgBuy, avgSell, cogs, matchedProfit, marginPct, openStock, closeStock };
+  });
+
+  // Daily flow per type — running stock from opening, flags impossibilities (running < 0)
+  const dailyFlow = (type: "Arabica" | "Robusta") => {
+    const days = new Map<string, { bought: number; sold: number; cost: number; revenue: number }>();
+    purchases.filter((p) => normalizeType(p.coffee_type) === type).forEach((p) => {
+      const d = days.get(p.date) || { bought: 0, sold: 0, cost: 0, revenue: 0 };
+      d.bought += p.kilograms; d.cost += p.cost;
+      days.set(p.date, d);
+    });
+    sales.filter((s) => normalizeType(s.coffee_type) === type).forEach((s) => {
+      const d = days.get(s.date) || { bought: 0, sold: 0, cost: 0, revenue: 0 };
+      d.sold += s.weight; d.revenue += s.total_amount;
+      days.set(s.date, d);
+    });
+    let running = openingStock[type] || 0;
+    return Array.from(days.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, v]) => {
+        running += v.bought - v.sold;
+        return { date, ...v, running, impossible: running < -0.01, soldMoreThanDay: v.sold > v.bought && v.bought > 0 };
+      });
+  };
+
+  const arabicaDaily = generated ? dailyFlow("Arabica") : [];
+  const robustaDaily = generated ? dailyFlow("Robusta") : [];
+  const impossibleDays = [...arabicaDaily, ...robustaDaily].filter((d) => d.impossible);
+
   const handlePrint = () => {
     const w = window.open("", "_blank");
     if (!w) {
@@ -268,6 +359,54 @@ const ConfidentialPLReport = () => {
       )
       .join("");
 
+    const typeBlocksHtml = byType
+      .map(
+        (t) => `
+      <div class="type-box">
+        <h3>${t.type}</h3>
+        <table>
+          <tbody>
+            <tr><td>Opening Stock</td><td class="r">${t.openStock.toLocaleString()} kg</td></tr>
+            <tr><td>+ Bought (period)</td><td class="r">${t.purchKg.toLocaleString()} kg @ ${fmt(t.avgBuy)}</td></tr>
+            <tr><td>− Sold (period)</td><td class="r">${t.salesKg.toLocaleString()} kg @ ${fmt(t.avgSell)}</td></tr>
+            <tr style="border-top:1px solid #999;font-weight:bold"><td>Closing Stock</td><td class="r" style="color:${t.closeStock < 0 ? "#b91c1c" : "#1a5632"}">${t.closeStock.toLocaleString()} kg</td></tr>
+            <tr><td colspan="2" style="height:6px;border:none"></td></tr>
+            <tr><td>Revenue</td><td class="r">${fmt(t.salesRev)}</td></tr>
+            <tr><td>COGS (sold × avg buy)</td><td class="r">(${fmt(t.cogs)})</td></tr>
+            <tr style="background:${t.matchedProfit >= 0 ? "#dcfce7" : "#fee2e2"};font-weight:bold"><td>Matched Profit (${t.marginPct.toFixed(1)}%)</td><td class="r">${fmt(t.matchedProfit)}</td></tr>
+          </tbody>
+        </table>
+      </div>`
+      )
+      .join("");
+
+    const dailyBlockHtml = (type: "Arabica" | "Robusta", rows: ReturnType<typeof dailyFlow>) =>
+      rows.length === 0
+        ? ""
+        : `<h2>${type} — Daily Flow & Running Stock</h2>
+      <table>
+        <thead><tr><th>Date</th><th class="r">Bought (kg)</th><th class="r">Sold (kg)</th><th class="r">Net</th><th class="r">Running Stock</th><th class="r">Revenue</th></tr></thead>
+        <tbody>${rows
+          .map(
+            (d) => `<tr style="${d.impossible ? "background:#fee2e2" : ""}">
+              <td>${format(new Date(d.date), "MMM dd, yyyy")}</td>
+              <td class="r">${d.bought.toLocaleString()}</td>
+              <td class="r">${d.sold.toLocaleString()}</td>
+              <td class="r">${(d.bought - d.sold >= 0 ? "+" : "") + (d.bought - d.sold).toLocaleString()}</td>
+              <td class="r" style="${d.impossible ? "color:#b91c1c;font-weight:bold" : ""}">${d.running.toLocaleString()}${d.impossible ? " ⚠" : ""}</td>
+              <td class="r">${d.revenue > 0 ? fmt(d.revenue) : "—"}</td>
+            </tr>`
+          )
+          .join("")}</tbody>
+      </table>`;
+
+    const impossibleHtml =
+      impossibleDays.length === 0
+        ? ""
+        : `<div style="border:2px solid #dc2626;background:#fee2e2;padding:8px;margin-top:10px;border-radius:4px">
+        <strong style="color:#b91c1c">DATA INTEGRITY ALERT:</strong> ${impossibleDays.length} day(s) recorded more sales than available stock. Please reconcile inventory.
+      </div>`;
+
     w.document.write(`<!DOCTYPE html><html><head><title>Confidential P&L — ${periodStr}</title>
     <style>
       @page { size: A4; margin: 14mm; }
@@ -286,6 +425,9 @@ const ConfidentialPLReport = () => {
       td.r, th.r { text-align: right; }
       tfoot td { font-weight: bold; background: #f1f5f4; border-top: 2px solid #1a5632; }
       .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 12px 0; }
+      .type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 10px 0; }
+      .type-box { border: 1px solid #d4d4d4; padding: 10px; border-radius: 4px; background: #fafafa; }
+      .type-box h3 { margin: 0 0 6px 0; color: #1a5632; font-size: 13px; border-bottom: 1px solid #1a5632; padding-bottom: 3px; }
       .stat { border: 1px solid #d4d4d4; padding: 10px; border-radius: 4px; background: #fafafa; }
       .stat .lbl { font-size: 9px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
       .stat .val { font-size: 14px; font-weight: bold; color: #1a1a1a; margin-top: 4px; }
@@ -310,6 +452,7 @@ const ConfidentialPLReport = () => {
       </div>
 
       <h2>Executive Summary</h2>
+      ${impossibleHtml}
       <div class="summary-grid">
         <div class="stat"><div class="lbl">Total Bought</div><div class="val">${totals.purchKg.toLocaleString()} kg</div></div>
         <div class="stat"><div class="lbl">Purchase Cost</div><div class="val">${fmt(totals.purchCost)}</div></div>
@@ -320,6 +463,12 @@ const ConfidentialPLReport = () => {
         <div class="stat"><div class="lbl">Cash Paid to Suppliers</div><div class="val">${fmt(totals.paymentsTotal)}</div></div>
         <div class="stat profit"><div class="lbl">Net Profit (Period)</div><div class="val">${fmt(totals.grossProfit)}</div></div>
       </div>
+
+      <h2>P&amp;L by Coffee Type</h2>
+      <div class="type-grid">${typeBlocksHtml}</div>
+
+      ${dailyBlockHtml("Arabica", arabicaDaily)}
+      ${dailyBlockHtml("Robusta", robustaDaily)}
 
       <h2>Supplier Deliveries (Purchases)</h2>
       <table>
@@ -432,6 +581,39 @@ const ConfidentialPLReport = () => {
 
         {generated && (
           <>
+            {impossibleDays.length > 0 && (
+              <Card className="border-2 border-red-600 bg-red-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-red-700">
+                    <AlertTriangle className="h-5 w-5" /> Data Integrity Alert — Impossible Stock
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-red-900 mb-2">
+                    The following days show <strong>more coffee sold than available</strong> (running stock went negative).
+                    This means a sale was recorded without a matching purchase — please reconcile.
+                  </p>
+                  <table className="w-full text-xs">
+                    <thead><tr className="border-b border-red-300"><th className="text-left p-1">Date</th><th className="p-1">Type</th><th className="text-right p-1">Bought</th><th className="text-right p-1">Sold</th><th className="text-right p-1">Running Stock</th></tr></thead>
+                    <tbody>
+                      {impossibleDays.map((d, i) => {
+                        const type = arabicaDaily.includes(d as any) ? "Arabica" : "Robusta";
+                        return (
+                          <tr key={i} className="border-b border-red-200">
+                            <td className="p-1">{format(new Date(d.date), "MMM dd, yyyy")}</td>
+                            <td className="p-1 text-center">{type}</td>
+                            <td className="p-1 text-right">{d.bought.toLocaleString()}</td>
+                            <td className="p-1 text-right">{d.sold.toLocaleString()}</td>
+                            <td className="p-1 text-right font-bold text-red-700">{d.running.toLocaleString()} kg</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </CardContent>
+              </Card>
+            )}
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card><CardContent className="pt-4">
                 <p className="text-xs text-muted-foreground uppercase">Total Bought</p>
@@ -489,6 +671,79 @@ const ConfidentialPLReport = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Per-coffee-type breakdown */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {byType.map((t) => (
+                <Card key={t.type} className={t.type === "Arabica" ? "border-emerald-300" : "border-amber-300"}>
+                  <CardHeader>
+                    <CardTitle className={t.type === "Arabica" ? "text-emerald-700" : "text-amber-700"}>
+                      {t.type} — Period P&amp;L
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <table className="w-full text-sm">
+                      <tbody>
+                        <tr><td className="py-1">Opening Stock</td><td className="text-right font-medium">{t.openStock.toLocaleString()} kg</td></tr>
+                        <tr><td className="py-1">+ Bought (period)</td><td className="text-right">{t.purchKg.toLocaleString()} kg @ {fmt(t.avgBuy)}</td></tr>
+                        <tr><td className="py-1">− Sold (period)</td><td className="text-right">{t.salesKg.toLocaleString()} kg @ {fmt(t.avgSell)}</td></tr>
+                        <tr className="border-t"><td className="py-1 font-bold">Closing Stock</td><td className={`text-right font-bold ${t.closeStock < 0 ? "text-red-700" : ""}`}>{t.closeStock.toLocaleString()} kg</td></tr>
+                        <tr><td colSpan={2} className="py-2"></td></tr>
+                        <tr><td className="py-1">Revenue</td><td className="text-right">{fmt(t.salesRev)}</td></tr>
+                        <tr><td className="py-1">COGS (sold × avg buy)</td><td className="text-right">({fmt(t.cogs)})</td></tr>
+                        <tr className={`border-t ${t.matchedProfit >= 0 ? "bg-green-50" : "bg-red-50"}`}>
+                          <td className="py-1 font-bold">Matched Profit</td>
+                          <td className={`text-right font-bold ${t.matchedProfit >= 0 ? "text-green-700" : "text-red-700"}`}>
+                            {fmt(t.matchedProfit)} <span className="text-xs">({t.marginPct.toFixed(1)}%)</span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Daily flow per type */}
+            {TYPES.map((type) => {
+              const rows = type === "Arabica" ? arabicaDaily : robustaDaily;
+              if (rows.length === 0) return null;
+              return (
+                <Card key={type}>
+                  <CardHeader>
+                    <CardTitle>{type} — Daily Flow & Running Stock</CardTitle>
+                  </CardHeader>
+                  <CardContent className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead><tr className="border-b">
+                        <th className="text-left p-2">Date</th>
+                        <th className="text-right p-2">Bought (kg)</th>
+                        <th className="text-right p-2">Sold (kg)</th>
+                        <th className="text-right p-2">Net (kg)</th>
+                        <th className="text-right p-2">Running Stock</th>
+                        <th className="text-right p-2">Revenue</th>
+                      </tr></thead>
+                      <tbody>
+                        {rows.map((d, i) => (
+                          <tr key={i} className={`border-b ${d.impossible ? "bg-red-50" : ""}`}>
+                            <td className="p-2">{format(new Date(d.date), "MMM dd")}</td>
+                            <td className="p-2 text-right">{d.bought.toLocaleString()}</td>
+                            <td className="p-2 text-right">{d.sold.toLocaleString()}</td>
+                            <td className={`p-2 text-right ${d.bought - d.sold >= 0 ? "text-blue-700" : "text-orange-700"}`}>
+                              {(d.bought - d.sold >= 0 ? "+" : "") + (d.bought - d.sold).toLocaleString()}
+                            </td>
+                            <td className={`p-2 text-right font-medium ${d.impossible ? "text-red-700 font-bold" : ""}`}>
+                              {d.running.toLocaleString()} {d.impossible ? "⚠" : ""}
+                            </td>
+                            <td className="p-2 text-right">{d.revenue > 0 ? fmt(d.revenue) : "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </CardContent>
+                </Card>
+              );
+            })}
 
             <Card>
               <CardHeader>
