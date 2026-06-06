@@ -58,6 +58,7 @@ const ConfidentialPLReport = () => {
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [openingStock, setOpeningStock] = useState<Opening>(EMPTY_OPENING);
   const [generated, setGenerated] = useState(false);
+  const [autoFilling, setAutoFilling] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -299,6 +300,91 @@ const ConfidentialPLReport = () => {
   const arabicaDaily = generated ? dailyFlow("Arabica") : [];
   const robustaDaily = generated ? dailyFlow("Robusta") : [];
   const impossibleDays = [...arabicaDaily, ...robustaDaily].filter((d) => d.impossible);
+
+  // Compute per-day deficits to backfill: walks flow in order, whenever running<0
+  // records the gap and resets running to 0 (next deficit is incremental).
+  const computeDeficits = (type: "Arabica" | "Robusta") => {
+    const rows = type === "Arabica" ? arabicaDaily : robustaDaily;
+    const deficits: Array<{ date: string; missingKg: number }> = [];
+    let running = openingStock[type] || 0;
+    rows.forEach((d) => {
+      running += d.bought - d.sold;
+      if (running < -0.01) {
+        deficits.push({ date: d.date, missingKg: Math.ceil(-running) });
+        running = 0;
+      }
+    });
+    return deficits;
+  };
+
+  const handleAutoFill = async () => {
+    const plan: Array<{ type: "Arabica" | "Robusta"; date: string; missingKg: number; price: number }> = [];
+    for (const type of TYPES) {
+      const t = byType.find((b) => b.type === type)!;
+      // Period avg buy price; fallback to avg sell - 1500 (rough margin) or 8000 default
+      let price = t.avgBuy;
+      if (!price || price <= 0) price = Math.max(0, t.avgSell - 1500);
+      if (!price || price <= 0) price = type === "Arabica" ? 12000 : 8000;
+      const defs = computeDeficits(type);
+      defs.forEach((d) => plan.push({ type, date: d.date, missingKg: d.missingKg, price: Math.round(price) }));
+    }
+    if (plan.length === 0) {
+      toast.info("No missing purchases detected for this period");
+      return;
+    }
+    const totalKg = plan.reduce((s, p) => s + p.missingKg, 0);
+    if (!window.confirm(
+      `Auto-create ${plan.length} synthetic purchase record(s) totaling ${totalKg.toLocaleString()} kg ` +
+      `to cover the missing stock?\n\nEach record will use the period's average buy price per type. ` +
+      `They will be tagged with supplier "SYSTEM AUTO-FILL" and a special batch number so you can find them later.`
+    )) return;
+
+    setAutoFilling(true);
+    try {
+      let inserted = 0;
+      for (const item of plan) {
+        const ts = Date.now();
+        const batch = `AUTOFILL-${item.type.slice(0, 3).toUpperCase()}-${item.date}-${ts}`;
+        const recordId = `autofill-${item.type.toLowerCase()}-${item.date}-${ts}`;
+        const bags = Math.max(1, Math.round(item.missingKg / 60));
+        const { error: crErr } = await (supabase as any)
+          .from("coffee_records")
+          .insert({
+            id: recordId,
+            date: item.date,
+            coffee_type: item.type,
+            kilograms: item.missingKg,
+            bags,
+            supplier_name: "SYSTEM AUTO-FILL",
+            batch_number: batch,
+            status: "approved",
+            created_by: "system-auto-fill",
+          });
+        if (crErr) throw crErr;
+        const { error: qaErr } = await (supabase as any)
+          .from("quality_assessments")
+          .insert({
+            store_record_id: recordId,
+            batch_number: batch,
+            final_price: item.price,
+            suggested_price: item.price,
+            status: "approved",
+            date_assessed: item.date,
+            assessed_by: "system-auto-fill",
+            comments: `Auto-generated to backfill ${item.missingKg.toLocaleString()} kg deficit at period avg price`,
+          });
+        if (qaErr) throw qaErr;
+        inserted++;
+      }
+      toast.success(`Created ${inserted} backfill purchase(s). Reloading report...`);
+      await load();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Auto-fill failed");
+    } finally {
+      setAutoFilling(false);
+    }
+  };
 
   const handlePrint = () => {
     const w = window.open("", "_blank");
