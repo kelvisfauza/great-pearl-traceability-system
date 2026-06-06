@@ -292,7 +292,8 @@ const ConfidentialPLReport = () => {
     const purchCost = purchases.reduce((s, p) => s + p.cost, 0);
     const salesKg = reportSales.reduce((s, p) => s + p.weight, 0);
     const salesRev = reportSales.reduce((s, p) => s + p.total_amount, 0);
-    const paymentsTotal = payments.reduce((s, p) => s + p.amount_paid_ugx, 0);
+    // Policy: all coffee bought is considered paid for P&L purposes
+    const paymentsTotal = purchases.reduce((s, p) => s + p.cost, 0);
     const avgBuy = purchKg > 0 ? purchCost / purchKg : 0;
     const avgSell = salesKg > 0 ? salesRev / salesKg : 0;
     // Matched P&L: apply weighted-average buy price to kg actually sold
