@@ -6364,6 +6364,8 @@ export type Database = {
           employee_name: string | null
           factors: Json
           id: string
+          notified_at: string | null
+          notified_limit: number | null
           period: string
           updated_at: string
           user_id: string | null
@@ -6376,6 +6378,8 @@ export type Database = {
           employee_name?: string | null
           factors?: Json
           id?: string
+          notified_at?: string | null
+          notified_limit?: number | null
           period: string
           updated_at?: string
           user_id?: string | null
@@ -6388,6 +6392,8 @@ export type Database = {
           employee_name?: string | null
           factors?: Json
           id?: string
+          notified_at?: string | null
+          notified_limit?: number | null
           period?: string
           updated_at?: string
           user_id?: string | null
