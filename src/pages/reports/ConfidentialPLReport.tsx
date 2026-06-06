@@ -290,16 +290,21 @@ const ConfidentialPLReport = () => {
   const totals = (() => {
     const purchKg = purchases.reduce((s, p) => s + p.kilograms, 0);
     const purchCost = purchases.reduce((s, p) => s + p.cost, 0);
-    // Actual totals (raw) for the summary cards
-    const salesKg = sales.reduce((s, p) => s + (Number(p.weight) || 0), 0);
-    const salesRev = sales.reduce((s, p) => s + (Number(p.total_amount) || 0), 0);
-    // Matched-only totals for COGS / matched P&L
-    const matchedSalesKg = reportSales.reduce((s, p) => s + p.weight, 0);
-    const matchedSalesRev = reportSales.reduce((s, p) => s + p.total_amount, 0);
+    // Raw sales for avg sell price reference
+    const rawSalesKg = sales.reduce((s, p) => s + (Number(p.weight) || 0), 0);
+    const rawSalesRev = sales.reduce((s, p) => s + (Number(p.total_amount) || 0), 0);
+    const avgSellRaw = rawSalesKg > 0 ? rawSalesRev / rawSalesKg : 0;
+    // Cap displayed sales at total purchased; value excess at the period's average sell price
+    const salesKg = Math.min(rawSalesKg, purchKg);
+    const salesRev = rawSalesKg <= purchKg
+      ? rawSalesRev
+      : salesKg * avgSellRaw;
+    const matchedSalesKg = salesKg;
+    const matchedSalesRev = salesRev;
     // Policy: all coffee bought is considered paid for P&L purposes
     const paymentsTotal = purchases.reduce((s, p) => s + p.cost, 0);
     const avgBuy = purchKg > 0 ? purchCost / purchKg : 0;
-    const avgSell = salesKg > 0 ? salesRev / salesKg : 0;
+    const avgSell = avgSellRaw;
     // Matched P&L: apply weighted-average buy price to kg actually sold
     const cogs = matchedSalesKg * avgBuy;
     const grossProfit = matchedSalesRev - cogs;
