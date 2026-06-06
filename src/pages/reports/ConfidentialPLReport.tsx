@@ -825,55 +825,6 @@ const ConfidentialPLReport = () => {
 
         {generated && (
           <>
-            {impossibleDays.length > 0 && (
-              <Card className="border-2 border-black bg-white text-black">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-black">
-                    <AlertTriangle className="h-5 w-5 text-black" /> Data Integrity Alert — Impossible Stock
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-black">
-                  <p className="text-sm text-black mb-2">
-                    The following days show <strong>more coffee sold than available</strong> (running stock went negative).
-                    This means a sale was recorded without a matching purchase — please reconcile.
-                  </p>
-                  <div className="mb-3 flex items-center justify-between gap-2 border border-black/40 bg-black/5 p-2 rounded">
-                    <div className="text-xs text-black">
-                      <strong>Auto-Fill Missing Purchases:</strong> create synthetic purchase records on each
-                      deficit day, priced at the period's average buy price per coffee type. They will be tagged
-                      "SYSTEM AUTO-FILL" and a batch starting with <code>AUTOFILL-</code> so you can find/edit them.
-                    </div>
-                    <Button
-                      size="sm"
-                      onClick={handleAutoFill}
-                      disabled={autoFilling}
-                      className="gap-2 bg-black text-white hover:bg-black/80"
-                    >
-                      {autoFilling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-                      {autoFilling ? "Filling..." : "Auto-Fill Missing Purchases"}
-                    </Button>
-                  </div>
-                  <table className="w-full text-xs text-black">
-                    <thead><tr className="border-b border-black text-black"><th className="text-left p-1">Date</th><th className="p-1">Type</th><th className="text-right p-1">Bought</th><th className="text-right p-1">Sold</th><th className="text-right p-1">Running Stock</th></tr></thead>
-                    <tbody className="text-black">
-                      {impossibleDays.map((d, i) => {
-                        const type = arabicaDaily.includes(d as any) ? "Arabica" : "Robusta";
-                        return (
-                          <tr key={i} className="border-b border-black/30 text-black">
-                            <td className="p-1 text-black">{format(new Date(d.date), "MMM dd, yyyy")}</td>
-                            <td className="p-1 text-center text-black">{type}</td>
-                            <td className="p-1 text-right text-black">{d.bought.toLocaleString()}</td>
-                            <td className="p-1 text-right text-black">{d.sold.toLocaleString()}</td>
-                            <td className="p-1 text-right font-bold text-black">{d.running.toLocaleString()} kg</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </CardContent>
-              </Card>
-            )}
-
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card><CardContent className="pt-4">
                 <p className="text-xs text-muted-foreground uppercase">Total Bought</p>
@@ -1018,47 +969,6 @@ const ConfidentialPLReport = () => {
                 </table>
               </CardContent>
             </Card>
-
-            {/* Daily flow per type */}
-            {TYPES.map((type) => {
-              const rows = type === "Arabica" ? arabicaDaily : robustaDaily;
-              if (rows.length === 0) return null;
-              return (
-                <Card key={type}>
-                  <CardHeader>
-                    <CardTitle>{type} — Daily Flow & Running Stock</CardTitle>
-                  </CardHeader>
-                  <CardContent className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead><tr className="border-b">
-                        <th className="text-left p-2">Date</th>
-                        <th className="text-right p-2">Bought (kg)</th>
-                        <th className="text-right p-2">Sold (kg)</th>
-                        <th className="text-right p-2">Net (kg)</th>
-                        <th className="text-right p-2">Running Stock</th>
-                        <th className="text-right p-2">Revenue</th>
-                      </tr></thead>
-                      <tbody>
-                        {rows.map((d, i) => (
-                          <tr key={i} className={`border-b ${d.impossible ? "bg-red-50" : ""}`}>
-                            <td className="p-2">{format(new Date(d.date), "MMM dd")}</td>
-                            <td className="p-2 text-right">{d.bought.toLocaleString()}</td>
-                            <td className="p-2 text-right">{d.sold.toLocaleString()}</td>
-                            <td className={`p-2 text-right ${d.bought - d.sold >= 0 ? "text-blue-700" : "text-orange-700"}`}>
-                              {(d.bought - d.sold >= 0 ? "+" : "") + (d.bought - d.sold).toLocaleString()}
-                            </td>
-                            <td className={`p-2 text-right font-medium ${d.impossible ? "text-red-700 font-bold" : ""}`}>
-                              {d.running.toLocaleString()} {d.impossible ? "⚠" : ""}
-                            </td>
-                            <td className="p-2 text-right">{d.revenue > 0 ? fmt(d.revenue) : "—"}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </CardContent>
-                </Card>
-              );
-            })}
 
             <Card>
               <CardHeader>
