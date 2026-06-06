@@ -3,7 +3,7 @@ import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { BarChart3, FileText, TrendingUp, Store, ShoppingCart, BookOpen, Calculator, Receipt, Wallet, AlertTriangle, MapPin, ArrowRight, ClipboardList, Truck, Globe, Smartphone, GitBranch } from "lucide-react";
+import { BarChart3, FileText, TrendingUp, Store, ShoppingCart, BookOpen, Calculator, Receipt, Wallet, AlertTriangle, MapPin, ArrowRight, ClipboardList, Truck, Globe, Smartphone, GitBranch, FileLock } from "lucide-react";
 import KeyMetrics from "@/components/reports/KeyMetrics";
 import { RefreshMetricsButton } from "@/components/reports/RefreshMetricsButton";
 
@@ -141,6 +141,13 @@ const Reports = () => {
       icon: BarChart3,
       path: "/reports/store-audit",
       color: "text-teal-700"
+    });
+    reportCards.push({
+      title: "Confidential P&L",
+      description: "Executive profit & loss — bought, sold, net profit (CONFIDENTIAL)",
+      icon: FileLock,
+      path: "/reports/confidential-pl",
+      color: "text-red-700"
     });
   }
 
