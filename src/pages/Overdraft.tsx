@@ -133,7 +133,7 @@ const Overdraft = () => {
             <CardContent className="pt-6 text-center space-y-4">
               <ShieldAlert className="h-12 w-12 mx-auto text-muted-foreground" />
               <p className="text-muted-foreground">You haven't activated overdraft yet.</p>
-              <Button onClick={() => handleToggle('activate')} disabled={busy || !eligibility || Number(eligibility?.computed_limit || 0) <= 0}>
+              <Button onClick={() => handleToggle('activate')} disabled={busy}>
                 {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wallet className="h-4 w-4 mr-2" />}
                 Activate Overdraft
               </Button>
