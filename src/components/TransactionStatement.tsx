@@ -654,6 +654,11 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
                     {activityLabel && (
                       <span className="text-[10px] text-muted-foreground">{activityLabel}</span>
                     )}
+                    {meta?.overdraft_portion && Number(meta.overdraft_portion) > 0 && meta?.type !== 'overdraft_draw' && (
+                      <Badge variant="outline" className="text-[9px] px-1 py-0 bg-amber-100 text-amber-800 border-amber-300">
+                        +{Math.round(Number(meta.overdraft_portion)).toLocaleString()} via overdraft
+                      </Badge>
+                    )}
                     {isReversed && (
                       <Badge variant="outline" className="text-[9px] px-1 py-0 bg-destructive/10 text-destructive">
                         REVERSED
