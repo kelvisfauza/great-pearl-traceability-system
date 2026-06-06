@@ -582,29 +582,29 @@ const ConfidentialPLReport = () => {
         {generated && (
           <>
             {impossibleDays.length > 0 && (
-              <Card className="border-2 border-red-600 bg-red-50">
+              <Card className="border-2 border-black bg-white text-black">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-red-700">
-                    <AlertTriangle className="h-5 w-5" /> Data Integrity Alert — Impossible Stock
+                  <CardTitle className="flex items-center gap-2 text-black">
+                    <AlertTriangle className="h-5 w-5 text-black" /> Data Integrity Alert — Impossible Stock
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-red-900 mb-2">
+                <CardContent className="text-black">
+                  <p className="text-sm text-black mb-2">
                     The following days show <strong>more coffee sold than available</strong> (running stock went negative).
                     This means a sale was recorded without a matching purchase — please reconcile.
                   </p>
-                  <table className="w-full text-xs">
-                    <thead><tr className="border-b border-red-300"><th className="text-left p-1">Date</th><th className="p-1">Type</th><th className="text-right p-1">Bought</th><th className="text-right p-1">Sold</th><th className="text-right p-1">Running Stock</th></tr></thead>
-                    <tbody>
+                  <table className="w-full text-xs text-black">
+                    <thead><tr className="border-b border-black text-black"><th className="text-left p-1">Date</th><th className="p-1">Type</th><th className="text-right p-1">Bought</th><th className="text-right p-1">Sold</th><th className="text-right p-1">Running Stock</th></tr></thead>
+                    <tbody className="text-black">
                       {impossibleDays.map((d, i) => {
                         const type = arabicaDaily.includes(d as any) ? "Arabica" : "Robusta";
                         return (
-                          <tr key={i} className="border-b border-red-200">
-                            <td className="p-1">{format(new Date(d.date), "MMM dd, yyyy")}</td>
-                            <td className="p-1 text-center">{type}</td>
-                            <td className="p-1 text-right">{d.bought.toLocaleString()}</td>
-                            <td className="p-1 text-right">{d.sold.toLocaleString()}</td>
-                            <td className="p-1 text-right font-bold text-red-700">{d.running.toLocaleString()} kg</td>
+                          <tr key={i} className="border-b border-black/30 text-black">
+                            <td className="p-1 text-black">{format(new Date(d.date), "MMM dd, yyyy")}</td>
+                            <td className="p-1 text-center text-black">{type}</td>
+                            <td className="p-1 text-right text-black">{d.bought.toLocaleString()}</td>
+                            <td className="p-1 text-right text-black">{d.sold.toLocaleString()}</td>
+                            <td className="p-1 text-right font-bold text-black">{d.running.toLocaleString()} kg</td>
                           </tr>
                         );
                       })}
