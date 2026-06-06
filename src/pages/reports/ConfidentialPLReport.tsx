@@ -158,6 +158,7 @@ const ConfidentialPLReport = () => {
           id: r.id,
           date: r.date,
           supplier_name: r.supplier_name || "Unknown",
+          supplier_id: r.supplier_id || null,
           batch_number: r.batch_number || "-",
           coffee_type: r.coffee_type || "-",
           kilograms: kgVal,
