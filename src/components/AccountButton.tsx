@@ -218,6 +218,12 @@ export const AccountButton = () => {
     fetchOverdraft();
   }, [user?.id, user?.email, employee?.email, withdrawalRequests.length]);
 
+  useEffect(() => {
+    if (showSendMoney || showWithdrawal) {
+      fetchOverdraft();
+    }
+  }, [showSendMoney, showWithdrawal]);
+
   // Real-time subscription for ledger changes
   useEffect(() => {
     if (!ledgerUserId) return;
