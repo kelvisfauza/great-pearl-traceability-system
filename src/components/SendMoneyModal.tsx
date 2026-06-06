@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Send, CheckCircle, Smartphone, Users } from 'lucide-react';
+import { Loader2, Send, CheckCircle, Smartphone, Users, TrendingDown } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWithdrawalControl } from '@/hooks/useWithdrawalControl';
@@ -47,6 +47,8 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
   const [mobilePhone, setMobilePhone] = useState('');
   const [mobileAmount, setMobileAmount] = useState('');
   const [mobileLoading, setMobileLoading] = useState(false);
+  const [overdraftConfirmed, setOverdraftConfirmed] = useState(false);
+  const [overdraftConfirmedMobile, setOverdraftConfirmedMobile] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -57,6 +59,8 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
     setSuccess(false);
     setTxRef('');
     setSuccessMessage('');
+    setOverdraftConfirmed(false);
+    setOverdraftConfirmedMobile(false);
     setTab(restricted ? 'employee' : 'employee');
     const fetchEmployees = async () => {
       const { data } = await supabase.rpc('get_guarantor_candidates');
@@ -68,6 +72,13 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
   const parsedAmount = parseFloat(amount) || 0;
   const selectedRecipient = employees.find(e => e.id === recipientId);
   const parsedMobileAmount = parseFloat(mobileAmount) || 0;
+
+  // Wallet-only balance (without overdraft). Defaults to availableBalance if not provided.
+  const walletOnly = typeof walletBalance === 'number' ? walletBalance : Math.max(0, availableBalance - overdraftHeadroom);
+  const employeeOdPortion = Math.max(0, Math.min(parsedAmount, availableBalance) - walletOnly);
+  const mobileOdPortion = Math.max(0, Math.min(parsedMobileAmount, availableBalance) - walletOnly);
+  const employeeNeedsOdConfirm = employeeOdPortion > 0 && !overdraftConfirmed;
+  const mobileNeedsOdConfirm = mobileOdPortion > 0 && !overdraftConfirmedMobile;
 
   const handleSendToEmployee = async () => {
     if (!selectedRecipient || parsedAmount <= 0) return;
@@ -343,14 +354,38 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
                     <CardContent className="p-3 text-sm space-y-1">
                       <div className="flex justify-between"><span>Sending:</span><span className="font-semibold">UGX {parsedAmount.toLocaleString()}</span></div>
                       <div className="flex justify-between"><span>To:</span><span className="font-semibold">{selectedRecipient.name}</span></div>
-                      <div className="flex justify-between text-muted-foreground"><span>Your new balance:</span><span>UGX {Math.max(0, availableBalance - parsedAmount).toLocaleString()}</span></div>
+                      {employeeOdPortion > 0 && (
+                        <>
+                          <div className="flex justify-between text-muted-foreground"><span>From wallet:</span><span>UGX {Math.min(parsedAmount, walletOnly).toLocaleString()}</span></div>
+                          <div className="flex justify-between text-emerald-700"><span>From overdraft:</span><span>UGX {employeeOdPortion.toLocaleString()}</span></div>
+                        </>
+                      )}
+                      <div className="flex justify-between text-muted-foreground"><span>Your new balance:</span><span>UGX {Math.max(0, walletOnly - parsedAmount).toLocaleString()}</span></div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {employeeOdPortion > 0 && (
+                  <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20">
+                    <CardContent className="p-3 text-xs space-y-2">
+                      <div className="flex items-start gap-2 text-amber-900 dark:text-amber-200">
+                        <TrendingDown className="h-4 w-4 mt-0.5 shrink-0 text-amber-600" />
+                        <div>
+                          <p className="font-semibold">Overdraft will be applied: UGX {employeeOdPortion.toLocaleString()}</p>
+                          <p className="mt-0.5">Your wallet doesn't fully cover this. The shortfall will be taken from your overdraft and added to your outstanding balance (0.5% daily interest until cleared).</p>
+                        </div>
+                      </div>
+                      <label className="flex items-center gap-2 cursor-pointer text-amber-900 dark:text-amber-200">
+                        <input type="checkbox" checked={overdraftConfirmed} onChange={(e) => setOverdraftConfirmed(e.target.checked)} className="h-4 w-4" />
+                        <span>I approve using my overdraft for this transfer.</span>
+                      </label>
                     </CardContent>
                   </Card>
                 )}
 
                 <Button
                   onClick={handleSendToEmployee}
-                  disabled={loading || !recipientId || parsedAmount < 500 || parsedAmount > availableBalance || (restricted && parsedAmount > EMPLOYEE_CAP_RESTRICTED)}
+                  disabled={loading || !recipientId || parsedAmount < 500 || parsedAmount > availableBalance || (restricted && parsedAmount > EMPLOYEE_CAP_RESTRICTED) || employeeNeedsOdConfirm}
                   className="w-full"
                 >
                   {loading ? (
@@ -390,7 +425,31 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
                     <CardContent className="p-3 text-sm space-y-1">
                       <div className="flex justify-between"><span>Sending via Mobile Money:</span><span className="font-semibold">UGX {parsedMobileAmount.toLocaleString()}</span></div>
                       <div className="flex justify-between"><span>To:</span><span className="font-semibold">{mobilePhone}</span></div>
-                      <div className="flex justify-between text-muted-foreground"><span>Your new balance:</span><span>UGX {Math.max(0, availableBalance - parsedMobileAmount).toLocaleString()}</span></div>
+                      {mobileOdPortion > 0 && (
+                        <>
+                          <div className="flex justify-between text-muted-foreground"><span>From wallet:</span><span>UGX {Math.min(parsedMobileAmount, walletOnly).toLocaleString()}</span></div>
+                          <div className="flex justify-between text-emerald-700"><span>From overdraft:</span><span>UGX {mobileOdPortion.toLocaleString()}</span></div>
+                        </>
+                      )}
+                      <div className="flex justify-between text-muted-foreground"><span>Your new balance:</span><span>UGX {Math.max(0, walletOnly - parsedMobileAmount).toLocaleString()}</span></div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {mobileOdPortion > 0 && (
+                  <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20">
+                    <CardContent className="p-3 text-xs space-y-2">
+                      <div className="flex items-start gap-2 text-amber-900 dark:text-amber-200">
+                        <TrendingDown className="h-4 w-4 mt-0.5 shrink-0 text-amber-600" />
+                        <div>
+                          <p className="font-semibold">Overdraft will be applied: UGX {mobileOdPortion.toLocaleString()}</p>
+                          <p className="mt-0.5">Your wallet doesn't fully cover this. The shortfall will be taken from your overdraft (0.5% daily interest until cleared).</p>
+                        </div>
+                      </div>
+                      <label className="flex items-center gap-2 cursor-pointer text-amber-900 dark:text-amber-200">
+                        <input type="checkbox" checked={overdraftConfirmedMobile} onChange={(e) => setOverdraftConfirmedMobile(e.target.checked)} className="h-4 w-4" />
+                        <span>I approve using my overdraft for this payout.</span>
+                      </label>
                     </CardContent>
                   </Card>
                 )}
@@ -401,7 +460,7 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
 
                 <Button
                   onClick={handleSendToMobile}
-                  disabled={mobileLoading || !mobilePhone || parsedMobileAmount < 2000 || parsedMobileAmount > availableBalance}
+                  disabled={mobileLoading || !mobilePhone || parsedMobileAmount < 2000 || parsedMobileAmount > availableBalance || mobileNeedsOdConfirm}
                   className="w-full"
                 >
                   {mobileLoading ? (
