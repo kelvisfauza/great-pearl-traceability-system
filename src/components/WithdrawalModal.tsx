@@ -47,6 +47,8 @@ interface WithdrawalModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   availableAmount: number;
+  walletBalance?: number;
+  overdraftHeadroom?: number;
 }
 
 type Step = 'amount' | 'verify' | 'done';
@@ -55,6 +57,8 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   open,
   onOpenChange,
   availableAmount,
+  walletBalance,
+  overdraftHeadroom = 0,
 }) => {
   const [amount, setAmount] = useState('');
   const [channel, setChannel] = useState<'CASH' | 'MOBILE_MONEY' | 'BANK'>('CASH');
@@ -84,6 +88,12 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const [eligibilityLoading, setEligibilityLoading] = useState(false);
   const [eligibilityResolved, setEligibilityResolved] = useState(false);
   const [useInstant, setUseInstant] = useState(false);
+  const [overdraftAccepted, setOverdraftAccepted] = useState(false);
+
+  // Wallet-only spendable (fallback when not provided)
+  const walletOnly = typeof walletBalance === 'number'
+    ? Math.max(0, walletBalance)
+    : Math.max(0, availableAmount - overdraftHeadroom);
 
   // Check if instant withdrawals are within operating hours (Mon-Sat, before 7:15 PM EAT)
   const getOperatingHoursStatus = () => {
