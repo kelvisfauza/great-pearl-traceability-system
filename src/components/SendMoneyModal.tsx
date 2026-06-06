@@ -19,10 +19,12 @@ interface SendMoneyModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   availableBalance: number;
+  overdraftHeadroom?: number;
+  walletBalance?: number;
 }
 
 export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
-  open, onOpenChange, availableBalance,
+  open, onOpenChange, availableBalance, overdraftHeadroom = 0, walletBalance,
 }) => {
   const { user, employee, isAdmin } = useAuth();
   const { toast } = useToast();
