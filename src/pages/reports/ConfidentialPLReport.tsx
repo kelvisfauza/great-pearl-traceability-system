@@ -187,18 +187,65 @@ const ConfidentialPLReport = () => {
     }
   };
 
+  const reportSales = (() : SaleRow[] => {
+    if (!generated) return [];
+
+    const purchaseByTypeDate = new Map<string, number>();
+    purchases.forEach((p) => {
+      const type = normalizeType(p.coffee_type);
+      const key = `${type}__${p.date}`;
+      purchaseByTypeDate.set(key, (purchaseByTypeDate.get(key) || 0) + p.kilograms);
+    });
+
+    const available: Opening = { ...openingStock };
+    const purchasesApplied = new Set<string>();
+
+    return [...sales]
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .flatMap((s) => {
+        const type = normalizeType(s.coffee_type);
+        const dateKey = `${type}__${s.date}`;
+
+        if (!purchasesApplied.has(dateKey)) {
+          available[type] += purchaseByTypeDate.get(dateKey) || 0;
+          purchasesApplied.add(dateKey);
+        }
+
+        const requestedWeight = Number(s.weight) || 0;
+        const matchedWeight = Math.max(0, Math.min(requestedWeight, available[type] || 0));
+
+        if (matchedWeight <= 0.01) return [];
+
+        available[type] -= matchedWeight;
+
+        const unitPrice = Number(s.unit_price) || 0;
+        const matchedAmount = unitPrice > 0
+          ? matchedWeight * unitPrice
+          : requestedWeight > 0
+            ? (Number(s.total_amount) || 0) * (matchedWeight / requestedWeight)
+            : 0;
+
+        return [{
+          ...s,
+          coffee_type: type === "Other" ? (s.coffee_type || "Other") : type,
+          weight: matchedWeight,
+          total_amount: matchedAmount,
+        }];
+      });
+  })();
+
   const totals = (() => {
     const purchKg = purchases.reduce((s, p) => s + p.kilograms, 0);
     const purchCost = purchases.reduce((s, p) => s + p.cost, 0);
-    const salesKg = sales.reduce((s, p) => s + p.weight, 0);
-    const salesRev = sales.reduce((s, p) => s + p.total_amount, 0);
+    const salesKg = reportSales.reduce((s, p) => s + p.weight, 0);
+    const salesRev = reportSales.reduce((s, p) => s + p.total_amount, 0);
     const paymentsTotal = payments.reduce((s, p) => s + p.amount_paid_ugx, 0);
     const avgBuy = purchKg > 0 ? purchCost / purchKg : 0;
     const avgSell = salesKg > 0 ? salesRev / salesKg : 0;
-    const grossProfit = salesRev - purchCost;
-    const cashBasisProfit = salesRev - paymentsTotal;
     // Matched P&L: apply weighted-average buy price to kg actually sold
     const cogs = salesKg * avgBuy;
+    const grossProfit = salesRev - cogs;
+    const cashBasisProfit = salesRev - paymentsTotal;
     const matchedProfit = salesRev - cogs;
     const marginPct = salesRev > 0 ? (matchedProfit / salesRev) * 100 : 0;
     const profitPerKg = salesKg > 0 ? matchedProfit / salesKg : 0;
@@ -244,7 +291,7 @@ const ConfidentialPLReport = () => {
 
   const customerBreakdown = (() => {
     const m = new Map<string, { kg: number; revenue: number; orders: number }>();
-    sales.forEach((s) => {
+    reportSales.forEach((s) => {
       const cur = m.get(s.customer) || { kg: 0, revenue: 0, orders: 0 };
       cur.kg += s.weight;
       cur.revenue += s.total_amount;
@@ -260,7 +307,7 @@ const ConfidentialPLReport = () => {
   const TYPES: Array<"Arabica" | "Robusta"> = ["Arabica", "Robusta"];
   const byType = TYPES.map((type) => {
     const tp = purchases.filter((p) => normalizeType(p.coffee_type) === type);
-    const ts = sales.filter((s) => normalizeType(s.coffee_type) === type);
+    const ts = reportSales.filter((s) => normalizeType(s.coffee_type) === type);
     const purchKg = tp.reduce((a, b) => a + b.kilograms, 0);
     const purchCost = tp.reduce((a, b) => a + b.cost, 0);
     const salesKg = ts.reduce((a, b) => a + b.weight, 0);
@@ -283,7 +330,7 @@ const ConfidentialPLReport = () => {
       d.bought += p.kilograms; d.cost += p.cost;
       days.set(p.date, d);
     });
-    sales.filter((s) => normalizeType(s.coffee_type) === type).forEach((s) => {
+    reportSales.filter((s) => normalizeType(s.coffee_type) === type).forEach((s) => {
       const d = days.get(s.date) || { bought: 0, sold: 0, cost: 0, revenue: 0 };
       d.sold += s.weight; d.revenue += s.total_amount;
       days.set(s.date, d);
@@ -407,7 +454,7 @@ const ConfidentialPLReport = () => {
       </tr>`
       )
       .join("");
-    const salesRowsHtml = sales
+    const salesRowsHtml = reportSales
       .map(
         (s) => `
       <tr>
@@ -547,7 +594,7 @@ const ConfidentialPLReport = () => {
         <div class="stat"><div class="lbl">Avg Buy Price/kg</div><div class="val">${fmt(totals.avgBuy)}</div></div>
         <div class="stat"><div class="lbl">Avg Sell Price/kg</div><div class="val">${fmt(totals.avgSell)}</div></div>
         <div class="stat"><div class="lbl">Cash Paid to Suppliers</div><div class="val">${fmt(totals.paymentsTotal)}</div></div>
-        <div class="stat profit"><div class="lbl">Net Profit (Period)</div><div class="val">${fmt(totals.grossProfit)}</div></div>
+        <div class="stat profit"><div class="lbl">Matched Profit (Period)</div><div class="val">${fmt(totals.grossProfit)}</div></div>
       </div>
 
       <h2>P&amp;L by Coffee Type</h2>
@@ -567,7 +614,7 @@ const ConfidentialPLReport = () => {
       <table>
         <thead><tr><th>Customer</th><th class="r">Orders</th><th class="r">Kg Sold</th><th class="r">Avg Price/kg</th><th class="r">Revenue</th></tr></thead>
         <tbody>${customerRowsHtml || `<tr><td colspan="5" style="text-align:center;color:#999">No sales in this period</td></tr>`}</tbody>
-        <tfoot><tr><td>TOTAL</td><td class="r">${sales.length}</td><td class="r">${totals.salesKg.toLocaleString()}</td><td class="r">${fmt(totals.avgSell)}</td><td class="r">${fmt(totals.salesRev)}</td></tr></tfoot>
+        <tfoot><tr><td>TOTAL</td><td class="r">${reportSales.length}</td><td class="r">${totals.salesKg.toLocaleString()}</td><td class="r">${fmt(totals.avgSell)}</td><td class="r">${fmt(totals.salesRev)}</td></tr></tfoot>
       </table>
 
       <h2>Detailed Purchases (Batch Level)</h2>
@@ -586,8 +633,8 @@ const ConfidentialPLReport = () => {
       <table>
         <tbody>
           <tr><td>Sales Revenue</td><td class="r">${fmt(totals.salesRev)}</td></tr>
-          <tr><td>Less: Cost of Coffee Purchased (period)</td><td class="r">(${fmt(totals.purchCost)})</td></tr>
-          <tr style="background:#dcfce7;font-weight:bold"><td>NET PROFIT (Accrual Basis)</td><td class="r">${fmt(totals.grossProfit)}</td></tr>
+          <tr><td>Less: Matched Coffee Cost (COGS)</td><td class="r">(${fmt(totals.cogs)})</td></tr>
+          <tr style="background:#dcfce7;font-weight:bold"><td>NET PROFIT (Matched Basis)</td><td class="r">${fmt(totals.grossProfit)}</td></tr>
           <tr><td colspan="2" style="height:8px;border:none"></td></tr>
           <tr><td>Kg Sold</td><td class="r">${totals.salesKg.toLocaleString()} kg</td></tr>
           <tr><td>Weighted Avg Buy Price (period)</td><td class="r">${fmt(totals.avgBuy)} / kg</td></tr>
