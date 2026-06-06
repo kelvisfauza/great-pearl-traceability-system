@@ -103,6 +103,7 @@ import WholeBusinessReport from "./pages/reports/WholeBusinessReport";
 import YoPaymentsReport from "./pages/reports/YoPaymentsReport";
 import CoffeeAuditTrailReportPage from "./pages/reports/CoffeeAuditTrailReport";
 import StoreAuditComparison from "./pages/reports/StoreAuditComparison";
+import ConfidentialPLReport from "./pages/reports/ConfidentialPLReport";
 import SystemSettings from "./pages/admin/SystemSettings";
 import SystemTransactions from "./pages/admin/SystemTransactions";
 import AdminInitiateWithdrawal from "./pages/admin/AdminInitiateWithdrawal";
