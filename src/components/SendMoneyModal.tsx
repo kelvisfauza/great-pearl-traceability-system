@@ -269,6 +269,12 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
                   <span>Your Available Balance:</span>
                   <span className="font-semibold">UGX {availableBalance.toLocaleString()}</span>
                 </div>
+                {overdraftHeadroom > 0 && (
+                  <div className="flex justify-between text-xs text-emerald-600 mt-1">
+                    <span>Includes overdraft:</span>
+                    <span>+ UGX {overdraftHeadroom.toLocaleString()}</span>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
