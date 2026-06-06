@@ -354,9 +354,18 @@ const ConfidentialPLReport = () => {
           <tr><td>Less: Cost of Coffee Purchased (period)</td><td class="r">(${fmt(totals.purchCost)})</td></tr>
           <tr style="background:#dcfce7;font-weight:bold"><td>NET PROFIT (Accrual Basis)</td><td class="r">${fmt(totals.grossProfit)}</td></tr>
           <tr><td colspan="2" style="height:8px;border:none"></td></tr>
+          <tr><td>Kg Sold</td><td class="r">${totals.salesKg.toLocaleString()} kg</td></tr>
+          <tr><td>Weighted Avg Buy Price (period)</td><td class="r">${fmt(totals.avgBuy)} / kg</td></tr>
+          <tr><td>COGS = Kg Sold × Avg Buy Price</td><td class="r">(${fmt(totals.cogs)})</td></tr>
+          <tr><td>Weighted Avg Sell Price</td><td class="r">${fmt(totals.avgSell)} / kg</td></tr>
+          <tr><td>Profit per Kg Sold</td><td class="r">${fmt(totals.profitPerKg)}</td></tr>
+          <tr style="background:#fef3c7;font-weight:bold"><td>MATCHED PROFIT (Revenue − COGS) — Margin ${totals.marginPct.toFixed(2)}%</td><td class="r">${fmt(totals.matchedProfit)}</td></tr>
+          <tr><td colspan="2" style="height:8px;border:none"></td></tr>
           <tr><td>Sales Revenue</td><td class="r">${fmt(totals.salesRev)}</td></tr>
           <tr><td>Less: Cash Paid to Suppliers (period)</td><td class="r">(${fmt(totals.paymentsTotal)})</td></tr>
           <tr style="background:#dbeafe;font-weight:bold"><td>NET CASHFLOW (Cash Basis)</td><td class="r">${fmt(totals.cashBasisProfit)}</td></tr>
+          <tr><td colspan="2" style="height:8px;border:none"></td></tr>
+          <tr><td>Inventory Movement (Bought − Sold)</td><td class="r">${totals.kgVariance >= 0 ? "+" : ""}${totals.kgVariance.toLocaleString()} kg ${totals.kgVariance >= 0 ? "(stock added)" : "(sold from prior stock)"}</td></tr>
         </tbody>
       </table>
 
@@ -396,6 +405,12 @@ const ConfidentialPLReport = () => {
             <CardTitle>Report Period</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => applyPreset("this-month")}>This Month</Button>
+              <Button size="sm" variant="outline" onClick={() => applyPreset("last-month")}>Last Month</Button>
+              <Button size="sm" variant="outline" onClick={() => applyPreset("this-quarter")}>This Quarter</Button>
+              <Button size="sm" variant="outline" onClick={() => applyPreset("ytd")}>Year to Date</Button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="from">From</Label>
