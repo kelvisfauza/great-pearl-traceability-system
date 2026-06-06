@@ -390,7 +390,7 @@ const ConfidentialPLReport = () => {
       const r = getRow(key);
       r.buyKg += p.kilograms;
       r.buyCost += p.cost;
-      r.suppliers.add(p.supplier_name);
+      r.suppliers.add(stripLegacySupplierSuffix(p.supplier_name || "").toLowerCase().trim());
       r.batches += 1;
     });
     sales.forEach((s) => {
