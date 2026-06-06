@@ -825,21 +825,12 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
                 <p className="text-sm text-muted-foreground">
                   Select the period for your statement. It will be sent to <span className="font-medium text-foreground">{user?.email}</span>
                 </p>
-                {isFreeWindow ? (
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-center gap-2">
-                    <span className="text-emerald-600 text-sm">✓</span>
-                    <p className="text-xs text-emerald-800">
-                      Statements are <span className="font-bold">free for the next 2 hours</span> — download as many as you need.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2">
-                    <span className="text-amber-600 text-sm">ℹ</span>
-                    <p className="text-xs text-amber-800">
-                      A UGX {STATEMENT_FEE.toLocaleString()} statement fee applies.
-                    </p>
-                  </div>
-                )}
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2">
+                  <span className="text-amber-600 text-sm">ℹ</span>
+                  <p className="text-xs text-amber-800">
+                    A UGX {STATEMENT_FEE.toLocaleString()} statement fee applies.
+                  </p>
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="dateFrom" className="text-xs">From</Label>
