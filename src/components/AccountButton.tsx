@@ -862,6 +862,8 @@ export const AccountButton = () => {
         open={showWithdrawal} 
         onOpenChange={setShowWithdrawal}
         availableAmount={availableForWithdrawal}
+        walletBalance={availableLoyalty}
+        overdraftHeadroom={overdraftHeadroom}
       />
       <DepositModal open={showDeposit} onOpenChange={setShowDeposit} />
       <SendMoneyModal open={showSendMoney} onOpenChange={setShowSendMoney} availableBalance={availableForWithdrawal} overdraftHeadroom={overdraftHeadroom} walletBalance={availableLoyalty} />

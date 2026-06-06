@@ -47,6 +47,8 @@ interface WithdrawalModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   availableAmount: number;
+  walletBalance?: number;
+  overdraftHeadroom?: number;
 }
 
 type Step = 'amount' | 'verify' | 'done';
@@ -55,6 +57,8 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   open,
   onOpenChange,
   availableAmount,
+  walletBalance,
+  overdraftHeadroom = 0,
 }) => {
   const [amount, setAmount] = useState('');
   const [channel, setChannel] = useState<'CASH' | 'MOBILE_MONEY' | 'BANK'>('CASH');
@@ -84,6 +88,12 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const [eligibilityLoading, setEligibilityLoading] = useState(false);
   const [eligibilityResolved, setEligibilityResolved] = useState(false);
   const [useInstant, setUseInstant] = useState(false);
+  const [overdraftAccepted, setOverdraftAccepted] = useState(false);
+
+  // Wallet-only spendable (fallback when not provided)
+  const walletOnly = typeof walletBalance === 'number'
+    ? Math.max(0, walletBalance)
+    : Math.max(0, availableAmount - overdraftHeadroom);
 
   // Check if instant withdrawals are within operating hours (Mon-Sat, before 7:15 PM EAT)
   const getOperatingHoursStatus = () => {
@@ -224,7 +234,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
       if (!isUgandanMobileNumber(phoneToUse)) throw new Error('Enter a valid MTN or Airtel mobile money number to continue.');
 
       const { data, error } = await supabase.functions.invoke('instant-withdrawal', {
-        body: { amount: withdrawalAmount, depositPhone: phoneToUse },
+        body: { amount: withdrawalAmount, depositPhone: phoneToUse, acceptOverdraft: overdraftAccepted },
       });
 
       if (error) throw new Error(error.message || 'Instant withdrawal failed');
@@ -540,6 +550,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     setCompletedAmount(0);
     setUseInstant(false);
     setInstantEligibility(null);
+    setOverdraftAccepted(false);
     onOpenChange(false);
     refreshAccount();
   };
@@ -555,6 +566,13 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const isValidMobileNumber = isUgandanMobileNumber(cleanMobile);
   const isDisbursementValid = channel === 'CASH' || (channel === 'MOBILE_MONEY' && isValidMobileNumber) || (channel === 'BANK' && bankName && accountNumber && accountName);
   const isAmountValid = amount && parsedAmount <= availableAmount && parsedAmount >= 2000 && isCashRoundAmount && !withdrawalStatus.disabled && !isWalletFrozen && isDisbursementValid;
+
+  // Overdraft portion for instant withdrawal
+  const odPortion = Math.max(0, parsedAmount - walletOnly);
+  const walletPortion = parsedAmount - odPortion;
+  const upfrontInterest = Math.round(odPortion * 0.005 * 100) / 100;
+  const usesOverdraft = odPortion > 0 && overdraftHeadroom > 0;
+  const overdraftBlocked = usesOverdraft && !overdraftAccepted;
 
   return (
     <>
@@ -702,6 +720,21 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                   </Alert>
                 )}
 
+                {/* Overdraft acceptance for instant withdraw */}
+                {instantEligibility?.eligible && usesOverdraft && parsedAmount >= 2000 && parsedAmount <= instantMaxAmount && (
+                  <div className="rounded-md border border-amber-300 bg-amber-50 p-3 space-y-2 text-xs text-amber-900">
+                    <div className="flex justify-between"><span>From wallet:</span><span>UGX {walletPortion.toLocaleString()}</span></div>
+                    <div className="flex justify-between text-emerald-700"><span>From overdraft:</span><span>UGX {odPortion.toLocaleString()}</span></div>
+                    <div className="flex justify-between font-semibold border-t border-amber-200 pt-1"><span>Total payout:</span><span>UGX {parsedAmount.toLocaleString()}</span></div>
+                    <div className="flex justify-between text-amber-800"><span>Upfront interest (0.5%):</span><span>UGX {upfrontInterest.toLocaleString()}</span></div>
+                    <p className="mt-1">Your wallet doesn't fully cover this. The shortfall (UGX {odPortion.toLocaleString()}) will be taken from your overdraft, and UGX {upfrontInterest.toLocaleString()} interest will be added to your outstanding balance immediately.</p>
+                    <label className="flex items-center gap-2 pt-1 cursor-pointer">
+                      <input type="checkbox" checked={overdraftAccepted} onChange={(e) => setOverdraftAccepted(e.target.checked)} className="h-4 w-4" />
+                      <span>I approve using my overdraft for this withdrawal.</span>
+                    </label>
+                  </div>
+                )}
+
                 <div className="flex justify-end space-x-2">
                   <Button type="button" variant="outline" onClick={handleClose} disabled={instantLoading}>
                     Cancel
@@ -710,7 +743,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                     <Button
                       type="button"
                       onClick={() => setShowInstantConfirm(true)}
-                      disabled={instantLoading || withdrawalStatus.disabled || isWalletFrozen || !amount || parsedAmount < 2000 || parsedAmount > instantMaxAmount || (needsInstantPhoneInput && !isValidMobileNumber)}
+                      disabled={instantLoading || withdrawalStatus.disabled || isWalletFrozen || !amount || parsedAmount < 2000 || parsedAmount > instantMaxAmount || (needsInstantPhoneInput && !isValidMobileNumber) || overdraftBlocked}
                       className="bg-green-600 hover:bg-green-700 text-white"
                     >
                       {instantLoading ? (

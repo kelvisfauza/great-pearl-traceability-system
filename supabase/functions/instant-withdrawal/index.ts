@@ -132,8 +132,8 @@ serve(async (req) => {
       console.warn("[instant-withdrawal] kill-switch check failed:", (e as Error).message);
     }
 
-    const { amount, depositPhone } = await req.json();
-    console.log(`[instant-withdrawal] amount=${amount}, depositPhone=${depositPhone}`);
+    const { amount, depositPhone, acceptOverdraft } = await req.json();
+    console.log(`[instant-withdrawal] amount=${amount}, depositPhone=${depositPhone}, acceptOverdraft=${!!acceptOverdraft}`);
 
     if (!amount || !depositPhone) {
       return respond(false, { error: "Missing amount or depositPhone" });
@@ -251,6 +251,33 @@ serve(async (req) => {
     // Compute how much of this withdrawal is overdraft-funded
     const overdraftPortion = Math.max(0, numAmount - walletSpendable);
     const walletPortion = numAmount - overdraftPortion;
+
+    // Upfront interest charged when the user accepts to dip into overdraft
+    let odInterestRateBps = 50; // 0.5% default
+    if (overdraftPortion > 0 && odAccountId) {
+      try {
+        const { data: odAcc } = await supabase
+          .from('overdraft_accounts')
+          .select('interest_rate_bps')
+          .eq('id', odAccountId)
+          .maybeSingle();
+        if (odAcc?.interest_rate_bps != null) odInterestRateBps = Number(odAcc.interest_rate_bps);
+      } catch (_) { /* keep default */ }
+    }
+    const upfrontInterest = overdraftPortion > 0
+      ? Math.round(overdraftPortion * odInterestRateBps) / 10000
+      : 0;
+
+    // Block draw if user hasn't explicitly approved using their overdraft
+    if (overdraftPortion > 0 && !acceptOverdraft) {
+      return respond(false, {
+        error: `This withdrawal exceeds your wallet by UGX ${overdraftPortion.toLocaleString()}. Approve using your overdraft (upfront interest UGX ${upfrontInterest.toLocaleString()}) to continue.`,
+        code: 'OVERDRAFT_NOT_ACCEPTED',
+        wallet_portion: walletPortion,
+        overdraft_portion: overdraftPortion,
+        upfront_interest: upfrontInterest,
+      });
+    }
 
     // Fetch employee name early for narrative
     const { data: empData } = await supabase
@@ -388,6 +415,8 @@ serve(async (req) => {
         yo_status: txStatus,
         wallet_portion: walletPortion,
         overdraft_portion: overdraftPortion,
+        interest_charged: upfrontInterest,
+        interest_rate_bps: odInterestRateBps,
         // Yo payout has ALREADY succeeded at this point — the treasury/float
         // check must not block recording the user-side debit, otherwise the
         // user keeps the cash AND the wallet balance (real money leak).
@@ -447,13 +476,14 @@ serve(async (req) => {
       try {
         const { data: acc2 } = await supabase
           .from('overdraft_accounts')
-          .select('outstanding_balance, total_drawn')
+          .select('outstanding_balance, total_drawn, total_interest')
           .eq('id', odAccountId)
           .single();
-        const newOut = Number(acc2?.outstanding_balance || 0) + overdraftPortion;
+        const newOut = Number(acc2?.outstanding_balance || 0) + overdraftPortion + upfrontInterest;
         await supabase.from('overdraft_accounts').update({
           outstanding_balance: newOut,
           total_drawn: Number(acc2?.total_drawn || 0) + overdraftPortion,
+          total_interest: Number(acc2?.total_interest || 0) + upfrontInterest,
           last_used_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }).eq('id', odAccountId);
@@ -462,11 +492,28 @@ serve(async (req) => {
           user_id: resolvedUserId,
           transaction_type: 'draw',
           amount: overdraftPortion,
-          balance_after: newOut,
+          balance_after: Number(acc2?.outstanding_balance || 0) + overdraftPortion,
           ledger_entry_id: ledgerRow?.id || null,
           reference: ledgerRef,
-          metadata: { source: 'instant_withdrawal', wallet_portion: walletPortion },
+          metadata: { source: 'instant_withdrawal', wallet_portion: walletPortion, interest_charged: upfrontInterest },
         });
+        if (upfrontInterest > 0) {
+          await supabase.from('overdraft_transactions').insert({
+            account_id: odAccountId,
+            user_id: resolvedUserId,
+            transaction_type: 'interest',
+            amount: upfrontInterest,
+            balance_after: newOut,
+            ledger_entry_id: null,
+            reference: ledgerRef + '-INT',
+            metadata: {
+              source: 'instant_withdrawal',
+              rate_bps: odInterestRateBps,
+              draw_amount: overdraftPortion,
+              description: `Upfront interest on overdraft draw (${odInterestRateBps / 100}%)`,
+            },
+          });
+        }
       } catch (e) {
         console.error('[instant-withdrawal] overdraft sync failed:', (e as Error).message);
       }
