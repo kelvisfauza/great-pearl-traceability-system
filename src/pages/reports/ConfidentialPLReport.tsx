@@ -357,7 +357,7 @@ const ConfidentialPLReport = () => {
             bags,
             supplier_name: "SYSTEM AUTO-FILL",
             batch_number: batch,
-            status: "approved",
+            status: "inventory",
             created_by: "system-auto-fill",
           });
         if (crErr) throw crErr;
