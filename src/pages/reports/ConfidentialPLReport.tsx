@@ -523,6 +523,39 @@ const ConfidentialPLReport = () => {
 
         {generated && (
           <>
+            {impossibleDays.length > 0 && (
+              <Card className="border-2 border-red-600 bg-red-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-red-700">
+                    <AlertTriangle className="h-5 w-5" /> Data Integrity Alert — Impossible Stock
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-red-900 mb-2">
+                    The following days show <strong>more coffee sold than available</strong> (running stock went negative).
+                    This means a sale was recorded without a matching purchase — please reconcile.
+                  </p>
+                  <table className="w-full text-xs">
+                    <thead><tr className="border-b border-red-300"><th className="text-left p-1">Date</th><th className="p-1">Type</th><th className="text-right p-1">Bought</th><th className="text-right p-1">Sold</th><th className="text-right p-1">Running Stock</th></tr></thead>
+                    <tbody>
+                      {impossibleDays.map((d, i) => {
+                        const type = arabicaDaily.includes(d as any) ? "Arabica" : "Robusta";
+                        return (
+                          <tr key={i} className="border-b border-red-200">
+                            <td className="p-1">{format(new Date(d.date), "MMM dd, yyyy")}</td>
+                            <td className="p-1 text-center">{type}</td>
+                            <td className="p-1 text-right">{d.bought.toLocaleString()}</td>
+                            <td className="p-1 text-right">{d.sold.toLocaleString()}</td>
+                            <td className="p-1 text-right font-bold text-red-700">{d.running.toLocaleString()} kg</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </CardContent>
+              </Card>
+            )}
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card><CardContent className="pt-4">
                 <p className="text-xs text-muted-foreground uppercase">Total Bought</p>
@@ -580,6 +613,79 @@ const ConfidentialPLReport = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Per-coffee-type breakdown */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {byType.map((t) => (
+                <Card key={t.type} className={t.type === "Arabica" ? "border-emerald-300" : "border-amber-300"}>
+                  <CardHeader>
+                    <CardTitle className={t.type === "Arabica" ? "text-emerald-700" : "text-amber-700"}>
+                      {t.type} — Period P&amp;L
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <table className="w-full text-sm">
+                      <tbody>
+                        <tr><td className="py-1">Opening Stock</td><td className="text-right font-medium">{t.openStock.toLocaleString()} kg</td></tr>
+                        <tr><td className="py-1">+ Bought (period)</td><td className="text-right">{t.purchKg.toLocaleString()} kg @ {fmt(t.avgBuy)}</td></tr>
+                        <tr><td className="py-1">− Sold (period)</td><td className="text-right">{t.salesKg.toLocaleString()} kg @ {fmt(t.avgSell)}</td></tr>
+                        <tr className="border-t"><td className="py-1 font-bold">Closing Stock</td><td className={`text-right font-bold ${t.closeStock < 0 ? "text-red-700" : ""}`}>{t.closeStock.toLocaleString()} kg</td></tr>
+                        <tr><td colSpan={2} className="py-2"></td></tr>
+                        <tr><td className="py-1">Revenue</td><td className="text-right">{fmt(t.salesRev)}</td></tr>
+                        <tr><td className="py-1">COGS (sold × avg buy)</td><td className="text-right">({fmt(t.cogs)})</td></tr>
+                        <tr className={`border-t ${t.matchedProfit >= 0 ? "bg-green-50" : "bg-red-50"}`}>
+                          <td className="py-1 font-bold">Matched Profit</td>
+                          <td className={`text-right font-bold ${t.matchedProfit >= 0 ? "text-green-700" : "text-red-700"}`}>
+                            {fmt(t.matchedProfit)} <span className="text-xs">({t.marginPct.toFixed(1)}%)</span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Daily flow per type */}
+            {TYPES.map((type) => {
+              const rows = type === "Arabica" ? arabicaDaily : robustaDaily;
+              if (rows.length === 0) return null;
+              return (
+                <Card key={type}>
+                  <CardHeader>
+                    <CardTitle>{type} — Daily Flow & Running Stock</CardTitle>
+                  </CardHeader>
+                  <CardContent className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead><tr className="border-b">
+                        <th className="text-left p-2">Date</th>
+                        <th className="text-right p-2">Bought (kg)</th>
+                        <th className="text-right p-2">Sold (kg)</th>
+                        <th className="text-right p-2">Net (kg)</th>
+                        <th className="text-right p-2">Running Stock</th>
+                        <th className="text-right p-2">Revenue</th>
+                      </tr></thead>
+                      <tbody>
+                        {rows.map((d, i) => (
+                          <tr key={i} className={`border-b ${d.impossible ? "bg-red-50" : ""}`}>
+                            <td className="p-2">{format(new Date(d.date), "MMM dd")}</td>
+                            <td className="p-2 text-right">{d.bought.toLocaleString()}</td>
+                            <td className="p-2 text-right">{d.sold.toLocaleString()}</td>
+                            <td className={`p-2 text-right ${d.bought - d.sold >= 0 ? "text-blue-700" : "text-orange-700"}`}>
+                              {(d.bought - d.sold >= 0 ? "+" : "") + (d.bought - d.sold).toLocaleString()}
+                            </td>
+                            <td className={`p-2 text-right font-medium ${d.impossible ? "text-red-700 font-bold" : ""}`}>
+                              {d.running.toLocaleString()} {d.impossible ? "⚠" : ""}
+                            </td>
+                            <td className="p-2 text-right">{d.revenue > 0 ? fmt(d.revenue) : "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </CardContent>
+                </Card>
+              );
+            })}
 
             <Card>
               <CardHeader>
