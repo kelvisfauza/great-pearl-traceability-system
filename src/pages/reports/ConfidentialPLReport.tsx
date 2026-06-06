@@ -15,6 +15,7 @@ type PurchaseRow = {
   id: string;
   date: string;
   supplier_name: string;
+  supplier_id?: string | null;
   batch_number: string;
   coffee_type: string;
   kilograms: number;
