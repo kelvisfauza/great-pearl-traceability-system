@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, subMonths } from "date-fns";
 import { ArrowLeft, FileLock, Printer, Loader2 } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -150,8 +150,35 @@ const ConfidentialPLReport = () => {
     const avgSell = salesKg > 0 ? salesRev / salesKg : 0;
     const grossProfit = salesRev - purchCost;
     const cashBasisProfit = salesRev - paymentsTotal;
-    return { purchKg, purchCost, salesKg, salesRev, paymentsTotal, avgBuy, avgSell, grossProfit, cashBasisProfit };
+    // Matched P&L: apply weighted-average buy price to kg actually sold
+    const cogs = salesKg * avgBuy;
+    const matchedProfit = salesRev - cogs;
+    const marginPct = salesRev > 0 ? (matchedProfit / salesRev) * 100 : 0;
+    const profitPerKg = salesKg > 0 ? matchedProfit / salesKg : 0;
+    const kgVariance = purchKg - salesKg; // + surplus stock, - sold from prior stock
+    return {
+      purchKg, purchCost, salesKg, salesRev, paymentsTotal,
+      avgBuy, avgSell, grossProfit, cashBasisProfit,
+      cogs, matchedProfit, marginPct, profitPerKg, kgVariance,
+    };
   })();
+
+  const applyPreset = (preset: string) => {
+    const now = new Date();
+    let from: Date, to: Date;
+    switch (preset) {
+      case "this-month": from = startOfMonth(now); to = endOfMonth(now); break;
+      case "last-month": {
+        const lm = subMonths(now, 1);
+        from = startOfMonth(lm); to = endOfMonth(lm); break;
+      }
+      case "this-quarter": from = startOfQuarter(now); to = endOfQuarter(now); break;
+      case "ytd": from = startOfYear(now); to = now; break;
+      default: return;
+    }
+    setDateFrom(format(from, "yyyy-MM-dd"));
+    setDateTo(format(to, "yyyy-MM-dd"));
+  };
 
   // Group purchases by supplier
   const supplierBreakdown = (() => {
