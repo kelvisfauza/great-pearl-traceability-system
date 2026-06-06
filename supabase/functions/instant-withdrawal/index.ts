@@ -415,6 +415,8 @@ serve(async (req) => {
         yo_status: txStatus,
         wallet_portion: walletPortion,
         overdraft_portion: overdraftPortion,
+        interest_charged: upfrontInterest,
+        interest_rate_bps: odInterestRateBps,
         // Yo payout has ALREADY succeeded at this point — the treasury/float
         // check must not block recording the user-side debit, otherwise the
         // user keeps the cash AND the wallet balance (real money leak).
