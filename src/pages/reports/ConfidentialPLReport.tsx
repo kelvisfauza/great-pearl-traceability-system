@@ -970,47 +970,6 @@ const ConfidentialPLReport = () => {
               </CardContent>
             </Card>
 
-            {/* Daily flow per type */}
-            {TYPES.map((type) => {
-              const rows = type === "Arabica" ? arabicaDaily : robustaDaily;
-              if (rows.length === 0) return null;
-              return (
-                <Card key={type}>
-                  <CardHeader>
-                    <CardTitle>{type} — Daily Flow & Running Stock</CardTitle>
-                  </CardHeader>
-                  <CardContent className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead><tr className="border-b">
-                        <th className="text-left p-2">Date</th>
-                        <th className="text-right p-2">Bought (kg)</th>
-                        <th className="text-right p-2">Sold (kg)</th>
-                        <th className="text-right p-2">Net (kg)</th>
-                        <th className="text-right p-2">Running Stock</th>
-                        <th className="text-right p-2">Revenue</th>
-                      </tr></thead>
-                      <tbody>
-                        {rows.map((d, i) => (
-                          <tr key={i} className={`border-b ${d.impossible ? "bg-red-50" : ""}`}>
-                            <td className="p-2">{format(new Date(d.date), "MMM dd")}</td>
-                            <td className="p-2 text-right">{d.bought.toLocaleString()}</td>
-                            <td className="p-2 text-right">{d.sold.toLocaleString()}</td>
-                            <td className={`p-2 text-right ${d.bought - d.sold >= 0 ? "text-blue-700" : "text-orange-700"}`}>
-                              {(d.bought - d.sold >= 0 ? "+" : "") + (d.bought - d.sold).toLocaleString()}
-                            </td>
-                            <td className={`p-2 text-right font-medium ${d.impossible ? "text-red-700 font-bold" : ""}`}>
-                              {d.running.toLocaleString()} {d.impossible ? "⚠" : ""}
-                            </td>
-                            <td className="p-2 text-right">{d.revenue > 0 ? fmt(d.revenue) : "—"}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </CardContent>
-                </Card>
-              );
-            })}
-
             <Card>
               <CardHeader>
                 <CardTitle>Supplier Breakdown ({supplierBreakdown.length})</CardTitle>
