@@ -187,11 +187,58 @@ const ConfidentialPLReport = () => {
     }
   };
 
+  const reportSales = (() : SaleRow[] => {
+    if (!generated) return [];
+
+    const purchaseByTypeDate = new Map<string, number>();
+    purchases.forEach((p) => {
+      const type = normalizeType(p.coffee_type);
+      const key = `${type}__${p.date}`;
+      purchaseByTypeDate.set(key, (purchaseByTypeDate.get(key) || 0) + p.kilograms);
+    });
+
+    const available: Opening = { ...openingStock };
+    const purchasesApplied = new Set<string>();
+
+    return [...sales]
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .flatMap((s) => {
+        const type = normalizeType(s.coffee_type);
+        const dateKey = `${type}__${s.date}`;
+
+        if (!purchasesApplied.has(dateKey)) {
+          available[type] += purchaseByTypeDate.get(dateKey) || 0;
+          purchasesApplied.add(dateKey);
+        }
+
+        const requestedWeight = Number(s.weight) || 0;
+        const matchedWeight = Math.max(0, Math.min(requestedWeight, available[type] || 0));
+
+        if (matchedWeight <= 0.01) return [];
+
+        available[type] -= matchedWeight;
+
+        const unitPrice = Number(s.unit_price) || 0;
+        const matchedAmount = unitPrice > 0
+          ? matchedWeight * unitPrice
+          : requestedWeight > 0
+            ? (Number(s.total_amount) || 0) * (matchedWeight / requestedWeight)
+            : 0;
+
+        return [{
+          ...s,
+          coffee_type: type === "Other" ? (s.coffee_type || "Other") : type,
+          weight: matchedWeight,
+          total_amount: matchedAmount,
+        }];
+      });
+  })();
+
   const totals = (() => {
     const purchKg = purchases.reduce((s, p) => s + p.kilograms, 0);
     const purchCost = purchases.reduce((s, p) => s + p.cost, 0);
-    const salesKg = sales.reduce((s, p) => s + p.weight, 0);
-    const salesRev = sales.reduce((s, p) => s + p.total_amount, 0);
+    const salesKg = reportSales.reduce((s, p) => s + p.weight, 0);
+    const salesRev = reportSales.reduce((s, p) => s + p.total_amount, 0);
     const paymentsTotal = payments.reduce((s, p) => s + p.amount_paid_ugx, 0);
     const avgBuy = purchKg > 0 ? purchCost / purchKg : 0;
     const avgSell = salesKg > 0 ? salesRev / salesKg : 0;
@@ -244,7 +291,7 @@ const ConfidentialPLReport = () => {
 
   const customerBreakdown = (() => {
     const m = new Map<string, { kg: number; revenue: number; orders: number }>();
-    sales.forEach((s) => {
+    reportSales.forEach((s) => {
       const cur = m.get(s.customer) || { kg: 0, revenue: 0, orders: 0 };
       cur.kg += s.weight;
       cur.revenue += s.total_amount;
@@ -260,7 +307,7 @@ const ConfidentialPLReport = () => {
   const TYPES: Array<"Arabica" | "Robusta"> = ["Arabica", "Robusta"];
   const byType = TYPES.map((type) => {
     const tp = purchases.filter((p) => normalizeType(p.coffee_type) === type);
-    const ts = sales.filter((s) => normalizeType(s.coffee_type) === type);
+    const ts = reportSales.filter((s) => normalizeType(s.coffee_type) === type);
     const purchKg = tp.reduce((a, b) => a + b.kilograms, 0);
     const purchCost = tp.reduce((a, b) => a + b.cost, 0);
     const salesKg = ts.reduce((a, b) => a + b.weight, 0);
@@ -283,7 +330,7 @@ const ConfidentialPLReport = () => {
       d.bought += p.kilograms; d.cost += p.cost;
       days.set(p.date, d);
     });
-    sales.filter((s) => normalizeType(s.coffee_type) === type).forEach((s) => {
+    reportSales.filter((s) => normalizeType(s.coffee_type) === type).forEach((s) => {
       const d = days.get(s.date) || { bought: 0, sold: 0, cost: 0, revenue: 0 };
       d.sold += s.weight; d.revenue += s.total_amount;
       days.set(s.date, d);
