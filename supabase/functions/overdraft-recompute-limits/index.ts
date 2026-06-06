@@ -23,6 +23,15 @@ Deno.serve(async (req) => {
   const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
 
   try {
+    // Optional behavior flags from the caller
+    let forceAnnounce = false;
+    if (req.method === "POST") {
+      try {
+        const body = await req.json();
+        forceAnnounce = !!body?.announce_all;
+      } catch (_) { /* no body */ }
+    }
+
     // Pull active employees
     const { data: employees, error: empErr } = await admin
       .from("employees")
@@ -100,8 +109,67 @@ Deno.serve(async (req) => {
       synced = data;
     } catch (_) { /* ignore */ }
 
+    // Send qualification announcement emails to anyone whose limit changed
+    // meaningfully (or who has never been notified, or when admin forces broadcast).
+    let emailsQueued = 0;
+    try {
+      const emails = rows.map((r) => r.employee_email).filter(Boolean);
+      const { data: existing } = await admin
+        .from("overdraft_eligibility")
+        .select("employee_email, computed_limit, notified_limit, notified_at")
+        .eq("period", period)
+        .in("employee_email", emails);
+      const byEmail = new Map<string, any>();
+      (existing || []).forEach((r: any) => byEmail.set(r.employee_email, r));
+
+      const meaningfulChange = (oldLim: number | null, newLim: number) => {
+        if (oldLim == null) return true; // never notified
+        const a = Number(oldLim) || 0;
+        const b = Number(newLim) || 0;
+        if (a === b) return false;
+        if (a === 0 && b > 0) return true; // newly qualifying
+        if (a > 0 && b === 0) return true; // lost eligibility
+        const diff = Math.abs(a - b);
+        return diff >= Math.max(10000, a * 0.1); // 10% or 10k threshold
+      };
+
+      for (const row of rows) {
+        const cur = byEmail.get(row.employee_email);
+        const newLim = Number(row.computed_limit) || 0;
+        const oldLim = cur ? (cur.notified_limit == null ? null : Number(cur.notified_limit)) : null;
+        const shouldEmail = forceAnnounce || meaningfulChange(oldLim, newLim);
+        if (!shouldEmail) continue;
+
+        try {
+          await admin.functions.invoke("send-transactional-email", {
+            body: {
+              templateName: "overdraft-qualification",
+              recipientEmail: row.employee_email,
+              idempotencyKey: `overdraft-qualification-${row.employee_email}-${period}-${newLim}`,
+              templateData: {
+                employeeName: row.employee_name || "Team member",
+                approvedLimit: newLim.toLocaleString(),
+                rawLimit: newLim,
+                period,
+              },
+            },
+          });
+          emailsQueued++;
+          await admin
+            .from("overdraft_eligibility")
+            .update({ notified_at: new Date().toISOString(), notified_limit: newLim })
+            .eq("employee_email", row.employee_email)
+            .eq("period", period);
+        } catch (e) {
+          console.error("Failed to queue overdraft-qualification email", row.employee_email, e);
+        }
+      }
+    } catch (e) {
+      console.error("Notification phase failed", e);
+    }
+
     return new Response(
-      JSON.stringify({ ok: true, period, processed, written: rows.length, accounts_synced: synced }),
+      JSON.stringify({ ok: true, period, processed, written: rows.length, accounts_synced: synced, emails_queued: emailsQueued }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e: any) {
