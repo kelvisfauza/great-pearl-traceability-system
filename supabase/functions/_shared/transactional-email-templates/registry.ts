@@ -70,6 +70,7 @@ import { template as payrollDeductionsNotice } from './payroll-deductions-notice
 import { template as publicHolidayClosure } from './public-holiday-closure.tsx'
 import { template as happyEid } from './happy-eid.tsx'
 import { template as overdraftQualification } from './overdraft-qualification.tsx'
+import { template as overdraftPenaltyWarning } from './overdraft-penalty-warning.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'verification-code': verificationCode,
@@ -133,4 +134,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'public-holiday-closure': publicHolidayClosure,
   'happy-eid': happyEid,
   'overdraft-qualification': overdraftQualification,
+  'overdraft-penalty-warning': overdraftPenaltyWarning,
 }
