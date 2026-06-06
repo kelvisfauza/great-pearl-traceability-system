@@ -457,6 +457,39 @@ const ConfidentialPLReport = () => {
               </Card>
             </div>
 
+            <Card className="border-2 border-amber-500 bg-amber-50/40">
+              <CardHeader>
+                <CardTitle className="text-amber-800">Matched P&amp;L — Purchases vs Sales Reconciliation</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div><p className="text-xs text-muted-foreground uppercase">Avg Buy / kg</p><p className="text-lg font-bold">{fmt(totals.avgBuy)}</p></div>
+                  <div><p className="text-xs text-muted-foreground uppercase">Avg Sell / kg</p><p className="text-lg font-bold">{fmt(totals.avgSell)}</p></div>
+                  <div><p className="text-xs text-muted-foreground uppercase">COGS (Kg Sold × Avg Buy)</p><p className="text-lg font-bold">{fmt(totals.cogs)}</p></div>
+                  <div><p className="text-xs text-muted-foreground uppercase">Profit / kg</p><p className="text-lg font-bold">{fmt(totals.profitPerKg)}</p></div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-amber-300 grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-xs uppercase text-muted-foreground">Matched Profit</p>
+                    <p className={`text-2xl font-bold ${totals.matchedProfit >= 0 ? "text-green-700" : "text-red-700"}`}>{fmt(totals.matchedProfit)}</p>
+                    <p className="text-xs text-muted-foreground">Margin {totals.marginPct.toFixed(2)}%</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase text-muted-foreground">Inventory Movement</p>
+                    <p className={`text-2xl font-bold ${totals.kgVariance >= 0 ? "text-blue-700" : "text-orange-700"}`}>
+                      {totals.kgVariance >= 0 ? "+" : ""}{totals.kgVariance.toLocaleString()} kg
+                    </p>
+                    <p className="text-xs text-muted-foreground">{totals.kgVariance >= 0 ? "Stock added (bought > sold)" : "Sold from prior stock"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase text-muted-foreground">Cash Net (Revenue − Payments)</p>
+                    <p className={`text-2xl font-bold ${totals.cashBasisProfit >= 0 ? "text-green-700" : "text-red-700"}`}>{fmt(totals.cashBasisProfit)}</p>
+                    <p className="text-xs text-muted-foreground">Cash basis</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle>Supplier Breakdown ({supplierBreakdown.length})</CardTitle>
