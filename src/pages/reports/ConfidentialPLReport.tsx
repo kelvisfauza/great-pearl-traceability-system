@@ -242,10 +242,10 @@ const ConfidentialPLReport = () => {
     const paymentsTotal = payments.reduce((s, p) => s + p.amount_paid_ugx, 0);
     const avgBuy = purchKg > 0 ? purchCost / purchKg : 0;
     const avgSell = salesKg > 0 ? salesRev / salesKg : 0;
-    const grossProfit = salesRev - cogs;
-    const cashBasisProfit = salesRev - paymentsTotal;
     // Matched P&L: apply weighted-average buy price to kg actually sold
     const cogs = salesKg * avgBuy;
+    const grossProfit = salesRev - cogs;
+    const cashBasisProfit = salesRev - paymentsTotal;
     const matchedProfit = salesRev - cogs;
     const marginPct = salesRev > 0 ? (matchedProfit / salesRev) * 100 : 0;
     const profitPerKg = salesKg > 0 ? matchedProfit / salesKg : 0;
