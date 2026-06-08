@@ -552,6 +552,33 @@ export const useQualityControl = () => {
           console.error('Error sending Finance notification:', notifError);
           // Don't fail the whole process for notification errors
         }
+
+        // Post to Microsoft Teams - QUALITY DEPARTMENT channel (fire-and-forget)
+        supabase.functions
+          .invoke('teams-notify', {
+            body: {
+              channel: 'quality',
+              title: `Quality Assessment - Batch ${batchNumber}`,
+              message: `Supplier: ${coffeeRecord.supplier_name}\nCoffee: ${coffeeRecord.coffee_type}\nKilograms: ${kilograms.toLocaleString()} kg\nMoisture: ${assessment.moisture}%  FM: ${assessment.fm}%  Outturn: ${assessment.outturn}%\nGroup 1: ${assessment.group1_defects}%  Group 2: ${assessment.group2_defects}%\nFinal Price: UGX ${Number(finalPrice).toLocaleString()}/kg\nTotal: UGX ${totalPaymentAmount.toLocaleString()}\nAssessed by: ${assessment.assessed_by || 'Quality'}`,
+            },
+          })
+          .catch((e) => console.error('teams-notify (quality) failed', e));
+      }
+
+      // Also notify Teams on rejected lots
+      if (isRejected) {
+        supabase.functions
+          .invoke('teams-notify', {
+            body: {
+              channel: 'quality',
+              title: `Quality REJECTED - Batch ${batchNumber}`,
+              message: `Supplier: ${coffeeRecord.supplier_name}\nCoffee: ${coffeeRecord.coffee_type}\nKilograms: ${(coffeeRecord?.kilograms || 0).toLocaleString()} kg\nMoisture: ${assessment.moisture}%  FM: ${assessment.fm}%  Outturn: ${assessment.outturn}%\nReason / Comments: ${assessment.comments || '-'}\nAssessed by: ${assessment.assessed_by || 'Quality'}`,
+            },
+          })
+          .catch((e) => console.error('teams-notify (quality reject) failed', e));
+      }
+
+      if (!isRejected) {
         
         console.log('Payment calculation:', {
           kilograms,
