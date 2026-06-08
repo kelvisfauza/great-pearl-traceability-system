@@ -94,6 +94,16 @@ const LeaveManagement = () => {
       toast({ title: "Leave request created", description: "The leave request has been submitted." });
       queryClient.invalidateQueries({ queryKey: ["leave-requests"] });
       queryClient.invalidateQueries({ queryKey: ["hr-v2-stats"] });
+      const emp = employees?.find((e) => e.id === selectedEmployee);
+      supabase.functions
+        .invoke("teams-notify", {
+          body: {
+            channel: "hr",
+            title: `New Leave Request - ${emp?.name ?? ""}`,
+            message: `Type: ${leaveType}\nFrom: ${startDate}\nTo: ${endDate}\nReason: ${reason || "-"}\nCreated by HR for ${emp?.name ?? ""} (${emp?.department ?? ""})`,
+          },
+        })
+        .catch((e) => console.error("teams-notify (leave create) failed", e));
       setDialogOpen(false);
       setSelectedEmployee("");
       setLeaveType("");
@@ -124,6 +134,15 @@ const LeaveManagement = () => {
       toast({ title: vars.status === "approved" ? "Leave Approved" : "Leave Rejected" });
       queryClient.invalidateQueries({ queryKey: ["leave-requests"] });
       queryClient.invalidateQueries({ queryKey: ["hr-v2-stats"] });
+      supabase.functions
+        .invoke("teams-notify", {
+          body: {
+            channel: "hr",
+            title: `Leave ${vars.status === "approved" ? "Approved" : "Rejected"}`,
+            message: `Request ID: ${vars.id}\nDecision by: ${employee?.name ?? "admin"}`,
+          },
+        })
+        .catch((e) => console.error("teams-notify (leave decision) failed", e));
     },
   });
 
