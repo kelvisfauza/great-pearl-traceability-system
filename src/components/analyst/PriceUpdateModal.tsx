@@ -58,6 +58,20 @@ export const PriceUpdateModal = ({ open, onOpenChange }: PriceUpdateModalProps) 
         throw insertError;
       }
 
+      // Post to Microsoft Teams - TRADE TEAM channel (fire-and-forget)
+      {
+        const dateStr = new Date().toLocaleDateString('en-GB');
+        supabase.functions
+          .invoke('teams-notify', {
+            body: {
+              channel: 'trade',
+              title: `Arabica Price Update - ${dateStr}`,
+              message: `Outturn: ${formData.outturn}%\nMoisture: ${formData.moisture}%\nFM: ${formData.fm}%\nPrice: UGX ${parseFloat(formData.price).toLocaleString()}/kg`,
+            },
+          })
+          .catch((e) => console.error('teams-notify (price) failed', e));
+      }
+
       // Send SMS notifications if checked
       if (formData.sendNotification) {
         const { data: suppliers, error: suppliersError } = await supabase
