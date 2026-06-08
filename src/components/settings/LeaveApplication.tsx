@@ -78,6 +78,16 @@ const LeaveApplication = () => {
     onSuccess: () => {
       toast({ title: "Leave Applied", description: "Your leave request has been submitted for approval." });
       queryClient.invalidateQueries({ queryKey: ["my-leave-requests"] });
+      // Post to Microsoft Teams - HR channel (fire-and-forget)
+      supabase.functions
+        .invoke("teams-notify", {
+          body: {
+            channel: "hr",
+            title: `New Leave Request - ${employee?.name ?? ""}`,
+            message: `Type: ${leaveType}\nFrom: ${startDate}\nTo: ${endDate}\nReason: ${reason || "-"}\nSubmitted by: ${employee?.name ?? ""} (${employee?.department ?? ""})`,
+          },
+        })
+        .catch((e) => console.error("teams-notify (leave submit) failed", e));
       setDialogOpen(false);
       setLeaveType("");
       setStartDate("");
