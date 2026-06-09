@@ -127,6 +127,7 @@ import OverdraftAdmin from "./pages/admin/OverdraftAdmin";
 import OverdraftAnalytics from "./pages/admin/OverdraftAnalytics";
 import ProfileCompletionModal from "./components/ProfileCompletionModal";
 import BirthdayNotification from "./components/BirthdayNotification";
+import ContractRenewalGate from "./components/ContractRenewalGate";
 import MeetingRewardsTeaserPopup from "./components/MeetingRewardsTeaserPopup";
 import StatutoryInfoModal from "./components/StatutoryInfoModal";
 import SeasonalAdvisoryModal from "./components/SeasonalAdvisoryModal";
