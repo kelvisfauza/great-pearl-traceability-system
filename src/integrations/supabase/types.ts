@@ -1292,6 +1292,99 @@ export type Database = {
           },
         ]
       }
+      contract_renewal_requests: {
+        Row: {
+          admin_email: string | null
+          admin_notes: string | null
+          approved_at: string | null
+          bank_account: string | null
+          bank_name: string | null
+          created_at: string
+          current_contract_id: string | null
+          emergency_contact: string | null
+          employee_email: string
+          employee_name: string
+          id: string
+          new_contract_id: string | null
+          nssf_number: string | null
+          pdf_url: string | null
+          policy_acknowledged: boolean
+          reason: string
+          rejected_at: string | null
+          requested_months: number
+          signature: string
+          status: string
+          tin_number: string | null
+          updated_at: string
+          updated_phone: string | null
+        }
+        Insert: {
+          admin_email?: string | null
+          admin_notes?: string | null
+          approved_at?: string | null
+          bank_account?: string | null
+          bank_name?: string | null
+          created_at?: string
+          current_contract_id?: string | null
+          emergency_contact?: string | null
+          employee_email: string
+          employee_name: string
+          id?: string
+          new_contract_id?: string | null
+          nssf_number?: string | null
+          pdf_url?: string | null
+          policy_acknowledged?: boolean
+          reason: string
+          rejected_at?: string | null
+          requested_months: number
+          signature: string
+          status?: string
+          tin_number?: string | null
+          updated_at?: string
+          updated_phone?: string | null
+        }
+        Update: {
+          admin_email?: string | null
+          admin_notes?: string | null
+          approved_at?: string | null
+          bank_account?: string | null
+          bank_name?: string | null
+          created_at?: string
+          current_contract_id?: string | null
+          emergency_contact?: string | null
+          employee_email?: string
+          employee_name?: string
+          id?: string
+          new_contract_id?: string | null
+          nssf_number?: string | null
+          pdf_url?: string | null
+          policy_acknowledged?: boolean
+          reason?: string
+          rejected_at?: string | null
+          requested_months?: number
+          signature?: string
+          status?: string
+          tin_number?: string | null
+          updated_at?: string
+          updated_phone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_renewal_requests_current_contract_id_fkey"
+            columns: ["current_contract_id"]
+            isOneToOne: false
+            referencedRelation: "employee_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_renewal_requests_new_contract_id_fkey"
+            columns: ["new_contract_id"]
+            isOneToOne: false
+            referencedRelation: "employee_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversation_participants: {
         Row: {
           conversation_id: string | null
