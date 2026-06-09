@@ -275,6 +275,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
           source: 'statement_fee',
           description: 'Transaction Statement Charge',
           period: `${dateFrom} to ${dateTo}`,
+          bypass_treasury_check: true,
         },
       });
       if (feeError) throw feeError;
