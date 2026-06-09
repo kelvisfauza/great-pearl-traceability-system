@@ -12,6 +12,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AlertTriangle, FileSignature, Loader2 } from 'lucide-react';
 
+const TERMS = [
+  'I confirm that all information provided in this renewal form is true, accurate, and complete to the best of my knowledge.',
+  'I agree to continue serving Great Agro Coffee diligently and to uphold the company\'s code of conduct, confidentiality, and anti-fraud policies.',
+  'I understand that this renewal is for a fixed term of 3–6 months and does not constitute a permanent employment guarantee.',
+  'I authorise the company to deduct any verified statutory contributions (PAYE, NSSF, LST) and recoverable advances or penalties from my salary or wallet.',
+  'I accept that breach of company policy, falsification of records, or unauthorised disclosure of company information may lead to disciplinary action or termination.',
+  'I agree that my contract data, banking details, and statutory numbers may be processed and stored securely for HR, payroll, and compliance purposes.',
+  'I acknowledge that this renewal becomes binding only upon written approval by the Administrator and receipt of the signed contract via email.',
+];
+
 interface ExpiredContract {
   id: string;
   contract_end_date: string;
@@ -37,6 +47,7 @@ const ContractRenewalGate = () => {
   const [bankName, setBankName] = useState('');
   const [bankAccount, setBankAccount] = useState('');
   const [ack, setAck] = useState(false);
+  const [terms, setTerms] = useState(false);
   const [signature, setSignature] = useState('');
 
   useEffect(() => {
@@ -89,6 +100,10 @@ const ContractRenewalGate = () => {
     }
     if (!ack) {
       toast({ title: 'Acknowledgement required', description: 'Please acknowledge company policies', variant: 'destructive' });
+      return;
+    }
+    if (!terms) {
+      toast({ title: 'Terms not accepted', description: 'You must accept the Terms & Conditions to continue', variant: 'destructive' });
       return;
     }
     if (signature.trim().toLowerCase() !== (employee.name || '').trim().toLowerCase()) {
@@ -188,6 +203,22 @@ const ContractRenewalGate = () => {
                 <Label htmlFor="ack" className="text-sm leading-tight cursor-pointer">
                   I acknowledge and agree to abide by all Great Agro Coffee company policies, code of conduct, and the renewed terms of employment.
                 </Label>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Terms & Conditions *</Label>
+                <div className="max-h-48 overflow-y-auto rounded-md border bg-muted/30 p-3 text-xs leading-relaxed space-y-2">
+                  <p className="font-semibold text-foreground">Great Agro Coffee — Contract Renewal Terms</p>
+                  <ol className="list-decimal pl-4 space-y-1.5 text-muted-foreground">
+                    {TERMS.map((t, i) => <li key={i}>{t}</li>)}
+                  </ol>
+                </div>
+                <div className="flex items-start gap-2 rounded-md border border-primary/40 p-3 bg-primary/5">
+                  <Checkbox id="terms" checked={terms} onCheckedChange={(v) => setTerms(!!v)} />
+                  <Label htmlFor="terms" className="text-sm leading-tight cursor-pointer">
+                    I have read, understood, and accept the Terms & Conditions above.
+                  </Label>
+                </div>
               </div>
 
               <div className="space-y-2">
