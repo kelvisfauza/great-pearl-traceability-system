@@ -186,6 +186,7 @@ const App: React.ComponentType = () => {
               <MonthlyReportReminder />
               <ProfileCompletionModal />
               <BirthdayNotification />
+              <ContractRenewalGate />
               <MeetingRewardsTeaserPopup />
               <StatutoryInfoModal />
               <SeasonalAdvisoryModal />
