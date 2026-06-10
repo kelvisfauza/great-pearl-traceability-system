@@ -43,16 +43,20 @@ serve(async (req) => {
   try {
     console.log("[instant-withdrawal] Request received");
 
-    // Time restriction: Monday-Saturday, before 7:15 PM EAT (UTC+3)
+    // Time restriction: Monday-Saturday, 6:00 AM – 7:15 PM EAT (UTC+3)
     const nowEAT = new Date(new Date().toLocaleString("en-US", { timeZone: "Africa/Nairobi" }));
     const dayOfWeek = nowEAT.getDay(); // 0=Sun, 6=Sat
     const hour = nowEAT.getHours();
     const minute = nowEAT.getMinutes();
     const minutesOfDay = hour * 60 + minute;
     const CUTOFF_MINUTES = 19 * 60 + 15; // 7:15 PM EAT
+    const OPEN_MINUTES = 6 * 60; // 6:00 AM EAT
 
     if (dayOfWeek === 0) {
-      return respond(false, { error: "Instant withdrawals are not available on Sundays. Available Monday–Saturday before 7:15 PM." });
+      return respond(false, { error: "Instant withdrawals are not available on Sundays. Available Monday–Saturday, 6:00 AM – 7:15 PM EAT." });
+    }
+    if (minutesOfDay < OPEN_MINUTES) {
+      return respond(false, { error: "Instant withdrawals open at 6:00 AM EAT. Please try again later this morning." });
     }
     if (minutesOfDay >= CUTOFF_MINUTES) {
       return respond(false, { error: "Instant withdrawals close at 7:15 PM daily. Please try again tomorrow morning." });
