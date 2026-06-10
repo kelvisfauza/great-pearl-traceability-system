@@ -549,6 +549,45 @@ export type Database = {
         }
         Relationships: []
       }
+      birthday_rewards: {
+        Row: {
+          amount: number
+          birthday_year: number
+          created_at: string
+          email_sent: boolean
+          employee_email: string
+          employee_id: string | null
+          employee_name: string
+          id: string
+          ledger_reference: string | null
+          sms_sent: boolean
+        }
+        Insert: {
+          amount?: number
+          birthday_year: number
+          created_at?: string
+          email_sent?: boolean
+          employee_email: string
+          employee_id?: string | null
+          employee_name: string
+          id?: string
+          ledger_reference?: string | null
+          sms_sent?: boolean
+        }
+        Update: {
+          amount?: number
+          birthday_year?: number
+          created_at?: string
+          email_sent?: boolean
+          employee_email?: string
+          employee_id?: string | null
+          employee_name?: string
+          id?: string
+          ledger_reference?: string | null
+          sms_sent?: boolean
+        }
+        Relationships: []
+      }
       bonuses: {
         Row: {
           allocated_at: string
