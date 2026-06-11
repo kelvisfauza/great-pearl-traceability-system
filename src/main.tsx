@@ -32,6 +32,11 @@ import '@/utils/createMasikaAccount';
 import './index.css';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { useGlobalErrorHandler } from './hooks/useGlobalErrorHandler';
+import { installJsPdfGrayscale } from '@/utils/jsPdfGrayscalePatch';
+
+// Force every generated PDF (receipts, payslips, loan agreements, reports, …)
+// to render in grayscale so they print cleanly on B&W printers.
+installJsPdfGrayscale();
 
 
 // Error Handler Component
