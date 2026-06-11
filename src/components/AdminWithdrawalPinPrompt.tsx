@@ -25,48 +25,22 @@ const AdminWithdrawalPinPrompt = () => {
   const checkPendingWithdrawals = useCallback(async () => {
     if (!user?.email) return;
 
-    const { data } = await supabase
-      .from('admin_initiated_withdrawals' as any)
-      .select('id, employee_id, employee_email, employee_name, amount, reason, initiated_by, initiated_by_name, status, pin_expires_at, created_at')
-      .eq('employee_email', user.email)
-      .eq('status', 'pending_pin')
-      .gt('pin_expires_at', new Date().toISOString())
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    if (data && (data as any[]).length > 0) {
-      setPendingWithdrawal((data as any[])[0]);
+    const { data } = await supabase.rpc('get_my_pending_admin_withdrawal' as any);
+    const rows = (data as any[]) || [];
+    if (rows.length > 0) {
+      setPendingWithdrawal(rows[0]);
     }
   }, [user?.email]);
 
-  // Initial check + realtime subscription
+  // Initial check + periodic poll (direct SELECT is blocked by RLS by design)
   useEffect(() => {
     if (!user?.email) return;
 
     checkPendingWithdrawals();
-
-    const channel = supabase
-      .channel('admin-withdrawal-pin-prompt')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'admin_initiated_withdrawals',
-          filter: `employee_email=eq.${user.email}`,
-        },
-        (payload) => {
-          const record = payload.new as any;
-          if (record.status === 'pending_pin' && new Date(record.pin_expires_at) > new Date()) {
-            setPendingWithdrawal(record);
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    const interval = setInterval(() => {
+      checkPendingWithdrawals();
+    }, 15000);
+    return () => clearInterval(interval);
   }, [user?.email, checkPendingWithdrawals]);
 
   const handleVerify = async () => {
@@ -78,11 +52,6 @@ const AdminWithdrawalPinPrompt = () => {
     try {
       // Check PIN expiry
       if (new Date(pendingWithdrawal.pin_expires_at) < new Date()) {
-        // Mark as expired
-        await supabase
-          .from('admin_initiated_withdrawals' as any)
-          .update({ status: 'expired' })
-          .eq('id', pendingWithdrawal.id);
         setError('PIN has expired. Contact admin to re-initiate.');
         setPendingWithdrawal(null);
         return;
@@ -179,10 +148,7 @@ const AdminWithdrawalPinPrompt = () => {
   const handleDecline = async () => {
     if (!pendingWithdrawal) return;
 
-    await supabase
-      .from('admin_initiated_withdrawals' as any)
-      .update({ status: 'cancelled' })
-      .eq('id', pendingWithdrawal.id);
+    await supabase.rpc('decline_my_admin_withdrawal' as any, { _id: pendingWithdrawal.id });
 
     toast({
       title: 'Withdrawal Declined',
