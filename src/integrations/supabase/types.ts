@@ -12066,6 +12066,7 @@ export type Database = {
         Args: { user_email: string }
         Returns: boolean
       }
+      can_manage_employees: { Args: never; Returns: boolean }
       can_manage_quality_assessments: { Args: never; Returns: boolean }
       can_manage_users: { Args: never; Returns: boolean }
       can_perform_action: { Args: { action_type: string }; Returns: boolean }
@@ -12108,6 +12109,7 @@ export type Database = {
         Returns: Json
       }
       current_user_email: { Args: never; Returns: string }
+      decline_my_admin_withdrawal: { Args: { _id: string }; Returns: Json }
       deduct_from_inventory_batches: {
         Args: {
           p_coffee_type: string
@@ -12308,6 +12310,22 @@ export type Database = {
           id: string
           is_locked: boolean
           user_name: string
+        }[]
+      }
+      get_my_pending_admin_withdrawal: {
+        Args: never
+        Returns: {
+          amount: number
+          created_at: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          id: string
+          initiated_by: string
+          initiated_by_name: string
+          pin_expires_at: string
+          reason: string
+          status: string
         }[]
       }
       get_or_create_inventory_batch_for_day: {
