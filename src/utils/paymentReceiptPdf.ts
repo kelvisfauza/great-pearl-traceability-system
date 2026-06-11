@@ -80,8 +80,8 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
   doc.text('PAID', pageW / 2, pageH / 2 + 40, { align: 'center', angle: 25 });
   doc.restoreGraphicsState();
 
-  // ---- Header band ----
-  doc.setFillColor(28, 80, 50); // deep coffee green
+  // ---- Header band (black for B&W print) ----
+  doc.setFillColor(0, 0, 0);
   doc.rect(0, 0, pageW, 90, 'F');
 
   try {
@@ -100,7 +100,7 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
   doc.text(`${COMPANY.address}  •  ${COMPANY.phone}  •  ${COMPANY.email}`, margin + 70, 68);
 
   // ---- Title bar ----
-  doc.setTextColor(28, 80, 50);
+  doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(20);
   doc.text('PAYMENT RECEIPT', margin, 125);
@@ -108,7 +108,7 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
   // Receipt meta box (top-right)
   const metaX = pageW - margin - 200;
   const metaY = 105;
-  doc.setDrawColor(28, 80, 50);
+  doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.6);
   doc.roundedRect(metaX, metaY, 200, 60, 4, 4, 'S');
   doc.setFontSize(8);
@@ -123,9 +123,12 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
   doc.text(formatDate(data.paidOn), metaX + 10, metaY + 50);
 
   // ---- Status pill ----
-  doc.setFillColor(220, 252, 231);
+  doc.setFillColor(235, 235, 235);
   doc.roundedRect(margin, 135, 70, 20, 10, 10, 'F');
-  doc.setTextColor(21, 128, 61);
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.6);
+  doc.roundedRect(margin, 135, 70, 20, 10, 10, 'S');
+  doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.text('PAID', margin + 35, 149, { align: 'center' });
@@ -182,7 +185,7 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
   if (data.charges > 0) rows.push(['Mobile Money / Withdrawal Charges', formatUGX(data.charges)]);
 
   // Header
-  doc.setFillColor(28, 80, 50);
+  doc.setFillColor(0, 0, 0);
   doc.rect(tableX, cursorY, tableW, rowH, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
@@ -204,7 +207,7 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
   });
 
   // Total row
-  doc.setFillColor(28, 80, 50);
+  doc.setFillColor(0, 0, 0);
   doc.rect(tableX, cursorY, tableW, rowH + 4, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
@@ -294,7 +297,7 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
   doc.text(validLines, pageW - margin - 220, sigBoxY + 52);
 
   // ---- Footer ----
-  doc.setDrawColor(28, 80, 50);
+  doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(1);
   doc.line(margin, pageH - 50, pageW - margin, pageH - 50);
   doc.setFont('helvetica', 'normal');
