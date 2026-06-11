@@ -580,7 +580,7 @@ const MyExpenses = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="templates">
               <Download className="h-4 w-4 mr-2" />
               Download Forms
@@ -597,6 +597,10 @@ const MyExpenses = () => {
               <Wallet className="h-4 w-4 mr-2" />
               Salary
             </TabsTrigger>
+            <TabsTrigger value="fuel">
+              <Fuel className="h-4 w-4 mr-2" />
+              Fuel Order
+            </TabsTrigger>
           </TabsList>
 
           {/* Download Templates Tab */}
@@ -604,6 +608,33 @@ const MyExpenses = () => {
             <CompanyHeaderSheetDownload />
             <PerDiemTemplateDownload />
             <ExpenseTemplateDownload />
+          </TabsContent>
+
+          {/* Fuel / Service Order Tab */}
+          <TabsContent value="fuel" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Fuel className="h-5 w-5 text-primary" />
+                  Fuel / Service Order
+                </CardTitle>
+                <CardDescription>
+                  Issue an A4 printable order to a service provider (e.g. petrol station) to fuel a company
+                  vehicle. The provider fills in litres, unit price and total amount owed on the printed copy.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button onClick={() => setFuelOrderOpen(true)} className="gap-2">
+                  <Fuel className="h-4 w-4" />
+                  New Fuel Order
+                </Button>
+                <p className="text-xs text-muted-foreground mt-3">
+                  Includes truck no., driver, fuel type / volume (or full tank), destination, requesting and
+                  authorising officers, plus a service-provider fill-in section for litres, unit price, amount
+                  and total amount owed. Prints in black &amp; white.
+                </p>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Cash Requisitions Tab */}
