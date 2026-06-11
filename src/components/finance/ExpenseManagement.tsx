@@ -2,15 +2,18 @@ import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DollarSign, ShieldAlert, Loader2 } from 'lucide-react';
+import { DollarSign, ShieldAlert, Loader2, Fuel } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 const MoneyRequestsManager = lazy(() => import('./MoneyRequestsManager').then(m => ({ default: m.default })));
+const FuelOrderModal = lazy(() => import('./FuelOrderModal').then(m => ({ default: m.default })));
 
 export const ExpenseManagement = () => {
   const { employee } = useAuth();
   const [moneyRequestsCount, setMoneyRequestsCount] = useState(0);
+  const [fuelOrderOpen, setFuelOrderOpen] = useState(false);
 
   const isFinance = employee?.department === 'Finance';
 
@@ -68,6 +71,25 @@ export const ExpenseManagement = () => {
       </Alert>
 
       <Card>
+        <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Fuel className="h-5 w-5 text-primary" />
+              Fuel / Service Orders
+            </CardTitle>
+            <CardDescription>
+              Issue a printable A4 fuel order to a service provider (e.g. petrol station). The provider fills in
+              litres, unit price and the total amount owed on the printed copy.
+            </CardDescription>
+          </div>
+          <Button onClick={() => setFuelOrderOpen(true)} className="shrink-0">
+            <Fuel className="h-4 w-4 mr-2" />
+            New Fuel Order
+          </Button>
+        </CardHeader>
+      </Card>
+
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5" />
@@ -99,6 +121,12 @@ export const ExpenseManagement = () => {
           </Tabs>
         </CardContent>
       </Card>
+
+      <Suspense fallback={null}>
+        {fuelOrderOpen && (
+          <FuelOrderModal open={fuelOrderOpen} onClose={() => setFuelOrderOpen(false)} />
+        )}
+      </Suspense>
     </div>
   );
 };
