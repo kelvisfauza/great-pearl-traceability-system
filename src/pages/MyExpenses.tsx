@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
-import { DollarSign, ShoppingCart, Coffee, Wallet, Clock, CheckCircle, XCircle, AlertTriangle, AlertCircle, Printer, Edit2, Undo2, ShieldCheck, Download } from 'lucide-react';
+import { DollarSign, ShoppingCart, Coffee, Wallet, Clock, CheckCircle, XCircle, AlertTriangle, AlertCircle, Printer, Edit2, Undo2, ShieldCheck, Download, Fuel } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { useAttendance } from '@/hooks/useAttendance';
@@ -25,6 +25,7 @@ import MySalaryPayments from '@/components/expenses/MySalaryPayments';
 import ExpenseTemplateDownload from '@/components/expenses/ExpenseTemplateDownload';
 import CompanyHeaderSheetDownload from '@/components/expenses/CompanyHeaderSheetDownload';
 import PerDiemTemplateDownload from '@/components/expenses/PerDiemTemplateDownload';
+import FuelOrderModal from '@/components/finance/FuelOrderModal';
 
 interface ExpenseRequest {
   id: string;
@@ -67,6 +68,7 @@ const MyExpenses = () => {
   const [editForm, setEditForm] = useState({ title: '', amount: '', description: '' });
   const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
   const [editLoading, setEditLoading] = useState(false);
+  const [fuelOrderOpen, setFuelOrderOpen] = useState(false);
 
   const isFullyApproved = (request: ExpenseRequest) => {
     return request.status === 'Approved' || 
