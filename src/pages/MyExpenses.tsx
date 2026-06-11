@@ -905,6 +905,11 @@ const MyExpenses = () => {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Fuel / Service Order Modal */}
+      {fuelOrderOpen && (
+        <FuelOrderModal open={fuelOrderOpen} onClose={() => setFuelOrderOpen(false)} />
+      )}
     </Layout>
   );
 };
