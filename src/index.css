@@ -451,6 +451,14 @@ input[type="datetime-local"],
 input[type="month"],
 input[type="week"] {
   color: hsl(var(--foreground));
+  color-scheme: light;
+}
+
+.dark input[type="date"],
+.dark input[type="time"],
+.dark input[type="datetime-local"],
+.dark input[type="month"],
+.dark input[type="week"] {
   color-scheme: dark;
 }
 
@@ -467,9 +475,14 @@ input[type="time"]::-webkit-datetime-edit-ampm-field {
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="time"]::-webkit-calendar-picker-indicator,
 input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-  filter: invert(1) brightness(1.4);
   opacity: 0.8;
   cursor: pointer;
+}
+
+.dark input[type="date"]::-webkit-calendar-picker-indicator,
+.dark input[type="time"]::-webkit-calendar-picker-indicator,
+.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.4);
 }
 
 input[type="date"]:placeholder-shown,
