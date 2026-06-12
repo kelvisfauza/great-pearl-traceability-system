@@ -1,0 +1,1 @@
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.investments TO authenticated; GRANT ALL ON public.investments TO service_role;
