@@ -208,7 +208,12 @@ const AdminLoanTracker = () => {
                         <TableCell>
                           <div>
                             <p className="font-medium text-sm">{b.employee_name}</p>
-                            <p className="text-xs text-muted-foreground">{b.loan_type === 'long_term' ? 'Long-Term' : 'Quick'}</p>
+                            <div className="flex items-center gap-1 flex-wrap">
+                              <p className="text-xs text-muted-foreground">{b.loan_type === 'long_term' ? 'Long-Term' : 'Quick'}</p>
+                              {b.approved_via_appeal && (
+                                <Badge className="bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-300 text-[10px] px-1 py-0">Admin Appeal</Badge>
+                              )}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell className="text-sm">UGX {b.loan_amount?.toLocaleString()}</TableCell>
