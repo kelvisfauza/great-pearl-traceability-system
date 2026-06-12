@@ -594,6 +594,7 @@ const ServiceProviderPayments = () => {
                   <TableHead>Provider</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Service</TableHead>
+                  <TableHead>Method</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead className="text-right">Charge</TableHead>
                   <TableHead className="text-right">Total</TableHead>
@@ -611,6 +612,17 @@ const ServiceProviderPayments = () => {
                     <TableCell className="font-medium">{d.receiver_name || '—'}</TableCell>
                     <TableCell className="text-sm">{d.receiver_phone}</TableCell>
                     <TableCell className="max-w-[200px] truncate text-sm">{d.service_description}</TableCell>
+                    <TableCell>
+                      {d.payment_method === 'cash' ? (
+                        <Badge variant="outline" className="gap-1 border-amber-300 text-amber-700 dark:text-amber-400">
+                          <Banknote className="h-3 w-3" /> Cash
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="gap-1 border-blue-300 text-blue-700 dark:text-blue-400">
+                          <Smartphone className="h-3 w-3" /> Yo
+                        </Badge>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right text-sm">{formatAmount(d.amount)}</TableCell>
                     <TableCell className="text-right text-sm">{formatAmount(d.withdraw_charge)}</TableCell>
                     <TableCell className="text-right text-sm font-medium">{formatAmount(d.total_amount)}</TableCell>
