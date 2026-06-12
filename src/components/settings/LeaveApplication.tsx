@@ -13,6 +13,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { notifyTeamsRich } from "@/lib/teamsNotify";
+import { buildPublicUrl } from "@/utils/publicUrl";
 
 const leaveTypes = ["Annual Leave", "Sick Leave", "Maternity Leave", "Paternity Leave", "Compassionate Leave", "Study Leave", "Unpaid Leave"];
 
@@ -53,7 +55,7 @@ const LeaveApplication = () => {
         (new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)
       ) + 1;
 
-      const { error } = await supabase.from("approval_requests").insert({
+      const { data: inserted, error } = await supabase.from("approval_requests").insert({
         type: "leave",
         title: `${leaveType} - ${employee.name}`,
         description: reason || `${leaveType} request`,
@@ -72,22 +74,53 @@ const LeaveApplication = () => {
           days,
           reason,
         },
-      });
+      }).select("id").single();
       if (error) throw error;
+      return { id: inserted?.id as string, days };
     },
-    onSuccess: () => {
+    onSuccess: async ({ id, days }) => {
       toast({ title: "Leave Applied", description: "Your leave request has been submitted for approval." });
       queryClient.invalidateQueries({ queryKey: ["my-leave-requests"] });
-      // Post to Microsoft Teams - HR channel (fire-and-forget)
-      supabase.functions
-        .invoke("teams-notify", {
-          body: {
-            channel: "hr",
-            title: `New Leave Request - ${employee?.name ?? ""}`,
-            message: `Type: ${leaveType}\nFrom: ${startDate}\nTo: ${endDate}\nReason: ${reason || "-"}\nSubmitted by: ${employee?.name ?? ""} (${employee?.department ?? ""})`,
-          },
-        })
-        .catch((e) => console.error("teams-notify (leave submit) failed", e));
+      // Post rich card to Microsoft Teams - HR channel with deep-link actions
+      const reviewUrl = buildPublicUrl(`/approvals?id=${id}`);
+      const profileUrl = buildPublicUrl(`/employee/${employee?.id ?? ""}`);
+      const title = `🗓️ New Leave Request — ${employee?.name ?? ""}`;
+      const message =
+        `Type: ${leaveType}\n` +
+        `From: ${startDate}\n` +
+        `To: ${endDate}  (${days} day${days !== 1 ? "s" : ""})\n` +
+        `Department: ${employee?.department ?? "-"}\n` +
+        `Reason: ${reason || "-"}\n` +
+        `Status: ⏳ Pending Admin`;
+      try {
+        const result = await notifyTeamsRich({
+          channel: "hr",
+          title,
+          message,
+          actions: [
+            { label: "Review & Approve", url: reviewUrl },
+            { label: "View Employee Profile", url: profileUrl },
+          ],
+        });
+        if (result.messageId && id) {
+          // Persist the Teams thread id so approval outcomes can reply in-thread
+          await supabase
+            .from("approval_requests")
+            .update({
+              details: {
+                leave_type: leaveType,
+                start_date: startDate,
+                end_date: endDate,
+                days,
+                reason,
+                teams_hr_message_id: result.messageId,
+              },
+            })
+            .eq("id", id);
+        }
+      } catch (e) {
+        console.error("teams-notify (leave submit) failed", e);
+      }
       setDialogOpen(false);
       setLeaveType("");
       setStartDate("");
