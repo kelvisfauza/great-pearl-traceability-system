@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 import { executeOrQueue } from "@/lib/offline/queue";
+import { notifyTeams } from "@/lib/teamsNotify";
 
 interface NewCoffeeReceiptDialogProps {
   open: boolean;
@@ -118,6 +119,14 @@ const NewCoffeeReceiptDialog = ({ open, onOpenChange }: NewCoffeeReceiptDialogPr
           : "Coffee receipt created successfully"
       });
       queryClient.invalidateQueries({ queryKey: ['v2-coffee-receipts'] });
+      if (!queued) {
+        const payload: any = result?.data ?? result;
+        notifyTeams(
+          "trade",
+          `New Coffee Delivery — ${payload?.supplier_name ?? ""}`,
+          `Supplier: ${payload?.supplier_name ?? ""}\nCoffee: ${payload?.coffee_type ?? ""}\nQuantity: ${payload?.kilograms ?? ""} kg (${payload?.bags ?? ""} bags)\nBatch: ${payload?.batch_number ?? ""}\nDate: ${payload?.date ?? ""}\nReceived by: ${employee?.name ?? employee?.email ?? ""}`,
+        );
+      }
       reset();
       onOpenChange(false);
     },
