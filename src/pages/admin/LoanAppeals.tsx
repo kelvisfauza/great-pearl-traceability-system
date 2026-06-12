@@ -8,9 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Loader2, Scale, ThumbsUp, ThumbsDown, Repeat } from 'lucide-react';
+import { Loader2, Scale, ThumbsUp, ThumbsDown, Repeat, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { sendLoanAgreement } from '@/utils/sendLoanAgreement';
 
 type Vote = { id: string; admin_id: string; admin_email: string | null; vote_type: 'uphold' | 'approve_full' | 'counter'; counter_amount: number | null; counter_term_months: number | null; reason: string; created_at: string };
 type Appeal = {
@@ -31,6 +32,7 @@ type Appeal = {
   decided_at: string | null;
   expires_at: string;
   created_at: string;
+  resulting_loan_id?: string | null;
 };
 
 export default function LoanAppeals() {
@@ -45,6 +47,7 @@ export default function LoanAppeals() {
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [me, setMe] = useState<{ id: string; email: string | null } | null>(null);
+  const [sendingPdfFor, setSendingPdfFor] = useState<string | null>(null);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -157,6 +160,18 @@ export default function LoanAppeals() {
     const votes = votesByAppeal[a.id] || [];
     const counts = tallySummary(votes);
     const myVote = votes.find((v) => v.admin_id === me?.id);
+    const resultingLoanId = (a as any).resulting_loan_id as string | null | undefined;
+    const handleSendPdf = async () => {
+      if (!resultingLoanId) return;
+      setSendingPdfFor(a.id);
+      const res = await sendLoanAgreement(resultingLoanId, me?.email || 'Administration');
+      setSendingPdfFor(null);
+      if (res.ok) {
+        toast({ title: 'Agreement sent', description: `PDF emailed to ${a.employee_email}.` });
+      } else {
+        toast({ title: 'Failed to send agreement', description: res.error, variant: 'destructive' });
+      }
+    };
     return (
       <Card key={a.id} className="border-l-4 border-l-primary">
         <CardHeader className="pb-2">
@@ -251,6 +266,21 @@ export default function LoanAppeals() {
               <strong>Final:</strong> {a.final_decision} — UGX {Number(a.final_amount || 0).toLocaleString()}
               {a.final_term_months ? ` × ${a.final_term_months} months` : ''}
             </div>
+          )}
+          {resultingLoanId && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSendPdf}
+              disabled={sendingPdfFor === a.id}
+              className="w-full"
+            >
+              {sendingPdfFor === a.id ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating & sending…</>
+              ) : (
+                <><FileText className="mr-2 h-4 w-4" /> Send Agreement PDF to borrower</>
+              )}
+            </Button>
           )}
         </CardContent>
       </Card>
