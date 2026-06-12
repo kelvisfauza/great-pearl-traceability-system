@@ -102,6 +102,12 @@ export const useCoffeeBookings = () => {
         description: "Coffee booking created successfully"
       });
 
+      notifyTeams(
+        "trade",
+        `New Coffee Booking — ${data.supplier_name}`,
+        `Supplier: ${data.supplier_name}\nCoffee: ${data.coffee_type}\nQuantity: ${data.booked_quantity_kg} kg\nPrice: UGX ${Number(data.booked_price_per_kg).toLocaleString()}/kg\nExpected delivery: ${data.expected_delivery_date || '-'}\nExpiry: ${data.expiry_date}\nCreated by: ${data.created_by}${data.notes ? `\nNotes: ${data.notes}` : ''}`,
+      );
+
       await fetchBookings();
       return { success: true, booking: data };
     } catch (error) {
