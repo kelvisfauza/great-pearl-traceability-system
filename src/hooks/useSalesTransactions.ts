@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { notifyTeams } from '@/lib/teamsNotify';
 
 export interface SalesTransaction {
   id: string;
@@ -269,6 +270,12 @@ export const useSalesTransactions = () => {
         title: "Success",
         description: `Sale recorded successfully. ${transactionData.weight} kg tracked in inventory movements.`,
       });
+
+      notifyTeams(
+        "trade",
+        `New Sale / Dispatch — ${transactionData.customer}`,
+        `Customer: ${transactionData.customer}\nCoffee: ${transactionData.coffee_type}\nWeight: ${transactionData.weight} kg\nUnit Price: UGX ${Number(transactionData.unit_price).toLocaleString()}\nTotal: UGX ${Number(transactionData.total_amount).toLocaleString()}\nTruck: ${transactionData.truck_details || '-'}\nDriver: ${transactionData.driver_details || '-'}\nDate: ${transactionData.date}`,
+      );
 
       await fetchTransactions();
       return data;
