@@ -1,94 +1,89 @@
+# Loan Evaluation Appeal System
 
-# Overdraft v2 — MTN-style Opt-In Overdraft
+When the evaluator denies a loan or offers less than the user requested, the user can file an appeal. The appeal goes to admins, who review the full evaluation report and either uphold, approve, or counter-offer. Any decision requires **3 admin sign-offs with written reasons** before it takes effect.
 
-Rebuild the overdraft so it works like MTN MoKash: members opt in once, then it transparently funds wallet debits when the wallet runs out, accrues daily interest, and auto-recovers from any future credit.
+## User Flow
 
-## Chosen parameters
-- **Activation:** opt-in (one-tap, no admin approval)
-- **Fee:** none (no activation fee)
-- **Daily interest:** 0.5% on outstanding balance (~15%/month, between MTN's ~9% and your 2%/day suggestion)
-- **30-day freeze:** yes — if outstanding has not cleared for 30 days, new draws blocked until repaid (incoming credits still apply to recovery)
+1. User submits loan request → evaluator returns `denied` or `reduced` (amount < requested).
+2. UI shows a banner: *"Not what you expected? Appeal to admin"* with a button.
+3. User opens appeal form:
+   - Requested amount (prefilled, locked)
+   - Offered amount (prefilled, locked)
+   - Evaluation reasons (read-only summary)
+   - **Justification** (required, min 30 chars): why they deserve more / why the denial is wrong
+   - Optional supporting note (e.g. "I have a side income of X")
+4. Submit → creates a `loan_appeals` row, status `pending_admin_review`.
+5. User sees appeal status on their loans page (Pending → Under Review → Decided).
 
-## What changes
+## Admin Flow
 
-### Activation
-- Remove the "apply + admin approve" path. Members see their system-assigned monthly limit and a single **Activate Overdraft** button.
-- Activation creates an `overdraft_accounts` row with `approved_limit = current month's eligibility` and `status='active'`. No fee.
-- Monthly recompute cron also updates each active account's `approved_limit` to the new month's eligibility figure.
-- Members can **Deactivate** anytime if outstanding = 0.
+New tab in Loans Management: **Appeals**.
+Each appeal card shows:
+- Borrower name, dept, salary, requested vs offered amounts, loan type, term
+- Full evaluation report (risk signals, history summary, recommended amount, denial reasons)
+- User's justification
+- Three decision actions:
+  - **Uphold evaluation** (denial stands / offered amount stands)
+  - **Approve requested amount in full**
+  - **Counter-offer** (custom amount + custom term)
+- Each admin must attach a written reason (min 20 chars) with their vote.
 
-### How it gets used (no explicit "draw")
-Any wallet debit (instant withdrawal, wallet-to-wallet transfer, loan repayment, USSD pay, service-provider payout, milling pay, etc.) calls a new RPC `consume_spendable(user_id, amount, source, metadata)`:
-1. Computes `spendable = wallet_balance + (limit − outstanding)`.
-2. If `amount > spendable` → reject as "insufficient funds".
-3. Else, debits wallet first; any shortfall is taken from overdraft (increases `outstanding_balance`, logs `overdraft_transactions` row type `draw`).
-4. If account is frozen (see below) → reject overdraft portion only; wallet-only debit still allowed.
+Voting rules:
+- Need **3 distinct admin votes** for the same decision (same amount/term if counter-offer; same uphold/approve outcome otherwise).
+- An admin can only vote once per appeal.
+- Borrower's own line manager / department head cannot vote (separation of duties — reuses existing SOD pattern).
+- Once 3 matching votes are collected, decision auto-executes:
+  - **Approve / Counter-offer** → creates the loan at the agreed amount/term, disburses to wallet (bypasses re-evaluation), audit trail references the appeal.
+  - **Uphold** → appeal closes as `denied_on_appeal`, user notified.
+- If admins vote differently (e.g. 1 uphold, 1 approve, 1 counter), nothing happens until 3 align. Show vote tally on the card.
+- Appeals auto-expire after 7 days with no 3-vote consensus → status `expired`, user can refile once.
 
-### Daily interest
-- New cron `overdraft-accrue-interest` runs daily at 00:30 UTC.
-- For every active account with `outstanding_balance > 0`: `outstanding += round(outstanding * 0.005)`, log a `overdraft_transactions` row `type='interest'`.
+## Notifications
 
-### Recovery (unchanged behaviour, kept)
-- The existing `trigger_overdraft_recovery` on wallet credits diverts incoming money to clear outstanding (principal + accrued interest) first; remainder lands in wallet.
+- On appeal submission: email all admins with permission to review, CC operations.
+- On each admin vote: email borrower ("1 of 3 admins reviewed").
+- On final decision: email borrower + CC operations with outcome + all 3 reasons.
 
-### 30-day freeze
-- New columns: `first_negative_at`, `frozen` on `overdraft_accounts`.
-- Set `first_negative_at = now()` when balance goes from 0 → positive outstanding; clear it when it returns to 0.
-- Daily cron also flips `frozen = true` when `first_negative_at < now() - 30 days`. New overdraft draws blocked until cleared; recovery still applies and unfreezes on full clearance.
+## Technical Details
 
-### Monthly recompute (kept, extended)
-- 1st of each month at 06:00 UTC: recompute `overdraft_eligibility` AND mirror the new limit into each active `overdraft_accounts.approved_limit`.
+### New table: `loan_appeals`
+- `loan_evaluation_id` (FK to `loan_evaluations`)
+- `user_id`, `requested_amount`, `offered_amount`, `loan_type`, `term_months`
+- `justification` (text)
+- `status` ('pending_admin_review' | 'decided_approve' | 'decided_uphold' | 'decided_counter' | 'expired')
+- `final_amount`, `final_term_months` (null until decided)
+- `resulting_loan_id` (FK to `loans`, null until disbursed)
+- `decided_at`, timestamps
+- RLS: borrower can read own; admins (via `has_role`) can read/update all.
 
-## UI changes
+### New table: `loan_appeal_votes`
+- `appeal_id` (FK)
+- `admin_id` (auth.uid())
+- `vote_type` ('uphold' | 'approve_full' | 'counter')
+- `counter_amount`, `counter_term_months` (null unless `counter`)
+- `reason` (text, required)
+- UNIQUE(appeal_id, admin_id) — one vote per admin.
+- RLS: admins read all; insert their own only.
 
-### Member Overdraft page (`/overdraft`)
-- Drop the Apply dialog and applications history.
-- Show three cards: **System Limit** (from eligibility), **Outstanding** (with accrued interest breakdown), **Available** (limit − outstanding).
-- **Activate / Deactivate** button.
-- Activity table: draws, interest accruals, recoveries.
-- Info banner explains: auto-used on debit, 0.5%/day interest, 30-day freeze rule.
+### DB function: `tally_loan_appeal_votes(appeal_id)`
+- Counts matching votes. If 3 align on the same decision (and same counter amount/term if applicable), updates `loan_appeals.status` and `final_amount`, then calls existing loan-creation RPC to disburse.
+- Trigger on `loan_appeal_votes` insert calls this function.
 
-### Admin Overdraft page (`/admin/overdraft`)
-- Drop pending applications section.
-- Show all active accounts with: member, limit, outstanding, frozen flag, days since first overdrawn.
-- Manual actions: adjust limit, unfreeze (override), force-close.
-- "Recompute all limits" button.
-
-### Wallet/withdrawal/transfer UIs
-- Replace "balance" guards with "spendable" (balance + available overdraft). Show a small "incl. UGX X overdraft available" hint when overdraft is active.
-
-## Technical details
-
-### DB migration
-- `overdraft_accounts`: add `frozen boolean default false`, `first_negative_at timestamptz`, `last_interest_at timestamptz`.
-- `overdraft_transactions`: ensure `transaction_type` allows `'interest'` (it's free-text today, so fine).
-- New RPC `public.consume_spendable(p_user_id uuid, p_amount numeric, p_source text, p_metadata jsonb)` returning `{ok, wallet_debit, overdraft_debit, new_outstanding}`.
-- New RPC `public.get_overdraft_spendable(p_user_id uuid)` returning `{wallet, limit, outstanding, available, frozen}`.
-- Trigger update: when `overdraft_accounts.outstanding_balance` transitions 0→positive set `first_negative_at`; positive→0 clear it and `frozen=false`.
-
-### Edge functions
-- New: `overdraft-activate`, `overdraft-deactivate`, `overdraft-accrue-interest` (cron target).
-- Modify (call `consume_spendable` instead of raw wallet debit + balance check):
-  - `instant-withdrawal`
-  - `service-provider-payout`
-  - `process-salary-auto-invest`
-  - `process-loan-repayments`
-  - `ussd-payment-success` (if debits wallet)
-  - wallet-to-wallet transfer function
-- Delete/disable: `overdraft-apply`, `overdraft-approve`, `overdraft-draw` (kept as no-ops returning error pointing to new flow, to avoid breaking old clients).
-
-### Cron jobs
-- Keep `overdraft-recompute-monthly` (1st @ 06:00 UTC), extend to push new limits into active accounts.
-- New `overdraft-accrue-interest-daily` (every day @ 00:30 UTC).
+### Edge function updates
+- `loan-evaluation`: when returning `denied`/`reduced`, include `appeal_eligible: true` and `evaluation_id` in response.
+- New edge function `loan-appeal-decide` (optional) — only needed if we want server-side validation of admin role + SOD check before insert. Otherwise enforce via RLS + trigger.
 
 ### Frontend
-- Rewrite `src/pages/Overdraft.tsx` and `src/pages/admin/OverdraftAdmin.tsx`.
-- Update `useUnifiedApprovalRequests.ts` and `WithdrawalRequestsManager.tsx` balance guards to use `get_overdraft_spendable`.
-- Add a tiny `useSpendableBalance(email)` hook used by withdrawal/transfer forms.
+- `QuickLoans.tsx`: after evaluation, show appeal banner + dialog if `appeal_eligible`.
+- New page `src/pages/admin/LoanAppeals.tsx`: list pending appeals, card per appeal, vote dialog.
+- Add nav entry under Loans Management for admins.
+- Notification integration: reuse existing email infrastructure with operations CC.
 
-## Rollout
-1. Migration (schema + RPCs + trigger).
-2. New edge functions + cron.
-3. Refactor existing edge functions one by one to use `consume_spendable`.
-4. Frontend rewrite + balance-guard updates.
-5. Verify with a test activation + small simulated debit.
+### Cron
+- Daily job to expire appeals older than 7 days with <3 matching votes.
+
+## Open Questions
+
+1. **Counter-offer matching**: must all 3 counter votes agree on the exact same amount, or take the median/lowest? Strictest = exact match.
+2. **Can admins change their vote** within the 7-day window? (Recommend: yes, until decision executes.)
+3. Should the borrower see admin names + reasons on the final decision email, or just the outcome?
