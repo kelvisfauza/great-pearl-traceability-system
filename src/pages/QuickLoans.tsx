@@ -863,7 +863,9 @@ const QuickLoans = () => {
         }
 
         // SMS to borrower with repayment details
-        const firstRepaymentDate = getFirstRepaymentDate(startDate, loan.repayment_frequency || 'monthly');
+        const firstRepaymentDate = isPureSalary
+          ? computePureSalaryFirstDue(startDate)
+          : getFirstRepaymentDate(startDate, loan.repayment_frequency || 'monthly');
         const repaymentDateStr = firstRepaymentDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
         const installmentAmount = isWeekly
           ? Math.ceil(loan.total_repayable / (loan.total_weeks || Math.ceil((loan.duration_months * 30) / 7)))
