@@ -344,6 +344,7 @@ const ServiceProviderPayments = () => {
         <td>${d.receiver_name || '—'}</td>
         <td>${d.receiver_phone || ''}</td>
         <td>${d.service_description || ''}</td>
+        <td>${d.payment_method === 'cash' ? 'Cash' : 'Yo (MoMo)'}</td>
         <td style="text-align:right">${formatAmount(d.amount)}</td>
         <td style="text-align:right">${formatAmount(d.withdraw_charge)}</td>
         <td style="text-align:right">${formatAmount(d.total_amount)}</td>
@@ -359,7 +360,7 @@ const ServiceProviderPayments = () => {
       <small>Generated ${new Date().toLocaleString('en-UG')} • ${payments.length} record(s)</small>
       <table><thead><tr>
         <th>Date</th><th>Provider</th><th>Phone</th><th>Service</th>
-        <th>Amount</th><th>Charge</th><th>Total</th><th>Status</th><th>Initiated By</th>
+        <th>Method</th><th>Amount</th><th>Charge</th><th>Total</th><th>Status</th><th>Initiated By</th>
       </tr></thead><tbody>${rows}</tbody></table>
       <script>window.onload=()=>{window.print();setTimeout(()=>window.close(),300)}</script>
       </body></html>`;
