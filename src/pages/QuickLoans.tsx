@@ -19,6 +19,7 @@ import LoanAdvertDialog from '@/components/loans/LoanAdvertDialog';
 import LoanReviewModal from '@/components/loans/LoanReviewModal';
 import LoanRepaymentSlip from '@/components/loans/LoanRepaymentSlip';
 import { generateLoanAgreementPdf } from '@/utils/loanAgreementPdf';
+import LoanAppealDialog from '@/components/loans/LoanAppealDialog';
 
 // Loan types with their monthly interest rates
 type LoanType = 'quick' | 'long_term' | 'pure_salary';
