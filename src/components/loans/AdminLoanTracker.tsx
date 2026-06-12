@@ -418,12 +418,10 @@ const BorrowerDetailDialog = ({ selectedBorrower, onClose, today, getStatusBadge
         if (borrower?.auth_user_id) {
           const { data: userId } = await supabase.rpc('get_unified_user_id', { input_email: selectedBorrower.employee_email });
           const uid = userId || borrower.auth_user_id;
-          const { data: walletLedger } = await supabase
-            .from('ledger_entries')
-            .select('amount, entry_type')
-            .eq('user_id', uid)
-            .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY', 'PAYOUT']);
-          setBorrowerWalletBalance((walletLedger || []).reduce((sum: number, e: any) => sum + Number(e.amount), 0));
+          // Use the authoritative RPC — summing ledger_entries client-side hits Supabase's
+          // 1000-row limit for active users and produces inflated balances.
+          const { data: bal } = await supabase.rpc('get_effective_wallet_balance', { p_user_id: uid });
+          setBorrowerWalletBalance(Number(bal) || 0);
         }
 
         if (selectedBorrower.guarantor_email) {
