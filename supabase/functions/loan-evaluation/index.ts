@@ -57,6 +57,51 @@ serve(async (req) => {
     const overdue = loans.filter((l: any) => l.status === "overdue").length;
     const active = loans.filter((l: any) => ["active", "pending_guarantor", "pending_admin"].includes(l.status));
     const outstanding = active.reduce((s: number, l: any) => s + Number(l.remaining_balance || l.loan_amount || 0), 0);
+    const activePureSalary = active.filter((l: any) => l.loan_type === 'pure_salary').length;
+    const totalMissedInstallments = loans.reduce((s: number, l: any) => s + Number(l.missed_installments || 0), 0);
+    const totalPenaltyAmount = loans.reduce((s: number, l: any) => s + Number(l.penalty_amount || 0), 0);
+
+    // Repayment quality from loan_repayments (on-time vs late)
+    const loanIds = loans.map((l: any) => l.id);
+    let repayOnTime = 0, repayLate = 0, repayOverdueOpen = 0, totalRepaymentPenalty = 0;
+    if (loanIds.length) {
+      const { data: schedule } = await supabase
+        .from("loan_repayments")
+        .select("status, due_date, paid_date, overdue_days, penalty_applied")
+        .in("loan_id", loanIds);
+      for (const r of (schedule || []) as any[]) {
+        totalRepaymentPenalty += Number(r.penalty_applied || 0);
+        if (r.status === 'paid') {
+          if (r.paid_date && r.due_date && new Date(r.paid_date) <= new Date(r.due_date)) repayOnTime++;
+          else repayLate++;
+        } else if (r.status === 'overdue' || (r.status === 'pending' && r.due_date && new Date(r.due_date) < new Date())) {
+          repayOverdueOpen++;
+        }
+      }
+    }
+    const totalPaidInstallments = repayOnTime + repayLate;
+    const onTimeRatio = totalPaidInstallments > 0 ? repayOnTime / totalPaidInstallments : 1;
+
+    // Overdraft posture
+    const { data: overdraft } = await supabase
+      .from("overdraft_accounts")
+      .select("status, outstanding_balance, approved_limit, frozen, first_negative_at, total_recovered, total_drawn")
+      .eq("employee_email", employee_email)
+      .maybeSingle();
+    const overdraftActive = !!overdraft && overdraft.status === 'active';
+    const overdraftOutstanding = Number(overdraft?.outstanding_balance || 0);
+    const overdraftFrozen = !!overdraft?.frozen;
+    const overdraftStaleDays = overdraft?.first_negative_at
+      ? Math.floor((Date.now() - new Date(overdraft.first_negative_at).getTime()) / 86400000)
+      : 0;
+
+    // Salary advances (active / outstanding)
+    const { data: salAdv } = await supabase
+      .from("employee_salary_advances")
+      .select("status, remaining_balance, original_amount")
+      .eq("employee_email", employee_email);
+    const activeSalAdv = (salAdv || []).filter((s: any) => ['active','pending','approved'].includes(s.status));
+    const salaryAdvanceOutstanding = activeSalAdv.reduce((s: number, a: any) => s + Number(a.remaining_balance || a.original_amount || 0), 0);
 
     // Guarantor defaults — instances where THIS user's loan caused their guarantor's wallet to be debited
     const { data: guarantorDeducts } = await supabase
@@ -72,6 +117,15 @@ serve(async (req) => {
     });
     const guarantorDefaultCount = new Set(guarantorHits.map((e: any) => String(e.reference).match(/^LOAN-GUARANTOR-([0-9a-f-]+)-/i)?.[1])).size;
     const guarantorDefaultAmount = guarantorHits.reduce((s: number, e: any) => s + Math.abs(Number(e.amount)), 0);
+
+    // Times the borrower acted as GUARANTOR for others and was debited (signal of poor judgement / risky circle)
+    const { data: actedAsGuarantor } = await supabase
+      .from("ledger_entries")
+      .select("amount, reference")
+      .eq("user_id", userId)
+      .like("reference", "LOAN-GUARANTOR-%")
+      .lt("amount", 0);
+    const timesDebitedAsGuarantor = (actedAsGuarantor || []).length;
 
     // Wallet snapshot
     const walletTypes = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY', 'PAYOUT'];
@@ -100,6 +154,10 @@ serve(async (req) => {
 
     const requested = Number(requested_amount || 0);
 
+    // Total existing debt obligations (loans + salary advance + overdraft drawn)
+    const totalDebtObligations = outstanding + salaryAdvanceOutstanding + overdraftOutstanding;
+    const debtToSalaryRatio = salary > 0 ? totalDebtObligations / salary : 999;
+
     // Heuristic fallback — start from FULL entitlement (3× salary), not requested.
     // The "limit" shown to user must reflect what they're entitled to, not what they typed.
     const hasActive = active.length > 0;
@@ -111,10 +169,64 @@ serve(async (req) => {
       fallbackDecision = "deny";
       fallbackAmount = 0;
       fallbackFactors.push(`${defaulted} prior default(s)`);
+    } else if (salary <= 0) {
+      fallbackDecision = "deny";
+      fallbackAmount = 0;
+      fallbackFactors.push("No salary on record");
+    } else if (overdraftFrozen) {
+      fallbackDecision = "deny";
+      fallbackAmount = 0;
+      fallbackFactors.push("Overdraft account is frozen");
+    } else if (overdraftActive && overdraftStaleDays > 45 && overdraftOutstanding > 0) {
+      fallbackDecision = "deny";
+      fallbackAmount = 0;
+      fallbackFactors.push(`Overdraft negative for ${overdraftStaleDays} days unrecovered`);
+    } else if (repayOverdueOpen >= 2) {
+      fallbackDecision = "deny";
+      fallbackAmount = 0;
+      fallbackFactors.push(`${repayOverdueOpen} overdue installments on existing loan(s)`);
+    } else if (debtToSalaryRatio >= 3) {
+      fallbackDecision = "deny";
+      fallbackAmount = 0;
+      fallbackFactors.push(`Debt load already ${debtToSalaryRatio.toFixed(1)}× salary`);
     } else if (tenureMonths < 2) {
       fallbackAmount = Math.min(fallbackAmount, Math.round(salary * 1.5));
       fallbackFactors.push("New employee (< 2 months) – limit capped at 1.5× salary");
     }
+
+    // Penalty / late-payment posture
+    if (onTimeRatio < 0.5 && totalPaidInstallments >= 2) {
+      fallbackAmount = Math.round(fallbackAmount * 0.4);
+      fallbackFactors.push(`Poor repayment timeliness: only ${Math.round(onTimeRatio*100)}% on-time`);
+    } else if (onTimeRatio < 0.8 && totalPaidInstallments >= 2) {
+      fallbackAmount = Math.round(fallbackAmount * 0.7);
+      fallbackFactors.push(`Mixed repayment timeliness: ${Math.round(onTimeRatio*100)}% on-time`);
+    }
+    if (totalMissedInstallments >= 3) {
+      fallbackAmount = Math.round(fallbackAmount * 0.5);
+      fallbackFactors.push(`${totalMissedInstallments} missed installments historically`);
+    }
+    if (totalPenaltyAmount + totalRepaymentPenalty > 0) {
+      fallbackAmount = Math.round(fallbackAmount * 0.8);
+      fallbackFactors.push(`Penalties accrued: UGX ${(totalPenaltyAmount + totalRepaymentPenalty).toLocaleString()}`);
+    }
+    if (timesDebitedAsGuarantor > 0) {
+      fallbackAmount = Math.round(fallbackAmount * 0.85);
+      fallbackFactors.push(`Debited ${timesDebitedAsGuarantor}× as guarantor for others`);
+    }
+    if (overdraftActive && overdraftOutstanding > 0) {
+      fallbackFactors.push(`Active overdraft draw: UGX ${overdraftOutstanding.toLocaleString()}`);
+      fallbackAmount = Math.max(0, fallbackAmount - overdraftOutstanding);
+    }
+    if (salaryAdvanceOutstanding > 0) {
+      fallbackFactors.push(`Outstanding salary advance: UGX ${salaryAdvanceOutstanding.toLocaleString()}`);
+      fallbackAmount = Math.max(0, fallbackAmount - salaryAdvanceOutstanding);
+    }
+    if (activePureSalary > 0) {
+      fallbackDecision = fallbackDecision === 'deny' ? 'deny' : 'top_up';
+      fallbackFactors.push("Active pure-salary loan in force");
+    }
+
     if (overdue > 0) {
       fallbackAmount = Math.round(fallbackAmount * 0.6);
       fallbackFactors.push(`${overdue} overdue loan(s) – limit reduced by 40%`);
@@ -147,7 +259,19 @@ serve(async (req) => {
     let recommendedAmount = fallbackAmount;
     let recommendedType = requested_loan_type || (recommendedAmount > salary ? "long_term" : "quick");
     let recommendedDuration = Number(requested_duration) || (recommendedAmount > salary ? 3 : 1);
-    let riskScore = Math.max(5, 80 - defaulted * 30 - guarantorDefaultCount * 35 + completed * 5 - (hasActive ? 10 : 0));
+    let riskScore = Math.max(
+      5,
+      80
+        - defaulted * 30
+        - guarantorDefaultCount * 35
+        - repayOverdueOpen * 15
+        - totalMissedInstallments * 5
+        - (overdraftActive && overdraftOutstanding > 0 ? 10 : 0)
+        - (salaryAdvanceOutstanding > 0 ? 5 : 0)
+        - Math.round((1 - onTimeRatio) * 20)
+        + completed * 5
+        - (hasActive ? 10 : 0)
+    );
     let factors = fallbackFactors.length ? fallbackFactors : ["Standard evaluation applied"];
 
     if (LOVABLE_API_KEY) {
@@ -165,7 +289,17 @@ LOAN HISTORY
 - Active/Pending: ${active.length}
 - Total outstanding (UGX): ${outstanding}
 - Repayments last 6 months: ${repayCount} totaling UGX ${repayTotal}
+- On-time repayment ratio: ${(onTimeRatio * 100).toFixed(0)}% (${repayOnTime} on-time, ${repayLate} late, ${repayOverdueOpen} currently overdue)
+- Missed installments (lifetime): ${totalMissedInstallments}
+- Penalties accrued (lifetime UGX): ${totalPenaltyAmount + totalRepaymentPenalty}
 - Loans recovered from GUARANTOR (borrower failed, guarantor wallet debited): ${guarantorDefaultCount} occurrence(s), total UGX ${guarantorDefaultAmount}
+- Times debited as guarantor for others: ${timesDebitedAsGuarantor}
+
+OTHER DEBT
+- Overdraft: ${overdraftActive ? `ACTIVE, outstanding UGX ${overdraftOutstanding}, frozen=${overdraftFrozen}, days-negative=${overdraftStaleDays}` : 'none'}
+- Salary advance outstanding (UGX): ${salaryAdvanceOutstanding}
+- Active pure-salary loans: ${activePureSalary}
+- Total debt obligations (UGX): ${totalDebtObligations} (debt-to-salary ${debtToSalaryRatio.toFixed(2)}×)
 
 REQUEST
 - Requested amount (UGX): ${requested}
@@ -178,9 +312,15 @@ RULES (be fair — approve when reasonable; only deny on clear red flags)
 - Hard cap: recommended_amount must NEVER exceed 3× salary (UGX ${maxLimit}).
 - Default for clean borrowers = the full ${maxLimit} (3× salary). Do not award less unless a rule below reduces it.
 - Subtract outstanding from any new approval.
-- "deny" ONLY if: 1+ true defaults (is_defaulted), OR 2+ guarantor recoveries, OR salary is 0.
-- 1 guarantor recovery = reduce limit by ~50% but still approve/top_up.
+- "deny" if ANY of: 1+ true defaults; 2+ guarantor recoveries; salary is 0; overdraft frozen; overdraft negative >45 days; 2+ currently-overdue installments; debt-to-salary ratio ≥ 3×; on-time repayment ratio < 30% with ≥3 paid installments.
+- 1 guarantor recovery = reduce limit ~50% but still approve/top_up.
 - Overdue loans (not yet defaulted) = reduce limit ~40%, do NOT deny.
+- Subtract active overdraft outstanding AND outstanding salary advances from any new approval (they share the same paycheck).
+- On-time ratio 30-80% with ≥2 paid → reduce 30-60%.
+- Lifetime missed installments ≥ 3 → reduce 50%.
+- Any historical penalty (loans.penalty_amount or loan_repayments.penalty_applied > 0) → reduce 20%.
+- Times debited as guarantor for others ≥ 1 → reduce 15% (signals risky circle).
+- Active pure-salary loan → force "top_up" never "approve" (salary already pledged).
 - Clean history with completed loans = ALWAYS award the full ${maxLimit} cap.
 - Active loan + clean repayments → "top_up" (cap minus outstanding).
 - New employee (<2 months) → cap at 1.5× salary.
