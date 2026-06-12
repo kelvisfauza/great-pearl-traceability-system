@@ -208,7 +208,12 @@ const AdminLoanTracker = () => {
                         <TableCell>
                           <div>
                             <p className="font-medium text-sm">{b.employee_name}</p>
-                            <p className="text-xs text-muted-foreground">{b.loan_type === 'long_term' ? 'Long-Term' : 'Quick'}</p>
+                            <div className="flex items-center gap-1 flex-wrap">
+                              <p className="text-xs text-muted-foreground">{b.loan_type === 'long_term' ? 'Long-Term' : 'Quick'}</p>
+                              {b.approved_via_appeal && (
+                                <Badge className="bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-300 text-[10px] px-1 py-0">Admin Appeal</Badge>
+                              )}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell className="text-sm">UGX {b.loan_amount?.toLocaleString()}</TableCell>
@@ -601,6 +606,37 @@ const BorrowerDetailDialog = ({ selectedBorrower, onClose, today, getStatusBadge
                     )}
                   </CardContent>
                 </Card>
+
+                {selectedBorrower.approved_via_appeal && Array.isArray(selectedBorrower.appeal_admin_voters) && selectedBorrower.appeal_admin_voters.length > 0 && (
+                  <Card className="border-amber-300 dark:border-amber-700">
+                    <CardHeader className="pb-2 p-4">
+                      <CardTitle className="text-sm flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                        ⚖ Approved via Admin Appeal Panel
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0 space-y-2 text-xs">
+                      <p className="text-muted-foreground">
+                        The system originally denied or reduced this loan. Three administrators independently
+                        reviewed the appeal and motivated the final decision below:
+                      </p>
+                      <div className="space-y-2">
+                        {(selectedBorrower.appeal_admin_voters as any[]).map((v: any, i: number) => (
+                          <div key={i} className="rounded border-l-4 border-l-amber-500 bg-amber-50/60 dark:bg-amber-950/20 p-2">
+                            <div className="font-semibold">{v.name || v.email}</div>
+                            <div className="text-muted-foreground">
+                              {v.vote_type === 'approve_full'
+                                ? 'Approved the full requested amount'
+                                : v.vote_type === 'counter'
+                                  ? `Counter-offer UGX ${Number(v.counter_amount || 0).toLocaleString()} × ${v.counter_term_months || 0} mo`
+                                  : v.vote_type}
+                            </div>
+                            <div className="italic mt-1">"{v.reason}"</div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Borrower Profile */}
                 <Card>
