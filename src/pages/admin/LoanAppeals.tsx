@@ -169,7 +169,7 @@ export default function LoanAppeals() {
       if (res.ok) {
         toast({ title: 'Agreement sent', description: `PDF emailed to ${a.employee_email}.` });
       } else {
-        toast({ title: 'Failed to send agreement', description: res.error, variant: 'destructive' });
+        toast({ title: 'Failed to send agreement', description: (res as any).error, variant: 'destructive' });
       }
     };
     return (
