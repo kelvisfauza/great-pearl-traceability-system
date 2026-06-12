@@ -65,6 +65,14 @@ export default function LoanAppeals() {
       } else {
         setVotesByAppeal({});
       }
+      // Auto-recovery: any decided appeal without a resulting loan needs disbursement
+      const stuck = ((a as Appeal[]) || []).filter((x: any) =>
+        ['decided_approve', 'decided_counter'].includes(x.status) && !x.resulting_loan_id
+      );
+      for (const s of stuck) {
+        // eslint-disable-next-line no-await-in-loop
+        await tryAutoDisburse(s.id);
+      }
     } catch (e: any) {
       toast({ title: 'Failed to load appeals', description: e.message, variant: 'destructive' });
     } finally {
