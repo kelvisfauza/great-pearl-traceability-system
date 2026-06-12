@@ -288,9 +288,10 @@ const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
           const isApprove = !isReject && (updateData.admin_approved === true || updateData.status === 'Approved');
           if (threadId && (isReject || isApprove)) {
             const who = approverName || 'Admin';
+            const requesterName = (request as any).requestedby_name || request.requestedby;
             const outcomeTitle = isReject
-              ? `❌ Leave Rejected — ${request.requestedby_name || request.requestedby}`
-              : `✅ Leave Approved — ${request.requestedby_name || request.requestedby}`;
+              ? `❌ Leave Rejected — ${requesterName}`
+              : `✅ Leave Approved — ${requesterName}`;
             const lines = [
               `${isReject ? 'Rejected' : 'Approved'} by: ${who}`,
               isReject && rejectionReason ? `Reason: ${rejectionReason}` : '',
