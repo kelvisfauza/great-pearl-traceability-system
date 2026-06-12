@@ -1974,7 +1974,13 @@ const QuickLoans = () => {
                   <div>
                     <Label>Loan Amount (UGX)</Label>
                     <Input type="number" value={loanAmount} onChange={e => setLoanAmount(e.target.value)} placeholder="e.g. 500000" />
-                    <p className="text-xs text-muted-foreground mt-1">Max: UGX {(myLimit?.availableLimit || (employee?.salary || 0) * 5).toLocaleString()} (5x salary)</p>
+                    {loanType === 'pure_salary' ? (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Max: UGX {(Math.floor((employee?.salary || 0) * 0.5) * (parseInt(durationMonths) || 1)).toLocaleString()} (50% of salary × {parseInt(durationMonths) || 1} month{(parseInt(durationMonths) || 1) > 1 ? 's' : ''})
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground mt-1">Max: UGX {(myLimit?.availableLimit || (employee?.salary || 0) * 5).toLocaleString()} (5x salary)</p>
+                    )}
                   </div>
                   <div>
                     <Label>Loan Type</Label>
@@ -1982,6 +1988,8 @@ const QuickLoans = () => {
                       const lt = v as LoanType;
                       setLoanType(lt);
                       setRepaymentFrequency(LOAN_TYPE_CONFIG[lt].frequencies[0]);
+                      const cap = LOAN_TYPE_CONFIG[lt].maxMonths;
+                      if (cap && parseInt(durationMonths) > cap) setDurationMonths('');
                     }}>
                       <SelectTrigger><SelectValue placeholder="Select loan type" /></SelectTrigger>
                       <SelectContent>
@@ -2008,7 +2016,7 @@ const QuickLoans = () => {
                     <Select value={durationMonths} onValueChange={setDurationMonths}>
                       <SelectTrigger><SelectValue placeholder="Select duration" /></SelectTrigger>
                       <SelectContent>
-                        {[1, 2, 3, 4, 5, 6].map(m => {
+                        {[1, 2, 3, 4, 5, 6].filter(m => !LOAN_TYPE_CONFIG[loanType].maxMonths || m <= LOAN_TYPE_CONFIG[loanType].maxMonths!).map(m => {
                           const monthlyRate = LOAN_TYPE_CONFIG[loanType].monthlyRate;
                           const maxRate = LOAN_TYPE_CONFIG[loanType].maxRate;
                           const effectiveRate = Math.min(monthlyRate * m, maxRate);
@@ -2021,17 +2029,26 @@ const QuickLoans = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <Label>Select Guarantor</Label>
-                    <Select value={guarantorId} onValueChange={setGuarantorId}>
-                      <SelectTrigger><SelectValue placeholder="Choose a colleague" /></SelectTrigger>
-                      <SelectContent>
-                        {employees.filter(e => e.email !== employee?.email).map(e => (
-                          <SelectItem key={e.id} value={e.id}>{e.name} ({e.email})</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {LOAN_TYPE_CONFIG[loanType].requiresGuarantor !== false ? (
+                    <div>
+                      <Label>Select Guarantor</Label>
+                      <Select value={guarantorId} onValueChange={setGuarantorId}>
+                        <SelectTrigger><SelectValue placeholder="Choose a colleague" /></SelectTrigger>
+                        <SelectContent>
+                          {employees.filter(e => e.email !== employee?.email).map(e => (
+                            <SelectItem key={e.id} value={e.id}>{e.name} ({e.email})</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : (
+                    <Card className="border-emerald-300 bg-emerald-50 dark:bg-emerald-950/20">
+                      <CardContent className="p-3 text-xs text-emerald-900 dark:text-emerald-200">
+                        <strong>No guarantor needed.</strong> Repaid automatically via salary — 50% of your monthly pay goes to the loan until cleared.
+                        If approved mid-month, the remaining 50% of that month's salary is frozen and applied at month-end.
+                      </CardContent>
+                    </Card>
+                  )}
 
                   {parseFloat(loanAmount) > 0 && durationMonths && (
                     <Card className="bg-muted/50">
