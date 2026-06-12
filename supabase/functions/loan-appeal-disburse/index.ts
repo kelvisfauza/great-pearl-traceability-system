@@ -82,13 +82,22 @@ serve(async (req) => {
       .maybeSingle();
     if (!emp) return ok({ ok: false, error: "Borrower employee not found" });
 
-    // Compute loan terms — mirror standard quick loan economics
+    // Compute loan terms based on loan_type
     const principal = Number(appeal.final_amount);
     const months = Number(appeal.final_term_months || appeal.requested_term_months || 1);
-    const monthlyRate = 10; // %/month
+    const loanType = String(appeal.loan_type || "quick");
+    const isPureSalary = loanType === "pure_salary";
+    const monthlyRate = isPureSalary ? 15 : 10; // %/month
     const dailyRate = Number((monthlyRate / 30).toFixed(4));
     const totalRepayable = Math.ceil(principal + (principal * monthlyRate / 100) * months);
-    const monthlyInstallment = Math.ceil(totalRepayable / months);
+    // Pure salary: installment = 50% of salary, paid every 27th payroll until cleared.
+    // Standard: equal installments over N months.
+    const salaryAmt = Number((emp as any).salary || 0);
+    const halfSalary = Math.max(1, Math.floor(salaryAmt * 0.5));
+    const monthlyInstallment = isPureSalary ? halfSalary : Math.ceil(totalRepayable / months);
+    const numInstallments = isPureSalary
+      ? Math.ceil(totalRepayable / halfSalary)
+      : months;
 
     // Insert loan (auto-approved via appeal — no guarantor required, no fee deducted)
     const { data: loanRow, error: lErr } = await supabase.from("loans").insert({
@@ -120,18 +129,39 @@ serve(async (req) => {
     const loanId = (loanRow as any).id;
 
     // Build repayment schedule
-    const startDate = new Date();
     const repayments: any[] = [];
-    for (let i = 1; i <= months; i++) {
-      const due = new Date(startDate);
-      due.setMonth(due.getMonth() + i);
-      repayments.push({
-        loan_id: loanId,
-        installment_number: i,
-        amount_due: monthlyInstallment,
-        due_date: due.toISOString().split("T")[0],
-        status: "pending",
-      });
+    let remaining = totalRepayable;
+    if (isPureSalary) {
+      // Next payroll = 27th of current month if today <= 27, else 27th of next month
+      const today = new Date();
+      const firstPayroll = new Date(today.getFullYear(), today.getMonth(), 27);
+      if (today.getDate() > 27) firstPayroll.setMonth(firstPayroll.getMonth() + 1);
+      for (let i = 1; i <= numInstallments; i++) {
+        const due = new Date(firstPayroll);
+        due.setMonth(due.getMonth() + (i - 1));
+        const amt = Math.min(monthlyInstallment, remaining);
+        remaining -= amt;
+        repayments.push({
+          loan_id: loanId,
+          installment_number: i,
+          amount_due: amt,
+          due_date: due.toISOString().split("T")[0],
+          status: "pending",
+        });
+      }
+    } else {
+      const startDate = new Date();
+      for (let i = 1; i <= months; i++) {
+        const due = new Date(startDate);
+        due.setMonth(due.getMonth() + i);
+        repayments.push({
+          loan_id: loanId,
+          installment_number: i,
+          amount_due: monthlyInstallment,
+          due_date: due.toISOString().split("T")[0],
+          status: "pending",
+        });
+      }
     }
     await supabase.from("loan_repayments").insert(repayments);
 
@@ -196,9 +226,9 @@ serve(async (req) => {
             totalRepayable: totalRepayable.toLocaleString(),
             installmentAmount: monthlyInstallment.toLocaleString(),
             installmentFrequency: "month",
-            numInstallments: String(months),
+            numInstallments: String(numInstallments),
             firstDeductionDate: repayments[0]?.due_date,
-            loanType: appeal.loan_type === "long_term" ? "Long-Term Loan" : "Quick Loan",
+            loanType: isPureSalary ? "Pure Salary Loan" : (loanType === "long_term" ? "Long-Term Loan" : "Quick Loan"),
             approvedBy: "Admin Panel (Appeal)",
             approvalDate: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }),
             disbursedAmount: principal.toLocaleString(),
