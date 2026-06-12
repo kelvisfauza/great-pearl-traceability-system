@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Truck, Send, Loader2, Phone, DollarSign, RefreshCw, RotateCcw, CheckCheck, UserPlus, Users, Printer, Filter, Receipt } from 'lucide-react';
+import { Truck, Send, Loader2, Phone, DollarSign, RefreshCw, RotateCcw, CheckCheck, UserPlus, Users, Printer, Filter, Receipt, Smartphone, Banknote } from 'lucide-react';
 import { sendPaymentReceipt } from '@/utils/sendPaymentReceipt';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
@@ -40,6 +40,7 @@ const ServiceProviderPayments = () => {
     email: '',
   });
   const [saveProvider, setSaveProvider] = useState(true);
+  const [paymentMethod, setPaymentMethod] = useState<'mobile_money' | 'cash'>('mobile_money');
 
   // Fetch saved service providers
   const { data: savedProviders = [] } = useQuery({
@@ -95,6 +96,49 @@ const ServiceProviderPayments = () => {
 
     setSubmitting(true);
     try {
+      // Cash payment: record directly without calling Yo edge function
+      if (paymentMethod === 'cash') {
+        const charge = parseFloat(form.withdrawCharge) || 0;
+        const { error: insertError } = await (supabase.from('service_provider_payments') as any).insert({
+          receiver_phone: form.receiverPhone,
+          receiver_name: form.receiverName,
+          service_description: form.description,
+          amount: amount,
+          withdraw_charge: charge,
+          total_amount: amount + charge,
+          notes: form.notes,
+          initiated_by: employee?.email || '',
+          initiated_by_name: employee?.name || '',
+          yo_status: 'paid',
+          payment_method: 'cash',
+        });
+        if (insertError) throw insertError;
+
+        toast({ title: 'Cash payment recorded', description: `UGX ${amount.toLocaleString()} cash payment to ${form.receiverName || form.receiverPhone} logged.` });
+
+        if (saveProvider && form.receiverName) {
+          const exists = savedProviders.some((p: any) =>
+            p.name?.toLowerCase() === form.receiverName.toLowerCase() ||
+            p.phone === form.receiverPhone
+          );
+          if (!exists) {
+            await (supabase.from('service_providers') as any).insert({
+              name: form.receiverName,
+              phone: form.receiverPhone || null,
+              email: form.email || null,
+            });
+            queryClient.invalidateQueries({ queryKey: ['saved-service-providers'] });
+          }
+        }
+
+        setForm({ receiverPhone: '', receiverName: '', description: '', amount: '', withdrawCharge: '', notes: '', invoiceNumber: '', email: '' });
+        setSaveProvider(true);
+        setPaymentMethod('mobile_money');
+        setOpen(false);
+        queryClient.invalidateQueries({ queryKey: ['service-provider-payments'] });
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('service-provider-payout', {
         body: {
           phone: form.receiverPhone,
@@ -107,6 +151,7 @@ const ServiceProviderPayments = () => {
           notes: form.notes,
           invoiceNumber: form.invoiceNumber,
           providerEmail: form.email,
+          paymentMethod: 'mobile_money',
         },
       });
 
