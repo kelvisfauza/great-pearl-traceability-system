@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Truck, Send, Loader2, Phone, DollarSign, RefreshCw, RotateCcw, CheckCheck, UserPlus, Users, Printer, Filter, Receipt } from 'lucide-react';
+import { Truck, Send, Loader2, Phone, DollarSign, RefreshCw, RotateCcw, CheckCheck, UserPlus, Users, Printer, Filter, Receipt, Smartphone, Banknote } from 'lucide-react';
 import { sendPaymentReceipt } from '@/utils/sendPaymentReceipt';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
@@ -40,6 +40,7 @@ const ServiceProviderPayments = () => {
     email: '',
   });
   const [saveProvider, setSaveProvider] = useState(true);
+  const [paymentMethod, setPaymentMethod] = useState<'mobile_money' | 'cash'>('mobile_money');
 
   // Fetch saved service providers
   const { data: savedProviders = [] } = useQuery({
@@ -95,6 +96,49 @@ const ServiceProviderPayments = () => {
 
     setSubmitting(true);
     try {
+      // Cash payment: record directly without calling Yo edge function
+      if (paymentMethod === 'cash') {
+        const charge = parseFloat(form.withdrawCharge) || 0;
+        const { error: insertError } = await (supabase.from('service_provider_payments') as any).insert({
+          receiver_phone: form.receiverPhone,
+          receiver_name: form.receiverName,
+          service_description: form.description,
+          amount: amount,
+          withdraw_charge: charge,
+          total_amount: amount + charge,
+          notes: form.notes,
+          initiated_by: employee?.email || '',
+          initiated_by_name: employee?.name || '',
+          yo_status: 'paid',
+          payment_method: 'cash',
+        });
+        if (insertError) throw insertError;
+
+        toast({ title: 'Cash payment recorded', description: `UGX ${amount.toLocaleString()} cash payment to ${form.receiverName || form.receiverPhone} logged.` });
+
+        if (saveProvider && form.receiverName) {
+          const exists = savedProviders.some((p: any) =>
+            p.name?.toLowerCase() === form.receiverName.toLowerCase() ||
+            p.phone === form.receiverPhone
+          );
+          if (!exists) {
+            await (supabase.from('service_providers') as any).insert({
+              name: form.receiverName,
+              phone: form.receiverPhone || null,
+              email: form.email || null,
+            });
+            queryClient.invalidateQueries({ queryKey: ['saved-service-providers'] });
+          }
+        }
+
+        setForm({ receiverPhone: '', receiverName: '', description: '', amount: '', withdrawCharge: '', notes: '', invoiceNumber: '', email: '' });
+        setSaveProvider(true);
+        setPaymentMethod('mobile_money');
+        setOpen(false);
+        queryClient.invalidateQueries({ queryKey: ['service-provider-payments'] });
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('service-provider-payout', {
         body: {
           phone: form.receiverPhone,
@@ -107,6 +151,7 @@ const ServiceProviderPayments = () => {
           notes: form.notes,
           invoiceNumber: form.invoiceNumber,
           providerEmail: form.email,
+          paymentMethod: 'mobile_money',
         },
       });
 
@@ -299,6 +344,7 @@ const ServiceProviderPayments = () => {
         <td>${d.receiver_name || '—'}</td>
         <td>${d.receiver_phone || ''}</td>
         <td>${d.service_description || ''}</td>
+        <td>${d.payment_method === 'cash' ? 'Cash' : 'Yo (MoMo)'}</td>
         <td style="text-align:right">${formatAmount(d.amount)}</td>
         <td style="text-align:right">${formatAmount(d.withdraw_charge)}</td>
         <td style="text-align:right">${formatAmount(d.total_amount)}</td>
@@ -314,7 +360,7 @@ const ServiceProviderPayments = () => {
       <small>Generated ${new Date().toLocaleString('en-UG')} • ${payments.length} record(s)</small>
       <table><thead><tr>
         <th>Date</th><th>Provider</th><th>Phone</th><th>Service</th>
-        <th>Amount</th><th>Charge</th><th>Total</th><th>Status</th><th>Initiated By</th>
+        <th>Method</th><th>Amount</th><th>Charge</th><th>Total</th><th>Status</th><th>Initiated By</th>
       </tr></thead><tbody>${rows}</tbody></table>
       <script>window.onload=()=>{window.print();setTimeout(()=>window.close(),300)}</script>
       </body></html>`;
@@ -362,6 +408,41 @@ const ServiceProviderPayments = () => {
             </DialogHeader>
 
             <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>Payment Method *</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('mobile_money')}
+                    className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                      paymentMethod === 'mobile_money'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:bg-accent'
+                    }`}
+                  >
+                    <Smartphone className={`w-5 h-5 ${paymentMethod === 'mobile_money' ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <div className="text-left">
+                      <p className="text-sm font-medium">Mobile Money</p>
+                      <p className="text-xs text-muted-foreground">Yo Payments</p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('cash')}
+                    className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                      paymentMethod === 'cash'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:bg-accent'
+                    }`}
+                  >
+                    <Banknote className={`w-5 h-5 ${paymentMethod === 'cash' ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <div className="text-left">
+                      <p className="text-sm font-medium">Cash</p>
+                      <p className="text-xs text-muted-foreground">Paid in person</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
               {savedProviders.length > 0 && (
                 <div className="space-y-2">
                   <Label className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> Select Saved Provider</Label>
@@ -491,8 +572,8 @@ const ServiceProviderPayments = () => {
             <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
               <Button variant="outline" onClick={() => setOpen(false)} className="w-full sm:w-auto">Cancel</Button>
               <Button onClick={handleSubmit} disabled={submitting} className="gap-2 w-full sm:w-auto">
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                {submitting ? 'Sending...' : 'Send Payment'}
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : paymentMethod === 'cash' ? <Banknote className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+                {submitting ? (paymentMethod === 'cash' ? 'Recording...' : 'Sending...') : paymentMethod === 'cash' ? 'Record Cash Payment' : 'Send via Yo'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -514,6 +595,7 @@ const ServiceProviderPayments = () => {
                   <TableHead>Provider</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Service</TableHead>
+                  <TableHead>Method</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead className="text-right">Charge</TableHead>
                   <TableHead className="text-right">Total</TableHead>
@@ -531,6 +613,17 @@ const ServiceProviderPayments = () => {
                     <TableCell className="font-medium">{d.receiver_name || '—'}</TableCell>
                     <TableCell className="text-sm">{d.receiver_phone}</TableCell>
                     <TableCell className="max-w-[200px] truncate text-sm">{d.service_description}</TableCell>
+                    <TableCell>
+                      {d.payment_method === 'cash' ? (
+                        <Badge variant="outline" className="gap-1 border-amber-300 text-amber-700 dark:text-amber-400">
+                          <Banknote className="h-3 w-3" /> Cash
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="gap-1 border-blue-300 text-blue-700 dark:text-blue-400">
+                          <Smartphone className="h-3 w-3" /> Yo
+                        </Badge>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right text-sm">{formatAmount(d.amount)}</TableCell>
                     <TableCell className="text-right text-sm">{formatAmount(d.withdraw_charge)}</TableCell>
                     <TableCell className="text-right text-sm font-medium">{formatAmount(d.total_amount)}</TableCell>

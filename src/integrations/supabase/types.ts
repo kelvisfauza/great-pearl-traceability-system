@@ -8967,6 +8967,7 @@ export type Database = {
           initiated_by: string
           initiated_by_name: string
           notes: string | null
+          payment_method: string
           receiver_name: string | null
           receiver_phone: string
           service_description: string
@@ -8984,6 +8985,7 @@ export type Database = {
           initiated_by: string
           initiated_by_name: string
           notes?: string | null
+          payment_method?: string
           receiver_name?: string | null
           receiver_phone: string
           service_description: string
@@ -9001,6 +9003,7 @@ export type Database = {
           initiated_by?: string
           initiated_by_name?: string
           notes?: string | null
+          payment_method?: string
           receiver_name?: string | null
           receiver_phone?: string
           service_description?: string
