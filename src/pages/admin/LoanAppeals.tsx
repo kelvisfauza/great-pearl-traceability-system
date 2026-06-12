@@ -72,6 +72,20 @@ export default function LoanAppeals() {
     }
   };
 
+  const tryAutoDisburse = async (appealId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('loan-appeal-disburse', { body: { appeal_id: appealId } });
+      if (error) throw error;
+      if (data?.ok && !data?.already) {
+        toast({ title: 'Loan auto-disbursed', description: 'Funds credited to the borrower\u2019s wallet.' });
+      } else if (data?.ok === false) {
+        console.warn('disburse skipped', data.error);
+      }
+    } catch (e) {
+      console.warn('auto-disburse failed', e);
+    }
+  };
+
   useEffect(() => {
     fetchAll();
   }, []);
@@ -102,12 +116,19 @@ export default function LoanAppeals() {
       const { error } = await (supabase as any).from('loan_appeal_votes').insert(payload);
       if (error) throw error;
       toast({ title: 'Vote recorded', description: 'Appeal auto-finalizes when 3 admins agree.' });
+      const appealIdJustVoted = voteFor.id;
       setVoteFor(null);
       setReason('');
       setCounterAmount('');
       setCounterTerm('');
       setVoteType('uphold');
-      fetchAll();
+      await fetchAll();
+      // Re-read the appeal to see if it just became decided — then auto-disburse
+      const { data: fresh } = await (supabase as any).from('loan_appeals').select('status, resulting_loan_id').eq('id', appealIdJustVoted).maybeSingle();
+      if (fresh && !fresh.resulting_loan_id && ['decided_approve', 'decided_counter'].includes(fresh.status)) {
+        await tryAutoDisburse(appealIdJustVoted);
+        fetchAll();
+      }
     } catch (e: any) {
       toast({ title: 'Vote failed', description: e.message, variant: 'destructive' });
     } finally {
