@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Banknote, Clock, Shield, Users, AlertTriangle, CheckCircle, XCircle, CreditCard, Download, Printer, Phone, Loader2, FileText, Eye, ShieldOff, Wallet, HandCoins, ArrowUpCircle, Edit } from 'lucide-react';
+import { Banknote, Clock, Shield, Users, AlertTriangle, CheckCircle, XCircle, CreditCard, Download, Printer, Phone, Loader2, FileText, Eye, ShieldOff, Wallet, HandCoins, ArrowUpCircle, Edit, Scale } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import AdminLoanTracker from '@/components/loans/AdminLoanTracker';
 import { Textarea } from '@/components/ui/textarea';
@@ -74,6 +74,7 @@ const QuickLoans = () => {
   const [employees, setEmployees] = useState<any[]>([]);
   const [walletBalances, setWalletBalances] = useState<Record<string, number>>({});
   const [myWalletBalance, setMyWalletBalance] = useState(0);
+  const [showAppealDialog, setShowAppealDialog] = useState(false);
   const [allAiLimits, setAllAiLimits] = useState<Record<string, any>>({});
   const [allAiLimitsLoading, setAllAiLimitsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
