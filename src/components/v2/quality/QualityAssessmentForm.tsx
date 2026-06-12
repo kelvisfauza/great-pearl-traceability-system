@@ -13,6 +13,7 @@ import { Loader2, CheckCircle, XCircle, Copy } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useActivityTracker } from "@/hooks/useActivityTracker";
 import { executeOrQueue } from "@/lib/offline/queue";
+import { notifyTeams } from "@/lib/teamsNotify";
 import EmployeeCombobox from "@/components/quality/EmployeeCombobox";
 
 interface QualityAssessmentFormProps {
@@ -125,6 +126,13 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
           : "Quality assessment saved and sent to admin for final pricing."
       });
       queryClient.invalidateQueries({ queryKey: ['v2-pending-quality'] });
+      if (!queued) {
+        notifyTeams(
+          "trade",
+          `Quality Assessment Completed — Batch ${lot.batch_number}`,
+          `Supplier: ${lot.supplier_name ?? ""}\nCoffee: ${lot.coffee_type ?? ""}\nQuantity: ${lot.kilograms ?? ""} kg\nMoisture: ${assessment?.moisture ?? ""}%\nG1: ${assessment?.group1_defects ?? ""}% | G2: ${assessment?.group2_defects ?? ""}%\nOutturn: ${assessment?.outturn ?? ""}%\nSuggested Price: UGX ${Number(assessment?.suggested_price ?? 0).toLocaleString()}\nStatus: Awaiting admin final pricing\nAssessed by: ${employee?.name ?? employee?.email ?? ""}${ref ? `\nRef: ${ref}` : ""}`,
+        );
+      }
       // Stay on page only when there's a ref to copy
       if (queued || !ref) navigate('/v2/quality');
     },
