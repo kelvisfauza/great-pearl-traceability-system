@@ -125,6 +125,7 @@ import QuickLoans from "./pages/QuickLoans";
 import Overdraft from "./pages/Overdraft";
 import OverdraftAdmin from "./pages/admin/OverdraftAdmin";
 import OverdraftAnalytics from "./pages/admin/OverdraftAnalytics";
+import LoanAppeals from "./pages/admin/LoanAppeals";
 import ProfileCompletionModal from "./components/ProfileCompletionModal";
 import BirthdayNotification from "./components/BirthdayNotification";
 import ContractRenewalGate from "./components/ContractRenewalGate";
@@ -379,6 +380,11 @@ const App: React.ComponentType = () => {
                 <Route path="/admin/overdraft-analytics" element={
                   <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
                     <OverdraftAnalytics />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/loan-appeals" element={
+                  <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
+                    <LoanAppeals />
                   </ProtectedRoute>
                 } />
                 <Route path="/user-daily-reports" element={
