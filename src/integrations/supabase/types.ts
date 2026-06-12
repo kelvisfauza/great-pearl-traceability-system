@@ -4894,6 +4894,9 @@ export type Database = {
           admin_approved_at: string | null
           admin_approved_by: string | null
           admin_rejection_reason: string | null
+          appeal_admin_voters: Json | null
+          appeal_id: string | null
+          approved_via_appeal: boolean
           counter_offer_amount: number | null
           counter_offer_at: string | null
           counter_offer_by: string | null
@@ -4942,6 +4945,9 @@ export type Database = {
           admin_approved_at?: string | null
           admin_approved_by?: string | null
           admin_rejection_reason?: string | null
+          appeal_admin_voters?: Json | null
+          appeal_id?: string | null
+          approved_via_appeal?: boolean
           counter_offer_amount?: number | null
           counter_offer_at?: string | null
           counter_offer_by?: string | null
@@ -4990,6 +4996,9 @@ export type Database = {
           admin_approved_at?: string | null
           admin_approved_by?: string | null
           admin_rejection_reason?: string | null
+          appeal_admin_voters?: Json | null
+          appeal_id?: string | null
+          approved_via_appeal?: boolean
           counter_offer_amount?: number | null
           counter_offer_at?: string | null
           counter_offer_by?: string | null
@@ -5034,6 +5043,13 @@ export type Database = {
           weekly_installment?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "loans_appeal_id_fkey"
+            columns: ["appeal_id"]
+            isOneToOne: false
+            referencedRelation: "loan_appeals"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "loans_parent_loan_id_fkey"
             columns: ["parent_loan_id"]
