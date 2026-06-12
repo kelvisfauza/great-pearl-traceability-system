@@ -407,6 +407,41 @@ const ServiceProviderPayments = () => {
             </DialogHeader>
 
             <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>Payment Method *</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('mobile_money')}
+                    className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                      paymentMethod === 'mobile_money'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:bg-accent'
+                    }`}
+                  >
+                    <Smartphone className={`w-5 h-5 ${paymentMethod === 'mobile_money' ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <div className="text-left">
+                      <p className="text-sm font-medium">Mobile Money</p>
+                      <p className="text-xs text-muted-foreground">Yo Payments</p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('cash')}
+                    className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                      paymentMethod === 'cash'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:bg-accent'
+                    }`}
+                  >
+                    <Banknote className={`w-5 h-5 ${paymentMethod === 'cash' ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <div className="text-left">
+                      <p className="text-sm font-medium">Cash</p>
+                      <p className="text-xs text-muted-foreground">Paid in person</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
               {savedProviders.length > 0 && (
                 <div className="space-y-2">
                   <Label className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> Select Saved Provider</Label>
