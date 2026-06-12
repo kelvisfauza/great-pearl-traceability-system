@@ -127,14 +127,10 @@ serve(async (req) => {
       .lt("amount", 0);
     const timesDebitedAsGuarantor = (actedAsGuarantor || []).length;
 
-    // Wallet snapshot
-    const walletTypes = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY', 'PAYOUT'];
-    const { data: walletEntries } = await supabase
-      .from("ledger_entries")
-      .select("amount")
-      .eq("user_id", userId)
-      .in("entry_type", walletTypes);
-    const walletBalance = (walletEntries || []).reduce((s: number, e: any) => s + Number(e.amount), 0);
+    // Wallet snapshot — use server-side RPC to avoid the 1000-row PostgREST cap
+    // that silently truncated the ledger sum for high-volume users.
+    const { data: walletBalRaw } = await supabase.rpc("get_effective_wallet_balance", { p_user_id: userId });
+    const walletBalance = Number(walletBalRaw ?? 0);
 
     // Repayment quality (last 6 months)
     const sixMo = new Date(); sixMo.setMonth(sixMo.getMonth() - 6);
