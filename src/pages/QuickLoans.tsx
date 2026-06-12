@@ -2155,6 +2155,18 @@ const QuickLoans = () => {
               </DialogContent>
             </Dialog>
 
+            {evaluation && (
+              <LoanAppealDialog
+                open={showAppealDialog}
+                onOpenChange={setShowAppealDialog}
+                evaluation={evaluation}
+                employee={employee}
+                loanType={loanType}
+                requestedAmount={parseFloat(loanAmount) || 0}
+                requestedTerm={parseInt(durationMonths) || 0}
+              />
+            )}
+
             {/* Early Repayment Dialog */}
             <Dialog open={showEarlyPayDialog} onOpenChange={(open) => { setShowEarlyPayDialog(open); if (!open) setSelectedLoanForPayment(null); }}>
               <DialogContent className="max-w-md">
