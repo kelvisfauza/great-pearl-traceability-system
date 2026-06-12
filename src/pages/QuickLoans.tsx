@@ -630,16 +630,14 @@ const QuickLoans = () => {
         const endDate = new Date();
         endDate.setMonth(endDate.getMonth() + loan.duration_months);
 
-        // For weekly loans, next deduction is 7 days from now; for monthly, the next 27th (payroll date)
-        const nextDeduction = new Date();
+        // Weekly loans: first deduction 7 days from disbursement.
+        // Monthly/bullet loans: first deduction exactly one month after disbursement
+        // (anchored to the disbursement day, NOT the 27th payroll date).
+        const nextDeduction = new Date(startDate);
         if (isWeekly) {
           nextDeduction.setDate(nextDeduction.getDate() + 7);
         } else {
-          // Align to the next payroll date (27th). If today is on/after the 27th, jump to next month's 27th.
-          if (nextDeduction.getDate() >= 27) {
-            nextDeduction.setMonth(nextDeduction.getMonth() + 1);
-          }
-          nextDeduction.setDate(27);
+          nextDeduction.setMonth(nextDeduction.getMonth() + 1);
         }
 
         // Evaluation fee (10k) is baked into loan_amount/total_repayable as profit,
@@ -686,17 +684,13 @@ const QuickLoans = () => {
           const isBullet = loan.repayment_frequency === 'bullet';
           const numInstallments = isBullet ? 1 : loan.duration_months;
           for (let i = 1; i <= numInstallments; i++) {
-            // Anchor first installment on the next 27th payroll date
+            // Anchor installments on the disbursement day: 1 month after, 2 months after, etc.
             const dueDate = new Date(startDate);
-            const baseMonthOffset = dueDate.getDate() >= 27 ? 1 : 0;
             if (isBullet) {
-              // Bullet: due on the 27th after duration_months
-              dueDate.setMonth(dueDate.getMonth() + baseMonthOffset + (loan.duration_months - 1));
+              dueDate.setMonth(dueDate.getMonth() + loan.duration_months);
             } else {
-              // Monthly installments fall on the 27th of each subsequent month
-              dueDate.setMonth(dueDate.getMonth() + baseMonthOffset + (i - 1));
+              dueDate.setMonth(dueDate.getMonth() + i);
             }
-            dueDate.setDate(27);
             repayments.push({
               loan_id: loanId,
               installment_number: i,
