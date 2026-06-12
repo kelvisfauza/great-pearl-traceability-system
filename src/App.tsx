@@ -382,6 +382,11 @@ const App: React.ComponentType = () => {
                     <OverdraftAnalytics />
                   </ProtectedRoute>
                 } />
+                <Route path="/admin/loan-appeals" element={
+                  <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
+                    <LoanAppeals />
+                  </ProtectedRoute>
+                } />
                 <Route path="/user-daily-reports" element={
                   <ProtectedRoute>
                     <UserDailyReports />
