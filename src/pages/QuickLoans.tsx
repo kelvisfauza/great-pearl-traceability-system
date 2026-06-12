@@ -3116,6 +3116,12 @@ const QuickLoans = () => {
               <RepaymentSchedule myLoans={myLoans} />
             </TabsContent>
 
+            {isAdmin() && (
+              <TabsContent value="appeals">
+                <LoanAppealsPage />
+              </TabsContent>
+            )}
+
             <TabsContent value="guaranteed">
               <GuaranteedLoansTab
                 guaranteedLoans={guaranteedLoans}
