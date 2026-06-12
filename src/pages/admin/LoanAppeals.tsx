@@ -154,21 +154,46 @@ export default function LoanAppeals() {
             <div className="text-xs font-semibold mb-1">Justification</div>
             <div className="rounded border bg-background p-2 whitespace-pre-wrap">{a.justification}</div>
           </div>
-          {a.evaluation_snapshot && (
-            <details className="text-xs">
-              <summary className="cursor-pointer font-semibold">View evaluation report</summary>
-              <div className="mt-2 space-y-1 rounded bg-muted/30 p-2">
-                <div>Decision: <strong>{a.evaluation_snapshot.decision}</strong></div>
-                <div>Risk: {a.evaluation_snapshot.risk_score}/100</div>
-                <div>Salary: UGX {Number(a.evaluation_snapshot.salary || 0).toLocaleString()}</div>
-                <div>Max limit: UGX {Number(a.evaluation_snapshot.max_limit || 0).toLocaleString()}</div>
-                {(a.evaluation_snapshot.factors || []).length > 0 && (
+          {a.evaluation_snapshot ? (
+            <div className="rounded border border-amber-300 bg-amber-50 dark:bg-amber-950/20 p-3 text-xs space-y-2">
+              <div className="font-semibold text-sm">Evaluation Report</div>
+              <div className="grid grid-cols-2 gap-2">
+                <div><span className="text-muted-foreground">Decision:</span> <strong className="uppercase">{a.evaluation_snapshot.decision || '—'}</strong></div>
+                <div><span className="text-muted-foreground">Risk score:</span> <strong>{a.evaluation_snapshot.risk_score ?? '—'}/100</strong></div>
+                <div><span className="text-muted-foreground">Monthly salary:</span> <strong>UGX {Number(a.evaluation_snapshot.salary || 0).toLocaleString()}</strong></div>
+                <div><span className="text-muted-foreground">System max limit:</span> <strong>UGX {Number(a.evaluation_snapshot.max_limit || a.evaluation_snapshot.loan_limit || 0).toLocaleString()}</strong></div>
+                {a.evaluation_snapshot.recommended_amount != null && (
+                  <div><span className="text-muted-foreground">Recommended:</span> <strong>UGX {Number(a.evaluation_snapshot.recommended_amount).toLocaleString()}</strong></div>
+                )}
+                {a.evaluation_snapshot.outstanding != null && (
+                  <div><span className="text-muted-foreground">Outstanding:</span> <strong>UGX {Number(a.evaluation_snapshot.outstanding).toLocaleString()}</strong></div>
+                )}
+                {a.evaluation_snapshot.active_loans != null && (
+                  <div><span className="text-muted-foreground">Active loans:</span> <strong>{a.evaluation_snapshot.active_loans}</strong></div>
+                )}
+                {a.evaluation_snapshot.wallet_balance != null && (
+                  <div><span className="text-muted-foreground">Wallet balance:</span> <strong>UGX {Number(a.evaluation_snapshot.wallet_balance).toLocaleString()}</strong></div>
+                )}
+              </div>
+              {(a.evaluation_snapshot.factors || []).length > 0 && (
+                <div>
+                  <div className="font-semibold mt-1">Key factors / reasons:</div>
                   <ul className="list-disc pl-4">
                     {(a.evaluation_snapshot.factors || []).map((f: string, i: number) => <li key={i}>{f}</li>)}
                   </ul>
-                )}
-              </div>
-            </details>
+                </div>
+              )}
+              {(a.evaluation_snapshot.denial_reasons || []).length > 0 && (
+                <div>
+                  <div className="font-semibold mt-1">Denial reasons:</div>
+                  <ul className="list-disc pl-4">
+                    {a.evaluation_snapshot.denial_reasons.map((f: string, i: number) => <li key={i}>{f}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="rounded border border-dashed p-2 text-xs text-muted-foreground">No evaluation report was attached to this appeal.</div>
           )}
           <div className="rounded border p-2 text-xs">
             <div className="font-semibold mb-1">Votes ({votes.length}/3 needed to decide)</div>
