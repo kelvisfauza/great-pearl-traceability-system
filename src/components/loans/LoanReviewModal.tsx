@@ -111,15 +111,10 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
           .limit(15);
         setBorrowerLedger(ledger || []);
 
-        // Compute loyalty wallet balance
-        const { data: walletLedger } = await supabase
-          .from('ledger_entries')
-          .select('amount, entry_type')
-          .eq('user_id', uid)
-          .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY', 'PAYOUT']);
-        
-        const walletBal = (walletLedger || []).reduce((sum: number, e: any) => sum + Number(e.amount), 0);
-        setBorrowerWalletBalance(walletBal);
+        // Use the authoritative RPC — summing ledger_entries client-side hits Supabase's
+        // 1000-row limit for active users and produces inflated balances.
+        const { data: bal } = await supabase.rpc('get_effective_wallet_balance', { p_user_id: uid });
+        setBorrowerWalletBalance(Number(bal) || 0);
       }
     } catch (err) {
       console.error('Error fetching review data:', err);
