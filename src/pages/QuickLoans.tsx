@@ -21,12 +21,13 @@ import LoanRepaymentSlip from '@/components/loans/LoanRepaymentSlip';
 import { generateLoanAgreementPdf } from '@/utils/loanAgreementPdf';
 
 // Loan types with their monthly interest rates
-type LoanType = 'quick' | 'long_term';
+type LoanType = 'quick' | 'long_term' | 'pure_salary';
 type RepaymentFrequency = 'weekly' | 'monthly' | 'bullet';
 
-const LOAN_TYPE_CONFIG: Record<LoanType, { label: string; monthlyRate: number; maxRate: number; description: string; frequencies: RepaymentFrequency[] }> = {
-  quick: { label: 'Quick Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Short-term, weekly repayments (total interest cap 35%)', frequencies: ['weekly'] },
-  long_term: { label: 'Long-Term Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Flexible repayment, monthly or bullet (total interest cap 35%)', frequencies: ['monthly', 'bullet'] },
+const LOAN_TYPE_CONFIG: Record<LoanType, { label: string; monthlyRate: number; maxRate: number; description: string; frequencies: RepaymentFrequency[]; maxMonths?: number; requiresGuarantor?: boolean }> = {
+  quick: { label: 'Quick Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Short-term, weekly repayments (total interest cap 35%)', frequencies: ['weekly'], requiresGuarantor: true },
+  long_term: { label: 'Long-Term Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Flexible repayment, monthly or bullet (total interest cap 35%)', frequencies: ['monthly', 'bullet'], requiresGuarantor: true },
+  pure_salary: { label: 'Pure Salary Loan', monthlyRate: 15, maxRate: 45, description: '15%/month – Repaid by 50% of monthly salary (no guarantor, max 3 months)', frequencies: ['monthly'], maxMonths: 3, requiresGuarantor: false },
 };
 
 // Helper: calculate daily interest rate from monthly rate
