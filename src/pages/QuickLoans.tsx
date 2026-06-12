@@ -21,12 +21,13 @@ import LoanRepaymentSlip from '@/components/loans/LoanRepaymentSlip';
 import { generateLoanAgreementPdf } from '@/utils/loanAgreementPdf';
 
 // Loan types with their monthly interest rates
-type LoanType = 'quick' | 'long_term';
+type LoanType = 'quick' | 'long_term' | 'pure_salary';
 type RepaymentFrequency = 'weekly' | 'monthly' | 'bullet';
 
-const LOAN_TYPE_CONFIG: Record<LoanType, { label: string; monthlyRate: number; maxRate: number; description: string; frequencies: RepaymentFrequency[] }> = {
-  quick: { label: 'Quick Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Short-term, weekly repayments (total interest cap 35%)', frequencies: ['weekly'] },
-  long_term: { label: 'Long-Term Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Flexible repayment, monthly or bullet (total interest cap 35%)', frequencies: ['monthly', 'bullet'] },
+const LOAN_TYPE_CONFIG: Record<LoanType, { label: string; monthlyRate: number; maxRate: number; description: string; frequencies: RepaymentFrequency[]; maxMonths?: number; requiresGuarantor?: boolean }> = {
+  quick: { label: 'Quick Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Short-term, weekly repayments (total interest cap 35%)', frequencies: ['weekly'], requiresGuarantor: true },
+  long_term: { label: 'Long-Term Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Flexible repayment, monthly or bullet (total interest cap 35%)', frequencies: ['monthly', 'bullet'], requiresGuarantor: true },
+  pure_salary: { label: 'Pure Salary Loan', monthlyRate: 15, maxRate: 45, description: '15%/month – Repaid by 50% of monthly salary (no guarantor, max 3 months)', frequencies: ['monthly'], maxMonths: 3, requiresGuarantor: false },
 };
 
 // Helper: calculate daily interest rate from monthly rate
@@ -305,6 +306,16 @@ const QuickLoans = () => {
     const { totalDays, totalWeeks } = getLoanSchedule(months);
     const freq = repaymentFrequency;
 
+    // Pure Salary Loan: fixed 15%/month flat (capped), repayment = 50% of salary per month
+    if (loanType === 'pure_salary') {
+      const flatInterest = amount * (monthlyRate / 100) * months;
+      const total = Math.ceil(amount + flatInterest);
+      const salary = Number(employee?.salary || 0);
+      const installment = Math.floor(salary * 0.5);
+      const numInstallments = installment > 0 ? Math.ceil(total / installment) : months;
+      return { amount, months, dailyRate, monthlyRate, totalDays, totalWeeks, interest: flatInterest, total, weekly: installment, numInstallments, frequency: 'monthly' as RepaymentFrequency };
+    }
+
     // Bullet payments attract a flat 35% interest cap; monthly uses capped rate
     const interest = freq === 'bullet'
       ? amount * 0.35
@@ -343,27 +354,53 @@ const QuickLoans = () => {
     // Recalculate including 10k evaluation fee added to principal
     const requested = parseFloat(loanAmount) || 0;
     const months = parseInt(durationMonths) || 0;
-    if (requested <= 0 || months <= 0 || !guarantorId) {
+    const cfg = LOAN_TYPE_CONFIG[loanType];
+    const needsGuarantor = cfg.requiresGuarantor !== false;
+    if (requested <= 0 || months <= 0 || (needsGuarantor && !guarantorId)) {
       toast({ title: "Error", description: "Please fill all fields", variant: "destructive" });
+      return;
+    }
+    if (cfg.maxMonths && months > cfg.maxMonths) {
+      toast({ title: 'Duration too long', description: `${cfg.label} is limited to ${cfg.maxMonths} months.`, variant: 'destructive' });
       return;
     }
     const FEE = 10000;
     const amount = requested + FEE; // fee added to principal
     const dailyRate = getDailyRate(loanType);
-    const monthlyRate = LOAN_TYPE_CONFIG[loanType].monthlyRate;
-    const maxRate = LOAN_TYPE_CONFIG[loanType].maxRate;
+    const monthlyRate = cfg.monthlyRate;
+    const maxRate = cfg.maxRate;
     const { totalWeeks } = getLoanSchedule(months);
-    const freq = repaymentFrequency;
-    const interest = freq === 'bullet' ? amount * 0.35 : getCappedInterest(amount, monthlyRate, months, maxRate);
+    const freq: RepaymentFrequency = loanType === 'pure_salary' ? 'monthly' : repaymentFrequency;
+    const isPureSalary = loanType === 'pure_salary';
+    const interest = isPureSalary
+      ? amount * (monthlyRate / 100) * months
+      : (freq === 'bullet' ? amount * 0.35 : getCappedInterest(amount, monthlyRate, months, maxRate));
     const total = Math.ceil(amount + interest);
-    const numInstallments = freq === 'bullet' ? 1 : freq === 'monthly' ? months : totalWeeks;
-    const weekly = numInstallments > 0 ? Math.ceil(total / numInstallments) : 0;
+    const salaryNum = Number(employee?.salary || 0);
+    const halfSalary = Math.floor(salaryNum * 0.5);
+    const numInstallments = isPureSalary
+      ? (halfSalary > 0 ? Math.ceil(total / halfSalary) : months)
+      : (freq === 'bullet' ? 1 : freq === 'monthly' ? months : totalWeeks);
+    const weekly = isPureSalary ? halfSalary : (numInstallments > 0 ? Math.ceil(total / numInstallments) : 0);
 
-    // Evaluation sets the maximum borrowable limit; user chooses any amount up to max_limit
-    const maxAllowed = Number(evaluation.max_limit || evaluation.recommended_amount || 0);
-    if (amount > maxAllowed + FEE + 1) {
-      toast({ title: 'Above your limit', description: `Your evaluated maximum is UGX ${maxAllowed.toLocaleString()}. You can request any amount up to this.`, variant: 'destructive' });
-      return;
+    // Pure Salary Loan uses its own cap (50% × salary × months) instead of the AI evaluation max
+    if (isPureSalary) {
+      const salaryCap = halfSalary * months;
+      if (salaryNum <= 0) {
+        toast({ title: 'Salary missing', description: 'A monthly salary is required for a Pure Salary Loan.', variant: 'destructive' });
+        return;
+      }
+      if (requested > salaryCap) {
+        toast({ title: 'Above salary cap', description: `Maximum is UGX ${salaryCap.toLocaleString()} (50% of salary × ${months} months).`, variant: 'destructive' });
+        return;
+      }
+    } else {
+      // Evaluation sets the maximum borrowable limit; user chooses any amount up to max_limit
+      const maxAllowed = Number(evaluation.max_limit || evaluation.recommended_amount || 0);
+      if (amount > maxAllowed + FEE + 1) {
+        toast({ title: 'Above your limit', description: `Your evaluated maximum is UGX ${maxAllowed.toLocaleString()}. You can request any amount up to this.`, variant: 'destructive' });
+        return;
+      }
     }
 
     // Check if borrower has any defaulted loans
@@ -386,17 +423,19 @@ const QuickLoans = () => {
       return;
     }
 
-    const guarantor = employees.find(e => e.id === guarantorId);
-    if (!guarantor) return;
-
-    if (guarantor.email === employee.email) {
-      toast({ title: "Error", description: "You cannot be your own guarantor", variant: "destructive" });
-      return;
+    let guarantor: any = null;
+    if (needsGuarantor) {
+      guarantor = employees.find(e => e.id === guarantorId);
+      if (!guarantor) return;
+      if (guarantor.email === employee.email) {
+        toast({ title: "Error", description: "You cannot be your own guarantor", variant: "destructive" });
+        return;
+      }
     }
 
     setSubmitting(true);
     try {
-      const approvalCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const approvalCode = needsGuarantor ? Math.floor(100000 + Math.random() * 900000).toString() : null;
 
       const { data: insertedLoan, error } = await supabase.from('loans').insert({
         employee_id: employee.id,
@@ -413,12 +452,13 @@ const QuickLoans = () => {
         total_weeks: freq === 'weekly' ? totalWeeks : null,
         remaining_balance: Math.ceil(total),
         repayment_frequency: freq,
-        status: 'pending_guarantor',
-        guarantor_id: guarantor.id,
-        guarantor_email: guarantor.email,
-        guarantor_name: guarantor.name,
-        guarantor_phone: guarantor.phone || '',
+        status: needsGuarantor ? 'pending_guarantor' : 'pending_admin',
+        guarantor_id: needsGuarantor ? guarantor.id : null,
+        guarantor_email: needsGuarantor ? guarantor.email : null,
+        guarantor_name: needsGuarantor ? guarantor.name : null,
+        guarantor_phone: needsGuarantor ? (guarantor.phone || '') : null,
         guarantor_approval_code: approvalCode,
+        guarantor_approved: needsGuarantor ? false : true,
         loan_type: loanType,
       } as any).select().single();
 
@@ -434,28 +474,31 @@ const QuickLoans = () => {
         }).eq('id', evaluation.id);
       } catch (e) { console.warn('eval update', e); }
 
-      // Send email to guarantor with approval code
-      await supabase.functions.invoke('send-transactional-email', {
-        body: {
-          templateName: 'loan-guarantor-code',
-          recipientEmail: guarantor.email,
-          idempotencyKey: `loan-guarantor-${guarantor.email}-${Date.now()}`,
-          templateData: {
-            guarantorName: guarantor.name,
-            borrowerName: employee.name,
-            loanAmount: amount.toLocaleString(),
-            duration: String(months),
-            approvalCode,
-          },
-        }
-      });
-
-      toast({ title: "Loan Requested", description: `Guarantor notified. UGX ${FEE.toLocaleString()} evaluation fee added to principal.` });
+      if (needsGuarantor) {
+        // Send email to guarantor with approval code
+        await supabase.functions.invoke('send-transactional-email', {
+          body: {
+            templateName: 'loan-guarantor-code',
+            recipientEmail: guarantor.email,
+            idempotencyKey: `loan-guarantor-${guarantor.email}-${Date.now()}`,
+            templateData: {
+              guarantorName: guarantor.name,
+              borrowerName: employee.name,
+              loanAmount: amount.toLocaleString(),
+              duration: String(months),
+              approvalCode,
+            },
+          }
+        });
+        toast({ title: "Loan Requested", description: `Guarantor notified. UGX ${FEE.toLocaleString()} evaluation fee added to principal.` });
+      } else {
+        toast({ title: "Loan Requested", description: `Pure Salary Loan submitted for admin approval. UGX ${FEE.toLocaleString()} evaluation fee added to principal.` });
+      }
       setShowRequestDialog(false);
       setEvaluation(null);
 
       // Trigger repayment statement slip
-      const slipGuarantor = employees.find(e => e.id === guarantorId);
+      const slipGuarantor = needsGuarantor ? employees.find(e => e.id === guarantorId) : null;
       setRepaymentSlipData({
         employeeName: employee.name,
         employeeEmail: employee.email,
@@ -638,15 +681,25 @@ const QuickLoans = () => {
       }
 
       if (approve) {
+        const isPureSalary = loan.loan_type === 'pure_salary';
         const isWeekly = loan.repayment_frequency === 'weekly';
         const startDate = new Date();
         const endDate = new Date();
         endDate.setMonth(endDate.getMonth() + loan.duration_months);
 
-        // Weekly loans: first deduction 7 days from disbursement.
-        // Monthly/bullet loans: first deduction exactly one month after disbursement
-        // (anchored to the disbursement day, NOT the 27th payroll date).
-        const nextDeduction = getFirstRepaymentDate(startDate, loan.repayment_frequency || 'monthly');
+        // Pure Salary Loan: anchored to the 27th payroll date. Other types: anchored to disbursement.
+        const computePureSalaryFirstDue = (start: Date) => {
+          // First payroll on or after start date
+          const d = new Date(start);
+          if (d.getDate() > 27) {
+            d.setMonth(d.getMonth() + 1);
+          }
+          d.setDate(27);
+          return d;
+        };
+        const nextDeduction = isPureSalary
+          ? computePureSalaryFirstDue(startDate)
+          : getFirstRepaymentDate(startDate, loan.repayment_frequency || 'monthly');
 
         // Evaluation fee (10k) is baked into loan_amount/total_repayable as profit,
         // but it must NOT be sent to the borrower's wallet — only the requested amount is disbursed.
@@ -671,7 +724,66 @@ const QuickLoans = () => {
 
         // Create repayment schedule using flat interest (equal installments)
         const repayments = [];
-        if (isWeekly) {
+        if (isPureSalary) {
+          // Borrower's salary determines installment size (50% per payroll)
+          const { data: borrowerEmp } = await supabase
+            .from('employees')
+            .select('salary')
+            .eq('email', loan.employee_email)
+            .single();
+          const salaryNum = Number(borrowerEmp?.salary || 0);
+          const halfSalary = Math.max(1, Math.floor(salaryNum * 0.5));
+          const total = Number(loan.total_repayable) || 0;
+
+          let remaining = total;
+          let installmentNumber = 0;
+
+          // Mid-month rule: if loan starts before payday (27th), the FIRST cycle takes BOTH halves
+          // of that month's salary — 50% on the 27th (regular installment), and the frozen other
+          // 50% on the last day of the same month.
+          const startedBeforePayday = startDate.getDate() < 27;
+
+          // Installment 1: regular 27th deduction of the starting month (or next month if past 27)
+          const firstDue = computePureSalaryFirstDue(startDate);
+          const firstAmt = Math.min(halfSalary, remaining);
+          installmentNumber += 1;
+          repayments.push({
+            loan_id: loanId,
+            installment_number: installmentNumber,
+            amount_due: Math.ceil(firstAmt),
+            due_date: firstDue.toISOString().split('T')[0],
+          });
+          remaining -= firstAmt;
+
+          // Mid-month freeze release: same month's last day, 50% of salary
+          if (startedBeforePayday && remaining > 0) {
+            const freezeDate = new Date(firstDue.getFullYear(), firstDue.getMonth() + 1, 0);
+            const freezeAmt = Math.min(halfSalary, remaining);
+            installmentNumber += 1;
+            repayments.push({
+              loan_id: loanId,
+              installment_number: installmentNumber,
+              amount_due: Math.ceil(freezeAmt),
+              due_date: freezeDate.toISOString().split('T')[0],
+            });
+            remaining -= freezeAmt;
+          }
+
+          // Remaining months: 50% on each subsequent 27th until cleared
+          let cursor = new Date(firstDue);
+          while (remaining > 0) {
+            cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 27);
+            const amt = Math.min(halfSalary, remaining);
+            installmentNumber += 1;
+            repayments.push({
+              loan_id: loanId,
+              installment_number: installmentNumber,
+              amount_due: Math.ceil(amt),
+              due_date: cursor.toISOString().split('T')[0],
+            });
+            remaining -= amt;
+          }
+        } else if (isWeekly) {
           const numWeeks = loan.total_weeks || (loan.duration_months * 4);
           const weeklyInstallment = loan.weekly_installment || Math.ceil(loan.total_repayable / numWeeks);
           const totalInterest = loan.total_repayable - loan.loan_amount;
@@ -751,7 +863,9 @@ const QuickLoans = () => {
         }
 
         // SMS to borrower with repayment details
-        const firstRepaymentDate = getFirstRepaymentDate(startDate, loan.repayment_frequency || 'monthly');
+        const firstRepaymentDate = isPureSalary
+          ? computePureSalaryFirstDue(startDate)
+          : getFirstRepaymentDate(startDate, loan.repayment_frequency || 'monthly');
         const repaymentDateStr = firstRepaymentDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
         const installmentAmount = isWeekly
           ? Math.ceil(loan.total_repayable / (loan.total_weeks || Math.ceil((loan.duration_months * 30) / 7)))
@@ -1862,7 +1976,13 @@ const QuickLoans = () => {
                   <div>
                     <Label>Loan Amount (UGX)</Label>
                     <Input type="number" value={loanAmount} onChange={e => setLoanAmount(e.target.value)} placeholder="e.g. 500000" />
-                    <p className="text-xs text-muted-foreground mt-1">Max: UGX {(myLimit?.availableLimit || (employee?.salary || 0) * 5).toLocaleString()} (5x salary)</p>
+                    {loanType === 'pure_salary' ? (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Max: UGX {(Math.floor((employee?.salary || 0) * 0.5) * (parseInt(durationMonths) || 1)).toLocaleString()} (50% of salary × {parseInt(durationMonths) || 1} month{(parseInt(durationMonths) || 1) > 1 ? 's' : ''})
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground mt-1">Max: UGX {(myLimit?.availableLimit || (employee?.salary || 0) * 5).toLocaleString()} (5x salary)</p>
+                    )}
                   </div>
                   <div>
                     <Label>Loan Type</Label>
@@ -1870,6 +1990,8 @@ const QuickLoans = () => {
                       const lt = v as LoanType;
                       setLoanType(lt);
                       setRepaymentFrequency(LOAN_TYPE_CONFIG[lt].frequencies[0]);
+                      const cap = LOAN_TYPE_CONFIG[lt].maxMonths;
+                      if (cap && parseInt(durationMonths) > cap) setDurationMonths('');
                     }}>
                       <SelectTrigger><SelectValue placeholder="Select loan type" /></SelectTrigger>
                       <SelectContent>
@@ -1896,7 +2018,7 @@ const QuickLoans = () => {
                     <Select value={durationMonths} onValueChange={setDurationMonths}>
                       <SelectTrigger><SelectValue placeholder="Select duration" /></SelectTrigger>
                       <SelectContent>
-                        {[1, 2, 3, 4, 5, 6].map(m => {
+                        {[1, 2, 3, 4, 5, 6].filter(m => !LOAN_TYPE_CONFIG[loanType].maxMonths || m <= LOAN_TYPE_CONFIG[loanType].maxMonths!).map(m => {
                           const monthlyRate = LOAN_TYPE_CONFIG[loanType].monthlyRate;
                           const maxRate = LOAN_TYPE_CONFIG[loanType].maxRate;
                           const effectiveRate = Math.min(monthlyRate * m, maxRate);
@@ -1909,17 +2031,26 @@ const QuickLoans = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <Label>Select Guarantor</Label>
-                    <Select value={guarantorId} onValueChange={setGuarantorId}>
-                      <SelectTrigger><SelectValue placeholder="Choose a colleague" /></SelectTrigger>
-                      <SelectContent>
-                        {employees.filter(e => e.email !== employee?.email).map(e => (
-                          <SelectItem key={e.id} value={e.id}>{e.name} ({e.email})</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {LOAN_TYPE_CONFIG[loanType].requiresGuarantor !== false ? (
+                    <div>
+                      <Label>Select Guarantor</Label>
+                      <Select value={guarantorId} onValueChange={setGuarantorId}>
+                        <SelectTrigger><SelectValue placeholder="Choose a colleague" /></SelectTrigger>
+                        <SelectContent>
+                          {employees.filter(e => e.email !== employee?.email).map(e => (
+                            <SelectItem key={e.id} value={e.id}>{e.name} ({e.email})</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : (
+                    <Card className="border-emerald-300 bg-emerald-50 dark:bg-emerald-950/20">
+                      <CardContent className="p-3 text-xs text-emerald-900 dark:text-emerald-200">
+                        <strong>No guarantor needed.</strong> Repaid automatically via salary — 50% of your monthly pay goes to the loan until cleared.
+                        If approved mid-month, the remaining 50% of that month's salary is frozen and applied at month-end.
+                      </CardContent>
+                    </Card>
+                  )}
 
                   {parseFloat(loanAmount) > 0 && durationMonths && (
                     <Card className="bg-muted/50">
