@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Banknote, Clock, Shield, Users, AlertTriangle, CheckCircle, XCircle, CreditCard, Download, Printer, Phone, Loader2, FileText, Eye, ShieldOff, Wallet, HandCoins, ArrowUpCircle, Edit, Scale } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import AdminLoanTracker from '@/components/loans/AdminLoanTracker';
+import LoanAppealsPage from '@/pages/admin/LoanAppeals';
 import { Textarea } from '@/components/ui/textarea';
 import LoanAdvertDialog from '@/components/loans/LoanAdvertDialog';
 import LoanReviewModal from '@/components/loans/LoanReviewModal';
@@ -2819,6 +2820,7 @@ const QuickLoans = () => {
               {isAdmin() && <TabsTrigger value="all-loans">All Loans (Admin)</TabsTrigger>}
               {isAdmin() && <TabsTrigger value="loan-tracker">Loan Tracker</TabsTrigger>}
               {isAdmin() && <TabsTrigger value="employee-limits">Employee Limits</TabsTrigger>}
+              {isAdmin() && <TabsTrigger value="appeals">Loan Appeals</TabsTrigger>}
               <TabsTrigger value="repayments">Repayment Schedule</TabsTrigger>
               <TabsTrigger value="guaranteed">Guaranteed Loans</TabsTrigger>
             </TabsList>
