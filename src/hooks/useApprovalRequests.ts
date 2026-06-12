@@ -8,6 +8,7 @@ import { useNotifications } from './useNotifications';
 import { useSeparationOfDuties } from './useSeparationOfDuties';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { notifyTeamsRich } from '@/lib/teamsNotify';
 
 export interface ApprovalRequest {
   id: string;
@@ -278,6 +279,35 @@ const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
       
       console.log('✅ Step 1 Complete: Supabase approval request updated');
       alert('✅ Database updated successfully!');
+
+      // For Leave requests, post an outcome reply in the original HR Teams thread
+      try {
+        if (request.type === 'leave') {
+          const threadId = (request.details as any)?.teams_hr_message_id as string | undefined;
+          const isReject = updateData.status === 'Rejected';
+          const isApprove = !isReject && (updateData.admin_approved === true || updateData.status === 'Approved');
+          if (threadId && (isReject || isApprove)) {
+            const who = approverName || 'Admin';
+            const outcomeTitle = isReject
+              ? `❌ Leave Rejected — ${request.requestedby_name || request.requestedby}`
+              : `✅ Leave Approved — ${request.requestedby_name || request.requestedby}`;
+            const lines = [
+              `${isReject ? 'Rejected' : 'Approved'} by: ${who}`,
+              isReject && rejectionReason ? `Reason: ${rejectionReason}` : '',
+              isReject && rejectionComments ? `Comments: ${rejectionComments}` : '',
+              `When: ${new Date().toLocaleString()}`,
+            ].filter(Boolean).join('\n');
+            await notifyTeamsRich({
+              channel: 'hr',
+              title: outcomeTitle,
+              message: lines,
+              replyToMessageId: threadId,
+            });
+          }
+        }
+      } catch (teamsErr) {
+        console.error('teams-notify (leave outcome reply) failed', teamsErr);
+      }
 
       // Track workflow step
       try {
