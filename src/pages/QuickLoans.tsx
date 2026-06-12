@@ -2123,6 +2123,16 @@ const QuickLoans = () => {
                             Re-run
                           </Button>
                         </div>
+                        {(evaluation.decision === 'deny' || Number(evaluation.max_limit || 0) < (parseFloat(loanAmount) || 0)) && (
+                          <div className="border-t pt-3 mt-2">
+                            <div className="text-xs text-amber-900 dark:text-amber-200 mb-2">
+                              Not what you expected? You can appeal this decision — 3 admins will review and decide.
+                            </div>
+                            <Button size="sm" variant="secondary" className="w-full" onClick={() => setShowAppealDialog(true)}>
+                              <Scale className="mr-2 h-3 w-3" /> Appeal to Admin
+                            </Button>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   )}
