@@ -306,6 +306,16 @@ const QuickLoans = () => {
     const { totalDays, totalWeeks } = getLoanSchedule(months);
     const freq = repaymentFrequency;
 
+    // Pure Salary Loan: fixed 15%/month flat (capped), repayment = 50% of salary per month
+    if (loanType === 'pure_salary') {
+      const flatInterest = amount * (monthlyRate / 100) * months;
+      const total = Math.ceil(amount + flatInterest);
+      const salary = Number(employee?.salary || 0);
+      const installment = Math.floor(salary * 0.5);
+      const numInstallments = installment > 0 ? Math.ceil(total / installment) : months;
+      return { amount, months, dailyRate, monthlyRate, totalDays, totalWeeks, interest: flatInterest, total, weekly: installment, numInstallments, frequency: 'monthly' as RepaymentFrequency };
+    }
+
     // Bullet payments attract a flat 35% interest cap; monthly uses capped rate
     const interest = freq === 'bullet'
       ? amount * 0.35
@@ -344,27 +354,53 @@ const QuickLoans = () => {
     // Recalculate including 10k evaluation fee added to principal
     const requested = parseFloat(loanAmount) || 0;
     const months = parseInt(durationMonths) || 0;
-    if (requested <= 0 || months <= 0 || !guarantorId) {
+    const cfg = LOAN_TYPE_CONFIG[loanType];
+    const needsGuarantor = cfg.requiresGuarantor !== false;
+    if (requested <= 0 || months <= 0 || (needsGuarantor && !guarantorId)) {
       toast({ title: "Error", description: "Please fill all fields", variant: "destructive" });
+      return;
+    }
+    if (cfg.maxMonths && months > cfg.maxMonths) {
+      toast({ title: 'Duration too long', description: `${cfg.label} is limited to ${cfg.maxMonths} months.`, variant: 'destructive' });
       return;
     }
     const FEE = 10000;
     const amount = requested + FEE; // fee added to principal
     const dailyRate = getDailyRate(loanType);
-    const monthlyRate = LOAN_TYPE_CONFIG[loanType].monthlyRate;
-    const maxRate = LOAN_TYPE_CONFIG[loanType].maxRate;
+    const monthlyRate = cfg.monthlyRate;
+    const maxRate = cfg.maxRate;
     const { totalWeeks } = getLoanSchedule(months);
-    const freq = repaymentFrequency;
-    const interest = freq === 'bullet' ? amount * 0.35 : getCappedInterest(amount, monthlyRate, months, maxRate);
+    const freq: RepaymentFrequency = loanType === 'pure_salary' ? 'monthly' : repaymentFrequency;
+    const isPureSalary = loanType === 'pure_salary';
+    const interest = isPureSalary
+      ? amount * (monthlyRate / 100) * months
+      : (freq === 'bullet' ? amount * 0.35 : getCappedInterest(amount, monthlyRate, months, maxRate));
     const total = Math.ceil(amount + interest);
-    const numInstallments = freq === 'bullet' ? 1 : freq === 'monthly' ? months : totalWeeks;
-    const weekly = numInstallments > 0 ? Math.ceil(total / numInstallments) : 0;
+    const salaryNum = Number(employee?.salary || 0);
+    const halfSalary = Math.floor(salaryNum * 0.5);
+    const numInstallments = isPureSalary
+      ? (halfSalary > 0 ? Math.ceil(total / halfSalary) : months)
+      : (freq === 'bullet' ? 1 : freq === 'monthly' ? months : totalWeeks);
+    const weekly = isPureSalary ? halfSalary : (numInstallments > 0 ? Math.ceil(total / numInstallments) : 0);
 
-    // Evaluation sets the maximum borrowable limit; user chooses any amount up to max_limit
-    const maxAllowed = Number(evaluation.max_limit || evaluation.recommended_amount || 0);
-    if (amount > maxAllowed + FEE + 1) {
-      toast({ title: 'Above your limit', description: `Your evaluated maximum is UGX ${maxAllowed.toLocaleString()}. You can request any amount up to this.`, variant: 'destructive' });
-      return;
+    // Pure Salary Loan uses its own cap (50% × salary × months) instead of the AI evaluation max
+    if (isPureSalary) {
+      const salaryCap = halfSalary * months;
+      if (salaryNum <= 0) {
+        toast({ title: 'Salary missing', description: 'A monthly salary is required for a Pure Salary Loan.', variant: 'destructive' });
+        return;
+      }
+      if (requested > salaryCap) {
+        toast({ title: 'Above salary cap', description: `Maximum is UGX ${salaryCap.toLocaleString()} (50% of salary × ${months} months).`, variant: 'destructive' });
+        return;
+      }
+    } else {
+      // Evaluation sets the maximum borrowable limit; user chooses any amount up to max_limit
+      const maxAllowed = Number(evaluation.max_limit || evaluation.recommended_amount || 0);
+      if (amount > maxAllowed + FEE + 1) {
+        toast({ title: 'Above your limit', description: `Your evaluated maximum is UGX ${maxAllowed.toLocaleString()}. You can request any amount up to this.`, variant: 'destructive' });
+        return;
+      }
     }
 
     // Check if borrower has any defaulted loans
@@ -387,17 +423,19 @@ const QuickLoans = () => {
       return;
     }
 
-    const guarantor = employees.find(e => e.id === guarantorId);
-    if (!guarantor) return;
-
-    if (guarantor.email === employee.email) {
-      toast({ title: "Error", description: "You cannot be your own guarantor", variant: "destructive" });
-      return;
+    let guarantor: any = null;
+    if (needsGuarantor) {
+      guarantor = employees.find(e => e.id === guarantorId);
+      if (!guarantor) return;
+      if (guarantor.email === employee.email) {
+        toast({ title: "Error", description: "You cannot be your own guarantor", variant: "destructive" });
+        return;
+      }
     }
 
     setSubmitting(true);
     try {
-      const approvalCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const approvalCode = needsGuarantor ? Math.floor(100000 + Math.random() * 900000).toString() : null;
 
       const { data: insertedLoan, error } = await supabase.from('loans').insert({
         employee_id: employee.id,
@@ -414,12 +452,13 @@ const QuickLoans = () => {
         total_weeks: freq === 'weekly' ? totalWeeks : null,
         remaining_balance: Math.ceil(total),
         repayment_frequency: freq,
-        status: 'pending_guarantor',
-        guarantor_id: guarantor.id,
-        guarantor_email: guarantor.email,
-        guarantor_name: guarantor.name,
-        guarantor_phone: guarantor.phone || '',
+        status: needsGuarantor ? 'pending_guarantor' : 'pending_admin',
+        guarantor_id: needsGuarantor ? guarantor.id : null,
+        guarantor_email: needsGuarantor ? guarantor.email : null,
+        guarantor_name: needsGuarantor ? guarantor.name : null,
+        guarantor_phone: needsGuarantor ? (guarantor.phone || '') : null,
         guarantor_approval_code: approvalCode,
+        guarantor_approved: needsGuarantor ? false : true,
         loan_type: loanType,
       } as any).select().single();
 
@@ -435,28 +474,31 @@ const QuickLoans = () => {
         }).eq('id', evaluation.id);
       } catch (e) { console.warn('eval update', e); }
 
-      // Send email to guarantor with approval code
-      await supabase.functions.invoke('send-transactional-email', {
-        body: {
-          templateName: 'loan-guarantor-code',
-          recipientEmail: guarantor.email,
-          idempotencyKey: `loan-guarantor-${guarantor.email}-${Date.now()}`,
-          templateData: {
-            guarantorName: guarantor.name,
-            borrowerName: employee.name,
-            loanAmount: amount.toLocaleString(),
-            duration: String(months),
-            approvalCode,
-          },
-        }
-      });
-
-      toast({ title: "Loan Requested", description: `Guarantor notified. UGX ${FEE.toLocaleString()} evaluation fee added to principal.` });
+      if (needsGuarantor) {
+        // Send email to guarantor with approval code
+        await supabase.functions.invoke('send-transactional-email', {
+          body: {
+            templateName: 'loan-guarantor-code',
+            recipientEmail: guarantor.email,
+            idempotencyKey: `loan-guarantor-${guarantor.email}-${Date.now()}`,
+            templateData: {
+              guarantorName: guarantor.name,
+              borrowerName: employee.name,
+              loanAmount: amount.toLocaleString(),
+              duration: String(months),
+              approvalCode,
+            },
+          }
+        });
+        toast({ title: "Loan Requested", description: `Guarantor notified. UGX ${FEE.toLocaleString()} evaluation fee added to principal.` });
+      } else {
+        toast({ title: "Loan Requested", description: `Pure Salary Loan submitted for admin approval. UGX ${FEE.toLocaleString()} evaluation fee added to principal.` });
+      }
       setShowRequestDialog(false);
       setEvaluation(null);
 
       // Trigger repayment statement slip
-      const slipGuarantor = employees.find(e => e.id === guarantorId);
+      const slipGuarantor = needsGuarantor ? employees.find(e => e.id === guarantorId) : null;
       setRepaymentSlipData({
         employeeName: employee.name,
         employeeEmail: employee.email,
