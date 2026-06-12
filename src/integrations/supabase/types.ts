@@ -4635,6 +4635,134 @@ export type Database = {
         }
         Relationships: []
       }
+      loan_appeal_votes: {
+        Row: {
+          admin_email: string | null
+          admin_id: string
+          appeal_id: string
+          counter_amount: number | null
+          counter_term_months: number | null
+          created_at: string
+          id: string
+          reason: string
+          vote_type: string
+        }
+        Insert: {
+          admin_email?: string | null
+          admin_id: string
+          appeal_id: string
+          counter_amount?: number | null
+          counter_term_months?: number | null
+          created_at?: string
+          id?: string
+          reason: string
+          vote_type: string
+        }
+        Update: {
+          admin_email?: string | null
+          admin_id?: string
+          appeal_id?: string
+          counter_amount?: number | null
+          counter_term_months?: number | null
+          created_at?: string
+          id?: string
+          reason?: string
+          vote_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_appeal_votes_appeal_id_fkey"
+            columns: ["appeal_id"]
+            isOneToOne: false
+            referencedRelation: "loan_appeals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loan_appeals: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          employee_email: string
+          employee_name: string | null
+          evaluation_snapshot: Json
+          expires_at: string
+          final_amount: number | null
+          final_decision: string | null
+          final_term_months: number | null
+          id: string
+          justification: string
+          loan_evaluation_id: string | null
+          loan_type: string
+          offered_amount: number
+          requested_amount: number
+          requested_term_months: number
+          resulting_loan_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          employee_email: string
+          employee_name?: string | null
+          evaluation_snapshot?: Json
+          expires_at?: string
+          final_amount?: number | null
+          final_decision?: string | null
+          final_term_months?: number | null
+          id?: string
+          justification: string
+          loan_evaluation_id?: string | null
+          loan_type: string
+          offered_amount?: number
+          requested_amount: number
+          requested_term_months: number
+          resulting_loan_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          employee_email?: string
+          employee_name?: string | null
+          evaluation_snapshot?: Json
+          expires_at?: string
+          final_amount?: number | null
+          final_decision?: string | null
+          final_term_months?: number | null
+          id?: string
+          justification?: string
+          loan_evaluation_id?: string | null
+          loan_type?: string
+          offered_amount?: number
+          requested_amount?: number
+          requested_term_months?: number
+          resulting_loan_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_appeals_loan_evaluation_id_fkey"
+            columns: ["loan_evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "loan_evaluations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loan_appeals_resulting_loan_id_fkey"
+            columns: ["resulting_loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loan_evaluations: {
         Row: {
           applied_loan_id: string | null
@@ -12490,6 +12618,7 @@ export type Database = {
       }
       is_hr_or_admin: { Args: never; Returns: boolean }
       is_ip_whitelisted: { Args: { check_ip: string }; Returns: boolean }
+      is_loan_appeal_admin: { Args: { _uid: string }; Returns: boolean }
       is_manager_or_above: { Args: never; Returns: boolean }
       is_privileged_realtime_subscriber: {
         Args: { _user_id: string }
