@@ -571,8 +571,8 @@ const ServiceProviderPayments = () => {
             <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
               <Button variant="outline" onClick={() => setOpen(false)} className="w-full sm:w-auto">Cancel</Button>
               <Button onClick={handleSubmit} disabled={submitting} className="gap-2 w-full sm:w-auto">
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                {submitting ? 'Sending...' : 'Send Payment'}
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : paymentMethod === 'cash' ? <Banknote className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+                {submitting ? (paymentMethod === 'cash' ? 'Recording...' : 'Sending...') : paymentMethod === 'cash' ? 'Record Cash Payment' : 'Send via Yo'}
               </Button>
             </DialogFooter>
           </DialogContent>
