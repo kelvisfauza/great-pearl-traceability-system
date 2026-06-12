@@ -38,6 +38,8 @@ Deno.serve(async (req) => {
     const channel = body.channel as ChannelKey;
     const title = typeof body.title === 'string' ? body.title : '';
     const message = typeof body.message === 'string' ? body.message : '';
+    const actions = Array.isArray(body.actions) ? body.actions as Array<{ label: string; url: string }> : [];
+    const replyToMessageId = typeof body.replyToMessageId === 'string' ? body.replyToMessageId : '';
 
     if (!channel || !CHANNELS[channel]) {
       return new Response(JSON.stringify({ ok: false, error: 'invalid channel' }), {
@@ -62,13 +64,26 @@ Deno.serve(async (req) => {
     }
 
     const { teamId, channelId } = CHANNELS[channel];
+    const actionsHtml = actions.length
+      ? `<div style="margin-top:12px">${actions
+          .filter((a) => a && typeof a.label === 'string' && typeof a.url === 'string')
+          .map(
+            (a) =>
+              `<a href="${escapeHtml(a.url)}" style="display:inline-block;padding:8px 14px;margin-right:8px;background:#0F6CBD;color:#fff;border-radius:6px;text-decoration:none;font-weight:600">${escapeHtml(
+                a.label,
+              )}</a>`,
+          )
+          .join('')}</div>`
+      : '';
     const html = `${title ? `<h3>${escapeHtml(title)}</h3>` : ''}${
       message ? `<div>${escapeHtml(message).replace(/\n/g, '<br/>')}</div>` : ''
-    }`;
+    }${actionsHtml}`;
 
-    const res = await fetch(
-      `${GATEWAY}/teams/${teamId}/channels/${encodeURIComponent(channelId)}/messages`,
-      {
+    const endpoint = replyToMessageId
+      ? `${GATEWAY}/teams/${teamId}/channels/${encodeURIComponent(channelId)}/messages/${encodeURIComponent(replyToMessageId)}/replies`
+      : `${GATEWAY}/teams/${teamId}/channels/${encodeURIComponent(channelId)}/messages`;
+
+    const res = await fetch(endpoint, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${lovableKey}`,
@@ -78,8 +93,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           body: { contentType: 'html', content: html },
         }),
-      },
-    );
+      });
 
     const text = await res.text();
     if (!res.ok) {
@@ -90,7 +104,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    return new Response(JSON.stringify({ ok: true }), {
+    let messageId: string | undefined;
+    try {
+      const parsed = JSON.parse(text);
+      messageId = parsed?.id;
+    } catch {
+      // ignore parse errors
+    }
+
+    return new Response(JSON.stringify({ ok: true, messageId }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
