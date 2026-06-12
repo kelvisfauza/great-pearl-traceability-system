@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { notifyTeams } from '@/lib/teamsNotify';
 
 interface ReferencePrices {
   iceArabica: number;
@@ -162,6 +163,12 @@ const priceData = {
         ...newPrices,
         lastUpdated: new Date().toISOString()
       });
+
+      notifyTeams(
+        "trade",
+        "Daily Buying Prices Updated",
+        `Arabica buying price: UGX ${Number(newPrices.arabicaBuyingPrice ?? 0).toLocaleString()}/kg\nRobusta buying price: UGX ${Number(newPrices.robustaBuyingPrice ?? 0).toLocaleString()}/kg\nDrugar local: UGX ${Number(newPrices.drugarLocal ?? 0).toLocaleString()}\nWugar local: UGX ${Number(newPrices.wugarLocal ?? 0).toLocaleString()}\nRobusta FAQ local: UGX ${Number(newPrices.robustaFaqLocal ?? 0).toLocaleString()}\nSorted price: UGX ${Number(newPrices.sortedPrice ?? 0).toLocaleString()}\nICE Arabica ref: ${newPrices.iceArabica}\nRobusta ref: ${newPrices.robusta}\nFX: ${newPrices.exchangeRate}\nUpdated at: ${new Date().toLocaleString()}`,
+      );
       
       return true;
     } catch (error: any) {
