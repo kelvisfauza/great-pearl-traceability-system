@@ -49,6 +49,19 @@ const getCappedInterest = (principal: number, monthlyRate: number, months: numbe
   return Math.min(rawInterest, maxInterest);
 };
 
+const getFirstRepaymentDate = (startDateInput: Date | string, frequency: RepaymentFrequency) => {
+  const startDate = new Date(startDateInput);
+  const dueDate = new Date(startDate);
+
+  if (frequency === 'weekly') {
+    dueDate.setDate(dueDate.getDate() + 7);
+  } else {
+    dueDate.setMonth(dueDate.getMonth() + 1);
+  }
+
+  return dueDate;
+};
+
 // Processing fees and insurance removed
 
 const QuickLoans = () => {
@@ -633,12 +646,7 @@ const QuickLoans = () => {
         // Weekly loans: first deduction 7 days from disbursement.
         // Monthly/bullet loans: first deduction exactly one month after disbursement
         // (anchored to the disbursement day, NOT the 27th payroll date).
-        const nextDeduction = new Date(startDate);
-        if (isWeekly) {
-          nextDeduction.setDate(nextDeduction.getDate() + 7);
-        } else {
-          nextDeduction.setMonth(nextDeduction.getMonth() + 1);
-        }
+        const nextDeduction = getFirstRepaymentDate(startDate, loan.repayment_frequency || 'monthly');
 
         // Evaluation fee (10k) is baked into loan_amount/total_repayable as profit,
         // but it must NOT be sent to the borrower's wallet — only the requested amount is disbursed.
@@ -743,15 +751,7 @@ const QuickLoans = () => {
         }
 
         // SMS to borrower with repayment details
-        const firstRepaymentDate = new Date(startDate);
-        if (isWeekly) {
-          firstRepaymentDate.setDate(firstRepaymentDate.getDate() + 7);
-        } else {
-          if (firstRepaymentDate.getDate() >= 27) {
-            firstRepaymentDate.setMonth(firstRepaymentDate.getMonth() + 1);
-          }
-          firstRepaymentDate.setDate(27);
-        }
+        const firstRepaymentDate = getFirstRepaymentDate(startDate, loan.repayment_frequency || 'monthly');
         const repaymentDateStr = firstRepaymentDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
         const installmentAmount = isWeekly
           ? Math.ceil(loan.total_repayable / (loan.total_weeks || Math.ceil((loan.duration_months * 30) / 7)))
