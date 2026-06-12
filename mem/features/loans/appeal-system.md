@@ -1,0 +1,6 @@
+---
+name: Loan Evaluation Appeal System
+description: 3-admin appeal workflow when the loan evaluator denies or reduces a loan offer
+type: feature
+---
+When the loan evaluator returns `deny` or `max_limit < requested`, the user sees an "Appeal to Admin" button in QuickLoans. Submitting creates a row in `loan_appeals` with status `pending_admin_review` and a 7-day expiry. Admins (Administrator / Super Admin) review at `/admin/loan-appeals` and cast one vote each via `loan_appeal_votes`. Vote types: `uphold` (deny stands), `approve_full` (give requested), `counter` (custom amount + term). The borrower cannot vote on their own appeal (enforced in RLS). Once **3 admins agree on the same decision** (counter-offers must match on exact amount AND term), the `tally_loan_appeal_votes` trigger updates the appeal's `status`, `final_decision`, `final_amount`, and `final_term_months`. The decided appeal is then ready for disbursement (manual claim flow — not yet auto-disbursed). Every vote requires a written reason ≥20 chars; appeal justification ≥30 chars. Role check goes through `is_loan_appeal_admin(uuid)` security-definer function reading `user_roles`.
