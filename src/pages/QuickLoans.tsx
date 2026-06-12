@@ -681,15 +681,25 @@ const QuickLoans = () => {
       }
 
       if (approve) {
+        const isPureSalary = loan.loan_type === 'pure_salary';
         const isWeekly = loan.repayment_frequency === 'weekly';
         const startDate = new Date();
         const endDate = new Date();
         endDate.setMonth(endDate.getMonth() + loan.duration_months);
 
-        // Weekly loans: first deduction 7 days from disbursement.
-        // Monthly/bullet loans: first deduction exactly one month after disbursement
-        // (anchored to the disbursement day, NOT the 27th payroll date).
-        const nextDeduction = getFirstRepaymentDate(startDate, loan.repayment_frequency || 'monthly');
+        // Pure Salary Loan: anchored to the 27th payroll date. Other types: anchored to disbursement.
+        const computePureSalaryFirstDue = (start: Date) => {
+          // First payroll on or after start date
+          const d = new Date(start);
+          if (d.getDate() > 27) {
+            d.setMonth(d.getMonth() + 1);
+          }
+          d.setDate(27);
+          return d;
+        };
+        const nextDeduction = isPureSalary
+          ? computePureSalaryFirstDue(startDate)
+          : getFirstRepaymentDate(startDate, loan.repayment_frequency || 'monthly');
 
         // Evaluation fee (10k) is baked into loan_amount/total_repayable as profit,
         // but it must NOT be sent to the borrower's wallet — only the requested amount is disbursed.
@@ -714,7 +724,66 @@ const QuickLoans = () => {
 
         // Create repayment schedule using flat interest (equal installments)
         const repayments = [];
-        if (isWeekly) {
+        if (isPureSalary) {
+          // Borrower's salary determines installment size (50% per payroll)
+          const { data: borrowerEmp } = await supabase
+            .from('employees')
+            .select('salary')
+            .eq('email', loan.employee_email)
+            .single();
+          const salaryNum = Number(borrowerEmp?.salary || 0);
+          const halfSalary = Math.max(1, Math.floor(salaryNum * 0.5));
+          const total = Number(loan.total_repayable) || 0;
+
+          let remaining = total;
+          let installmentNumber = 0;
+
+          // Mid-month rule: if loan starts before payday (27th), the FIRST cycle takes BOTH halves
+          // of that month's salary — 50% on the 27th (regular installment), and the frozen other
+          // 50% on the last day of the same month.
+          const startedBeforePayday = startDate.getDate() < 27;
+
+          // Installment 1: regular 27th deduction of the starting month (or next month if past 27)
+          const firstDue = computePureSalaryFirstDue(startDate);
+          const firstAmt = Math.min(halfSalary, remaining);
+          installmentNumber += 1;
+          repayments.push({
+            loan_id: loanId,
+            installment_number: installmentNumber,
+            amount_due: Math.ceil(firstAmt),
+            due_date: firstDue.toISOString().split('T')[0],
+          });
+          remaining -= firstAmt;
+
+          // Mid-month freeze release: same month's last day, 50% of salary
+          if (startedBeforePayday && remaining > 0) {
+            const freezeDate = new Date(firstDue.getFullYear(), firstDue.getMonth() + 1, 0);
+            const freezeAmt = Math.min(halfSalary, remaining);
+            installmentNumber += 1;
+            repayments.push({
+              loan_id: loanId,
+              installment_number: installmentNumber,
+              amount_due: Math.ceil(freezeAmt),
+              due_date: freezeDate.toISOString().split('T')[0],
+            });
+            remaining -= freezeAmt;
+          }
+
+          // Remaining months: 50% on each subsequent 27th until cleared
+          let cursor = new Date(firstDue);
+          while (remaining > 0) {
+            cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 27);
+            const amt = Math.min(halfSalary, remaining);
+            installmentNumber += 1;
+            repayments.push({
+              loan_id: loanId,
+              installment_number: installmentNumber,
+              amount_due: Math.ceil(amt),
+              due_date: cursor.toISOString().split('T')[0],
+            });
+            remaining -= amt;
+          }
+        } else if (isWeekly) {
           const numWeeks = loan.total_weeks || (loan.duration_months * 4);
           const weeklyInstallment = loan.weekly_installment || Math.ceil(loan.total_repayable / numWeeks);
           const totalInterest = loan.total_repayable - loan.loan_amount;
