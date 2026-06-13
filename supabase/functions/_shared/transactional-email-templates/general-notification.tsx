@@ -40,9 +40,9 @@ export const template = {
 } satisfies TemplateEntry
 
 const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px', maxWidth: '600px', margin: '0 auto' }
-const h1 = { fontSize: '20px', fontWeight: 'bold' as const, color: '#1a1a1a', margin: '0 0 20px' }
-const text = { fontSize: '14px', color: '#333333', lineHeight: '1.6', margin: '0 0 8px', whiteSpace: 'pre-wrap' as const }
-const bulletStyle = { ...text, paddingLeft: '12px' }
-const hr = { borderColor: '#e5e5e5', margin: '24px 0' }
-const footer = { fontSize: '12px', color: '#999999', margin: '0' }
+const container = { padding: '32px 28px', maxWidth: '640px', width: '100%', margin: '0 auto' }
+const h1 = { fontSize: '26px', fontWeight: 'bold' as const, color: '#1a1a1a', margin: '0 0 24px', lineHeight: '1.3' }
+const text = { fontSize: '17px', color: '#1f2937', lineHeight: '1.65', margin: '0 0 12px', whiteSpace: 'pre-wrap' as const }
+const bulletStyle = { ...text, paddingLeft: '14px' }
+const hr = { borderColor: '#e5e5e5', margin: '28px 0' }
+const footer = { fontSize: '13px', color: '#6b7280', margin: '0' }
