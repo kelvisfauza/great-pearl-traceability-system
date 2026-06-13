@@ -4,7 +4,7 @@ import {
 } from 'npm:@react-email/components@0.0.22'
 import type { TemplateEntry } from './registry.ts'
 
-const SITE_NAME = "Great Pearl Coffee"
+const SITE_NAME = "Great Agro Coffee"
 
 interface GeneralNotificationProps {
   title?: string
@@ -39,10 +39,10 @@ export const template = {
   previewData: { title: 'Important Notice', message: 'This is a system notification.', recipientName: 'Employee' },
 } satisfies TemplateEntry
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '32px 28px', maxWidth: '640px', width: '100%', margin: '0 auto' }
-const h1 = { fontSize: '26px', fontWeight: 'bold' as const, color: '#1a1a1a', margin: '0 0 24px', lineHeight: '1.3' }
-const text = { fontSize: '17px', color: '#1f2937', lineHeight: '1.65', margin: '0 0 12px', whiteSpace: 'pre-wrap' as const }
-const bulletStyle = { ...text, paddingLeft: '14px' }
-const hr = { borderColor: '#e5e5e5', margin: '28px 0' }
-const footer = { fontSize: '13px', color: '#6b7280', margin: '0' }
+const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif', fontSize: '18px', WebkitTextSizeAdjust: '100%', msTextSizeAdjust: '100%' as any }
+const container = { padding: '40px 32px', maxWidth: '680px', width: '100%', margin: '0 auto' }
+const h1 = { fontSize: '30px', fontWeight: 'bold' as const, color: '#000000', margin: '0 0 28px', lineHeight: '1.3' }
+const text = { fontSize: '18px', color: '#000000', lineHeight: '1.7', margin: '0 0 16px', whiteSpace: 'pre-wrap' as const }
+const bulletStyle = { ...text, paddingLeft: '16px' }
+const hr = { borderColor: '#cccccc', margin: '32px 0' }
+const footer = { fontSize: '14px', color: '#555555', margin: '0' }
