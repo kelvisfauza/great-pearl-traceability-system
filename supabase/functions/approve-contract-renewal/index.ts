@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    const { requestId, decision, adminEmail, adminNotes } = await req.json();
+    const { requestId, decision, adminEmail, adminNotes, overrides } = await req.json();
     if (!requestId || !['approve', 'reject'].includes(decision) || !adminEmail) {
       return json({ ok: false, error: 'Missing/invalid parameters' });
     }
@@ -83,6 +83,11 @@ Deno.serve(async (req) => {
       .ilike('email', reqRow.employee_email)
       .maybeSingle();
 
+    const ov = overrides || {};
+    const finalPosition = (ov.position || source?.position || empProfile?.position || 'Staff').toString();
+    const finalDepartment = (ov.department || source?.department || empProfile?.department || 'General').toString();
+    const finalSalary = ov.salary != null ? Number(ov.salary) : (source?.salary || empProfile?.salary || 0);
+
     // Insert new contract
     const newContract = {
       employee_id: source?.employee_id || empProfile?.id || reqRow.employee_email,
@@ -90,12 +95,12 @@ Deno.serve(async (req) => {
       employee_email: reqRow.employee_email,
       employee_gac_id: source?.employee_gac_id || empProfile?.employee_id || null,
       contract_type: source?.contract_type || 'Renewal',
-      position: source?.position || empProfile?.position || 'Staff',
-      department: source?.department || empProfile?.department || 'General',
+      position: finalPosition,
+      department: finalDepartment,
       contract_start_date: today.toISOString().split('T')[0],
       contract_end_date: endDate.toISOString().split('T')[0],
       contract_duration_months: reqRow.requested_months,
-      salary: source?.salary || empProfile?.salary || 0,
+      salary: finalSalary,
       status: 'Active',
       renewal_count: (source?.renewal_count || 0) + 1,
       renewed_from_id: source?.id || null,
@@ -109,13 +114,17 @@ Deno.serve(async (req) => {
       .single();
     if (cErr) return json({ ok: false, error: 'Failed to create contract: ' + cErr.message });
 
-    // Update employee profile fields if provided
-    const profileUpdate: Record<string, any> = {};
+    // Update employee profile fields: contact info from request + admin overrides
+    const profileUpdate: Record<string, any> = {
+      position: finalPosition,
+      department: finalDepartment,
+      salary: finalSalary,
+    };
     if (reqRow.updated_phone) profileUpdate.phone = reqRow.updated_phone;
     if (reqRow.emergency_contact) profileUpdate.emergency_contact = reqRow.emergency_contact;
-    if (Object.keys(profileUpdate).length) {
-      await supabase.from('employees').update(profileUpdate).ilike('email', reqRow.employee_email);
-    }
+    if (ov.role) profileUpdate.role = ov.role;
+    if (Array.isArray(ov.permissions) && ov.permissions.length) profileUpdate.permissions = ov.permissions;
+    await supabase.from('employees').update(profileUpdate).ilike('email', reqRow.employee_email);
 
     await supabase
       .from('contract_renewal_requests')
