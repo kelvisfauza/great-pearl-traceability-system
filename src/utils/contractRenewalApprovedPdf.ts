@@ -17,12 +17,12 @@ export interface ApprovedContractData {
   adminNotes?: string;
 }
 
-const BRAND: [number, number, number] = [123, 63, 0];
-const ACCENT: [number, number, number] = [201, 162, 39];
-const LIGHT: [number, number, number] = [245, 239, 230];
-const GREY: [number, number, number] = [120, 120, 120];
-const LINE: [number, number, number] = [160, 160, 160];
-const DARK: [number, number, number] = [40, 40, 40];
+const BRAND: [number, number, number] = [0, 0, 0];
+const ACCENT: [number, number, number] = [0, 0, 0];
+const LIGHT: [number, number, number] = [245, 245, 245];
+const GREY: [number, number, number] = [96, 96, 96];
+const LINE: [number, number, number] = [150, 150, 150];
+const DARK: [number, number, number] = [0, 0, 0];
 
 export function generateApprovedContractBlob(d: ApprovedContractData): Blob {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
@@ -37,10 +37,10 @@ export function generateApprovedContractBlob(d: ApprovedContractData): Blob {
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(15);
-  doc.text('GREAT PEARL COFFEE FACTORY', M, 11);
+  doc.text('GREAT AGRO COFFEE', M, 11);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
-  doc.text('Kanoni-Mityana, Uganda  |  +256 781 121 639  |  greatpearlcoffee@gmail.com', M, 17);
+  doc.text('Kasese Municipality, Tibamwenda Road, Kasese, Uganda  |  +256 393 001 626  |  info@greatpearlcoffee.com', M, 17);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.text('EMPLOYMENT CONTRACT', W - M, 11, { align: 'right' });
@@ -167,7 +167,7 @@ export function generateApprovedContractBlob(d: ApprovedContractData): Blob {
   doc.setTextColor(...GREY);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
-  doc.text('Great Pearl Coffee Factory — Human Resources Department', M, H - 9);
+  doc.text('Great Agro Coffee — Human Resources Department', M, H - 9);
   doc.text('CC: Operations Department', W - M, H - 9, { align: 'right' });
 
   return doc.output('blob');
