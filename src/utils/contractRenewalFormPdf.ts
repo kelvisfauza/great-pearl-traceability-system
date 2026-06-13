@@ -36,6 +36,20 @@ export function generateContractRenewalFormPdf(
   data: ContractRenewalFormData = {},
   filename = 'Contract_Renewal_Form.pdf'
 ) {
+  const doc = buildContractRenewalDoc(data);
+  doc.save(filename);
+}
+
+export function generateContractRenewalFormBlob(
+  data: ContractRenewalFormData = {}
+): Blob {
+  const doc = buildContractRenewalDoc(data);
+  return doc.output('blob');
+}
+
+function buildContractRenewalDoc(
+  data: ContractRenewalFormData = {}
+) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const W = 210;
   const H = 297;
@@ -326,5 +340,5 @@ export function generateContractRenewalFormPdf(
 
   drawFooter(3, 3);
 
-  doc.save(filename);
+  return doc;
 }
