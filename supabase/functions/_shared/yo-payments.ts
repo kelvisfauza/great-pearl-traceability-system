@@ -30,7 +30,7 @@ function getProviderCode(phone: string): string {
   // Remove country code to get local number
   const local = digits.startsWith("256") ? "0" + digits.slice(3) : digits;
 
-  if (local.startsWith("077") || local.startsWith("078") || local.startsWith("076")) {
+  if (local.startsWith("077") || local.startsWith("078") || local.startsWith("076") || local.startsWith("079")) {
     return "MTN";
   }
   if (local.startsWith("070") || local.startsWith("075") || local.startsWith("074")) {
