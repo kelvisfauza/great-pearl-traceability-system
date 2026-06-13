@@ -23,7 +23,7 @@ const TERMS = [
 ];
 
 interface ExpiredContract {
-  id: string;
+  id: string | null;
   contract_end_date: string;
   contract_type: string;
   position: string;
@@ -60,7 +60,6 @@ const ContractRenewalGate = () => {
           .from('employee_contracts')
           .select('id, contract_end_date, contract_type, position, department, status')
           .ilike('employee_email', employee.email)
-          .lt('contract_end_date', today)
           .order('contract_end_date', { ascending: false })
           .limit(1),
         (supabase as any)
@@ -79,9 +78,28 @@ const ContractRenewalGate = () => {
         return;
       }
       const c = (contracts || [])[0];
-      if (c) {
+      const todayDate = new Date(today);
+      if (c && c.contract_end_date && new Date(c.contract_end_date) < todayDate) {
+        // Has an actual expired contract row
         setExpired(c as ExpiredContract);
         setPhone(employee.phone || '');
+      } else if (!c) {
+        // No contract row at all — derive expiry from join_date + 6 months
+        const join = (employee as any).join_date || (employee as any).created_at;
+        if (join) {
+          const derivedEnd = new Date(join);
+          derivedEnd.setMonth(derivedEnd.getMonth() + 6);
+          if (derivedEnd < todayDate) {
+            setExpired({
+              id: null,
+              contract_end_date: derivedEnd.toISOString().split('T')[0],
+              contract_type: 'Fixed Term (provisional)',
+              position: (employee as any).position || 'N/A',
+              department: (employee as any).department || 'N/A',
+            });
+            setPhone(employee.phone || '');
+          }
+        }
       }
       setChecked(true);
     })();
@@ -114,7 +132,7 @@ const ContractRenewalGate = () => {
     const { error } = await (supabase as any).from('contract_renewal_requests').insert({
       employee_email: employee.email,
       employee_name: employee.name,
-      current_contract_id: expired.id,
+      current_contract_id: expired.id, // may be null for provisional/derived contracts
       requested_months: months,
       reason: reason.trim(),
       updated_phone: phone.trim() || null,
