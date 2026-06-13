@@ -16,7 +16,7 @@ function escapeXml(str: string): string {
 function getProviderCode(phone: string): string {
   const digits = phone.replace(/\D/g, "");
   const local = digits.startsWith("256") ? "0" + digits.slice(3) : digits;
-  if (local.startsWith("077") || local.startsWith("078") || local.startsWith("076")) return "MTN";
+  if (local.startsWith("077") || local.startsWith("078") || local.startsWith("076") || local.startsWith("079")) return "MTN";
   if (local.startsWith("070") || local.startsWith("075") || local.startsWith("074")) return "AIRTEL";
   return "MTN";
 }
