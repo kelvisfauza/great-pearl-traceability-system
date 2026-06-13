@@ -221,7 +221,7 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
     // Validate phone format
     const cleanPhone = mobilePhone.replace(/\D/g, '');
     const localPhone = cleanPhone.startsWith('256') ? '0' + cleanPhone.slice(3) : cleanPhone;
-    const validPrefixes = ['070', '074', '075', '076', '077', '078'];
+    const validPrefixes = ['070', '074', '075', '076', '077', '078', '079'];
     if (!validPrefixes.some(p => localPhone.startsWith(p)) || localPhone.length !== 10) {
       toast({ title: 'Invalid phone number', description: 'Enter a valid Ugandan mobile money number (e.g. 0770123456)', variant: 'destructive' });
       return;
@@ -405,7 +405,7 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
                     onChange={e => setMobilePhone(e.target.value)}
                     placeholder="e.g. 0770123456"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">MTN (077/078/076) or Airtel (070/075/074)</p>
+                  <p className="text-xs text-muted-foreground mt-1">MTN (077/078/076/079) or Airtel (070/075/074)</p>
                 </div>
 
                 <div>
