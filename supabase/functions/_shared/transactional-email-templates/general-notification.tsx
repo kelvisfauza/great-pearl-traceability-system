@@ -1,6 +1,6 @@
 import * as React from 'npm:react@18.3.1'
 import {
-  Body, Container, Head, Heading, Html, Preview, Text, Hr,
+  Body, Container, Head, Heading, Html, Preview, Text, Hr, Button, Section,
 } from 'npm:@react-email/components@0.0.22'
 import type { TemplateEntry } from './registry.ts'
 
@@ -10,9 +10,11 @@ interface GeneralNotificationProps {
   title?: string
   message?: string
   recipientName?: string
+  ctaUrl?: string
+  ctaLabel?: string
 }
 
-const GeneralNotificationEmail = ({ title, message, recipientName }: GeneralNotificationProps) => (
+const GeneralNotificationEmail = ({ title, message, recipientName, ctaUrl, ctaLabel }: GeneralNotificationProps) => (
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>{title || 'System Notification'}</Preview>
@@ -25,6 +27,13 @@ const GeneralNotificationEmail = ({ title, message, recipientName }: GeneralNoti
             {line}
           </Text>
         ))}
+        {ctaUrl && (
+          <Section style={{ textAlign: 'center', margin: '32px 0' }}>
+            <Button href={ctaUrl} style={ctaButton}>
+              {ctaLabel || 'Download Now'}
+            </Button>
+          </Section>
+        )}
         <Hr style={hr} />
         <Text style={footer}>{SITE_NAME} — Automated System Notification</Text>
       </Container>
@@ -46,3 +55,13 @@ const text = { fontSize: '18px', color: '#000000', lineHeight: '1.7', margin: '0
 const bulletStyle = { ...text, paddingLeft: '16px' }
 const hr = { borderColor: '#cccccc', margin: '32px 0' }
 const footer = { fontSize: '14px', color: '#555555', margin: '0' }
+const ctaButton = {
+  backgroundColor: '#000000',
+  color: '#ffffff',
+  padding: '14px 32px',
+  borderRadius: '6px',
+  fontSize: '16px',
+  fontWeight: 'bold' as const,
+  textDecoration: 'none',
+  display: 'inline-block',
+}
