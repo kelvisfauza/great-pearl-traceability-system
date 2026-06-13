@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { FileSignature, Check, X, Loader2 } from 'lucide-react';
+import { generateApprovedContractBlob } from '@/utils/contractRenewalApprovedPdf';
 
 const ROLE_OPTIONS = ['User', 'Supervisor', 'Manager', 'Admin'];
 const PERMISSION_LIST = Object.values(PERMISSIONS).filter((p) => p !== '*');
@@ -101,11 +102,79 @@ const ContractRenewalApprovals = () => {
         } : undefined,
       },
     });
-    setActing(null);
     if (error || (data && data.ok === false)) {
+      setActing(null);
       toast({ title: `Failed to ${decision}`, description: error?.message || data?.error || 'Unknown error', variant: 'destructive' });
       return;
     }
+
+    // On approval: generate PDF contract, upload, then email the employee with the link
+    if (decision === 'approve' && data?.contract) {
+      try {
+        const c = data.contract;
+        const fmt = (s: string) => new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        const blob = generateApprovedContractBlob({
+          employeeName: c.employee_name,
+          employeeEmail: c.employee_email,
+          employeeId: c.employee_id || undefined,
+          position: c.position,
+          department: c.department,
+          salary: Number(c.salary || 0),
+          durationMonths: Number(c.duration_months),
+          startDate: fmt(c.start_date),
+          endDate: fmt(c.end_date),
+          role: c.role || undefined,
+          approvedBy: employee.name || employee.email,
+          approvalDate: fmt(new Date().toISOString()),
+          renewalCount: Number(c.renewal_count || 1),
+          adminNotes: notes[id] || undefined,
+        });
+        const safeName = String(c.employee_name || 'employee').replace(/[^a-z0-9]+/gi, '_').slice(0, 40);
+        const path = `renewals/${safeName}-${id.substring(0, 8)}-${Date.now()}.pdf`;
+        const file = new File([blob], path.split('/').pop()!, { type: 'application/pdf' });
+        const { error: upErr } = await supabase.storage.from('contracts').upload(path, file, { upsert: true, contentType: 'application/pdf' });
+        if (upErr) throw upErr;
+        const { data: signed } = await supabase.storage.from('contracts').createSignedUrl(path, 60 * 60 * 24 * 90);
+        const pdfUrl = signed?.signedUrl || '';
+
+        await supabase.functions.invoke('send-transactional-email', {
+          body: {
+            templateName: 'general-notification',
+            recipientEmail: c.employee_email,
+            idempotencyKey: `contract-renewal-approved-${id}`,
+            templateData: {
+              subject: 'Contract Renewal Approved — Great Agro Coffee',
+              title: 'Your Contract Has Been Renewed',
+              recipientName: c.employee_name,
+              message:
+`We are pleased to confirm that your contract has been renewed.
+
+• Position: ${c.position}
+• Department: ${c.department}
+• Duration: ${c.duration_months} months
+• Start date: ${fmt(c.start_date)}
+• End date: ${fmt(c.end_date)}
+• Gross salary (UGX): ${Number(c.salary || 0).toLocaleString()}
+
+Your signed contract PDF is attached as a secure download link below (valid for 90 days):
+${pdfUrl}
+
+${notes[id] ? 'Note from administration: ' + notes[id] + '\n\n' : ''}You now have full access to the system. Welcome back!
+
+Great Agro Coffee — Human Resources`,
+            },
+          },
+        });
+      } catch (e: any) {
+        console.error('Contract PDF/email failed', e);
+        toast({ title: 'Approved, but email failed', description: e?.message || 'Could not send contract PDF email.', variant: 'destructive' });
+        setActing(null);
+        load();
+        return;
+      }
+    }
+
+    setActing(null);
     toast({ title: decision === 'approve' ? 'Renewal approved' : 'Renewal rejected', description: 'Employee has been notified by email.' });
     load();
   };
