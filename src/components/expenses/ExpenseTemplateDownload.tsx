@@ -734,7 +734,7 @@ const generatePDF = async (
 
   // Pay-To / Beneficiary block (used by salary-request and any prefill that names a payee)
   if (prefill.beneficiaryName) {
-    const payToH = 22;
+    const payToH = 18;
     doc.setFillColor(252, 248, 235);
     doc.setDrawColor(192, 144, 0);
     doc.setLineWidth(0.4);
@@ -745,10 +745,10 @@ const generatePDF = async (
     doc.setTextColor(140, 90, 0);
     doc.text('PAY TO (BENEFICIARY)', margin + 4, y + 5);
 
-    doc.setFontSize(11);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(20, 20, 20);
-    doc.text(prefill.beneficiaryName, margin + 4, y + 11.5);
+    doc.text(prefill.beneficiaryName, margin + 4, y + 10.5);
 
     const meta: string[] = [];
     if (prefill.payeePosition) meta.push(prefill.payeePosition);
@@ -756,15 +756,15 @@ const generatePDF = async (
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(80, 80, 80);
-    if (meta.length) doc.text(meta.join('  •  '), margin + 4, y + 16);
+    if (meta.length) doc.text(meta.join('  •  '), margin + 4, y + 14.5);
 
     const contactParts: string[] = [];
     if (prefill.beneficiaryPhone) contactParts.push(`Phone/Acct: ${prefill.beneficiaryPhone}`);
     if (prefill.payeeEmail) contactParts.push(prefill.payeeEmail);
     if (contactParts.length) {
-      doc.text(contactParts.join('   '), margin + 4, y + 20);
+      doc.text(contactParts.join('   '), margin + 4, y + (meta.length ? 17.5 : 14.5));
     }
-    y += payToH + 5;
+    y += payToH + 3;
   }
 
   // Form fields
@@ -789,7 +789,7 @@ const generatePDF = async (
     doc.setDrawColor(180, 180, 180);
     doc.setLineWidth(0.3);
     for (let i = 0; i < lines; i++) {
-      const lineY = y + i * 7;
+      const lineY = y + i * 6;
       doc.line(margin, lineY + 4, margin + contentW, lineY + 4);
     }
     if (prefillValue) {
@@ -799,10 +799,10 @@ const generatePDF = async (
       const wrapped = doc.splitTextToSize(prefillValue, contentW - 2);
       const maxLines = Math.min(lines, wrapped.length);
       for (let i = 0; i < maxLines; i++) {
-        doc.text(wrapped[i], margin + 1, y + i * 7 + 3);
+        doc.text(wrapped[i], margin + 1, y + i * 6 + 3);
       }
     }
-    y += lines * 7 + 4;
+    y += lines * 6 + 3;
   });
   }
 
@@ -818,6 +818,7 @@ const generatePDF = async (
   y += 12;
 
   const boxW = (contentW - 8) / 3;
+  const boxH = 26;
   const boxes = [
     { title: 'Requested By', subtitle: '(Employee Signature & Date)' },
     { title: 'Admin Approval', subtitle: '(Signature & Date)' },
@@ -831,7 +832,7 @@ const generatePDF = async (
     doc.setFillColor(245, 245, 245);
     doc.setDrawColor(180, 180, 180);
     doc.setLineWidth(0.3);
-    doc.roundedRect(bx, y, boxW, 30, 1, 1, 'FD');
+    doc.roundedRect(bx, y, boxW, boxH, 1, 1, 'FD');
 
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
@@ -843,16 +844,16 @@ const generatePDF = async (
     doc.setFontSize(6);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(130, 130, 130);
-    doc.text('Name:', bx + 3, y + 12);
-    doc.line(bx + 14, y + 12, bx + boxW - 3, y + 12);
+    doc.text('Name:', bx + 3, y + 11);
+    doc.line(bx + 14, y + 11, bx + boxW - 3, y + 11);
 
     // Signature line
-    doc.text('Sign:', bx + 3, y + 19);
-    doc.line(bx + 14, y + 19, bx + boxW - 3, y + 19);
+    doc.text('Sign:', bx + 3, y + 17);
+    doc.line(bx + 14, y + 17, bx + boxW - 3, y + 17);
 
     // Date line
-    doc.text('Date:', bx + 3, y + 26);
-    doc.line(bx + 14, y + 26, bx + boxW - 3, y + 26);
+    doc.text('Date:', bx + 3, y + 23);
+    doc.line(bx + 14, y + 23, bx + boxW - 3, y + 23);
   });
 
   // Footer
