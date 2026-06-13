@@ -76,19 +76,26 @@ Deno.serve(async (req) => {
         .eq('id', source.id);
     }
 
+    // Fallback to employee profile when there is no prior contract on file
+    const { data: empProfile } = await supabase
+      .from('employees')
+      .select('id, position, department, salary, employee_id')
+      .ilike('email', reqRow.employee_email)
+      .maybeSingle();
+
     // Insert new contract
     const newContract = {
-      employee_id: source?.employee_id || reqRow.employee_email,
+      employee_id: source?.employee_id || empProfile?.id || reqRow.employee_email,
       employee_name: reqRow.employee_name,
       employee_email: reqRow.employee_email,
-      employee_gac_id: source?.employee_gac_id || null,
+      employee_gac_id: source?.employee_gac_id || empProfile?.employee_id || null,
       contract_type: source?.contract_type || 'Renewal',
-      position: source?.position || null,
-      department: source?.department || null,
+      position: source?.position || empProfile?.position || 'Staff',
+      department: source?.department || empProfile?.department || 'General',
       contract_start_date: today.toISOString().split('T')[0],
       contract_end_date: endDate.toISOString().split('T')[0],
       contract_duration_months: reqRow.requested_months,
-      salary: source?.salary || 0,
+      salary: source?.salary || empProfile?.salary || 0,
       status: 'Active',
       renewal_count: (source?.renewal_count || 0) + 1,
       renewed_from_id: source?.id || null,
