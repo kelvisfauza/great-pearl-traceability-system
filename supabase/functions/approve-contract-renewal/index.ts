@@ -43,13 +43,18 @@ Deno.serve(async (req) => {
         type: 'contract_renewal',
       });
 
-      // Email
-      await supabase.functions.invoke('send-email-direct', {
+      // Email is sent client-side via send-transactional-email after this returns
+      await supabase.functions.invoke('send-transactional-email', {
         body: {
-          to: reqRow.employee_email,
-          cc: ['operations@greatpearlcoffee.com'],
-          subject: 'Contract Renewal Request — Not Approved',
-          html: `<p>Dear ${reqRow.employee_name},</p><p>Your contract renewal request submitted on ${new Date(reqRow.created_at).toLocaleDateString()} was <strong>not approved</strong> at this time.</p>${adminNotes ? `<p><strong>Reviewer note:</strong> ${adminNotes}</p>` : ''}<p>Please reach out to HR or the administrator for next steps.</p><p>Great Agro Coffee</p>`,
+          templateName: 'general-notification',
+          recipientEmail: reqRow.employee_email,
+          idempotencyKey: `contract-renewal-rejected-${requestId}`,
+          templateData: {
+            subject: 'Contract Renewal Request — Not Approved',
+            title: 'Contract Renewal Not Approved',
+            recipientName: reqRow.employee_name,
+            message: `Your contract renewal request submitted on ${new Date(reqRow.created_at).toLocaleDateString()} was not approved at this time.\n\n${adminNotes ? 'Reviewer note: ' + adminNotes + '\n\n' : ''}Please reach out to HR or the administrator for next steps.`,
+          },
         },
       }).catch((e) => console.error('email error', e));
 
@@ -145,29 +150,26 @@ Deno.serve(async (req) => {
       type: 'contract_renewal',
     });
 
-    // Email confirmation
-    await supabase.functions.invoke('send-email-direct', {
-      body: {
-        to: reqRow.employee_email,
-        cc: ['operations@greatpearlcoffee.com'],
-        subject: 'Contract Renewal Approved — Great Agro Coffee',
-        html: `
-          <p>Dear ${reqRow.employee_name},</p>
-          <p>We are pleased to confirm that your <strong>contract has been renewed</strong>.</p>
-          <table style="border-collapse:collapse;margin:12px 0">
-            <tr><td style="padding:6px 12px;border:1px solid #ddd"><strong>Duration</strong></td><td style="padding:6px 12px;border:1px solid #ddd">${reqRow.requested_months} months</td></tr>
-            <tr><td style="padding:6px 12px;border:1px solid #ddd"><strong>Start date</strong></td><td style="padding:6px 12px;border:1px solid #ddd">${today.toLocaleDateString()}</td></tr>
-            <tr><td style="padding:6px 12px;border:1px solid #ddd"><strong>End date</strong></td><td style="padding:6px 12px;border:1px solid #ddd">${endDate.toLocaleDateString()}</td></tr>
-            <tr><td style="padding:6px 12px;border:1px solid #ddd"><strong>Position</strong></td><td style="padding:6px 12px;border:1px solid #ddd">${source?.position || '—'}</td></tr>
-          </table>
-          <p>You now have full access to the system. Welcome back!</p>
-          ${adminNotes ? `<p><strong>Note from admin:</strong> ${adminNotes}</p>` : ''}
-          <p>Great Agro Coffee — Human Resources</p>
-        `,
+    // Confirmation email (with contract PDF link) is sent client-side after upload.
+    // Return all the data the client needs to generate the PDF and email it.
+    return json({
+      ok: true,
+      decision: 'approved',
+      new_contract_id: created.id,
+      contract: {
+        employee_name: reqRow.employee_name,
+        employee_email: reqRow.employee_email,
+        employee_id: source?.employee_gac_id || empProfile?.employee_id || null,
+        position: finalPosition,
+        department: finalDepartment,
+        salary: finalSalary,
+        role: ov.role || null,
+        duration_months: reqRow.requested_months,
+        start_date: today.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0],
+        renewal_count: (source?.renewal_count || 0) + 1,
       },
-    }).catch((e) => console.error('email error', e));
-
-    return json({ ok: true, decision: 'approved', new_contract_id: created.id });
+    });
   } catch (e) {
     console.error('approve-contract-renewal error', e);
     return json({ ok: false, error: (e as Error).message });
