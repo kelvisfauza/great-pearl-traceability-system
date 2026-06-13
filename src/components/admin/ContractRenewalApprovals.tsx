@@ -21,6 +21,8 @@ const ContractRenewalApprovals = () => {
   const { employee } = useAuth();
   const { toast } = useToast();
   const [items, setItems] = useState<any[]>([]);
+  const [approved, setApproved] = useState<any[]>([]);
+  const [resending, setResending] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState<string | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -38,6 +40,27 @@ const ContractRenewalApprovals = () => {
       .order('created_at', { ascending: false });
     const rows = data || [];
     setItems(rows);
+
+    // Recently approved renewals — for resending the contract email
+    const { data: apr } = await (supabase as any)
+      .from('contract_renewal_requests')
+      .select('id, employee_name, employee_email, requested_months, approved_at, admin_notes, new_contract_id')
+      .eq('status', 'approved')
+      .order('approved_at', { ascending: false })
+      .limit(20);
+    const aprRows = apr || [];
+    if (aprRows.length) {
+      const contractIds = aprRows.map((r: any) => r.new_contract_id).filter(Boolean);
+      const { data: contracts } = await supabase
+        .from('employee_contracts')
+        .select('id, position, department, salary, contract_start_date, contract_end_date, renewal_count, employee_gac_id')
+        .in('id', contractIds);
+      const cmap: Record<string, any> = {};
+      (contracts || []).forEach((c: any) => { cmap[c.id] = c; });
+      setApproved(aprRows.map((r: any) => ({ ...r, contract: cmap[r.new_contract_id] })));
+    } else {
+      setApproved([]);
+    }
 
     // Hydrate per-request overrides from existing employee profile
     if (rows.length) {
@@ -63,6 +86,74 @@ const ContractRenewalApprovals = () => {
       setOverrides(ov);
     }
     setLoading(false);
+  };
+
+  const resendEmail = async (r: any) => {
+    if (!r.contract) {
+      toast({ title: 'Cannot resend', description: 'No linked contract record found.', variant: 'destructive' });
+      return;
+    }
+    setResending(r.id);
+    try {
+      const c = r.contract;
+      const fmt = (s: string) => new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      const blob = generateApprovedContractBlob({
+        employeeName: r.employee_name,
+        employeeEmail: r.employee_email,
+        employeeId: c.employee_gac_id || undefined,
+        position: c.position,
+        department: c.department,
+        salary: Number(c.salary || 0),
+        durationMonths: Number(r.requested_months),
+        startDate: fmt(c.contract_start_date),
+        endDate: fmt(c.contract_end_date),
+        approvedBy: employee?.name || employee?.email || 'Administrator',
+        approvalDate: fmt(r.approved_at || new Date().toISOString()),
+        renewalCount: Number(c.renewal_count || 1),
+        adminNotes: r.admin_notes || undefined,
+      });
+      const safeName = String(r.employee_name || 'employee').replace(/[^a-z0-9]+/gi, '_').slice(0, 40);
+      const path = `renewals/${safeName}-${r.id.substring(0, 8)}-${Date.now()}.pdf`;
+      const file = new File([blob], path.split('/').pop()!, { type: 'application/pdf' });
+      const { error: upErr } = await supabase.storage.from('contracts').upload(path, file, { upsert: true, contentType: 'application/pdf' });
+      if (upErr) throw upErr;
+      const { data: signed } = await supabase.storage.from('contracts').createSignedUrl(path, 60 * 60 * 24 * 90);
+      const pdfUrl = signed?.signedUrl || '';
+
+      await supabase.functions.invoke('send-transactional-email', {
+        body: {
+          templateName: 'general-notification',
+          recipientEmail: r.employee_email,
+          idempotencyKey: `contract-renewal-approved-resend-${r.id}-${Date.now()}`,
+          templateData: {
+            subject: 'Contract Renewal Approved — Great Agro Coffee',
+            title: 'Your Contract Has Been Renewed',
+            recipientName: r.employee_name,
+            message:
+`We are pleased to confirm that your contract has been renewed.
+
+• Position: ${c.position}
+• Department: ${c.department}
+• Duration: ${r.requested_months} months
+• Start date: ${fmt(c.contract_start_date)}
+• End date: ${fmt(c.contract_end_date)}
+• Gross salary (UGX): ${Number(c.salary || 0).toLocaleString()}
+
+Your signed contract PDF is available as a secure download link below (valid for 90 days):
+${pdfUrl}
+
+${r.admin_notes ? 'Note from administration: ' + r.admin_notes + '\n\n' : ''}You now have full access to the system. Welcome back!
+
+Great Agro Coffee — Human Resources`,
+          },
+        },
+      });
+      toast({ title: 'Email sent', description: `Contract PDF emailed to ${r.employee_email}` });
+    } catch (e: any) {
+      toast({ title: 'Failed to send', description: e?.message || 'Unknown error', variant: 'destructive' });
+    } finally {
+      setResending(null);
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -274,6 +365,25 @@ Great Agro Coffee — Human Resources`,
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {approved.length > 0 && (
+          <div className="mt-8 border-t pt-4">
+            <p className="text-sm font-semibold mb-3">Recently Approved — Resend Contract Email</p>
+            <div className="space-y-2">
+              {approved.map((r) => (
+                <div key={r.id} className="flex items-center justify-between border rounded p-3 bg-muted/30">
+                  <div className="text-sm">
+                    <p className="font-medium">{r.employee_name}</p>
+                    <p className="text-xs text-muted-foreground">{r.employee_email} • {r.contract?.position || '—'} • Approved {r.approved_at ? new Date(r.approved_at).toLocaleDateString() : '—'}</p>
+                  </div>
+                  <Button size="sm" onClick={() => resendEmail(r)} disabled={resending === r.id || !r.contract}>
+                    {resending === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send email'}
+                  </Button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </CardContent>
