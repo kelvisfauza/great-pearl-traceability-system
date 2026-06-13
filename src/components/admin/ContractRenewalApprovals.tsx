@@ -129,6 +129,8 @@ const ContractRenewalApprovals = () => {
             subject: 'Contract Renewal Approved — Great Agro Coffee',
             title: 'Your Contract Has Been Renewed',
             recipientName: r.employee_name,
+            ctaUrl: pdfUrl,
+            ctaLabel: 'Download Contract PDF',
             message:
 `We are pleased to confirm that your contract has been renewed.
 
@@ -139,8 +141,7 @@ const ContractRenewalApprovals = () => {
 • End date: ${fmt(c.contract_end_date)}
 • Gross salary (UGX): ${Number(c.salary || 0).toLocaleString()}
 
-Your signed contract PDF is available as a secure download link below (valid for 90 days):
-${pdfUrl}
+Your signed contract PDF is ready. Click the button below to download it (link valid for 90 days).
 
 ${r.admin_notes ? 'Note from administration: ' + r.admin_notes + '\n\n' : ''}You now have full access to the system. Welcome back!
 
@@ -237,6 +238,8 @@ Great Agro Coffee — Human Resources`,
               subject: 'Contract Renewal Approved — Great Agro Coffee',
               title: 'Your Contract Has Been Renewed',
               recipientName: c.employee_name,
+            ctaUrl: pdfUrl,
+            ctaLabel: 'Download Contract PDF',
               message:
 `We are pleased to confirm that your contract has been renewed.
 
@@ -247,8 +250,7 @@ Great Agro Coffee — Human Resources`,
 • End date: ${fmt(c.end_date)}
 • Gross salary (UGX): ${Number(c.salary || 0).toLocaleString()}
 
-Your signed contract PDF is attached as a secure download link below (valid for 90 days):
-${pdfUrl}
+Your signed contract PDF is ready. Click the button below to download it (link valid for 90 days).
 
 ${notes[id] ? 'Note from administration: ' + notes[id] + '\n\n' : ''}You now have full access to the system. Welcome back!
 
