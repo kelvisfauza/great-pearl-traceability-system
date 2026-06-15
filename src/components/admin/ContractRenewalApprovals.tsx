@@ -11,7 +11,7 @@ import { PERMISSIONS } from '@/types/permissions';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { FileSignature, Check, X, Loader2 } from 'lucide-react';
+import { FileSignature, Check, X, Loader2, MessageSquare, ArrowDownToLine } from 'lucide-react';
 import { generateApprovedContractBlob } from '@/utils/contractRenewalApprovedPdf';
 
 const ROLE_OPTIONS = ['User', 'Supervisor', 'Manager', 'Admin'];
@@ -36,7 +36,7 @@ const ContractRenewalApprovals = () => {
     const { data } = await (supabase as any)
       .from('contract_renewal_requests')
       .select('*')
-      .eq('status', 'pending')
+      .in('status', ['pending', 'negotiating'])
       .order('created_at', { ascending: false });
     const rows = data || [];
     setItems(rows);
@@ -169,6 +169,63 @@ Great Agro Coffee — Human Resources`,
     updateOverride(id, { permissions: next });
   };
 
+  const applyRequested = (r: any) => {
+    updateOverride(r.id, {
+      position: r.requested_position?.trim() || overrides[r.id]?.position || '',
+      salary: r.requested_salary != null ? String(r.requested_salary) : overrides[r.id]?.salary || '',
+    });
+    toast({ title: 'Requested values applied', description: 'Review then Approve to issue the revised contract.' });
+  };
+
+  const declineChanges = async (id: string) => {
+    if (!employee) return;
+    setActing(id);
+    const r = items.find((x) => x.id === id);
+    const { error } = await (supabase as any)
+      .from('contract_renewal_requests')
+      .update({
+        status: 'changes_declined',
+        hr_response: notes[id] || 'Requested changes not approved. Please sign the original renewal terms.',
+        hr_responded_at: new Date().toISOString(),
+        hr_responded_by: employee.email,
+      })
+      .eq('id', id);
+    if (error) {
+      setActing(null);
+      toast({ title: 'Failed to decline', description: error.message, variant: 'destructive' });
+      return;
+    }
+    try {
+      if (r) {
+        await supabase.functions.invoke('send-transactional-email', {
+          body: {
+            templateName: 'general-notification',
+            recipientEmail: r.employee_email,
+            idempotencyKey: `renewal-changes-declined-${id}`,
+            templateData: {
+              subject: 'Contract Change Request — HR Response',
+              title: 'Your Requested Contract Changes',
+              recipientName: r.employee_name,
+              message:
+`Dear ${r.employee_name},
+
+After review, HR is unable to accommodate the contract changes you proposed.
+
+HR response: ${notes[id] || 'Your proposed changes cannot be applied at this time.'}
+
+To continue your employment, please log back into the system and accept the original renewal terms, or contact HR to schedule a meeting.
+
+Great Agro Coffee — Human Resources`,
+            },
+          },
+        });
+      }
+    } catch (e) { console.warn('Decline email failed', e); }
+    setActing(null);
+    toast({ title: 'Change request declined', description: 'Employee notified by email.' });
+    load();
+  };
+
   const act = async (id: string, decision: 'approve' | 'reject') => {
     if (!employee) return;
     if (decision === 'approve') {
@@ -295,8 +352,39 @@ Great Agro Coffee — Human Resources`,
                     <p className="font-semibold">{r.employee_name}</p>
                     <p className="text-xs text-muted-foreground">{r.employee_email}</p>
                   </div>
-                  <Badge className="bg-amber-500">{r.requested_months} month renewal</Badge>
+                  <div className="flex gap-2">
+                    {r.status === 'negotiating' && (
+                      <Badge className="bg-blue-600 gap-1"><MessageSquare className="h-3 w-3" /> Change Request</Badge>
+                    )}
+                    <Badge className="bg-amber-500">{r.requested_months} month renewal</Badge>
+                  </div>
                 </div>
+                {r.status === 'negotiating' && (
+                  <div className="border border-blue-300 bg-blue-50 dark:bg-blue-950/20 rounded p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">Employee's proposed changes</p>
+                      <Button size="sm" variant="outline" onClick={() => applyRequested(r)} className="h-7 text-xs gap-1">
+                        <ArrowDownToLine className="h-3 w-3" /> Apply requested
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                      <div><span className="text-muted-foreground">Requested salary:</span> {r.requested_salary != null ? `UGX ${Number(r.requested_salary).toLocaleString()}` : '—'}</div>
+                      <div><span className="text-muted-foreground">Requested position:</span> {r.requested_position || '—'}</div>
+                    </div>
+                    {r.requested_role_changes && (
+                      <div className="text-xs"><span className="text-muted-foreground">Role changes:</span> {r.requested_role_changes}</div>
+                    )}
+                    {r.requested_other_terms && (
+                      <div className="text-xs"><span className="text-muted-foreground">Other terms:</span> {r.requested_other_terms}</div>
+                    )}
+                    {r.negotiation_notes && (
+                      <div className="text-xs"><span className="text-muted-foreground">Justification:</span> {r.negotiation_notes}</div>
+                    )}
+                    {r.grace_period_until && (
+                      <p className="text-[10px] text-muted-foreground">Grace period until {new Date(r.grace_period_until).toLocaleDateString()}</p>
+                    )}
+                  </div>
+                )}
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
                   <div><span className="text-muted-foreground">Phone:</span> {r.updated_phone || '—'}</div>
                   <div><span className="text-muted-foreground">Emergency:</span> {r.emergency_contact || '—'}</div>
@@ -352,15 +440,20 @@ Great Agro Coffee — Human Resources`,
                 </div>
 
                 <Textarea
-                  placeholder="Admin notes (optional)"
+                  placeholder={r.status === 'negotiating' ? 'HR response to employee (required when declining)' : 'Admin notes (optional)'}
                   value={notes[r.id] || ''}
                   onChange={(e) => setNotes((n) => ({ ...n, [r.id]: e.target.value }))}
                   rows={2}
                 />
                 <div className="flex gap-2">
                   <Button onClick={() => act(r.id, 'approve')} disabled={acting === r.id} className="flex-1 bg-green-600 hover:bg-green-700">
-                    {acting === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1" /> Approve</>}
+                    {acting === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1" /> {r.status === 'negotiating' ? 'Issue Revised Contract' : 'Approve'}</>}
                   </Button>
+                  {r.status === 'negotiating' && (
+                    <Button onClick={() => declineChanges(r.id)} disabled={acting === r.id} variant="outline" className="flex-1">
+                      Decline Changes
+                    </Button>
+                  )}
                   <Button onClick={() => act(r.id, 'reject')} disabled={acting === r.id} variant="destructive" className="flex-1">
                     <X className="h-4 w-4 mr-1" /> Reject
                   </Button>
