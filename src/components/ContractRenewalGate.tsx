@@ -7,10 +7,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { AlertTriangle, FileSignature, Loader2 } from 'lucide-react';
+import { AlertTriangle, FileSignature, Loader2, MessageSquare } from 'lucide-react';
 
 const TERMS = [
   'I confirm that all information provided in this renewal form is true, accurate, and complete to the best of my knowledge.',
@@ -35,6 +36,7 @@ const ContractRenewalGate = () => {
   const { toast } = useToast();
   const [expired, setExpired] = useState<ExpiredContract | null>(null);
   const [pending, setPending] = useState(false);
+  const [negotiating, setNegotiating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [checked, setChecked] = useState(false);
 
@@ -49,6 +51,13 @@ const ContractRenewalGate = () => {
   const [ack, setAck] = useState(false);
   const [terms, setTerms] = useState(false);
   const [signature, setSignature] = useState('');
+
+  // Negotiation fields
+  const [reqSalary, setReqSalary] = useState('');
+  const [reqPosition, setReqPosition] = useState('');
+  const [reqRoleChanges, setReqRoleChanges] = useState('');
+  const [reqOtherTerms, setReqOtherTerms] = useState('');
+  const [negotiationNotes, setNegotiationNotes] = useState('');
 
   useEffect(() => {
     if (!employee?.email) return;
@@ -74,6 +83,7 @@ const ContractRenewalGate = () => {
       const pendingOrApproved = (req || [])[0];
       if (pendingOrApproved) {
         if (pendingOrApproved.status === 'pending') setPending(true);
+        else if (pendingOrApproved.status === 'negotiating') setNegotiating(true);
         setChecked(true);
         return;
       }
@@ -155,7 +165,57 @@ const ContractRenewalGate = () => {
     setExpired(null);
   };
 
-  if (!checked || (!expired && !pending)) return null;
+  const submitNegotiation = async () => {
+    if (!employee || !expired) return;
+    if (months < 3 || months > 6) {
+      toast({ title: 'Invalid duration', description: 'Renewal must be between 3 and 6 months', variant: 'destructive' });
+      return;
+    }
+    const hasAnyChange =
+      reqSalary.trim() || reqPosition.trim() || reqRoleChanges.trim() || reqOtherTerms.trim();
+    if (!hasAnyChange) {
+      toast({ title: 'No changes specified', description: 'Fill at least one requested change field', variant: 'destructive' });
+      return;
+    }
+    if (negotiationNotes.trim().length < 10) {
+      toast({ title: 'Justification too short', description: 'Please explain your request (10+ characters)', variant: 'destructive' });
+      return;
+    }
+    setSubmitting(true);
+    const grace = new Date();
+    grace.setDate(grace.getDate() + 7);
+    const { error } = await (supabase as any).from('contract_renewal_requests').insert({
+      employee_email: employee.email,
+      employee_name: employee.name,
+      current_contract_id: expired.id,
+      requested_months: months,
+      reason: negotiationNotes.trim(),
+      updated_phone: phone.trim() || null,
+      requested_salary: reqSalary ? Number(reqSalary) : null,
+      requested_position: reqPosition.trim() || null,
+      requested_role_changes: reqRoleChanges.trim() || null,
+      requested_other_terms: reqOtherTerms.trim() || null,
+      negotiation_notes: negotiationNotes.trim(),
+      grace_period_until: grace.toISOString(),
+      status: 'negotiating',
+    });
+    setSubmitting(false);
+    if (error) {
+      toast({ title: 'Submission failed', description: error.message, variant: 'destructive' });
+      return;
+    }
+    toast({
+      title: 'Change request submitted',
+      description: 'HR has been notified. You have 7-day access while they review your proposed changes.',
+    });
+    setNegotiating(true);
+    setExpired(null);
+  };
+
+  if (!checked || (!expired && !pending && !negotiating)) return null;
+
+  // Negotiation in review — do NOT block access (grace period)
+  if (negotiating && !expired) return null;
 
   return (
     <Dialog open modal>
@@ -187,15 +247,26 @@ const ContractRenewalGate = () => {
           </Alert>
         ) : (
           expired && (
-            <div className="space-y-5">
+            <Tabs defaultValue="accept" className="space-y-4">
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Contract expired on {new Date(expired.contract_end_date).toLocaleDateString()}</AlertTitle>
                 <AlertDescription>
-                  {expired.position} — {expired.department}. The system is locked until you submit this renewal form.
+                  {expired.position} — {expired.department}. You may accept the standard renewal terms,
+                  or request changes (salary, role, or other terms) before signing.
                 </AlertDescription>
               </Alert>
 
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="accept" className="gap-2">
+                  <FileSignature className="h-4 w-4" /> Accept &amp; Sign
+                </TabsTrigger>
+                <TabsTrigger value="negotiate" className="gap-2">
+                  <MessageSquare className="h-4 w-4" /> Request Changes
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="accept" className="space-y-5 mt-0">
               <div className="space-y-2">
                 <Label>Renewal duration: <span className="text-primary font-semibold">{months} month{months > 1 ? 's' : ''}</span></Label>
                 <Slider value={[months]} onValueChange={(v) => setMonths(v[0])} min={3} max={6} step={1} />
@@ -247,7 +318,87 @@ const ContractRenewalGate = () => {
               <Button onClick={submit} disabled={submitting} className="w-full" size="lg">
                 {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Submitting...</> : 'Submit for Admin Approval'}
               </Button>
-            </div>
+              </TabsContent>
+
+              <TabsContent value="negotiate" className="space-y-5 mt-0">
+                <Alert className="border-blue-300 bg-blue-50 dark:bg-blue-950/20">
+                  <MessageSquare className="h-4 w-4 text-blue-600" />
+                  <AlertTitle>Propose changes to your renewal terms</AlertTitle>
+                  <AlertDescription className="text-xs">
+                    Fill only the fields you want changed. HR will review your proposal and either issue a revised
+                    contract or respond with their decision. You will retain system access for 7 days while under review.
+                  </AlertDescription>
+                </Alert>
+
+                <div className="space-y-2">
+                  <Label>Renewal duration: <span className="text-primary font-semibold">{months} month{months > 1 ? 's' : ''}</span></Label>
+                  <Slider value={[months]} onValueChange={(v) => setMonths(v[0])} min={3} max={6} step={1} />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <Label>Requested salary (UGX)</Label>
+                    <Input
+                      type="number"
+                      value={reqSalary}
+                      onChange={(e) => setReqSalary(e.target.value)}
+                      placeholder="e.g. 850000"
+                    />
+                  </div>
+                  <div>
+                    <Label>Requested position</Label>
+                    <Input
+                      value={reqPosition}
+                      onChange={(e) => setReqPosition(e.target.value)}
+                      placeholder={expired.position}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Role / responsibility changes</Label>
+                  <Textarea
+                    value={reqRoleChanges}
+                    onChange={(e) => setReqRoleChanges(e.target.value)}
+                    placeholder="Describe any adjustments to your assigned duties or roles..."
+                    rows={2}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Other terms (hours, location, benefits, etc.)</Label>
+                  <Textarea
+                    value={reqOtherTerms}
+                    onChange={(e) => setReqOtherTerms(e.target.value)}
+                    placeholder="Any other contract terms you would like reviewed..."
+                    rows={2}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Justification *</Label>
+                  <Textarea
+                    value={negotiationNotes}
+                    onChange={(e) => setNegotiationNotes(e.target.value)}
+                    placeholder="Explain why you are requesting these changes (min 10 characters)..."
+                    rows={3}
+                    maxLength={1000}
+                  />
+                </div>
+
+                <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/20">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-xs">
+                    Submitting a change request does NOT sign a contract. If HR declines your proposed changes,
+                    you will be asked to either accept the original terms or escalate to a meeting.
+                  </AlertDescription>
+                </Alert>
+
+                <Button onClick={submitNegotiation} disabled={submitting} className="w-full" size="lg" variant="secondary">
+                  {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Submitting...</> : 'Submit Change Request to HR'}
+                </Button>
+              </TabsContent>
+            </Tabs>
           )
         )}
       </DialogContent>
