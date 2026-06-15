@@ -1343,7 +1343,12 @@ export type Database = {
           emergency_contact: string | null
           employee_email: string
           employee_name: string
+          grace_period_until: string | null
+          hr_responded_at: string | null
+          hr_responded_by: string | null
+          hr_response: string | null
           id: string
+          negotiation_notes: string | null
           new_contract_id: string | null
           nssf_number: string | null
           pdf_url: string | null
@@ -1351,6 +1356,10 @@ export type Database = {
           reason: string
           rejected_at: string | null
           requested_months: number
+          requested_other_terms: string | null
+          requested_position: string | null
+          requested_role_changes: string | null
+          requested_salary: number | null
           signature: string
           status: string
           tin_number: string | null
@@ -1368,7 +1377,12 @@ export type Database = {
           emergency_contact?: string | null
           employee_email: string
           employee_name: string
+          grace_period_until?: string | null
+          hr_responded_at?: string | null
+          hr_responded_by?: string | null
+          hr_response?: string | null
           id?: string
+          negotiation_notes?: string | null
           new_contract_id?: string | null
           nssf_number?: string | null
           pdf_url?: string | null
@@ -1376,6 +1390,10 @@ export type Database = {
           reason: string
           rejected_at?: string | null
           requested_months: number
+          requested_other_terms?: string | null
+          requested_position?: string | null
+          requested_role_changes?: string | null
+          requested_salary?: number | null
           signature: string
           status?: string
           tin_number?: string | null
@@ -1393,7 +1411,12 @@ export type Database = {
           emergency_contact?: string | null
           employee_email?: string
           employee_name?: string
+          grace_period_until?: string | null
+          hr_responded_at?: string | null
+          hr_responded_by?: string | null
+          hr_response?: string | null
           id?: string
+          negotiation_notes?: string | null
           new_contract_id?: string | null
           nssf_number?: string | null
           pdf_url?: string | null
@@ -1401,6 +1424,10 @@ export type Database = {
           reason?: string
           rejected_at?: string | null
           requested_months?: number
+          requested_other_terms?: string | null
+          requested_position?: string | null
+          requested_role_changes?: string | null
+          requested_salary?: number | null
           signature?: string
           status?: string
           tin_number?: string | null
