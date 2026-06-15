@@ -58,6 +58,11 @@ const EmployeeList = ({ employees, onViewEmployee, onEditEmployee, onDeleteEmplo
                   <Badge variant={employee.status === 'Active' ? 'default' : 'secondary'} className="text-xs">
                     {employee.status}
                   </Badge>
+                  {employee.disabled && (
+                    <Badge variant="destructive" className="text-xs">
+                      Blocked
+                    </Badge>
+                  )}
                 </div>
                 
                 <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
