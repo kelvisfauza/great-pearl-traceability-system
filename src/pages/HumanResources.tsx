@@ -91,8 +91,12 @@ const HumanResources = () => {
     
     const matchesDepartment = departmentFilter === 'all' || employee.department === departmentFilter;
     const matchesRole = roleFilter === 'all' || employee.role === roleFilter;
-    const matchesStatus = statusFilter === 'all' || employee.status === statusFilter;
-    
+    const matchesStatus =
+      statusFilter === 'all' ||
+      (statusFilter === 'Disabled'
+        ? employee.disabled === true
+        : employee.status === statusFilter);
+
     return matchesSearch && matchesDepartment && matchesRole && matchesStatus;
   });
 
