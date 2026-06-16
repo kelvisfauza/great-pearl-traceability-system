@@ -40,15 +40,15 @@ Deno.serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // 5% fee charged only when user actually goes into the overdraft (per draw)
-    const drawFee = Math.round(drawAmount * 0.05);
+    // 2.75% access fee per draw (matches MTN MoMoAdvance)
+    const drawFee = Math.round(drawAmount * 0.0275);
     const totalDebt = drawAmount + drawFee; // both principal + fee added to outstanding
 
     const available = Number(account.approved_limit) - Number(account.outstanding_balance);
     if (totalDebt > available) {
       return new Response(JSON.stringify({
         ok: false,
-        error: `Draw + 5% fee exceeds available overdraft. Available: UGX ${available.toLocaleString()}, required: UGX ${totalDebt.toLocaleString()}`,
+        error: `Draw + 2.75% access fee exceeds available overdraft. Available: UGX ${available.toLocaleString()}, required: UGX ${totalDebt.toLocaleString()}`,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
       balance_after: newOutstanding,
       ledger_entry_id: ledger.id,
       reference: `OD-DRAW-${Date.now()}`,
-      metadata: { reason: reason || null, fee_rate: 0.05, fee_amount: drawFee },
+      metadata: { reason: reason || null, fee_rate: 0.0275, fee_amount: drawFee },
     });
 
     // Log fee as separate overdraft_transactions row for visibility
@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
       balance_after: newOutstanding,
       ledger_entry_id: null,
       reference: `OD-FEE-${Date.now()}`,
-      metadata: { fee_rate: 0.05, draw_amount: drawAmount, note: "5% fee on draw, added to outstanding" },
+      metadata: { fee_rate: 0.0275, draw_amount: drawAmount, note: "2.75% access fee on draw, added to outstanding" },
     });
 
     // Confirmation email (MoMo-style)
