@@ -319,6 +319,9 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         from += PAGE;
       }
 
+      // True opening balance for the selected period (before any period entries are applied)
+      const periodOpeningBalance = runBal;
+
       const fetchedEntries = mergeStatementEntries(
         ((periodEntries || []) as LedgerEntry[]).filter((entry) => !isDirectAllowancePayout(entry))
       );
