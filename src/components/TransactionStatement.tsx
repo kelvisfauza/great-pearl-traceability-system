@@ -319,6 +319,9 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         from += PAGE;
       }
 
+      // True opening balance for the selected period (before any period entries are applied)
+      const periodOpeningBalance = runBal;
+
       const fetchedEntries = mergeStatementEntries(
         ((periodEntries || []) as LedgerEntry[]).filter((entry) => !isDirectAllowancePayout(entry))
       );
@@ -502,9 +505,11 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       };
 
       doc.setFillColor(245, 245, 245);
-      doc.rect(margin, sy - 4, pageW - 2 * margin, 18, 'F');
-      drawRow('BALANCE BROUGHT FORWARD', `UGX ${balanceBroughtForward.toLocaleString()}`, true);
-      drawRow(`BALANCE AS AT ${periodTo}`, `UGX ${closingBalance.toLocaleString()}`, true);
+      doc.rect(margin, sy - 4, pageW - 2 * margin, 30, 'F');
+      drawRow(`BALANCE AS AT ${periodFrom} (Opening)`, `UGX ${periodOpeningBalance.toLocaleString()}`, true);
+      drawRow('Add: Total Credits', `+${totalCredits.toLocaleString()}`);
+      drawRow('Less: Total Debits (incl. Statement Charge)', `-${totalDebits.toLocaleString()}`);
+      drawRow(`BALANCE AS AT ${periodTo} (Closing)`, `UGX ${closingBalance.toLocaleString()}`, true);
       sy += 4;
 
       // Summary of transactions
