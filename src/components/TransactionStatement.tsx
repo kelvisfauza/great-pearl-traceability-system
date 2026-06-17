@@ -454,14 +454,107 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         y += 5.5;
       });
 
+      // ===== Summary Page (Stanbic-style) =====
+      const totalCredits = transactionsAsc.reduce((s, t) => s + (t.amount > 0 ? t.amount : 0), 0);
+      const totalDebits  = transactionsAsc.reduce((s, t) => s + (t.amount < 0 ? Math.abs(t.amount) : 0), 0);
+
+      doc.addPage();
+      let sy = 20;
+
+      // Header
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(26, 86, 50);
+      doc.text('Great Agro Coffee', margin, sy);
+      sy += 6;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100);
+      doc.text(`Statement from : ${periodFrom} to ${periodTo}`, margin, sy);
+      doc.text(`Page ${doc.getNumberOfPages()} of ${doc.getNumberOfPages()}`, pageW - margin, sy, { align: 'right' });
+      sy += 8;
+
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.4);
+      doc.line(margin, sy, pageW - margin, sy);
+      sy += 7;
+
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(30);
+      doc.text('STATEMENT SUMMARY', margin, sy);
+      sy += 8;
+
+      // Account details
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(50);
+      doc.text(`Account Holder : ${empName}`, margin, sy); sy += 5;
+      doc.text(`Currency       : UGX`, margin, sy); sy += 5;
+      doc.text(`Account Type   : WALLET`, margin, sy); sy += 8;
+
+      // Balance block
+      const drawRow = (label: string, value: string, bold = false) => {
+        doc.setFont('helvetica', bold ? 'bold' : 'normal');
+        doc.text(label, margin + 2, sy);
+        doc.text(value, pageW - margin - 2, sy, { align: 'right' });
+        sy += 6;
+      };
+
+      doc.setFillColor(245, 245, 245);
+      doc.rect(margin, sy - 4, pageW - 2 * margin, 18, 'F');
+      drawRow('BALANCE BROUGHT FORWARD', `UGX ${balanceBroughtForward.toLocaleString()}`, true);
+      drawRow(`BALANCE AS AT ${periodTo}`, `UGX ${closingBalance.toLocaleString()}`, true);
+      sy += 4;
+
+      // Summary of transactions
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setFillColor(26, 86, 50);
+      doc.setTextColor(255);
+      doc.rect(margin, sy - 4, pageW - 2 * margin, 7, 'F');
+      doc.text('Summary of transactions', margin + 2, sy);
+      sy += 8;
+      doc.setTextColor(50);
+      doc.setFontSize(10);
+      drawRow('Credits', `${totalCredits.toLocaleString()}`);
+      drawRow('Debits',  `${totalDebits.toLocaleString()} -`);
+      drawRow('Net movement', `${(totalCredits - totalDebits).toLocaleString()}`, true);
+      sy += 4;
+
+      // Fee summary
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setFillColor(26, 86, 50);
+      doc.setTextColor(255);
+      doc.rect(margin, sy - 4, pageW - 2 * margin, 7, 'F');
+      doc.text('Fee summary', margin + 2, sy);
+      sy += 8;
+      doc.setTextColor(50);
+      doc.setFontSize(10);
+      drawRow('Statement Charge', `${STATEMENT_FEE.toLocaleString()}`);
+      drawRow('Service Fee', `0`);
+      drawRow('VAT', `0`);
+      drawRow('Total Fees', `${STATEMENT_FEE.toLocaleString()}`, true);
+      sy += 6;
+
+      // Notice
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(8);
+      doc.setTextColor(110);
+      const notice = 'Please verify all transactions reflected on this statement and notify any discrepancies to Great Agro Coffee Operations as soon as possible. Balances may change if there are transactions still being processed.';
+      const lines = doc.splitTextToSize(notice, pageW - 2 * margin);
+      doc.text(lines, margin, sy);
+      sy += lines.length * 4 + 6;
+
       // Footer
-      y += 5;
       doc.setDrawColor(200);
-      doc.line(margin, y, pageW - margin, y);
-      y += 5;
+      doc.line(margin, sy, pageW - margin, sy);
+      sy += 5;
+      doc.setFont('helvetica', 'normal');
       doc.setFontSize(7);
       doc.setTextColor(150);
-      doc.text(`Generated on ${format(new Date(), 'MMM dd, yyyy h:mm a')} | For questions: operations@greatpearlcoffee.com`, margin, y);
+      doc.text(`Generated on ${format(new Date(), 'MMM dd, yyyy h:mm a')} | For questions: operations@greatpearlcoffee.com`, margin, sy);
 
       // 4. Upload PDF to Supabase Storage
       const pdfBlob = doc.output('blob');
