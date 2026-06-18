@@ -49,7 +49,7 @@ interface SMSFailure {
   user_email: string;
   user_name: string;
   user_phone: string;
-  verification_code: string;
+  verification_code?: string | null;
   failure_reason: string;
   department: string;
   role: string;
@@ -513,12 +513,12 @@ export const ComprehensiveSMSManager = () => {
                                 expiryStatus.isExpired ? 'bg-red-50 border border-red-200' : 'bg-muted'
                               }`}>
                                 <span className="text-sm font-mono font-bold">
-                                  Code: {failure.verification_code}
+                                  Code: {(failure.verification_code || "")}
                                 </span>
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  onClick={() => copyCode(failure.verification_code, failure.user_name || 'User')}
+                                  onClick={() => copyCode((failure.verification_code || ""), failure.user_name || 'User')}
                                 >
                                   <Copy className="h-3 w-3" />
                                 </Button>
@@ -537,7 +537,7 @@ export const ComprehensiveSMSManager = () => {
                                 <Button
                                   size="sm"
                                   variant={expiryStatus.isExpired ? "default" : "secondary"}
-                                  onClick={() => sendCodeManually(failure.user_phone, failure.verification_code, failure.user_name || 'User')}
+                                  onClick={() => sendCodeManually(failure.user_phone, (failure.verification_code || ""), failure.user_name || 'User')}
                                   className="flex-1"
                                 >
                                   <MessageCircle className="h-3 w-3 mr-1" />

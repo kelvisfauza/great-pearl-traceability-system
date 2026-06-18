@@ -9150,7 +9150,6 @@ export type Database = {
           user_email: string
           user_name: string | null
           user_phone: string
-          verification_code: string | null
         }
         Insert: {
           created_at?: string
@@ -9161,7 +9160,6 @@ export type Database = {
           user_email: string
           user_name?: string | null
           user_phone: string
-          verification_code?: string | null
         }
         Update: {
           created_at?: string
@@ -9172,7 +9170,6 @@ export type Database = {
           user_email?: string
           user_name?: string | null
           user_phone?: string
-          verification_code?: string | null
         }
         Relationships: []
       }
