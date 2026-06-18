@@ -7310,6 +7310,75 @@ export type Database = {
         }
         Relationships: []
       }
+      provider_submission_requests: {
+        Row: {
+          amount: number
+          attachment_url: string | null
+          created_at: string
+          description: string
+          email: string | null
+          id: string
+          invoice_number: string | null
+          payout_message: string | null
+          payout_record_id: string | null
+          payout_status: string | null
+          phone: string
+          provider_name: string
+          rejection_reason: string | null
+          request_type: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewed_by_name: string | null
+          status: string
+          submitter_ip: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          attachment_url?: string | null
+          created_at?: string
+          description: string
+          email?: string | null
+          id?: string
+          invoice_number?: string | null
+          payout_message?: string | null
+          payout_record_id?: string | null
+          payout_status?: string | null
+          phone: string
+          provider_name: string
+          rejection_reason?: string | null
+          request_type: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_name?: string | null
+          status?: string
+          submitter_ip?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          attachment_url?: string | null
+          created_at?: string
+          description?: string
+          email?: string | null
+          id?: string
+          invoice_number?: string | null
+          payout_message?: string | null
+          payout_record_id?: string | null
+          payout_status?: string | null
+          phone?: string
+          provider_name?: string
+          rejection_reason?: string | null
+          request_type?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_name?: string | null
+          status?: string
+          submitter_ip?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       public_holidays: {
         Row: {
           bg_gradient_from: string
