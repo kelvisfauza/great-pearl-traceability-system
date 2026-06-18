@@ -49,7 +49,7 @@ interface SMSFailure {
   user_email: string;
   user_name: string;
   user_phone: string;
-  verification_code: string;
+  verification_code?: string | null;
   failure_reason: string;
   department: string;
   role: string;
