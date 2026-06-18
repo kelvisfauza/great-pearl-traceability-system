@@ -19,6 +19,7 @@ const PUBLIC_PATH_PREFIXES = [
   '/reset-password',
   '/display',
   '/maintenance-recovery',
+  '/submit-request',
 ];
 
 const isPublicPath = (pathname: string) =>
