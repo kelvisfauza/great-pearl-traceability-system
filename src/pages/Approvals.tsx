@@ -7,6 +7,7 @@ import AdminRejectedLotsReview from '@/components/admin/AdminRejectedLotsReview'
 import ContractRenewalApprovals from '@/components/admin/ContractRenewalApprovals';
 import MealDisbursementSection from '@/components/admin/MealDisbursementSection';
 import ServiceProviderPayments from '@/components/admin/ServiceProviderPayments';
+import ProviderSubmissionApprovals from '@/components/admin/ProviderSubmissionApprovals';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRoleBasedData } from '@/hooks/useRoleBasedData';
 import { Shield, ClipboardCheck, DollarSign } from 'lucide-react';
@@ -75,6 +76,9 @@ const Approvals = () => {
 
         {/* Contract Renewal Requests */}
         <ContractRenewalApprovals />
+
+        {/* Self-submitted provider requests (from public link) */}
+        <ProviderSubmissionApprovals />
 
         {/* Meal Plan Disbursements */}
         <MealDisbursementSection />
