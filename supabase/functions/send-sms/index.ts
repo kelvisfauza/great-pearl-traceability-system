@@ -307,6 +307,7 @@ serve(async (req) => {
       'supplier_price_broadcast',
       'payout_confirmation',
       'loan_advert',
+      'service_provider_invite',
     ]
     
     const isAllowedType = ALLOWED_SMS_TYPES.includes(messageType?.toLowerCase() || '')
