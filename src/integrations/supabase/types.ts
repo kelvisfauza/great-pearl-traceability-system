@@ -12504,6 +12504,20 @@ export type Database = {
           name: string
         }[]
       }
+      get_employee_directory_safe: {
+        Args: never
+        Returns: {
+          department: string
+          email: string
+          employee_id: string
+          id: string
+          name: string
+          phone: string
+          position: string
+          role: string
+          status: string
+        }[]
+      }
       get_employee_display_name: {
         Args: { _auth_user_id: string }
         Returns: string
