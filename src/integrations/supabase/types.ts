@@ -12706,6 +12706,10 @@ export type Database = {
         Returns: boolean
       }
       has_face_credential: { Args: { p_email: string }; Returns: boolean }
+      has_overdraft_loan_backstop: {
+        Args: { p_reserve?: number; p_user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
