@@ -209,6 +209,7 @@ const App: React.ComponentType = () => {
                 <Route path="/approve-action" element={<ApproveAction />} />
                 <Route path="/verify-device" element={<VerifyDevice />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/submit-request" element={<SubmitRequest />} />
                 {/* Idle / inactive display — plays Great Agro Coffee documentary */}
                 <Route path="/display" element={<IdleDocumentary />} />
                 {/* Legacy price display TV (kept available on a dedicated route) */}
