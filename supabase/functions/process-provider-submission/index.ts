@@ -188,6 +188,34 @@ serve(async (req) => {
       console.error("SMS notify error:", e);
     }
 
+    // Notify provider via Email
+    try {
+      if ((yoStatus === "success" || yoStatus === "pending_approval") && submission.email) {
+        const shortRef = (result.transactionRef || record.id).slice(-8).toUpperCase();
+        await supabase.functions.invoke("send-transactional-email", {
+          body: {
+            templateName: "payment-receipt",
+            recipientEmail: submission.email,
+            idempotencyKey: `provider-submission-${submissionId}`,
+            templateData: {
+              recipientName: submission.provider_name,
+              reference: shortRef,
+              description: submission.description,
+              invoiceNumber: submission.invoice_number || undefined,
+              amount: `UGX ${numAmount.toLocaleString()}`,
+              charges: numCharge > 0 ? `UGX ${numCharge.toLocaleString()}` : undefined,
+              total: `UGX ${totalAmount.toLocaleString()}`,
+              paymentMethod: "Mobile Money (Yo Payments)",
+              transactionId: result.transactionRef || record.id,
+              processedBy: reviewerName,
+            },
+          },
+        });
+      }
+    } catch (e) {
+      console.error("Email notify error:", e);
+    }
+
     return new Response(
       JSON.stringify({
         ok: true,
