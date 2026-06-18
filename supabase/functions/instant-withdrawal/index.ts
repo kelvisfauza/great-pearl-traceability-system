@@ -209,7 +209,9 @@ serve(async (req) => {
     } catch (_) { /* non-fatal */ }
 
     // Loan minimum balance enforcement: borrowers and guarantors on active loans
-    // must keep UGX 10,000 in their wallet at all times.
+    // must keep UGX 10,000 in their wallet at all times — UNLESS they have an
+    // active overdraft account with at least 10,000 headroom, in which case the
+    // overdraft itself acts as the loan backstop.
     let reserve = 0;
     try {
       const { data: hasLoan } = await supabase.rpc('has_active_loan_obligation', { p_user_id: resolvedUserId });
@@ -242,18 +244,26 @@ serve(async (req) => {
       }
     } catch (_) { /* non-fatal */ }
 
-    const spendable = walletSpendable + odAvailable;
+    // If overdraft headroom can cover the loan reserve, waive the wallet reserve.
+    if (reserve > 0 && !odFrozen && odAvailable >= reserve) {
+      reserve = 0;
+    }
+
+    // Recompute wallet spendable now that reserve may have been waived above.
+    const walletSpendableFinal = Math.max(0, baseAvailable - inFlightInstant - reserve);
+
+    const spendable = walletSpendableFinal + odAvailable;
     if (numAmount > spendable) {
       const msg = reserve > 0
         ? `You have an active loan (as borrower or guarantor). UGX ${reserve.toLocaleString()} must remain in your wallet. Available to withdraw: UGX ${spendable.toLocaleString()}.`
         : odFrozen
-          ? `Insufficient funds. Your overdraft is frozen (outstanding not cleared within 30 days). Wallet available: UGX ${walletSpendable.toLocaleString()}.`
-          : `Insufficient funds. Available: UGX ${spendable.toLocaleString()} (wallet ${walletSpendable.toLocaleString()}${odAvailable>0?`, overdraft ${odAvailable.toLocaleString()}`:''}).`;
+          ? `Insufficient funds. Your overdraft is frozen (outstanding not cleared within 30 days). Wallet available: UGX ${walletSpendableFinal.toLocaleString()}.`
+          : `Insufficient funds. Available: UGX ${spendable.toLocaleString()} (wallet ${walletSpendableFinal.toLocaleString()}${odAvailable>0?`, overdraft ${odAvailable.toLocaleString()}`:''}).`;
       return respond(false, { error: msg });
     }
 
     // Compute how much of this withdrawal is overdraft-funded
-    const overdraftPortion = Math.max(0, numAmount - walletSpendable);
+    const overdraftPortion = Math.max(0, numAmount - walletSpendableFinal);
     const walletPortion = numAmount - overdraftPortion;
 
     // Upfront interest charged when the user accepts to dip into overdraft
