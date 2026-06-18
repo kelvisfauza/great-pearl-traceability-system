@@ -57,6 +57,7 @@ import IdleDocumentary from "./pages/IdleDocumentary";
 import ApproveAction from "./pages/ApproveAction";
 import VerifyDevice from "./pages/VerifyDevice";
 import ResetPassword from "./pages/ResetPassword";
+import SubmitRequest from "./pages/SubmitRequest";
 
 // V2 System Pages
 import V2DepartmentRouter from "./components/v2/V2DepartmentRouter";
