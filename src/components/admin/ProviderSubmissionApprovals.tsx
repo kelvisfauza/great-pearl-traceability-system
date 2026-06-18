@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Inbox, Loader2, Check, X, Copy, ExternalLink } from 'lucide-react';
+import { printProviderAcknowledgement } from '@/utils/printProviderAcknowledgement';
 
 const ProviderSubmissionApprovals: React.FC = () => {
   const { toast } = useToast();
@@ -58,6 +59,29 @@ const ProviderSubmissionApprovals: React.FC = () => {
         title: action === 'approve' ? 'Approved' : 'Rejected',
         description: (data as any)?.message || `Request ${action}d successfully`,
       });
+
+      // On successful approval, open printable acknowledgement form
+      if (action === 'approve') {
+        const ref = ((data as any)?.ref || (data as any)?.recordId || selected.id)
+          .toString().slice(-8).toUpperCase();
+        const numAmount = Number(selected.amount);
+        const numCharge = Number(withdrawCharge || 0);
+        printProviderAcknowledgement({
+          providerName: selected.provider_name,
+          phone: selected.phone,
+          email: selected.email,
+          description: selected.description,
+          invoiceNumber: selected.invoice_number,
+          amount: numAmount,
+          charges: numCharge,
+          total: numAmount + numCharge,
+          reference: ref,
+          transactionId: (data as any)?.ref || null,
+          requestType: selected.request_type === 'meal_plan' ? 'meal_plan' : 'service_provider',
+          processedBy: 'Finance / Admin',
+        });
+      }
+
       queryClient.invalidateQueries({ queryKey: ['provider-submissions-pending'] });
       queryClient.invalidateQueries({ queryKey: ['service-provider-payments'] });
       queryClient.invalidateQueries({ queryKey: ['meal-disbursements'] });
