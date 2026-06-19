@@ -169,7 +169,7 @@ export function generateApprovedContractBlob(d: ApprovedContractData): Blob {
   doc.setTextColor(...GREY);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
-  doc.text('Great Agro Coffee — Human Resources Department', M, H - 9);
+  doc.text('Great Agro Coffee — Under Hello YEDA Coffee Company Limited — Human Resources Department', M, H - 9);
   doc.text('CC: Operations Department', W - M, H - 9, { align: 'right' });
 
   return doc.output('blob');
