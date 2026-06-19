@@ -101,6 +101,7 @@ const buildHtml = (templateNo: string, dateStr: string, rows: number) => {
   .header { text-align: center; border-bottom: 1.5px solid #111; padding-bottom: 4px; margin-bottom: 6px; }
   .logo-wrap { display: none; }
   .company { font-size: 14px; font-weight: bold; letter-spacing: 0.5px; margin: 2px 0; }
+  .company-subtitle { font-size: 10px; font-weight: bold; color: #1a5632; margin: 1px 0; }
   .contact { font-size: 9px; color: #444; line-height: 1.3; }
   .doc-title { font-size: 12px; font-weight: bold; margin-top: 4px; text-transform: uppercase; }
   .meta { display: flex; justify-content: space-between; font-size: 9.5px; margin: 4px 0; flex-wrap: wrap; gap: 4px; }
