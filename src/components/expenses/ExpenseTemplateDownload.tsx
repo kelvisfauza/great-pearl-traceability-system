@@ -517,19 +517,19 @@ const generatePDF = async (
   doc.setTextColor(13, 61, 31);
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.text('GREAT AGRO COFFEE LTD', pageW / 2 + 5, 13, { align: 'center' });
+  doc.text(COMPANY_NAME, pageW / 2 + 5, 13, { align: 'center' });
 
   // Parent company
   doc.setTextColor(26, 86, 50);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text('A Member of Hello YEDA Coffee Company Limited', pageW / 2 + 5, 19, { align: 'center' });
+  doc.text(COMPANY_TAGLINE, pageW / 2 + 5, 19, { align: 'center' });
 
   // Location
   doc.setTextColor(80, 80, 80);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.text('P.O Box 431420, Kasese, Uganda.', pageW / 2 + 5, 25);
+  doc.text(`${COMPANY_ADDRESS}.`, pageW / 2 + 5, 25);
 
   // Contact info
   doc.setFontSize(7);
@@ -903,7 +903,7 @@ const generatePDF = async (
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(110, 110, 110);
   doc.text(`Ref: ${refNo}  |  This form must be submitted to the Finance Department with all supporting documents.`, pageW / 2, footerY + 5, { align: 'center' });
-  doc.text('Great Agro Coffee Ltd  |  A Member of Hello YEDA Coffee Company Limited  |  P.O Box 431420, Kasese, Uganda  |  Internal Use Only', pageW / 2, footerY + 10, { align: 'center' });
+  doc.text(`Great Agro Coffee  |  ${COMPANY_TAGLINE}  |  ${COMPANY_ADDRESS}  |  Internal Use Only`, pageW / 2, footerY + 10, { align: 'center' });
 
   // Open in new tab and trigger print, also save copy
   const blobUrl = doc.output('bloburl');
