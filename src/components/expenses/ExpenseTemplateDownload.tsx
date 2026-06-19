@@ -229,7 +229,21 @@ const generateDepartmentReportDocx = async (
       children: [
         new Paragraph({
           alignment: AlignmentType.CENTER,
-          children: [new TextRun({ text: 'GREAT AGRO COFFEE LTD', bold: true, size: 36, font: 'Calibri' })],
+          children: [
+            new TextRun({ text: 'GREAT AGRO COFFEE LTD', bold: true, size: 36, font: 'Calibri' }),
+          ],
+        }),
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new TextRun({ text: 'Under Hello YEDA Coffee Company Limited', bold: true, size: 20, color: '1a5632', font: 'Calibri' }),
+          ],
+        }),
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new TextRun({ text: 'P.O Box 431420, Kasese, Uganda', size: 18, color: '666666', font: 'Calibri' }),
+          ],
         }),
       ],
     }),
@@ -256,7 +270,21 @@ const generateDepartmentReportDocx = async (
       children: [
         new Paragraph({
           alignment: AlignmentType.CENTER,
-          children: [new TextRun({ text: 'GREAT AGRO COFFEE LTD', bold: true, size: 36, font: 'Calibri' })],
+          children: [
+            new TextRun({ text: 'GREAT AGRO COFFEE LTD', bold: true, size: 36, font: 'Calibri' }),
+          ],
+        }),
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new TextRun({ text: 'Under Hello YEDA Coffee Company Limited', bold: true, size: 20, color: '1a5632', font: 'Calibri' }),
+          ],
+        }),
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new TextRun({ text: 'P.O Box 431420, Kasese, Uganda', size: 18, color: '666666', font: 'Calibri' }),
+          ],
         }),
       ],
     });
