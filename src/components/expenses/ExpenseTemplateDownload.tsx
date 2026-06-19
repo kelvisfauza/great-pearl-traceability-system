@@ -396,7 +396,7 @@ const generateDepartmentReportDocx = async (
     rows: [
       new DocxTableRow({
         children: [
-          footerCell('Great Agro Coffee Ltd', 'P.O Box 431420, Kasese, Uganda'),
+          footerCell('Great Agro Coffee', COMPANY_ADDRESS),
           footerCell('Telephone', '0393001626'),
           footerCell('Email', 'operations@greatpearlcoffee.com'),
           footerCell('Website', 'www.greatpearlcoffee.com'),
@@ -424,7 +424,7 @@ const generateDepartmentReportDocx = async (
       children: [
         headerTable,
         new Paragraph({ spacing: { after: 120 }, children: [new TextRun({ text: '' })] }),
-        contactPara('P.O Box 431420, Kasese, Uganda'),
+        contactPara(COMPANY_ADDRESS),
         contactPara('0393001626'),
         contactPara('operations@greatpearlcoffee.com'),
         contactPara('www.greatpearlcoffee.com'),
