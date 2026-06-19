@@ -30,6 +30,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 const LOGO_URL = '/lovable-uploads/great-agro-coffee-logo.png';
+const COMPANY_NAME = 'GREAT AGRO COFFEE';
+const COMPANY_TAGLINE = 'a member of HELLO YEDA COFFEE COMPANY LIMITED';
+const COMPANY_ADDRESS = 'P.O Box 431420, Kasese, Uganda';
 
 const generateRefNumber = (prefix: string) => {
   const date = new Date();
@@ -230,19 +233,19 @@ const generateDepartmentReportDocx = async (
         new Paragraph({
           alignment: AlignmentType.CENTER,
           children: [
-            new TextRun({ text: 'GREAT AGRO COFFEE LTD', bold: true, size: 36, font: 'Calibri' }),
+            new TextRun({ text: COMPANY_NAME, bold: true, size: 36, font: 'Calibri' }),
           ],
         }),
         new Paragraph({
           alignment: AlignmentType.CENTER,
           children: [
-            new TextRun({ text: 'A Member of Hello YEDA Coffee Company Limited', bold: true, size: 20, color: '1a5632', font: 'Calibri' }),
+            new TextRun({ text: COMPANY_TAGLINE, bold: true, size: 20, color: '1a5632', font: 'Calibri' }),
           ],
         }),
         new Paragraph({
           alignment: AlignmentType.CENTER,
           children: [
-            new TextRun({ text: 'P.O Box 431420, Kasese, Uganda', size: 18, color: '666666', font: 'Calibri' }),
+            new TextRun({ text: COMPANY_ADDRESS, size: 18, color: '666666', font: 'Calibri' }),
           ],
         }),
       ],
@@ -271,19 +274,19 @@ const generateDepartmentReportDocx = async (
         new Paragraph({
           alignment: AlignmentType.CENTER,
           children: [
-            new TextRun({ text: 'GREAT AGRO COFFEE LTD', bold: true, size: 36, font: 'Calibri' }),
+            new TextRun({ text: COMPANY_NAME, bold: true, size: 36, font: 'Calibri' }),
           ],
         }),
         new Paragraph({
           alignment: AlignmentType.CENTER,
           children: [
-            new TextRun({ text: 'A Member of Hello YEDA Coffee Company Limited', bold: true, size: 20, color: '1a5632', font: 'Calibri' }),
+            new TextRun({ text: COMPANY_TAGLINE, bold: true, size: 20, color: '1a5632', font: 'Calibri' }),
           ],
         }),
         new Paragraph({
           alignment: AlignmentType.CENTER,
           children: [
-            new TextRun({ text: 'P.O Box 431420, Kasese, Uganda', size: 18, color: '666666', font: 'Calibri' }),
+            new TextRun({ text: COMPANY_ADDRESS, size: 18, color: '666666', font: 'Calibri' }),
           ],
         }),
       ],
@@ -393,7 +396,7 @@ const generateDepartmentReportDocx = async (
     rows: [
       new DocxTableRow({
         children: [
-          footerCell('Great Agro Coffee Ltd', 'P.O Box 431420, Kasese, Uganda'),
+          footerCell('Great Agro Coffee', COMPANY_ADDRESS),
           footerCell('Telephone', '0393001626'),
           footerCell('Email', 'operations@greatpearlcoffee.com'),
           footerCell('Website', 'www.greatpearlcoffee.com'),
@@ -421,7 +424,7 @@ const generateDepartmentReportDocx = async (
       children: [
         headerTable,
         new Paragraph({ spacing: { after: 120 }, children: [new TextRun({ text: '' })] }),
-        contactPara('P.O Box 431420, Kasese, Uganda'),
+        contactPara(COMPANY_ADDRESS),
         contactPara('0393001626'),
         contactPara('operations@greatpearlcoffee.com'),
         contactPara('www.greatpearlcoffee.com'),
@@ -514,19 +517,19 @@ const generatePDF = async (
   doc.setTextColor(13, 61, 31);
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.text('GREAT AGRO COFFEE LTD', pageW / 2 + 5, 13, { align: 'center' });
+  doc.text(COMPANY_NAME, pageW / 2 + 5, 13, { align: 'center' });
 
   // Parent company
   doc.setTextColor(26, 86, 50);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text('A Member of Hello YEDA Coffee Company Limited', pageW / 2 + 5, 19, { align: 'center' });
+  doc.text(COMPANY_TAGLINE, pageW / 2 + 5, 19, { align: 'center' });
 
   // Location
   doc.setTextColor(80, 80, 80);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.text('P.O Box 431420, Kasese, Uganda.', pageW / 2 + 5, 25);
+  doc.text(`${COMPANY_ADDRESS}.`, pageW / 2 + 5, 25);
 
   // Contact info
   doc.setFontSize(7);
@@ -900,7 +903,7 @@ const generatePDF = async (
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(110, 110, 110);
   doc.text(`Ref: ${refNo}  |  This form must be submitted to the Finance Department with all supporting documents.`, pageW / 2, footerY + 5, { align: 'center' });
-  doc.text('Great Agro Coffee Ltd  |  A Member of Hello YEDA Coffee Company Limited  |  P.O Box 431420, Kasese, Uganda  |  Internal Use Only', pageW / 2, footerY + 10, { align: 'center' });
+  doc.text(`Great Agro Coffee  |  ${COMPANY_TAGLINE}  |  ${COMPANY_ADDRESS}  |  Internal Use Only`, pageW / 2, footerY + 10, { align: 'center' });
 
   // Open in new tab and trigger print, also save copy
   const blobUrl = doc.output('bloburl');
