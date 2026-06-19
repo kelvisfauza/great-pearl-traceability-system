@@ -91,7 +91,8 @@ const GRNGenerator: React.FC<GRNGeneratorProps> = ({ open, onClose }) => {
           <tr>
             <td style="text-align:center;padding:4px 0;font-size:11px;">
               <strong style="font-size:13px;letter-spacing:1px;">GREAT AGRO COFFEE LIMITED</strong><br/>
-              <span style="font-size:9.5px;color:#444;">A SPECIALTY COFFEE PROCESSOR & EXPORTER</span>
+              <span style="font-size:9.5px;color:#444;font-weight:bold;">Under Hello YEDA Coffee Company Limited</span><br/>
+              <span style="font-size:9.5px;color:#444;">P.O Box 431420, Kasese, Uganda</span>
             </td>
             <td style="width:30%;text-align:right;padding:4px 0;">
               <strong style="font-size:11px;">GAC-GRNC</strong>
@@ -206,7 +207,8 @@ const GRNGenerator: React.FC<GRNGeneratorProps> = ({ open, onClose }) => {
           <tr>
             <td style="padding:8px;font-size:9px;color:#444;line-height:1.5;vertical-align:top;width:65%;">
               <strong style="color:#1a1a1a;">GREAT AGRO COFFEE LIMITED</strong><br/>
-              Kampala Industrial & Business Park — Namanve / P.O. Box 3181, Kampala, Uganda<br/>
+              Under Hello YEDA Coffee Company Limited<br/>
+              P.O Box 431420, Kasese, Uganda<br/>
               Tel: +256 393 001 626 &nbsp;|&nbsp; Email: info@greatpearlcoffee.com &nbsp;|&nbsp; Web: www.greatagrocoffee.com
               ${verificationCode ? `<br/><span style="color:#0a6b2a;font-weight:bold;font-family:'Courier New',monospace;margin-top:4px;display:inline-block;">Verify code: ${verificationCode}</span>` : ''}
             </td>
