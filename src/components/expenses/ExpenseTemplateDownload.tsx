@@ -30,6 +30,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 const LOGO_URL = '/lovable-uploads/great-agro-coffee-logo.png';
+const COMPANY_NAME = 'GREAT AGRO COFFEE';
+const COMPANY_TAGLINE = 'a member of HELLO YEDA COFFEE COMPANY LIMITED';
+const COMPANY_ADDRESS = 'P.O Box 431420, Kasese, Uganda';
 
 const generateRefNumber = (prefix: string) => {
   const date = new Date();
@@ -230,19 +233,19 @@ const generateDepartmentReportDocx = async (
         new Paragraph({
           alignment: AlignmentType.CENTER,
           children: [
-            new TextRun({ text: 'GREAT AGRO COFFEE LTD', bold: true, size: 36, font: 'Calibri' }),
+            new TextRun({ text: COMPANY_NAME, bold: true, size: 36, font: 'Calibri' }),
           ],
         }),
         new Paragraph({
           alignment: AlignmentType.CENTER,
           children: [
-            new TextRun({ text: 'A Member of Hello YEDA Coffee Company Limited', bold: true, size: 20, color: '1a5632', font: 'Calibri' }),
+            new TextRun({ text: COMPANY_TAGLINE, bold: true, size: 20, color: '1a5632', font: 'Calibri' }),
           ],
         }),
         new Paragraph({
           alignment: AlignmentType.CENTER,
           children: [
-            new TextRun({ text: 'P.O Box 431420, Kasese, Uganda', size: 18, color: '666666', font: 'Calibri' }),
+            new TextRun({ text: COMPANY_ADDRESS, size: 18, color: '666666', font: 'Calibri' }),
           ],
         }),
       ],
@@ -271,19 +274,19 @@ const generateDepartmentReportDocx = async (
         new Paragraph({
           alignment: AlignmentType.CENTER,
           children: [
-            new TextRun({ text: 'GREAT AGRO COFFEE LTD', bold: true, size: 36, font: 'Calibri' }),
+            new TextRun({ text: COMPANY_NAME, bold: true, size: 36, font: 'Calibri' }),
           ],
         }),
         new Paragraph({
           alignment: AlignmentType.CENTER,
           children: [
-            new TextRun({ text: 'A Member of Hello YEDA Coffee Company Limited', bold: true, size: 20, color: '1a5632', font: 'Calibri' }),
+            new TextRun({ text: COMPANY_TAGLINE, bold: true, size: 20, color: '1a5632', font: 'Calibri' }),
           ],
         }),
         new Paragraph({
           alignment: AlignmentType.CENTER,
           children: [
-            new TextRun({ text: 'P.O Box 431420, Kasese, Uganda', size: 18, color: '666666', font: 'Calibri' }),
+            new TextRun({ text: COMPANY_ADDRESS, size: 18, color: '666666', font: 'Calibri' }),
           ],
         }),
       ],
