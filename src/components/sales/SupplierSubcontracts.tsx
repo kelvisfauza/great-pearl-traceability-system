@@ -146,7 +146,7 @@ export const SupplierSubcontracts = () => {
       <body>
         <div class="header">
           <h1>GREAT AGRO COFFEE</h1>
-          <p style="font-size:12px;font-weight:bold;color:#1a5632;margin:2px 0;">Under Hello YEDA Coffee Company Limited</p>
+          <p style="font-size:12px;font-weight:bold;color:#1a5632;margin:2px 0;">A Member of Hello YEDA Coffee Company Limited</p>
           <p style="font-size:11px;color:#666;margin:2px 0;">P.O Box 431420, Kasese, Uganda</p>
           <h2>Supplier Subcontract Agreement</h2>
         </div>

@@ -390,7 +390,7 @@ const CoffeeAuditTrailReport = () => {
         <div class="logo-block"><img src="${window.location.origin}/lovable-uploads/great-agro-coffee-logo.png" alt="Logo"/></div>
         <div class="company-block">
           <h1 class="company-name">GREAT AGRO COFFEE LTD</h1>
-          <p class="company-sub">Under Hello YEDA Coffee Company Limited</p>
+          <p class="company-sub">A Member of Hello YEDA Coffee Company Limited</p>
           <p class="company-sub">P.O Box 431420, Kasese, Uganda · Tel: +256 393 001 626 · info@greatpearlcoffee.com</p>
           <p class="company-sub">UCDA Licensed</p>
         </div>

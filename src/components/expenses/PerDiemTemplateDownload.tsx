@@ -90,7 +90,7 @@ const generatePDF = async (
   doc.setTextColor(80, 80, 80);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('Under Hello YEDA Coffee Company Limited', pageW / 2 + 5, 19);
+  doc.text('A Member of Hello YEDA Coffee Company Limited', pageW / 2 + 5, 19);
   doc.setFontSize(8);
   doc.text('P.O Box 431420, Kasese, Uganda', pageW / 2 + 5, 25);
   doc.text('Tel: +256 393 001 626  |  Email: info@greatpearlcoffee.com', pageW / 2 + 5, 31);
@@ -315,7 +315,7 @@ const generatePDF = async (
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(110, 110, 110);
   doc.text(`Ref: ${refNo}  |  Submit to Finance with all supporting documents.`, pageW / 2, footerY + 5, { align: 'center' });
-  doc.text('Great Agro Coffee Ltd  |  Under Hello YEDA Coffee Company Limited  |  P.O Box 431420, Kasese, Uganda  |  Internal Use Only', pageW / 2, footerY + 10, { align: 'center' });
+  doc.text('Great Agro Coffee Ltd  |  A Member of Hello YEDA Coffee Company Limited  |  P.O Box 431420, Kasese, Uganda  |  Internal Use Only', pageW / 2, footerY + 10, { align: 'center' });
 
   const blobUrl = doc.output('bloburl');
   const printWin = window.open(blobUrl as unknown as string, '_blank');

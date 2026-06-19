@@ -236,7 +236,7 @@ const generateDepartmentReportDocx = async (
         new Paragraph({
           alignment: AlignmentType.CENTER,
           children: [
-            new TextRun({ text: 'Under Hello YEDA Coffee Company Limited', bold: true, size: 20, color: '1a5632', font: 'Calibri' }),
+            new TextRun({ text: 'A Member of Hello YEDA Coffee Company Limited', bold: true, size: 20, color: '1a5632', font: 'Calibri' }),
           ],
         }),
         new Paragraph({
@@ -277,7 +277,7 @@ const generateDepartmentReportDocx = async (
         new Paragraph({
           alignment: AlignmentType.CENTER,
           children: [
-            new TextRun({ text: 'Under Hello YEDA Coffee Company Limited', bold: true, size: 20, color: '1a5632', font: 'Calibri' }),
+            new TextRun({ text: 'A Member of Hello YEDA Coffee Company Limited', bold: true, size: 20, color: '1a5632', font: 'Calibri' }),
           ],
         }),
         new Paragraph({
@@ -520,7 +520,7 @@ const generatePDF = async (
   doc.setTextColor(26, 86, 50);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text('Under Hello YEDA Coffee Company Limited', pageW / 2 + 5, 19, { align: 'center' });
+  doc.text('A Member of Hello YEDA Coffee Company Limited', pageW / 2 + 5, 19, { align: 'center' });
 
   // Location
   doc.setTextColor(80, 80, 80);
@@ -900,7 +900,7 @@ const generatePDF = async (
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(110, 110, 110);
   doc.text(`Ref: ${refNo}  |  This form must be submitted to the Finance Department with all supporting documents.`, pageW / 2, footerY + 5, { align: 'center' });
-  doc.text('Great Agro Coffee Ltd  |  Under Hello YEDA Coffee Company Limited  |  P.O Box 431420, Kasese, Uganda  |  Internal Use Only', pageW / 2, footerY + 10, { align: 'center' });
+  doc.text('Great Agro Coffee Ltd  |  A Member of Hello YEDA Coffee Company Limited  |  P.O Box 431420, Kasese, Uganda  |  Internal Use Only', pageW / 2, footerY + 10, { align: 'center' });
 
   // Open in new tab and trigger print, also save copy
   const blobUrl = doc.output('bloburl');

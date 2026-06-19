@@ -46,7 +46,7 @@ const generateDocx = async (employee: any) => {
             alignment: AlignmentType.RIGHT,
             children: [
               new TextRun({ text: 'GREAT AGRO COFFEE LTD', bold: true, size: 32, font: 'Arial' }),
-              new TextRun({ text: '\nUnder Hello YEDA Coffee Company Limited', bold: true, size: 20, font: 'Arial', color: '1a5632' }),
+              new TextRun({ text: '\nA Member of Hello YEDA Coffee Company Limited', bold: true, size: 20, font: 'Arial', color: '1a5632' }),
             ],
           }),
         ],

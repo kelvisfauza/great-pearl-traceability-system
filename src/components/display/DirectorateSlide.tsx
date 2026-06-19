@@ -45,7 +45,7 @@ const DirectorateSlide = () => {
           />
           <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-6 py-3">
             <p className="text-2xl font-semibold text-white">{current.caption}</p>
-            <p className="text-white/60 text-sm">Great Agro Coffee • Under Hello YEDA Coffee Company Limited • P.O Box 431420 Kasese, Uganda</p>
+            <p className="text-white/60 text-sm">Great Agro Coffee • A Member of Hello YEDA Coffee Company Limited • P.O Box 431420 Kasese, Uganda</p>
           </div>
         </div>
 

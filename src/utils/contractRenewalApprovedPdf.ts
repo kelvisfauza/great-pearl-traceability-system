@@ -40,7 +40,7 @@ export function generateApprovedContractBlob(d: ApprovedContractData): Blob {
   doc.text('GREAT AGRO COFFEE', M, 11);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
-  doc.text('Under Hello YEDA Coffee Company Limited', M, 17);
+  doc.text('A Member of Hello YEDA Coffee Company Limited', M, 17);
   doc.setFontSize(8);
   doc.text('P.O Box 431420, Kasese, Uganda  |  +256 393 001 626  |  info@greatpearlcoffee.com', M, 23);
   doc.setFont('helvetica', 'bold');
@@ -169,7 +169,7 @@ export function generateApprovedContractBlob(d: ApprovedContractData): Blob {
   doc.setTextColor(...GREY);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
-  doc.text('Great Agro Coffee — Under Hello YEDA Coffee Company Limited — Human Resources Department', M, H - 9);
+  doc.text('Great Agro Coffee — A Member of Hello YEDA Coffee Company Limited — Human Resources Department', M, H - 9);
   doc.text('CC: Operations Department', W - M, H - 9, { align: 'right' });
 
   return doc.output('blob');

@@ -49,7 +49,7 @@ export const PaymentSlipModal: React.FC<PaymentSlipModalProps> = ({
             GREAT AGRO COFFEE
           </h1>
           <div style="font-size: 8px; color: #666; line-height: 1.2;">
-            <p style="margin: 1px 0; font-weight: bold; color: #1a5632;">Under Hello YEDA Coffee Company Limited</p>
+            <p style="margin: 1px 0; font-weight: bold; color: #1a5632;">A Member of Hello YEDA Coffee Company Limited</p>
             <p style="margin: 1px 0;">P.O Box 431420, Kasese, Uganda</p>
             <p style="margin: 1px 0;">+256 393 001 626</p>
             <p style="margin: 1px 0;">www.greatagrocoffee.com | info@greatpearlcoffee.com</p>

@@ -121,7 +121,7 @@ const buildHtml = (templateNo: string, dateStr: string, rows: number) => {
   <div class="header">
     <div class="logo-wrap"><img src="${logoUrl}" alt="Great Agro Coffee" /></div>
     <div class="company">GREAT AGRO COFFEE</div>
-    <div class="company-subtitle">Under Hello YEDA Coffee Company Limited</div>
+    <div class="company-subtitle">A Member of Hello YEDA Coffee Company Limited</div>
     <div class="contact">
       P.O Box 431420, Kasese, Uganda &nbsp;|&nbsp; +256 393 001 626<br/>
       www.greatagrocoffee.com &nbsp;|&nbsp; info@greatpearlcoffee.com<br/>

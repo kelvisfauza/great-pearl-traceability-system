@@ -240,7 +240,7 @@ const MillingPrintReportModal: React.FC<MillingPrintReportModalProps> = ({ open,
             </div>
             <h1 className="company-name">GREAT AGRO COFFEE</h1>
             <div className="company-address">
-              <p style={{ fontWeight: 'bold', color: '#1a5632' }}>Under Hello YEDA Coffee Company Limited</p>
+              <p style={{ fontWeight: 'bold', color: '#1a5632' }}>A Member of Hello YEDA Coffee Company Limited</p>
               <p>P.O Box 431420, Kasese, Uganda</p>
               <p>+256 393 001 626</p>
               <p>www.greatagrocoffee.com</p>

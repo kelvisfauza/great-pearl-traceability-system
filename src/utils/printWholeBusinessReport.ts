@@ -106,7 +106,7 @@ export const printWholeBusinessReport = async (data: WholeBusinessData, periodLa
   <div class="header">
     <div class="header-logo"><img src="/lovable-uploads/great-agro-coffee-logo.png" alt="Logo" /></div>
     <h1>Great Agro Coffee</h1>
-    <p class="header-subtitle">Under Hello YEDA Coffee Company Limited</p>
+    <p class="header-subtitle">A Member of Hello YEDA Coffee Company Limited</p>
     <p class="header-address">P.O Box 431420, Kasese, Uganda</p>
     <h2>Comprehensive Business Report</h2>
     <div class="period">Period: <strong>${periodLabel}</strong> &nbsp;|&nbsp; Generated: ${format(new Date(), "PPpp")}</div>
@@ -263,7 +263,7 @@ export const printWholeBusinessReport = async (data: WholeBusinessData, periodLa
   ${getVerificationHtml(code, qrUrl)}
 
   <div class="footer">
-    <p>Great Agro Coffee — Under Hello YEDA Coffee Company Limited.</p>
+    <p>Great Agro Coffee — A Member of Hello YEDA Coffee Company Limited.</p>
     <p>P.O Box 431420, Kasese, Uganda | +256 393 001 626 | www.greatagrocoffee.com</p>
     <p style="margin-top:4px;font-size:8px;color:#999;">© ${new Date().getFullYear()} Great Agro Coffee. All rights reserved.</p>
   </div>

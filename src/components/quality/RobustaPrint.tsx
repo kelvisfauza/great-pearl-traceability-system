@@ -59,7 +59,7 @@ const RobustaPrint = forwardRef<HTMLDivElement, RobustaPrintProps>(({ analysis, 
             GREAT AGRO COFFEE
           </h1>
           <p style={{ margin: '2px 0', fontSize: '9px', color: '#666', fontWeight: 'bold' }}>
-            Under Hello YEDA Coffee Company Limited
+            A Member of Hello YEDA Coffee Company Limited
           </p>
           <p style={{ margin: '2px 0', fontSize: '9px', color: '#666' }}>
             P.O Box 431420, Kasese, Uganda | www.greatagrocoffee.com | +256 781 121 639
