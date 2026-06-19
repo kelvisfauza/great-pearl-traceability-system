@@ -68,7 +68,7 @@ function buildContractRenewalDoc(
     doc.text('GREAT AGRO COFFEE', M, 11);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
-    doc.text('Kasese Municipality, Tibamwenda Road, Kasese, Uganda  |  +256 393 001 626  |  info@greatpearlcoffee.com', M, 17);
+    doc.text('Under Hello YEDA Coffee Company Limited', M, 17);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.text(pageLabel, W - M, 11, { align: 'right' });
@@ -86,7 +86,7 @@ function buildContractRenewalDoc(
     doc.setTextColor(...GREY);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
-    doc.text('Great Agro Coffee — Human Resources Department', M, H - 9);
+    doc.text('Great Agro Coffee — Under Hello YEDA Coffee Company Limited — Human Resources Department', M, H - 9);
     doc.text(`Ref: ${data.ref || ''}`, W / 2, H - 9, { align: 'center' });
     doc.text(`Page ${page} of ${total}  |  CC: Operations Department`, W - M, H - 9, { align: 'right' });
   };
@@ -224,7 +224,7 @@ function buildContractRenewalDoc(
   // SECTION C
   sectionTitle('SECTION C — CONTRACT STATUS DECLARATION');
   paragraph(
-    'I hereby acknowledge that my current employment contract with Great Agro Coffee has either expired or is due to expire shortly. I am formally applying for renewal of my contract under the terms outlined in Section E below, subject to performance review, departmental approval and management discretion.',
+    'I hereby acknowledge that my current employment contract with Great Agro Coffee (under Hello YEDA Coffee Company Limited) has either expired or is due to expire shortly. I am formally applying for renewal of my contract under the terms outlined in Section E below, subject to performance review, departmental approval and management discretion.',
     { gap: 3 }
   );
   checkbox('My contract has already EXPIRED');
@@ -284,7 +284,7 @@ function buildContractRenewalDoc(
   doc.setFontSize(8.5);
   doc.setTextColor(...DARK);
   const terms = [
-    '1. Renewal of this contract is at the sole discretion of Great Agro Coffee and is subject to satisfactory performance, conduct and the operational needs of the company.',
+    '1. Renewal of this contract is at the sole discretion of Great Agro Coffee (under Hello YEDA Coffee Company Limited) and is subject to satisfactory performance, conduct and the operational needs of the company.',
     '2. The renewed contract will be governed by the Employment Act of Uganda, the company\'s HR Policy Manual and the Code of Conduct in force at the time of renewal.',
     '3. The employee is required to give written notice as per the renewed contract terms in case of resignation, and the company reserves the same right of termination subject to law.',
     '4. The employee shall continue to maintain confidentiality of all company information, trade secrets, supplier relationships, pricing data and financial records during and after employment.',
