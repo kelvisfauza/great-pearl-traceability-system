@@ -488,21 +488,27 @@ const generatePDF = async (
   doc.setFont('helvetica', 'bold');
   doc.text('GREAT AGRO COFFEE LTD', pageW / 2 + 5, 13, { align: 'center' });
 
+  // Parent company
+  doc.setTextColor(26, 86, 50);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Under Hello YEDA Coffee Company Limited', pageW / 2 + 5, 19, { align: 'center' });
+
   // Location
   doc.setTextColor(80, 80, 80);
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.text('Kasese, Uganda.', pageW / 2 + 5, 19);
+  doc.text('P.O Box 431420, Kasese, Uganda.', pageW / 2 + 5, 25);
 
   // Contact info
   doc.setFontSize(7);
-  doc.text('Tel: +256 393 001 626  |  Email: info@greatpearlcoffee.com', pageW / 2 + 5, 25);
+  doc.text('Tel: +256 393 001 626  |  Email: info@greatpearlcoffee.com', pageW / 2 + 5, 31);
 
   // Title (no background)
   doc.setTextColor(13, 61, 31);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text(template.title.toUpperCase(), pageW / 2, 39, { align: 'center' });
+  doc.text(template.title.toUpperCase(), pageW / 2, 43, { align: 'center' });
 
   let y = 48;
 
@@ -866,7 +872,7 @@ const generatePDF = async (
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(110, 110, 110);
   doc.text(`Ref: ${refNo}  |  This form must be submitted to the Finance Department with all supporting documents.`, pageW / 2, footerY + 5, { align: 'center' });
-  doc.text('Great Agro Coffee Ltd  |  Kasese, Uganda  |  Tel: +256 393 001 626  |  Internal Use Only', pageW / 2, footerY + 10, { align: 'center' });
+  doc.text('Great Agro Coffee Ltd  |  Under Hello YEDA Coffee Company Limited  |  P.O Box 431420, Kasese, Uganda  |  Internal Use Only', pageW / 2, footerY + 10, { align: 'center' });
 
   // Open in new tab and trigger print, also save copy
   const blobUrl = doc.output('bloburl');
