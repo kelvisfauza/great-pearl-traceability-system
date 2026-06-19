@@ -31,23 +31,25 @@ export function generateApprovedContractBlob(d: ApprovedContractData): Blob {
 
   // Header
   doc.setFillColor(...BRAND);
-  doc.rect(0, 0, W, 22, 'F');
+  doc.rect(0, 0, W, 28, 'F');
   doc.setFillColor(...ACCENT);
-  doc.rect(0, 22, W, 2, 'F');
+  doc.rect(0, 28, W, 2, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(15);
   doc.text('GREAT AGRO COFFEE', M, 11);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
-  doc.text('Kasese Municipality, Tibamwenda Road, Kasese, Uganda  |  +256 393 001 626  |  info@greatpearlcoffee.com', M, 17);
+  doc.text('Under Hello YEDA Coffee Company Limited', M, 17);
+  doc.setFontSize(8);
+  doc.text('P.O Box 431420, Kasese, Uganda  |  +256 393 001 626  |  info@greatpearlcoffee.com', M, 23);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.text('EMPLOYMENT CONTRACT', W - M, 11, { align: 'right' });
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.text('CONFIDENTIAL — HR DOCUMENT', W - M, 17, { align: 'right' });
-  y = 32;
+  y = 36;
 
   // Title
   doc.setTextColor(...DARK);
