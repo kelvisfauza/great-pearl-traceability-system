@@ -168,6 +168,7 @@ const GRNGenerator: React.FC<GRNGeneratorProps> = ({ open, onClose }) => {
         <div style="position:relative;margin:14px 0;text-align:center;">
           <div style="display:inline-block;border:2.5px solid #0a6b2a;color:#0a6b2a;padding:6px 18px;border-radius:60px;transform:rotate(-6deg);font-weight:bold;font-family:Arial,sans-serif;letter-spacing:1.5px;">
             <div style="font-size:10px;">★ GREAT AGRO COFFEE LTD ★</div>
+            <div style="font-size:9px;margin:2px 0;">Under Hello YEDA Coffee Company Limited</div>
             <div style="font-size:13px;margin:2px 0;">${issueDate.toUpperCase()}</div>
             <div style="font-size:9px;">QUALITY DEPARTMENT</div>
           </div>
