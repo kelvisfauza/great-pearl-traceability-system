@@ -19,10 +19,13 @@ const BrandSignatureSlide = ({ variant = "intro" }: BrandSignatureSlideProps) =>
               {isIntro ? "Live TV presentation" : "Brand close"}
             </Badge>
             <div>
-              <p className="text-sm uppercase tracking-[0.35em] text-muted-foreground">Kasese • Uganda</p>
-              <h2 className="mt-5 max-w-4xl text-8xl font-black leading-[0.92] tracking-tight text-foreground">
-                Great Agro Coffee
-              </h2>
+            <p className="text-sm uppercase tracking-[0.35em] text-muted-foreground">P.O Box 431420 • Kasese • Uganda</p>
+            <h2 className="mt-5 max-w-4xl text-8xl font-black leading-[0.92] tracking-tight text-foreground">
+              Great Agro Coffee
+            </h2>
+            <p className="mt-4 text-lg font-semibold uppercase tracking-widest text-primary/80">
+              Under Hello YEDA Coffee Company Limited
+            </p>
               <p className="mt-6 max-w-4xl text-3xl leading-relaxed text-foreground/90">
                 {isIntro
                   ? "A colorful 15-slide market board for today’s prices, ICE futures, sales flow, and coffee news across Africa."

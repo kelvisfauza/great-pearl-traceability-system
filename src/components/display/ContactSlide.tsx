@@ -10,7 +10,8 @@ const ContactSlide = () => {
         className="h-32 w-auto mb-6 animate-pulse"
       />
       
-      <h2 className="text-5xl font-bold text-white mb-4">Get In Touch</h2>
+      <h2 className="text-5xl font-bold text-white mb-2">Get In Touch</h2>
+      <p className="text-white/90 text-xl mb-1 font-semibold">Under Hello YEDA Coffee Company Limited</p>
       <p className="text-white/70 text-2xl mb-12">Partner with Uganda's Premier Coffee Exporter</p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full">
@@ -43,7 +44,7 @@ const ContactSlide = () => {
           </div>
           <div>
             <p className="text-white/60 text-sm">Visit Us</p>
-            <p className="text-xl font-bold text-white">Kasese, Western Uganda</p>
+            <p className="text-xl font-bold text-white">P.O Box 431420, Kasese, Uganda</p>
           </div>
         </div>
 
