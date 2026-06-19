@@ -44,7 +44,10 @@ const generateDocx = async (employee: any) => {
         children: [
           new Paragraph({
             alignment: AlignmentType.RIGHT,
-            children: [new TextRun({ text: 'GREAT AGRO COFFEE LTD', bold: true, size: 32, font: 'Arial' })],
+            children: [
+              new TextRun({ text: 'GREAT AGRO COFFEE LTD', bold: true, size: 32, font: 'Arial' }),
+              new TextRun({ text: '\nUnder Hello YEDA Coffee Company Limited', bold: true, size: 20, font: 'Arial', color: '1a5632' }),
+            ],
           }),
         ],
       }),
@@ -81,7 +84,7 @@ const generateDocx = async (employee: any) => {
 
   // Contact block (left aligned, under header)
   const contactLines = [
-    'Kasese, Uganda',
+    'P.O Box 431420, Kasese, Uganda',
     '0393001626',
     'operations@greatpearlcoffee.com',
     'www.greatpearlcoffee.com',
@@ -139,7 +142,7 @@ const generateDocx = async (employee: any) => {
           margins: { top: 120, bottom: 60, left: 0, right: 80 },
           children: [
             new Paragraph({ children: [new TextRun({ text: 'Great Agro Coffee Ltd', bold: true, size: 18 })] }),
-            new Paragraph({ children: [new TextRun({ text: 'Kasese, Uganda', size: 18 })] }),
+            new Paragraph({ children: [new TextRun({ text: 'P.O Box 431420, Kasese, Uganda', size: 18 })] }),
           ],
         }),
         footCell('Telephone', '0393001626'),

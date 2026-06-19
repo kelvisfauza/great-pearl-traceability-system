@@ -58,8 +58,11 @@ const RobustaPrint = forwardRef<HTMLDivElement, RobustaPrintProps>(({ analysis, 
           <h1 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#166534' }}>
             GREAT AGRO COFFEE
           </h1>
+          <p style={{ margin: '2px 0', fontSize: '9px', color: '#666', fontWeight: 'bold' }}>
+            Under Hello YEDA Coffee Company Limited
+          </p>
           <p style={{ margin: '2px 0', fontSize: '9px', color: '#666' }}>
-            Kasese, Uganda | www.greatagrocoffee.com | +256 781 121 639
+            P.O Box 431420, Kasese, Uganda | www.greatagrocoffee.com | +256 781 121 639
           </p>
         </div>
         <div style={{ textAlign: 'right' }}>
