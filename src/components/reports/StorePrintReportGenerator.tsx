@@ -309,7 +309,7 @@ const StorePrintReportGenerator = () => {
               </div>
               <div class="company-name">GREAT AGRO COFFEE</div>
               <div class="company-details">
-                <strong>Under Hello YEDA Coffee Company Limited</strong><br>
+                <strong>A Member of Hello YEDA Coffee Company Limited</strong><br>
                 P.O Box 431420, Kasese, Uganda<br>
                 Tel: +256 781 121 639 | Web: www.greatagrocoffee.com<br>
                 Email: info@greatpearlcoffee.com<br>

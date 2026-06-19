@@ -97,7 +97,7 @@ const PaymentSlipGenerator = ({ isOpen, onClose }: PaymentSlipGeneratorProps) =>
             <div>
               <div class="company-name">Great Agro Coffee</div>
               <div class="company-address">
-                <strong>Under Hello YEDA Coffee Company Limited</strong><br>
+                <strong>A Member of Hello YEDA Coffee Company Limited</strong><br>
                 P.O Box 431420, Kasese, Uganda<br>
                 Tel: +256 393 001 626 | Email: info@greatpearlcoffee.com
               </div>

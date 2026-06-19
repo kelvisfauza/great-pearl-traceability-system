@@ -1849,7 +1849,7 @@ const QuickLoans = () => {
     </style></head><body>
       <div class="header">
         <h1>GREAT AGRO COFFEE</h1>
-        <p style="font-size:12px;font-weight:bold;color:#1a5632;margin:2px 0;">Under Hello YEDA Coffee Company Limited</p>
+        <p style="font-size:12px;font-weight:bold;color:#1a5632;margin:2px 0;">A Member of Hello YEDA Coffee Company Limited</p>
         <p style="font-size:11px;color:#666;margin:2px 0;">P.O Box 431420, Kasese, Uganda</p>
         <h2>Loan Account Statement</h2>
         <div class="date">Statement Date: ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
@@ -1919,7 +1919,7 @@ const QuickLoans = () => {
 
       <div class="footer">
         This is a system-generated loan statement for ${loan.employee_name}. All amounts in Uganda Shillings (UGX).<br/>
-        GREAT AGRO COFFEE — Under Hello YEDA Coffee Company Limited — P.O Box 431420, Kasese, Uganda — Loan Management System — ${new Date().getFullYear()}
+        GREAT AGRO COFFEE — A Member of Hello YEDA Coffee Company Limited — P.O Box 431420, Kasese, Uganda — Loan Management System — ${new Date().getFullYear()}
       </div>
     </body></html>`);
     win.document.close();
@@ -3240,7 +3240,7 @@ const RepaymentSchedule = ({ myLoans }: { myLoans: any[] }) => {
     </head><body>
       <div class="header">
         <h2 style="margin:0 0 4px;color:#1a365d">GREAT AGRO COFFEE</h2>
-        <p style="margin:0 0 2px;font-size:12px;font-weight:bold;color:#1a5632">Under Hello YEDA Coffee Company Limited</p>
+        <p style="margin:0 0 2px;font-size:12px;font-weight:bold;color:#1a5632">A Member of Hello YEDA Coffee Company Limited</p>
         <p style="margin:0 0 6px;font-size:11px;color:#666">P.O Box 431420, Kasese, Uganda</p>
         <h3 style="margin:0;font-weight:normal;color:#555">Loan Repayment Program</h3>
       </div>

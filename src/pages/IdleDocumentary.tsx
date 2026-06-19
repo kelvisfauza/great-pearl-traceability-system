@@ -172,7 +172,7 @@ const IdleDocumentary = () => {
               GREAT AGRO COFFEE
             </div>
             <div className="text-[10px] md:text-xs font-semibold uppercase tracking-wider text-amber-300/90">
-              Under Hello YEDA Coffee Company Limited
+              A Member of Hello YEDA Coffee Company Limited
             </div>
             <div className="text-[9px] md:text-[10px] uppercase tracking-[0.2em] text-white/70">
               P.O Box 431420, Kasese, Uganda
