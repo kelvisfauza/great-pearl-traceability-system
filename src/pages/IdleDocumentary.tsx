@@ -211,7 +211,10 @@ const IdleDocumentary = () => {
             GREAT AGRO COFFEE
           </div>
           <div className="mt-2 text-sm md:text-lg uppercase tracking-[0.4em] text-amber-200">
-            Great Pearl Coffee Factory
+            Hello YEDA Coffee Company Limited
+          </div>
+          <div className="mt-2 text-xs md:text-sm uppercase tracking-[0.3em] text-emerald-100/90">
+            P.O Box 431420, Kasese, Uganda
           </div>
           <div className="mt-4 text-xs md:text-sm uppercase tracking-[0.3em] text-emerald-100/90">
             From Farm • To Cup • Traceable • Sustainable
