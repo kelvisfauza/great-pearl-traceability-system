@@ -722,6 +722,8 @@ const ConfidentialPLReport = () => {
       <div class="header">
         <div class="brand">
           <h1>GREAT AGRO COFFEE</h1>
+          <p style="font-weight:bold;color:#1a5632;">Under Hello YEDA Coffee Company Limited</p>
+          <p>P.O Box 431420, Kasese, Uganda</p>
           <p>Coffee Trading & Export • Uganda</p>
           <p>Confidential Profit &amp; Loss Statement</p>
         </div>
