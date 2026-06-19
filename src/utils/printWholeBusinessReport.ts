@@ -50,6 +50,8 @@ export const printWholeBusinessReport = async (data: WholeBusinessData, periodLa
   .header-logo { background: #0d3d1f; display: inline-block; padding: 8px 16px; border-radius: 6px; margin-bottom: 8px; }
   .header-logo img { height: 40px; }
   .header h1 { font-size: 22px; color: #1a365d; margin: 5px 0 2px; }
+  .header .header-subtitle { font-size: 13px; font-weight: bold; color: #1a5632; margin: 2px 0; }
+  .header .header-address { font-size: 12px; color: #555; margin: 2px 0 6px; }
   .header h2 { font-size: 14px; font-weight: normal; color: #666; }
   .header .period { font-size: 12px; color: #444; margin-top: 4px; }
 
