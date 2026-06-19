@@ -50,6 +50,8 @@ export const printWholeBusinessReport = async (data: WholeBusinessData, periodLa
   .header-logo { background: #0d3d1f; display: inline-block; padding: 8px 16px; border-radius: 6px; margin-bottom: 8px; }
   .header-logo img { height: 40px; }
   .header h1 { font-size: 22px; color: #1a365d; margin: 5px 0 2px; }
+  .header .header-subtitle { font-size: 13px; font-weight: bold; color: #1a5632; margin: 2px 0; }
+  .header .header-address { font-size: 12px; color: #555; margin: 2px 0 6px; }
   .header h2 { font-size: 14px; font-weight: normal; color: #666; }
   .header .period { font-size: 12px; color: #444; margin-top: 4px; }
 
@@ -104,6 +106,8 @@ export const printWholeBusinessReport = async (data: WholeBusinessData, periodLa
   <div class="header">
     <div class="header-logo"><img src="/lovable-uploads/great-agro-coffee-logo.png" alt="Logo" /></div>
     <h1>Great Agro Coffee</h1>
+    <p class="header-subtitle">Under Hello YEDA Coffee Company Limited</p>
+    <p class="header-address">P.O Box 431420, Kasese, Uganda</p>
     <h2>Comprehensive Business Report</h2>
     <div class="period">Period: <strong>${periodLabel}</strong> &nbsp;|&nbsp; Generated: ${format(new Date(), "PPpp")}</div>
   </div>
@@ -259,8 +263,8 @@ export const printWholeBusinessReport = async (data: WholeBusinessData, periodLa
   ${getVerificationHtml(code, qrUrl)}
 
   <div class="footer">
-    <p>Great Agro Coffee.</p>
-    <p>+256 393 001 626 | www.greatagrocoffee.com</p>
+    <p>Great Agro Coffee — Under Hello YEDA Coffee Company Limited.</p>
+    <p>P.O Box 431420, Kasese, Uganda | +256 393 001 626 | www.greatagrocoffee.com</p>
     <p style="margin-top:4px;font-size:8px;color:#999;">© ${new Date().getFullYear()} Great Agro Coffee. All rights reserved.</p>
   </div>
 

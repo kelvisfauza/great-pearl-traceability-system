@@ -311,8 +311,9 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
 <div class="voucher">
   <div class="header">
     <h1>Great Agro Coffee.</h1>
+    <p style="font-size:12px;font-weight:bold;color:#1a5632;margin:2px 0;">Under Hello YEDA Coffee Company Limited</p>
+    <p style="font-size:11px;color:#666;margin:2px 0;">P.O Box 431420, Kasese, Uganda | +256 393 001 626</p>
     <h2>Employee Withdrawal Payment Voucher</h2>
-    <div class="sub">P.O. Box XXXXX, Kampala, Uganda | Tel: +256-XXX-XXXXXX</div>
   </div>
   <div class="title">PAYMENT VOUCHER</div>
   <div class="body">

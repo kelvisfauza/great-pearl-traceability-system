@@ -31,10 +31,17 @@ export const getStandardPrintStyles = () => `
   .company-name {
     font-size: 18px;
     font-weight: bold;
-    margin-bottom: 6px;
+    margin-bottom: 2px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: #1a365d;
+  }
+
+  .company-subtitle {
+    font-size: 11px;
+    font-weight: bold;
+    color: #1a5632;
+    margin-bottom: 4px;
   }
   
   .company-details {

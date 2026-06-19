@@ -107,7 +107,8 @@ const DeliveryNoteModal: React.FC<DeliveryNoteModalProps> = ({ open, onClose, sa
                 />
                 <div style={{ color: 'white' }}>
                   <h1 style={{ fontSize: '18px', fontWeight: 'bold', margin: '0' }}>GREAT AGRO COFFEE</h1>
-                  <p style={{ fontSize: '11px', margin: '2px 0 0 0', opacity: '0.9' }}>Kasese, Uganda</p>
+                  <p style={{ fontSize: '11px', margin: '2px 0 0 0', opacity: '0.9', fontWeight: 'bold' }}>Under Hello YEDA Coffee Company Limited</p>
+                  <p style={{ fontSize: '10px', margin: '2px 0 0 0', opacity: '0.8' }}>P.O Box 431420, Kasese, Uganda</p>
                 </div>
               </div>
               <div style={{ textAlign: 'right', color: 'white', fontSize: '11px' }}>
@@ -134,7 +135,7 @@ const DeliveryNoteModal: React.FC<DeliveryNoteModalProps> = ({ open, onClose, sa
               <h3 style={{ fontSize: '10px', fontWeight: '600', color: '#0d3d1f', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.5px' }}>From (Seller)</h3>
               <p style={{ fontWeight: '600', margin: '0 0 4px 0', fontSize: '13px' }}>Great Agro Coffee</p>
               <p style={{ margin: '0', color: '#666', fontSize: '11px', lineHeight: '1.4' }}>
-                Kasese, Uganda
+                P.O Box 431420, Kasese, Uganda
               </p>
             </div>
             <div style={{ padding: '14px 16px' }}>

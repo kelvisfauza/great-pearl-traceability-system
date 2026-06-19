@@ -92,9 +92,9 @@ const ContractGenerator = ({ isOpen, onClose }: ContractGeneratorProps) => {
             <div>
               <div class="company-name">GREAT AGRO COFFEE</div>
               <div class="company-address">
-                P.O. Box 12345, Kampala, Uganda<br>
-                Registration No: 123456789<br>
-                Tel: +256 123 456 789 | Email: info@greatpearlcoffee.com
+                <strong>Under Hello YEDA Coffee Company Limited</strong><br>
+                P.O Box 431420, Kasese, Uganda<br>
+                Tel: +256 393 001 626 | Email: info@greatpearlcoffee.com
               </div>
             </div>
           </div>
@@ -104,7 +104,7 @@ const ContractGenerator = ({ isOpen, onClose }: ContractGeneratorProps) => {
 
         <div class="parties">
           <div class="party">
-            <strong>EMPLOYER:</strong> Great Agro Coffee, a company incorporated under the laws of Uganda with its registered office at P.O. Box 12345, Kampala, Uganda (hereinafter referred to as "the Company").
+          <strong>EMPLOYER:</strong> Great Agro Coffee, under Hello YEDA Coffee Company Limited, a company incorporated under the laws of Uganda with its registered office at P.O Box 431420, Kasese, Uganda (hereinafter referred to as "the Company").
           </div>
           <div class="party">
             <strong>EMPLOYEE:</strong> ${selectedEmployee.name}, of ${selectedEmployee.address || '[Address]'} (hereinafter referred to as "the Employee").

@@ -660,7 +660,8 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
         <tr>
           <td style="text-align:center;padding:4px 0;font-size:11px;">
             <strong class="gac-grn-company-name">GREAT AGRO COFFEE LIMITED</strong><br/>
-            <span class="gac-grn-company-tagline">A SPECIALTY COFFEE PROCESSOR & EXPORTER</span>
+            <span class="gac-grn-company-tagline">Under Hello YEDA Coffee Company Limited</span><br/>
+            <span class="gac-grn-company-tagline">P.O Box 431420, Kasese, Uganda</span>
           </td>
           <td style="width:30%;text-align:right;padding:4px 0;white-space:nowrap;">
             <strong class="gac-grn-ref-label">GAC-GRNC</strong>
@@ -810,7 +811,8 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
         <tr>
           <td class="gac-grn-footer-left">
             <strong style="color:#1a1a1a;">GREAT AGRO COFFEE LIMITED</strong><br/>
-            Kasese Municipality, Tibamwenda Road, Kasese, Uganda<br/>
+            Under Hello YEDA Coffee Company Limited<br/>
+            P.O Box 431420, Kasese, Uganda<br/>
             Tel: +256 393 001 626 &nbsp;|&nbsp; Email: info@greatpearlcoffee.com &nbsp;|&nbsp; Web: www.greatagrocoffee.com
             ${data.verificationCode ? `<br/><span class="gac-grn-verify-code">Verify code: ${escapeHtml(data.verificationCode)}</span>` : ""}
             ${data.printedBy ? `<br/><span><strong>Printed by:</strong> ${escapeHtml(data.printedBy)}</span>` : ""}
@@ -900,7 +902,8 @@ export function getPaymentOrderMarkup(data: GRNDocumentData): string {
         <tr>
           <td style="text-align:center;padding:4px 0;font-size:11px;">
             <strong class="gac-grn-company-name">GREAT AGRO COFFEE LIMITED</strong><br/>
-            <span class="gac-grn-company-tagline">Kasese Municipality, Tibamwenda Road, Kasese, Uganda</span>
+            <span class="gac-grn-company-tagline">Under Hello YEDA Coffee Company Limited</span><br/>
+            <span class="gac-grn-company-tagline">P.O Box 431420, Kasese, Uganda</span>
           </td>
         </tr>
       </table>
@@ -1076,7 +1079,8 @@ export function getPaymentOrderMarkup(data: GRNDocumentData): string {
         <tr>
           <td class="gac-grn-footer-left">
             <strong style="color:#1a1a1a;">GREAT AGRO COFFEE LIMITED</strong><br/>
-            Kasese Municipality, Tibamwenda Road, Kasese, Uganda<br/>
+            Under Hello YEDA Coffee Company Limited<br/>
+            P.O Box 431420, Kasese, Uganda<br/>
             Tel: +256 393 001 626 &nbsp;|&nbsp; Email: info@greatpearlcoffee.com &nbsp;|&nbsp; Web: www.greatagrocoffee.com
             ${data.verificationCode ? `<br/><span class="gac-grn-verify-code">Verify code: ${escapeHtml(data.verificationCode)}</span>` : ""}
             ${data.printedBy ? `<br/><span><strong>Printed by:</strong> ${escapeHtml(data.printedBy)}</span>` : ""}

@@ -171,6 +171,12 @@ const IdleDocumentary = () => {
             <div className="text-base md:text-lg font-bold tracking-wide">
               GREAT AGRO COFFEE
             </div>
+            <div className="text-[10px] md:text-xs font-semibold uppercase tracking-wider text-amber-300/90">
+              Under Hello YEDA Coffee Company Limited
+            </div>
+            <div className="text-[9px] md:text-[10px] uppercase tracking-[0.2em] text-white/70">
+              P.O Box 431420, Kasese, Uganda
+            </div>
             <div className="text-[10px] md:text-xs uppercase tracking-[0.25em] text-amber-300/80">
               The Value of Coffee — A Documentary
             </div>
@@ -205,7 +211,10 @@ const IdleDocumentary = () => {
             GREAT AGRO COFFEE
           </div>
           <div className="mt-2 text-sm md:text-lg uppercase tracking-[0.4em] text-amber-200">
-            Great Pearl Coffee Factory
+            Hello YEDA Coffee Company Limited
+          </div>
+          <div className="mt-2 text-xs md:text-sm uppercase tracking-[0.3em] text-emerald-100/90">
+            P.O Box 431420, Kasese, Uganda
           </div>
           <div className="mt-4 text-xs md:text-sm uppercase tracking-[0.3em] text-emerald-100/90">
             From Farm • To Cup • Traceable • Sustainable

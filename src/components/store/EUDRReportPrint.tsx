@@ -43,7 +43,8 @@ const EUDRReportPrint: React.FC<EUDRReportPrintProps> = ({
             />
             <div>
               <h1 className="text-2xl font-bold text-green-700">GREAT AGRO COFFEE</h1>
-              <p className="text-sm text-gray-600">Kampala, Uganda | +256 123 456 789</p>
+              <p className="text-sm font-semibold text-green-800">Under Hello YEDA Coffee Company Limited</p>
+              <p className="text-sm text-gray-600">P.O Box 431420, Kasese, Uganda | +256 393 001 626</p>
             </div>
           </div>
           <h2 className="text-xl font-semibold text-gray-800">EUDR COMPLIANCE REPORT</h2>
@@ -212,7 +213,8 @@ const EUDRReportPrint: React.FC<EUDRReportPrintProps> = ({
 
         {/* Footer */}
         <div className="mt-8 pt-4 border-t border-gray-300 text-xs text-gray-500 text-center">
-          <p><strong>GREAT AGRO COFFEE</strong> - EUDR Compliance Report</p>
+          <p><strong>GREAT AGRO COFFEE</strong> — Under Hello YEDA Coffee Company Limited — P.O Box 431420, Kasese, Uganda</p>
+          <p>EUDR Compliance Report</p>
           <p>This report contains confidential business information and is intended for authorized personnel only.</p>
           <p className="mt-2">Report Generated: {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString()}</p>
         </div>

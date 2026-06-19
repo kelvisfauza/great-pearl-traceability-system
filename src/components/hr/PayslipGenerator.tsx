@@ -83,8 +83,11 @@ const PayslipGenerator = ({ payslips, onGeneratePayslips, loading }: PayslipGene
       currentY += 8;
 
       pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Under Hello YEDA Coffee Company Limited', pageWidth / 2, currentY, { align: 'center' });
+      currentY += 5;
       pdf.setFont('helvetica', 'normal');
-      pdf.text('Specialty Coffee Processing & Export', pageWidth / 2, currentY, { align: 'center' });
+      pdf.text('P.O Box 431420, Kasese, Uganda', pageWidth / 2, currentY, { align: 'center' });
       currentY += 5;
       pdf.text('+256 393 001 626', pageWidth / 2, currentY, { align: 'center' });
       currentY += 5;

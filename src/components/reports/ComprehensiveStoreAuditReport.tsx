@@ -180,7 +180,8 @@ const ComprehensiveStoreAuditReport = () => {
         </div>
         <div class="company-block">
           <h1 class="company-name">GREAT AGRO COFFEE LTD</h1>
-          <p class="company-sub">Kasese, Uganda.</p>
+          <p class="company-sub">Under Hello YEDA Coffee Company Limited</p>
+          <p class="company-sub">P.O Box 431420, Kasese, Uganda.</p>
           <p class="company-sub">Tel: +256 393 001 626 | Email: info@greatpearlcoffee.com</p>
           <p class="company-sub">UCDA Licensed</p>
         </div>

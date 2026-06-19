@@ -30,13 +30,16 @@ const StandardPrintHeader: React.FC<StandardPrintHeaderProps> = ({
       </div>
       
       {/* Company Name - Centered */}
-      <h1 className="company-name font-bold text-xl uppercase tracking-wide mb-2 text-gray-900 text-center">
+      <h1 className="company-name font-bold text-xl uppercase tracking-wide mb-1 text-gray-900 text-center">
         GREAT AGRO COFFEE
       </h1>
+      <p className="text-sm font-semibold text-gray-700 text-center mb-1">
+        Under Hello YEDA Coffee Company Limited
+      </p>
       
       {/* Company Contact Info - Centered */}
       <div className="company-details text-sm text-gray-600 space-y-1 mb-4 text-center">
-        <p>Kasese, Uganda.</p>
+        <p>P.O Box 431420, Kasese, Uganda.</p>
         <p>+256 393 001 626</p>
         <p>www.greatagrocoffee.com | info@greatpearlcoffee.com</p>
         <p>Uganda Coffee Development Authority Licensed</p>

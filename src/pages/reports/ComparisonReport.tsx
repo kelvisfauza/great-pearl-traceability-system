@@ -567,7 +567,8 @@ const ComparisonReport = () => {
           <img src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" alt="Company Logo" class="company-logo" />
           <h1 class="company-name">GREAT AGRO COFFEE</h1>
           <div class="company-details">
-            <p>Specialty Coffee Processing & Export</p>
+            <p style="font-weight:bold;color:#1a5632;">Under Hello YEDA Coffee Company Limited</p>
+            <p>P.O Box 431420, Kasese, Uganda</p>
             <p>+256 393 001 626</p>
             <p>www.greatagrocoffee.com | info@greatpearlcoffee.com</p>
             <p>Uganda Coffee Development Authority Licensed</p>

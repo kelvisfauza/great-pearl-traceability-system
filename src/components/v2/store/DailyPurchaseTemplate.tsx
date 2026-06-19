@@ -101,6 +101,7 @@ const buildHtml = (templateNo: string, dateStr: string, rows: number) => {
   .header { text-align: center; border-bottom: 1.5px solid #111; padding-bottom: 4px; margin-bottom: 6px; }
   .logo-wrap { display: none; }
   .company { font-size: 14px; font-weight: bold; letter-spacing: 0.5px; margin: 2px 0; }
+  .company-subtitle { font-size: 10px; font-weight: bold; color: #1a5632; margin: 1px 0; }
   .contact { font-size: 9px; color: #444; line-height: 1.3; }
   .doc-title { font-size: 12px; font-weight: bold; margin-top: 4px; text-transform: uppercase; }
   .meta { display: flex; justify-content: space-between; font-size: 9.5px; margin: 4px 0; flex-wrap: wrap; gap: 4px; }
@@ -120,8 +121,9 @@ const buildHtml = (templateNo: string, dateStr: string, rows: number) => {
   <div class="header">
     <div class="logo-wrap"><img src="${logoUrl}" alt="Great Agro Coffee" /></div>
     <div class="company">GREAT AGRO COFFEE</div>
+    <div class="company-subtitle">Under Hello YEDA Coffee Company Limited</div>
     <div class="contact">
-      Kasese, Uganda &nbsp;|&nbsp; +256 393 001 626<br/>
+      P.O Box 431420, Kasese, Uganda &nbsp;|&nbsp; +256 393 001 626<br/>
       www.greatagrocoffee.com &nbsp;|&nbsp; info@greatpearlcoffee.com<br/>
       Uganda Coffee Development Authority Licensed
     </div>
