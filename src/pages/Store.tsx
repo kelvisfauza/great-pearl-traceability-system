@@ -497,7 +497,9 @@ const Store = () => {
           <style>
             body { font-family: Arial, sans-serif; padding: 20px; }
             .header { text-align: center; margin-bottom: 30px; }
-            .company-name { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+            .company-name { font-size: 24px; font-weight: bold; margin-bottom: 4px; }
+            .company-subtitle { font-size: 13px; font-weight: bold; color: #1a5632; margin-bottom: 2px; }
+            .company-address { font-size: 12px; color: #666; margin-bottom: 10px; }
             .report-date { font-size: 14px; color: #666; margin-bottom: 5px; }
             .filter-date { font-size: 16px; font-weight: bold; margin-top: 10px; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
