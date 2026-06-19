@@ -247,12 +247,12 @@ const SalesDeliveryNoteModal: React.FC<SalesDeliveryNoteModalProps> = ({ open, o
                 className="h-16 w-auto"
               />
             </div>
-            <h1 className="company-title text-2xl font-bold text-[#1a365d] uppercase tracking-wider mb-2">
+            <h1 className="company-title text-2xl font-bold text-[#1a365d] uppercase tracking-wider mb-1">
               GREAT AGRO COFFEE
             </h1>
-            <p className="company-tagline text-sm text-gray-600 mb-1">Specialty Coffee Processing & Export</p>
-            <p className="text-xs text-gray-500">+256 393 001 626 | info@greatpearlcoffee.com</p>
-            <p className="text-xs text-gray-500">Uganda Coffee Development Authority Licensed</p>
+            <p className="company-tagline text-sm font-semibold text-[#1a5632] mb-1">Under Hello YEDA Coffee Company Limited</p>
+            <p className="text-xs text-gray-500 mb-1">P.O Box 431420, Kasese, Uganda | +256 393 001 626</p>
+            <p className="text-xs text-gray-500">info@greatpearlcoffee.com | Uganda Coffee Development Authority Licensed</p>
             
             <div className="doc-title inline-block mt-4 px-6 py-2 border-2 border-[#1a365d] font-bold text-[#1a365d] uppercase">
               COFFEE DELIVERY NOTE
