@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Truck, Send, Loader2, Phone, DollarSign, RefreshCw, RotateCcw, CheckCheck, UserPlus, Users, Printer, Filter, Receipt, Smartphone, Banknote } from 'lucide-react';
+import { Truck, Send, Loader2, Phone, DollarSign, RefreshCw, RotateCcw, CheckCheck, UserPlus, Users, Printer, Receipt, Smartphone, Banknote, Search } from 'lucide-react';
 import { sendPaymentReceipt } from '@/utils/sendPaymentReceipt';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
@@ -26,7 +26,7 @@ const ServiceProviderPayments = () => {
   const [rechecking, setRechecking] = useState(false);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [markingId, setMarkingId] = useState<string | null>(null);
-  const [showAll, setShowAll] = useState(false);
+  const [search, setSearch] = useState('');
   const [receiptingId, setReceiptingId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
@@ -61,8 +61,7 @@ const ServiceProviderPayments = () => {
       const { data, error } = await supabase
         .from('service_provider_payments')
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
+        .order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -335,7 +334,16 @@ const ServiceProviderPayments = () => {
 
   const hasPending = payments.some((d: any) => d.yo_status === 'pending_approval');
 
-  const visiblePayments = showAll ? payments : payments.slice(0, 10);
+  const term = search.trim().toLowerCase();
+  const visiblePayments = term
+    ? payments.filter((d: any) =>
+        (d.receiver_name || '').toLowerCase().includes(term) ||
+        (d.receiver_phone || '').toLowerCase().includes(term) ||
+        (d.service_description || '').toLowerCase().includes(term) ||
+        (d.initiated_by_name || '').toLowerCase().includes(term) ||
+        (d.invoice_number || '').toLowerCase().includes(term)
+      )
+    : payments.slice(0, 3);
 
   const handlePrint = () => {
     const rows = payments.map((d: any) => `
@@ -588,6 +596,18 @@ const ServiceProviderPayments = () => {
           <p className="text-center text-muted-foreground py-6">No service provider payments yet</p>
         ) : (
           <div className="overflow-x-auto">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+              <p className="text-sm text-muted-foreground">Most recent service provider payments</p>
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Filter payments..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 h-9 text-sm"
+                />
+              </div>
+            </div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -675,13 +695,10 @@ const ServiceProviderPayments = () => {
                 ))}
               </TableBody>
             </Table>
-            {payments.length > 10 && (
+            {payments.length > 3 && (
               <div className="flex items-center justify-between px-2 py-3 text-sm text-muted-foreground">
                 <span>Showing {visiblePayments.length} of {payments.length} payments</span>
-                <Button variant="ghost" size="sm" onClick={() => setShowAll(s => !s)} className="gap-1">
-                  <Filter className="w-3.5 h-3.5" />
-                  {showAll ? 'Show recent 10 only' : `Show all ${payments.length}`}
-                </Button>
+                {!search.trim() && <span>{payments.length - 3} more hidden — filter to search</span>}
               </div>
             )}
           </div>
