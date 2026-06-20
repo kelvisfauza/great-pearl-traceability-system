@@ -11,7 +11,7 @@ import { PERMISSIONS } from '@/types/permissions';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { FileSignature, Check, X, Loader2, MessageSquare, ArrowDownToLine } from 'lucide-react';
+import { FileSignature, Check, X, Loader2, MessageSquare, ArrowDownToLine, Search } from 'lucide-react';
 import { generateApprovedContractBlob } from '@/utils/contractRenewalApprovedPdf';
 
 const ROLE_OPTIONS = ['User', 'Supervisor', 'Manager', 'Admin'];
