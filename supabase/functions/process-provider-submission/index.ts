@@ -27,7 +27,7 @@ serve(async (req) => {
       });
     }
 
-    const { submissionId, action, rejectionReason, withdrawCharge } = await req.json();
+    const { submissionId, action, rejectionReason, withdrawCharge, amountOverride } = await req.json();
     if (!submissionId || !["approve", "reject"].includes(action)) {
       return new Response(JSON.stringify({ ok: false, error: "Invalid request" }), {
         status: 200,
@@ -83,9 +83,22 @@ serve(async (req) => {
 
     // APPROVE: insert into target table & trigger Yo payout
     const cleanPhone = normalizePhone(submission.phone);
-    const numAmount = Number(submission.amount);
+    const originalAmount = Number(submission.amount);
+    const overridden =
+      amountOverride !== undefined &&
+      amountOverride !== null &&
+      Number(amountOverride) > 0 &&
+      Number(amountOverride) !== originalAmount;
+    const numAmount = overridden ? Number(amountOverride) : originalAmount;
     const numCharge = Number(withdrawCharge || 0);
     const totalAmount = numAmount + numCharge;
+
+    if (!Number.isFinite(numAmount) || numAmount < 500) {
+      return new Response(
+        JSON.stringify({ ok: false, error: "Amount must be at least 500 UGX" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const targetTable =
       submission.request_type === "meal_plan" ? "meal_disbursements" : "service_provider_payments";
@@ -98,7 +111,9 @@ serve(async (req) => {
       total_amount: totalAmount,
       yo_status: "pending",
       initiated_by: reviewer.id,
-      initiated_by_name: `${reviewerName} (self-submitted)`,
+      initiated_by_name: overridden
+        ? `${reviewerName} (self-submitted, amount adjusted from ${originalAmount.toLocaleString()})`
+        : `${reviewerName} (self-submitted)`,
     };
     if (targetTable === "service_provider_payments") {
       baseRow.service_description = submission.description;
