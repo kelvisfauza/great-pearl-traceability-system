@@ -250,7 +250,7 @@ const SalesDeliveryNoteModal: React.FC<SalesDeliveryNoteModalProps> = ({ open, o
             <h1 className="company-title text-2xl font-bold text-[#1a365d] uppercase tracking-wider mb-1">
               GREAT AGRO COFFEE
             </h1>
-            <p className="company-tagline text-sm font-semibold text-[#1a5632] mb-1">A Member of Hello YEDA Coffee Company Limited</p>
+            <p className="company-tagline text-sm font-semibold text-[#1a5632] mb-1">A Member of YEDA Coffee Company Limited</p>
             <p className="text-xs text-gray-500 mb-1">P.O Box 431420, Kasese, Uganda | +256 393 001 626</p>
             <p className="text-xs text-gray-500">info@greatpearlcoffee.com | Uganda Coffee Development Authority Licensed</p>
             

@@ -11,7 +11,7 @@ import {
 
 const LOGO_URL = '/lovable-uploads/great-agro-coffee-logo.png';
 const COMPANY_NAME = 'GREAT AGRO COFFEE';
-const COMPANY_TAGLINE = 'a member of HELLO YEDA COFFEE COMPANY LIMITED';
+const COMPANY_TAGLINE = 'a member of YEDA COFFEE COMPANY LIMITED';
 const COMPANY_ADDRESS = 'P.O Box 431420, Kasese, Uganda';
 
 const fetchLogoBytes = async (): Promise<Uint8Array | null> => {

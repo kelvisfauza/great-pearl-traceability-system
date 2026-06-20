@@ -85,7 +85,7 @@ const HTML = (name: string) => `<!doctype html>
             </p>
 
             <p style="font-size:14px;margin:22px 0 0;color:#6b4423;font-weight:600;">\u2014 HR &amp; Management, Great Agro Coffee</p>
-            <p style="font-size:12px;color:#94a3b8;margin:2px 0 0;">a member of HELLO YEDA COFFEE COMPANY LIMITED</p>
+            <p style="font-size:12px;color:#94a3b8;margin:2px 0 0;">a member of YEDA COFFEE COMPANY LIMITED</p>
           </td>
         </tr>
         <tr>
@@ -119,7 +119,7 @@ Arrive on time, clock in via the attendance system, and if you have a genuine re
 Review your attendance under HR \u2192 My Attendance. For disputes, contact HR before the 27th.
 
 \u2014 HR & Management, Great Agro Coffee
-a member of HELLO YEDA COFFEE COMPANY LIMITED
+a member of YEDA COFFEE COMPANY LIMITED
 P.O Box 431420, Kasese, Uganda`
 
 Deno.serve(async (req) => {

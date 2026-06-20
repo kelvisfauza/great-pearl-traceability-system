@@ -511,7 +511,7 @@ const Store = () => {
         <body>
           <div class="header">
             <div class="company-name">GREAT AGRO COFFEE</div>
-            <div class="company-subtitle">A Member of Hello YEDA Coffee Company Limited</div>
+            <div class="company-subtitle">A Member of YEDA Coffee Company Limited</div>
             <div class="company-address">P.O Box 431420, Kasese, Uganda</div>
             <div class="report-date">Coffee Records Report - Generated on ${new Date().toLocaleDateString()}</div>
             <div class="filter-date">Records for: ${filterDateFormatted}</div>

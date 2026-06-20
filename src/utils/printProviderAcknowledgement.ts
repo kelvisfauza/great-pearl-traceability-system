@@ -50,7 +50,7 @@ export function printProviderAcknowledgement(d: AckData) {
   <img src="${logo}" alt="Great Agro Coffee" />
   <div class="company">
     <h1>GREAT AGRO COFFEE LTD</h1>
-    <p>A Member of Hello YEDA Coffee Company Limited</p>
+    <p>A Member of YEDA Coffee Company Limited</p>
     <p>P.O Box 431420, Kasese, Uganda</p>
     <p>Email: info@greatpearlcoffee.com • Tel: +256 393 001 626</p>
   </div>
@@ -91,7 +91,7 @@ export function printProviderAcknowledgement(d: AckData) {
 </div>
 
 <div class="footer">
-  Great Agro Coffee Ltd — A Member of Hello YEDA Coffee Company Limited — P.O Box 431420, Kasese, Uganda. System-generated document. Ref ${d.reference} • ${date}
+  Great Agro Coffee Ltd — A Member of YEDA Coffee Company Limited — P.O Box 431420, Kasese, Uganda. System-generated document. Ref ${d.reference} • ${date}
 </div>
 
 <div class="actions no-print">

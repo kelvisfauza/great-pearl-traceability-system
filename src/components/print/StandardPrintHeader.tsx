@@ -34,7 +34,7 @@ const StandardPrintHeader: React.FC<StandardPrintHeaderProps> = ({
         GREAT AGRO COFFEE
       </h1>
       <p className="text-sm font-semibold text-gray-700 text-center mb-1">
-        A Member of Hello YEDA Coffee Company Limited
+        A Member of YEDA Coffee Company Limited
       </p>
       
       {/* Company Contact Info - Centered */}
