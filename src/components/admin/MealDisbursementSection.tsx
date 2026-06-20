@@ -25,7 +25,7 @@ const MealDisbursementSection = () => {
   const [rechecking, setRechecking] = useState(false);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [markingId, setMarkingId] = useState<string | null>(null);
-  const [showAll, setShowAll] = useState(false);
+  const [search, setSearch] = useState('');
   const [receiptingId, setReceiptingId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
