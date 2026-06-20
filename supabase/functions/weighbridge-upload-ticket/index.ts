@@ -43,20 +43,22 @@ Deno.serve(async (req) => {
       .upload(fileName, bytes, { contentType: mime, upsert: false });
     if (upErr) return json({ ok: false, error: `Upload failed: ${upErr.message}` }, 200);
 
-    const { data: urlData } = supabase.storage
+    // Bucket is private — store the path and issue a signed URL for immediate use
+    const { data: signed } = await supabase.storage
       .from("dispatch-attachments")
-      .getPublicUrl(fileName);
+      .createSignedUrl(fileName, 60 * 60 * 24 * 7); // 7 days
+    const photoUrl = signed?.signedUrl || fileName;
 
     const { error: insErr } = await supabase
       .from("weighbridge_scanned_tickets")
       .insert({
         session_id: session.id,
         qr_data: `auto-captured-${Date.now()}`,
-        photo_url: urlData.publicUrl,
+        photo_url: photoUrl,
       });
     if (insErr) return json({ ok: false, error: `Insert failed: ${insErr.message}` }, 200);
 
-    return json({ ok: true, photo_url: urlData.publicUrl }, 200);
+    return json({ ok: true, photo_url: photoUrl }, 200);
   } catch (err) {
     return json({ ok: false, error: String((err as any)?.message || err) }, 200);
   }
