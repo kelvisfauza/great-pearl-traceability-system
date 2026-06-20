@@ -465,19 +465,52 @@ Great Agro Coffee — Human Resources`,
 
         {approved.length > 0 && (
           <div className="mt-8 border-t pt-4">
-            <p className="text-sm font-semibold mb-3">Recently Approved — Resend Contract Email</p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+              <p className="text-sm font-semibold">Recently Approved — Resend Contract Email</p>
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Filter approved renewals..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 h-9 text-sm"
+                />
+              </div>
+            </div>
             <div className="space-y-2">
-              {approved.map((r) => (
-                <div key={r.id} className="flex items-center justify-between border rounded p-3 bg-muted/30">
-                  <div className="text-sm">
-                    <p className="font-medium">{r.employee_name}</p>
-                    <p className="text-xs text-muted-foreground">{r.employee_email} • {r.contract?.position || '—'} • Approved {r.approved_at ? new Date(r.approved_at).toLocaleDateString() : '—'}</p>
-                  </div>
-                  <Button size="sm" onClick={() => resendEmail(r)} disabled={resending === r.id || !r.contract}>
-                    {resending === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send email'}
-                  </Button>
-                </div>
-              ))}
+              {(() => {
+                const term = search.trim().toLowerCase();
+                const filtered = term
+                  ? approved.filter((r) =>
+                      (r.employee_name || '').toLowerCase().includes(term) ||
+                      (r.employee_email || '').toLowerCase().includes(term) ||
+                      (r.contract?.position || '').toLowerCase().includes(term)
+                    )
+                  : approved.slice(0, 3);
+                return (
+                  <>
+                    {filtered.map((r) => (
+                      <div key={r.id} className="flex items-center justify-between border rounded p-3 bg-muted/30">
+                        <div className="text-sm">
+                          <p className="font-medium">{r.employee_name}</p>
+                          <p className="text-xs text-muted-foreground">{r.employee_email} • {r.contract?.position || '—'} • Approved {r.approved_at ? new Date(r.approved_at).toLocaleDateString() : '—'}</p>
+                        </div>
+                        <Button size="sm" onClick={() => resendEmail(r)} disabled={resending === r.id || !r.contract}>
+                          {resending === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send email'}
+                        </Button>
+                      </div>
+                    ))}
+                    {!term && approved.length > 3 && (
+                      <p className="text-xs text-muted-foreground text-center py-1">
+                        {approved.length - 3} more hidden — type above to filter
+                      </p>
+                    )}
+                    {term && filtered.length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-2">No matches found</p>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
         )}
