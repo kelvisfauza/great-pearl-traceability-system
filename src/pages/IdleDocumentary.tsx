@@ -172,7 +172,7 @@ const IdleDocumentary = () => {
               GREAT AGRO COFFEE
             </div>
             <div className="text-[10px] md:text-xs font-semibold uppercase tracking-wider text-amber-300/90">
-              A Member of Hello YEDA Coffee Company Limited
+              A Member of YEDA Coffee Company Limited
             </div>
             <div className="text-[9px] md:text-[10px] uppercase tracking-[0.2em] text-white/70">
               P.O Box 431420, Kasese, Uganda
@@ -211,7 +211,7 @@ const IdleDocumentary = () => {
             GREAT AGRO COFFEE
           </div>
           <div className="mt-2 text-sm md:text-lg uppercase tracking-[0.4em] text-amber-200">
-            Hello YEDA Coffee Company Limited
+            YEDA Coffee Company Limited
           </div>
           <div className="mt-2 text-xs md:text-sm uppercase tracking-[0.3em] text-emerald-100/90">
             P.O Box 431420, Kasese, Uganda

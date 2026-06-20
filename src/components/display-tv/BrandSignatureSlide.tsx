@@ -24,7 +24,7 @@ const BrandSignatureSlide = ({ variant = "intro" }: BrandSignatureSlideProps) =>
               Great Agro Coffee
             </h2>
             <p className="mt-4 text-lg font-semibold uppercase tracking-widest text-primary/80">
-              A Member of Hello YEDA Coffee Company Limited
+              A Member of YEDA Coffee Company Limited
             </p>
               <p className="mt-6 max-w-4xl text-3xl leading-relaxed text-foreground/90">
                 {isIntro

@@ -91,7 +91,7 @@ const GRNGenerator: React.FC<GRNGeneratorProps> = ({ open, onClose }) => {
           <tr>
             <td style="text-align:center;padding:4px 0;font-size:11px;">
               <strong style="font-size:13px;letter-spacing:1px;">GREAT AGRO COFFEE LIMITED</strong><br/>
-              <span style="font-size:9.5px;color:#444;font-weight:bold;">A Member of Hello YEDA Coffee Company Limited</span><br/>
+              <span style="font-size:9.5px;color:#444;font-weight:bold;">A Member of YEDA Coffee Company Limited</span><br/>
               <span style="font-size:9.5px;color:#444;">P.O Box 431420, Kasese, Uganda</span>
             </td>
             <td style="width:30%;text-align:right;padding:4px 0;">
@@ -168,7 +168,7 @@ const GRNGenerator: React.FC<GRNGeneratorProps> = ({ open, onClose }) => {
         <div style="position:relative;margin:14px 0;text-align:center;">
           <div style="display:inline-block;border:2.5px solid #0a6b2a;color:#0a6b2a;padding:6px 18px;border-radius:60px;transform:rotate(-6deg);font-weight:bold;font-family:Arial,sans-serif;letter-spacing:1.5px;">
             <div style="font-size:10px;">★ GREAT AGRO COFFEE LTD ★</div>
-            <div style="font-size:9px;margin:2px 0;">A Member of Hello YEDA Coffee Company Limited</div>
+            <div style="font-size:9px;margin:2px 0;">A Member of YEDA Coffee Company Limited</div>
             <div style="font-size:13px;margin:2px 0;">${issueDate.toUpperCase()}</div>
             <div style="font-size:9px;">QUALITY DEPARTMENT</div>
           </div>
@@ -208,7 +208,7 @@ const GRNGenerator: React.FC<GRNGeneratorProps> = ({ open, onClose }) => {
           <tr>
             <td style="padding:8px;font-size:9px;color:#444;line-height:1.5;vertical-align:top;width:65%;">
               <strong style="color:#1a1a1a;">GREAT AGRO COFFEE LIMITED</strong><br/>
-              A Member of Hello YEDA Coffee Company Limited<br/>
+              A Member of YEDA Coffee Company Limited<br/>
               P.O Box 431420, Kasese, Uganda<br/>
               Tel: +256 393 001 626 &nbsp;|&nbsp; Email: info@greatpearlcoffee.com &nbsp;|&nbsp; Web: www.greatagrocoffee.com
               ${verificationCode ? `<br/><span style="color:#0a6b2a;font-weight:bold;font-family:'Courier New',monospace;margin-top:4px;display:inline-block;">Verify code: ${verificationCode}</span>` : ''}

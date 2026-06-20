@@ -31,7 +31,7 @@ import { toast } from '@/hooks/use-toast';
 
 const LOGO_URL = '/lovable-uploads/great-agro-coffee-logo.png';
 const COMPANY_NAME = 'GREAT AGRO COFFEE';
-const COMPANY_TAGLINE = 'a member of HELLO YEDA COFFEE COMPANY LIMITED';
+const COMPANY_TAGLINE = 'a member of YEDA COFFEE COMPANY LIMITED';
 const COMPANY_ADDRESS = 'P.O Box 431420, Kasese, Uganda';
 
 const generateRefNumber = (prefix: string) => {

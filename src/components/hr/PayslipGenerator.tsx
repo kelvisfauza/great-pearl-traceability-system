@@ -84,7 +84,7 @@ const PayslipGenerator = ({ payslips, onGeneratePayslips, loading }: PayslipGene
 
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('A Member of Hello YEDA Coffee Company Limited', pageWidth / 2, currentY, { align: 'center' });
+      pdf.text('A Member of YEDA Coffee Company Limited', pageWidth / 2, currentY, { align: 'center' });
       currentY += 5;
       pdf.setFont('helvetica', 'normal');
       pdf.text('P.O Box 431420, Kasese, Uganda', pageWidth / 2, currentY, { align: 'center' });

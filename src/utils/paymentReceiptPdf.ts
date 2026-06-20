@@ -25,7 +25,7 @@ export interface ReceiptPayload {
 
 const COMPANY = {
   name: 'GREAT AGRO COFFEE',
-  tagline: 'A Member of Hello YEDA Coffee Company Limited',
+  tagline: 'A Member of YEDA Coffee Company Limited',
   address: 'P.O Box 431420, Kasese, Uganda',
   phone: '+256 393 001 626',
   email: 'finance@greatpearlcoffee.com',

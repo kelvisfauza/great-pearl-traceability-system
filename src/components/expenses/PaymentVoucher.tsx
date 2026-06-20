@@ -296,7 +296,7 @@ const PaymentVoucher: React.FC<PaymentVoucherProps> = ({
                 <div className="logo-icon">☕</div>
                 <div className="company-info">
                   <h1>GREAT AGRO COFFEE</h1>
-                  <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#1a5632' }}>A Member of Hello YEDA Coffee Company Limited</p>
+                  <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#1a5632' }}>A Member of YEDA Coffee Company Limited</p>
                   <p style={{ fontSize: '11px', color: '#666' }}>P.O Box 431420, Kasese, Uganda</p>
                 </div>
               </div>

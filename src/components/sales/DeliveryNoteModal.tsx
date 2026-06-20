@@ -107,7 +107,7 @@ const DeliveryNoteModal: React.FC<DeliveryNoteModalProps> = ({ open, onClose, sa
                 />
                 <div style={{ color: 'white' }}>
                   <h1 style={{ fontSize: '18px', fontWeight: 'bold', margin: '0' }}>GREAT AGRO COFFEE</h1>
-                  <p style={{ fontSize: '11px', margin: '2px 0 0 0', opacity: '0.9', fontWeight: 'bold' }}>A Member of Hello YEDA Coffee Company Limited</p>
+                  <p style={{ fontSize: '11px', margin: '2px 0 0 0', opacity: '0.9', fontWeight: 'bold' }}>A Member of YEDA Coffee Company Limited</p>
                   <p style={{ fontSize: '10px', margin: '2px 0 0 0', opacity: '0.8' }}>P.O Box 431420, Kasese, Uganda</p>
                 </div>
               </div>
