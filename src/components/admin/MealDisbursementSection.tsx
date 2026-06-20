@@ -405,6 +405,18 @@ const MealDisbursementSection = () => {
           <p className="text-center text-muted-foreground py-6">No meal disbursements yet</p>
         ) : (
           <div className="overflow-x-auto">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+              <p className="text-sm text-muted-foreground">Most recent meal disbursements</p>
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Filter disbursements..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 h-9 text-sm"
+                />
+              </div>
+            </div>
             <Table>
               <TableHeader>
                 <TableRow>
