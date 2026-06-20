@@ -47,8 +47,7 @@ const ContractRenewalApprovals = () => {
       .from('contract_renewal_requests')
       .select('id, employee_name, employee_email, requested_months, approved_at, admin_notes, new_contract_id')
       .eq('status', 'approved')
-      .order('approved_at', { ascending: false })
-      .limit(20);
+      .order('approved_at', { ascending: false });
     const aprRows = apr || [];
     if (aprRows.length) {
       const contractIds = aprRows.map((r: any) => r.new_contract_id).filter(Boolean);
