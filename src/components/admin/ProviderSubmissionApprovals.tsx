@@ -22,6 +22,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
   const [rejectOpen, setRejectOpen] = useState(false);
   const [selected, setSelected] = useState<any>(null);
   const [withdrawCharge, setWithdrawCharge] = useState('');
+  const [overrideAmount, setOverrideAmount] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
 
   const { data: submissions = [], isLoading } = useQuery({
@@ -42,6 +43,13 @@ const ProviderSubmissionApprovals: React.FC = () => {
 
   const handleAction = async (action: 'approve' | 'reject') => {
     if (!selected) return;
+    const finalAmount = action === 'approve'
+      ? Number(overrideAmount || selected.amount)
+      : Number(selected.amount);
+    if (action === 'approve' && (!finalAmount || finalAmount < 500)) {
+      toast({ title: 'Invalid amount', description: 'Amount must be at least 500 UGX', variant: 'destructive' });
+      return;
+    }
     setProcessing(selected.id);
     try {
       const { data, error } = await supabase.functions.invoke('process-provider-submission', {
@@ -50,6 +58,9 @@ const ProviderSubmissionApprovals: React.FC = () => {
           action,
           rejectionReason: action === 'reject' ? rejectionReason : undefined,
           withdrawCharge: action === 'approve' ? Number(withdrawCharge || 0) : undefined,
+          amountOverride: action === 'approve' && Number(overrideAmount) > 0 && Number(overrideAmount) !== Number(selected.amount)
+            ? Number(overrideAmount)
+            : undefined,
         },
       });
       if (error) throw error;
@@ -64,7 +75,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
       if (action === 'approve') {
         const ref = ((data as any)?.ref || (data as any)?.recordId || selected.id)
           .toString().slice(-8).toUpperCase();
-        const numAmount = Number(selected.amount);
+        const numAmount = finalAmount;
         const numCharge = Number(withdrawCharge || 0);
         printProviderAcknowledgement({
           providerName: selected.provider_name,
@@ -89,6 +100,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
       setRejectOpen(false);
       setSelected(null);
       setWithdrawCharge('');
+      setOverrideAmount('');
       setRejectionReason('');
     } catch (e: any) {
       toast({ title: 'Error', description: e.message, variant: 'destructive' });
@@ -167,7 +179,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
                   </Button>
                   <Button
                     size="sm"
-                    onClick={() => { setSelected(s); setWithdrawCharge(''); setApproveOpen(true); }}
+                    onClick={() => { setSelected(s); setWithdrawCharge(''); setOverrideAmount(String(s.amount || '')); setApproveOpen(true); }}
                     disabled={processing === s.id}
                   >
                     {processing === s.id ? (
@@ -194,6 +206,29 @@ const ProviderSubmissionApprovals: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
+            {selected && (
+              <div className="rounded-md border bg-muted/40 p-3 text-sm space-y-1">
+                <p><span className="text-muted-foreground">Provider:</span> <strong>{selected.provider_name}</strong></p>
+                <p><span className="text-muted-foreground">Phone:</span> {selected.phone}</p>
+                <p><span className="text-muted-foreground">Description:</span> {selected.description}</p>
+                {selected.invoice_number && (
+                  <p><span className="text-muted-foreground">Invoice:</span> {selected.invoice_number}</p>
+                )}
+                <p><span className="text-muted-foreground">Requested amount:</span> <strong>UGX {Number(selected.amount).toLocaleString()}</strong></p>
+              </div>
+            )}
+            <div>
+              <Label>Amount to Send (UGX)</Label>
+              <Input
+                type="number"
+                value={overrideAmount}
+                onChange={(e) => setOverrideAmount(e.target.value)}
+                placeholder={selected ? String(selected.amount) : '0'}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                You can adjust the amount before disbursing if the request needs correction.
+              </p>
+            </div>
             <div>
               <Label>Withdraw Charge (optional, UGX)</Label>
               <Input
@@ -206,6 +241,22 @@ const ProviderSubmissionApprovals: React.FC = () => {
                 Added to the amount sent (covers MoMo fees).
               </p>
             </div>
+            {(Number(overrideAmount) > 0 || Number(withdrawCharge) > 0) && (
+              <div className="bg-muted/50 rounded-lg p-3 text-sm">
+                <div className="flex justify-between">
+                  <span>Amount:</span>
+                  <span>UGX {Number(overrideAmount || 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Withdraw Charge:</span>
+                  <span>UGX {Number(withdrawCharge || 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between font-bold border-t pt-1 mt-1">
+                  <span>Total to Send:</span>
+                  <span>UGX {(Number(overrideAmount || 0) + Number(withdrawCharge || 0)).toLocaleString()}</span>
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setApproveOpen(false)}>Cancel</Button>
