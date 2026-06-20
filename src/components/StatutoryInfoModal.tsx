@@ -23,6 +23,13 @@ const StatutoryInfoModal = () => {
 
   useEffect(() => {
     if (!employee) return;
+    // Skip when we only have a synthetic fallback employee (no DB record loaded).
+    // The fallback omits tin_number/nssf_number and would falsely re-prompt users
+    // who already submitted, e.g. after a transient token refresh / RLS error.
+    if (!(employee as any).employee_id) {
+      setOpen(false);
+      return;
+    }
     const hasTin = !!(employee as any).tin_number?.toString().trim();
     const hasNssf = !!(employee as any).nssf_number?.toString().trim();
     if (hasTin && hasNssf) {
