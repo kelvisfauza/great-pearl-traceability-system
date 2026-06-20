@@ -61,8 +61,7 @@ const ServiceProviderPayments = () => {
       const { data, error } = await supabase
         .from('service_provider_payments')
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
+        .order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },

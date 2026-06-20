@@ -42,8 +42,7 @@ const MealDisbursementSection = () => {
       const { data, error } = await supabase
         .from('meal_disbursements')
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
+        .order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
