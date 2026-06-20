@@ -696,13 +696,10 @@ const ServiceProviderPayments = () => {
                 ))}
               </TableBody>
             </Table>
-            {payments.length > 10 && (
+            {payments.length > 3 && (
               <div className="flex items-center justify-between px-2 py-3 text-sm text-muted-foreground">
                 <span>Showing {visiblePayments.length} of {payments.length} payments</span>
-                <Button variant="ghost" size="sm" onClick={() => setShowAll(s => !s)} className="gap-1">
-                  <Filter className="w-3.5 h-3.5" />
-                  {showAll ? 'Show recent 10 only' : `Show all ${payments.length}`}
-                </Button>
+                {!search.trim() && <span>{payments.length - 3} more hidden — filter to search</span>}
               </div>
             )}
           </div>
