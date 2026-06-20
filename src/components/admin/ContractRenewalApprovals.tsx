@@ -29,6 +29,7 @@ const ContractRenewalApprovals = () => {
   const [overrides, setOverrides] = useState<Record<string, {
     position: string; department: string; salary: string; role: string; permissions: string[];
   }>>({});
+  const [search, setSearch] = useState('');
   const [employees, setEmployees] = useState<Record<string, any>>({});
 
   const load = async () => {
