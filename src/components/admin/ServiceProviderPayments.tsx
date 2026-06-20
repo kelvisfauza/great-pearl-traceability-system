@@ -335,7 +335,16 @@ const ServiceProviderPayments = () => {
 
   const hasPending = payments.some((d: any) => d.yo_status === 'pending_approval');
 
-  const visiblePayments = showAll ? payments : payments.slice(0, 10);
+  const term = search.trim().toLowerCase();
+  const visiblePayments = term
+    ? payments.filter((d: any) =>
+        (d.receiver_name || '').toLowerCase().includes(term) ||
+        (d.receiver_phone || '').toLowerCase().includes(term) ||
+        (d.service_description || '').toLowerCase().includes(term) ||
+        (d.initiated_by_name || '').toLowerCase().includes(term) ||
+        (d.invoice_number || '').toLowerCase().includes(term)
+      )
+    : payments.slice(0, 3);
 
   const handlePrint = () => {
     const rows = payments.map((d: any) => `

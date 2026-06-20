@@ -231,7 +231,15 @@ const MealDisbursementSection = () => {
 
   const hasPending = disbursements.some((d: any) => d.yo_status === 'pending_approval');
 
-  const visibleDisbursements = showAll ? disbursements : disbursements.slice(0, 10);
+  const term = search.trim().toLowerCase();
+  const visibleDisbursements = term
+    ? disbursements.filter((d: any) =>
+        (d.receiver_name || '').toLowerCase().includes(term) ||
+        (d.receiver_phone || '').toLowerCase().includes(term) ||
+        (d.description || '').toLowerCase().includes(term) ||
+        (d.initiated_by_name || '').toLowerCase().includes(term)
+      )
+    : disbursements.slice(0, 3);
 
   const handlePrint = () => {
     const rows = disbursements.map((d: any) => `
