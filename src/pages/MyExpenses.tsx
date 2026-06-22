@@ -25,6 +25,7 @@ import MySalaryPayments from '@/components/expenses/MySalaryPayments';
 import ExpenseTemplateDownload from '@/components/expenses/ExpenseTemplateDownload';
 import CompanyHeaderSheetDownload from '@/components/expenses/CompanyHeaderSheetDownload';
 import PerDiemTemplateDownload from '@/components/expenses/PerDiemTemplateDownload';
+import QualityAnalysisFormDownload from '@/components/expenses/QualityAnalysisFormDownload';
 import FuelOrderModal from '@/components/finance/FuelOrderModal';
 
 interface ExpenseRequest {
@@ -574,8 +575,8 @@ const MyExpenses = () => {
       <div className="container mx-auto p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">My Expenses</h1>
-            <p className="text-muted-foreground">Submit and track your expense requests</p>
+            <h1 className="text-3xl font-bold">Company Forms</h1>
+            <p className="text-muted-foreground">Download forms, submit requests and track your expenses</p>
           </div>
         </div>
 
@@ -608,6 +609,7 @@ const MyExpenses = () => {
             <CompanyHeaderSheetDownload />
             <PerDiemTemplateDownload />
             <ExpenseTemplateDownload />
+            <QualityAnalysisFormDownload />
           </TabsContent>
 
           {/* Fuel / Service Order Tab */}
