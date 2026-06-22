@@ -54,70 +54,72 @@ const generateBlankQualityForm = async () => {
 
   const logoData = await loadImageAsBase64(LOGO_URL);
 
-  // Brand header band (matches salary advance form letterhead)
-  doc.setFillColor(...BRAND);
-  doc.rect(0, 0, pageW, 26, 'F');
-  doc.setFillColor(...ACCENT);
-  doc.rect(0, 26, pageW, 2, 'F');
-
+  // ---- Clean B&W Header (no coloured bands) ----
   if (logoData) {
-    try { doc.addImage(logoData, 'PNG', margin, 3, 20, 20); } catch {}
+    try { doc.addImage(logoData, 'PNG', margin, 4, 18, 18); } catch {}
   }
 
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(15);
-  doc.text('GREAT AGRO COFFEE', margin + 24, 12);
+  doc.text('GREAT AGRO COFFEE', margin + 24, 11);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
-  doc.text('a member of YEDA COFFEE COMPANY LIMITED', margin + 24, 17);
-  doc.text('P.O Box 431420, Kasese, Uganda  |  +256 393 001 626  |  info@greatpearlcoffee.com', margin + 24, 22);
+  doc.text('a member of YEDA COFFEE COMPANY LIMITED', margin + 24, 16);
+  doc.text('P.O Box 431420, Kasese, Uganda  |  +256 393 001 626  |  info@greatpearlcoffee.com', margin + 24, 21);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
-  doc.text('QUALITY', pageW - margin, 12, { align: 'right' });
-  doc.text('ANALYSIS FORM', pageW - margin, 17, { align: 'right' });
+  doc.text('QUALITY ANALYSIS FORM', pageW - margin, 14, { align: 'right' });
+
+  // Thin separator line under header
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.5);
+  doc.line(margin, 26, pageW - margin, 26);
 
   // Section title
-  doc.setTextColor(...BRAND);
+  doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.text('QUALITY ANALYSIS FORM', pageW / 2, 36, { align: 'center' });
+  doc.setFontSize(13);
+  doc.text('QUALITY ANALYSIS FORM', pageW / 2, 34, { align: 'center' });
 
   // Table
-  let y = 42;
+  let y = 40;
   const labelW = contentW * 0.42;
   const valueW = contentW - labelW;
   const rowH = Math.min(13, (pageH - y - 24) / ROWS.length);
 
-  doc.setLineWidth(0.4);
+  doc.setLineWidth(0.35);
   doc.setDrawColor(0, 0, 0);
 
-  ROWS.forEach((r) => {
-    doc.setFillColor(248, 244, 235);
-    doc.rect(margin, y, labelW, rowH, 'F');
+  ROWS.forEach((r, i) => {
+    // Light gray fill for every other row for readability in B&W
+    if (i % 2 === 0) {
+      doc.setFillColor(240, 240, 240);
+      doc.rect(margin, y, contentW, rowH, 'F');
+    }
     doc.rect(margin, y, labelW, rowH);
     doc.rect(margin + labelW, y, valueW, rowH);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
-    doc.setTextColor(20, 20, 20);
+    doc.setTextColor(0, 0, 0);
     doc.text(r.label, margin + 3, y + rowH / 2 + 1);
     if (r.hint) {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
-      doc.setTextColor(150, 150, 150);
+      doc.setTextColor(80, 80, 80);
       doc.text(r.hint, margin + labelW + 4, y + rowH / 2 + 1);
     }
     y += rowH;
   });
 
-  // Footer
-  doc.setDrawColor(...ACCENT);
-  doc.setLineWidth(0.6);
+  // Footer separator
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.5);
   doc.line(margin, pageH - 16, pageW - margin, pageH - 16);
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(8);
-  doc.setTextColor(110, 110, 110);
+  doc.setTextColor(80, 80, 80);
   doc.text(
     'Great Agro Coffee  |  a member of YEDA Coffee Company Limited  |  P.O Box 431420, Kasese, Uganda  |  www.greatpearlcoffee.com',
     pageW / 2,
