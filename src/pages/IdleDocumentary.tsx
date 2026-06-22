@@ -7,6 +7,7 @@ import logoUrl from "@/assets/great-agro-coffee-logo.png";
 const VIDEOS: { id: string; start: number; title: string }[] = [
   { id: "b2iSY1KOf4A", start: 0, title: "The Value of Coffee" },
   { id: "ejHDV8g-5sg", start: 4, title: "Coffee Around the World" },
+  { id: "WrafhfjjuUo", start: 0, title: "Great Agro Coffee — Company Ad" },
 ];
 
 const MARQUEE_MESSAGES = [
