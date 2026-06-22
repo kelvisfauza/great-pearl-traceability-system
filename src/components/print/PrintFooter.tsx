@@ -39,6 +39,7 @@ export function getStandardPrintFooter(verificationCode?: string): string {
       <p style="margin: 0;">Great Agro Coffee — A Member of YEDA Coffee Company Limited.</p>
       <p style="margin: 2px 0;">P.O Box 431420, Kasese, Uganda</p>
       <p style="margin: 2px 0;">+256 393 001 626 | www.greatagrocoffee.com</p>
+      <p style="margin: 2px 0;">Company Reg. No: 80034513266362 (Incorporated in Uganda, 22 June 2026)</p>
       <p style="margin: 5px 0 0; font-size: 8px; color: #999;">© ${currentYear} Great Agro Coffee. All rights reserved.</p>
     </div>
   `;

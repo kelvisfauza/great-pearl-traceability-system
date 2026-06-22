@@ -43,6 +43,7 @@ const StandardPrintHeader: React.FC<StandardPrintHeaderProps> = ({
         <p>+256 393 001 626</p>
         <p>www.greatagrocoffee.com | info@greatpearlcoffee.com</p>
         <p>Uganda Coffee Development Authority Licensed</p>
+        <p>Company Reg. No: 80034513266362 | Incorporated 22 June 2026</p>
       </div>
       
       {/* Document Title - Centered */}
