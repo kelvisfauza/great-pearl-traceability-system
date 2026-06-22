@@ -5,31 +5,18 @@ import { FileText, Download } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import {
-  Document, Packer, Paragraph, TextRun, ImageRun, AlignmentType, Table, TableRow, TableCell,
-  WidthType, BorderStyle, ShadingType, PageOrientation, Footer,
+  Document, Packer, Paragraph, TextRun,
+  PageOrientation, Footer,
 } from 'docx';
+import {
+  createLetterheadHeader,
+  createLetterheadRegLine,
+  createLetterheadFooter,
+  fetchLogoBytes,
+  letterheadSpacer,
+} from '@/utils/docxLetterhead';
+import { COMPANY_REG_INC } from '@/utils/companyBrand';
 
-const LOGO_URL = '/lovable-uploads/great-agro-coffee-logo.png';
-const COMPANY_NAME = 'GREAT AGRO COFFEE';
-const COMPANY_TAGLINE = 'a member of YEDA COFFEE COMPANY LIMITED';
-const COMPANY_ADDRESS = 'P.O Box 431420, Kasese, Uganda';
-const COMPANY_REG = 'Company Reg. No: 80034513266362  •  Incorporated in Uganda, 22 June 2026';
-
-const fetchLogoBytes = async (): Promise<Uint8Array | null> => {
-  try {
-    const res = await fetch(LOGO_URL);
-    if (!res.ok) return null;
-    const buf = await res.arrayBuffer();
-    return new Uint8Array(buf);
-  } catch {
-    return null;
-  }
-};
-
-const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
-const noBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
-
-const thinBlack = { style: BorderStyle.SINGLE, size: 6, color: '000000' };
 
 const generateDocx = async (employee: any) => {
   const logoBytes = await fetchLogoBytes();
