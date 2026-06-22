@@ -82,9 +82,9 @@ const generateDocx = async (employee: any) => {
       children: [
         headerTable,
         regLine,
-        spacer(200),
+        letterheadSpacer(200),
         refTable,
-        spacer(300),
+        letterheadSpacer(300),
         // Blank body — users type whatever they want
         ...Array.from({ length: 24 }, () => new Paragraph({ children: [new TextRun({ text: '' })] })),
       ],
