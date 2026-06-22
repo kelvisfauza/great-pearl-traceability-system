@@ -431,6 +431,22 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       doc.text('Balance (UGX)', cols.bal, y, { align: 'right' });
       y += 6;
 
+      // Track table bounds for gridlines
+      const tableTopY = y - 10; // top of header band
+      const colDividers = [
+        cols.type - 1,
+        cols.desc - 1,
+        cols.debit - 1,
+        cols.credit - 1,
+        cols.credit + 25,
+      ];
+      const drawRowLine = (yy: number) => {
+        doc.setDrawColor(180);
+        doc.setLineWidth(0.1);
+        doc.line(margin, yy, pageW - margin, yy);
+      };
+      drawRowLine(y - 6); // line under header
+
       // Opening balance row (always first)
       doc.setFillColor(232, 240, 234);
       doc.rect(margin, y - 3.5, pageW - 2 * margin, 6, 'F');
@@ -444,6 +460,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       doc.text('-', cols.credit + 22, y, { align: 'right' });
       doc.text(periodOpeningBalance.toLocaleString(), cols.bal, y, { align: 'right' });
       y += 6;
+      drawRowLine(y - 3.5);
 
       // Table rows (chronological asc so running balance reads top-to-bottom)
       doc.setFont('helvetica', 'normal');
@@ -482,6 +499,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         doc.setTextColor(tx.balance != null && tx.balance < 0 ? 185 : 50, tx.balance != null && tx.balance < 0 ? 28 : 50, tx.balance != null && tx.balance < 0 ? 28 : 50);
         doc.text(tx.balance != null ? tx.balance.toLocaleString() : '-', cols.bal, y, { align: 'right' });
         y += 5.5;
+        drawRowLine(y - 3.5);
       });
 
       // Closing balance row
@@ -497,6 +515,21 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       doc.text(totalCreditsPreview().toLocaleString(), cols.credit + 22, y, { align: 'right' });
       doc.text(closingBalance.toLocaleString(), cols.bal, y, { align: 'right' });
       y += 6;
+      drawRowLine(y - 3.5);
+
+      // Draw vertical column dividers + outer border across full table
+      const tableBottomY = y - 3.5;
+      doc.setDrawColor(120);
+      doc.setLineWidth(0.15);
+      // outer border
+      doc.line(margin, tableTopY, margin, tableBottomY);
+      doc.line(pageW - margin, tableTopY, pageW - margin, tableBottomY);
+      doc.line(margin, tableTopY, pageW - margin, tableTopY);
+      // vertical dividers between columns
+      doc.setDrawColor(180);
+      colDividers.forEach((x) => {
+        doc.line(x, tableTopY, x, tableBottomY);
+      });
 
       function totalCreditsPreview() { return transactionsAsc.reduce((s, t) => s + (t.amount > 0 ? t.amount : 0), 0); }
       function totalDebitsPreview()  { return transactionsAsc.reduce((s, t) => s + (t.amount < 0 ? Math.abs(t.amount) : 0), 0); }
