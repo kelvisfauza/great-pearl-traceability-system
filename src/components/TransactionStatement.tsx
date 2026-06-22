@@ -409,53 +409,97 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       doc.text(`UGX ${STATEMENT_FEE.toLocaleString()}`, margin + 38, y);
       y += 8;
 
-      // Table header
-      const cols = [margin, margin + 40, margin + 75, margin + 115, pageW - margin - 25];
-      const colLabels = ['Date', 'Type', 'Description', 'Amount (UGX)', 'Balance (UGX)'];
+      // Table header: Date | Type | Description | Debit | Credit | Balance
+      const cols = {
+        date: margin,
+        type: margin + 28,
+        desc: margin + 60,
+        debit: margin + 100,
+        credit: margin + 130,
+        bal:   pageW - margin,
+      };
       doc.setFillColor(26, 86, 50);
       doc.rect(margin, y - 4, pageW - 2 * margin, 7, 'F');
       doc.setTextColor(255);
       doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
-      colLabels.forEach((label, i) => {
-        const x = i >= 3 ? cols[i] : cols[i];
-        doc.text(label, x, y);
-      });
+      doc.text('Date', cols.date, y);
+      doc.text('Type', cols.type, y);
+      doc.text('Description', cols.desc, y);
+      doc.text('Debit (UGX)',  cols.debit + 22, y, { align: 'right' });
+      doc.text('Credit (UGX)', cols.credit + 22, y, { align: 'right' });
+      doc.text('Balance (UGX)', cols.bal, y, { align: 'right' });
       y += 6;
 
-      // Table rows
+      // Opening balance row (always first)
+      doc.setFillColor(232, 240, 234);
+      doc.rect(margin, y - 3.5, pageW - 2 * margin, 6, 'F');
+      doc.setTextColor(26, 86, 50);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.text(periodFrom, cols.date, y);
+      doc.text('OPENING', cols.type, y);
+      doc.text('Balance brought forward', cols.desc, y);
+      doc.text('-', cols.debit + 22, y, { align: 'right' });
+      doc.text('-', cols.credit + 22, y, { align: 'right' });
+      doc.text(periodOpeningBalance.toLocaleString(), cols.bal, y, { align: 'right' });
+      y += 6;
+
+      // Table rows (chronological asc so running balance reads top-to-bottom)
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
-      transactions.forEach((tx, idx) => {
+      transactionsAsc.forEach((tx, idx) => {
         if (y > 270) {
           doc.addPage();
           y = 20;
         }
-        // Alternate row bg
         if (idx % 2 === 0) {
           doc.setFillColor(245, 245, 245);
           doc.rect(margin, y - 3.5, pageW - 2 * margin, 5.5, 'F');
         }
         doc.setTextColor(50);
-        // Strip emojis for PDF
         const cleanType = tx.type.replace(/[\u{1F000}-\u{1FFFF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|📄|📤|📥|📶|📱|💵|📋|🏆|🎂|📲|💰|🏦|🎁/gu, '').trim();
-        doc.text(tx.date.split(',')[0] || tx.date, cols[0], y);
-        doc.text(cleanType.substring(0, 20), cols[1], y);
-        doc.text((tx.description || '-').substring(0, 22), cols[2], y);
-        
-        // Amount color
-        if (tx.amount >= 0) {
-          doc.setTextColor(21, 128, 61); // green
+        doc.text(tx.date.split(',')[0] || tx.date, cols.date, y);
+        doc.text(cleanType.substring(0, 16), cols.type, y);
+        doc.text((tx.description || '-').substring(0, 22), cols.desc, y);
+
+        if (tx.amount < 0) {
+          doc.setTextColor(185, 28, 28);
+          doc.text(Math.abs(tx.amount).toLocaleString(), cols.debit + 22, y, { align: 'right' });
+          doc.setTextColor(50);
+          doc.text('-', cols.credit + 22, y, { align: 'right' });
+        } else if (tx.amount > 0) {
+          doc.setTextColor(50);
+          doc.text('-', cols.debit + 22, y, { align: 'right' });
+          doc.setTextColor(21, 128, 61);
+          doc.text(tx.amount.toLocaleString(), cols.credit + 22, y, { align: 'right' });
         } else {
-          doc.setTextColor(185, 28, 28); // red
+          doc.setTextColor(50);
+          doc.text('-', cols.debit + 22, y, { align: 'right' });
+          doc.text('-', cols.credit + 22, y, { align: 'right' });
         }
-        const amtStr = `${tx.amount >= 0 ? '+' : ''}${tx.amount.toLocaleString()}`;
-        doc.text(amtStr, cols[3], y);
-        
-        doc.setTextColor(50);
-        doc.text(tx.balance != null ? tx.balance.toLocaleString() : '-', cols[4], y);
+
+        doc.setTextColor(tx.balance != null && tx.balance < 0 ? 185 : 50, tx.balance != null && tx.balance < 0 ? 28 : 50, tx.balance != null && tx.balance < 0 ? 28 : 50);
+        doc.text(tx.balance != null ? tx.balance.toLocaleString() : '-', cols.bal, y, { align: 'right' });
         y += 5.5;
       });
+
+      // Closing balance row
+      if (y > 270) { doc.addPage(); y = 20; }
+      doc.setFillColor(232, 240, 234);
+      doc.rect(margin, y - 3.5, pageW - 2 * margin, 6, 'F');
+      doc.setTextColor(26, 86, 50);
+      doc.setFont('helvetica', 'bold');
+      doc.text(periodTo, cols.date, y);
+      doc.text('CLOSING', cols.type, y);
+      doc.text('Balance carried forward', cols.desc, y);
+      doc.text(totalDebitsPreview().toLocaleString(), cols.debit + 22, y, { align: 'right' });
+      doc.text(totalCreditsPreview().toLocaleString(), cols.credit + 22, y, { align: 'right' });
+      doc.text(closingBalance.toLocaleString(), cols.bal, y, { align: 'right' });
+      y += 6;
+
+      function totalCreditsPreview() { return transactionsAsc.reduce((s, t) => s + (t.amount > 0 ? t.amount : 0), 0); }
+      function totalDebitsPreview()  { return transactionsAsc.reduce((s, t) => s + (t.amount < 0 ? Math.abs(t.amount) : 0), 0); }
 
       // ===== Summary Page (Stanbic-style) =====
       const totalCredits = transactionsAsc.reduce((s, t) => s + (t.amount > 0 ? t.amount : 0), 0);
