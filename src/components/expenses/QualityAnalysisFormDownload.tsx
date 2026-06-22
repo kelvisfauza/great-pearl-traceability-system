@@ -67,11 +67,11 @@ const generateBlankQualityForm = async () => {
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(15);
-  doc.text('GREAT PEARL COFFEE FACTORY', margin + 24, 12);
+  doc.text('GREAT AGRO COFFEE', margin + 24, 12);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.text('a member of YEDA COFFEE COMPANY LIMITED', margin + 24, 17);
-  doc.text('P.O Box 431420, Kasese, Uganda  |  +256 781 121 639  |  info@greatpearlcoffee.com', margin + 24, 22);
+  doc.text('P.O Box 431420, Kasese, Uganda  |  +256 393 001 626  |  info@greatpearlcoffee.com', margin + 24, 22);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
