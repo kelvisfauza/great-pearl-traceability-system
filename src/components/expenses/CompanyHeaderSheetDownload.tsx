@@ -13,6 +13,7 @@ const LOGO_URL = '/lovable-uploads/great-agro-coffee-logo.png';
 const COMPANY_NAME = 'GREAT AGRO COFFEE';
 const COMPANY_TAGLINE = 'a member of YEDA COFFEE COMPANY LIMITED';
 const COMPANY_ADDRESS = 'P.O Box 431420, Kasese, Uganda';
+const COMPANY_REG = 'Company Reg. No: 80034513266362  •  Incorporated in Uganda, 22 June 2026';
 
 const fetchLogoBytes = async (): Promise<Uint8Array | null> => {
   try {
@@ -85,13 +86,12 @@ const generateDocx = async (employee: any) => {
 
   const spacer = (size = 100) => new Paragraph({ spacing: { before: 0, after: size }, children: [new TextRun({ text: '' })] });
 
-  // Contact block (left aligned, under header)
-  const contactLines = [
-    COMPANY_ADDRESS,
-    '0393001626',
-    'operations@greatpearlcoffee.com',
-    'www.greatpearlcoffee.com',
-  ].map(t => new Paragraph({ children: [new TextRun({ text: t, size: 20 })], spacing: { after: 40 } }));
+  // Registration line directly under the header rule (contact info lives in footer to avoid repetition)
+  const regLine = new Paragraph({
+    alignment: AlignmentType.RIGHT,
+    spacing: { after: 80 },
+    children: [new TextRun({ text: COMPANY_REG, size: 16, color: '555555' })],
+  });
 
   // Ref / Date block as a borderless 2-col table
   const refCell = (label: string, value: string) => new TableRow({
@@ -171,8 +171,7 @@ const generateDocx = async (employee: any) => {
       },
       children: [
         headerTable,
-        spacer(200),
-        ...contactLines,
+        regLine,
         spacer(200),
         refTable,
         spacer(300),
