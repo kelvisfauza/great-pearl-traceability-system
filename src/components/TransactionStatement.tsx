@@ -418,7 +418,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         credit: margin + 130,
         bal:   pageW - margin,
       };
-      doc.setFillColor(26, 86, 50);
+      doc.setFillColor(0, 0, 0);
       doc.rect(margin, y - 4, pageW - 2 * margin, 7, 'F');
       doc.setTextColor(255);
       doc.setFontSize(8);
@@ -432,7 +432,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       y += 6;
 
       // Track table bounds for gridlines
-      const tableTopY = y - 10; // top of header band
+      let segmentTopY = y - 10; // top of current page's table segment
       const colDividers = [
         cols.type - 1,
         cols.desc - 1,
@@ -441,16 +441,42 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         cols.credit + 25,
       ];
       const drawRowLine = (yy: number) => {
-        doc.setDrawColor(180);
+        doc.setDrawColor(0);
         doc.setLineWidth(0.1);
         doc.line(margin, yy, pageW - margin, yy);
+      };
+      const drawVerticals = (yTop: number, yBot: number) => {
+        doc.setDrawColor(0);
+        doc.setLineWidth(0.15);
+        // outer left/right
+        doc.line(margin, yTop, margin, yBot);
+        doc.line(pageW - margin, yTop, pageW - margin, yBot);
+        // column dividers
+        doc.setLineWidth(0.1);
+        colDividers.forEach((x) => doc.line(x, yTop, x, yBot));
+      };
+      const redrawHeaderOnNewPage = () => {
+        doc.setFillColor(0, 0, 0);
+        doc.rect(margin, y - 4, pageW - 2 * margin, 7, 'F');
+        doc.setTextColor(255);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Date', cols.date, y);
+        doc.text('Type', cols.type, y);
+        doc.text('Description', cols.desc, y);
+        doc.text('Debit (UGX)',  cols.debit + 22, y, { align: 'right' });
+        doc.text('Credit (UGX)', cols.credit + 22, y, { align: 'right' });
+        doc.text('Balance (UGX)', cols.bal, y, { align: 'right' });
+        y += 6;
+        segmentTopY = y - 10;
+        drawRowLine(y - 6);
       };
       drawRowLine(y - 6); // line under header
 
       // Opening balance row (always first)
-      doc.setFillColor(232, 240, 234);
+      doc.setFillColor(220, 220, 220);
       doc.rect(margin, y - 3.5, pageW - 2 * margin, 6, 'F');
-      doc.setTextColor(26, 86, 50);
+      doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8);
       doc.text(periodFrom, cols.date, y);
@@ -467,46 +493,54 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       doc.setFontSize(8);
       transactionsAsc.forEach((tx, idx) => {
         if (y > 270) {
+          // close out vertical lines for current segment, then new page
+          drawVerticals(segmentTopY, y - 3.5);
           doc.addPage();
           y = 20;
+          redrawHeaderOnNewPage();
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
         }
         if (idx % 2 === 0) {
-          doc.setFillColor(245, 245, 245);
+          doc.setFillColor(240, 240, 240);
           doc.rect(margin, y - 3.5, pageW - 2 * margin, 5.5, 'F');
         }
-        doc.setTextColor(50);
+        doc.setTextColor(0);
         const cleanType = tx.type.replace(/[\u{1F000}-\u{1FFFF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|📄|📤|📥|📶|📱|💵|📋|🏆|🎂|📲|💰|🏦|🎁/gu, '').trim();
         doc.text(tx.date.split(',')[0] || tx.date, cols.date, y);
         doc.text(cleanType.substring(0, 16), cols.type, y);
         doc.text((tx.description || '-').substring(0, 22), cols.desc, y);
 
         if (tx.amount < 0) {
-          doc.setTextColor(185, 28, 28);
+          doc.setTextColor(0);
           doc.text(Math.abs(tx.amount).toLocaleString(), cols.debit + 22, y, { align: 'right' });
-          doc.setTextColor(50);
           doc.text('-', cols.credit + 22, y, { align: 'right' });
         } else if (tx.amount > 0) {
-          doc.setTextColor(50);
+          doc.setTextColor(0);
           doc.text('-', cols.debit + 22, y, { align: 'right' });
-          doc.setTextColor(21, 128, 61);
           doc.text(tx.amount.toLocaleString(), cols.credit + 22, y, { align: 'right' });
         } else {
-          doc.setTextColor(50);
+          doc.setTextColor(0);
           doc.text('-', cols.debit + 22, y, { align: 'right' });
           doc.text('-', cols.credit + 22, y, { align: 'right' });
         }
 
-        doc.setTextColor(tx.balance != null && tx.balance < 0 ? 185 : 50, tx.balance != null && tx.balance < 0 ? 28 : 50, tx.balance != null && tx.balance < 0 ? 28 : 50);
+        doc.setTextColor(0);
         doc.text(tx.balance != null ? tx.balance.toLocaleString() : '-', cols.bal, y, { align: 'right' });
         y += 5.5;
         drawRowLine(y - 3.5);
       });
 
       // Closing balance row
-      if (y > 270) { doc.addPage(); y = 20; }
-      doc.setFillColor(232, 240, 234);
+      if (y > 270) {
+        drawVerticals(segmentTopY, y - 3.5);
+        doc.addPage();
+        y = 20;
+        redrawHeaderOnNewPage();
+      }
+      doc.setFillColor(220, 220, 220);
       doc.rect(margin, y - 3.5, pageW - 2 * margin, 6, 'F');
-      doc.setTextColor(26, 86, 50);
+      doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'bold');
       doc.text(periodTo, cols.date, y);
       doc.text('CLOSING', cols.type, y);
@@ -517,19 +551,8 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       y += 6;
       drawRowLine(y - 3.5);
 
-      // Draw vertical column dividers + outer border across full table
-      const tableBottomY = y - 3.5;
-      doc.setDrawColor(120);
-      doc.setLineWidth(0.15);
-      // outer border
-      doc.line(margin, tableTopY, margin, tableBottomY);
-      doc.line(pageW - margin, tableTopY, pageW - margin, tableBottomY);
-      doc.line(margin, tableTopY, pageW - margin, tableTopY);
-      // vertical dividers between columns
-      doc.setDrawColor(180);
-      colDividers.forEach((x) => {
-        doc.line(x, tableTopY, x, tableBottomY);
-      });
+      // Draw vertical dividers + outer border for final page segment
+      drawVerticals(segmentTopY, y - 3.5);
 
       function totalCreditsPreview() { return transactionsAsc.reduce((s, t) => s + (t.amount > 0 ? t.amount : 0), 0); }
       function totalDebitsPreview()  { return transactionsAsc.reduce((s, t) => s + (t.amount < 0 ? Math.abs(t.amount) : 0), 0); }
