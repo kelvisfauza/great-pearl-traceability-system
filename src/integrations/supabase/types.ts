@@ -12984,14 +12984,24 @@ export type Database = {
         }
         Returns: Json
       }
-      transfer_wallet_funds_secure: {
-        Args: {
-          p_amount: number
-          p_receiver_email: string
-          p_reference: string
-        }
-        Returns: Json
-      }
+      transfer_wallet_funds_secure:
+        | {
+            Args: {
+              p_amount: number
+              p_receiver_email: string
+              p_reference: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_amount: number
+              p_receiver_email: string
+              p_reference: string
+              p_use_overdraft?: boolean
+            }
+            Returns: Json
+          }
       trigger_daily_salary_processing: { Args: never; Returns: Json }
       update_inventory_batch_source_for_record: {
         Args: { p_coffee_record_id: string }
