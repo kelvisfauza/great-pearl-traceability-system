@@ -8,6 +8,7 @@ import ContractRenewalApprovals from '@/components/admin/ContractRenewalApproval
 import MealDisbursementSection from '@/components/admin/MealDisbursementSection';
 import ServiceProviderPayments from '@/components/admin/ServiceProviderPayments';
 import ProviderSubmissionApprovals from '@/components/admin/ProviderSubmissionApprovals';
+import SupportStaffPerDiemSection from '@/components/admin/SupportStaffPerDiemSection';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRoleBasedData } from '@/hooks/useRoleBasedData';
 import { Shield, ClipboardCheck, DollarSign } from 'lucide-react';
@@ -85,6 +86,9 @@ const Approvals = () => {
 
         {/* Service Provider Payments */}
         <ServiceProviderPayments />
+
+        {/* Support Staff Per-Diem */}
+        <SupportStaffPerDiemSection />
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

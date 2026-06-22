@@ -101,7 +101,11 @@ serve(async (req) => {
     }
 
     const targetTable =
-      submission.request_type === "meal_plan" ? "meal_disbursements" : "service_provider_payments";
+      submission.request_type === "meal_plan"
+        ? "meal_disbursements"
+        : submission.request_type === "support_staff_per_diem"
+          ? "support_staff_per_diem"
+          : "service_provider_payments";
 
     const baseRow: Record<string, unknown> = {
       receiver_phone: cleanPhone,
@@ -119,6 +123,13 @@ serve(async (req) => {
       baseRow.service_description = submission.description;
       baseRow.notes = submission.invoice_number
         ? `Invoice: ${submission.invoice_number}`
+        : null;
+    } else if (targetTable === "support_staff_per_diem") {
+      baseRow.description = submission.description;
+      baseRow.national_id = (submission as any).national_id || null;
+      baseRow.payment_method = "mobile_money";
+      baseRow.notes = submission.invoice_number
+        ? `Ref: ${submission.invoice_number}`
         : null;
     } else {
       baseRow.description = submission.description;
@@ -142,7 +153,9 @@ serve(async (req) => {
     const narrative =
       submission.request_type === "meal_plan"
         ? `Meal plan payment - ${submission.description} - ${submission.provider_name}`
-        : `Service provider payment - ${submission.description} - ${submission.provider_name}`;
+        : submission.request_type === "support_staff_per_diem"
+          ? `Support staff per-diem - ${submission.description} - ${submission.provider_name}`
+          : `Service provider payment - ${submission.description} - ${submission.provider_name}`;
 
     const result = await yoPayout({ phone: cleanPhone, amount: totalAmount, narrative });
 

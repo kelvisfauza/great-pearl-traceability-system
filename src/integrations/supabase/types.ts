@@ -7319,6 +7319,7 @@ export type Database = {
           email: string | null
           id: string
           invoice_number: string | null
+          national_id: string | null
           payout_message: string | null
           payout_record_id: string | null
           payout_status: string | null
@@ -7341,6 +7342,7 @@ export type Database = {
           email?: string | null
           id?: string
           invoice_number?: string | null
+          national_id?: string | null
           payout_message?: string | null
           payout_record_id?: string | null
           payout_status?: string | null
@@ -7363,6 +7365,7 @@ export type Database = {
           email?: string | null
           id?: string
           invoice_number?: string | null
+          national_id?: string | null
           payout_message?: string | null
           payout_record_id?: string | null
           payout_status?: string | null
@@ -10388,6 +10391,66 @@ export type Database = {
           origin?: string
           phone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      support_staff_per_diem: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          id: string
+          initiated_by: string
+          initiated_by_name: string
+          national_id: string | null
+          notes: string | null
+          payment_method: string
+          receiver_name: string
+          receiver_phone: string
+          total_amount: number
+          updated_at: string
+          withdraw_charge: number
+          yo_raw_response: string | null
+          yo_reference: string | null
+          yo_status: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description: string
+          id?: string
+          initiated_by: string
+          initiated_by_name: string
+          national_id?: string | null
+          notes?: string | null
+          payment_method?: string
+          receiver_name: string
+          receiver_phone: string
+          total_amount: number
+          updated_at?: string
+          withdraw_charge?: number
+          yo_raw_response?: string | null
+          yo_reference?: string | null
+          yo_status?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          id?: string
+          initiated_by?: string
+          initiated_by_name?: string
+          national_id?: string | null
+          notes?: string | null
+          payment_method?: string
+          receiver_name?: string
+          receiver_phone?: string
+          total_amount?: number
+          updated_at?: string
+          withdraw_charge?: number
+          yo_raw_response?: string | null
+          yo_reference?: string | null
+          yo_status?: string
         }
         Relationships: []
       }
