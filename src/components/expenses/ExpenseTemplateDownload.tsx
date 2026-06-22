@@ -213,7 +213,7 @@ const generateDepartmentReportDocx = async (
   const subject = prefill.reason || prefill.beneficiaryName || '';
   const period = prefill.beneficiaryPhone || '';
 
-  const logoBytes = await loadImageAsUint8(LOGO_URL);
+  const logoBytes = await fetchLogoBytes();
 
   const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
   const allNoBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder };
@@ -221,87 +221,9 @@ const generateDepartmentReportDocx = async (
   const thin = { style: BorderStyle.SINGLE, size: 4, color: '888888' };
   const cellBorders = { top: thin, bottom: thin, left: thin, right: thin };
 
-  // ===== Header table (company name + logo) =====
-  const headerCells: DocxTableCell[] = [
-    new DocxTableCell({
-      width: { size: 7560, type: WidthType.DXA },
-      borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
-      margins: { top: 80, bottom: 80, left: 120, right: 120 },
-      children: [
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [
-            new TextRun({ text: COMPANY_NAME, bold: true, size: 36, font: 'Calibri' }),
-          ],
-        }),
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [
-            new TextRun({ text: COMPANY_TAGLINE, bold: true, size: 20, color: '1a5632', font: 'Calibri' }),
-          ],
-        }),
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [
-            new TextRun({ text: COMPANY_ADDRESS, size: 18, color: '666666', font: 'Calibri' }),
-          ],
-        }),
-      ],
-    }),
-  ];
-  if (logoBytes) {
-    headerCells.push(
-      new DocxTableCell({
-        width: { size: 1800, type: WidthType.DXA },
-        borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
-        margins: { top: 80, bottom: 80, left: 120, right: 120 },
-        children: [
-          new Paragraph({
-            alignment: AlignmentType.RIGHT,
-            children: [new ImageRun({ type: 'png', data: logoBytes, transformation: { width: 70, height: 70 } } as any)],
-          }),
-        ],
-      }),
-    );
-  } else {
-    headerCells[0] = new DocxTableCell({
-      width: { size: 9360, type: WidthType.DXA },
-      borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
-      margins: { top: 80, bottom: 80, left: 120, right: 120 },
-      children: [
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [
-            new TextRun({ text: COMPANY_NAME, bold: true, size: 36, font: 'Calibri' }),
-          ],
-        }),
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [
-            new TextRun({ text: COMPANY_TAGLINE, bold: true, size: 20, color: '1a5632', font: 'Calibri' }),
-          ],
-        }),
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [
-            new TextRun({ text: COMPANY_ADDRESS, size: 18, color: '666666', font: 'Calibri' }),
-          ],
-        }),
-      ],
-    });
-  }
-
-  const headerTable = new DocxTable({
-    width: { size: 9360, type: WidthType.DXA },
-    columnWidths: logoBytes ? [7560, 1800] : [9360],
-    borders: { ...allNoBorders, bottom: { style: BorderStyle.SINGLE, size: 8, color: '000000' } },
-    rows: [new DocxTableRow({ children: headerCells })],
-  });
-
-  const contactPara = (text: string) => new Paragraph({
-    spacing: { after: 40 },
-    children: [new TextRun({ text, size: 20, font: 'Calibri' })],
-  });
+  // ===== Standard letterhead (logo left, company name + tagline) =====
+  const headerTable = createLetterheadHeader(logoBytes);
+  const regLine = createLetterheadRegLine(false);
 
   // ===== Meta block (Our Ref / Your Ref / Date) =====
   const metaRow = (label: string, value: string) =>
