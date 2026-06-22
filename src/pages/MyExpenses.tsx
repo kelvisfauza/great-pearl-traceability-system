@@ -25,6 +25,7 @@ import MySalaryPayments from '@/components/expenses/MySalaryPayments';
 import ExpenseTemplateDownload from '@/components/expenses/ExpenseTemplateDownload';
 import CompanyHeaderSheetDownload from '@/components/expenses/CompanyHeaderSheetDownload';
 import PerDiemTemplateDownload from '@/components/expenses/PerDiemTemplateDownload';
+import QualityAnalysisFormDownload from '@/components/expenses/QualityAnalysisFormDownload';
 import FuelOrderModal from '@/components/finance/FuelOrderModal';
 
 interface ExpenseRequest {
