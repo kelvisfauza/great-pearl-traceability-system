@@ -6,13 +6,21 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { CheckCircle2, Loader2, Send } from 'lucide-react';
+
+const MEAL_ITEMS = [
+  'Matooke', 'Rice', 'Groundnuts', 'Peas', 'Charcoal', 'Beans',
+  'Sugar', 'Spices', 'Maize Flour', 'Irish Potatoes',
+];
 
 const SubmitRequest = () => {
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [mealItems, setMealItems] = useState<string[]>([]);
+  const [otherItems, setOtherItems] = useState('');
   const [form, setForm] = useState({
     request_type: 'service_provider' as 'service_provider' | 'meal_plan' | 'support_staff_per_diem',
     provider_name: '',
@@ -26,10 +34,18 @@ const SubmitRequest = () => {
 
   const update = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
+  const toggleMealItem = (item: string) => {
+    setMealItems((prev) => prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.provider_name.trim() || !form.phone.trim() || !form.amount || !form.description.trim()) {
       toast({ title: 'Missing details', description: 'Please fill in all required fields.', variant: 'destructive' });
+      return;
+    }
+    if (form.request_type === 'meal_plan' && mealItems.length === 0 && !otherItems.trim()) {
+      toast({ title: 'Select items', description: 'Please tick at least one meal item you will buy.', variant: 'destructive' });
       return;
     }
     const amt = Number(form.amount);
@@ -49,13 +65,19 @@ const SubmitRequest = () => {
     }
 
     setSubmitting(true);
+    let fullDescription = form.description.trim();
+    if (form.request_type === 'meal_plan') {
+      const items = [...mealItems];
+      if (otherItems.trim()) items.push(`Others: ${otherItems.trim()}`);
+      if (items.length) fullDescription += `\n\nItems to buy: ${items.join(', ')}`;
+    }
     const { error } = await supabase.from('provider_submission_requests').insert({
       request_type: form.request_type,
       provider_name: form.provider_name.trim(),
       phone: cleanPhone,
       email: form.email.trim() || null,
       amount: amt,
-      description: form.description.trim(),
+      description: fullDescription,
       invoice_number: form.invoice_number.trim() || null,
       national_id: form.national_id.trim() || null,
     } as any);
@@ -81,7 +103,7 @@ const SubmitRequest = () => {
               Your request has been sent to Great Agro Coffee for approval. You will receive an SMS
               once the payment is processed.
             </p>
-            <Button onClick={() => { setSubmitted(false); setForm({ request_type: 'service_provider', provider_name: '', phone: '', email: '', amount: '', description: '', invoice_number: '', national_id: '' }); }}>
+            <Button onClick={() => { setSubmitted(false); setMealItems([]); setOtherItems(''); setForm({ request_type: 'service_provider', provider_name: '', phone: '', email: '', amount: '', description: '', invoice_number: '', national_id: '' }); }}>
               Submit another request
             </Button>
           </CardContent>
@@ -153,6 +175,33 @@ const SubmitRequest = () => {
                 <Label>Service / Reason *</Label>
                 <Textarea value={form.description} onChange={(e) => update('description', e.target.value)} placeholder="Describe the service rendered or meal plan being billed for" rows={4} maxLength={500} />
               </div>
+
+              {form.request_type === 'meal_plan' && (
+                <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
+                  <Label className="text-base font-semibold">Items to Buy *</Label>
+                  <p className="text-xs text-muted-foreground">Tick all the items you will purchase for this meal plan.</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {MEAL_ITEMS.map((item) => (
+                      <label key={item} className="flex items-center gap-2 cursor-pointer text-sm">
+                        <Checkbox
+                          checked={mealItems.includes(item)}
+                          onCheckedChange={() => toggleMealItem(item)}
+                        />
+                        <span>{item}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <div>
+                    <Label className="text-sm">Others (specify)</Label>
+                    <Input
+                      value={otherItems}
+                      onChange={(e) => setOtherItems(e.target.value)}
+                      placeholder="e.g. tomatoes, onions, cooking oil"
+                      maxLength={200}
+                    />
+                  </div>
+                </div>
+              )}
 
               <Button type="submit" className="w-full" disabled={submitting}>
                 {submitting ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Submitting...</>) : (<><Send className="w-4 h-4 mr-2" />Submit Request</>)}
