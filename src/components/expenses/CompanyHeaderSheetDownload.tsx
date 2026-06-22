@@ -152,7 +152,59 @@ const generateDocx = async (employee: any) => {
         footCell('Email', 'operations@greatpearlcoffee.com'),
         footCell('Website', 'www.greatpearlcoffee.com'),
       ],
+    }),
+    new TableRow({
+      children: [
+        new TableCell({
+          width: { size: 9360, type: WidthType.DXA },
+          borders: noBorders,
+          margins: { top: 40, bottom: 0, left: 0, right: 0 },
+          children: [new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [new TextRun({ text: COMPANY_REG, size: 16, color: '666666' })],
+          })],
+        }),
+      ],
     })],
+  });
+
+  // The second row spans all 4 columns — rebuild with correct grid span
+  const footerTableFixed = new Table({
+    width: { size: 9360, type: WidthType.DXA },
+    columnWidths: [2340, 2340, 2340, 2340],
+    borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            width: { size: 2340, type: WidthType.DXA },
+            borders: { ...noBorders, top: thinBlack },
+            margins: { top: 120, bottom: 60, left: 0, right: 80 },
+            children: [
+              new Paragraph({ children: [new TextRun({ text: 'Great Agro Coffee', bold: true, size: 18 })] }),
+              new Paragraph({ children: [new TextRun({ text: COMPANY_ADDRESS, size: 18 })] }),
+            ],
+          }),
+          footCell('Telephone', '0393001626'),
+          footCell('Email', 'operations@greatpearlcoffee.com'),
+          footCell('Website', 'www.greatpearlcoffee.com'),
+        ],
+      }),
+      new TableRow({
+        children: [
+          new TableCell({
+            width: { size: 9360, type: WidthType.DXA },
+            columnSpan: 4,
+            borders: noBorders,
+            margins: { top: 60, bottom: 0, left: 0, right: 0 },
+            children: [new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [new TextRun({ text: COMPANY_REG, size: 16, color: '666666' })],
+            })],
+          }),
+        ],
+      }),
+    ],
   });
 
   const doc = new Document({
@@ -167,7 +219,7 @@ const generateDocx = async (employee: any) => {
         },
       },
       footers: {
-        default: new Footer({ children: [footerTable] }),
+        default: new Footer({ children: [footerTableFixed] }),
       },
       children: [
         headerTable,
