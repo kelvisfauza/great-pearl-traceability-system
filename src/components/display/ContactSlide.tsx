@@ -69,6 +69,10 @@ const ContactSlide = () => {
       <p className="mt-6 text-2xl text-green-400 font-semibold animate-pulse">
         🌱 From Farm to Cup, Quality You Can Trust 🌱
       </p>
+
+      <p className="mt-4 text-white/60 text-sm">
+        Company Reg. No: 80034513266362 · Incorporated in Uganda, 22 June 2026
+      </p>
     </div>
   );
 };
