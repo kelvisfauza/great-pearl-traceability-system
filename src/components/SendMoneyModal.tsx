@@ -111,6 +111,7 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
         p_receiver_email: selectedRecipient.email,
         p_amount: parsedAmount,
         p_reference: ref,
+        p_use_overdraft: overdraftConfirmed,
       });
 
       if (transferErr) throw new Error(transferErr.message);
