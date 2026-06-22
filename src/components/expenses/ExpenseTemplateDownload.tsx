@@ -10,7 +10,6 @@ import {
   Packer,
   Paragraph,
   TextRun,
-  ImageRun,
   Table as DocxTable,
   TableRow as DocxTableRow,
   TableCell as DocxTableCell,
@@ -21,6 +20,13 @@ import {
   Footer,
   ShadingType,
 } from 'docx';
+import {
+  createLetterheadHeader,
+  createLetterheadRegLine,
+  createLetterheadFooter,
+  fetchLogoBytes,
+  letterheadSpacer,
+} from '@/utils/docxLetterhead';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,6 +34,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+
 
 const LOGO_URL = '/lovable-uploads/great-agro-coffee-logo.png';
 const COMPANY_NAME = 'GREAT AGRO COFFEE';
@@ -168,15 +175,6 @@ const loadImageAsBase64 = (url: string): Promise<string> => {
   });
 };
 
-const loadImageAsUint8 = async (url: string): Promise<Uint8Array | null> => {
-  try {
-    const res = await fetch(url);
-    const buf = await res.arrayBuffer();
-    return new Uint8Array(buf);
-  } catch {
-    return null;
-  }
-};
 
 const downloadBlob = (blob: Blob, filename: string) => {
   const url = URL.createObjectURL(blob);
@@ -215,7 +213,7 @@ const generateDepartmentReportDocx = async (
   const subject = prefill.reason || prefill.beneficiaryName || '';
   const period = prefill.beneficiaryPhone || '';
 
-  const logoBytes = await loadImageAsUint8(LOGO_URL);
+  const logoBytes = await fetchLogoBytes();
 
   const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
   const allNoBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder };
@@ -223,87 +221,9 @@ const generateDepartmentReportDocx = async (
   const thin = { style: BorderStyle.SINGLE, size: 4, color: '888888' };
   const cellBorders = { top: thin, bottom: thin, left: thin, right: thin };
 
-  // ===== Header table (company name + logo) =====
-  const headerCells: DocxTableCell[] = [
-    new DocxTableCell({
-      width: { size: 7560, type: WidthType.DXA },
-      borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
-      margins: { top: 80, bottom: 80, left: 120, right: 120 },
-      children: [
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [
-            new TextRun({ text: COMPANY_NAME, bold: true, size: 36, font: 'Calibri' }),
-          ],
-        }),
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [
-            new TextRun({ text: COMPANY_TAGLINE, bold: true, size: 20, color: '1a5632', font: 'Calibri' }),
-          ],
-        }),
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [
-            new TextRun({ text: COMPANY_ADDRESS, size: 18, color: '666666', font: 'Calibri' }),
-          ],
-        }),
-      ],
-    }),
-  ];
-  if (logoBytes) {
-    headerCells.push(
-      new DocxTableCell({
-        width: { size: 1800, type: WidthType.DXA },
-        borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
-        margins: { top: 80, bottom: 80, left: 120, right: 120 },
-        children: [
-          new Paragraph({
-            alignment: AlignmentType.RIGHT,
-            children: [new ImageRun({ type: 'png', data: logoBytes, transformation: { width: 70, height: 70 } } as any)],
-          }),
-        ],
-      }),
-    );
-  } else {
-    headerCells[0] = new DocxTableCell({
-      width: { size: 9360, type: WidthType.DXA },
-      borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
-      margins: { top: 80, bottom: 80, left: 120, right: 120 },
-      children: [
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [
-            new TextRun({ text: COMPANY_NAME, bold: true, size: 36, font: 'Calibri' }),
-          ],
-        }),
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [
-            new TextRun({ text: COMPANY_TAGLINE, bold: true, size: 20, color: '1a5632', font: 'Calibri' }),
-          ],
-        }),
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [
-            new TextRun({ text: COMPANY_ADDRESS, size: 18, color: '666666', font: 'Calibri' }),
-          ],
-        }),
-      ],
-    });
-  }
-
-  const headerTable = new DocxTable({
-    width: { size: 9360, type: WidthType.DXA },
-    columnWidths: logoBytes ? [7560, 1800] : [9360],
-    borders: { ...allNoBorders, bottom: { style: BorderStyle.SINGLE, size: 8, color: '000000' } },
-    rows: [new DocxTableRow({ children: headerCells })],
-  });
-
-  const contactPara = (text: string) => new Paragraph({
-    spacing: { after: 40 },
-    children: [new TextRun({ text, size: 20, font: 'Calibri' })],
-  });
+  // ===== Standard letterhead (logo left, company name + tagline) =====
+  const headerTable = createLetterheadHeader(logoBytes);
+  const regLine = createLetterheadRegLine(false);
 
   // ===== Meta block (Our Ref / Your Ref / Date) =====
   const metaRow = (label: string, value: string) =>
@@ -378,32 +298,8 @@ const generateDepartmentReportDocx = async (
     ],
   });
 
-  // ===== Footer =====
-  const footerCell = (heading: string, value: string) => new DocxTableCell({
-    width: { size: 2340, type: WidthType.DXA },
-    borders: { top: { style: BorderStyle.SINGLE, size: 6, color: '000000' }, bottom: noBorder, left: noBorder, right: noBorder },
-    margins: { top: 80, bottom: 40, left: 60, right: 60 },
-    children: [
-      new Paragraph({ children: [new TextRun({ text: heading, bold: true, size: 16, font: 'Calibri' })] }),
-      new Paragraph({ children: [new TextRun({ text: value, size: 16, font: 'Calibri' })] }),
-    ],
-  });
-
-  const footerTable = new DocxTable({
-    width: { size: 9360, type: WidthType.DXA },
-    columnWidths: [2340, 2340, 2340, 2340],
-    borders: allNoBorders,
-    rows: [
-      new DocxTableRow({
-        children: [
-          footerCell('Great Agro Coffee', COMPANY_ADDRESS),
-          footerCell('Telephone', '0393001626'),
-          footerCell('Email', 'operations@greatpearlcoffee.com'),
-          footerCell('Website', 'www.greatpearlcoffee.com'),
-        ],
-      }),
-    ],
-  });
+  // ===== Standard letterhead footer (keeps the incorporation date in the footer) =====
+  const footerTable = createLetterheadFooter(true);
 
   const doc = new DocxDocument({
     creator: 'Great Agro Coffee',
@@ -423,12 +319,8 @@ const generateDepartmentReportDocx = async (
       },
       children: [
         headerTable,
-        new Paragraph({ spacing: { after: 120 }, children: [new TextRun({ text: '' })] }),
-        contactPara(COMPANY_ADDRESS),
-        contactPara('0393001626'),
-        contactPara('operations@greatpearlcoffee.com'),
-        contactPara('www.greatpearlcoffee.com'),
-        new Paragraph({ spacing: { before: 200, after: 120 }, children: [new TextRun({ text: '' })] }),
+        regLine,
+        letterheadSpacer(120),
         metaTable,
         new Paragraph({ spacing: { before: 200, after: 80 }, children: [new TextRun({ text: '' })] }),
         detailsTable,

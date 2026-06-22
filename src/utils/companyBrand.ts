@@ -1,0 +1,9 @@
+export const LOGO_URL = '/lovable-uploads/great-agro-coffee-logo.png';
+export const COMPANY_NAME = 'GREAT AGRO COFFEE';
+export const COMPANY_TAGLINE = 'a member of YEDA COFFEE COMPANY LIMITED';
+export const COMPANY_ADDRESS = 'P.O Box 431420, Kasese, Uganda';
+export const COMPANY_PHONE = '0393001626';
+export const COMPANY_EMAIL = 'operations@greatpearlcoffee.com';
+export const COMPANY_WEBSITE = 'www.greatpearlcoffee.com';
+export const COMPANY_REG = 'Company Reg. No: 80034513266362';
+export const COMPANY_REG_INC = 'Company Reg. No: 80034513266362 · Incorporated in Uganda, 22 June 2026';
