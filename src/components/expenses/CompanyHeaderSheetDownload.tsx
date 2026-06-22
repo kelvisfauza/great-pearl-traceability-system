@@ -13,6 +13,7 @@ const LOGO_URL = '/lovable-uploads/great-agro-coffee-logo.png';
 const COMPANY_NAME = 'GREAT AGRO COFFEE';
 const COMPANY_TAGLINE = 'a member of YEDA COFFEE COMPANY LIMITED';
 const COMPANY_ADDRESS = 'P.O Box 431420, Kasese, Uganda';
+const COMPANY_REG = 'Company Reg. No: 80034513266362  •  Incorporated in Uganda, 22 June 2026';
 
 const fetchLogoBytes = async (): Promise<Uint8Array | null> => {
   try {
@@ -85,13 +86,12 @@ const generateDocx = async (employee: any) => {
 
   const spacer = (size = 100) => new Paragraph({ spacing: { before: 0, after: size }, children: [new TextRun({ text: '' })] });
 
-  // Contact block (left aligned, under header)
-  const contactLines = [
-    COMPANY_ADDRESS,
-    '0393001626',
-    'operations@greatpearlcoffee.com',
-    'www.greatpearlcoffee.com',
-  ].map(t => new Paragraph({ children: [new TextRun({ text: t, size: 20 })], spacing: { after: 40 } }));
+  // Registration line directly under the header rule (contact info lives in footer to avoid repetition)
+  const regLine = new Paragraph({
+    alignment: AlignmentType.RIGHT,
+    spacing: { after: 80 },
+    children: [new TextRun({ text: COMPANY_REG, size: 16, color: '555555' })],
+  });
 
   // Ref / Date block as a borderless 2-col table
   const refCell = (label: string, value: string) => new TableRow({
@@ -133,26 +133,42 @@ const generateDocx = async (employee: any) => {
     ],
   });
 
-  const footerTable = new Table({
+  const footerTableFixed = new Table({
     width: { size: 9360, type: WidthType.DXA },
     columnWidths: [2340, 2340, 2340, 2340],
     borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
-    rows: [new TableRow({
-      children: [
-        new TableCell({
-          width: { size: 2340, type: WidthType.DXA },
-          borders: { ...noBorders, top: thinBlack },
-          margins: { top: 120, bottom: 60, left: 0, right: 80 },
-          children: [
-            new Paragraph({ children: [new TextRun({ text: 'Great Agro Coffee', bold: true, size: 18 })] }),
-            new Paragraph({ children: [new TextRun({ text: COMPANY_ADDRESS, size: 18 })] }),
-          ],
-        }),
-        footCell('Telephone', '0393001626'),
-        footCell('Email', 'operations@greatpearlcoffee.com'),
-        footCell('Website', 'www.greatpearlcoffee.com'),
-      ],
-    })],
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            width: { size: 2340, type: WidthType.DXA },
+            borders: { ...noBorders, top: thinBlack },
+            margins: { top: 120, bottom: 60, left: 0, right: 80 },
+            children: [
+              new Paragraph({ children: [new TextRun({ text: 'Great Agro Coffee', bold: true, size: 18 })] }),
+              new Paragraph({ children: [new TextRun({ text: COMPANY_ADDRESS, size: 18 })] }),
+            ],
+          }),
+          footCell('Telephone', '0393001626'),
+          footCell('Email', 'operations@greatpearlcoffee.com'),
+          footCell('Website', 'www.greatpearlcoffee.com'),
+        ],
+      }),
+      new TableRow({
+        children: [
+          new TableCell({
+            width: { size: 9360, type: WidthType.DXA },
+            columnSpan: 4,
+            borders: noBorders,
+            margins: { top: 60, bottom: 0, left: 0, right: 0 },
+            children: [new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [new TextRun({ text: COMPANY_REG, size: 16, color: '666666' })],
+            })],
+          }),
+        ],
+      }),
+    ],
   });
 
   const doc = new Document({
@@ -167,12 +183,11 @@ const generateDocx = async (employee: any) => {
         },
       },
       footers: {
-        default: new Footer({ children: [footerTable] }),
+        default: new Footer({ children: [footerTableFixed] }),
       },
       children: [
         headerTable,
-        spacer(200),
-        ...contactLines,
+        regLine,
         spacer(200),
         refTable,
         spacer(300),
