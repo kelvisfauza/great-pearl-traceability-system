@@ -1,0 +1,2 @@
+ALTER TABLE public.provider_submission_requests DROP CONSTRAINT IF EXISTS provider_submission_requests_request_type_check;
+ALTER TABLE public.provider_submission_requests ADD CONSTRAINT provider_submission_requests_request_type_check CHECK (request_type IN ('service_provider','meal_plan','support_staff_per_diem'));
