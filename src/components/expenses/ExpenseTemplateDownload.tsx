@@ -175,15 +175,6 @@ const loadImageAsBase64 = (url: string): Promise<string> => {
   });
 };
 
-const loadImageAsUint8 = async (url: string): Promise<Uint8Array | null> => {
-  try {
-    const res = await fetch(url);
-    const buf = await res.arrayBuffer();
-    return new Uint8Array(buf);
-  } catch {
-    return null;
-  }
-};
 
 const downloadBlob = (blob: Blob, filename: string) => {
   const url = URL.createObjectURL(blob);
