@@ -298,32 +298,8 @@ const generateDepartmentReportDocx = async (
     ],
   });
 
-  // ===== Footer =====
-  const footerCell = (heading: string, value: string) => new DocxTableCell({
-    width: { size: 2340, type: WidthType.DXA },
-    borders: { top: { style: BorderStyle.SINGLE, size: 6, color: '000000' }, bottom: noBorder, left: noBorder, right: noBorder },
-    margins: { top: 80, bottom: 40, left: 60, right: 60 },
-    children: [
-      new Paragraph({ children: [new TextRun({ text: heading, bold: true, size: 16, font: 'Calibri' })] }),
-      new Paragraph({ children: [new TextRun({ text: value, size: 16, font: 'Calibri' })] }),
-    ],
-  });
-
-  const footerTable = new DocxTable({
-    width: { size: 9360, type: WidthType.DXA },
-    columnWidths: [2340, 2340, 2340, 2340],
-    borders: allNoBorders,
-    rows: [
-      new DocxTableRow({
-        children: [
-          footerCell('Great Agro Coffee', COMPANY_ADDRESS),
-          footerCell('Telephone', '0393001626'),
-          footerCell('Email', 'operations@greatpearlcoffee.com'),
-          footerCell('Website', 'www.greatpearlcoffee.com'),
-        ],
-      }),
-    ],
-  });
+  // ===== Standard letterhead footer (keeps the incorporation date in the footer) =====
+  const footerTable = createLetterheadFooter(true);
 
   const doc = new DocxDocument({
     creator: 'Great Agro Coffee',
