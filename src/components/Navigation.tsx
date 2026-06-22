@@ -91,7 +91,7 @@ const Navigation = () => {
       items: [
         { name: "Suppliers", icon: UserCheck, path: "/suppliers", permission: null },
         { name: "Sales & Marketing", icon: TrendingUp, path: "/sales-marketing", permission: "Sales Marketing" },
-        { name: "My Expenses", icon: DollarSign, path: "/my-expenses", permission: null },
+        { name: "Company Forms", icon: DollarSign, path: "/my-expenses", permission: null },
         { name: "Human Resources", icon: Users, path: "/human-resources", permission: "Human Resources" },
         { name: "Data Analyst", icon: LineChart, path: "/data-analyst", permission: "Data Analysis" },
         { name: "IT Department", icon: Settings, path: "/it-department", permission: "IT Management" },
