@@ -10,7 +10,6 @@ import {
   Packer,
   Paragraph,
   TextRun,
-  ImageRun,
   Table as DocxTable,
   TableRow as DocxTableRow,
   TableCell as DocxTableCell,
@@ -21,6 +20,13 @@ import {
   Footer,
   ShadingType,
 } from 'docx';
+import {
+  createLetterheadHeader,
+  createLetterheadRegLine,
+  createLetterheadFooter,
+  fetchLogoBytes,
+  letterheadSpacer,
+} from '@/utils/docxLetterhead';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,6 +34,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+
 
 const LOGO_URL = '/lovable-uploads/great-agro-coffee-logo.png';
 const COMPANY_NAME = 'GREAT AGRO COFFEE';
