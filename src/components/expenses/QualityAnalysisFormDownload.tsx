@@ -5,8 +5,6 @@ import { toast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
 
 const LOGO_URL = '/lovable-uploads/great-agro-coffee-logo.png';
-const BRAND: [number, number, number] = [123, 63, 0];
-const ACCENT: [number, number, number] = [201, 162, 39];
 
 const loadImageAsBase64 = (url: string): Promise<string | null> =>
   new Promise((resolve) => {
