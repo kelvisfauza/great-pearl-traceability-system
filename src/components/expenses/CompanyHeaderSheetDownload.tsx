@@ -94,7 +94,7 @@ const generateDocx = async (employee: any) => {
 
   // Registration line directly under the header rule (contact info lives in footer to avoid repetition)
   const regLine = new Paragraph({
-    alignment: AlignmentType.RIGHT,
+    alignment: AlignmentType.LEFT,
     spacing: { after: 80 },
     children: [new TextRun({ text: COMPANY_REG, size: 16, color: '555555' })],
   });
