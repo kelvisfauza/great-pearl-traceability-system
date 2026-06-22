@@ -27,66 +27,10 @@ const generateDocx = async (employee: any) => {
   const today = `${now.getDate()}${['th','st','nd','rd'][((now.getDate()%100)>10&&(now.getDate()%100)<14)?0:[0,1,2,3][now.getDate()%10]||0]} ${now.toLocaleString('en-US',{month:'long'})} ${now.getFullYear()}`;
 
   // TOP HEADER (Stanbic-style): logo on LEFT, company name + tagline beside it, single bottom rule
-  const headerRow = new TableRow({
-    children: [
-      new TableCell({
-        width: { size: 1200, type: WidthType.DXA },
-        borders: { ...noBorders, bottom: thinBlack },
-        verticalAlign: 'center' as any,
-        margins: { top: 120, bottom: 120, left: 0, right: 200 },
-        children: [
-          new Paragraph({
-            alignment: AlignmentType.LEFT,
-            children: logoBytes
-              ? [new ImageRun({
-                  type: 'png',
-                  data: logoBytes,
-                  transformation: { width: 70, height: 70 },
-                  altText: { title: 'Logo', description: 'GAC Logo', name: 'logo' },
-                })]
-              : [new TextRun({ text: 'GAC', bold: true, size: 32 })],
-          }),
-        ],
-      }),
-      new TableCell({
-        width: { size: 8160, type: WidthType.DXA },
-        borders: { ...noBorders, bottom: thinBlack },
-        verticalAlign: 'center' as any,
-        margins: { top: 120, bottom: 120, left: 0, right: 0 },
-        children: [
-          new Paragraph({
-            alignment: AlignmentType.LEFT,
-            spacing: { after: 40 },
-            children: [
-              new TextRun({ text: COMPANY_NAME, bold: true, size: 36, font: 'Arial', color: '0d3d1f' }),
-            ],
-          }),
-          new Paragraph({
-            alignment: AlignmentType.LEFT,
-            children: [
-              new TextRun({ text: COMPANY_TAGLINE, size: 18, font: 'Arial', color: '555555', italics: true }),
-            ],
-          }),
-        ],
-      }),
-    ],
-  });
+  const headerTable = createLetterheadHeader(logoBytes);
 
-  const headerTable = new Table({
-    width: { size: 9360, type: WidthType.DXA },
-    columnWidths: [1200, 8160],
-    borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
-    rows: [headerRow],
-  });
-
-  const spacer = (size = 100) => new Paragraph({ spacing: { before: 0, after: size }, children: [new TextRun({ text: '' })] });
-
-  // Registration line directly under the header rule (contact info lives in footer to avoid repetition)
-  const regLine = new Paragraph({
-    alignment: AlignmentType.LEFT,
-    spacing: { after: 80 },
-    children: [new TextRun({ text: COMPANY_REG, size: 16, color: '555555' })],
-  });
+  // Registration line directly under the header rule (no incorporation date in the header)
+  const regLine = createLetterheadRegLine(false);
 
   // Ref / Date block as a borderless 2-col table
   const refCell = (label: string, value: string) => new TableRow({
@@ -117,54 +61,9 @@ const generateDocx = async (employee: any) => {
     ],
   });
 
-  // FOOTER: thin top border + 4 columns
-  const footCell = (heading: string, value: string, align: any = AlignmentType.LEFT) => new TableCell({
-    width: { size: 2340, type: WidthType.DXA },
-    borders: { ...noBorders, top: thinBlack },
-    margins: { top: 120, bottom: 60, left: 80, right: 80 },
-    children: [
-      new Paragraph({ alignment: align, children: [new TextRun({ text: heading, bold: true, size: 18 })] }),
-      new Paragraph({ alignment: align, children: [new TextRun({ text: value, size: 18 })] }),
-    ],
-  });
+  // FOOTER: thin top border + 4 columns + registration line
+  const footerTableFixed = createLetterheadFooter(true);
 
-  const footerTableFixed = new Table({
-    width: { size: 9360, type: WidthType.DXA },
-    columnWidths: [2340, 2340, 2340, 2340],
-    borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
-    rows: [
-      new TableRow({
-        children: [
-          new TableCell({
-            width: { size: 2340, type: WidthType.DXA },
-            borders: { ...noBorders, top: thinBlack },
-            margins: { top: 120, bottom: 60, left: 0, right: 80 },
-            children: [
-              new Paragraph({ children: [new TextRun({ text: 'Great Agro Coffee', bold: true, size: 18 })] }),
-              new Paragraph({ children: [new TextRun({ text: COMPANY_ADDRESS, size: 18 })] }),
-            ],
-          }),
-          footCell('Telephone', '0393001626'),
-          footCell('Email', 'operations@greatpearlcoffee.com'),
-          footCell('Website', 'www.greatpearlcoffee.com'),
-        ],
-      }),
-      new TableRow({
-        children: [
-          new TableCell({
-            width: { size: 9360, type: WidthType.DXA },
-            columnSpan: 4,
-            borders: noBorders,
-            margins: { top: 60, bottom: 0, left: 0, right: 0 },
-            children: [new Paragraph({
-              alignment: AlignmentType.CENTER,
-              children: [new TextRun({ text: COMPANY_REG, size: 16, color: '666666' })],
-            })],
-          }),
-        ],
-      }),
-    ],
-  });
 
   const doc = new Document({
     styles: {
