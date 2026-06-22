@@ -5,8 +5,8 @@ import { FileText, Download } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import {
-  Document, Packer, Paragraph, TextRun,
-  PageOrientation, Footer,
+  Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+  WidthType, BorderStyle, AlignmentType, PageOrientation, Footer,
 } from 'docx';
 import {
   createLetterheadHeader,
@@ -14,8 +14,10 @@ import {
   createLetterheadFooter,
   fetchLogoBytes,
   letterheadSpacer,
+  noBorder,
+  noBorders,
 } from '@/utils/docxLetterhead';
-import { COMPANY_REG_INC } from '@/utils/companyBrand';
+
 
 
 const generateDocx = async (employee: any) => {
