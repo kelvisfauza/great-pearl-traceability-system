@@ -14,13 +14,14 @@ const SubmitRequest = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState({
-    request_type: 'service_provider' as 'service_provider' | 'meal_plan',
+    request_type: 'service_provider' as 'service_provider' | 'meal_plan' | 'support_staff_per_diem',
     provider_name: '',
     phone: '',
     email: '',
     amount: '',
     description: '',
     invoice_number: '',
+    national_id: '',
   });
 
   const update = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
@@ -42,6 +43,11 @@ const SubmitRequest = () => {
       return;
     }
 
+    if (form.request_type === 'support_staff_per_diem' && !form.national_id.trim()) {
+      toast({ title: 'NIN required', description: 'Enter your National ID (NIN) for support staff per-diem.', variant: 'destructive' });
+      return;
+    }
+
     setSubmitting(true);
     const { error } = await supabase.from('provider_submission_requests').insert({
       request_type: form.request_type,
@@ -51,7 +57,8 @@ const SubmitRequest = () => {
       amount: amt,
       description: form.description.trim(),
       invoice_number: form.invoice_number.trim() || null,
-    });
+      national_id: form.national_id.trim() || null,
+    } as any);
     setSubmitting(false);
 
     if (error) {
@@ -74,7 +81,7 @@ const SubmitRequest = () => {
               Your request has been sent to Great Agro Coffee for approval. You will receive an SMS
               once the payment is processed.
             </p>
-            <Button onClick={() => { setSubmitted(false); setForm({ request_type: 'service_provider', provider_name: '', phone: '', email: '', amount: '', description: '', invoice_number: '' }); }}>
+            <Button onClick={() => { setSubmitted(false); setForm({ request_type: 'service_provider', provider_name: '', phone: '', email: '', amount: '', description: '', invoice_number: '', national_id: '' }); }}>
               Submit another request
             </Button>
           </CardContent>
@@ -106,6 +113,7 @@ const SubmitRequest = () => {
                   <SelectContent>
                     <SelectItem value="service_provider">Service Provider Payment</SelectItem>
                     <SelectItem value="meal_plan">Meal Plan Payment</SelectItem>
+                    <SelectItem value="support_staff_per_diem">Support Staff Per-Diem</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -127,8 +135,12 @@ const SubmitRequest = () => {
                   <Input type="email" value={form.email} onChange={(e) => update('email', e.target.value)} placeholder="you@example.com" maxLength={150} />
                 </div>
                 <div>
-                  <Label>Invoice Number (optional)</Label>
-                  <Input value={form.invoice_number} onChange={(e) => update('invoice_number', e.target.value)} placeholder="INV-001" maxLength={50} />
+                  <Label>{form.request_type === 'support_staff_per_diem' ? 'National ID (NIN) *' : 'Invoice Number (optional)'}</Label>
+                  {form.request_type === 'support_staff_per_diem' ? (
+                    <Input value={form.national_id} onChange={(e) => update('national_id', e.target.value)} placeholder="CM/CF..." maxLength={30} />
+                  ) : (
+                    <Input value={form.invoice_number} onChange={(e) => update('invoice_number', e.target.value)} placeholder="INV-001" maxLength={50} />
+                  )}
                 </div>
               </div>
 
