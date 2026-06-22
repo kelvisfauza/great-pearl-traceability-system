@@ -96,6 +96,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['provider-submissions-pending'] });
       queryClient.invalidateQueries({ queryKey: ['service-provider-payments'] });
       queryClient.invalidateQueries({ queryKey: ['meal-disbursements'] });
+      queryClient.invalidateQueries({ queryKey: ['support-staff-per-diem'] });
       setApproveOpen(false);
       setRejectOpen(false);
       setSelected(null);
