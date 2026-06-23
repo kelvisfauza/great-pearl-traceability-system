@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import UserPresencePanel from '@/components/admin/UserPresencePanel';
 import AccountStatusManager from '@/components/admin/AccountStatusManager';
 import HolidayManager from '@/components/settings/HolidayManager';
+import StatutoryInfoExport from '@/components/admin/StatutoryInfoExport';
 import { Database, ArrowRight } from 'lucide-react';
 
 const Settings = () => {
@@ -115,6 +116,7 @@ const Settings = () => {
           {isAdmin() && (
             <TabsContent value="admin" className="space-y-6">
               <AccountStatusManager />
+              <StatutoryInfoExport />
               
               <Card>
                 <CardHeader>
