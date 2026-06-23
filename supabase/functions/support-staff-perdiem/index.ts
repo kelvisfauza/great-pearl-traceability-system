@@ -120,6 +120,32 @@ serve(async (req) => {
         }
       } catch (_) { /* ignore */ }
 
+      // Email notification (cash)
+      try {
+        const recipientEmail = await lookupEmail(supabase, { nationalId, phone: cleanPhone, name: receiverName });
+        if (recipientEmail) {
+          const shortRef = String(record.id).slice(-8).toUpperCase();
+          await supabase.functions.invoke("send-transactional-email", {
+            body: {
+              templateName: "payment-receipt",
+              recipientEmail,
+              idempotencyKey: `support-perdiem-cash-${record.id}`,
+              templateData: {
+                recipientName: receiverName,
+                reference: shortRef,
+                description: `Support staff per-diem: ${description}`,
+                amount: `UGX ${numAmount.toLocaleString()}`,
+                charges: numCharge > 0 ? `UGX ${numCharge.toLocaleString()}` : undefined,
+                total: `UGX ${totalAmount.toLocaleString()}`,
+                paymentMethod: "Cash (collect from Finance)",
+                transactionId: record.id,
+                processedBy: initiatedByName || "Admin",
+              },
+            },
+          });
+        }
+      } catch (e) { console.error("[support-staff-perdiem] email (cash) error:", e); }
+
       return new Response(
         JSON.stringify({
           success: true,
@@ -172,6 +198,34 @@ serve(async (req) => {
       }
     } catch (_) { /* ignore */ }
 
+    // Email notification (mobile money)
+    try {
+      if (yoStatus === "success" || yoStatus === "pending_approval") {
+        const recipientEmail = await lookupEmail(supabase, { nationalId, phone: cleanPhone, name: receiverName });
+        if (recipientEmail) {
+          const shortRef = (result.transactionRef || record.id).toString().slice(-8).toUpperCase();
+          await supabase.functions.invoke("send-transactional-email", {
+            body: {
+              templateName: "payment-receipt",
+              recipientEmail,
+              idempotencyKey: `support-perdiem-momo-${record.id}`,
+              templateData: {
+                recipientName: receiverName,
+                reference: shortRef,
+                description: `Support staff per-diem: ${description}`,
+                amount: `UGX ${numAmount.toLocaleString()}`,
+                charges: numCharge > 0 ? `UGX ${numCharge.toLocaleString()}` : undefined,
+                total: `UGX ${totalAmount.toLocaleString()}`,
+                paymentMethod: "Mobile Money (Yo Payments)",
+                transactionId: result.transactionRef || record.id,
+                processedBy: initiatedByName || "Admin",
+              },
+            },
+          });
+        }
+      }
+    } catch (e) { console.error("[support-staff-perdiem] email (momo) error:", e); }
+
     return new Response(
       JSON.stringify({
         success: result.success || isPending22,
@@ -190,3 +244,47 @@ serve(async (req) => {
     );
   }
 });
+
+// Try to resolve an email for the per-diem recipient from the employees table.
+// Order: national_id -> phone -> exact name match.
+async function lookupEmail(
+  supabase: any,
+  { nationalId, phone, name }: { nationalId?: string | null; phone?: string | null; name?: string | null },
+): Promise<string | null> {
+  try {
+    if (nationalId) {
+      const { data } = await supabase
+        .from("employees")
+        .select("email")
+        .eq("national_id", nationalId)
+        .not("email", "is", null)
+        .limit(1)
+        .maybeSingle();
+      if (data?.email) return data.email;
+    }
+    if (phone) {
+      const tail = phone.slice(-9);
+      const { data } = await supabase
+        .from("employees")
+        .select("email, phone")
+        .ilike("phone", `%${tail}%`)
+        .not("email", "is", null)
+        .limit(1)
+        .maybeSingle();
+      if (data?.email) return data.email;
+    }
+    if (name) {
+      const { data } = await supabase
+        .from("employees")
+        .select("email")
+        .ilike("name", name)
+        .not("email", "is", null)
+        .limit(1)
+        .maybeSingle();
+      if (data?.email) return data.email;
+    }
+  } catch (e) {
+    console.error("[support-staff-perdiem] lookupEmail error:", e);
+  }
+  return null;
+}
