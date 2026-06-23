@@ -17,7 +17,12 @@ export interface SendReceiptResult {
   errors: string[];
 }
 
-const shorten = (url: string) => url; // placeholder for future link shortener
+// Short, stable public redirect that resolves to a fresh 24h signed URL
+// at click-time. Used in SMS so the message stays well under any per-segment
+// length limit and the JWT-bearing signed URL never gets truncated mid-token.
+const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL || '';
+const buildShortReceiptLink = (reference: string) =>
+  `${SUPABASE_URL}/functions/v1/receipt-link?ref=${encodeURIComponent(reference)}`;
 
 export const sendPaymentReceipt = async (input: SendReceiptInput): Promise<SendReceiptResult> => {
   const reference = input.reference || buildReceiptReference();
@@ -163,13 +168,15 @@ export const sendPaymentReceipt = async (input: SendReceiptInput): Promise<SendR
   const phone = input.recipientPhone || input.paidTo.phone;
   if (phone) {
     const totalStr = formatUGX(input.total);
-    const sms = `GREAT PEARL COFFEE — Payment Receipt ${reference}: ${totalStr} for "${input.description.substring(0, 40)}". Download: ${shorten(pdfUrl)}`;
+    const shortLink = buildShortReceiptLink(reference);
+    const sms = `GREAT PEARL COFFEE — Payment Receipt ${reference}: ${totalStr} for "${input.description.substring(0, 40)}". Download: ${shortLink}`;
     tasks.push(
       supabase.functions
         .invoke('send-sms', {
           body: {
             phone,
-            message: sms.substring(0, 320),
+            // Don't substring — that can chop the URL token. Message is short by design.
+            message: sms,
             messageType: 'payout_confirmation',
             userName: input.paidTo.name,
             recipientEmail: email,
