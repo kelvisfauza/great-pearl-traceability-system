@@ -513,6 +513,7 @@ serve(async (req) => {
       if (yoStatus === "success" || yoStatus === "pending_approval") {
         const shortRef = (result.transactionRef || record.id).slice(-8).toUpperCase();
         const smsMessage = `Dear ${submission.provider_name}, UGX ${totalAmount.toLocaleString()} has been sent from Great Agro Coffee. Ref: ${shortRef}. Thank you.`;
+        // (PDF link added in disbursement email below; SMS kept short to avoid extra segments)
         await supabase.functions.invoke("send-sms", {
           body: {
             phone: cleanPhone,
@@ -530,9 +531,73 @@ serve(async (req) => {
 
     // Notify provider via Email
     try {
-      if ((yoStatus === "success" || yoStatus === "pending_approval") && submission.email) {
+      if (yoStatus === "success" || yoStatus === "pending_approval") {
         const shortRef = (result.transactionRef || record.id).slice(-8).toUpperCase();
-        await supabase.functions.invoke("send-transactional-email", {
+
+        // 📄 Generate signed PDF receipt and upload to payment-receipts bucket so
+        // the email carries a "Download PDF Receipt" button (matches the Finance
+        // payout flow). Reference uses RCP-YYYYMMDD-XXXXX so /receipt-link can
+        // resolve it later.
+        let pdfUrl: string | undefined;
+        const pdfRef = buildReceiptRef();
+        try {
+          const pdfBytes = generateReceiptPdfBytes({
+            reference: pdfRef,
+            paidToName: submission.provider_name,
+            paidToPhone: cleanPhone,
+            paidToEmail: submission.email || undefined,
+            description: submission.description,
+            invoiceNumber: submission.invoice_number || undefined,
+            amount: numAmount,
+            charges: numCharge,
+            total: totalAmount,
+            paymentMethod: "Mobile Money (Yo Payments)",
+            transactionId: result.transactionRef || record.id,
+            processedBy: reviewerName,
+          });
+          const year = new Date().getFullYear();
+          const path = `${year}/${pdfRef}.pdf`;
+          const { error: upErr } = await supabase.storage
+            .from("payment-receipts")
+            .upload(path, pdfBytes, {
+              contentType: "application/pdf",
+              upsert: true,
+              cacheControl: "3600",
+            });
+          if (upErr) {
+            console.error("PDF upload error:", upErr);
+          } else {
+            const { data: signed } = await supabase.storage
+              .from("payment-receipts")
+              .createSignedUrl(path, 60 * 60 * 24 * 365);
+            pdfUrl = signed?.signedUrl;
+          }
+        } catch (e) {
+          console.error("PDF generation error:", e);
+        }
+
+        if (!submission.email) {
+          // No email recipient — skip email but still try to send PDF link via SMS if generated
+          if (pdfUrl) {
+            try {
+              const supaUrl = Deno.env.get("SUPABASE_URL")!;
+              const link = `${supaUrl}/functions/v1/receipt-link?ref=${encodeURIComponent(pdfRef)}`;
+              await supabase.functions.invoke("send-sms", {
+                body: {
+                  phone: cleanPhone,
+                  message: `Great Agro Coffee — Download your receipt ${pdfRef}: ${link}`,
+                  userName: submission.provider_name,
+                  messageType: "payout_confirmation",
+                  department: "Finance",
+                  triggeredBy: reviewer.id,
+                },
+              });
+            } catch (e) {
+              console.error("PDF SMS error:", e);
+            }
+          }
+        } else {
+          await supabase.functions.invoke("send-transactional-email", {
           body: {
             templateName: "payment-receipt",
             recipientEmail: submission.email,
@@ -548,9 +613,11 @@ serve(async (req) => {
               paymentMethod: "Mobile Money (Yo Payments)",
               transactionId: result.transactionRef || record.id,
               processedBy: reviewerName,
+                pdfUrl,
             },
           },
         });
+        }
       }
     } catch (e) {
       console.error("Email notify error:", e);
