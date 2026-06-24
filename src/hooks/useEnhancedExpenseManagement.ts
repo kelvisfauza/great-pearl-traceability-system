@@ -185,6 +185,22 @@ export const useEnhancedExpenseManagement = () => {
       
       console.log('✅ Update successful:', data);
 
+      // 🎁 Loyalty reward for the approver (UGX 200, capped 10/day)
+      if (approved) {
+        try {
+          const { data: authData } = await supabase.auth.getUser();
+          if (authData?.user?.id) {
+            await supabase.rpc('award_approval_reward' as any, {
+              user_uuid: authData.user.id,
+              request_id: requestId,
+              approval_role: approvalType,
+            });
+          }
+        } catch (e) {
+          console.warn('Loyalty reward (admin approval) skipped:', e);
+        }
+      }
+
       // Update local state
       setExpenseRequests(prev => prev.map(req => {
         if (req.id === requestId) {
