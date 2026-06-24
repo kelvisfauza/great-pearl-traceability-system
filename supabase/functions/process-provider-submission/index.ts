@@ -178,6 +178,53 @@ serve(async (req) => {
       record = inserted;
     }
 
+    // ✅ APPROVAL NOTIFICATION — sent immediately, before the Yo payout result.
+    // Only sent the first time (not on retry of a previously failed payout).
+    const isRetry = (submission as any).payout_status === "failed";
+    if (!isRetry) {
+      try {
+        const approvalSms = `Dear ${submission.provider_name}, your request to Great Agro Coffee for UGX ${numAmount.toLocaleString()} (${submission.description}) has been APPROVED by ${reviewerName}. Disbursement is being processed and you will receive a confirmation message shortly.`;
+        await supabase.functions.invoke("send-sms", {
+          body: {
+            phone: cleanPhone,
+            message: approvalSms,
+            userName: submission.provider_name,
+            messageType: "approval",
+            department: "Admin",
+            triggeredBy: reviewer.id,
+          },
+        });
+      } catch (e) {
+        console.error("Approval SMS error:", e);
+      }
+
+      if (submission.email) {
+        try {
+          await supabase.functions.invoke("send-transactional-email", {
+            body: {
+              templateName: "payment-receipt",
+              recipientEmail: submission.email,
+              idempotencyKey: `provider-submission-approval-${submissionId}`,
+              templateData: {
+                recipientName: submission.provider_name,
+                reference: submissionId.slice(-8).toUpperCase(),
+                description: `APPROVED — ${submission.description}. Disbursement is being processed; you will receive a confirmation once funds are sent.`,
+                invoiceNumber: submission.invoice_number || undefined,
+                amount: `UGX ${numAmount.toLocaleString()}`,
+                charges: numCharge > 0 ? `UGX ${numCharge.toLocaleString()}` : undefined,
+                total: `UGX ${totalAmount.toLocaleString()}`,
+                paymentMethod: "Pending disbursement",
+                transactionId: submissionId,
+                processedBy: reviewerName,
+              },
+            },
+          });
+        } catch (e) {
+          console.error("Approval email error:", e);
+        }
+      }
+    }
+
     // Trigger Yo Payout
     const narrative =
       submission.request_type === "meal_plan"
