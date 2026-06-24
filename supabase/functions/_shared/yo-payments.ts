@@ -10,6 +10,7 @@ interface YoPayoutParams {
   phone: string;       // Must be 256XXXXXXXXX format
   amount: number;
   narrative: string;   // Payment description/reason
+  privateRef?: string; // Our own PrivateTransactionReference (used to poll status later)
 }
 
 interface YoPayoutResult {
@@ -55,6 +56,7 @@ function buildYoXmlRequest(username: string, password: string, params: YoPayoutP
     <Account>${params.phone}</Account>
     <AccountProviderCode>${getProviderCode(params.phone)}</AccountProviderCode>
     <Narrative>${escapeXml(params.narrative)}</Narrative>
+${params.privateRef ? `    <PrivateTransactionReference>${escapeXml(params.privateRef)}</PrivateTransactionReference>\n` : ""}
   </Request>
 </AutoCreate>`;
 }

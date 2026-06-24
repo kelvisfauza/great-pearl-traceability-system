@@ -465,7 +465,11 @@ serve(async (req) => {
           ? `Support staff per-diem - ${submission.description} - ${submission.provider_name}`
           : `Service provider payment - ${submission.description} - ${submission.provider_name}`;
 
-    const result = await yoPayout({ phone: cleanPhone, amount: totalAmount, narrative });
+    // Generate our own PrivateTransactionReference so the every-2-minute poller
+    // can always look up status at Yo (even when Yo doesn't echo back a TransactionReference,
+    // e.g. when StatusCode=-22 "pending authorization").
+    const privateRef = `PSUB-${record.id.slice(0, 8)}-${Date.now()}`;
+    const result = await yoPayout({ phone: cleanPhone, amount: totalAmount, narrative, privateRef });
 
     const rawResp = result.rawResponse || "";
     const isPending22 =
@@ -484,7 +488,8 @@ serve(async (req) => {
     await supabase
       .from(targetTable)
       .update({
-        yo_reference: result.transactionRef || null,
+        // Persist our private ref as fallback so the poller has something to query.
+        yo_reference: result.transactionRef || privateRef,
         yo_status: yoStatus,
         yo_raw_response: rawResp || null,
         updated_at: new Date().toISOString(),
