@@ -12345,6 +12345,10 @@ export type Database = {
         Args: { _call_id: string }
         Returns: Json
       }
+      award_approval_reward: {
+        Args: { approval_role?: string; request_id?: string; user_uuid: string }
+        Returns: Json
+      }
       award_host_meeting_bonus: { Args: { _call_id: string }; Returns: Json }
       award_meeting_attendance_bonus: {
         Args: { _call_id: string; _interacted?: boolean }
