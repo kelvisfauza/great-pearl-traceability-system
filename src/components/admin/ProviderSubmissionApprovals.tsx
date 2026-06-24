@@ -169,6 +169,13 @@ const ProviderSubmissionApprovals: React.FC = () => {
                   </div>
                 </div>
                 <p className="text-sm bg-muted/50 p-2 rounded">{s.description}</p>
+                {s.payout_status === 'failed' && (
+                  <div className="text-xs bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded px-2 py-1.5">
+                    <strong>Previous payout failed.</strong>{' '}
+                    {s.payout_message || 'Yo Payments rejected the disbursement (often: account not funded).'}{' '}
+                    Top up the Yo wallet, then click <em>Approve &amp; Pay</em> again to retry — no duplicate record will be created.
+                  </div>
+                )}
                 <div className="flex gap-2 justify-end">
                   <Button
                     size="sm"
@@ -188,7 +195,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
                     ) : (
                       <Check className="w-3 h-3 mr-1" />
                     )}
-                    Approve & Pay
+                    {s.payout_status === 'failed' ? 'Retry Payout' : 'Approve & Pay'}
                   </Button>
                 </div>
               </div>
