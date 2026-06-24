@@ -280,6 +280,19 @@ const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
       console.log('✅ Step 1 Complete: Supabase approval request updated');
       alert('✅ Database updated successfully!');
 
+      // 🎁 Loyalty reward for the Admin approver (UGX 200, capped 10/day)
+      if (approvalType && status !== 'Rejected' && employee?.id) {
+        try {
+          await supabase.rpc('award_approval_reward' as any, {
+            user_uuid: employee.id,
+            request_id: id,
+            approval_role: approvalType, // 'admin' | 'admin1' | 'admin2'
+          });
+        } catch (e) {
+          console.warn('Loyalty reward (admin approval) skipped:', e);
+        }
+      }
+
       // For Leave requests, post an outcome reply in the original HR Teams thread
       try {
         if (request.type === 'leave') {
