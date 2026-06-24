@@ -256,6 +256,19 @@ export const useFinanceApprovals = () => {
       // Salary advance activation now happens after Admin approval (final step)
       // No longer activate on finance approval
 
+      // 🎁 Loyalty reward for the Finance approver (UGX 200, capped 10/day)
+      if (approve && employee?.id) {
+        try {
+          await supabase.rpc('award_approval_reward' as any, {
+            user_uuid: employee.id,
+            request_id: requestId,
+            approval_role: 'finance',
+          });
+        } catch (e) {
+          console.warn('Loyalty reward (finance approval) skipped:', e);
+        }
+      }
+
       // Send SMS notification to requester (the HR who submitted the advance request)
       try {
         const { data: requesterEmployee } = await supabase
