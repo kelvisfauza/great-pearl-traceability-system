@@ -1,6 +1,238 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { yoPayout, normalizePhone } from "../_shared/yo-payments.ts";
+import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
+
+const formatUGX = (n: number) => `UGX ${Number(n || 0).toLocaleString("en-UG")}`;
+const formatDate = (iso: string) => {
+  const d = new Date(iso);
+  return d.toLocaleString("en-UG", {
+    day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+};
+
+const buildReceiptRef = () => {
+  const now = new Date();
+  const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+  const rand = Math.random().toString(36).substring(2, 7).toUpperCase();
+  return `RCP-${stamp}-${rand}`;
+};
+
+interface ServerReceiptInput {
+  reference: string;
+  paidToName: string;
+  paidToPhone: string;
+  paidToEmail?: string;
+  description: string;
+  invoiceNumber?: string;
+  amount: number;
+  charges: number;
+  total: number;
+  paymentMethod: string;
+  transactionId: string;
+  processedBy: string;
+}
+
+const generateReceiptPdfBytes = (data: ServerReceiptInput): Uint8Array => {
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 40;
+
+  // Watermark
+  doc.saveGraphicsState();
+  // @ts-ignore
+  doc.setGState(new (doc as any).GState({ opacity: 0.08 }));
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(140);
+  doc.setTextColor(0, 0, 0);
+  doc.text("PAID", pageW / 2, pageH / 2 + 40, { align: "center", angle: 25 });
+  doc.restoreGraphicsState();
+
+  // Header band
+  doc.setFillColor(0, 0, 0);
+  doc.rect(0, 0, pageW, 90, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.text("GREAT AGRO COFFEE", margin, 38);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.5);
+  doc.text("A Member of YEDA Coffee Company Limited", margin, 54);
+  doc.setFontSize(8.5);
+  doc.text("P.O Box 431420, Kasese, Uganda  •  +256 393 001 626  •  finance@greatpearlcoffee.com", margin, 68);
+
+  // Title
+  doc.setTextColor(0, 0, 0);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(20);
+  doc.text("PAYMENT RECEIPT", margin, 125);
+
+  // Meta box
+  const metaX = pageW - margin - 200;
+  const metaY = 105;
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.6);
+  doc.roundedRect(metaX, metaY, 200, 60, 4, 4, "S");
+  doc.setFontSize(8);
+  doc.setTextColor(120, 120, 120);
+  doc.setFont("helvetica", "bold");
+  doc.text("RECEIPT NO.", metaX + 10, metaY + 14);
+  doc.text("DATE", metaX + 10, metaY + 36);
+  doc.setTextColor(20, 20, 20);
+  doc.setFontSize(11);
+  doc.text(data.reference, metaX + 10, metaY + 26);
+  doc.setFontSize(9.5);
+  doc.text(formatDate(new Date().toISOString()), metaX + 10, metaY + 50);
+
+  // Status pill
+  doc.setFillColor(235, 235, 235);
+  doc.roundedRect(margin, 135, 70, 20, 10, 10, "F");
+  doc.roundedRect(margin, 135, 70, 20, 10, 10, "S");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("PAID", margin + 35, 149, { align: "center" });
+
+  // Payee
+  let y = 195;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(120, 120, 120);
+  doc.text("RECEIVED FROM (PAID TO)", margin, y);
+  y += 14;
+  doc.setTextColor(20, 20, 20);
+  doc.setFontSize(13);
+  doc.text(data.paidToName || "—", margin, y);
+  y += 14;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(80, 80, 80);
+  doc.text(`Phone: ${data.paidToPhone || "—"}`, margin, y);
+  if (data.paidToEmail) {
+    y += 12;
+    doc.text(`Email: ${data.paidToEmail}`, margin, y);
+  }
+
+  // Description
+  y += 26;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(120, 120, 120);
+  doc.text("PAYMENT DESCRIPTION", margin, y);
+  y += 14;
+  doc.setTextColor(20, 20, 20);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  const descLines = doc.splitTextToSize(data.description || "—", pageW - margin * 2);
+  doc.text(descLines, margin, y);
+  y += descLines.length * 14 + 4;
+  if (data.invoiceNumber) {
+    doc.setFontSize(9.5);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Reference Invoice: ${data.invoiceNumber}`, margin, y);
+    y += 14;
+  }
+
+  // Amount table
+  y += 14;
+  const tableW = pageW - margin * 2;
+  const rowH = 26;
+  const rows: [string, string][] = [["Amount", formatUGX(data.amount)]];
+  if (data.charges > 0) rows.push(["Mobile Money / Withdrawal Charges", formatUGX(data.charges)]);
+
+  doc.setFillColor(0, 0, 0);
+  doc.rect(margin, y, tableW, rowH, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("DESCRIPTION", margin + 12, y + 17);
+  doc.text("AMOUNT (UGX)", margin + tableW - 12, y + 17, { align: "right" });
+  y += rowH;
+
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(20, 20, 20);
+  rows.forEach((r, i) => {
+    if (i % 2 === 0) {
+      doc.setFillColor(248, 250, 247);
+      doc.rect(margin, y, tableW, rowH, "F");
+    }
+    doc.text(r[0], margin + 12, y + 17);
+    doc.text(r[1], margin + tableW - 12, y + 17, { align: "right" });
+    y += rowH;
+  });
+
+  doc.setFillColor(0, 0, 0);
+  doc.rect(margin, y, tableW, rowH + 4, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text("TOTAL PAID", margin + 12, y + 19);
+  doc.text(formatUGX(data.total), margin + tableW - 12, y + 19, { align: "right" });
+  y += rowH + 18;
+
+  // Payment details
+  doc.setTextColor(120, 120, 120);
+  doc.setFontSize(9.5);
+  doc.setFont("helvetica", "bold");
+  doc.text("PAYMENT METHOD", margin, y);
+  doc.text("TRANSACTION REFERENCE", margin + 220, y);
+  doc.text("PROCESSED BY", pageW - margin - 130, y);
+  y += 13;
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(20, 20, 20);
+  doc.setFontSize(10);
+  doc.text(data.paymentMethod, margin, y);
+  doc.setFontSize(9);
+  const txLines = doc.splitTextToSize(data.transactionId || "—", 180);
+  doc.text(txLines, margin + 220, y);
+  doc.setFontSize(10);
+  const procLines = doc.splitTextToSize(data.processedBy || "—", 130);
+  doc.text(procLines, pageW - margin - 130, y);
+
+  // Authorisation
+  const sigBoxY = pageH - 130;
+  doc.setDrawColor(230, 230, 230);
+  doc.setLineWidth(0.4);
+  doc.line(margin, sigBoxY - 8, pageW - margin, sigBoxY - 8);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.5);
+  doc.setTextColor(60, 60, 60);
+  doc.text("AUTHORIZED BY", margin, sigBoxY + 2);
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.6);
+  doc.line(margin, sigBoxY + 40, margin + 180, sigBoxY + 40);
+  doc.setTextColor(0, 0, 0);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("Mukobi Godwin", margin, sigBoxY + 52);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(60, 60, 60);
+  doc.text(`Finance Manager • Signed ${formatDate(new Date().toISOString())}`, margin, sigBoxY + 62);
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(8);
+  doc.setTextColor(80, 80, 80);
+  const validLines = doc.splitTextToSize(
+    `Verify authenticity by quoting ref ${data.reference} to finance@greatpearlcoffee.com.`,
+    220,
+  );
+  doc.text(validLines, pageW - margin - 220, sigBoxY + 52);
+
+  // Footer
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(1);
+  doc.line(margin, pageH - 50, pageW - margin, pageH - 50);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(110, 110, 110);
+  doc.text(
+    "GREAT AGRO COFFEE  •  P.O Box 431420, Kasese, Uganda  •  +256 393 001 626  •  www.greatpearlcoffee.com",
+    pageW / 2, pageH - 35, { align: "center" },
+  );
+  doc.text("Thank you for doing business with us.", pageW / 2, pageH - 22, { align: "center" });
+
+  return new Uint8Array(doc.output("arraybuffer"));
+};
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -281,6 +513,7 @@ serve(async (req) => {
       if (yoStatus === "success" || yoStatus === "pending_approval") {
         const shortRef = (result.transactionRef || record.id).slice(-8).toUpperCase();
         const smsMessage = `Dear ${submission.provider_name}, UGX ${totalAmount.toLocaleString()} has been sent from Great Agro Coffee. Ref: ${shortRef}. Thank you.`;
+        // (PDF link added in disbursement email below; SMS kept short to avoid extra segments)
         await supabase.functions.invoke("send-sms", {
           body: {
             phone: cleanPhone,
@@ -298,9 +531,73 @@ serve(async (req) => {
 
     // Notify provider via Email
     try {
-      if ((yoStatus === "success" || yoStatus === "pending_approval") && submission.email) {
+      if (yoStatus === "success" || yoStatus === "pending_approval") {
         const shortRef = (result.transactionRef || record.id).slice(-8).toUpperCase();
-        await supabase.functions.invoke("send-transactional-email", {
+
+        // 📄 Generate signed PDF receipt and upload to payment-receipts bucket so
+        // the email carries a "Download PDF Receipt" button (matches the Finance
+        // payout flow). Reference uses RCP-YYYYMMDD-XXXXX so /receipt-link can
+        // resolve it later.
+        let pdfUrl: string | undefined;
+        const pdfRef = buildReceiptRef();
+        try {
+          const pdfBytes = generateReceiptPdfBytes({
+            reference: pdfRef,
+            paidToName: submission.provider_name,
+            paidToPhone: cleanPhone,
+            paidToEmail: submission.email || undefined,
+            description: submission.description,
+            invoiceNumber: submission.invoice_number || undefined,
+            amount: numAmount,
+            charges: numCharge,
+            total: totalAmount,
+            paymentMethod: "Mobile Money (Yo Payments)",
+            transactionId: result.transactionRef || record.id,
+            processedBy: reviewerName,
+          });
+          const year = new Date().getFullYear();
+          const path = `${year}/${pdfRef}.pdf`;
+          const { error: upErr } = await supabase.storage
+            .from("payment-receipts")
+            .upload(path, pdfBytes, {
+              contentType: "application/pdf",
+              upsert: true,
+              cacheControl: "3600",
+            });
+          if (upErr) {
+            console.error("PDF upload error:", upErr);
+          } else {
+            const { data: signed } = await supabase.storage
+              .from("payment-receipts")
+              .createSignedUrl(path, 60 * 60 * 24 * 365);
+            pdfUrl = signed?.signedUrl;
+          }
+        } catch (e) {
+          console.error("PDF generation error:", e);
+        }
+
+        if (!submission.email) {
+          // No email recipient — skip email but still try to send PDF link via SMS if generated
+          if (pdfUrl) {
+            try {
+              const supaUrl = Deno.env.get("SUPABASE_URL")!;
+              const link = `${supaUrl}/functions/v1/receipt-link?ref=${encodeURIComponent(pdfRef)}`;
+              await supabase.functions.invoke("send-sms", {
+                body: {
+                  phone: cleanPhone,
+                  message: `Great Agro Coffee — Download your receipt ${pdfRef}: ${link}`,
+                  userName: submission.provider_name,
+                  messageType: "payout_confirmation",
+                  department: "Finance",
+                  triggeredBy: reviewer.id,
+                },
+              });
+            } catch (e) {
+              console.error("PDF SMS error:", e);
+            }
+          }
+        } else {
+          await supabase.functions.invoke("send-transactional-email", {
           body: {
             templateName: "payment-receipt",
             recipientEmail: submission.email,
@@ -316,9 +613,11 @@ serve(async (req) => {
               paymentMethod: "Mobile Money (Yo Payments)",
               transactionId: result.transactionRef || record.id,
               processedBy: reviewerName,
+                pdfUrl,
             },
           },
         });
+        }
       }
     } catch (e) {
       console.error("Email notify error:", e);
