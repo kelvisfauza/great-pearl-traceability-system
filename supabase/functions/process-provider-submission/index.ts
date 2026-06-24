@@ -135,18 +135,47 @@ serve(async (req) => {
       baseRow.description = submission.description;
     }
 
-    const { data: record, error: insertErr } = await supabase
-      .from(targetTable)
-      .insert(baseRow)
-      .select()
-      .single();
+    // 🔁 RETRY-AWARE: if a previous attempt for this submission failed, reuse the
+    // existing payout row instead of creating a duplicate. The submission stays
+    // 'pending' on failure (see below) so admin can re-click Approve & Pay.
+    let record: any = null;
+    if ((submission as any).payout_record_id && (submission as any).payout_status === "failed") {
+      const { data: existing } = await supabase
+        .from(targetTable)
+        .select("*")
+        .eq("id", (submission as any).payout_record_id)
+        .maybeSingle();
+      if (existing) {
+        const { data: updated, error: updErr } = await supabase
+          .from(targetTable)
+          .update({
+            ...baseRow,
+            yo_status: "pending",
+            yo_reference: null,
+            yo_raw_response: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existing.id)
+          .select()
+          .single();
+        if (!updErr) record = updated;
+      }
+    }
 
-    if (insertErr || !record) {
-      console.error("Insert error:", insertErr);
-      return new Response(
-        JSON.stringify({ ok: false, error: "Failed to create payout record" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (!record) {
+      const { data: inserted, error: insertErr } = await supabase
+        .from(targetTable)
+        .insert(baseRow)
+        .select()
+        .single();
+      if (insertErr || !inserted) {
+        console.error("Insert error:", insertErr);
+        return new Response(
+          JSON.stringify({ ok: false, error: "Failed to create payout record" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      record = inserted;
     }
 
     // Trigger Yo Payout
@@ -183,10 +212,14 @@ serve(async (req) => {
       })
       .eq("id", record.id);
 
+    // 🔁 If Yo failed (e.g. account not funded), keep submission as 'pending'
+    // so it stays in the approval list and admin can re-click Approve & Pay
+    // once the Yo wallet is funded. The existing payout record is reused on retry.
+    const submissionStatus = yoStatus === "failed" ? "pending" : "paid";
     await supabase
       .from("provider_submission_requests")
       .update({
-        status: yoStatus === "failed" ? "failed" : "paid",
+        status: submissionStatus,
         reviewed_by: reviewer.id,
         reviewed_by_name: reviewerName,
         reviewed_at: new Date().toISOString(),
