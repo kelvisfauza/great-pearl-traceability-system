@@ -41,6 +41,7 @@ const ApprovedRequestsHistory = () => {
   const APPROVED_STATUSES = ['approved', 'Approved', 'completed', 'Completed', 'paid', 'Paid', 'disbursed', 'Disbursed'];
 
   const fetchAll = async (dateFilter?: { start: string; end: string }) => {
+    const sb: any = supabase;
     const apply = (q: any, col = 'updated_at') => {
       if (dateFilter) {
         return q.gte(col, dateFilter.start).lte(col, dateFilter.end + 'T23:59:59');
@@ -52,6 +53,27 @@ const ApprovedRequestsHistory = () => {
       try { const r = await p; return r.data || []; } catch (e) { console.warn('approval source failed', e); return []; }
     };
 
+    const results: any[] = await Promise.all([
+      safe(apply(sb.from('approval_requests').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
+      safe(apply(sb.from('deletion_requests').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
+      safe(apply(sb.from('edit_requests').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
+      safe(apply(sb.from('contract_renewal_requests').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
+      safe(apply(sb.from('meal_disbursements').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
+      safe(apply(sb.from('service_provider_payments').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
+      safe(apply(sb.from('provider_submission_requests').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
+      safe(apply(sb.from('support_staff_per_diem').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
+      safe(apply(sb.from('employee_salary_advances').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
+      safe(apply(sb.from('price_approval_requests').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
+      safe(apply(sb.from('instant_withdrawals').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
+      safe(apply(sb.from('admin_initiated_withdrawals').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
+      safe(apply(sb.from('contract_approvals').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
+      safe(apply(sb.from('monthly_overtime_reviews').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
+      safe(apply(sb.from('transfer_reversal_requests').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
+      safe(apply(sb.from('absence_appeals').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
+      safe(apply(sb.from('loans').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
+      safe(apply(sb.from('overtime_awards').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
+      safe(apply(sb.from('bonuses').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
+    ]);
     const [
       approvalRequests,
       deletionRequests,
@@ -72,27 +94,7 @@ const ApprovedRequestsHistory = () => {
       loans,
       overtimeAwards,
       bonuses,
-    ] = await Promise.all([
-      safe(apply(supabase.from('approval_requests').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(supabase.from('deletion_requests').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(supabase.from('edit_requests').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(supabase.from('contract_renewal_requests').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(supabase.from('meal_disbursements').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(supabase.from('service_provider_payments').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(supabase.from('provider_submission_requests').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(supabase.from('support_staff_per_diem').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(supabase.from('employee_salary_advances').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(supabase.from('price_approval_requests').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(supabase.from('instant_withdrawals').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(supabase.from('admin_initiated_withdrawals').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(supabase.from('contract_approvals').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(supabase.from('monthly_overtime_reviews').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(supabase.from('transfer_reversal_requests').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(supabase.from('absence_appeals').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(supabase.from('loans').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(supabase.from('overtime_awards').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(supabase.from('bonuses').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-    ]);
+    ] = results;
 
     const num = (v: any) => (v == null ? 0 : parseFloat(v.toString()) || 0);
     const d = (v: any) => (v ? new Date(v) : undefined);
