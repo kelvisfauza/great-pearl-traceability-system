@@ -119,9 +119,11 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
       const result = typeof transferResult === 'string' ? JSON.parse(transferResult) : transferResult;
       if (!result?.success) throw new Error(result?.error || 'Transfer failed');
 
-      const receiverBalance = Number(result.receiver_balance || 0);
+      const receiverBalance = Number(
+        result.receiver_wallet_after ?? result.receiver_balance ?? 0
+      );
       const senderAvailableBalance = Number(
-        result.sender_available_balance ?? Math.max(0, availableBalance - parsedAmount)
+        result.sender_wallet_after ?? result.sender_available_balance ?? (availableBalance - parsedAmount)
       );
 
       // Send SMS to receiver
