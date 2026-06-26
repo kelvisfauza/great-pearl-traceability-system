@@ -1,13 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePrices } from "@/contexts/PriceContext";
 import { useDisplayData } from "@/hooks/useDisplayData";
+import TradingViewMarketWidget from "@/components/TradingViewMarketWidget";
 import logoUrl from "@/assets/great-agro-coffee-logo.png";
 
-// YouTube documentaries shown when the user is inactive.
-const VIDEOS: { id: string; start: number; title: string }[] = [
-  { id: "b2iSY1KOf4A", start: 0, title: "The Value of Coffee" },
-  { id: "ejHDV8g-5sg", start: 4, title: "Coffee Around the World" },
-  { id: "WrafhfjjuUo", start: 0, title: "Great Agro Coffee — Company Ad" },
+type VideoSlide = { type: "video"; id: string; start: number; title: string; duration: number };
+type MarketSlide = { type: "market"; title: string; duration: number };
+type Slide = VideoSlide | MarketSlide;
+
+const SLIDES: Slide[] = [
+  { type: "video", id: "b2iSY1KOf4A", start: 0, title: "The Value of Coffee", duration: 40_000 },
+  { type: "market", title: "Live Coffee Futures", duration: 50_000 },
+  { type: "video", id: "ejHDV8g-5sg", start: 4, title: "Coffee Around the World", duration: 90_000 },
+  { type: "video", id: "WrafhfjjuUo", start: 0, title: "Great Agro Coffee — Company Ad", duration: 90_000 },
 ];
 
 const MARQUEE_MESSAGES = [
@@ -20,7 +25,7 @@ const MARQUEE_MESSAGES = [
 
 const IdleDocumentary = () => {
   const [muted, setMuted] = useState(true);
-  const [videoIdx, setVideoIdx] = useState(0);
+  const [slideIdx, setSlideIdx] = useState(0);
   const [splitMode, setSplitMode] = useState(false);
   const [showSplash, setShowSplash] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -50,11 +55,14 @@ const IdleDocumentary = () => {
     return () => clearInterval(id);
   }, []);
 
-  // Rotate between videos every 90s
+  // Advance slides on a per-slide timer
   useEffect(() => {
-    const id = setInterval(() => setVideoIdx((i) => (i + 1) % VIDEOS.length), 90_000);
-    return () => clearInterval(id);
-  }, []);
+    const currentSlide = SLIDES[slideIdx];
+    const id = setTimeout(() => {
+      setSlideIdx((i) => (i + 1) % SLIDES.length);
+    }, currentSlide.duration);
+    return () => clearTimeout(id);
+  }, [slideIdx]);
 
   // Green logo splash every 20s (visible ~3s)
   useEffect(() => {
@@ -65,34 +73,60 @@ const IdleDocumentary = () => {
     return () => clearInterval(id);
   }, []);
 
-  const current = VIDEOS[videoIdx];
-  const src = useMemo(
-    () =>
-      `https://www.youtube.com/embed/${current.id}?autoplay=1&mute=${
-        muted ? 1 : 0
-      }&controls=0&modestbranding=1&rel=0&loop=1&playlist=${current.id}&playsinline=1&iv_load_policy=3&start=${current.start}`,
-    [current.id, current.start, muted]
-  );
+  const currentSlide = SLIDES[slideIdx];
+  const isMarket = currentSlide.type === "market";
+
+  const videoSrc = useMemo(() => {
+    if (isMarket) return "";
+    const v = currentSlide as VideoSlide;
+    return `https://www.youtube.com/embed/${v.id}?autoplay=1&mute=${
+      muted ? 1 : 0
+    }&controls=0&modestbranding=1&rel=0&loop=1&playlist=${v.id}&playsinline=1&iv_load_policy=3&start=${v.start}`;
+  }, [currentSlide, isMarket, muted]);
+
+  const topBarSubtitle = isMarket
+    ? "Live ICE Coffee C Futures — Real-Time Market Data"
+    : "The Value of Coffee — A Documentary";
 
   return (
     <div
       ref={containerRef}
       className="fixed inset-0 z-50 bg-black text-white overflow-hidden"
     >
-      {/* Video — shrinks to left when split mode is active */}
+      {/* Main content area — shrinks to left when split mode is active */}
       <div
         className={`absolute top-0 left-0 h-full transition-all duration-700 ease-in-out ${
           splitMode ? "w-[62%]" : "w-full"
         }`}
       >
-        <iframe
-          key={current.id}
-          title={`Great Agro Coffee — ${current.title}`}
-          src={src}
-          allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-          allowFullScreen
-          className="absolute inset-0 w-full h-full border-0"
-        />
+        {isMarket ? (
+          <div className="absolute inset-0 bg-[#131722]">
+            <TradingViewMarketWidget symbol="ICEUS:KC1!" />
+            {/* Overlay branding */}
+            <div className="absolute top-0 inset-x-0 z-10 bg-gradient-to-b from-black/80 to-transparent px-6 py-3 pointer-events-none">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-full bg-amber-500 flex items-center justify-center font-black text-black text-sm shadow-lg">
+                  G
+                </div>
+                <div>
+                  <div className="text-sm font-bold tracking-wide">GREAT AGRO COFFEE</div>
+                  <div className="text-[10px] uppercase tracking-wider text-amber-300/90">
+                    Live Market Preview • ICE Coffee C Futures
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <iframe
+            key={(currentSlide as VideoSlide).id}
+            title={`Great Agro Coffee — ${(currentSlide as VideoSlide).title}`}
+            src={videoSrc}
+            allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+            allowFullScreen
+            className="absolute inset-0 w-full h-full border-0"
+          />
+        )}
       </div>
 
       {/* Live data side panel */}
@@ -179,7 +213,7 @@ const IdleDocumentary = () => {
               P.O Box 431420, Kasese, Uganda
             </div>
             <div className="text-[10px] md:text-xs uppercase tracking-[0.25em] text-amber-300/80">
-              The Value of Coffee — A Documentary
+              {topBarSubtitle}
             </div>
           </div>
         </div>
