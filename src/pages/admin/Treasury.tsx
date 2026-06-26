@@ -189,18 +189,27 @@ export default function Treasury() {
     }
   };
 
-  const filtered = entries.filter((e) => {
-    if (filterCategory !== "all" && e.category !== filterCategory) return false;
-    if (filterChannel !== "all" && e.channel !== filterChannel) return false;
-    // Profit entries (fee credits) live in their own Profits panel — don't pollute the
-    // operational cash-flow log unless the admin explicitly filters for them.
-    if (filterCategory === "all" && e.category === "fee" && e.direction === "credit") return false;
-    return true;
-  });
-
   // Profits = fee credits (overdraft fees/interest, loan interest, statement charges, etc.)
   const profitEntries = entries.filter((e) => e.category === "fee" && e.direction === "credit");
   const totalProfits = profitEntries.reduce((s, e) => s + Number(e.amount), 0);
+
+  // Build a human-readable line per profit entry, e.g.
+  // "UGX 5,000 loan interest from Bwambale Denis on 21 Jun 2026"
+  const sourceLabel = (e: PoolEntry) => {
+    const raw = (e.metadata?.source || e.reference || "").toString().toLowerCase();
+    if (raw.includes("overdraft_fee")) return "overdraft access fee";
+    if (raw.includes("overdraft_interest")) return "overdraft daily interest";
+    if (raw.includes("overdraft_penalty")) return "overdraft penalty";
+    if (raw.includes("loan")) return "loan interest";
+    if (raw.includes("statement")) return "statement fee";
+    return raw.replace(/_/g, " ") || "fee";
+  };
+  const profitLine = (e: PoolEntry) => {
+    const who = e.related_user_name || e.related_user_email || "system";
+    const when = new Date(e.created_at).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
+    const what = sourceLabel(e);
+    return `${fmt(e.amount)} — ${what} from ${who} on ${when}${e.description ? ` · ${e.description}` : ""}`;
+  };
 
   // Aggregates
   const totalCredits = entries
@@ -514,109 +523,29 @@ export default function Treasury() {
           {profitEntries.length === 0 ? (
             <div className="text-center text-muted-foreground py-6 text-sm">No profit entries yet.</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>When</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {profitEntries.slice(0, 50).map((e) => (
-                  <TableRow key={e.id}>
-                    <TableCell className="text-xs whitespace-nowrap">{new Date(e.created_at).toLocaleString()}</TableCell>
-                    <TableCell><Badge variant="outline" className="text-xs bg-emerald-100 text-emerald-800">{(e.metadata?.source || e.reference || 'fee').toString().replace(/_/g, ' ').toLowerCase()}</Badge></TableCell>
-                    <TableCell className="text-xs">{e.related_user_name || e.related_user_email || "—"}</TableCell>
-                    <TableCell className="text-xs max-w-[320px] truncate" title={e.description || ""}>{e.description || "—"}</TableCell>
-                    <TableCell className="text-right font-mono text-sm text-emerald-700">+{fmt(e.amount)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <ul className="divide-y divide-emerald-200/60">
+              {profitEntries.slice(0, 200).map((e) => (
+                <li key={e.id} className="py-2 flex items-start gap-3 text-sm">
+                  <Badge variant="outline" className="text-[10px] bg-emerald-100 text-emerald-800 shrink-0 mt-0.5">
+                    {sourceLabel(e)}
+                  </Badge>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-emerald-800">+{fmt(e.amount)}</div>
+                    <div className="text-xs text-muted-foreground">
+                      from {e.related_user_name || e.related_user_email || "system"} ·{" "}
+                      {new Date(e.created_at).toLocaleString()}
+                    </div>
+                    {e.description && (
+                      <div className="text-xs text-muted-foreground mt-0.5">{e.description}</div>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
         </CardContent>
       </Card>
 
-      {/* Operational transaction log (excludes profit credits — see Profits panel above) */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-3">
-          <CardTitle className="text-base">Transaction Log ({filtered.length})</CardTitle>
-          <div className="flex gap-2">
-            <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger className="w-[160px]"><SelectValue placeholder="Category" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All categories</SelectItem>
-                <SelectItem value="withdrawal">Withdrawal</SelectItem>
-                <SelectItem value="deposit">Deposit</SelectItem>
-                <SelectItem value="transfer">Transfer</SelectItem>
-                <SelectItem value="provider_payout">Provider payout</SelectItem>
-                <SelectItem value="meal_plan">Meal plan</SelectItem>
-                <SelectItem value="topup">Top up</SelectItem>
-                <SelectItem value="reconciliation">Reconciliation</SelectItem>
-                <SelectItem value="adjustment">Adjustment</SelectItem>
-                <SelectItem value="refund">Refund</SelectItem>
-                <SelectItem value="fee">Fee</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterChannel} onValueChange={setFilterChannel}>
-              <SelectTrigger className="w-[140px]"><SelectValue placeholder="Channel" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All channels</SelectItem>
-                <SelectItem value="yo_payments">Yo Payments</SelectItem>
-                <SelectItem value="cash">Cash</SelectItem>
-                <SelectItem value="bank">Bank</SelectItem>
-                <SelectItem value="internal">Internal</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          {loading ? (
-            <div className="space-y-2">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
-          ) : filtered.length === 0 ? (
-            <div className="text-center text-muted-foreground py-12">No entries yet. The pool will populate as withdrawals, deposits, transfers and payouts occur — or post a manual top-up above.</div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>When</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Channel</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead className="text-right">Balance after</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((e) => (
-                  <TableRow key={e.id}>
-                    <TableCell className="text-xs whitespace-nowrap">
-                      {new Date(e.created_at).toLocaleString()}
-                    </TableCell>
-                    <TableCell><Badge variant="outline" className="text-xs">{e.category}</Badge></TableCell>
-                    <TableCell><Badge variant="secondary" className="text-xs">{e.channel}</Badge></TableCell>
-                    <TableCell className="text-xs">{e.related_user_name || e.related_user_email || "—"}</TableCell>
-                    <TableCell className="text-xs max-w-[280px] truncate" title={e.description || ""}>
-                      {e.description || "—"}
-                    </TableCell>
-                    <TableCell className={`text-right font-mono text-sm ${e.direction === "credit" ? "text-green-600" : "text-red-600"}`}>
-                      {e.direction === "credit" ? "+" : "-"}{fmt(e.amount)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                      {fmt(e.balance_after)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }
