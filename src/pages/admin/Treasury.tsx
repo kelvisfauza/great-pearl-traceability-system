@@ -192,8 +192,15 @@ export default function Treasury() {
   const filtered = entries.filter((e) => {
     if (filterCategory !== "all" && e.category !== filterCategory) return false;
     if (filterChannel !== "all" && e.channel !== filterChannel) return false;
+    // Profit entries (fee credits) live in their own Profits panel — don't pollute the
+    // operational cash-flow log unless the admin explicitly filters for them.
+    if (filterCategory === "all" && e.category === "fee" && e.direction === "credit") return false;
     return true;
   });
+
+  // Profits = fee credits (overdraft fees/interest, loan interest, statement charges, etc.)
+  const profitEntries = entries.filter((e) => e.category === "fee" && e.direction === "credit");
+  const totalProfits = profitEntries.reduce((s, e) => s + Number(e.amount), 0);
 
   // Aggregates
   const totalCredits = entries
