@@ -269,7 +269,7 @@ export const useQualityControl = () => {
     try {
       console.log('Updating store record in Supabase:', id, updates);
       
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('coffee_records')
         .update({
           ...updates,
@@ -535,7 +535,7 @@ export const useQualityControl = () => {
 
         // Send notification to Finance department
         try {
-          await supabase.from('notifications').insert({
+          await (supabase as any).from('notifications').insert({
             title: 'New Quality Assessment',
             message: `Coffee quality assessed for batch ${batchNumber}. Total payment: ${totalPaymentAmount.toLocaleString()} UGX`,
             type: 'payment',
