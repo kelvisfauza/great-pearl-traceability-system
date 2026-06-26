@@ -71,6 +71,15 @@ const SubmitRequest = () => {
       if (otherItems.trim()) items.push(`Others: ${otherItems.trim()}`);
       if (items.length) fullDescription += `\n\nItems to buy: ${items.join(', ')}`;
     }
+    // Auto-generate invoice number if not provided (skip for support staff per-diem)
+    let invoiceNo = form.invoice_number.trim();
+    if (!invoiceNo && form.request_type !== 'support_staff_per_diem') {
+      const d = new Date();
+      const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+      const rand = Math.floor(1000 + Math.random() * 9000);
+      const prefix = form.request_type === 'meal_plan' ? 'MEAL' : 'SVC';
+      invoiceNo = `${prefix}-${ymd}-${rand}`;
+    }
     const { error } = await supabase.from('provider_submission_requests').insert({
       request_type: form.request_type,
       provider_name: form.provider_name.trim(),
@@ -78,7 +87,7 @@ const SubmitRequest = () => {
       email: form.email.trim() || null,
       amount: amt,
       description: fullDescription,
-      invoice_number: form.invoice_number.trim() || null,
+      invoice_number: invoiceNo || null,
       national_id: form.national_id.trim() || null,
     } as any);
     setSubmitting(false);
@@ -161,7 +170,10 @@ const SubmitRequest = () => {
                   {form.request_type === 'support_staff_per_diem' ? (
                     <Input value={form.national_id} onChange={(e) => update('national_id', e.target.value)} placeholder="CM/CF..." maxLength={30} />
                   ) : (
-                    <Input value={form.invoice_number} onChange={(e) => update('invoice_number', e.target.value)} placeholder="INV-001" maxLength={50} />
+                    <Input value={form.invoice_number} onChange={(e) => update('invoice_number', e.target.value)} placeholder="Auto-generated if left blank" maxLength={50} />
+                  )}
+                  {form.request_type !== 'support_staff_per_diem' && (
+                    <p className="text-xs text-muted-foreground mt-1">Leave blank — we'll generate one for you.</p>
                   )}
                 </div>
               </div>
