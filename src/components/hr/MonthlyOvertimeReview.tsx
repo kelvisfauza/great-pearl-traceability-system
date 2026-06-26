@@ -55,7 +55,7 @@ const MonthlyOvertimeReview = () => {
     mutationFn: async ({ id, updates }: { id: string; updates: Record<string, any> }) => {
       const { error } = await supabase
         .from('monthly_overtime_reviews')
-        .update(updates)
+        .update(updates as any)
         .eq('id', id);
       if (error) throw error;
     },
