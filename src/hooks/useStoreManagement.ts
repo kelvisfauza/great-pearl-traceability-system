@@ -228,7 +228,7 @@ export const useStoreManagement = () => {
       
       // Update related quality assessments
       if (recordData.batchNumber) {
-        await supabase
+        await (supabase as any)
           .from('quality_assessments')
           .update({
             batch_number: recordData.batchNumber,

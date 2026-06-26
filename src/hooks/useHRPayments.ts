@@ -97,7 +97,7 @@ export const useHRPayments = () => {
     try {
       if (method === 'Cash') {
         // Process cash payment immediately
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('approval_requests')
           .update({
             status: 'Approved',

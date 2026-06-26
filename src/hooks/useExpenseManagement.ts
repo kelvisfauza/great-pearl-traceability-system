@@ -116,7 +116,7 @@ export const useExpenseManagement = () => {
 
   const rejectExpenseRequest = async (requestId: string, reason: string) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('approval_requests')
         .update({
           status: 'Rejected',

@@ -146,7 +146,7 @@ const PendingPaymentsTab = () => {
         .single();
 
       if (currentBalance) {
-        await supabase
+        await (supabase as any)
           .from("finance_cash_balance")
           .update({
             current_balance: (currentBalance.current_balance || 0) - payDialog.total_amount_ugx,
