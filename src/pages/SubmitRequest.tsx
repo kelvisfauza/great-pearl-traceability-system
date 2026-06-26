@@ -170,7 +170,10 @@ const SubmitRequest = () => {
                   {form.request_type === 'support_staff_per_diem' ? (
                     <Input value={form.national_id} onChange={(e) => update('national_id', e.target.value)} placeholder="CM/CF..." maxLength={30} />
                   ) : (
-                    <Input value={form.invoice_number} onChange={(e) => update('invoice_number', e.target.value)} placeholder="INV-001" maxLength={50} />
+                    <Input value={form.invoice_number} onChange={(e) => update('invoice_number', e.target.value)} placeholder="Auto-generated if left blank" maxLength={50} />
+                  )}
+                  {form.request_type !== 'support_staff_per_diem' && (
+                    <p className="text-xs text-muted-foreground mt-1">Leave blank — we'll generate one for you.</p>
                   )}
                 </div>
               </div>
