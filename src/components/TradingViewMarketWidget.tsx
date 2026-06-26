@@ -6,7 +6,7 @@ interface TradingViewMarketWidgetProps {
 }
 
 const TradingViewMarketWidget = ({
-  symbol = "ICEUS:KC1!",
+  symbol = "CAPITALCOM:COFFEE",
   className = "",
 }: TradingViewMarketWidgetProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
