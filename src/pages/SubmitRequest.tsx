@@ -80,7 +80,7 @@ const SubmitRequest = () => {
       const prefix = form.request_type === 'meal_plan' ? 'MEAL' : 'SVC';
       invoiceNo = `${prefix}-${ymd}-${rand}`;
     }
-    const { error } = await supabase.from('provider_submission_requests').insert({
+    const { data: inserted, error } = await supabase.from('provider_submission_requests').insert({
       request_type: form.request_type,
       provider_name: form.provider_name.trim(),
       phone: cleanPhone,
@@ -89,13 +89,27 @@ const SubmitRequest = () => {
       description: fullDescription,
       invoice_number: invoiceNo || null,
       national_id: form.national_id.trim() || null,
-    } as any);
+    } as any).select('id').maybeSingle();
     setSubmitting(false);
 
     if (error) {
       toast({ title: 'Submission failed', description: error.message, variant: 'destructive' });
       return;
     }
+    // Fire-and-forget admin email notification
+    supabase.functions.invoke('notify-admin-new-submission', {
+      body: {
+        submission_id: (inserted as any)?.id,
+        request_type: form.request_type,
+        provider_name: form.provider_name.trim(),
+        phone: cleanPhone,
+        email: form.email.trim() || null,
+        amount: amt,
+        description: fullDescription,
+        invoice_number: invoiceNo || null,
+        national_id: form.national_id.trim() || null,
+      },
+    }).catch(() => {});
     setSubmitted(true);
   };
 
