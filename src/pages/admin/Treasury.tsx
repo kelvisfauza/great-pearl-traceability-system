@@ -79,10 +79,6 @@ export default function Treasury() {
   const [syncing, setSyncing] = useState(false);
   const [backfilling, setBackfilling] = useState(false);
 
-  // Filters
-  const [filterCategory, setFilterCategory] = useState<string>("all");
-  const [filterChannel, setFilterChannel] = useState<string>("all");
-
   // Manual entry form
   const [direction, setDirection] = useState<Direction>("credit");
   const [category, setCategory] = useState<Category>("topup");
@@ -203,12 +199,6 @@ export default function Treasury() {
     if (raw.includes("loan")) return "loan interest";
     if (raw.includes("statement")) return "statement fee";
     return raw.replace(/_/g, " ") || "fee";
-  };
-  const profitLine = (e: PoolEntry) => {
-    const who = e.related_user_name || e.related_user_email || "system";
-    const when = new Date(e.created_at).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
-    const what = sourceLabel(e);
-    return `${fmt(e.amount)} — ${what} from ${who} on ${when}${e.description ? ` · ${e.description}` : ""}`;
   };
 
   // Aggregates
