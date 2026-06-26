@@ -1,13 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePrices } from "@/contexts/PriceContext";
 import { useDisplayData } from "@/hooks/useDisplayData";
+import TradingViewMarketWidget from "@/components/TradingViewMarketWidget";
 import logoUrl from "@/assets/great-agro-coffee-logo.png";
 
-// YouTube documentaries shown when the user is inactive.
-const VIDEOS: { id: string; start: number; title: string }[] = [
-  { id: "b2iSY1KOf4A", start: 0, title: "The Value of Coffee" },
-  { id: "ejHDV8g-5sg", start: 4, title: "Coffee Around the World" },
-  { id: "WrafhfjjuUo", start: 0, title: "Great Agro Coffee — Company Ad" },
+type VideoSlide = { type: "video"; id: string; start: number; title: string; duration: number };
+type MarketSlide = { type: "market"; title: string; duration: number };
+type Slide = VideoSlide | MarketSlide;
+
+const SLIDES: Slide[] = [
+  { type: "video", id: "b2iSY1KOf4A", start: 0, title: "The Value of Coffee", duration: 40_000 },
+  { type: "market", title: "Live Coffee Futures", duration: 50_000 },
+  { type: "video", id: "ejHDV8g-5sg", start: 4, title: "Coffee Around the World", duration: 90_000 },
+  { type: "video", id: "WrafhfjjuUo", start: 0, title: "Great Agro Coffee — Company Ad", duration: 90_000 },
 ];
 
 const MARQUEE_MESSAGES = [
