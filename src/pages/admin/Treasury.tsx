@@ -498,7 +498,49 @@ export default function Treasury() {
         </CardContent>
       </Card>
 
-      {/* Transaction log */}
+      {/* Profits (revenue) panel — kept separate from operational cash flow */}
+      <Card className="border-emerald-300/60 bg-emerald-50/40">
+        <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-emerald-600" /> Profits & Revenue
+          </CardTitle>
+          <div className="text-right">
+            <div className="text-[10px] text-muted-foreground uppercase">Total profit captured</div>
+            <div className="text-xl font-bold text-emerald-700">{fmt(totalProfits)}</div>
+            <div className="text-[10px] text-muted-foreground">{profitEntries.length} entries · OD fees · OD interest · loan interest · statement fees</div>
+          </div>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          {profitEntries.length === 0 ? (
+            <div className="text-center text-muted-foreground py-6 text-sm">No profit entries yet.</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>When</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead>User</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {profitEntries.slice(0, 50).map((e) => (
+                  <TableRow key={e.id}>
+                    <TableCell className="text-xs whitespace-nowrap">{new Date(e.created_at).toLocaleString()}</TableCell>
+                    <TableCell><Badge variant="outline" className="text-xs bg-emerald-100 text-emerald-800">{(e.metadata?.source || e.reference || 'fee').toString().replace(/_/g, ' ').toLowerCase()}</Badge></TableCell>
+                    <TableCell className="text-xs">{e.related_user_name || e.related_user_email || "—"}</TableCell>
+                    <TableCell className="text-xs max-w-[320px] truncate" title={e.description || ""}>{e.description || "—"}</TableCell>
+                    <TableCell className="text-right font-mono text-sm text-emerald-700">+{fmt(e.amount)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Operational transaction log (excludes profit credits — see Profits panel above) */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-3">
           <CardTitle className="text-base">Transaction Log ({filtered.length})</CardTitle>
