@@ -12713,6 +12713,13 @@ export type Database = {
         }[]
       }
       get_public_supplier_count: { Args: never; Returns: number }
+      get_system_maintenance_recovery: {
+        Args: never
+        Returns: {
+          recovery_key: string
+          recovery_pin: string
+        }[]
+      }
       get_unified_user_id: { Args: { input_email: string }; Returns: string }
       get_user_balance_data: {
         Args: { user_email: string }
