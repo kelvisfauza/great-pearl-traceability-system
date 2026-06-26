@@ -70,7 +70,7 @@ const IdleDocumentary = () => {
     return () => clearInterval(id);
   }, []);
 
-  const current = VIDEOS[videoIdx];
+  const current = SLIDES[slideIdx];
   const src = useMemo(
     () =>
       `https://www.youtube.com/embed/${current.id}?autoplay=1&mute=${
