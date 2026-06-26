@@ -12910,6 +12910,17 @@ export type Database = {
       overdraft_daily_maintenance: { Args: never; Returns: Json }
       overdraft_deactivate: { Args: { p_email: string }; Returns: Json }
       overdraft_sync_active_limits: { Args: never; Returns: Json }
+      post_treasury_profit: {
+        Args: {
+          p_amount: number
+          p_description: string
+          p_metadata?: Json
+          p_reference: string
+          p_user_email?: string
+          p_user_name?: string
+        }
+        Returns: string
+      }
       process_daily_salary_credits: { Args: never; Returns: Json }
       process_monthly_payroll: { Args: { p_month?: string }; Returns: Json }
       process_salary_credits_for_date: {
