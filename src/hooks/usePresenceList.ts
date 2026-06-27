@@ -139,7 +139,7 @@ export const usePresenceList = () => {
 
     // Also subscribe to realtime changes on user_presence for instant updates
     const channel = supabase
-      .channel('presence-realtime')
+      .channel(`presence-realtime-${Math.random().toString(36).slice(2, 10)}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'user_presence' },
