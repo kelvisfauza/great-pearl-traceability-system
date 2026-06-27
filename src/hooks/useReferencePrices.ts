@@ -187,6 +187,13 @@ const priceData = {
   useEffect(() => {
     fetchPrices();
 
+    // Clear any stale channel left by older builds/HMR that used the static name.
+    supabase.getChannels().forEach((existingChannel) => {
+      if (existingChannel.topic === 'realtime:market_prices_changes') {
+        supabase.removeChannel(existingChannel);
+      }
+    });
+
     // Auto-refresh every 45 seconds so the display always has fresh prices
     const interval = setInterval(fetchPrices, 45000);
 
