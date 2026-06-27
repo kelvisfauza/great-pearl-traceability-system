@@ -833,7 +833,9 @@ export const useUnifiedApprovalRequests = () => {
           return false;
         }
 
-        const requiresThreeApprovals = currentReq.amount > 50000;
+        // Salary Advance: single admin approval is enough (no 3-tier, no Finance step)
+        const isSalaryAdvanceReq = request.requestType === 'Salary Advance';
+        const requiresThreeApprovals = !isSalaryAdvanceReq && currentReq.amount > 50000;
         const adminName = employee?.name || employee?.email || 'Admin';
         const updateData: any = {
           updated_at: new Date().toISOString()
@@ -888,9 +890,19 @@ export const useUnifiedApprovalRequests = () => {
             updateData.admin_final_approval = true;
             updateData.admin_final_approval_at = new Date().toISOString();
             updateData.admin_final_approval_by = adminName;
-            updateData.status = 'Pending Finance';
-            updateData.approval_stage = 'pending_finance';
-            console.log('✅ 2-tier: Admin approved - sent to Finance for final approval');
+            if (isSalaryAdvanceReq) {
+              // Salary Advance: one admin approval fully approves and disburses
+              updateData.status = 'Approved';
+              updateData.approval_stage = 'approved';
+              updateData.finance_approved = true;
+              updateData.finance_approved_by = 'AUTO (Salary Advance)';
+              updateData.finance_approved_at = new Date().toISOString();
+              console.log('✅ Salary Advance fully approved by single admin');
+            } else {
+              updateData.status = 'Pending Finance';
+              updateData.approval_stage = 'pending_finance';
+              console.log('✅ 2-tier: Admin approved - sent to Finance for final approval');
+            }
           }
         } else {
           // Rejected by admin
