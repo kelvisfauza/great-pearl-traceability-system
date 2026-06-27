@@ -58,6 +58,7 @@ import ApproveAction from "./pages/ApproveAction";
 import VerifyDevice from "./pages/VerifyDevice";
 import ResetPassword from "./pages/ResetPassword";
 import SubmitRequest from "./pages/SubmitRequest";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 // V2 System Pages
 import V2DepartmentRouter from "./components/v2/V2DepartmentRouter";
@@ -525,6 +526,7 @@ const App: React.ComponentType = () => {
                   </ProtectedRoute>
                 } />
                 <Route path="/scan-weighbridge" element={<ScanWeighBridge />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <AdminWithdrawalPinPrompt />
