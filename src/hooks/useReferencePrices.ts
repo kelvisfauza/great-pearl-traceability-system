@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { notifyTeams } from '@/lib/teamsNotify';
 
@@ -43,6 +43,9 @@ const [prices, setPrices] = useState<ReferencePrices>({
     sortedPrice: 0
   });
   const [loading, setLoading] = useState(false);
+  const channelNameRef = useRef(
+    `market_prices_changes_${Date.now()}_${Math.random().toString(36).slice(2)}`
+  );
 
   // Fetch reference prices from Supabase
   const fetchPrices = useCallback(async () => {
@@ -194,7 +197,7 @@ const priceData = {
     });
 
     const channel = supabase
-      .channel('market_prices_changes')
+      .channel(channelNameRef.current)
       .on(
         'postgres_changes',
         {
