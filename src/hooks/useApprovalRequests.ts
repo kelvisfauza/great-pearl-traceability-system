@@ -183,7 +183,7 @@ const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
     
     // Set up real-time subscription
     const channel = supabase
-      .channel('approval-requests-changes')
+      .channel(`approval-requests-changes-${Math.random().toString(36).slice(2, 10)}`)
       .on(
         'postgres_changes',
         {
