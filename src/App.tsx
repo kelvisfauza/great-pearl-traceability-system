@@ -526,6 +526,7 @@ const App: React.ComponentType = () => {
                   </ProtectedRoute>
                 } />
                 <Route path="/scan-weighbridge" element={<ScanWeighBridge />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <AdminWithdrawalPinPrompt />
