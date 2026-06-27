@@ -13191,8 +13191,8 @@ export type Database = {
         Returns: boolean
       }
       verify_withdrawal_code: {
-        Args: { p_code: string; p_code_id: string }
-        Returns: Json
+        Args: { _code_id: string; _plaintext: string }
+        Returns: boolean
       }
       verify_withdrawal_otp: {
         Args: { _code: string; _id: string }
