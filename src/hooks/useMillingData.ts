@@ -531,7 +531,7 @@ export const useMillingData = () => {
 
     // Set up real-time subscriptions
     const channel = supabase
-      .channel('milling-changes')
+      .channel(`milling-changes-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
       .on(
         'postgres_changes',
         {
