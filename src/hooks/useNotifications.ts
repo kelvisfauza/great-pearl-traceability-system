@@ -377,7 +377,7 @@ export const useNotifications = () => {
     // Set up real-time subscription for new notifications
     if (employee?.id) {
       const channel = supabase
-        .channel('notifications-changes')
+        .channel(`notifications-changes-${employee.id}-${Math.random().toString(36).slice(2, 8)}`)
         .on(
           'postgres_changes',
           {
