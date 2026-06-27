@@ -162,8 +162,11 @@ export const useUserWallet = () => {
   // Real-time: refetch immediately on any ledger entry or withdrawal change for this user
   useEffect(() => {
     if (!walletOwnerEmail) return;
+    const safeWalletTopic = walletOwnerEmail.replace(/[^a-zA-Z0-9_-]/g, '-');
+    const channelName = `wallet-rt-${safeWalletTopic}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
     const channel = supabase
-      .channel(`wallet-rt-${walletOwnerEmail}`)
+      .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'ledger_entries' }, (payload: any) => {
         const row = payload.new || payload.old;
         if (!row) return;
