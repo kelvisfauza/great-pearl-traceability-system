@@ -12733,6 +12733,10 @@ export type Database = {
         }[]
       }
       get_public_supplier_count: { Args: never; Returns: number }
+      get_spendable_wallet_balance: {
+        Args: { p_user_id: string }
+        Returns: number
+      }
       get_system_maintenance_recovery: {
         Args: never
         Returns: {
