@@ -380,11 +380,16 @@ Deno.serve(async (req) => {
           errors.push({ employee: emp.name, error: 'No auth user ID found' });
         }
 
-        // 5. Send SMS notification
+        const transactionId = `AUTO-SAL-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-${emp.name.replace(/\s/g, '').substring(0, 6).toUpperCase()}`;
+        const statutoryDeductions = Number(stat.nssfEmployee || 0) + Number(stat.paye || 0);
+        const payrollDeductions = Number(totalAdvanceDeduction || 0) + Number(totalLoanDeduction || 0);
+        const totalDeductions = statutoryDeductions + payrollDeductions;
+
+        // 5a. Send SMS notification without blocking the email notice
         if (emp.phone) {
-          let smsMessage = totalAdvanceDeduction > 0
-            ? `${emp.name}, salary ${currentMonth} credited. Gross ${grossSalary.toLocaleString()} Deduction ${totalAdvanceDeduction.toLocaleString()} Net ${netSalary.toLocaleString()}. Great Pearl Coffee`
-            : `${emp.name}, salary ${currentMonth} UGX ${netSalary.toLocaleString()} credited to wallet. Great Pearl Coffee`;
+          const smsMessage = totalDeductions > 0
+            ? `${emp.name}, salary ${currentMonth} paid. Gross UGX ${grossSalary.toLocaleString()}, deductions UGX ${totalDeductions.toLocaleString()}, wallet UGX ${walletCredit.toLocaleString()}. Great Pearl Coffee`
+            : `${emp.name}, salary ${currentMonth} UGX ${walletCredit.toLocaleString()} credited to wallet. Great Pearl Coffee`;
 
           try {
             await supabase.functions.invoke('send-sms', {
@@ -398,67 +403,79 @@ Deno.serve(async (req) => {
                 recipientEmail: emp.email,
               },
             });
+            console.log(`📱 Salary SMS sent to ${emp.name}`);
+          } catch (smsErr) {
+            console.warn(`⚠️ Salary SMS failed for ${emp.name} (non-blocking):`, smsErr);
+          }
+        }
 
-            // Generate payslip
-            let payslipUrl = '';
-            try {
-              const transactionId = `AUTO-SAL-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-${emp.name.replace(/\s/g, '').substring(0, 6).toUpperCase()}`;
-              const { data: payslipResult } = await supabase.functions.invoke('generate-payslip', {
-                body: {
-                  employeeName: emp.name,
-                  employeeEmail: emp.email,
-                  employeeId: emp.employee_id || emp.id,
-                  department: emp.department || '',
-                  month: currentMonth,
-                  grossSalary: grossSalary,
-                  advanceDeduction: totalAdvanceDeduction,
-                  netSalary: netSalary,
-                  nssfEmployee: stat.nssfEmployee,
-                  nssfEmployer: stat.nssfEmployer,
-                  paye: stat.paye,
-                  taxableIncome: stat.taxableIncome,
-                  paymentMethod: 'Wallet',
-                  transactionId: transactionId,
-                  processedDate: now.toLocaleDateString('en-UG', { year: 'numeric', month: 'long', day: 'numeric' }),
-                  advanceDetails: advanceDetails,
-                },
-              });
-              payslipUrl = payslipResult?.url || '';
-              console.log(`📄 Payslip generated for ${emp.name}: ${payslipUrl}`);
-            } catch (payslipErr) {
-              console.warn(`⚠️ Payslip generation failed for ${emp.name} (non-blocking):`, payslipErr);
-            }
-
-            // Send detailed salary email with payslip link
-            await supabase.functions.invoke('send-transactional-email', {
+        // 5b. Always send detailed salary email for valid employee emails
+        if (emp.email && emp.email.includes('@')) {
+          let payslipUrl = '';
+          try {
+            const { data: payslipResult } = await supabase.functions.invoke('generate-payslip', {
               body: {
-                templateName: 'salary-credited',
-                recipientEmail: emp.email,
-                idempotencyKey: `salary-${emp.email}-${currentMonth}`,
-                templateData: {
-                  employeeName: emp.name,
-                  month: currentMonth,
-                  grossSalary: grossSalary.toLocaleString(),
-                  advanceDeduction: totalAdvanceDeduction.toLocaleString(),
-                  netSalary: netSalary.toLocaleString(),
-                  hasDeductions: totalAdvanceDeduction > 0,
-                  department: emp.department || '',
-                  transactionId: `AUTO-SAL-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-${emp.name.replace(/\s/g, '').substring(0, 6).toUpperCase()}`,
-                  payslipUrl: payslipUrl,
-                  hasRemittance: remittanceAmount > 0,
-                  remittanceAmount: remittanceAmount.toLocaleString(),
-                  remittanceRecipient: remittanceInfo?.recipient_name || '',
-                  remittancePhone: remittanceInfo?.recipient_phone || '',
-                  remittancePercentage: remittanceInfo?.percentage || 0,
-                  walletCredited: walletCredit.toLocaleString(),
-                },
+                employeeName: emp.name,
+                employeeEmail: emp.email,
+                employeeId: emp.employee_id || emp.id,
+                department: emp.department || '',
+                month: currentMonth,
+                grossSalary,
+                advanceDeduction: totalAdvanceDeduction + totalLoanDeduction,
+                netSalary: walletCredit,
+                nssfEmployee: stat.nssfEmployee,
+                nssfEmployer: stat.nssfEmployer,
+                paye: stat.paye,
+                taxableIncome: stat.taxableIncome,
+                paymentMethod: 'Wallet',
+                transactionId,
+                processedDate: now.toLocaleDateString('en-UG', { year: 'numeric', month: 'long', day: 'numeric' }),
+                advanceDetails: [...advanceDetails, ...loanDetails],
               },
             });
-
-            console.log(`📱 SMS + Email sent to ${emp.name}`);
-          } catch (smsErr) {
-            console.warn(`⚠️ SMS failed for ${emp.name} (non-blocking):`, smsErr);
+            payslipUrl = payslipResult?.url || '';
+            console.log(`📄 Payslip generated for ${emp.name}: ${payslipUrl}`);
+          } catch (payslipErr) {
+            console.warn(`⚠️ Payslip generation failed for ${emp.name} (non-blocking):`, payslipErr);
           }
+
+          const { error: emailErr } = await supabase.functions.invoke('send-transactional-email', {
+            body: {
+              templateName: 'salary-credited',
+              recipientEmail: emp.email,
+              idempotencyKey: `salary-paid-${emp.email}-${currentMonth}`,
+              templateData: {
+                employeeName: emp.name,
+                month: currentMonth,
+                grossSalary: grossSalary.toLocaleString(),
+                advanceDeduction: totalAdvanceDeduction.toLocaleString(),
+                loanDeduction: totalLoanDeduction.toLocaleString(),
+                netSalary: netAfterLoans.toLocaleString(),
+                hasDeductions: payrollDeductions > 0,
+                department: emp.department || '',
+                transactionId,
+                payslipUrl,
+                hasRemittance: remittanceAmount > 0,
+                remittanceAmount: remittanceAmount.toLocaleString(),
+                remittanceRecipient: remittanceInfo?.recipient_name || '',
+                remittancePhone: remittanceInfo?.recipient_phone || '',
+                remittancePercentage: remittanceInfo?.percentage || 0,
+                walletCredited: walletCredit.toLocaleString(),
+                nssfEmployee: Number(stat.nssfEmployee || 0).toLocaleString(),
+                nssfEmployer: Number(stat.nssfEmployer || 0).toLocaleString(),
+                paye: Number(stat.paye || 0).toLocaleString(),
+                totalDeductions: totalDeductions.toLocaleString(),
+              },
+            },
+          });
+
+          if (emailErr) {
+            console.warn(`⚠️ Salary email failed for ${emp.name} (non-blocking):`, emailErr);
+          } else {
+            console.log(`📧 Salary email sent to ${emp.name}`);
+          }
+        } else {
+          console.warn(`⚠️ Salary email skipped for ${emp.name}: invalid email ${emp.email}`);
         }
 
         results.push({
