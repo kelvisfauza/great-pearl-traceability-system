@@ -145,7 +145,77 @@ Deno.serve(async (req) => {
 
         const netSalary = Math.max(0, stat.net - totalAdvanceDeduction);
 
-        // 2b. Salary remittance agreement (e.g. portion of net sent to a third party via Yo Payments)
+        // 2b. Active loan installment recovery (e.g. pure_salary loan monthly installment)
+        let totalLoanDeduction = 0;
+        const loanDetails: any[] = [];
+        try {
+          const { data: activeLoans } = await supabase
+            .from('loans')
+            .select('id, monthly_installment, remaining_balance, paid_amount, loan_type')
+            .eq('employee_email', emp.email)
+            .eq('status', 'active')
+            .gt('remaining_balance', 0);
+
+          if (activeLoans && activeLoans.length > 0) {
+            // Budget cap: don't push net below zero from loans alone
+            let remainingBudget = Math.max(0, netSalary - totalLoanDeduction);
+            for (const loan of activeLoans) {
+              const installment = Number(loan.monthly_installment) || 0;
+              const deduction = Math.min(installment, Number(loan.remaining_balance), remainingBudget);
+              if (deduction <= 0) continue;
+              totalLoanDeduction += deduction;
+              remainingBudget -= deduction;
+
+              const newRemaining = Math.max(0, Number(loan.remaining_balance) - deduction);
+              const newPaid = Number(loan.paid_amount || 0) + deduction;
+              const newStatus = newRemaining <= 0 ? 'paid_off' : 'active';
+
+              await supabase.from('loans').update({
+                paid_amount: newPaid,
+                remaining_balance: newRemaining,
+                status: newStatus,
+                updated_at: new Date().toISOString(),
+              }).eq('id', loan.id);
+
+              // Update next pending installment
+              const { data: nextInst } = await supabase
+                .from('loan_repayments')
+                .select('id, amount_due, amount_paid')
+                .eq('loan_id', loan.id)
+                .in('status', ['pending', 'partial'])
+                .order('installment_number', { ascending: true })
+                .limit(1)
+                .maybeSingle();
+              if (nextInst) {
+                const paidNow = Number(nextInst.amount_paid || 0) + deduction;
+                const fullyPaid = paidNow >= Number(nextInst.amount_due);
+                await supabase.from('loan_repayments').update({
+                  amount_paid: paidNow,
+                  status: fullyPaid ? 'paid' : 'partial',
+                  paid_date: fullyPaid ? new Date().toISOString() : null,
+                  deducted_from: `Salary - ${currentMonth}`,
+                  payment_reference: `AUTO-SAL-LOAN-${loan.id}-${currentMonth.replace(/\s/g,'')}`,
+                  updated_at: new Date().toISOString(),
+                }).eq('id', nextInst.id);
+              }
+
+              loanDetails.push({
+                loan_id: loan.id,
+                loan_type: loan.loan_type,
+                deduction,
+                remaining_after: newRemaining,
+                status_after: newStatus,
+              });
+              console.log(`💳 Loan ${loan.id} deduction: UGX ${deduction.toLocaleString()} (remaining ${newRemaining})`);
+            }
+          }
+        } catch (loanErr) {
+          console.error(`⚠️ Loan deduction error for ${emp.name}:`, loanErr);
+        }
+
+        const netAfterLoans = Math.max(0, netSalary - totalLoanDeduction);
+
+        // 2c. Salary remittance agreement (e.g. portion of net sent to a third party via Yo Payments)
         let remittanceAmount = 0;
         let remittanceInfo: any = null;
         try {
@@ -156,9 +226,9 @@ Deno.serve(async (req) => {
             .eq('status', 'active')
             .maybeSingle();
 
-          if (agreement && netSalary > 0) {
+          if (agreement && netAfterLoans > 0) {
             const pct = Number(agreement.percentage) || 0;
-            remittanceAmount = Math.round((netSalary * pct) / 100);
+            remittanceAmount = Math.round((netAfterLoans * pct) / 100);
             if (remittanceAmount > 0) {
               const recipientPhone = normalizePhone(agreement.recipient_phone);
               const narrative = `Salary remittance - ${emp.name} - ${currentMonth}`;
@@ -179,7 +249,7 @@ Deno.serve(async (req) => {
                 payroll_run_id: payrollRunId,
                 employee_email: emp.email,
                 month: currentMonth,
-                net_salary: netSalary,
+                net_salary: netAfterLoans,
                 percentage: pct,
                 amount: remittanceAmount,
                 yo_reference: payout.transactionRef || null,
@@ -200,7 +270,7 @@ Deno.serve(async (req) => {
           console.error(`⚠️ Remittance processing error for ${emp.name}:`, remErr);
         }
 
-        const walletCredit = Math.max(0, netSalary - remittanceAmount);
+        const walletCredit = Math.max(0, netAfterLoans - remittanceAmount);
 
         // 3. Create salary payment record
         const { data: paymentRecord, error: paymentError } = await supabase
