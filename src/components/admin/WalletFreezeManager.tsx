@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Snowflake, Search, ShieldOff } from "lucide-react";
+import { Snowflake, Search, ShieldOff, Lock, Unlock } from "lucide-react";
 import { format } from "date-fns";
 
 interface Employee {
@@ -32,6 +32,27 @@ const WalletFreezeManager = () => {
   const [freezeTarget, setFreezeTarget] = useState<Employee | null>(null);
   const [freezeReason, setFreezeReason] = useState("");
   const [unfreezeTarget, setUnfreezeTarget] = useState<Employee | null>(null);
+  const [bulkLockOpen, setBulkLockOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  const runBulkLock = async (action: "apply" | "release") => {
+    setBulkBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("apply-attendance-wallet-lock", {
+        body: { action, percentage: 35 },
+      });
+      if (error) throw error;
+      toast({
+        title: action === "apply" ? "35% Wallet Lock Applied" : "Wallet Locks Released",
+        description: `Processed ${(data as any)?.processed ?? 0} employees. Emails sent.`,
+      });
+      setBulkLockOpen(false);
+    } catch (e: any) {
+      toast({ title: "Failed", description: e?.message || "Bulk lock failed", variant: "destructive" });
+    } finally {
+      setBulkBusy(false);
+    }
+  };
 
   const { data: employees = [], isLoading } = useQuery({
     queryKey: ["employees-wallet-freeze"],
@@ -118,6 +139,21 @@ const WalletFreezeManager = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-lg border p-3 bg-amber-50/50 dark:bg-amber-950/20">
+            <div>
+              <p className="font-medium text-sm flex items-center gap-2"><Lock className="h-4 w-4 text-amber-600" /> Attendance Wallet Lock</p>
+              <p className="text-xs text-muted-foreground">Lock 35% of every active employee's wallet until attendance records are fully entered. Each employee will be emailed.</p>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => runBulkLock("release")}>
+                <Unlock className="h-4 w-4 mr-1" /> Release All
+              </Button>
+              <Button size="sm" disabled={bulkBusy} onClick={() => runBulkLock("apply")}>
+                <Lock className="h-4 w-4 mr-1" /> {bulkBusy ? "Working..." : "Apply 35% Lock"}
+              </Button>
+            </div>
+          </div>
+
           {frozenAccounts.length > 0 && (
             <div className="space-y-2">
               <h4 className="font-semibold text-sm text-destructive">Currently Frozen ({frozenAccounts.length})</h4>

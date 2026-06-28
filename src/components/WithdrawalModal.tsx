@@ -80,6 +80,8 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const withdrawalStatus = isWithdrawalDisabled();
   const { validateAmount: validateLimits } = useWithdrawalLimits();
   const isWalletFrozen = !!(employee as any)?.wallet_frozen;
+  const walletLockedAmount = Math.max(0, Number((employee as any)?.wallet_locked_amount || 0));
+  const walletLockedReason = (employee as any)?.wallet_locked_reason || '';
   
   // Instant withdrawal state
   const [instantEligibility, setInstantEligibility] = useState<InstantEligibility | null>(null);
@@ -653,6 +655,16 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                         Reason: {(employee as any)?.wallet_frozen_reason || 'No reason provided'}
                       </div>
                       <div className="text-xs">Deposits and rewards still apply. Contact HR for assistance.</div>
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {!isWalletFrozen && walletLockedAmount > 0 && (
+                  <Alert>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>UGX {walletLockedAmount.toLocaleString()} of your wallet is temporarily locked.</strong>
+                      <div className="text-xs mt-1">{walletLockedReason || 'Will be released once attendance records are fully entered.'}</div>
+                      <div className="text-xs">You can still withdraw the unlocked portion.</div>
                     </AlertDescription>
                   </Alert>
                 )}

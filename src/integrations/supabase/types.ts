@@ -2407,6 +2407,10 @@ export type Database = {
           wallet_frozen_at: string | null
           wallet_frozen_by: string | null
           wallet_frozen_reason: string | null
+          wallet_locked_amount: number
+          wallet_locked_at: string | null
+          wallet_locked_percentage: number | null
+          wallet_locked_reason: string | null
         }
         Insert: {
           account_name?: string | null
@@ -2458,6 +2462,10 @@ export type Database = {
           wallet_frozen_at?: string | null
           wallet_frozen_by?: string | null
           wallet_frozen_reason?: string | null
+          wallet_locked_amount?: number
+          wallet_locked_at?: string | null
+          wallet_locked_percentage?: number | null
+          wallet_locked_reason?: string | null
         }
         Update: {
           account_name?: string | null
@@ -2509,6 +2517,10 @@ export type Database = {
           wallet_frozen_at?: string | null
           wallet_frozen_by?: string | null
           wallet_frozen_reason?: string | null
+          wallet_locked_amount?: number
+          wallet_locked_at?: string | null
+          wallet_locked_percentage?: number | null
+          wallet_locked_reason?: string | null
         }
         Relationships: []
       }
@@ -12301,6 +12313,10 @@ export type Database = {
           wallet_frozen_at: string | null
           wallet_frozen_by: string | null
           wallet_frozen_reason: string | null
+          wallet_locked_amount: number
+          wallet_locked_at: string | null
+          wallet_locked_percentage: number | null
+          wallet_locked_reason: string | null
         }
         SetofOptions: {
           from: "*"
@@ -12545,6 +12561,10 @@ export type Database = {
           wallet_frozen_at: string | null
           wallet_frozen_by: string | null
           wallet_frozen_reason: string | null
+          wallet_locked_amount: number
+          wallet_locked_at: string | null
+          wallet_locked_percentage: number | null
+          wallet_locked_reason: string | null
         }
         SetofOptions: {
           from: "*"
