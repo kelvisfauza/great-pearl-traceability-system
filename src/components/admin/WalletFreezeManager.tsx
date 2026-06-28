@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Snowflake, Search, ShieldOff } from "lucide-react";
+import { Snowflake, Search, ShieldOff, Lock, Unlock } from "lucide-react";
 import { format } from "date-fns";
 
 interface Employee {
@@ -32,6 +32,27 @@ const WalletFreezeManager = () => {
   const [freezeTarget, setFreezeTarget] = useState<Employee | null>(null);
   const [freezeReason, setFreezeReason] = useState("");
   const [unfreezeTarget, setUnfreezeTarget] = useState<Employee | null>(null);
+  const [bulkLockOpen, setBulkLockOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  const runBulkLock = async (action: "apply" | "release") => {
+    setBulkBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("apply-attendance-wallet-lock", {
+        body: { action, percentage: 35 },
+      });
+      if (error) throw error;
+      toast({
+        title: action === "apply" ? "35% Wallet Lock Applied" : "Wallet Locks Released",
+        description: `Processed ${(data as any)?.processed ?? 0} employees. Emails sent.`,
+      });
+      setBulkLockOpen(false);
+    } catch (e: any) {
+      toast({ title: "Failed", description: e?.message || "Bulk lock failed", variant: "destructive" });
+    } finally {
+      setBulkBusy(false);
+    }
+  };
 
   const { data: employees = [], isLoading } = useQuery({
     queryKey: ["employees-wallet-freeze"],
