@@ -80,6 +80,8 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const withdrawalStatus = isWithdrawalDisabled();
   const { validateAmount: validateLimits } = useWithdrawalLimits();
   const isWalletFrozen = !!(employee as any)?.wallet_frozen;
+  const walletLockedAmount = Math.max(0, Number((employee as any)?.wallet_locked_amount || 0));
+  const walletLockedReason = (employee as any)?.wallet_locked_reason || '';
   
   // Instant withdrawal state
   const [instantEligibility, setInstantEligibility] = useState<InstantEligibility | null>(null);
