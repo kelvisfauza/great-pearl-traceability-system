@@ -658,6 +658,16 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                     </AlertDescription>
                   </Alert>
                 )}
+                {!isWalletFrozen && walletLockedAmount > 0 && (
+                  <Alert>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>UGX {walletLockedAmount.toLocaleString()} of your wallet is temporarily locked.</strong>
+                      <div className="text-xs mt-1">{walletLockedReason || 'Will be released once attendance records are fully entered.'}</div>
+                      <div className="text-xs">You can still withdraw the unlocked portion.</div>
+                    </AlertDescription>
+                  </Alert>
+                )}
                 {withdrawalStatus.disabled && !isWalletFrozen && (
                   <Alert variant="destructive">
                     <AlertTriangle className="h-4 w-4" />
