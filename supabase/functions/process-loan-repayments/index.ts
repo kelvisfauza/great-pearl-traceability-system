@@ -78,16 +78,16 @@ Deno.serve(async (req) => {
           continue
         }
 
-        // Get borrower's EFFECTIVE wallet balance (matches what the UI shows —
-        // excludes airtime/data allowances and PAYOUT entries so we never
-        // overdraw the wallet by treating non-cash credits as spendable).
+        // Get borrower's SPENDABLE wallet balance — effective balance MINUS any
+        // partial lock (e.g. 35% attendance lock). Locked funds must never be
+        // used to pay loans, transfers, or overdrafts.
         const { data: walletBalRaw, error: walletBalErr } = await supabase
-          .rpc('get_effective_wallet_balance', { p_user_id: borrowerUserId })
+          .rpc('get_spendable_wallet_balance', { p_user_id: borrowerUserId })
         if (walletBalErr) {
-          console.error('  ❌ get_effective_wallet_balance failed:', walletBalErr)
+          console.error('  ❌ get_spendable_wallet_balance failed:', walletBalErr)
         }
         const walletBalance = Math.max(0, Number(walletBalRaw || 0))
-        console.log(`  Effective wallet balance: UGX ${walletBalance}`)
+        console.log(`  Spendable wallet balance: UGX ${walletBalance}`)
 
         let remainingAmount = totalOwed
         let deductedFromWallet = 0
@@ -141,9 +141,9 @@ Deno.serve(async (req) => {
 
           if (guarantorUserId) {
             const { data: gBalRaw } = await supabase
-              .rpc('get_effective_wallet_balance', { p_user_id: guarantorUserId })
+              .rpc('get_spendable_wallet_balance', { p_user_id: guarantorUserId })
             const guarantorBalance = Math.max(0, Number(gBalRaw || 0))
-            console.log(`  Guarantor effective wallet balance: UGX ${guarantorBalance}`)
+            console.log(`  Guarantor spendable wallet balance: UGX ${guarantorBalance}`)
 
             if (guarantorBalance > 0) {
               deductedFromGuarantor = Math.min(guarantorBalance, remainingAmount)
