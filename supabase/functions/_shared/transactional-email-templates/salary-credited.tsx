@@ -10,6 +10,7 @@ interface Props {
   month?: string
   grossSalary?: string
   advanceDeduction?: string
+  loanDeduction?: string
   netSalary?: string
   hasDeductions?: boolean
   department?: string
@@ -33,7 +34,7 @@ interface Props {
 
 const SalaryCreditedEmail = ({
   employeeName, month = '', grossSalary = '0', advanceDeduction = '0',
-  netSalary = '0', hasDeductions = false, department = '', position = '',
+  loanDeduction = '0', netSalary = '0', hasDeductions = false, department = '', position = '',
   transactionId = '', payslipUrl = '',
   hasRemittance = false, remittanceAmount = '0', remittanceRecipient = '',
   remittancePhone = '', remittancePercentage = 0, walletCredited = '0',
@@ -44,18 +45,17 @@ const SalaryCreditedEmail = ({
 }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>💵 Salary Credited — UGX {netSalary} for {month}</Preview>
+    <Preview>Salary paid — UGX {walletCredited || netSalary} for {month}</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={header}>
-          <Text style={headerEmoji}>💵</Text>
-          <Heading style={h1}>Salary Credited</Heading>
+          <Heading style={h1}>Salary Paid</Heading>
           <Text style={subtitle}>{SITE_NAME} — {month} Payroll</Text>
         </Section>
         <Section style={content}>
           <Text style={greeting}>Dear {employeeName || 'Employee'},</Text>
           <Text style={bodyText}>
-            Your salary for <strong>{month}</strong> has been processed and credited to your wallet.
+            Your salary for <strong>{month}</strong> has been processed. Below is the payment breakdown showing deductions and the amount credited to your wallet.
           </Text>
 
           <Section style={employeeInfoCard}>
@@ -78,13 +78,16 @@ const SalaryCreditedEmail = ({
               {paye !== '0' && (
                 <tr><td style={labelCell}>PAYE (URA Tax):</td><td style={{...valueCell, color: '#c62828'}}>- UGX {paye}</td></tr>
               )}
-              {hasDeductions && (
-                <tr><td style={labelCell}>Salary Advance / Loan Recovery:</td><td style={{...valueCell, color: '#c62828'}}>- UGX {advanceDeduction}</td></tr>
+              {advanceDeduction !== '0' && (
+                <tr><td style={labelCell}>Salary Advance Recovery:</td><td style={{...valueCell, color: '#c62828'}}>- UGX {advanceDeduction}</td></tr>
+              )}
+              {loanDeduction !== '0' && (
+                <tr><td style={labelCell}>Loan Recovery:</td><td style={{...valueCell, color: '#c62828'}}>- UGX {loanDeduction}</td></tr>
               )}
               {totalDeductions !== '0' && (
                 <tr><td style={{...labelCell, borderTop:'1px solid #ddd', paddingTop:'8px'}}><strong>Total Deductions:</strong></td><td style={{...valueCell, color:'#c62828', borderTop:'1px solid #ddd', paddingTop:'8px', fontWeight:'bold' as const}}>- UGX {totalDeductions}</td></tr>
               )}
-              <tr><td style={labelCell}><strong>Net Salary:</strong></td><td style={valueBold}>UGX {netSalary}</td></tr>
+              <tr><td style={labelCell}><strong>After Deductions:</strong></td><td style={valueBold}>UGX {netSalary}</td></tr>
               {hasRemittance && (
                 <tr><td style={labelCell}>Remittance ({remittancePercentage}%) → {remittanceRecipient}:</td><td style={{...valueCell, color: '#c62828'}}>- UGX {remittanceAmount}</td></tr>
               )}
@@ -107,7 +110,7 @@ const SalaryCreditedEmail = ({
 
           {hasDeductions && (
             <Section style={noteBox}>
-              <Text style={noteText}>ℹ️ A salary advance deduction has been applied. This was previously approved and auto-recovered from your payroll.</Text>
+              <Text style={noteText}>Payroll recoveries shown above were applied before the wallet credit was posted.</Text>
             </Section>
           )}
 
@@ -143,7 +146,7 @@ const SalaryCreditedEmail = ({
 
 export const template = {
   component: SalaryCreditedEmail,
-  subject: (data: Record<string, any>) => `💵 Salary Credited — UGX ${data.netSalary || '0'} for ${data.month || 'this month'}`,
+  subject: (data: Record<string, any>) => `Salary Paid — UGX ${data.walletCredited || data.netSalary || '0'} for ${data.month || 'this month'}`,
   displayName: 'Salary credited with payslip',
   previewData: {
     employeeName: 'Jane Doe', month: 'April 2026', grossSalary: '500,000',
