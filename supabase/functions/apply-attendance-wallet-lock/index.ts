@@ -45,14 +45,18 @@ serve(async (req) => {
           })
           .eq("id", emp.id);
         results.push({ id: emp.id, released: true });
-        // Notify release
         try {
           await supabase.functions.invoke("send-transactional-email", {
             body: {
-              templateName: "wallet-lock-released",
+              templateName: "general-notification",
               recipientEmail: emp.email,
               idempotencyKey: `wallet-lock-release-${emp.id}-${Date.now()}`,
-              templateData: { name: emp.name },
+              templateData: {
+                subject: "Wallet Lock Released",
+                title: "Wallet Lock Released",
+                recipientName: emp.name,
+                message: `Good news — the temporary 35% wallet lock has been removed.\n\nYour full wallet balance is now available for withdrawals.\n\nThank you for your patience while attendance records were finalised.`,
+              },
             },
           });
         } catch (_) {}
@@ -84,15 +88,20 @@ serve(async (req) => {
       try {
         await supabase.functions.invoke("send-transactional-email", {
           body: {
-            templateName: "wallet-lock-applied",
+            templateName: "general-notification",
             recipientEmail: emp.email,
             idempotencyKey: `wallet-lock-apply-${emp.id}-${new Date().toISOString().slice(0,10)}`,
             templateData: {
-              name: emp.name,
-              percentage: pct,
-              lockedAmount: lockAmount.toLocaleString(),
-              walletBalance: balance.toLocaleString(),
-              reason,
+              subject: `Temporary ${pct}% Wallet Lock Applied`,
+              title: `Temporary ${pct}% Wallet Lock`,
+              recipientName: emp.name,
+              message:
+                `As part of finalising attendance records, ${pct}% of your wallet balance has been temporarily locked.\n\n` +
+                `• Wallet balance at lock time: UGX ${balance.toLocaleString()}\n` +
+                `• Locked (cannot be withdrawn): UGX ${lockAmount.toLocaleString()}\n` +
+                `• Available to withdraw: UGX ${(balance - lockAmount).toLocaleString()}\n\n` +
+                `Reason: ${reason}\n\n` +
+                `The lock will be released automatically once all attendance records are fully entered into the system. Deposits, salaries, awards and loan recoveries continue normally during the lock.`,
             },
           },
         });
