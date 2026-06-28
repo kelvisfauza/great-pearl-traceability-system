@@ -296,7 +296,7 @@ serve(async (req) => {
     // Fetch employee name early for narrative
     const { data: empData } = await supabase
       .from('employees')
-      .select('name, phone, wallet_frozen, wallet_frozen_reason')
+      .select('name, phone, wallet_frozen, wallet_frozen_reason, wallet_locked_amount, wallet_locked_reason')
       .eq('email', userEmail)
       .maybeSingle();
 
@@ -306,6 +306,21 @@ serve(async (req) => {
       return respond(false, {
         error: `Your wallet has been frozen by an administrator${empData.wallet_frozen_reason ? `: ${empData.wallet_frozen_reason}` : '.'} Please contact support.`,
       });
+    }
+
+    // Enforce partial wallet lock (e.g. 35% attendance lock).
+    // The locked amount cannot be withdrawn from the wallet portion.
+    const lockedAmount = Math.max(0, Number((empData as any)?.wallet_locked_amount || 0));
+    if (lockedAmount > 0) {
+      const walletAfterLock = Math.max(0, walletSpendableFinal - lockedAmount);
+      if (walletPortion > walletAfterLock) {
+        return respond(false, {
+          error: `UGX ${lockedAmount.toLocaleString()} of your wallet is temporarily locked${empData?.wallet_locked_reason ? ` (${empData.wallet_locked_reason})` : ''}. Available to withdraw from wallet: UGX ${walletAfterLock.toLocaleString()}.`,
+          code: 'WALLET_PARTIALLY_LOCKED',
+          locked_amount: lockedAmount,
+          wallet_available: walletAfterLock,
+        });
+      }
     }
 
     const employeeName = empData?.name || 'User';
