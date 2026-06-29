@@ -178,21 +178,24 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       const employee = await findEmployeeRecipient(supabase, normalizedEmail);
-      const [emailResult, smsResult] = await Promise.all([
-        sendVerificationEmail(supabase, normalizedEmail, verificationCode),
-        sendVerificationSms(normalizedEmail, employee, verificationCode),
-      ]);
-
-      if (!emailResult.sent && !smsResult.sent) {
-        throw new Error(emailResult.error || smsResult.error || 'Failed to send verification code');
+      // SMS-first policy (email provider unreliable right now).
+      // Try SMS; only fall back to email if there is no phone or SMS fails.
+      const smsResult = await sendVerificationSms(normalizedEmail, employee, verificationCode);
+      let emailResult: DeliveryResult = { sent: false, skipped: 'sms_primary' };
+      if (!smsResult.sent) {
+        emailResult = await sendVerificationEmail(supabase, normalizedEmail, verificationCode);
       }
 
-      console.log("Verification code sent to:", normalizedEmail, { emailSent: emailResult.sent, smsSent: smsResult.sent });
+      if (!smsResult.sent && !emailResult.sent) {
+        throw new Error(smsResult.error || emailResult.error || 'Failed to send verification code');
+      }
+
+      console.log("Verification code sent to:", normalizedEmail, { smsSent: smsResult.sent, emailSent: emailResult.sent });
       return new Response(
         JSON.stringify({
           success: true,
           message: smsResult.sent
-            ? "Verification code sent to your email and employee phone"
+            ? "Verification code sent to your phone via SMS"
             : "Verification code sent to your email",
           emailSent: emailResult.sent,
           smsSent: smsResult.sent,
