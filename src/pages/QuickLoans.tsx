@@ -3038,6 +3038,14 @@ const QuickLoans = () => {
                         return;
                       }
                       try {
+                        if (myActiveAdvance) {
+                          toast({ title: 'Active advance exists', description: 'You already have an active salary advance. Clear it before requesting another.', variant: 'destructive' });
+                          return;
+                        }
+                        if (pendingAdvanceRequest) {
+                          toast({ title: 'Request pending', description: 'A salary advance request is already pending approval.', variant: 'destructive' });
+                          return;
+                        }
                         await createAdvanceApprovalRequest({
                           employee_email: employee!.email,
                           employee_name: employee!.name,
@@ -3050,6 +3058,7 @@ const QuickLoans = () => {
                           requested_by_name: employee!.name,
                         });
                         setShowAdvanceDialog(false);
+                        fetchMyAdvance();
                       } catch (_e) { /* hook toasts */ }
                     }}
                   >
