@@ -2357,7 +2357,7 @@ const QuickLoans = () => {
                           Max payable: UGX {Math.min(earlyPayoff, myWalletBalance).toLocaleString()}
                         </p>
                       </div>
-                      <Button onClick={handleWalletRepayment} disabled={walletRepayLoading || !walletRepayAmount} className="w-full">
+                      <Button onClick={() => handleWalletRepayment()} disabled={walletRepayLoading || !walletRepayAmount} className="w-full">
                         {walletRepayLoading ? (
                           <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
                         ) : (
