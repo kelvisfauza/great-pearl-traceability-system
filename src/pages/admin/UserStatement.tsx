@@ -13,6 +13,9 @@ import { Printer, Search, FileText, ArrowDownCircle, ArrowUpCircle, Wallet, Arro
 import { AlertTriangle, Info } from "lucide-react";
 import { Mail } from "lucide-react";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { LOGO_URL, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONE, COMPANY_EMAIL, COMPANY_WEBSITE, COMPANY_REG } from "@/utils/companyBrand";
 
 type Entry = {
   id: string;
@@ -65,6 +68,11 @@ const UserStatement = () => {
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [printOpen, setPrintOpen] = useState(false);
+  const [printFrom, setPrintFrom] = useState<string>("");
+  const [printTo, setPrintTo] = useState<string>("");
+  const [printType, setPrintType] = useState<string>("all");
+  const [preparingPrint, setPreparingPrint] = useState(false);
 
   // Employees list
   const { data: employees = [] } = useQuery({
@@ -205,40 +213,213 @@ const UserStatement = () => {
     return Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count);
   }, [entries]);
 
-  const printStatement = () => {
-    if (!selectedEmployee) return;
-    const w = window.open("", "_blank");
-    if (!w) return;
-    const rowsHtml = totals.enriched
-      .slice()
-      .reverse()
-      .map(
-        (e) => `
-        <tr>
-          <td>${new Date(e.created_at).toLocaleString()}</td>
-          <td>${e.entry_type}</td>
-          <td>${e.metadata?.description || e.reference}</td>
-          <td style="text-align:right;color:${Number(e.amount) >= 0 ? "#16a34a" : "#dc2626"}">${fmt(Number(e.amount))}</td>
-          <td style="text-align:right">${fmt(e.running)}</td>
-        </tr>`
-      )
-      .join("");
+  const openPrintDialog = () => {
+    setPrintFrom(from || "");
+    setPrintTo(to || "");
+    setPrintType(typeFilter);
+    setPrintOpen(true);
+  };
 
-    w.document.write(`<!doctype html><html><head><title>Statement - ${selectedEmployee.name}</title>
-      <style>body{font:12px system-ui;padding:24px}h1{margin:0 0 4px}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{border-bottom:1px solid #eee;padding:6px 8px;text-align:left}th{background:#f5f5f5}.summary{display:flex;gap:24px;margin:12px 0;padding:12px;background:#fafafa;border:1px solid #eee}</style>
-    </head><body onload="window.print()">
-      <h1>Wallet Statement</h1>
-      <div>${selectedEmployee.name} · ${selectedEmployee.email} · ${selectedEmployee.department}</div>
-      <div>Generated ${new Date().toLocaleString()}</div>
-      <div class="summary">
-        <div><strong>Credits:</strong> ${fmt(totals.credits)}</div>
-        <div><strong>Debits:</strong> ${fmt(totals.debits)}</div>
-        <div><strong>Net:</strong> ${fmt(totals.net)}</div>
-        <div><strong>Entries:</strong> ${entries.length}</div>
+  const runPrint = async () => {
+    if (!selectedEmployee || candidateUserIds.length === 0) return;
+    setPreparingPrint(true);
+    try {
+      // 1. Opening balance = sum of all wallet entries strictly BEFORE printFrom
+      let opening = 0;
+      if (printFrom) {
+        const PAGE = 1000;
+        for (let offset = 0; ; offset += PAGE) {
+          const { data, error } = await supabase
+            .from("ledger_entries")
+            .select("amount, entry_type, metadata")
+            .in("user_id", candidateUserIds)
+            .in("entry_type", WALLET_TYPES)
+            .lt("created_at", printFrom)
+            .order("created_at", { ascending: true })
+            .range(offset, offset + PAGE - 1);
+          if (error) throw error;
+          const batch = (data || []) as any[];
+          batch
+            .filter((e) => !isDirectAllowancePayout(e))
+            .forEach((e) => { opening += Number(e.amount) || 0; });
+          if (batch.length < PAGE) break;
+          if (offset > 50000) break;
+        }
+      }
+
+      // 2. Period entries
+      const PAGE = 1000;
+      const period: Entry[] = [];
+      for (let offset = 0; ; offset += PAGE) {
+        let q = supabase
+          .from("ledger_entries")
+          .select("id, created_at, entry_type, source_category, amount, reference, metadata")
+          .in("user_id", candidateUserIds)
+          .in("entry_type", WALLET_TYPES)
+          .order("created_at", { ascending: true })
+          .range(offset, offset + PAGE - 1);
+        if (printType !== "all") q = q.eq("entry_type", printType);
+        if (printFrom) q = q.gte("created_at", printFrom);
+        if (printTo) q = q.lte("created_at", `${printTo}T23:59:59`);
+        const { data, error } = await q;
+        if (error) throw error;
+        const batch = (data || []) as Entry[];
+        period.push(...batch);
+        if (batch.length < PAGE) break;
+        if (offset > 50000) break;
+      }
+      const clean = period
+        .filter((e) => !isDirectAllowancePayout(e))
+        .filter((e, i, a) => a.findIndex((c) => c.id === e.id) === i);
+
+      // 3. Build rows with running balance starting from opening
+      let running = opening;
+      let periodCredits = 0;
+      let periodDebits = 0;
+      const rows = clean.map((e) => {
+        const amt = Number(e.amount) || 0;
+        const debit = amt < 0 ? Math.abs(amt) : 0;
+        const credit = amt > 0 ? amt : 0;
+        periodDebits += debit;
+        periodCredits += credit;
+        running += amt;
+        const meta = e.metadata && typeof e.metadata === "string" ? JSON.parse(e.metadata) : e.metadata;
+        const fee = Number(meta?.fee) || 0;
+        const desc = (meta?.description || e.entry_type).toString().replace(/</g, "&lt;");
+        const ref = (e.reference || "").toString().replace(/</g, "&lt;");
+        const d = new Date(e.created_at);
+        const dateStr = d.toLocaleDateString("en-GB");
+        return { dateStr, desc, ref, fee, debit, credit, running };
+      });
+      const closing = running;
+
+      const w = window.open("", "_blank");
+      if (!w) { toast.error("Pop-up blocked. Please allow pop-ups to print."); return; }
+
+      const periodLabel = `${printFrom || "All time"} to ${printTo || new Date().toISOString().slice(0,10)}`;
+      const headerRows = rows.map((r) => `
+        <tr>
+          <td>${r.dateStr}</td>
+          <td>${r.dateStr}</td>
+          <td class="desc">${r.desc}<div class="ref">${r.ref}</div></td>
+          <td class="num">${r.fee ? Number(r.fee).toLocaleString() : ""}</td>
+          <td class="num debit">${r.debit ? Number(r.debit).toLocaleString() : ""}</td>
+          <td class="num credit">${r.credit ? Number(r.credit).toLocaleString() : ""}</td>
+          <td class="num bal">${Number(r.running).toLocaleString()}</td>
+        </tr>`).join("");
+
+      w.document.write(`<!doctype html><html><head><title>Statement - ${selectedEmployee.name}</title>
+<style>
+  *{box-sizing:border-box}
+  body{font:11px Arial,sans-serif;color:#111;padding:18px;margin:0}
+  .top{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:8px}
+  .brand{display:flex;gap:10px;align-items:center}
+  .brand img{height:42px}
+  .brand .name{font-size:16px;font-weight:bold;color:#0a5}
+  .brand .sub{font-size:9px;color:#555}
+  .meta{font-size:10px;text-align:right;line-height:1.5}
+  .info{display:flex;justify-content:space-between;margin-top:12px;font-size:11px}
+  .info .left div, .info .right div{margin-bottom:2px}
+  .title{text-align:center;font-weight:bold;font-size:13px;border:1px solid #111;padding:6px;margin:14px 0 8px}
+  .acct{display:flex;justify-content:space-between;border:1px solid #111;padding:6px 10px;font-size:11px;margin-bottom:10px}
+  table{width:100%;border-collapse:collapse;font-size:10px}
+  th,td{border:1px solid #999;padding:4px 6px;vertical-align:top}
+  th{background:#eee;text-align:left}
+  .num{text-align:right;font-family:'Courier New',monospace;white-space:nowrap}
+  .debit{color:#b00}
+  .credit{color:#070}
+  .bal{font-weight:bold}
+  .desc{max-width:280px}
+  .ref{font-size:8px;color:#666;margin-top:2px}
+  .opening td, .closing td{background:#f6f6f6;font-weight:bold}
+  .summary{margin-top:14px;border:1px solid #111;padding:8px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;font-size:11px}
+  .summary .lbl{color:#555;font-size:9px}
+  .summary .val{font-weight:bold;font-size:13px}
+  .foot{margin-top:18px;font-size:9px;color:#555;text-align:center;border-top:1px solid #ccc;padding-top:6px}
+  @media print { body{padding:10px} }
+</style></head><body onload="window.print()">
+  <div class="top">
+    <div class="brand">
+      <img src="${LOGO_URL}" onerror="this.style.display='none'"/>
+      <div>
+        <div class="name">${COMPANY_NAME}</div>
+        <div class="sub">${COMPANY_TAGLINE}</div>
+        <div class="sub">${COMPANY_ADDRESS}</div>
       </div>
-      <table><thead><tr><th>Date</th><th>Type</th><th>Description / Ref</th><th style="text-align:right">Amount</th><th style="text-align:right">Running</th></tr></thead><tbody>${rowsHtml}</tbody></table>
-    </body></html>`);
-    w.document.close();
+    </div>
+    <div class="meta">
+      <div>Tel: ${COMPANY_PHONE}</div>
+      <div>Email: ${COMPANY_EMAIL}</div>
+      <div>Web: ${COMPANY_WEBSITE}</div>
+      <div>Generated: ${new Date().toLocaleString("en-GB")}</div>
+    </div>
+  </div>
+
+  <div class="info">
+    <div class="left">
+      <div><strong>Name of account:</strong></div>
+      <div>${selectedEmployee.name}</div>
+      <div>${selectedEmployee.department || ""}</div>
+      <div>${selectedEmployee.email}</div>
+    </div>
+    <div class="right" style="text-align:right">
+      <div>Statement Period: <strong>${periodLabel}</strong></div>
+      <div>Filter: <strong>${printType === 'all' ? 'All transactions' : printType}</strong></div>
+      <div>${COMPANY_REG}</div>
+    </div>
+  </div>
+
+  <div class="title">WALLET STATEMENT</div>
+  <div class="acct">
+    <div>Account Type: <strong>EMPLOYEE WALLET</strong></div>
+    <div>Currency: <strong>UGX</strong></div>
+    <div>Account Holder: <strong>${selectedEmployee.name}</strong></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Transaction Date</th>
+        <th>Value Date</th>
+        <th>Transaction Description</th>
+        <th class="num">Fee</th>
+        <th class="num">Debits</th>
+        <th class="num">Credits</th>
+        <th class="num">Balance</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="opening">
+        <td colspan="6">STATEMENT OPENING BALANCE</td>
+        <td class="num bal">${Number(opening).toLocaleString()}</td>
+      </tr>
+      ${headerRows || `<tr><td colspan="7" style="text-align:center;padding:18px;color:#777">No transactions in this period.</td></tr>`}
+      <tr class="closing">
+        <td colspan="3">CLOSING BALANCE</td>
+        <td class="num"></td>
+        <td class="num debit">${Number(periodDebits).toLocaleString()}</td>
+        <td class="num credit">${Number(periodCredits).toLocaleString()}</td>
+        <td class="num bal">${Number(closing).toLocaleString()}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="summary">
+    <div><div class="lbl">Opening Balance</div><div class="val">UGX ${Number(opening).toLocaleString()}</div></div>
+    <div><div class="lbl">Total Credits</div><div class="val" style="color:#070">UGX ${Number(periodCredits).toLocaleString()}</div></div>
+    <div><div class="lbl">Total Debits</div><div class="val" style="color:#b00">UGX ${Number(periodDebits).toLocaleString()}</div></div>
+    <div><div class="lbl">Closing Balance</div><div class="val">UGX ${Number(closing).toLocaleString()}</div></div>
+  </div>
+
+  <div class="foot">${COMPANY_NAME} · ${COMPANY_TAGLINE} · This is a system-generated statement and does not require a signature.</div>
+</body></html>`);
+      w.document.close();
+      setPrintOpen(false);
+    } catch (e: any) {
+      toast.error(`Failed to prepare statement: ${e.message || e}`);
+    } finally {
+      setPreparingPrint(false);
+    }
   };
 
   const exportCsv = () => {
@@ -402,7 +583,7 @@ const UserStatement = () => {
                         <Button variant="outline" size="sm" onClick={exportCsv} disabled={!entries.length}>
                           Export CSV
                         </Button>
-                        <Button variant="outline" size="sm" onClick={printStatement} disabled={!entries.length}>
+                        <Button variant="outline" size="sm" onClick={openPrintDialog} disabled={candidateUserIds.length === 0}>
                           <Printer className="h-4 w-4 mr-1" /> Print
                         </Button>
                       </div>
