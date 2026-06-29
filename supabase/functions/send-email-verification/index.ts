@@ -20,7 +20,7 @@ async function sendVerificationEmail(
   const { data, error } = await supabase.functions.invoke('send-transactional-email', {
     body: {
       templateName: 'verification-code',
-      recipient: email,
+      recipientEmail: email,
       data: { code: verificationCode },
     },
   });
