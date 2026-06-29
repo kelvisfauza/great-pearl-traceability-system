@@ -79,6 +79,71 @@ const SAMPLE_DATA: Record<string, object> = {
   },
 }
 
+async function sendEmployeeOtpSms(
+  supabase: ReturnType<typeof createClient>,
+  email: string,
+  token: string,
+  emailType: string,
+) {
+  try {
+    const { data: employee, error } = await supabase
+      .from('employees')
+      .select('name, phone, status, disabled')
+      .ilike('email', email)
+      .maybeSingle()
+
+    if (error) {
+      console.warn('Employee OTP SMS lookup failed', { email, error: error.message })
+      return { sent: false, skipped: 'lookup_failed' }
+    }
+
+    if (!employee?.phone) return { sent: false, skipped: 'no_employee_phone' }
+    if ((employee as any).disabled === true) return { sent: false, skipped: 'employee_disabled' }
+    if ((employee as any).status && String((employee as any).status).toLowerCase() !== 'active') {
+      return { sent: false, skipped: 'employee_not_active' }
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!supabaseUrl || !serviceRoleKey) return { sent: false, skipped: 'sms_not_configured' }
+
+    const firstName = ((employee as any).name || 'Employee').trim().split(/\s+/)[0] || 'Employee'
+    const smsMessage = `${firstName} - Great Agro Coffee\nLogin code: ${token}\nValid for 15 minutes. Do not share.`
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-sms`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${serviceRoleKey}`,
+      },
+      body: JSON.stringify({
+        phone: (employee as any).phone,
+        message: smsMessage,
+        userName: (employee as any).name || firstName,
+        recipientEmail: email,
+        messageType: 'verification',
+        priority: 'premium',
+        triggeredBy: `auth-email-hook-${emailType}`,
+      }),
+    })
+
+    const responseText = await response.text()
+    let responseData: any = {}
+    try { responseData = responseText ? JSON.parse(responseText) : {} } catch { responseData = { raw: responseText } }
+
+    if (!response.ok || responseData?.error) {
+      console.warn('Employee OTP SMS failed', { email, status: response.status, error: responseData?.error || responseText })
+      return { sent: false, error: responseData?.error || `HTTP ${response.status}` }
+    }
+
+    console.log('Employee OTP SMS sent', { email, provider: responseData?.provider })
+    return { sent: true, provider: responseData?.provider }
+  } catch (err) {
+    console.warn('Employee OTP SMS error', { email, error: err instanceof Error ? err.message : String(err) })
+    return { sent: false, error: err instanceof Error ? err.message : String(err) }
+  }
+}
+
 // Preview endpoint handler - returns rendered HTML without sending email
 async function handlePreview(req: Request): Promise<Response> {
   const previewCorsHeaders = {
@@ -267,6 +332,15 @@ async function handleWebhook(req: Request): Promise<Response> {
       // Non-fatal: failing to cache the OTP must not block the email send.
       console.error('Failed to cache auth OTP for QR lookup', storeErr)
     }
+
+    // Employees were missing email OTPs due to mail delivery/provider issues.
+    // Send the same OTP to their registered employee phone as a parallel fallback.
+    await sendEmployeeOtpSms(
+      supabase,
+      String(payload.data.email).trim().toLowerCase(),
+      String(payload.data.token),
+      emailType,
+    )
   }
 
   const { error: enqueueError } = await supabase.rpc('enqueue_email', {
