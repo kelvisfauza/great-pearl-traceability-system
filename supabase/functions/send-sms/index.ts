@@ -332,7 +332,11 @@ serve(async (req) => {
       'hr_notification',
     ]
     
-    const isAllowedType = ALLOWED_SMS_TYPES.includes(messageType?.toLowerCase() || '')
+    const lowerType = (messageType || '').toLowerCase()
+    // Transactional-email parallel SMS dispatch always uses a "tx:" source prefix.
+    // Allow it through so the user gets BOTH email AND SMS, non-blocking.
+    const isTxSource = lowerType.startsWith('tx:') || lowerType.startsWith('source:tx:')
+    const isAllowedType = isTxSource || ALLOWED_SMS_TYPES.includes(lowerType)
     const isOtpMessage = message && (
       /\bcode\b.*\d{4,6}/i.test(message) || 
       /\d{4,6}.*\bcode\b/i.test(message) ||
