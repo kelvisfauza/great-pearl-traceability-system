@@ -781,6 +781,65 @@ const UserStatement = () => {
                 </Card>
               </>
             )}
+
+            <Dialog open={printOpen} onOpenChange={setPrintOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2"><Printer className="h-4 w-4" /> Print Statement — Filter</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3">
+                  <p className="text-xs text-muted-foreground">Choose the period and transaction type to include on the printed statement. The opening balance will be computed from all activity before the start date.</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs">From</Label>
+                      <Input type="date" value={printFrom} onChange={(e) => setPrintFrom(e.target.value)} />
+                    </div>
+                    <div>
+                      <Label className="text-xs">To</Label>
+                      <Input type="date" value={printTo} onChange={(e) => setPrintTo(e.target.value)} />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Transaction type</Label>
+                    <Select value={printType} onValueChange={setPrintType}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All transactions</SelectItem>
+                        <SelectItem value="LOYALTY_REWARD">Loyalty</SelectItem>
+                        <SelectItem value="BONUS">Bonus</SelectItem>
+                        <SelectItem value="DEPOSIT">Deposits (credits)</SelectItem>
+                        <SelectItem value="MONTHLY_SALARY">Salary</SelectItem>
+                        <SelectItem value="WITHDRAWAL">Withdrawals (debits)</SelectItem>
+                        <SelectItem value="ADJUSTMENT">Adjustments</SelectItem>
+                        <SelectItem value="LOAN_DISBURSEMENT">Loan disbursements</SelectItem>
+                        <SelectItem value="LOAN_REPAYMENT">Loan repayments</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <Button type="button" variant="outline" size="sm" onClick={() => {
+                      const today = new Date();
+                      const first = new Date(today.getFullYear(), today.getMonth(), 1);
+                      setPrintFrom(first.toISOString().slice(0,10));
+                      setPrintTo(today.toISOString().slice(0,10));
+                    }}>This month</Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => {
+                      const today = new Date();
+                      const first = new Date(today.getFullYear(), 0, 1);
+                      setPrintFrom(first.toISOString().slice(0,10));
+                      setPrintTo(today.toISOString().slice(0,10));
+                    }}>This year</Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => { setPrintFrom(""); setPrintTo(""); setPrintType("all"); }}>All time</Button>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="ghost" onClick={() => setPrintOpen(false)}>Cancel</Button>
+                  <Button onClick={runPrint} disabled={preparingPrint}>
+                    <Printer className="h-4 w-4 mr-1" />{preparingPrint ? "Preparing…" : "Print Statement"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </div>
