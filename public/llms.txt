@@ -1,0 +1,14 @@
+# Great Agro Coffee — Management System
+
+> Internal management system for Great Agro Coffee, a member of YEDA Coffee Company Limited (P.O. Box 431420, Kasese, Uganda). Handles coffee procurement, quality, inventory, finance, HR, payroll, loans, and traceability (EUDR).
+
+The application is primarily an authenticated business system. Most routes require staff login. The public surfaces below are safe for AI crawlers.
+
+## Pages
+
+- [Home / Sign in](/): Landing and sign-in entry point for staff.
+- [Auth](/auth): Authentication page for employees.
+
+## Optional
+
+- [Employee QR profile](/employee/:id): Public read-only profile rendered when scanning an employee QR badge.
