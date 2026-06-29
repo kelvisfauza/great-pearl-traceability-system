@@ -311,31 +311,31 @@ const UserStatement = () => {
       w.document.write(`<!doctype html><html><head><title>Statement - ${selectedEmployee.name}</title>
 <style>
   *{box-sizing:border-box}
-  body{font:11px Arial,sans-serif;color:#111;padding:18px;margin:0}
-  .top{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:8px}
+  body{font:11px Arial,sans-serif;color:#000;padding:18px;margin:0}
+  .top{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #000;padding-bottom:8px}
   .brand{display:flex;gap:10px;align-items:center}
   .brand img{height:42px}
-  .brand .name{font-size:16px;font-weight:bold;color:#0a5}
-  .brand .sub{font-size:9px;color:#555}
+  .brand .name{font-size:16px;font-weight:bold;color:#000}
+  .brand .sub{font-size:9px;color:#000}
   .meta{font-size:10px;text-align:right;line-height:1.5}
   .info{display:flex;justify-content:space-between;margin-top:12px;font-size:11px}
   .info .left div, .info .right div{margin-bottom:2px}
-  .title{text-align:center;font-weight:bold;font-size:13px;border:1px solid #111;padding:6px;margin:14px 0 8px}
-  .acct{display:flex;justify-content:space-between;border:1px solid #111;padding:6px 10px;font-size:11px;margin-bottom:10px}
+  .title{text-align:center;font-weight:bold;font-size:13px;border:1px solid #000;padding:6px;margin:14px 0 8px}
+  .acct{display:flex;justify-content:space-between;border:1px solid #000;padding:6px 10px;font-size:11px;margin-bottom:10px}
   table{width:100%;border-collapse:collapse;font-size:10px}
-  th,td{border:1px solid #999;padding:4px 6px;vertical-align:top}
-  th{background:#eee;text-align:left}
+  th,td{border:1px solid #000;padding:4px 6px;vertical-align:top}
+  th{background:#fff;text-align:left}
   .num{text-align:right;font-family:'Courier New',monospace;white-space:nowrap}
-  .debit{color:#b00}
-  .credit{color:#070}
+  .debit{color:#000;font-weight:bold}
+  .credit{color:#000;font-weight:bold}
   .bal{font-weight:bold}
   .desc{max-width:280px}
-  .ref{font-size:8px;color:#666;margin-top:2px}
-  .opening td, .closing td{background:#f6f6f6;font-weight:bold}
-  .summary{margin-top:14px;border:1px solid #111;padding:8px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;font-size:11px}
-  .summary .lbl{color:#555;font-size:9px}
+  .ref{font-size:8px;color:#000;margin-top:2px}
+  .opening td, .closing td{background:#fff;font-weight:bold}
+  .summary{margin-top:14px;border:1px solid #000;padding:8px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;font-size:11px}
+  .summary .lbl{color:#000;font-size:9px}
   .summary .val{font-weight:bold;font-size:13px}
-  .foot{margin-top:18px;font-size:9px;color:#555;text-align:center;border-top:1px solid #ccc;padding-top:6px}
+  .foot{margin-top:18px;font-size:9px;color:#000;text-align:center;border-top:1px solid #000;padding-top:6px}
   @media print { body{padding:10px} }
 </style></head><body onload="window.print()">
   <div class="top">
@@ -406,8 +406,8 @@ const UserStatement = () => {
 
   <div class="summary">
     <div><div class="lbl">Opening Balance</div><div class="val">UGX ${Number(opening).toLocaleString()}</div></div>
-    <div><div class="lbl">Total Credits</div><div class="val" style="color:#070">UGX ${Number(periodCredits).toLocaleString()}</div></div>
-    <div><div class="lbl">Total Debits</div><div class="val" style="color:#b00">UGX ${Number(periodDebits).toLocaleString()}</div></div>
+    <div><div class="lbl">Total Credits</div><div class="val" style="color:#000;font-weight:bold">UGX ${Number(periodCredits).toLocaleString()}</div></div>
+    <div><div class="lbl">Total Debits</div><div class="val" style="color:#000;font-weight:bold">UGX ${Number(periodDebits).toLocaleString()}</div></div>
     <div><div class="lbl">Closing Balance</div><div class="val">UGX ${Number(closing).toLocaleString()}</div></div>
   </div>
 
