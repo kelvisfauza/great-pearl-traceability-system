@@ -987,74 +987,38 @@ export const useUnifiedApprovalRequests = () => {
         }
 
         // Handle salary advance activation after FINAL admin approval
+        // NOTE: DB trigger `trg_auto_disburse_salary_advance` now creates the
+        // employee_salary_advances row AND credits the wallet. We only send the
+        // recipient SMS here to avoid double-disbursement.
         if (status === 'Approved' && request.requestType === 'Salary Advance' && updateData.status === 'Approved') {
           try {
             const details = typeof request.details === 'string' ? JSON.parse(request.details) : (request.details || {});
             if (details?.advance_type === 'salary_advance') {
-              // Create the actual salary advance record
-              const { data: advance, error: advanceError } = await supabase
-                .from('employee_salary_advances')
-                .insert({
-                  employee_email: details.employee_email,
-                  employee_name: details.employee_name,
-                  original_amount: details.advance_amount,
-                  remaining_balance: details.advance_amount,
-                  minimum_payment: details.minimum_payment,
-                  reason: details.reason,
-                  created_by: request.requestedBy,
-                  status: 'active'
-                })
-                .select()
-                .single();
+              // Disbursement is handled by DB trigger. Just notify the recipient.
+              try {
+                const { data: empData } = await supabase
+                  .from('employees')
+                  .select('auth_user_id, phone, name')
+                  .eq('email', details.employee_email)
+                  .single();
 
-              if (advanceError) {
-                console.error('Failed to create salary advance record:', advanceError);
-              } else {
-                console.log('✅ Salary advance activated after admin approval:', advance.id);
-
-                // Credit wallet for the advance
-                try {
-                  const { data: empData } = await supabase
-                    .from('employees')
-                    .select('auth_user_id, phone, name')
-                    .eq('email', details.employee_email)
-                    .single();
-
-                  if (empData?.auth_user_id) {
-                    await supabase.from('ledger_entries').insert({
-                      user_id: empData.auth_user_id,
-                      entry_type: 'DEPOSIT',
-                      amount: details.advance_amount,
-                      reference: `SALARY-ADVANCE-${advance.id}`,
-                      metadata: {
-                        source: 'salary_advance',
-                        description: `Salary Advance Disbursement - Approved`,
-                        advance_id: advance.id,
-                        employee_name: details.employee_name
-                      }
-                    });
-                    console.log('✅ Wallet credited for salary advance');
-                  }
-
-                  // Send SMS to the employee receiving the advance
-                  if (empData?.phone) {
-                    const advanceMsg = `Dear ${empData.name}, your salary advance of UGX ${details.advance_amount.toLocaleString()} has been APPROVED and DISBURSED to your wallet. Minimum monthly payment: UGX ${details.minimum_payment.toLocaleString()}. This will be deducted from your future salary. Great Agro Coffee.`;
-                    await supabase.functions.invoke('send-sms', {
-                      body: {
-                        phone: empData.phone,
-                        message: advanceMsg,
-                        userName: empData.name,
-                        messageType: 'approval',
-                        triggeredBy: 'Salary Advance System',
-                        department: 'HR',
-                        recipientEmail: details.employee_email
-                      }
-                    });
-                    console.log('✅ SMS sent to salary advance recipient:', empData.name);
-                  }
-                } catch (walletErr) {
-                  console.error('Wallet/SMS error for salary advance (non-blocking):', walletErr);
+                if (empData?.phone) {
+                  const advanceMsg = `Dear ${empData.name}, your salary advance of UGX ${Number(details.advance_amount).toLocaleString()} has been APPROVED and DISBURSED to your wallet. Minimum monthly payment: UGX ${Number(details.minimum_payment).toLocaleString()}. This will be deducted from your future salary. Great Agro Coffee.`;
+                  await supabase.functions.invoke('send-sms', {
+                    body: {
+                      phone: empData.phone,
+                      message: advanceMsg,
+                      userName: empData.name,
+                      messageType: 'approval',
+                      triggeredBy: 'Salary Advance System',
+                      department: 'HR',
+                      recipientEmail: details.employee_email
+                    }
+                  });
+                  console.log('✅ SMS sent to salary advance recipient:', empData.name);
                 }
+              } catch (walletErr) {
+                console.error('SMS error for salary advance (non-blocking):', walletErr);
               }
             }
           } catch (advErr) {
