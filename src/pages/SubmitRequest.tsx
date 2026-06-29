@@ -21,8 +21,9 @@ const SubmitRequest = () => {
   const [submitted, setSubmitted] = useState(false);
   const [mealItems, setMealItems] = useState<string[]>([]);
   const [otherItems, setOtherItems] = useState('');
+  const [cashItems, setCashItems] = useState('');
   const [form, setForm] = useState({
-    request_type: 'service_provider' as 'service_provider' | 'meal_plan' | 'support_staff_per_diem',
+    request_type: 'service_provider' as 'service_provider' | 'meal_plan' | 'support_staff_per_diem' | 'cash_requisition',
     provider_name: '',
     phone: '',
     email: '',
@@ -48,6 +49,10 @@ const SubmitRequest = () => {
       toast({ title: 'Select items', description: 'Please tick at least one meal item you will buy.', variant: 'destructive' });
       return;
     }
+    if (form.request_type === 'cash_requisition' && !cashItems.trim()) {
+      toast({ title: 'List items', description: 'Please list the items you intend to buy with the cash.', variant: 'destructive' });
+      return;
+    }
     const amt = Number(form.amount);
     if (isNaN(amt) || amt < 500) {
       toast({ title: 'Invalid amount', description: 'Minimum amount is UGX 500.', variant: 'destructive' });
@@ -71,13 +76,18 @@ const SubmitRequest = () => {
       if (otherItems.trim()) items.push(`Others: ${otherItems.trim()}`);
       if (items.length) fullDescription += `\n\nItems to buy: ${items.join(', ')}`;
     }
+    if (form.request_type === 'cash_requisition') {
+      fullDescription += `\n\nItems to purchase with cash: ${cashItems.trim()}`;
+    }
     // Auto-generate invoice number if not provided (skip for support staff per-diem)
     let invoiceNo = form.invoice_number.trim();
     if (!invoiceNo && form.request_type !== 'support_staff_per_diem') {
       const d = new Date();
       const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
       const rand = Math.floor(1000 + Math.random() * 9000);
-      const prefix = form.request_type === 'meal_plan' ? 'MEAL' : 'SVC';
+      const prefix = form.request_type === 'meal_plan' ? 'MEAL'
+        : form.request_type === 'cash_requisition' ? 'CASH'
+        : 'SVC';
       invoiceNo = `${prefix}-${ymd}-${rand}`;
     }
     const { error } = await supabase.from('provider_submission_requests').insert({
@@ -126,7 +136,7 @@ const SubmitRequest = () => {
               Your request has been sent to Great Agro Coffee for approval. You will receive an SMS
               once the payment is processed.
             </p>
-            <Button onClick={() => { setSubmitted(false); setMealItems([]); setOtherItems(''); setForm({ request_type: 'service_provider', provider_name: '', phone: '', email: '', amount: '', description: '', invoice_number: '', national_id: '' }); }}>
+            <Button onClick={() => { setSubmitted(false); setMealItems([]); setOtherItems(''); setCashItems(''); setForm({ request_type: 'service_provider', provider_name: '', phone: '', email: '', amount: '', description: '', invoice_number: '', national_id: '' }); }}>
               Submit another request
             </Button>
           </CardContent>
@@ -159,6 +169,7 @@ const SubmitRequest = () => {
                     <SelectItem value="service_provider">Service Provider Payment</SelectItem>
                     <SelectItem value="meal_plan">Meal Plan Payment</SelectItem>
                     <SelectItem value="support_staff_per_diem">Support Staff Per-Diem</SelectItem>
+                    <SelectItem value="cash_requisition">Cash Requisition (Buy Items for Company)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -226,6 +237,21 @@ const SubmitRequest = () => {
                       maxLength={200}
                     />
                   </div>
+                </div>
+              )}
+
+              {form.request_type === 'cash_requisition' && (
+                <div className="space-y-2 border rounded-lg p-4 bg-amber-50 dark:bg-amber-950/20">
+                  <Label className="text-base font-semibold">Items to Purchase with Cash *</Label>
+                  <p className="text-xs text-muted-foreground">List the items you will buy for the company with this cash (qty + item).</p>
+                  <Textarea
+                    value={cashItems}
+                    onChange={(e) => setCashItems(e.target.value)}
+                    placeholder="e.g. 2 boxes printer paper, 5 reams toilet paper, 1 jerrycan diesel"
+                    rows={3}
+                    maxLength={500}
+                  />
+                  <p className="text-xs text-muted-foreground">Receipts must be submitted to Finance after purchase.</p>
                 </div>
               )}
 
