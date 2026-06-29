@@ -1286,11 +1286,13 @@ const QuickLoans = () => {
       return;
     }
 
-    // Check wallet balance
-    if (amount > myWalletBalance) {
-      toast({ title: "Insufficient Wallet Balance", description: `Your wallet balance is UGX ${myWalletBalance.toLocaleString()}`, variant: "destructive" });
+    // Compute overdraft portion if wallet is short
+    const odPortion = Math.max(0, amount - Math.max(0, myWalletBalance));
+    if (odPortion > 0 && !odConfirmed) {
+      setShowOdConfirm(true);
       return;
     }
+    const upfrontOdInterest = odPortion > 0 ? Math.ceil(odPortion * 0.005) : 0;
 
     setWalletRepayLoading(true);
     try {
@@ -1314,10 +1316,31 @@ const QuickLoans = () => {
           source: 'wallet_loan_repayment',
           type: 'internal_transfer_credit',
           bypass_treasury_check: true,
-          description: `Loan repayment from wallet – UGX ${amount.toLocaleString()}`
+          description: `Loan repayment from wallet – UGX ${amount.toLocaleString()}${odPortion > 0 ? ` (incl. OD top-up UGX ${odPortion.toLocaleString()})` : ''}`,
+          overdraft_portion: odPortion > 0 ? odPortion : undefined,
+          uses_overdraft: odPortion > 0,
         }
       });
       if (ledgerErr) throw new Error(ledgerErr.message || 'Failed to deduct from wallet');
+
+      // Post upfront OD access interest fee (0.5% on OD portion)
+      if (odPortion > 0 && upfrontOdInterest > 0) {
+        await supabase.from('ledger_entries').insert({
+          user_id: userId,
+          entry_type: 'WITHDRAWAL',
+          amount: -upfrontOdInterest,
+          reference: `${txRef}-ODFEE`,
+          source_category: 'OVERDRAFT_INTEREST',
+          metadata: {
+            loan_id: walletRepayLoan.id,
+            type: 'overdraft_draw',
+            parent_reference: txRef,
+            overdraft_portion: odPortion,
+            description: `Overdraft access fee 0.5% on UGX ${odPortion.toLocaleString()}`,
+            bypass_treasury_check: true,
+          }
+        });
+      }
 
       // For full early payoff, use daily pro-rata discount; for partial, use simple subtraction
       const newPaidAmount = (walletRepayLoan.paid_amount || 0) + amount;
@@ -1389,9 +1412,10 @@ const QuickLoans = () => {
       setShowWalletRepayDialog(false);
       setWalletRepayAmount('');
       setWalletRepayLoan(null);
+      setOdConfirmed(false);
       fetchLoans();
       // Update wallet balance
-      setMyWalletBalance(prev => prev - amount);
+      setMyWalletBalance(prev => prev - amount - upfrontOdInterest);
     } catch (err: any) {
       toast({ title: "Payment Failed ❌", description: err.message, variant: "destructive" });
     } finally {
