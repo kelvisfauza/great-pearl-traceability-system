@@ -486,7 +486,24 @@ const QuickLoans = () => {
       } catch (e) { console.warn('eval update', e); }
 
       if (needsGuarantor) {
-        // Send email to guarantor with approval code
+        // Send SMS to guarantor with approval code (primary channel)
+        if (guarantor.phone) {
+          try {
+            await supabase.functions.invoke('send-sms', {
+              body: {
+                phone: guarantor.phone,
+                message: `Great Agro Coffee\nHi ${guarantor.name.split(' ')[0]}, ${employee.name} requested a loan of UGX ${amount.toLocaleString()} for ${months} months and listed you as guarantor. Approval code: ${approvalCode}. Log into the system to approve or reject.`,
+                userName: guarantor.name,
+                recipientEmail: guarantor.email,
+                messageType: 'loan_guarantor_code',
+                priority: 'premium',
+              },
+            });
+          } catch (e) {
+            console.warn('Guarantor SMS failed, falling back to email:', e);
+          }
+        }
+        // Also send email as backup
         await supabase.functions.invoke('send-transactional-email', {
           body: {
             templateName: 'loan-guarantor-code',
@@ -501,7 +518,7 @@ const QuickLoans = () => {
             },
           }
         });
-        toast({ title: "Loan Requested", description: `Guarantor notified. UGX ${FEE.toLocaleString()} evaluation fee added to principal.` });
+        toast({ title: "Loan Requested", description: `Guarantor notified by SMS. UGX ${FEE.toLocaleString()} evaluation fee added to principal.` });
       } else {
         toast({ title: "Loan Requested", description: `Pure Salary Loan submitted for admin approval. UGX ${FEE.toLocaleString()} evaluation fee added to principal.` });
       }
