@@ -17,21 +17,32 @@ async function sendVerificationEmail(
   email: string,
   verificationCode: string,
 ) {
-  const { data, error } = await supabase.functions.invoke('send-transactional-email', {
-    body: {
-      templateName: 'verification-code',
-      recipientEmail: email,
-      data: { code: verificationCode },
-    },
-  });
-  if (error) {
-    console.error('send-transactional-email invoke error:', error);
-    throw new Error('Failed to send verification email');
+  // Retry on transient errors (esp. 429 rate-limits from email provider).
+  const maxAttempts = 4;
+  const delays = [800, 2000, 4000]; // ms between attempts
+  let lastErr: unknown = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const { data, error } = await supabase.functions.invoke('send-transactional-email', {
+      body: {
+        templateName: 'verification-code',
+        recipientEmail: email,
+        idempotencyKey: `verify-${email}-${verificationCode}`,
+        data: { code: verificationCode },
+      },
+    });
+    const errMsg = error
+      ? String((error as any).message || error)
+      : (data && (data as any).error ? String((data as any).error) : '');
+    if (!errMsg) return;
+    lastErr = errMsg;
+    const isRateLimit = /429|rate_?limit|high demand/i.test(errMsg);
+    const isTransient = isRateLimit || /5\d{2}|timeout|temporar/i.test(errMsg);
+    console.warn(`send-transactional-email attempt ${attempt} failed:`, errMsg);
+    if (!isTransient || attempt === maxAttempts) break;
+    await new Promise((r) => setTimeout(r, delays[attempt - 1] ?? 4000));
   }
-  if (data && (data as any).error) {
-    console.error('send-transactional-email returned error:', (data as any).error);
-    throw new Error('Failed to send verification email');
-  }
+  console.error('send-transactional-email failed after retries:', lastErr);
+  throw new Error('Failed to send verification email');
 }
 
 const handler = async (req: Request): Promise<Response> => {
