@@ -308,6 +308,20 @@ serve(async (req) => {
       'payout_confirmation',
       'loan_advert',
       'service_provider_invite',
+      // Wallet money movements — user explicitly wants SMS confirmation
+      'deposit',
+      'deposit_confirmation',
+      'wallet_deposit',
+      'withdrawal',
+      'withdrawal_confirmation',
+      'wallet_withdrawal',
+      'transfer_sent',
+      'transfer_received',
+      'wallet_transfer',
+      'wallet_credit',
+      'wallet_debit',
+      'money_received',
+      'money_sent',
     ]
     
     const isAllowedType = ALLOWED_SMS_TYPES.includes(messageType?.toLowerCase() || '')
