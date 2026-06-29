@@ -2939,16 +2939,48 @@ const QuickLoans = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <p className="text-sm text-muted-foreground">
-                Need a quick advance on your salary? Borrow up to <strong>UGX 100,000</strong>.
-                Requires <strong>one admin approval</strong>. Once approved the amount is credited to your wallet and recovered from your next salary.
-              </p>
-              <Button
-                className="bg-orange-600 hover:bg-orange-700 text-white shrink-0"
-                onClick={() => { setAdvanceAmount(''); setAdvanceReason(''); setShowAdvanceDialog(true); }}
-              >
-                <HandCoins className="mr-2 h-4 w-4" /> Request Salary Advance
-              </Button>
+              {myActiveAdvance ? (
+                <>
+                  <div className="text-sm space-y-1">
+                    <p className="text-muted-foreground">
+                      You already have an <strong>active salary advance</strong>. Only one salary advance is allowed at a time — clear it to request another.
+                    </p>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                      <span>Original: <strong>UGX {Number(myActiveAdvance.original_amount).toLocaleString()}</strong></span>
+                      <span>Remaining: <strong className="text-orange-700">UGX {Number(myActiveAdvance.remaining_balance).toLocaleString()}</strong></span>
+                    </div>
+                  </div>
+                  <Button
+                    className="bg-orange-600 hover:bg-orange-700 text-white shrink-0"
+                    onClick={() => { setAdvanceRepayAmount(String(myActiveAdvance.remaining_balance)); setAdvanceOdConfirmed(false); setShowAdvanceRepayDialog(true); }}
+                  >
+                    <Wallet className="mr-2 h-4 w-4" /> Repay Salary Advance
+                  </Button>
+                </>
+              ) : pendingAdvanceRequest ? (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Your salary advance request of <strong>UGX {Number(pendingAdvanceRequest.amount).toLocaleString()}</strong> is <strong>pending approval</strong>. You can request another one only after this is resolved.
+                  </p>
+                  <Button disabled className="shrink-0">
+                    <Clock className="mr-2 h-4 w-4" /> Awaiting Approval
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Need a quick advance on your salary? Borrow up to <strong>UGX 100,000</strong>.
+                    Requires <strong>one admin approval</strong>. Once approved the amount is credited to your wallet and recovered from your next salary.
+                    <span className="block mt-1 text-xs">Only <strong>one active advance at a time</strong>.</span>
+                  </p>
+                  <Button
+                    className="bg-orange-600 hover:bg-orange-700 text-white shrink-0"
+                    onClick={() => { setAdvanceAmount(''); setAdvanceReason(''); setShowAdvanceDialog(true); }}
+                  >
+                    <HandCoins className="mr-2 h-4 w-4" /> Request Salary Advance
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
 
