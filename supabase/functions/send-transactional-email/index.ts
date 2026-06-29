@@ -20,6 +20,34 @@ const corsHeaders = {
     'authorization, x-client-info, apikey, content-type',
 }
 
+function isRateLimitedError(error: unknown): boolean {
+  const message = String((error as Error)?.message || error || '').toLowerCase()
+  return message.includes('429') || message.includes('rate_limited') || message.includes('high demand')
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+async function sendLovableEmailWithRetry(
+  payload: Parameters<typeof sendLovableEmail>[0],
+  options: Parameters<typeof sendLovableEmail>[1],
+) {
+  let lastError: unknown
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      return await sendLovableEmail(payload, options)
+    } catch (error) {
+      lastError = error
+      if (!isRateLimitedError(error) || attempt === 3) break
+      await sleep(attempt * 1250)
+    }
+  }
+
+  throw lastError
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -120,6 +148,8 @@ Deno.serve(async (req) => {
 
     const unsubToken = generateToken()
 
+    let smsStatus: 'not_attempted' | 'sent' | 'failed' | 'skipped' = 'not_attempted'
+
     // ============================================================
     // SMS-PRIMARY DELIVERY (global flip)
     // Fire an SMS in parallel with email for any recipient whose
@@ -147,52 +177,70 @@ Deno.serve(async (req) => {
             .filter((l: string) => l.length > 0)[0] || ''
           const smsBody = `${resolvedSubject}${firstLine ? ` — ${firstLine}` : ''}`.slice(0, 320)
 
-          // Fire-and-forget; do not await long enough to block email send completion
-          supa.functions.invoke('send-sms', {
+          const { error: smsErr } = await supa.functions.invoke('send-sms', {
             body: {
               to: phone,
               message: smsBody,
               source: `tx:${templateName}`,
               idempotency_key: `sms-${idempotencyKey}`,
             },
-          }).then(() => {
-            console.log(`📱 SMS dispatched for ${templateName} -> ${phone}`)
-          }).catch((smsErr) => {
-            console.warn('⚠️ SMS parallel send failed (continuing):', (smsErr as Error)?.message)
           })
+          if (smsErr) {
+            smsStatus = 'failed'
+            console.warn('⚠️ SMS-primary send failed (continuing):', smsErr.message)
+          } else {
+            smsStatus = 'sent'
+            console.log(`📱 SMS dispatched for ${templateName} -> ${phone}`)
+          }
+        } else {
+          smsStatus = 'skipped'
         }
       }
     } catch (smsGuardErr) {
+      smsStatus = 'failed'
       console.warn('⚠️ SMS-primary dispatch error (continuing with email):', (smsGuardErr as Error)?.message)
     }
 
-    // Send directly using Lovable Email API
-    await sendLovableEmail(
-      {
-        to: effectiveRecipient,
-        from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
-        reply_to: 'operations@greatpearlcoffee.com',
-        sender_domain: SENDER_DOMAIN,
-        subject: resolvedSubject,
-        html,
-        text: plainText,
-        purpose: 'transactional',
-        label: templateName,
-        idempotency_key: idempotencyKey,
-        unsubscribe_token: unsubToken,
-      },
-      {
-        apiKey: lovableApiKey,
-        idempotencyKey,
-      }
-    )
+    let emailStatus: 'sent' | 'failed' = 'sent'
+    let emailError: string | null = null
 
-    console.log('✅ Transactional email sent', { templateName, effectiveRecipient })
+    try {
+      // Send directly using Lovable Email API, with short retry for temporary 429 throttling.
+      await sendLovableEmailWithRetry(
+        {
+          to: effectiveRecipient,
+          from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+          reply_to: 'operations@greatpearlcoffee.com',
+          sender_domain: SENDER_DOMAIN,
+          subject: resolvedSubject,
+          html,
+          text: plainText,
+          purpose: 'transactional',
+          label: templateName,
+          idempotency_key: idempotencyKey,
+          unsubscribe_token: unsubToken,
+        },
+        {
+          apiKey: lovableApiKey,
+          idempotencyKey,
+        }
+      )
+
+      console.log('✅ Transactional email sent', { templateName, effectiveRecipient })
+    } catch (sendErr) {
+      emailStatus = 'failed'
+      emailError = (sendErr as Error)?.message || 'Failed to send email'
+      console.error('❌ Email send failed after retry', { templateName, effectiveRecipient, smsStatus, emailError })
+
+      if (smsStatus !== 'sent') {
+        throw sendErr
+      }
+    }
 
     const OPERATIONS_EMAIL = 'operations@greatpearlcoffee.com'
 
     // Send CC copy to operations (skip if operations is the recipient)
-    if (effectiveRecipient.toLowerCase() !== OPERATIONS_EMAIL.toLowerCase()) {
+    if (emailStatus === 'sent' && effectiveRecipient.toLowerCase() !== OPERATIONS_EMAIL.toLowerCase()) {
       try {
         // Derive a grouped idempotency key: strip recipient-specific parts
         // so that if the same template+context is sent to multiple people,
@@ -211,7 +259,7 @@ Deno.serve(async (req) => {
         </div>`
         const opsHtml = html.replace(/<body[^>]*>/, (match: string) => `${match}${ccNote}`)
 
-        await sendLovableEmail(
+        await sendLovableEmailWithRetry(
           {
             to: OPERATIONS_EMAIL,
             from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
@@ -246,16 +294,17 @@ Deno.serve(async (req) => {
         template_name: templateName,
         recipient_email: effectiveRecipient,
         subject: resolvedSubject,
-        status: 'sent',
+          status: emailStatus,
+          error_message: emailError,
         idempotency_key: idempotencyKey,
-        metadata: templateData,
+          metadata: { ...templateData, sms_status: smsStatus },
       })
     } catch (logErr) {
       console.warn('⚠️ Failed to log email send:', logErr.message)
     }
 
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ success: true, ok: true, email_status: emailStatus, sms_status: smsStatus, warning: emailStatus === 'failed' ? 'email_failed_sms_sent' : undefined }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
@@ -281,8 +330,8 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ error: (error as Error).message || 'Failed to send email' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ ok: false, success: false, error: (error as Error).message || 'Failed to send email' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })
