@@ -322,6 +322,14 @@ serve(async (req) => {
       'wallet_debit',
       'money_received',
       'money_sent',
+      // HR / recruitment notifications — applicants typically have no email on file
+      'job_application',
+      'job_application_received',
+      'job_application_status',
+      'job_application_approved',
+      'job_application_rejected',
+      'interview_invite',
+      'hr_notification',
     ]
     
     const isAllowedType = ALLOWED_SMS_TYPES.includes(messageType?.toLowerCase() || '')
