@@ -20,6 +20,7 @@ export const EmailVerification = ({ email, onVerificationComplete, onCancel }: E
   const [error, setError] = useState('');
   const [countdown, setCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
+  const [deliveryText, setDeliveryText] = useState(`We've sent a 4-digit code to ${email}`);
   const { toast } = useToast();
 
   // Send initial verification code
@@ -52,9 +53,16 @@ export const EmailVerification = ({ email, onVerificationComplete, onCancel }: E
       if (error) throw error;
 
       if (data?.success) {
+        const sentToPhone = !!data?.smsSent;
+        setDeliveryText(sentToPhone
+          ? `We've sent a 4-digit code to ${email} and your employee phone.`
+          : `We've sent a 4-digit code to ${email}.`
+        );
         toast({
           title: "Code Sent",
-          description: "A 4-digit verification code has been sent to your email.",
+          description: sentToPhone
+            ? "A 4-digit verification code has been sent to your email and employee phone."
+            : "A 4-digit verification code has been sent to your email.",
         });
         setCountdown(60);
         setCanResend(false);
@@ -128,7 +136,11 @@ export const EmailVerification = ({ email, onVerificationComplete, onCancel }: E
         </div>
         <CardTitle className="text-2xl text-center">Verify Your Email</CardTitle>
         <CardDescription className="text-center">
-          We've sent a 4-digit code to <strong>{email}</strong>
+          {deliveryText.includes('employee phone') ? (
+            <>We've sent a 4-digit code to <strong>{email}</strong> and your <strong>employee phone</strong>.</>
+          ) : (
+            <>We've sent a 4-digit code to <strong>{email}</strong>.</>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

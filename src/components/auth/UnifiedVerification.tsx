@@ -30,6 +30,7 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
   const [biometricFailed, setBiometricFailed] = useState(false);
   const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
   const [emailCodeSent, setEmailCodeSent] = useState(false);
+  const [codeSentToPhone, setCodeSentToPhone] = useState(false);
   const { toast } = useToast();
 
   // On mount: keep password login on the normal email-code path.
@@ -77,7 +78,13 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
       });
       if (error) throw error;
       if (data?.success) {
-        toast({ title: "Code Sent", description: "A 4-digit code has been sent to your email." });
+        setCodeSentToPhone(!!data?.smsSent);
+        toast({
+          title: "Code Sent",
+          description: data?.smsSent
+            ? "A 4-digit code has been sent to your email and employee phone."
+            : "A 4-digit code has been sent to your email."
+        });
         setCountdown(60);
         setCanResend(false);
         setEmailCodeSent(true);
@@ -229,7 +236,11 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
         </div>
         <CardTitle className="text-xl text-center">{methodTitle[method]}</CardTitle>
         <CardDescription className="text-center text-xs">
-          {method === 'email' && <>We've sent a 4-digit code to <strong>{email}</strong></>}
+          {method === 'email' && (
+            codeSentToPhone
+              ? <>We've sent a 4-digit code to <strong>{email}</strong> and your <strong>employee phone</strong></>
+              : <>We've sent a 4-digit code to <strong>{email}</strong></>
+          )}
           {method === 'sms' && 'Enter the SMS code sent to your phone'}
           {method === 'biometric' && 'Use fingerprint or face ID to verify'}
           {method === 'dob' && 'Enter your date of birth to verify your identity'}
