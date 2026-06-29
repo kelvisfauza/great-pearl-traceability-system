@@ -2321,7 +2321,7 @@ const QuickLoans = () => {
             </Dialog>
 
             {/* Wallet Repayment Dialog */}
-            <Dialog open={showWalletRepayDialog} onOpenChange={(open) => { setShowWalletRepayDialog(open); if (!open) setWalletRepayLoan(null); }}>
+            <Dialog open={showWalletRepayDialog} onOpenChange={(open) => { setShowWalletRepayDialog(open); if (!open) { setWalletRepayLoan(null); setOdConfirmed(false); } }}>
               <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2"><Wallet className="h-5 w-5" /> Repay Loan from Wallet</DialogTitle>
