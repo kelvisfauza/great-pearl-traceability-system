@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Banknote, Clock, Shield, Users, AlertTriangle, CheckCircle, XCircle, CreditCard, Download, Printer, Phone, Loader2, FileText, Eye, ShieldOff, Wallet, HandCoins, ArrowUpCircle, Edit, Scale } from 'lucide-react';
@@ -107,6 +108,8 @@ const QuickLoans = () => {
   const [walletRepayLoan, setWalletRepayLoan] = useState<any>(null);
   const [walletRepayAmount, setWalletRepayAmount] = useState('');
   const [walletRepayLoading, setWalletRepayLoading] = useState(false);
+  const [showOdConfirm, setShowOdConfirm] = useState(false);
+  const [odConfirmed, setOdConfirmed] = useState(false);
   const [showChangeGuarantorDialog, setShowChangeGuarantorDialog] = useState(false);
   const [changeGuarantorLoan, setChangeGuarantorLoan] = useState<any>(null);
   const [newGuarantorId, setNewGuarantorId] = useState('');
@@ -1269,7 +1272,7 @@ const QuickLoans = () => {
   };
 
   // Wallet-based Loan Repayment
-  const handleWalletRepayment = async () => {
+  const handleWalletRepayment = async (forceOd = false) => {
     if (!walletRepayLoan || !employee) return;
     const amount = parseFloat(walletRepayAmount) || 0;
     if (amount <= 0 || amount < 500) {
@@ -1283,11 +1286,13 @@ const QuickLoans = () => {
       return;
     }
 
-    // Check wallet balance
-    if (amount > myWalletBalance) {
-      toast({ title: "Insufficient Wallet Balance", description: `Your wallet balance is UGX ${myWalletBalance.toLocaleString()}`, variant: "destructive" });
+    // Compute overdraft portion if wallet is short
+    const odPortion = Math.max(0, amount - Math.max(0, myWalletBalance));
+    if (odPortion > 0 && !odConfirmed && !forceOd) {
+      setShowOdConfirm(true);
       return;
     }
+    const upfrontOdInterest = odPortion > 0 ? Math.ceil(odPortion * 0.005) : 0;
 
     setWalletRepayLoading(true);
     try {
@@ -1311,10 +1316,31 @@ const QuickLoans = () => {
           source: 'wallet_loan_repayment',
           type: 'internal_transfer_credit',
           bypass_treasury_check: true,
-          description: `Loan repayment from wallet – UGX ${amount.toLocaleString()}`
+          description: `Loan repayment from wallet – UGX ${amount.toLocaleString()}${odPortion > 0 ? ` (incl. OD top-up UGX ${odPortion.toLocaleString()})` : ''}`,
+          overdraft_portion: odPortion > 0 ? odPortion : undefined,
+          uses_overdraft: odPortion > 0,
         }
       });
       if (ledgerErr) throw new Error(ledgerErr.message || 'Failed to deduct from wallet');
+
+      // Post upfront OD access interest fee (0.5% on OD portion)
+      if (odPortion > 0 && upfrontOdInterest > 0) {
+        await supabase.from('ledger_entries').insert({
+          user_id: userId,
+          entry_type: 'WITHDRAWAL',
+          amount: -upfrontOdInterest,
+          reference: `${txRef}-ODFEE`,
+          source_category: 'OVERDRAFT_INTEREST',
+          metadata: {
+            loan_id: walletRepayLoan.id,
+            type: 'overdraft_draw',
+            parent_reference: txRef,
+            overdraft_portion: odPortion,
+            description: `Overdraft access fee 0.5% on UGX ${odPortion.toLocaleString()}`,
+            bypass_treasury_check: true,
+          }
+        });
+      }
 
       // For full early payoff, use daily pro-rata discount; for partial, use simple subtraction
       const newPaidAmount = (walletRepayLoan.paid_amount || 0) + amount;
@@ -1386,9 +1412,10 @@ const QuickLoans = () => {
       setShowWalletRepayDialog(false);
       setWalletRepayAmount('');
       setWalletRepayLoan(null);
+      setOdConfirmed(false);
       fetchLoans();
       // Update wallet balance
-      setMyWalletBalance(prev => prev - amount);
+      setMyWalletBalance(prev => prev - amount - upfrontOdInterest);
     } catch (err: any) {
       toast({ title: "Payment Failed ❌", description: err.message, variant: "destructive" });
     } finally {
@@ -2294,7 +2321,7 @@ const QuickLoans = () => {
             </Dialog>
 
             {/* Wallet Repayment Dialog */}
-            <Dialog open={showWalletRepayDialog} onOpenChange={(open) => { setShowWalletRepayDialog(open); if (!open) setWalletRepayLoan(null); }}>
+            <Dialog open={showWalletRepayDialog} onOpenChange={(open) => { setShowWalletRepayDialog(open); if (!open) { setWalletRepayLoan(null); setOdConfirmed(false); } }}>
               <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2"><Wallet className="h-5 w-5" /> Repay Loan from Wallet</DialogTitle>
@@ -2330,7 +2357,7 @@ const QuickLoans = () => {
                           Max payable: UGX {Math.min(earlyPayoff, myWalletBalance).toLocaleString()}
                         </p>
                       </div>
-                      <Button onClick={handleWalletRepayment} disabled={walletRepayLoading || !walletRepayAmount} className="w-full">
+                      <Button onClick={() => handleWalletRepayment()} disabled={walletRepayLoading || !walletRepayAmount} className="w-full">
                         {walletRepayLoading ? (
                           <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
                         ) : (
@@ -2342,6 +2369,36 @@ const QuickLoans = () => {
                 })()}
               </DialogContent>
             </Dialog>
+
+            {/* Overdraft Top-up Confirmation */}
+            <AlertDialog open={showOdConfirm} onOpenChange={setShowOdConfirm}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-amber-600" /> Insufficient Wallet — Use Overdraft?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-2 text-sm">
+                      <p>Your wallet has <strong>UGX {Math.max(0, myWalletBalance).toLocaleString()}</strong>, but you're paying <strong>UGX {(parseFloat(walletRepayAmount) || 0).toLocaleString()}</strong>.</p>
+                      <p>The shortfall of <strong>UGX {Math.max(0, (parseFloat(walletRepayAmount) || 0) - Math.max(0, myWalletBalance)).toLocaleString()}</strong> will be drawn from your <strong>overdraft</strong> and added to your outstanding balance.</p>
+                      <p className="text-amber-700">Interest: <strong>0.5% per day</strong> on the overdraft portion until cleared. An upfront access fee of UGX {Math.ceil(Math.max(0, (parseFloat(walletRepayAmount) || 0) - Math.max(0, myWalletBalance)) * 0.005).toLocaleString()} (0.5%) will be charged now.</p>
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setOdConfirmed(false)}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      setOdConfirmed(true);
+                      setShowOdConfirm(false);
+                      setTimeout(() => handleWalletRepayment(true), 0);
+                    }}
+                  >
+                    Accept & Pay
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
 
             {/* Change Guarantor Dialog */}
             <Dialog open={showChangeGuarantorDialog} onOpenChange={(open) => { setShowChangeGuarantorDialog(open); if (!open) { setChangeGuarantorLoan(null); setNewGuarantorId(''); } }}>
