@@ -76,6 +76,14 @@ const QuickLoans = () => {
   const [showAdvanceDialog, setShowAdvanceDialog] = useState(false);
   const [advanceAmount, setAdvanceAmount] = useState('');
   const [advanceReason, setAdvanceReason] = useState('');
+  // Active salary advance (block re-request and enable repayment)
+  const [myActiveAdvance, setMyActiveAdvance] = useState<any | null>(null);
+  const [pendingAdvanceRequest, setPendingAdvanceRequest] = useState<any | null>(null);
+  const [showAdvanceRepayDialog, setShowAdvanceRepayDialog] = useState(false);
+  const [advanceRepayAmount, setAdvanceRepayAmount] = useState('');
+  const [advanceRepayLoading, setAdvanceRepayLoading] = useState(false);
+  const [showAdvanceOdConfirm, setShowAdvanceOdConfirm] = useState(false);
+  const [advanceOdConfirmed, setAdvanceOdConfirmed] = useState(false);
   const [loans, setLoans] = useState<any[]>([]);
   const [myLoans, setMyLoans] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
@@ -150,7 +158,36 @@ const QuickLoans = () => {
     checkGuarantorRequests();
     fetchGuaranteedLoans();
     fetchWalletBalances();
+    fetchMyAdvance();
   }, [employee]);
+
+  const fetchMyAdvance = async () => {
+    if (!employee?.email) return;
+    try {
+      const { data: active } = await supabase
+        .from('employee_salary_advances')
+        .select('*')
+        .eq('employee_email', employee.email)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      setMyActiveAdvance(active || null);
+
+      const { data: pending } = await supabase
+        .from('approval_requests')
+        .select('id, status, amount, created_at')
+        .eq('type', 'Salary Advance')
+        .eq('requestedby', employee.email)
+        .in('status', ['Pending Admin', 'Pending Finance', 'Pending', 'pending_admin', 'pending_finance'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      setPendingAdvanceRequest(pending || null);
+    } catch (err) {
+      console.error('Error fetching salary advance state:', err);
+    }
+  };
 
   const fetchLoans = async () => {
     if (!employee) return;
@@ -1441,6 +1478,109 @@ const QuickLoans = () => {
   };
 
   // Change guarantor for a loan where guarantor declined
+  const handleAdvanceRepayment = async (forceOd = false) => {
+    if (!myActiveAdvance || !employee) return;
+    const amount = parseFloat(advanceRepayAmount) || 0;
+    if (amount <= 0 || amount < 500) {
+      toast({ title: 'Error', description: 'Minimum amount is UGX 500', variant: 'destructive' });
+      return;
+    }
+    const owed = Number(myActiveAdvance.remaining_balance) || 0;
+    if (amount > owed) {
+      toast({ title: 'Error', description: `Max payable is UGX ${owed.toLocaleString()}`, variant: 'destructive' });
+      return;
+    }
+
+    const odPortion = Math.max(0, amount - Math.max(0, myWalletBalance));
+    if (odPortion > 0 && !advanceOdConfirmed && !forceOd) {
+      setShowAdvanceOdConfirm(true);
+      return;
+    }
+    const upfrontOdInterest = odPortion > 0 ? Math.ceil(odPortion * 0.005) : 0;
+
+    setAdvanceRepayLoading(true);
+    try {
+      const { data: borrowerEmp } = await supabase.from('employees').select('auth_user_id').eq('email', myActiveAdvance.employee_email).single();
+      if (!borrowerEmp?.auth_user_id) throw new Error('Could not find your account.');
+      const { data: unifiedId } = await supabase.rpc('get_unified_user_id', { input_email: myActiveAdvance.employee_email });
+      const userId = unifiedId || borrowerEmp.auth_user_id;
+
+      const txRef = `ADVREPAY-WALLET-${myActiveAdvance.id.slice(0, 8)}-${Date.now()}`;
+
+      const { error: ledgerErr } = await supabase.from('ledger_entries').insert({
+        user_id: userId,
+        entry_type: 'WITHDRAWAL',
+        amount: -amount,
+        reference: txRef,
+        source_category: 'SALARY_ADVANCE_REPAYMENT',
+        metadata: {
+          advance_id: myActiveAdvance.id,
+          source: 'wallet_advance_repayment',
+          type: 'internal_transfer_credit',
+          bypass_treasury_check: true,
+          description: `Salary advance repayment from wallet – UGX ${amount.toLocaleString()}${odPortion > 0 ? ` (incl. OD top-up UGX ${odPortion.toLocaleString()})` : ''}`,
+          overdraft_portion: odPortion > 0 ? odPortion : undefined,
+          uses_overdraft: odPortion > 0,
+        }
+      });
+      if (ledgerErr) throw new Error(ledgerErr.message || 'Failed to deduct from wallet');
+
+      if (odPortion > 0 && upfrontOdInterest > 0) {
+        await supabase.from('ledger_entries').insert({
+          user_id: userId,
+          entry_type: 'WITHDRAWAL',
+          amount: -upfrontOdInterest,
+          reference: `${txRef}-ODFEE`,
+          source_category: 'OVERDRAFT_INTEREST',
+          metadata: {
+            advance_id: myActiveAdvance.id,
+            type: 'overdraft_draw',
+            parent_reference: txRef,
+            overdraft_portion: odPortion,
+            description: `Overdraft access fee 0.5% on UGX ${odPortion.toLocaleString()}`,
+            bypass_treasury_check: true,
+          }
+        });
+      }
+
+      const newRemaining = Math.max(0, owed - amount);
+      const isCleared = newRemaining <= 0;
+      const { error: advErr } = await supabase
+        .from('employee_salary_advances')
+        .update({
+          remaining_balance: newRemaining,
+          status: isCleared ? 'cleared' : 'active',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', myActiveAdvance.id);
+      if (advErr) throw advErr;
+
+      await supabase.from('salary_advance_payments').insert({
+        advance_id: myActiveAdvance.id,
+        employee_email: myActiveAdvance.employee_email,
+        amount_paid: amount,
+        status: 'approved',
+        approved_by: employee.email,
+      });
+
+      toast({
+        title: isCleared ? 'Advance Fully Repaid 🎉' : 'Advance Payment Successful ✅',
+        description: `UGX ${amount.toLocaleString()} deducted from your wallet.${isCleared ? '' : ` Remaining: UGX ${newRemaining.toLocaleString()}`}`,
+        duration: 8000,
+      });
+
+      setShowAdvanceRepayDialog(false);
+      setAdvanceRepayAmount('');
+      setAdvanceOdConfirmed(false);
+      setMyWalletBalance(prev => prev - amount - upfrontOdInterest);
+      fetchMyAdvance();
+    } catch (err: any) {
+      toast({ title: 'Repayment Failed ❌', description: err.message, variant: 'destructive' });
+    } finally {
+      setAdvanceRepayLoading(false);
+    }
+  };
+
   const handleChangeGuarantor = async () => {
     if (!changeGuarantorLoan || !employee || !newGuarantorId) return;
     const guarantor = employees.find(e => e.id === newGuarantorId);
@@ -2799,16 +2939,48 @@ const QuickLoans = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <p className="text-sm text-muted-foreground">
-                Need a quick advance on your salary? Borrow up to <strong>UGX 100,000</strong>.
-                Requires <strong>one admin approval</strong>. Once approved the amount is credited to your wallet and recovered from your next salary.
-              </p>
-              <Button
-                className="bg-orange-600 hover:bg-orange-700 text-white shrink-0"
-                onClick={() => { setAdvanceAmount(''); setAdvanceReason(''); setShowAdvanceDialog(true); }}
-              >
-                <HandCoins className="mr-2 h-4 w-4" /> Request Salary Advance
-              </Button>
+              {myActiveAdvance ? (
+                <>
+                  <div className="text-sm space-y-1">
+                    <p className="text-muted-foreground">
+                      You already have an <strong>active salary advance</strong>. Only one salary advance is allowed at a time — clear it to request another.
+                    </p>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                      <span>Original: <strong>UGX {Number(myActiveAdvance.original_amount).toLocaleString()}</strong></span>
+                      <span>Remaining: <strong className="text-orange-700">UGX {Number(myActiveAdvance.remaining_balance).toLocaleString()}</strong></span>
+                    </div>
+                  </div>
+                  <Button
+                    className="bg-orange-600 hover:bg-orange-700 text-white shrink-0"
+                    onClick={() => { setAdvanceRepayAmount(String(myActiveAdvance.remaining_balance)); setAdvanceOdConfirmed(false); setShowAdvanceRepayDialog(true); }}
+                  >
+                    <Wallet className="mr-2 h-4 w-4" /> Repay Salary Advance
+                  </Button>
+                </>
+              ) : pendingAdvanceRequest ? (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Your salary advance request of <strong>UGX {Number(pendingAdvanceRequest.amount).toLocaleString()}</strong> is <strong>pending approval</strong>. You can request another one only after this is resolved.
+                  </p>
+                  <Button disabled className="shrink-0">
+                    <Clock className="mr-2 h-4 w-4" /> Awaiting Approval
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Need a quick advance on your salary? Borrow up to <strong>UGX 100,000</strong>.
+                    Requires <strong>one admin approval</strong>. Once approved the amount is credited to your wallet and recovered from your next salary.
+                    <span className="block mt-1 text-xs">Only <strong>one active advance at a time</strong>.</span>
+                  </p>
+                  <Button
+                    className="bg-orange-600 hover:bg-orange-700 text-white shrink-0"
+                    onClick={() => { setAdvanceAmount(''); setAdvanceReason(''); setShowAdvanceDialog(true); }}
+                  >
+                    <HandCoins className="mr-2 h-4 w-4" /> Request Salary Advance
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -2866,6 +3038,14 @@ const QuickLoans = () => {
                         return;
                       }
                       try {
+                        if (myActiveAdvance) {
+                          toast({ title: 'Active advance exists', description: 'You already have an active salary advance. Clear it before requesting another.', variant: 'destructive' });
+                          return;
+                        }
+                        if (pendingAdvanceRequest) {
+                          toast({ title: 'Request pending', description: 'A salary advance request is already pending approval.', variant: 'destructive' });
+                          return;
+                        }
                         await createAdvanceApprovalRequest({
                           employee_email: employee!.email,
                           employee_name: employee!.name,
@@ -2878,6 +3058,7 @@ const QuickLoans = () => {
                           requested_by_name: employee!.name,
                         });
                         setShowAdvanceDialog(false);
+                        fetchMyAdvance();
                       } catch (_e) { /* hook toasts */ }
                     }}
                   >
@@ -2887,6 +3068,73 @@ const QuickLoans = () => {
               </div>
             </DialogContent>
           </Dialog>
+
+          {/* Repay Salary Advance Dialog */}
+          <Dialog open={showAdvanceRepayDialog} onOpenChange={(open) => { setShowAdvanceRepayDialog(open); if (!open) { setAdvanceOdConfirmed(false); } }}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2"><Wallet className="h-5 w-5" /> Repay Salary Advance</DialogTitle>
+              </DialogHeader>
+              {myActiveAdvance && (
+                <div className="space-y-4">
+                  <Card className="bg-muted/50">
+                    <CardContent className="p-4 space-y-1 text-sm">
+                      <div className="flex justify-between"><span>Original Advance:</span><span>UGX {Number(myActiveAdvance.original_amount).toLocaleString()}</span></div>
+                      <div className="flex justify-between font-semibold text-orange-700"><span>Outstanding:</span><span>UGX {Number(myActiveAdvance.remaining_balance).toLocaleString()}</span></div>
+                    </CardContent>
+                  </Card>
+                  <div className="p-3 bg-muted rounded-lg text-sm flex justify-between">
+                    <span>Your Wallet Balance:</span>
+                    <span className="font-semibold">UGX {myWalletBalance.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <Label>Amount to Pay (UGX)</Label>
+                    <Input type="number" value={advanceRepayAmount} onChange={e => setAdvanceRepayAmount(e.target.value)} placeholder="Enter amount" />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Max payable: UGX {Number(myActiveAdvance.remaining_balance).toLocaleString()}. If your wallet is short, the difference will use your overdraft (with your approval).
+                    </p>
+                  </div>
+                  <Button onClick={() => handleAdvanceRepayment()} disabled={advanceRepayLoading || !advanceRepayAmount} className="w-full">
+                    {advanceRepayLoading ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
+                    ) : (
+                      <><Wallet className="mr-2 h-4 w-4" /> Pay UGX {(parseFloat(advanceRepayAmount) || 0).toLocaleString()} from Wallet</>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {/* Overdraft Top-up Confirmation for Salary Advance */}
+          <AlertDialog open={showAdvanceOdConfirm} onOpenChange={setShowAdvanceOdConfirm}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-600" /> Insufficient Wallet — Use Overdraft?
+                </AlertDialogTitle>
+                <AlertDialogDescription asChild>
+                  <div className="space-y-2 text-sm">
+                    <p>Your wallet has <strong>UGX {Math.max(0, myWalletBalance).toLocaleString()}</strong>, but you're paying <strong>UGX {(parseFloat(advanceRepayAmount) || 0).toLocaleString()}</strong> toward your salary advance.</p>
+                    <p>The shortfall of <strong>UGX {Math.max(0, (parseFloat(advanceRepayAmount) || 0) - Math.max(0, myWalletBalance)).toLocaleString()}</strong> will be drawn from your <strong>overdraft</strong> and added to your outstanding balance.</p>
+                    <p className="text-amber-700">An upfront overdraft access fee of UGX {Math.ceil(Math.max(0, (parseFloat(advanceRepayAmount) || 0) - Math.max(0, myWalletBalance)) * 0.005).toLocaleString()} (0.5%) will be charged now. Interest of 0.5%/day applies until cleared.</p>
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setAdvanceOdConfirmed(false)}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    setAdvanceOdConfirmed(true);
+                    setShowAdvanceOdConfirm(false);
+                    setTimeout(() => handleAdvanceRepayment(true), 0);
+                  }}
+                >
+                  Accept & Pay
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
           {myLimit && (
             <Card className="border-primary/30 bg-primary/5">
