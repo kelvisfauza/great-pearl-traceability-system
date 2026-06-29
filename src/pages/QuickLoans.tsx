@@ -76,6 +76,14 @@ const QuickLoans = () => {
   const [showAdvanceDialog, setShowAdvanceDialog] = useState(false);
   const [advanceAmount, setAdvanceAmount] = useState('');
   const [advanceReason, setAdvanceReason] = useState('');
+  // Active salary advance (block re-request and enable repayment)
+  const [myActiveAdvance, setMyActiveAdvance] = useState<any | null>(null);
+  const [pendingAdvanceRequest, setPendingAdvanceRequest] = useState<any | null>(null);
+  const [showAdvanceRepayDialog, setShowAdvanceRepayDialog] = useState(false);
+  const [advanceRepayAmount, setAdvanceRepayAmount] = useState('');
+  const [advanceRepayLoading, setAdvanceRepayLoading] = useState(false);
+  const [showAdvanceOdConfirm, setShowAdvanceOdConfirm] = useState(false);
+  const [advanceOdConfirmed, setAdvanceOdConfirmed] = useState(false);
   const [loans, setLoans] = useState<any[]>([]);
   const [myLoans, setMyLoans] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
