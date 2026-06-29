@@ -33,7 +33,7 @@ async function sendVerificationEmail(
     const errMsg = error
       ? String((error as any).message || error)
       : (data && (data as any).error ? String((data as any).error) : '');
-    if (!errMsg) return;
+    if (!errMsg) return { sent: true };
     lastErr = errMsg;
     const isRateLimit = /429|rate_?limit|high demand/i.test(errMsg);
     const isTransient = isRateLimit || /5\d{2}|timeout|temporar/i.test(errMsg);
@@ -42,7 +42,86 @@ async function sendVerificationEmail(
     await new Promise((r) => setTimeout(r, delays[attempt - 1] ?? 4000));
   }
   console.error('send-transactional-email failed after retries:', lastErr);
-  throw new Error('Failed to send verification email');
+  return { sent: false, error: String(lastErr || 'Failed to send verification email') };
+}
+
+async function findEmployeeRecipient(
+  supabase: ReturnType<typeof createClient>,
+  email: string,
+) {
+  try {
+    const { data, error } = await supabase
+      .from('employees')
+      .select('name, phone, status, disabled')
+      .ilike('email', email)
+      .maybeSingle();
+
+    if (error) {
+      console.warn('Employee lookup failed for verification SMS:', error.message);
+      return null;
+    }
+
+    if (!data) return null;
+    if ((data as any).disabled === true) return null;
+    if ((data as any).status && String((data as any).status).toLowerCase() !== 'active') return null;
+
+    return data as { name?: string | null; phone?: string | null };
+  } catch (err) {
+    console.warn('Employee lookup error for verification SMS:', err);
+    return null;
+  }
+}
+
+async function sendVerificationSms(
+  email: string,
+  employee: { name?: string | null; phone?: string | null } | null,
+  verificationCode: string,
+) {
+  if (!employee?.phone) {
+    return { sent: false, skipped: 'no_employee_phone' };
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!supabaseUrl || !serviceRoleKey) {
+    return { sent: false, error: 'SMS service not configured' };
+  }
+
+  const firstName = (employee.name || 'Employee').trim().split(/\s+/)[0] || 'Employee';
+  const smsMessage = `${firstName} - Great Agro Coffee\nVerification code: ${verificationCode}\nValid for 10 minutes. Do not share.`;
+
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-sms`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${serviceRoleKey}`,
+      },
+      body: JSON.stringify({
+        phone: employee.phone,
+        message: smsMessage,
+        userName: employee.name || firstName,
+        recipientEmail: email,
+        messageType: 'verification',
+        priority: 'premium',
+        triggeredBy: 'email-verification',
+      }),
+    });
+
+    const text = await response.text();
+    let data: any = {};
+    try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
+
+    if (!response.ok || data?.error) {
+      console.warn('Verification SMS failed:', response.status, data?.error || text);
+      return { sent: false, error: data?.error || `HTTP ${response.status}` };
+    }
+
+    return { sent: true, provider: data?.provider };
+  } catch (err: any) {
+    console.warn('Verification SMS error:', err?.message || err);
+    return { sent: false, error: err?.message || 'SMS failed' };
+  }
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -91,13 +170,25 @@ const handler = async (req: Request): Promise<Response> => {
         throw new Error("Failed to store verification code");
       }
 
-      await sendVerificationEmail(supabase, normalizedEmail, verificationCode);
+      const employee = await findEmployeeRecipient(supabase, normalizedEmail);
+      const [emailResult, smsResult] = await Promise.all([
+        sendVerificationEmail(supabase, normalizedEmail, verificationCode),
+        sendVerificationSms(normalizedEmail, employee, verificationCode),
+      ]);
 
-      console.log("Verification code sent to:", normalizedEmail);
+      if (!emailResult.sent && !smsResult.sent) {
+        throw new Error(emailResult.error || smsResult.error || 'Failed to send verification code');
+      }
+
+      console.log("Verification code sent to:", normalizedEmail, { emailSent: emailResult.sent, smsSent: smsResult.sent });
       return new Response(
         JSON.stringify({
           success: true,
-          message: "Verification code sent to your email"
+          message: smsResult.sent
+            ? "Verification code sent to your email and employee phone"
+            : "Verification code sent to your email",
+          emailSent: emailResult.sent,
+          smsSent: smsResult.sent,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
