@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSalaryAdvanceApprovals } from '@/hooks/useSalaryAdvanceApprovals';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -70,6 +71,10 @@ const getFirstRepaymentDate = (startDateInput: Date | string, frequency: Repayme
 const QuickLoans = () => {
   const { employee, isAdmin } = useAuth();
   const { toast } = useToast();
+  const { createAdvanceApprovalRequest, loading: advanceSubmitting } = useSalaryAdvanceApprovals();
+  const [showAdvanceDialog, setShowAdvanceDialog] = useState(false);
+  const [advanceAmount, setAdvanceAmount] = useState('');
+  const [advanceReason, setAdvanceReason] = useState('');
   const [loans, setLoans] = useState<any[]>([]);
   const [myLoans, setMyLoans] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
@@ -2711,6 +2716,103 @@ const QuickLoans = () => {
               </CardContent>
             </Card>
           ))}
+
+          {/* Salary Advance Quick Card */}
+          <Card className="border-orange-300 bg-orange-50 dark:bg-orange-950/20">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <HandCoins className="h-5 w-5 text-orange-600" /> Salary Advance
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-sm text-muted-foreground">
+                Need a quick advance on your salary? Borrow up to <strong>UGX 100,000</strong>.
+                Requires <strong>one admin approval</strong>. Once approved the amount is credited to your wallet and recovered from your next salary.
+              </p>
+              <Button
+                className="bg-orange-600 hover:bg-orange-700 text-white shrink-0"
+                onClick={() => { setAdvanceAmount(''); setAdvanceReason(''); setShowAdvanceDialog(true); }}
+              >
+                <HandCoins className="mr-2 h-4 w-4" /> Request Salary Advance
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Dialog open={showAdvanceDialog} onOpenChange={setShowAdvanceDialog}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Request Salary Advance</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label>Amount (UGX)</Label>
+                  <Input
+                    type="number"
+                    value={advanceAmount}
+                    onChange={e => setAdvanceAmount(e.target.value)}
+                    placeholder="e.g. 50000"
+                    max={100000}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Maximum: UGX 100,000</p>
+                </div>
+                <div>
+                  <Label>Reason</Label>
+                  <Input
+                    value={advanceReason}
+                    onChange={e => setAdvanceReason(e.target.value)}
+                    placeholder="Briefly explain why you need the advance"
+                  />
+                </div>
+                <Card className="bg-muted/50">
+                  <CardContent className="p-3 text-xs text-muted-foreground space-y-1">
+                    <div>• Requires one admin approval</div>
+                    <div>• On approval, funds are credited directly to your wallet</div>
+                    <div>• Recovered in full from your next salary payment</div>
+                  </CardContent>
+                </Card>
+                <div className="flex gap-2">
+                  <Button variant="outline" className="flex-1" onClick={() => setShowAdvanceDialog(false)} disabled={advanceSubmitting}>
+                    Cancel
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    disabled={advanceSubmitting || !employee}
+                    onClick={async () => {
+                      const amt = parseFloat(advanceAmount);
+                      if (!amt || amt <= 0) {
+                        toast({ title: 'Enter a valid amount', variant: 'destructive' });
+                        return;
+                      }
+                      if (amt > 100000) {
+                        toast({ title: 'Amount too high', description: 'Maximum salary advance is UGX 100,000.', variant: 'destructive' });
+                        return;
+                      }
+                      if (!advanceReason.trim()) {
+                        toast({ title: 'Reason required', description: 'Please briefly describe the reason for the advance.', variant: 'destructive' });
+                        return;
+                      }
+                      try {
+                        await createAdvanceApprovalRequest({
+                          employee_email: employee!.email,
+                          employee_name: employee!.name,
+                          department: (employee as any)?.department || 'General',
+                          position: (employee as any)?.position || (employee as any)?.role || 'Staff',
+                          amount: amt,
+                          minimum_payment: amt,
+                          reason: advanceReason.trim(),
+                          requested_by: employee!.email,
+                          requested_by_name: employee!.name,
+                        });
+                        setShowAdvanceDialog(false);
+                      } catch (_e) { /* hook toasts */ }
+                    }}
+                  >
+                    {advanceSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</> : 'Submit Request'}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {myLimit && (
             <Card className="border-primary/30 bg-primary/5">
