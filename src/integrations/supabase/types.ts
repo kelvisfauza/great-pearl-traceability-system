@@ -6829,6 +6829,13 @@ export type Database = {
             foreignKeyName: "overtime_awards_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
+            referencedRelation: "employees_payroll_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "overtime_awards_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
             referencedRelation: "employees_payroll_view"
             referencedColumns: ["id"]
           },
@@ -7564,6 +7571,13 @@ export type Database = {
             foreignKeyName: "qr_access_otps_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
+            referencedRelation: "employees_payroll_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qr_access_otps_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
             referencedRelation: "employees_payroll_view"
             referencedColumns: ["id"]
           },
@@ -7606,6 +7620,13 @@ export type Database = {
             foreignKeyName: "qr_access_pins_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: true
+            referencedRelation: "employees_payroll_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qr_access_pins_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: true
             referencedRelation: "employees_payroll_view"
             referencedColumns: ["id"]
           },
@@ -7642,6 +7663,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qr_trusted_devices_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_payroll_safe"
             referencedColumns: ["id"]
           },
           {
@@ -10732,6 +10760,13 @@ export type Database = {
             foreignKeyName: "time_deductions_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
+            referencedRelation: "employees_payroll_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_deductions_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
             referencedRelation: "employees_payroll_view"
             referencedColumns: ["id"]
           },
@@ -12092,6 +12127,78 @@ export type Database = {
           paid_requests: number | null
           total_amount: number | null
           total_requests: number | null
+        }
+        Relationships: []
+      }
+      employees_payroll_safe: {
+        Row: {
+          account_number: string | null
+          auth_user_id: string | null
+          bank_name: string | null
+          bank_phone: string | null
+          created_at: string | null
+          department: string | null
+          disabled: boolean | null
+          email: string | null
+          employee_id: string | null
+          id: string | null
+          name: string | null
+          nssf_number: string | null
+          phone: string | null
+          role: string | null
+          salary: number | null
+          status: string | null
+          tin_number: string | null
+          updated_at: string | null
+          wallet_locked_amount: number | null
+          wallet_locked_at: string | null
+          wallet_locked_reason: string | null
+        }
+        Insert: {
+          account_number?: string | null
+          auth_user_id?: string | null
+          bank_name?: string | null
+          bank_phone?: string | null
+          created_at?: string | null
+          department?: string | null
+          disabled?: boolean | null
+          email?: string | null
+          employee_id?: string | null
+          id?: string | null
+          name?: string | null
+          nssf_number?: string | null
+          phone?: string | null
+          role?: string | null
+          salary?: number | null
+          status?: string | null
+          tin_number?: string | null
+          updated_at?: string | null
+          wallet_locked_amount?: number | null
+          wallet_locked_at?: string | null
+          wallet_locked_reason?: string | null
+        }
+        Update: {
+          account_number?: string | null
+          auth_user_id?: string | null
+          bank_name?: string | null
+          bank_phone?: string | null
+          created_at?: string | null
+          department?: string | null
+          disabled?: boolean | null
+          email?: string | null
+          employee_id?: string | null
+          id?: string | null
+          name?: string | null
+          nssf_number?: string | null
+          phone?: string | null
+          role?: string | null
+          salary?: number | null
+          status?: string | null
+          tin_number?: string | null
+          updated_at?: string | null
+          wallet_locked_amount?: number | null
+          wallet_locked_at?: string | null
+          wallet_locked_reason?: string | null
         }
         Relationships: []
       }
