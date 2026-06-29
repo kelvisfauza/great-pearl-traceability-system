@@ -1272,7 +1272,7 @@ const QuickLoans = () => {
   };
 
   // Wallet-based Loan Repayment
-  const handleWalletRepayment = async () => {
+  const handleWalletRepayment = async (forceOd = false) => {
     if (!walletRepayLoan || !employee) return;
     const amount = parseFloat(walletRepayAmount) || 0;
     if (amount <= 0 || amount < 500) {
@@ -1288,7 +1288,7 @@ const QuickLoans = () => {
 
     // Compute overdraft portion if wallet is short
     const odPortion = Math.max(0, amount - Math.max(0, myWalletBalance));
-    if (odPortion > 0 && !odConfirmed) {
+    if (odPortion > 0 && !odConfirmed && !forceOd) {
       setShowOdConfirm(true);
       return;
     }
