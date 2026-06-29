@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { sendLovableEmail } from "npm:@lovable.dev/email-js@0.0.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,70 +12,26 @@ interface VerificationRequest {
   code?: string;
 }
 
-const SITE_NAME = "Great Agro Coffee";
-const SENDER_DOMAIN = "notify.greatpearlcoffeesystem.site";
-const FROM_DOMAIN = "notify.greatpearlcoffeesystem.site";
-const VERIFICATION_SUBJECT = "Your Great Agro Coffee Verification Code";
-
-function buildVerificationEmailHtml(code: string): string {
-  return `<!DOCTYPE html>
-<html lang="en" dir="ltr">
-<head><meta charset="UTF-8"></head>
-<body style="background-color:#ffffff;font-family:'Segoe UI',Arial,sans-serif;">
-<div style="padding:20px 25px;max-width:560px;margin:0 auto;">
-  <h1 style="font-size:22px;font-weight:bold;color:hsl(220,13%,18%);margin:0 0 20px;">Email Verification</h1>
-  <p style="font-size:14px;color:hsl(220,9%,46%);line-height:1.6;margin:0 0 25px;">
-    Use the code below to verify your email and complete your sign-in to the Great Agro Coffee system:
-  </p>
-  <p style="font-family:Courier,monospace;font-size:36px;font-weight:bold;color:hsl(217,91%,60%);letter-spacing:10px;text-align:center;background-color:#f4f4f4;padding:20px;border-radius:8px;margin:0 0 25px;">
-    ${code}
-  </p>
-  <p style="font-size:14px;color:hsl(220,9%,46%);line-height:1.6;margin:0 0 25px;">
-    This code will expire in 10 minutes. If you didn't request this code, please ignore this email.
-  </p>
-  <p style="font-size:12px;color:#999999;margin:30px 0 0;">Great Agro Coffee — Kasese, Uganda</p>
-</div>
-</body>
-</html>`;
-}
-
-function buildVerificationEmailText(code: string): string {
-  return `Email Verification\n\nUse the code below to verify your email and complete your sign-in to the Great Agro Coffee system:\n\n${code}\n\nThis code will expire in 10 minutes. If you didn't request this code, please ignore this email.\n\nGreat Agro Coffee — Kasese, Uganda`;
-}
-
-function generateToken(): string {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-async function sendVerificationEmail(email: string, verificationCode: string) {
-  const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
-
-  if (!lovableApiKey) {
-    throw new Error("Email service is not configured");
-  }
-
-  const unsubToken = generateToken();
-
-  await sendLovableEmail(
-    {
-      to: email,
-      from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
-      sender_domain: SENDER_DOMAIN,
-      subject: VERIFICATION_SUBJECT,
-      html: buildVerificationEmailHtml(verificationCode),
-      text: buildVerificationEmailText(verificationCode),
-      purpose: "transactional",
-      label: "verification-code",
-      idempotency_key: `verify-${email}-${verificationCode}`,
-      unsubscribe_token: unsubToken,
+async function sendVerificationEmail(
+  supabase: ReturnType<typeof createClient>,
+  email: string,
+  verificationCode: string,
+) {
+  const { data, error } = await supabase.functions.invoke('send-transactional-email', {
+    body: {
+      templateName: 'verification-code',
+      recipient: email,
+      data: { code: verificationCode },
     },
-    {
-      apiKey: lovableApiKey,
-      idempotencyKey: `verify-${email}-${verificationCode}`,
-    }
-  );
+  });
+  if (error) {
+    console.error('send-transactional-email invoke error:', error);
+    throw new Error('Failed to send verification email');
+  }
+  if (data && (data as any).error) {
+    console.error('send-transactional-email returned error:', (data as any).error);
+    throw new Error('Failed to send verification email');
+  }
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -125,7 +80,7 @@ const handler = async (req: Request): Promise<Response> => {
         throw new Error("Failed to store verification code");
       }
 
-      await sendVerificationEmail(normalizedEmail, verificationCode);
+      await sendVerificationEmail(supabase, normalizedEmail, verificationCode);
 
       console.log("Verification code sent to:", normalizedEmail);
       return new Response(
