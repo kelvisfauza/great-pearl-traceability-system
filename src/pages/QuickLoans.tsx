@@ -3069,6 +3069,73 @@ const QuickLoans = () => {
             </DialogContent>
           </Dialog>
 
+          {/* Repay Salary Advance Dialog */}
+          <Dialog open={showAdvanceRepayDialog} onOpenChange={(open) => { setShowAdvanceRepayDialog(open); if (!open) { setAdvanceOdConfirmed(false); } }}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2"><Wallet className="h-5 w-5" /> Repay Salary Advance</DialogTitle>
+              </DialogHeader>
+              {myActiveAdvance && (
+                <div className="space-y-4">
+                  <Card className="bg-muted/50">
+                    <CardContent className="p-4 space-y-1 text-sm">
+                      <div className="flex justify-between"><span>Original Advance:</span><span>UGX {Number(myActiveAdvance.original_amount).toLocaleString()}</span></div>
+                      <div className="flex justify-between font-semibold text-orange-700"><span>Outstanding:</span><span>UGX {Number(myActiveAdvance.remaining_balance).toLocaleString()}</span></div>
+                    </CardContent>
+                  </Card>
+                  <div className="p-3 bg-muted rounded-lg text-sm flex justify-between">
+                    <span>Your Wallet Balance:</span>
+                    <span className="font-semibold">UGX {myWalletBalance.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <Label>Amount to Pay (UGX)</Label>
+                    <Input type="number" value={advanceRepayAmount} onChange={e => setAdvanceRepayAmount(e.target.value)} placeholder="Enter amount" />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Max payable: UGX {Number(myActiveAdvance.remaining_balance).toLocaleString()}. If your wallet is short, the difference will use your overdraft (with your approval).
+                    </p>
+                  </div>
+                  <Button onClick={() => handleAdvanceRepayment()} disabled={advanceRepayLoading || !advanceRepayAmount} className="w-full">
+                    {advanceRepayLoading ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
+                    ) : (
+                      <><Wallet className="mr-2 h-4 w-4" /> Pay UGX {(parseFloat(advanceRepayAmount) || 0).toLocaleString()} from Wallet</>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {/* Overdraft Top-up Confirmation for Salary Advance */}
+          <AlertDialog open={showAdvanceOdConfirm} onOpenChange={setShowAdvanceOdConfirm}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-600" /> Insufficient Wallet — Use Overdraft?
+                </AlertDialogTitle>
+                <AlertDialogDescription asChild>
+                  <div className="space-y-2 text-sm">
+                    <p>Your wallet has <strong>UGX {Math.max(0, myWalletBalance).toLocaleString()}</strong>, but you're paying <strong>UGX {(parseFloat(advanceRepayAmount) || 0).toLocaleString()}</strong> toward your salary advance.</p>
+                    <p>The shortfall of <strong>UGX {Math.max(0, (parseFloat(advanceRepayAmount) || 0) - Math.max(0, myWalletBalance)).toLocaleString()}</strong> will be drawn from your <strong>overdraft</strong> and added to your outstanding balance.</p>
+                    <p className="text-amber-700">An upfront overdraft access fee of UGX {Math.ceil(Math.max(0, (parseFloat(advanceRepayAmount) || 0) - Math.max(0, myWalletBalance)) * 0.005).toLocaleString()} (0.5%) will be charged now. Interest of 0.5%/day applies until cleared.</p>
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setAdvanceOdConfirmed(false)}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    setAdvanceOdConfirmed(true);
+                    setShowAdvanceOdConfirm(false);
+                    setTimeout(() => handleAdvanceRepayment(true), 0);
+                  }}
+                >
+                  Accept & Pay
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
           {myLimit && (
             <Card className="border-primary/30 bg-primary/5">
               <CardHeader className="pb-2">
