@@ -216,6 +216,16 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
       toast({ title: 'Minimum is UGX 2,000', variant: 'destructive' });
       return;
     }
+    // Hard cap: UGX 100,000 per single mobile money send
+    const MOBILE_DAILY_CAP = 100000;
+    if (parsedMobileAmount > MOBILE_DAILY_CAP) {
+      toast({
+        title: 'Mobile money limit',
+        description: `Maximum send to a mobile number is UGX ${MOBILE_DAILY_CAP.toLocaleString()} per transaction. For internal transfers to staff there is no limit.`,
+        variant: 'destructive',
+      });
+      return;
+    }
     if (parsedMobileAmount > availableBalance) {
       toast({ title: 'Insufficient balance', description: `Available: UGX ${availableBalance.toLocaleString()}`, variant: 'destructive' });
       return;
@@ -229,6 +239,33 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
       toast({ title: 'Invalid phone number', description: 'Enter a valid Ugandan mobile money number (e.g. 0770123456)', variant: 'destructive' });
       return;
     }
+
+    // 24-hour cumulative cap on mobile sends (UGX 100,000)
+    try {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: unifiedId } = await supabase.rpc('get_unified_user_id', { input_email: employee?.email });
+      const uid = unifiedId || (employee as any)?.auth_user_id || (employee as any)?.id;
+      if (uid) {
+        const { data: recent } = await supabase
+          .from('instant_withdrawals')
+          .select('amount, payout_status, created_at')
+          .eq('user_id', uid)
+          .gte('created_at', since);
+        const used = (recent || [])
+          .filter((r: any) => !['failed', 'rejected'].includes(String(r.payout_status || '').toLowerCase()))
+          .reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
+        const remaining = Math.max(0, MOBILE_DAILY_CAP - used);
+        if (parsedMobileAmount > remaining) {
+          toast({
+            title: '24-hour limit reached',
+            description: `You can send up to UGX ${MOBILE_DAILY_CAP.toLocaleString()} to mobile money per 24 hours. Used: UGX ${used.toLocaleString()}. Remaining: UGX ${remaining.toLocaleString()}. Internal transfers to fellow staff have no limit.`,
+            variant: 'destructive',
+            duration: 9000,
+          });
+          return;
+        }
+      }
+    } catch (_e) { /* non-blocking; edge function also enforces */ }
 
     setMobileLoading(true);
     try {
