@@ -287,7 +287,7 @@ export const useAttendance = () => {
 
     // Set up realtime subscription
     const channel = supabase
-      .channel('attendance-changes')
+      .channel(`attendance-changes-${Math.random().toString(36).slice(2)}`)
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'attendance' },
         () => fetchTodayAttendance()
