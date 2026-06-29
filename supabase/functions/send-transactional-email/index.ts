@@ -120,6 +120,52 @@ Deno.serve(async (req) => {
 
     const unsubToken = generateToken()
 
+    // ============================================================
+    // SMS-PRIMARY DELIVERY (global flip)
+    // Fire an SMS in parallel with email for any recipient whose
+    // employee record has a phone number. Best-effort: SMS failures
+    // never block the email pipeline.
+    // ============================================================
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')
+      const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+      if (supabaseUrl && serviceKey) {
+        const supa = createClient(supabaseUrl, serviceKey)
+        const { data: emp } = await supa
+          .from('employees')
+          .select('phone, name, disabled')
+          .ilike('email', effectiveRecipient)
+          .maybeSingle()
+
+        const phone = (emp as any)?.phone as string | undefined
+        const isDisabled = (emp as any)?.disabled === true
+        if (phone && !isDisabled) {
+          // Compose a concise SMS body from subject + first line of plain text
+          const firstLine = (plainText || '')
+            .split('\n')
+            .map((l: string) => l.trim())
+            .filter((l: string) => l.length > 0)[0] || ''
+          const smsBody = `${resolvedSubject}${firstLine ? ` — ${firstLine}` : ''}`.slice(0, 320)
+
+          // Fire-and-forget; do not await long enough to block email send completion
+          supa.functions.invoke('send-sms', {
+            body: {
+              to: phone,
+              message: smsBody,
+              source: `tx:${templateName}`,
+              idempotency_key: `sms-${idempotencyKey}`,
+            },
+          }).then(() => {
+            console.log(`📱 SMS dispatched for ${templateName} -> ${phone}`)
+          }).catch((smsErr) => {
+            console.warn('⚠️ SMS parallel send failed (continuing):', (smsErr as Error)?.message)
+          })
+        }
+      }
+    } catch (smsGuardErr) {
+      console.warn('⚠️ SMS-primary dispatch error (continuing with email):', (smsGuardErr as Error)?.message)
+    }
+
     // Send directly using Lovable Email API
     await sendLovableEmail(
       {
