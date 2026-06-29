@@ -158,7 +158,36 @@ const QuickLoans = () => {
     checkGuarantorRequests();
     fetchGuaranteedLoans();
     fetchWalletBalances();
+    fetchMyAdvance();
   }, [employee]);
+
+  const fetchMyAdvance = async () => {
+    if (!employee?.email) return;
+    try {
+      const { data: active } = await supabase
+        .from('employee_salary_advances')
+        .select('*')
+        .eq('employee_email', employee.email)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      setMyActiveAdvance(active || null);
+
+      const { data: pending } = await supabase
+        .from('approval_requests')
+        .select('id, status, amount, created_at')
+        .eq('type', 'Salary Advance')
+        .eq('requestedby', employee.email)
+        .in('status', ['Pending Admin', 'Pending Finance', 'Pending', 'pending_admin', 'pending_finance'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      setPendingAdvanceRequest(pending || null);
+    } catch (err) {
+      console.error('Error fetching salary advance state:', err);
+    }
+  };
 
   const fetchLoans = async () => {
     if (!employee) return;
