@@ -2391,8 +2391,7 @@ const QuickLoans = () => {
                     onClick={() => {
                       setOdConfirmed(true);
                       setShowOdConfirm(false);
-                      // re-trigger after state update
-                      setTimeout(() => handleWalletRepayment(), 0);
+                      setTimeout(() => handleWalletRepayment(true), 0);
                     }}
                   >
                     Accept & Pay
