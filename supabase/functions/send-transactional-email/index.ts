@@ -149,63 +149,18 @@ Deno.serve(async (req) => {
     const unsubToken = generateToken()
 
     let smsStatus: 'not_attempted' | 'sent' | 'failed' | 'skipped' = 'not_attempted'
-
-    // ============================================================
-    // SMS-PRIMARY DELIVERY (global flip)
-    // Fire an SMS in parallel with email for any recipient whose
-    // employee record has a phone number. Best-effort: SMS failures
-    // never block the email pipeline.
-    // ============================================================
-    try {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')
-      const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-      if (supabaseUrl && serviceKey) {
-        const supa = createClient(supabaseUrl, serviceKey)
-        const { data: emp } = await supa
-          .from('employees')
-          .select('phone, name, disabled')
-          .ilike('email', effectiveRecipient)
-          .maybeSingle()
-
-        const phone = (emp as any)?.phone as string | undefined
-        const isDisabled = (emp as any)?.disabled === true
-        if (phone && !isDisabled) {
-          // Compose a concise SMS body from subject + first line of plain text
-          const firstLine = (plainText || '')
-            .split('\n')
-            .map((l: string) => l.trim())
-            .filter((l: string) => l.length > 0)[0] || ''
-          const smsBody = `${resolvedSubject}${firstLine ? ` — ${firstLine}` : ''}`.slice(0, 320)
-
-          const { error: smsErr } = await supa.functions.invoke('send-sms', {
-            body: {
-              to: phone,
-              message: smsBody,
-              source: `tx:${templateName}`,
-              idempotency_key: `sms-${idempotencyKey}`,
-            },
-          })
-          if (smsErr) {
-            smsStatus = 'failed'
-            console.warn('⚠️ SMS-primary send failed (continuing):', smsErr.message)
-          } else {
-            smsStatus = 'sent'
-            console.log(`📱 SMS dispatched for ${templateName} -> ${phone}`)
-          }
-        } else {
-          smsStatus = 'skipped'
-        }
-      }
-    } catch (smsGuardErr) {
-      smsStatus = 'failed'
-      console.warn('⚠️ SMS-primary dispatch error (continuing with email):', (smsGuardErr as Error)?.message)
-    }
-
     let emailStatus: 'sent' | 'failed' = 'sent'
     let emailError: string | null = null
 
-    try {
-      // Send directly using Lovable Email API, with short retry for temporary 429 throttling.
+    // ============================================================
+    // PARALLEL DELIVERY (non-blocking): fire EMAIL and SMS together.
+    // Neither channel blocks the other; each is awaited via allSettled.
+    // ============================================================
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const supa = (supabaseUrl && serviceKey) ? createClient(supabaseUrl, serviceKey) : null
+
+    const emailTask = (async () => {
       await sendLovableEmailWithRetry(
         {
           to: effectiveRecipient,
@@ -220,21 +175,57 @@ Deno.serve(async (req) => {
           idempotency_key: idempotencyKey,
           unsubscribe_token: unsubToken,
         },
-        {
-          apiKey: lovableApiKey,
-          idempotencyKey,
-        }
+        { apiKey: lovableApiKey, idempotencyKey }
       )
+    })()
 
+    const smsTask = (async () => {
+      if (!supa) return 'skipped' as const
+      const { data: emp } = await supa
+        .from('employees')
+        .select('phone, name, disabled')
+        .ilike('email', effectiveRecipient)
+        .maybeSingle()
+      const phone = (emp as any)?.phone as string | undefined
+      const isDisabled = (emp as any)?.disabled === true
+      if (!phone || isDisabled) return 'skipped' as const
+
+      const firstLine = (plainText || '')
+        .split('\n')
+        .map((l: string) => l.trim())
+        .filter((l: string) => l.length > 0)[0] || ''
+      const smsBody = `${resolvedSubject}${firstLine ? ` — ${firstLine}` : ''}`.slice(0, 320)
+
+      const { error: smsErr } = await supa.functions.invoke('send-sms', {
+        body: {
+          phone,
+          message: smsBody,
+          userName: (emp as any)?.name,
+          recipientEmail: effectiveRecipient,
+          messageType: `tx:${templateName}`,
+          idempotency_key: `sms-${idempotencyKey}`,
+        },
+      })
+      if (smsErr) throw new Error(smsErr.message || 'sms_invoke_failed')
+      return 'sent' as const
+    })()
+
+    const [emailRes, smsRes] = await Promise.allSettled([emailTask, smsTask])
+
+    if (emailRes.status === 'fulfilled') {
       console.log('✅ Transactional email sent', { templateName, effectiveRecipient })
-    } catch (sendErr) {
+    } else {
       emailStatus = 'failed'
-      emailError = (sendErr as Error)?.message || 'Failed to send email'
-      console.error('❌ Email send failed after retry', { templateName, effectiveRecipient, smsStatus, emailError })
+      emailError = (emailRes.reason as Error)?.message || 'Failed to send email'
+      console.error('❌ Email send failed', { templateName, effectiveRecipient, emailError })
+    }
 
-      if (smsStatus !== 'sent') {
-        throw sendErr
-      }
+    if (smsRes.status === 'fulfilled') {
+      smsStatus = smsRes.value
+      if (smsStatus === 'sent') console.log(`📱 SMS dispatched for ${templateName}`)
+    } else {
+      smsStatus = 'failed'
+      console.warn('⚠️ SMS dispatch failed (continuing):', (smsRes.reason as Error)?.message)
     }
 
     const OPERATIONS_EMAIL = 'operations@greatpearlcoffee.com'
