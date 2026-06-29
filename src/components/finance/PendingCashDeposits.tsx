@@ -142,6 +142,32 @@ export const PendingCashDeposits = () => {
 
       console.log('Balance updated successfully');
 
+      // Send branded confirmation email to the depositor
+      try {
+        const depositorEmail = transaction.created_by;
+        if (depositorEmail && depositorEmail.includes('@')) {
+          const dateStr = new Date().toLocaleDateString('en-UG', { dateStyle: 'full' });
+          supabase.functions.invoke('send-transactional-email', {
+            body: {
+              templateName: 'wallet-deposit-credited',
+              recipientEmail: depositorEmail,
+              idempotencyKey: `cash-deposit-${transactionId}`,
+              data: {
+                employeeName: depositorEmail.split('@')[0],
+                amount: Number(transaction.amount).toLocaleString(),
+                phone: '',
+                depositorName: '',
+                reference: transaction.reference || `CASH-${transactionId.slice(0, 8)}`,
+                date: dateStr,
+                newBalance: newBalance.toLocaleString(),
+              },
+            },
+          });
+        }
+      } catch (emailErr) {
+        console.warn('Deposit confirmation email failed (non-blocking):', emailErr);
+      }
+
       toast.success('Cash deposit confirmed successfully');
       
       // Force refetch all relevant queries
