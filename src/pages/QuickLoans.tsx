@@ -2370,6 +2370,37 @@ const QuickLoans = () => {
               </DialogContent>
             </Dialog>
 
+            {/* Overdraft Top-up Confirmation */}
+            <AlertDialog open={showOdConfirm} onOpenChange={setShowOdConfirm}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-amber-600" /> Insufficient Wallet — Use Overdraft?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-2 text-sm">
+                      <p>Your wallet has <strong>UGX {Math.max(0, myWalletBalance).toLocaleString()}</strong>, but you're paying <strong>UGX {(parseFloat(walletRepayAmount) || 0).toLocaleString()}</strong>.</p>
+                      <p>The shortfall of <strong>UGX {Math.max(0, (parseFloat(walletRepayAmount) || 0) - Math.max(0, myWalletBalance)).toLocaleString()}</strong> will be drawn from your <strong>overdraft</strong> and added to your outstanding balance.</p>
+                      <p className="text-amber-700">Interest: <strong>0.5% per day</strong> on the overdraft portion until cleared. An upfront access fee of UGX {Math.ceil(Math.max(0, (parseFloat(walletRepayAmount) || 0) - Math.max(0, myWalletBalance)) * 0.005).toLocaleString()} (0.5%) will be charged now.</p>
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setOdConfirmed(false)}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      setOdConfirmed(true);
+                      setShowOdConfirm(false);
+                      // re-trigger after state update
+                      setTimeout(() => handleWalletRepayment(), 0);
+                    }}
+                  >
+                    Accept & Pay
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
             {/* Change Guarantor Dialog */}
             <Dialog open={showChangeGuarantorDialog} onOpenChange={(open) => { setShowChangeGuarantorDialog(open); if (!open) { setChangeGuarantorLoan(null); setNewGuarantorId(''); } }}>
               <DialogContent className="max-w-md">
