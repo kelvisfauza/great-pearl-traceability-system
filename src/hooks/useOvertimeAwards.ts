@@ -101,7 +101,7 @@ export const useOvertimeAwards = () => {
 
     // Subscribe to realtime updates
     const channel = supabase
-      .channel('overtime-awards-changes')
+      .channel(`overtime-awards-changes-${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         {
