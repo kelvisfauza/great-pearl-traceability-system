@@ -12,11 +12,18 @@ interface VerificationRequest {
   code?: string;
 }
 
+type DeliveryResult = {
+  sent: boolean;
+  error?: string;
+  provider?: string;
+  skipped?: string;
+};
+
 async function sendVerificationEmail(
   supabase: ReturnType<typeof createClient>,
   email: string,
   verificationCode: string,
-) {
+): Promise<DeliveryResult> {
   // Retry on transient errors (esp. 429 rate-limits from email provider).
   const maxAttempts = 4;
   const delays = [800, 2000, 4000]; // ms between attempts
@@ -76,7 +83,7 @@ async function sendVerificationSms(
   email: string,
   employee: { name?: string | null; phone?: string | null } | null,
   verificationCode: string,
-) {
+): Promise<DeliveryResult> {
   if (!employee?.phone) {
     return { sent: false, skipped: 'no_employee_phone' };
   }
@@ -117,7 +124,7 @@ async function sendVerificationSms(
       return { sent: false, error: data?.error || `HTTP ${response.status}` };
     }
 
-    return { sent: true, provider: data?.provider };
+    return { sent: true, provider: data?.provider ? String(data.provider) : undefined };
   } catch (err: any) {
     console.warn('Verification SMS error:', err?.message || err);
     return { sent: false, error: err?.message || 'SMS failed' };
