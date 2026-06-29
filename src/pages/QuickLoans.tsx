@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSalaryAdvanceApprovals } from '@/hooks/useSalaryAdvanceApprovals';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -70,6 +71,10 @@ const getFirstRepaymentDate = (startDateInput: Date | string, frequency: Repayme
 const QuickLoans = () => {
   const { employee, isAdmin } = useAuth();
   const { toast } = useToast();
+  const { createAdvanceApprovalRequest, loading: advanceSubmitting } = useSalaryAdvanceApprovals();
+  const [showAdvanceDialog, setShowAdvanceDialog] = useState(false);
+  const [advanceAmount, setAdvanceAmount] = useState('');
+  const [advanceReason, setAdvanceReason] = useState('');
   const [loans, setLoans] = useState<any[]>([]);
   const [myLoans, setMyLoans] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
