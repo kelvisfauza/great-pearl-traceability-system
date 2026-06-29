@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Banknote, Clock, Shield, Users, AlertTriangle, CheckCircle, XCircle, CreditCard, Download, Printer, Phone, Loader2, FileText, Eye, ShieldOff, Wallet, HandCoins, ArrowUpCircle, Edit, Scale } from 'lucide-react';
@@ -107,6 +108,8 @@ const QuickLoans = () => {
   const [walletRepayLoan, setWalletRepayLoan] = useState<any>(null);
   const [walletRepayAmount, setWalletRepayAmount] = useState('');
   const [walletRepayLoading, setWalletRepayLoading] = useState(false);
+  const [showOdConfirm, setShowOdConfirm] = useState(false);
+  const [odConfirmed, setOdConfirmed] = useState(false);
   const [showChangeGuarantorDialog, setShowChangeGuarantorDialog] = useState(false);
   const [changeGuarantorLoan, setChangeGuarantorLoan] = useState<any>(null);
   const [newGuarantorId, setNewGuarantorId] = useState('');
