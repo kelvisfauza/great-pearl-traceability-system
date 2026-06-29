@@ -406,8 +406,8 @@ const UserStatement = () => {
 
   <div class="summary">
     <div><div class="lbl">Opening Balance</div><div class="val">UGX ${Number(opening).toLocaleString()}</div></div>
-    <div><div class="lbl">Total Credits</div><div class="val" style="color:#070">UGX ${Number(periodCredits).toLocaleString()}</div></div>
-    <div><div class="lbl">Total Debits</div><div class="val" style="color:#b00">UGX ${Number(periodDebits).toLocaleString()}</div></div>
+    <div><div class="lbl">Total Credits</div><div class="val" style="color:#000;font-weight:bold">UGX ${Number(periodCredits).toLocaleString()}</div></div>
+    <div><div class="lbl">Total Debits</div><div class="val" style="color:#000;font-weight:bold">UGX ${Number(periodDebits).toLocaleString()}</div></div>
     <div><div class="lbl">Closing Balance</div><div class="val">UGX ${Number(closing).toLocaleString()}</div></div>
   </div>
 
