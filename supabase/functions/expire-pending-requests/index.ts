@@ -80,11 +80,17 @@ serve(async (req) => {
         if (userId) {
           const ledgerRef = `REFUND-EXPIRED-${req.id.slice(0, 8).toUpperCase()}`;
 
-          // Check if refund already issued (idempotency)
+          // Check if ANY refund already issued for this request (idempotency).
+          // Manual refunds may use different reference patterns, so match by
+          // request id substring OR metadata.original_request_id.
+          const shortId = req.id.slice(0, 8).toUpperCase();
           const { data: existing } = await supabase
             .from("ledger_entries")
             .select("id")
-            .eq("reference", ledgerRef)
+            .eq("user_id", userId)
+            .eq("entry_type", "DEPOSIT")
+            .or(`reference.ilike.%${shortId}%,reference.ilike.%${req.id}%,metadata->>original_request_id.eq.${req.id}`)
+            .limit(1)
             .maybeSingle();
 
           if (!existing) {
