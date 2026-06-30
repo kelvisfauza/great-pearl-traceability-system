@@ -38,6 +38,7 @@ Deno.serve(async (req) => {
     const channel = body.channel as ChannelKey;
     const title = typeof body.title === 'string' ? body.title : '';
     const message = typeof body.message === 'string' ? body.message : '';
+    const rawHtml = typeof body.html === 'string' ? body.html : '';
     const actions = Array.isArray(body.actions) ? body.actions as Array<{ label: string; url: string }> : [];
     const replyToMessageId = typeof body.replyToMessageId === 'string' ? body.replyToMessageId : '';
 
@@ -47,7 +48,7 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    if (!title && !message) {
+    if (!title && !message && !rawHtml) {
       return new Response(JSON.stringify({ ok: false, error: 'title or message required' }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -75,7 +76,7 @@ Deno.serve(async (req) => {
           )
           .join('')}</div>`
       : '';
-    const html = `${title ? `<h3>${escapeHtml(title)}</h3>` : ''}${
+    const html = rawHtml ? rawHtml : `${title ? `<h3>${escapeHtml(title)}</h3>` : ''}${
       message ? `<div>${escapeHtml(message).replace(/\n/g, '<br/>')}</div>` : ''
     }${actionsHtml}`;
 
