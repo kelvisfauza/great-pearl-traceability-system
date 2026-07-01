@@ -104,7 +104,54 @@ export default function YoPaymentsReport() {
     return { totalAmount, successCount, failedCount, pendingCount, count: filtered.length };
   }, [filtered]);
 
-  const handlePrint = () => window.print();
+  const handlePrint = () => {
+    const w = window.open("", "_blank", "width=1200,height=800");
+    if (!w) return;
+    const rowsHtml = filtered.map((r) => `
+      <tr>
+        <td>${format(new Date(r.occurred_at), "MMM d, HH:mm")}</td>
+        <td>${r.source}</td>
+        <td>${r.recipient_name || "—"}</td>
+        <td style="font-family:monospace">${r.phone || "—"}</td>
+        <td style="text-align:right">${Number(r.amount || 0).toLocaleString()}</td>
+        <td>${(r.description || "—").replace(/</g, "&lt;")}</td>
+        <td>${r.status}</td>
+        <td style="font-family:monospace">${r.yo_reference || "—"}</td>
+        <td>${r.initiated_by || "—"}</td>
+        <td>${r.approved_by || "—"}</td>
+      </tr>`).join("");
+    w.document.write(`<!doctype html><html><head><title>Yo Payments Audit Report</title>
+      <style>
+        body{font-family:Arial,sans-serif;color:#000;margin:20px;font-size:11px}
+        h1{font-size:18px;margin:0 0 4px}
+        .meta{font-size:11px;color:#000;margin-bottom:12px}
+        .stats{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+        .stat{border:1px solid #000;padding:6px 10px;min-width:120px}
+        .stat .l{font-size:10px}
+        .stat .v{font-size:16px;font-weight:bold}
+        table{width:100%;border-collapse:collapse;font-size:10px}
+        th,td{border:1px solid #000;padding:4px 6px;text-align:left;vertical-align:top;color:#000}
+        th{background:#eee}
+        @media print{@page{size:A4 landscape;margin:12mm}}
+      </style></head><body>
+      <h1>Great Agro Coffee — Yo Payments Audit Report</h1>
+      <div class="meta">Period: ${startDate} to ${endDate} • Generated: ${format(new Date(), "yyyy-MM-dd HH:mm")}<br/>
+      Source: ${source === "all" ? "All" : source} • Status: ${status === "all" ? "All" : status}</div>
+      <div class="stats">
+        <div class="stat"><div class="l">Total Transactions</div><div class="v">${stats.count}</div></div>
+        <div class="stat"><div class="l">Total Amount (UGX)</div><div class="v">${stats.totalAmount.toLocaleString()}</div></div>
+        <div class="stat"><div class="l">Success</div><div class="v">${stats.successCount}</div></div>
+        <div class="stat"><div class="l">Pending</div><div class="v">${stats.pendingCount}</div></div>
+        <div class="stat"><div class="l">Failed</div><div class="v">${stats.failedCount}</div></div>
+      </div>
+      <table><thead><tr>
+        <th>Date</th><th>Source</th><th>Recipient</th><th>Phone</th><th>Amount (UGX)</th>
+        <th>Description</th><th>Status</th><th>Yo Ref</th><th>Initiated By</th><th>Approved By</th>
+      </tr></thead><tbody>${rowsHtml}</tbody></table>
+      <script>window.onload=()=>{setTimeout(()=>{window.print();},300);}</script>
+      </body></html>`);
+    w.document.close();
+  };
 
   const handleExportCSV = () => {
     const headers = ["Date", "Source", "Recipient", "Phone", "Amount", "Description", "Status", "Yo Reference", "Initiated By", "Approved By"];
