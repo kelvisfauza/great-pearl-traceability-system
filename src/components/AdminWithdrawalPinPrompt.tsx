@@ -90,6 +90,28 @@ const AdminWithdrawalPinPrompt = () => {
 
       if (ledgerError) throw ledgerError;
 
+      // Credit Treasury Pool (cash channel) - admin took cash from user's wallet into company float
+      try {
+        await supabase.rpc('record_treasury_entry' as any, {
+          p_amount: Math.abs(pendingWithdrawal.amount),
+          p_category: 'withdrawal',
+          p_channel: 'cash',
+          p_description: `Admin cash withdrawal from ${pendingWithdrawal.employee_name}: ${pendingWithdrawal.reason}`,
+          p_direction: 'credit',
+          p_metadata: {
+            type: 'admin_cash_withdrawal',
+            withdrawal_id: pendingWithdrawal.id,
+            initiated_by: pendingWithdrawal.initiated_by_name,
+          },
+          p_performed_by: pendingWithdrawal.initiated_by_name,
+          p_reference: reference,
+          p_related_user_email: pendingWithdrawal.employee_email,
+          p_related_user_name: pendingWithdrawal.employee_name,
+        });
+      } catch (tpErr) {
+        console.error('Treasury pool credit failed (non-blocking):', tpErr);
+      }
+
       // Update withdrawal status
       await supabase
         .from('admin_initiated_withdrawals' as any)
