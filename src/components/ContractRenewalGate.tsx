@@ -75,7 +75,7 @@ const ContractRenewalGate = () => {
           .from('contract_renewal_requests')
           .select('id, status')
           .ilike('employee_email', employee.email)
-          .in('status', ['pending', 'approved'])
+          .in('status', ['pending', 'negotiating', 'approved'])
           .order('created_at', { ascending: false })
           .limit(1),
       ]);
@@ -139,9 +139,9 @@ const ContractRenewalGate = () => {
       return;
     }
     setSubmitting(true);
-    const { error } = await (supabase as any).from('contract_renewal_requests').insert({
-      employee_email: employee.email,
-      employee_name: employee.name,
+    const { data, error } = await supabase.functions.invoke('submit-contract-renewal', {
+      body: {
+        mode: 'accept',
       current_contract_id: expired.id, // may be null for provisional/derived contracts
       requested_months: months,
       reason: reason.trim(),
@@ -153,11 +153,11 @@ const ContractRenewalGate = () => {
       bank_account: bankAccount.trim() || null,
       policy_acknowledged: ack,
       signature: signature.trim(),
-      status: 'pending',
+      },
     });
     setSubmitting(false);
-    if (error) {
-      toast({ title: 'Submission failed', description: error.message, variant: 'destructive' });
+    if (error || !data?.ok) {
+      toast({ title: 'Submission failed', description: data?.error || error?.message || 'Could not submit renewal request', variant: 'destructive' });
       return;
     }
     toast({ title: 'Submitted for approval', description: 'Admin will review your renewal request shortly.' });
@@ -184,9 +184,9 @@ const ContractRenewalGate = () => {
     setSubmitting(true);
     const grace = new Date();
     grace.setDate(grace.getDate() + 7);
-    const { error } = await (supabase as any).from('contract_renewal_requests').insert({
-      employee_email: employee.email,
-      employee_name: employee.name,
+    const { data, error } = await supabase.functions.invoke('submit-contract-renewal', {
+      body: {
+        mode: 'negotiate',
       current_contract_id: expired.id,
       requested_months: months,
       reason: negotiationNotes.trim(),
@@ -197,11 +197,11 @@ const ContractRenewalGate = () => {
       requested_other_terms: reqOtherTerms.trim() || null,
       negotiation_notes: negotiationNotes.trim(),
       grace_period_until: grace.toISOString(),
-      status: 'negotiating',
+      },
     });
     setSubmitting(false);
-    if (error) {
-      toast({ title: 'Submission failed', description: error.message, variant: 'destructive' });
+    if (error || !data?.ok) {
+      toast({ title: 'Submission failed', description: data?.error || error?.message || 'Could not submit change request', variant: 'destructive' });
       return;
     }
     toast({
