@@ -30,27 +30,82 @@ Deno.serve(async (req) => {
       const principal = Number(inv.amount);
       const rate = Number(inv.interest_rate) / 100;
       const interest = principal * rate;
-      const newPrincipal = principal + interest;
+      const payout = principal + interest;
+      const payoutRef = `INVEST-MATURE-${String(inv.id).slice(0, 8)}`;
 
-      // Auto-compound: add interest to principal and extend by another 3 months
-      const newMaturity = new Date();
-      newMaturity.setMonth(newMaturity.getMonth() + 3);
-      const newMaturityDate = newMaturity.toISOString().split("T")[0];
+      // Resolve unified user id for ledger
+      let unifiedId = inv.user_id;
+      try {
+        const { data: uid } = await supabase.rpc("get_unified_user_id", { input_email: inv.user_email });
+        if (uid) unifiedId = uid;
+      } catch (_) {}
 
+      // Idempotency: skip if ledger entry already exists
+      const { data: existing } = await supabase
+        .from("ledger_entries")
+        .select("id")
+        .eq("reference", payoutRef)
+        .maybeSingle();
+
+      if (!existing) {
+        const { error: ledgerErr } = await supabase.from("ledger_entries").insert([{
+          user_id: unifiedId,
+          entry_type: "DEPOSIT",
+          amount: payout,
+          reference: payoutRef,
+          source_category: "SYSTEM_AWARD",
+          metadata: {
+            description: `Investment matured - principal UGX ${principal.toLocaleString()} + interest UGX ${Math.round(interest).toLocaleString()} @ 25% - ${payoutRef}`,
+            type: "investment_maturity_payout",
+            investment_id: inv.id,
+            principal,
+            interest,
+            bypass_treasury_check: true,
+          },
+        }]);
+        if (ledgerErr) {
+          console.error(`Failed to credit ${inv.user_email}:`, ledgerErr);
+          continue;
+        }
+      }
+
+      // Mark investment matured
       const { error: updateErr } = await supabase.from("investments").update({
-        amount: newPrincipal,
-        start_date: today,
-        maturity_date: newMaturityDate,
-        earned_interest: (Number(inv.earned_interest) || 0) + interest,
+        status: "matured",
+        earned_interest: interest,
+        total_payout: payout,
+        withdrawn_at: new Date().toISOString(),
       }).eq("id", inv.id);
 
       if (updateErr) {
-        console.error(`Failed to compound ${inv.user_email}:`, updateErr);
+        console.error(`Failed to mark matured ${inv.user_email}:`, updateErr);
         continue;
       }
 
+      // Notify via email + SMS
+      try {
+        await supabase.functions.invoke("send-transactional-email", {
+          body: {
+            templateName: "investment-matured",
+            recipientEmail: inv.user_email,
+            idempotencyKey: `invest-matured-${inv.id}`,
+            templateData: {
+              employeeName: inv.employee_name || inv.user_email,
+              principal,
+              interest: Math.round(interest),
+              payout: Math.round(payout),
+              interestRate: 25,
+              maturityDate: inv.maturity_date,
+              investmentRef: payoutRef,
+            },
+          },
+        });
+      } catch (emailErr) {
+        console.warn(`Email failed for ${inv.user_email}:`, emailErr);
+      }
+
       processed++;
-      console.log(`🔄 Compounded investment for ${inv.user_email}: ${principal} → ${newPrincipal} (+ ${interest} interest), next maturity: ${newMaturityDate}`);
+      console.log(`✅ Matured & credited ${inv.user_email}: UGX ${payout} (principal ${principal} + interest ${interest})`);
     }
 
     return new Response(JSON.stringify({ ok: true, processed, total: matured?.length || 0 }), {
