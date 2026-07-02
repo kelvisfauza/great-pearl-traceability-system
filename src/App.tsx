@@ -132,7 +132,7 @@ import ProfileCompletionModal from "./components/ProfileCompletionModal";
 import BirthdayNotification from "./components/BirthdayNotification";
 import ContractRenewalGate from "./components/ContractRenewalGate";
 import MeetingRewardsTeaserPopup from "./components/MeetingRewardsTeaserPopup";
-import StatutoryInfoModal from "./components/StatutoryInfoModal";
+
 import SeasonalAdvisoryModal from "./components/SeasonalAdvisoryModal";
 import { useInactivityTimer } from './hooks/useInactivityTimer';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -191,7 +191,7 @@ const App: React.ComponentType = () => {
               <BirthdayNotification />
               <ContractRenewalGate />
               <MeetingRewardsTeaserPopup />
-              <StatutoryInfoModal />
+              
               <SeasonalAdvisoryModal />
               
               {/* <RoleNotificationHandler /> - Disabled due to performance issues */}
