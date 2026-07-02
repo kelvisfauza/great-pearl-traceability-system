@@ -105,9 +105,12 @@ Deno.serve(async (req) => {
       const attended = arr !== null && dep !== null && dep > arr && status === "present";
       if (!attended) continue;
 
-      if (!empMap[r.employee_id]) {
-        empMap[r.employee_id] = {
-          employee_id: r.employee_id,
+      // Normalize employee_id: attendance sometimes stores the same employee
+      // under both the raw UUID and a "company_<UUID>" variant. Merge them.
+      const normalizedId = String(r.employee_id || "").replace(/^company_/, "");
+      if (!empMap[normalizedId]) {
+        empMap[normalizedId] = {
+          employee_id: normalizedId,
           employee_name: r.employee_name,
           employee_email: r.employee_email,
           total_worked: 0,
@@ -115,9 +118,18 @@ Deno.serve(async (req) => {
           qualifying_days: 0,
         };
       }
-      empMap[r.employee_id].total_worked += (dep! - arr!);
-      empMap[r.employee_id].total_late += Number(r.late_minutes || 0);
-      empMap[r.employee_id].qualifying_days += 1;
+      // Prefer a real email over an employee-code placeholder if we see one later
+      const existingEmail = empMap[normalizedId].employee_email || "";
+      if (
+        (!existingEmail.includes("@") || /^GAC-|^EMP/i.test(existingEmail)) &&
+        r.employee_email &&
+        String(r.employee_email).includes("@")
+      ) {
+        empMap[normalizedId].employee_email = r.employee_email;
+      }
+      empMap[normalizedId].total_worked += (dep! - arr!);
+      empMap[normalizedId].total_late += Number(r.late_minutes || 0);
+      empMap[normalizedId].qualifying_days += 1;
     }
 
     const RATE_PER_HOUR = 1500; // UGX per hour
