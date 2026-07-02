@@ -74,6 +74,7 @@ import { template as overdraftQualification } from './overdraft-qualification.ts
 import { template as overdraftPenaltyWarning } from './overdraft-penalty-warning.tsx'
 import { template as labourDayClosureEmployees } from './labour-day-closure-employees.tsx'
 import { template as labourDayClosureSuppliers } from './labour-day-closure-suppliers.tsx'
+import { template as investmentMatured } from './investment-matured.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'verification-code': verificationCode,
@@ -124,6 +125,7 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'admin-withdrawal-pin': adminWithdrawalPin,
   'admin-withdrawal-confirmed': adminWithdrawalConfirmed,
   'investment-confirmation': investmentConfirmation,
+  'investment-matured': investmentMatured,
   'instant-withdrawal-confirmation': instantWithdrawalConfirmation,
   'request-expired-refund': requestExpiredRefund,
   'general-notification': generalNotification,
