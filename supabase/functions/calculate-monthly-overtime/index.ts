@@ -16,11 +16,18 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
+    // Allow explicit month override: { month: "YYYY-MM" }
+    let bodyJson: any = {};
+    try { bodyJson = await req.json(); } catch { /* no body */ }
     const now = new Date();
-    // Calculate for the previous month
-    const targetDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    let targetDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    if (bodyJson?.month && /^\d{4}-\d{2}$/.test(bodyJson.month)) {
+      const [y, m] = bodyJson.month.split("-").map(Number);
+      targetDate = new Date(y, m - 1, 1);
+    }
     const targetMonth = targetDate.getMonth() + 1;
     const targetYear = targetDate.getFullYear();
+    const recalc = bodyJson?.recalc !== false; // default true so re-runs refresh pending rows
     const monthStart = `${targetYear}-${String(targetMonth).padStart(2, "0")}-01`;
     const nextMonthDate = new Date(targetYear, targetMonth, 1);
     const monthEnd = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, "0")}-01`;
@@ -30,14 +37,27 @@ Deno.serve(async (req) => {
       "July", "August", "September", "October", "November", "December",
     ];
 
-    // Fetch already-existing reviews for this month so we can skip those employees
-    // (don't recompute employees who have already been processed/approved).
+    // Fetch already-existing reviews. Keep employees whose rows are already
+    // approved/paid (we never overwrite those). Pending rows are cleared and
+    // recomputed when recalc=true so admins get fresh figures.
     const { data: existingReviews } = await supabase
       .from("monthly_overtime_reviews")
-      .select("employee_id")
+      .select("employee_id, status")
       .eq("month", targetMonth)
       .eq("year", targetYear);
-    const existingEmployeeIds = new Set((existingReviews || []).map((r: any) => r.employee_id));
+    const lockedEmployeeIds = new Set(
+      (existingReviews || [])
+        .filter((r: any) => String(r.status).toLowerCase() !== "pending")
+        .map((r: any) => r.employee_id)
+    );
+    if (recalc) {
+      await supabase
+        .from("monthly_overtime_reviews")
+        .delete()
+        .eq("month", targetMonth)
+        .eq("year", targetYear)
+        .eq("status", "pending");
+    }
 
     // Aggregate overtime and late minutes per employee
     // IMPORTANT: only count rows where the employee actually attended that day.
@@ -54,63 +74,62 @@ Deno.serve(async (req) => {
 
     if (timeErr) throw timeErr;
 
-    // Build per-employee summary
+    // MONTHLY AGGREGATE MODEL
+    // We sum the actual worked minutes across every attended day in the month
+    // (departure − arrival), and sum total late minutes across the whole month.
+    // Overtime = TOTAL WORKED − EXPECTED (qualifying_days × 8h) − TOTAL LATE.
+    // This is the "total arrival for the month minus total late" approach —
+    // per-day overtime_minutes is ignored.
+    const STANDARD_DAY_MINUTES = 8 * 60; // 8 hour standard workday
+
+    const toMinutes = (t: string | null): number | null => {
+      if (!t) return null;
+      const [h, m] = String(t).split(":").map(Number);
+      if (isNaN(h) || isNaN(m)) return null;
+      return h * 60 + m;
+    };
+
     const empMap: Record<string, {
       employee_id: string;
       employee_name: string;
       employee_email: string;
-      total_overtime: number;
+      total_worked: number;
       total_late: number;
       qualifying_days: number;
-      skipped_invalid: number;
     }> = {};
 
-    let totalSkipped = 0;
     for (const r of timeRecords || []) {
       const status = String(r.status || "").toLowerCase();
-      const attended = !!r.arrival_time && !!r.departure_time && status === "present";
+      const arr = toMinutes(r.arrival_time);
+      const dep = toMinutes(r.departure_time);
+      const attended = arr !== null && dep !== null && dep > arr && status === "present";
+      if (!attended) continue;
 
       if (!empMap[r.employee_id]) {
         empMap[r.employee_id] = {
           employee_id: r.employee_id,
           employee_name: r.employee_name,
           employee_email: r.employee_email,
-          total_overtime: 0,
+          total_worked: 0,
           total_late: 0,
           qualifying_days: 0,
-          skipped_invalid: 0,
         };
       }
-
-      if (!attended) {
-        // Did not actually work that day → no overtime / no late credit
-        if (Number(r.overtime_minutes || 0) > 0 || Number(r.late_minutes || 0) > 0) {
-          empMap[r.employee_id].skipped_invalid += 1;
-          totalSkipped += 1;
-          console.log(
-            `[overtime] Skipping ${r.employee_email} on ${r.record_date}: arrival=${r.arrival_time} departure=${r.departure_time} status=${r.status} ot=${r.overtime_minutes}`
-          );
-        }
-        continue;
-      }
-
-      empMap[r.employee_id].total_overtime += Number(r.overtime_minutes || 0);
+      empMap[r.employee_id].total_worked += (dep! - arr!);
       empMap[r.employee_id].total_late += Number(r.late_minutes || 0);
       empMap[r.employee_id].qualifying_days += 1;
     }
 
-    console.log(`[overtime] Skipped ${totalSkipped} invalid rows (no full attendance) for ${monthNames[targetMonth]} ${targetYear}`);
-
     const RATE_PER_HOUR = 1500; // UGX per hour
     const MAX_MONTHLY_PAY = 100000; // UGX cap per employee per month
     const records = Object.values(empMap)
-      // Only include employees who actually attended at least one day in the month
-      .filter((emp) => emp.qualifying_days > 0 && emp.total_overtime > 0)
-      // Skip employees already in the review table (approved or otherwise processed)
-      .filter((emp) => !existingEmployeeIds.has(emp.employee_id))
+      .filter((emp) => emp.qualifying_days > 0)
+      .filter((emp) => !lockedEmployeeIds.has(emp.employee_id))
       .map((emp) => {
-        const netOT = Math.max(0, emp.total_overtime - emp.total_late);
-        const hours = Math.ceil(netOT / 60);
+        const expected = emp.qualifying_days * STANDARD_DAY_MINUTES;
+        const grossOT = emp.total_worked - expected;
+        const netOT = Math.max(0, grossOT - emp.total_late);
+        const hours = Math.floor(netOT / 60);
         const rawPay = hours * RATE_PER_HOUR;
         const cappedPay = Math.min(rawPay, MAX_MONTHLY_PAY);
         return {
@@ -119,17 +138,16 @@ Deno.serve(async (req) => {
           employee_email: emp.employee_email,
           month: targetMonth,
           year: targetYear,
-          total_overtime_minutes: emp.total_overtime,
+          total_overtime_minutes: Math.max(0, grossOT),
           total_late_minutes: emp.total_late,
           net_overtime_minutes: netOT,
           overtime_rate_per_hour: RATE_PER_HOUR,
           calculated_pay: cappedPay,
-          admin_notes: rawPay > MAX_MONTHLY_PAY
-            ? `Auto-capped at UGX ${MAX_MONTHLY_PAY.toLocaleString()} (raw: UGX ${rawPay.toLocaleString()} for ${hours}h)`
-            : null,
+          admin_notes: `Worked ${(emp.total_worked/60).toFixed(1)}h across ${emp.qualifying_days} days (expected ${(expected/60).toFixed(0)}h), late ${emp.total_late}min → net OT ${(netOT/60).toFixed(1)}h${rawPay > MAX_MONTHLY_PAY ? ` (auto-capped from UGX ${rawPay.toLocaleString()})` : ""}`,
           status: "pending",
         };
-      });
+      })
+      .filter((r) => r.net_overtime_minutes > 0);
 
     if (records.length === 0) {
       return new Response(
