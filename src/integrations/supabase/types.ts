@@ -12590,6 +12590,10 @@ export type Database = {
       can_manage_users: { Args: never; Returns: boolean }
       can_perform_action: { Args: { action_type: string }; Returns: boolean }
       can_process_finance: { Args: never; Returns: boolean }
+      can_submit_contract_renewal_request: {
+        Args: { _employee_email: string }
+        Returns: boolean
+      }
       check_auth_user_exists: { Args: { user_uuid: string }; Returns: Json }
       check_unread_messages_for_sms: { Args: never; Returns: undefined }
       cleanup_expired_email_verification_codes: {
