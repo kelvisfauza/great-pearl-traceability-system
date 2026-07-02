@@ -182,7 +182,7 @@ serve(async (req) => {
       await supabase.functions.invoke("send-transactional-email", {
         body: {
           templateName: "overtime-reward",
-          recipientEmail: review.employee_email,
+          recipientEmail: resolvedEmail || review.employee_email,
           idempotencyKey: `overtime-paid-${review.id}`,
           ccEmails: ["operations@greatpearlcoffee.com"],
           templateData: {
@@ -211,7 +211,7 @@ serve(async (req) => {
             phone: employeePhone,
             message: `Great Agro Coffee: Your ${monthLabel} overtime reward of UGX ${amount.toLocaleString()} has been ${payoutMessage}. Ref: ${payoutReference}`,
             userName: review.employee_name,
-            recipientEmail: review.employee_email,
+            recipientEmail: resolvedEmail || review.employee_email,
             messageType: "payout_confirmation",
             department: "Human Resources",
             triggeredBy: approverEmail || "HR",
