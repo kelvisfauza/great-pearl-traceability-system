@@ -15,44 +15,56 @@ serve(async (req) => {
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 
-  const email = "orubambura@gmail.com";
+  const workEmail = "onesmusrubambura@greatpearlcoffee.com";
+  const personalEmail = "orubambura@gmail.com";
   const password = "Onesmus@2026";
   const name = "Rubambura Kakuhi Onesmus";
   const phone = "0778479944";
 
   try {
-    // 1. Create auth user
-    const { data: authData, error: authErr } = await admin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { name, role: "User" },
-    });
+    // 1. Locate existing auth user by either personal or work email
+    const { data: list } = await admin.auth.admin.listUsers();
+    const existingAuth = list.users.find(
+      (u) =>
+        u.email?.toLowerCase() === personalEmail.toLowerCase() ||
+        u.email?.toLowerCase() === workEmail.toLowerCase()
+    );
 
-    let authUserId = authData?.user?.id;
-    if (authErr) {
-      if (!authErr.message?.toLowerCase().includes("already")) {
+    let authUserId = existingAuth?.id;
+    if (authUserId) {
+      // Update to work email + reset password
+      await admin.auth.admin.updateUserById(authUserId, {
+        email: workEmail,
+        password,
+        email_confirm: true,
+      });
+    } else {
+      const { data: authData, error: authErr } = await admin.auth.admin.createUser({
+        email: workEmail,
+        password,
+        email_confirm: true,
+        user_metadata: { name, role: "User" },
+      });
+      if (authErr) {
         return new Response(JSON.stringify({ ok: false, error: authErr.message }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      // Fetch existing user id
-      const { data: list } = await admin.auth.admin.listUsers();
-      authUserId = list.users.find((u) => u.email?.toLowerCase() === email)?.id;
+      authUserId = authData.user?.id;
     }
 
-    // 2. Upsert employee record
+    // 2. Upsert employee record (match by either email)
     const { data: existing } = await admin
       .from("employees")
       .select("id")
-      .eq("email", email)
+      .or(`email.eq.${personalEmail},email.eq.${workEmail}`)
       .maybeSingle();
 
     let employee;
     if (existing) {
       const { data } = await admin
         .from("employees")
-        .update({ auth_user_id: authUserId, status: "Active" })
+        .update({ auth_user_id: authUserId, email: workEmail, status: "Active" })
         .eq("id", existing.id)
         .select()
         .single();
@@ -62,7 +74,7 @@ serve(async (req) => {
         .from("employees")
         .insert({
           name,
-          email,
+          email: workEmail,
           phone,
           position: "Junior Quality Control Officer",
           department: "Quality Control",
@@ -87,10 +99,41 @@ serve(async (req) => {
     await admin
       .from("job_applications")
       .update({ status: "Onboarded", notes: "Account created; junior quality assistant." })
-      .eq("email", email);
+      .eq("email", personalEmail);
+
+    // 4. Send credentials to personal email + SMS
+    const message = `Welcome to Great Agro Coffee!\n\nYour login has been created.\n\nLogin email: ${workEmail}\nTemporary password: ${password}\n\nPlease log in at https://greatpearlcoffeesystem.site and change your password immediately.\n\n— Great Agro Coffee HR`;
+
+    const results = await Promise.allSettled([
+      admin.functions.invoke("send-transactional-email", {
+        body: {
+          templateName: "general-notification",
+          recipientEmail: personalEmail,
+          idempotencyKey: `onesmus-credentials-${Date.now()}`,
+          templateData: {
+            title: "Your Great Agro Coffee Login",
+            heading: `Welcome, ${name}`,
+            message,
+            recipientName: name,
+          },
+        },
+      }),
+      admin.functions.invoke("send-sms", {
+        body: {
+          to: phone,
+          message: `Great Agro: Your login email is ${workEmail}, temp password: ${password}. Change it on first login.`,
+          type: "account_credentials",
+        },
+      }),
+    ]);
+
+    const notify = {
+      email: results[0].status,
+      sms: results[1].status,
+    };
 
     return new Response(
-      JSON.stringify({ ok: true, email, password, authUserId, employee }),
+      JSON.stringify({ ok: true, workEmail, personalEmail, password, authUserId, employee, notify }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
