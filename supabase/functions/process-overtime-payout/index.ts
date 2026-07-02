@@ -63,20 +63,42 @@ serve(async (req) => {
     const monthLabel = `${monthNames[review.month]} ${review.year}`;
 
     // Resolve unified user id (for wallet credit) + phone fallback
+    // review.employee_email may actually be an employee CODE (e.g. "GAC-0002")
+    // when attendance records lacked a real email. Fall back to lookup by name.
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     let userId: string | null = null;
     let employeePhone: string | null = phone || null;
+    let resolvedEmail: string | null = null;
     try {
-      const { data: emp } = await supabase
+      let emp: any = null;
+      // 1) Try match by email exact
+      const r1 = await supabase
         .from("employees")
-        .select("id, phone, email")
-        .eq("email", review.employee_email)
+        .select("id, phone, email, auth_user_id, name")
+        .ilike("email", review.employee_email)
         .maybeSingle();
+      emp = r1.data;
+      // 2) Fall back to matching by employee name
+      if (!emp && review.employee_name) {
+        const r2 = await supabase
+          .from("employees")
+          .select("id, phone, email, auth_user_id, name")
+          .ilike("name", review.employee_name)
+          .maybeSingle();
+        emp = r2.data;
+      }
       if (emp?.phone && !employeePhone) employeePhone = emp.phone;
+      if (emp?.email) resolvedEmail = emp.email;
+      if (emp?.auth_user_id && UUID_RE.test(String(emp.auth_user_id))) {
+        userId = emp.auth_user_id;
+      }
 
-      const { data: uid } = await supabase.rpc("get_unified_user_id", {
-        input_email: review.employee_email,
-      });
-      if (uid) userId = uid as string;
+      if (!userId && resolvedEmail) {
+        const { data: uid } = await supabase.rpc("get_unified_user_id", {
+          input_email: resolvedEmail,
+        });
+        if (uid && UUID_RE.test(String(uid))) userId = uid as string;
+      }
     } catch (_) { /* ignore */ }
 
     let payoutDestination = "wallet";
@@ -87,16 +109,7 @@ serve(async (req) => {
     let payoutMessage = "";
 
     if (payoutMethod === "wallet") {
-      if (!userId) {
-        // Fallback: look up auth user directly by email
-        const { data: authUser } = await supabase
-          .from("employees")
-          .select("auth_user_id")
-          .eq("email", review.employee_email)
-          .maybeSingle();
-        if ((authUser as any)?.auth_user_id) userId = (authUser as any).auth_user_id;
-      }
-      if (!userId) {
+      if (!userId || !UUID_RE.test(userId)) {
         return fail("Could not resolve employee wallet (user_id). Make sure the employee has an auth account with a matching email.");
       }
       const { error: ledgerErr } = await supabase.from("ledger_entries").insert({
@@ -169,7 +182,7 @@ serve(async (req) => {
       await supabase.functions.invoke("send-transactional-email", {
         body: {
           templateName: "overtime-reward",
-          recipientEmail: review.employee_email,
+          recipientEmail: resolvedEmail || review.employee_email,
           idempotencyKey: `overtime-paid-${review.id}`,
           ccEmails: ["operations@greatpearlcoffee.com"],
           templateData: {
@@ -198,7 +211,7 @@ serve(async (req) => {
             phone: employeePhone,
             message: `Great Agro Coffee: Your ${monthLabel} overtime reward of UGX ${amount.toLocaleString()} has been ${payoutMessage}. Ref: ${payoutReference}`,
             userName: review.employee_name,
-            recipientEmail: review.employee_email,
+            recipientEmail: resolvedEmail || review.employee_email,
             messageType: "payout_confirmation",
             department: "Human Resources",
             triggeredBy: approverEmail || "HR",
