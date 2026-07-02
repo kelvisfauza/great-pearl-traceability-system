@@ -191,7 +191,7 @@ const App: React.ComponentType = () => {
               <BirthdayNotification />
               <ContractRenewalGate />
               <MeetingRewardsTeaserPopup />
-              <StatutoryInfoModal />
+              
               <SeasonalAdvisoryModal />
               
               {/* <RoleNotificationHandler /> - Disabled due to performance issues */}
