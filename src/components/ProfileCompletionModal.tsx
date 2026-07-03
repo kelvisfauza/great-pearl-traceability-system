@@ -106,8 +106,12 @@ const ProfileCompletionModal = () => {
     setIsUploading(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${employee.authUserId}-${Date.now()}.${fileExt}`;
-      const { error } = await supabase.storage.from('profile_pictures').upload(fileName, file);
+      // Path MUST start with auth.uid() folder — storage RLS enforces
+      // (storage.foldername(name))[1] = auth.uid()::text
+      const fileName = `${employee.authUserId}/${Date.now()}.${fileExt}`;
+      const { error } = await supabase.storage
+        .from('profile_pictures')
+        .upload(fileName, file, { upsert: true, contentType: file.type });
       if (error) throw error;
 
       const { data: { publicUrl } } = supabase.storage.from('profile_pictures').getPublicUrl(fileName);
