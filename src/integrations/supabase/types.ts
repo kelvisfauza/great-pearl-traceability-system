@@ -13048,6 +13048,7 @@ export type Database = {
       is_ip_whitelisted: { Args: { check_ip: string }; Returns: boolean }
       is_loan_appeal_admin: { Args: { _uid: string }; Returns: boolean }
       is_manager_or_above: { Args: never; Returns: boolean }
+      is_privileged_editor: { Args: never; Returns: boolean }
       is_privileged_realtime_subscriber: {
         Args: { _user_id: string }
         Returns: boolean
