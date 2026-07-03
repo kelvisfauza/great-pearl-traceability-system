@@ -209,11 +209,14 @@ export const useUnifiedEmployees = () => {
         throw new Error('Employee not found');
       }
 
+      // Strip fields that don't exist on the employees table
+      const { password, ...safeUpdates } = updates as any;
+
       // 1. Update in Supabase first (primary database)
       const { error: supabaseError } = await supabase
         .from('employees')
         .update({
-          ...updates,
+          ...safeUpdates,
           updated_at: new Date().toISOString()
         })
         .eq('id', id);
