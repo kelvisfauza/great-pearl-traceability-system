@@ -271,7 +271,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       const { error: feeError } = await supabase.from('ledger_entries').insert({
         user_id: unifiedUserId,
         entry_type: 'WITHDRAWAL',
-        source_category: 'WITHDRAWAL',
+        source_category: 'STATEMENT_FEE',
         amount: -STATEMENT_FEE,
         reference: statementRef,
         metadata: {
