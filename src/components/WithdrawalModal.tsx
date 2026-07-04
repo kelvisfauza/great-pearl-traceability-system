@@ -92,6 +92,10 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const [useInstant, setUseInstant] = useState(false);
   const [overdraftAccepted, setOverdraftAccepted] = useState(false);
 
+  // Hard re-entry lock — a ref so simultaneous clicks can't slip past the
+  // async `instantLoading` state update and fire duplicate withdrawals.
+  const submittingRef = useRef(false);
+
   // Wallet-only spendable (fallback when not provided)
   const walletOnly = typeof walletBalance === 'number'
     ? Math.max(0, walletBalance)
@@ -196,6 +200,12 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     if (!instantEligibility?.eligible || !amount) return;
     const withdrawalAmount = parseFloat(amount);
     if (withdrawalAmount < 2000 || withdrawalAmount > (instantEligibility.max_instant_amount || 0)) return;
+
+    // Hard guard against double-click / re-entry storms.
+    if (submittingRef.current || instantLoading) {
+      return;
+    }
+    submittingRef.current = true;
 
     if (withdrawalStatus.disabled) {
       toast({
