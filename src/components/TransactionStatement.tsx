@@ -242,10 +242,13 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         .limit(2000);
 
       if (error) throw error;
-      const filteredEntries = ((data || []) as LedgerEntry[]).filter((entry) => !isDirectAllowancePayout(entry));
-      const mergedEntries = mergeStatementEntries(filteredEntries);
-      setTotalCount(mergedEntries.length);
-      setEntries(mergedEntries.slice(0, DISPLAY_LIMIT));
+      // Use raw ledger rows (same as admin UserStatement) so employee-side
+      // numbers reconcile exactly with what admin sees. Previously we ran
+      // mergeStatementEntries here which dropped overdraft rows and rewrote
+      // amounts, causing the running balance to diverge from admin's view.
+      const rawEntries = ((data || []) as LedgerEntry[]).filter((entry) => !isDirectAllowancePayout(entry));
+      setTotalCount(rawEntries.length);
+      setEntries(rawEntries.slice(0, DISPLAY_LIMIT));
     } catch (err) {
       console.error('Error fetching ledger:', err);
     } finally {
@@ -322,8 +325,9 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       // True opening balance for the selected period (before any period entries are applied)
       const periodOpeningBalance = runBal;
 
-      const fetchedEntries = mergeStatementEntries(
-        ((periodEntries || []) as LedgerEntry[]).filter((entry) => !isDirectAllowancePayout(entry))
+      // Raw entries (no merge) so PDF/email statement matches admin view exactly.
+      const fetchedEntries = ((periodEntries || []) as LedgerEntry[]).filter(
+        (entry) => !isDirectAllowancePayout(entry)
       );
       
       const transactionsAsc = fetchedEntries.map(e => {
