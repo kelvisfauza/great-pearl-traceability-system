@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
-import { CheckCircle, XCircle, User, Wallet, Shield, Calendar, AlertTriangle, TrendingUp, Banknote, Printer, HandCoins } from 'lucide-react';
+import { CheckCircle, XCircle, User, Wallet, Shield, Calendar, AlertTriangle, TrendingUp, Banknote, Printer, HandCoins, Brain } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface LoanReviewModalProps {
@@ -33,6 +33,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
   const [borrowerLedger, setBorrowerLedger] = useState<any[]>([]);
   const [borrowerWalletBalance, setBorrowerWalletBalance] = useState(0);
   const [guarantorWalletBalance, setGuarantorWalletBalance] = useState(0);
+  const [evaluation, setEvaluation] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -45,6 +46,29 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
     if (!loan) return;
     setLoading(true);
     try {
+      // Fetch the AI/system evaluation report attached to this loan (by applied_loan_id
+      // or, if not yet linked, the most recent evaluation for this borrower).
+      let evalRow: any = null;
+      const { data: byLoan } = await supabase
+        .from('loan_evaluations')
+        .select('*')
+        .eq('applied_loan_id', loan.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      evalRow = byLoan;
+      if (!evalRow && loan.employee_email) {
+        const { data: byEmail } = await supabase
+          .from('loan_evaluations')
+          .select('*')
+          .eq('employee_email', loan.employee_email)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        evalRow = byEmail;
+      }
+      setEvaluation(evalRow);
+
       // Fetch borrower employee details
       const { data: borrower } = await supabase
         .from('employees')
@@ -210,6 +234,32 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
       </div>
     ` : '<div style="color:green;font-weight:bold;margin-bottom:10px;">✅ No major risk flags detected</div>';
 
+    const factors = (evaluation?.factors && typeof evaluation.factors === 'object') ? evaluation.factors : {};
+    const history = (evaluation?.history_summary && typeof evaluation.history_summary === 'object') ? evaluation.history_summary : {};
+    const factorRows = Object.entries(factors).map(([k, v]) => `
+      <tr><td style="text-transform:capitalize">${k.replace(/_/g, ' ')}</td><td>${typeof v === 'object' ? JSON.stringify(v) : String(v)}</td></tr>
+    `).join('');
+    const historyRows = Object.entries(history).map(([k, v]) => `
+      <tr><td style="text-transform:capitalize">${k.replace(/_/g, ' ')}</td><td>${typeof v === 'object' ? JSON.stringify(v) : String(v)}</td></tr>
+    `).join('');
+    const evalHtml = evaluation ? `
+      <div class="section">
+        <div class="section-title">🧠 System Evaluation Report</div>
+        <div class="grid grid-4">
+          <div><div class="label">Decision</div><div class="value" style="text-transform:uppercase;color:${evaluation.decision === 'approve' ? '#28a745' : evaluation.decision === 'deny' ? '#dc3545' : '#e67e22'}">${evaluation.decision || '—'}</div></div>
+          <div><div class="label">Risk Score</div><div class="value">${evaluation.risk_score ?? '—'} / 100</div></div>
+          <div><div class="label">Recommended Amount</div><div class="value">UGX ${(evaluation.recommended_amount || 0).toLocaleString()}</div></div>
+          <div><div class="label">Max Limit</div><div class="value">UGX ${(evaluation.max_limit || 0).toLocaleString()}</div></div>
+          <div><div class="label">Recommended Type</div><div class="value">${evaluation.recommended_loan_type || '—'}</div></div>
+          <div><div class="label">Recommended Duration</div><div class="value">${evaluation.recommended_duration_months || '—'} month(s)</div></div>
+          <div><div class="label">Evaluated On</div><div class="value">${evaluation.created_at ? new Date(evaluation.created_at).toLocaleDateString('en-GB') : '—'}</div></div>
+          <div><div class="label">Valid Until</div><div class="value">${evaluation.valid_until ? new Date(evaluation.valid_until).toLocaleDateString('en-GB') : '—'}</div></div>
+        </div>
+        ${factorRows ? `<div style="margin-top:8px"><strong>Decision Factors</strong><table><tbody>${factorRows}</tbody></table></div>` : ''}
+        ${historyRows ? `<div style="margin-top:8px"><strong>History & Behaviour Summary</strong><table><tbody>${historyRows}</tbody></table></div>` : ''}
+      </div>
+    ` : '';
+
     const scheduleRows = repaymentSchedule.map((r: any) => `
       <tr>
         <td>${r.installment}</td>
@@ -277,6 +327,8 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
       </div>
 
       ${riskHtml}
+
+      ${evalHtml}
 
       <div class="section">
         <div class="section-title">📋 Loan Request Details</div>
@@ -406,6 +458,89 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
                         </Badge>
                       ))}
                     </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* System Evaluation Report */}
+              {evaluation && (
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardHeader className="pb-2 p-4">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Brain className="h-4 w-4 text-primary" /> System Evaluation Report
+                      <Badge
+                        className={`ml-2 text-xs uppercase ${
+                          evaluation.decision === 'approve' ? 'bg-green-600' :
+                          evaluation.decision === 'deny' ? 'bg-destructive' : 'bg-orange-500'
+                        }`}
+                      >
+                        {evaluation.decision || 'pending'}
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0 space-y-3">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                      <div>
+                        <p className="text-muted-foreground text-xs">Risk Score</p>
+                        <p className="font-bold">{evaluation.risk_score ?? '—'} / 100</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Recommended Amount</p>
+                        <p className="font-bold">UGX {(evaluation.recommended_amount || 0).toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Max Limit</p>
+                        <p className="font-bold">UGX {(evaluation.max_limit || 0).toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Recommended Type</p>
+                        <p className="font-medium capitalize">{evaluation.recommended_loan_type || '—'}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Recommended Duration</p>
+                        <p className="font-medium">{evaluation.recommended_duration_months || '—'} month(s)</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Evaluated On</p>
+                        <p className="font-medium">{evaluation.created_at ? new Date(evaluation.created_at).toLocaleDateString('en-GB') : '—'}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Valid Until</p>
+                        <p className="font-medium">{evaluation.valid_until ? new Date(evaluation.valid_until).toLocaleDateString('en-GB') : '—'}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Fee</p>
+                        <p className="font-medium">UGX {(evaluation.fee_amount || 0).toLocaleString()} {evaluation.fee_charged ? '(charged)' : ''}</p>
+                      </div>
+                    </div>
+
+                    {evaluation.factors && Object.keys(evaluation.factors).length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold mb-1">Decision Factors</p>
+                        <div className="bg-background rounded p-2 text-xs space-y-1 border">
+                          {Object.entries(evaluation.factors).map(([k, v]) => (
+                            <div key={k} className="flex justify-between gap-2 border-b last:border-0 py-0.5">
+                              <span className="capitalize text-muted-foreground">{k.replace(/_/g, ' ')}</span>
+                              <span className="font-medium text-right">{typeof v === 'object' ? JSON.stringify(v) : String(v)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {evaluation.history_summary && Object.keys(evaluation.history_summary).length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold mb-1">History & Behaviour Summary</p>
+                        <div className="bg-background rounded p-2 text-xs space-y-1 border">
+                          {Object.entries(evaluation.history_summary).map(([k, v]) => (
+                            <div key={k} className="flex justify-between gap-2 border-b last:border-0 py-0.5">
+                              <span className="capitalize text-muted-foreground">{k.replace(/_/g, ' ')}</span>
+                              <span className="font-medium text-right">{typeof v === 'object' ? JSON.stringify(v) : String(v)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               )}
