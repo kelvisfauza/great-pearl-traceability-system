@@ -462,6 +462,89 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
                 </Card>
               )}
 
+              {/* System Evaluation Report */}
+              {evaluation && (
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardHeader className="pb-2 p-4">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Brain className="h-4 w-4 text-primary" /> System Evaluation Report
+                      <Badge
+                        className={`ml-2 text-xs uppercase ${
+                          evaluation.decision === 'approve' ? 'bg-green-600' :
+                          evaluation.decision === 'deny' ? 'bg-destructive' : 'bg-orange-500'
+                        }`}
+                      >
+                        {evaluation.decision || 'pending'}
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0 space-y-3">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                      <div>
+                        <p className="text-muted-foreground text-xs">Risk Score</p>
+                        <p className="font-bold">{evaluation.risk_score ?? '—'} / 100</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Recommended Amount</p>
+                        <p className="font-bold">UGX {(evaluation.recommended_amount || 0).toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Max Limit</p>
+                        <p className="font-bold">UGX {(evaluation.max_limit || 0).toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Recommended Type</p>
+                        <p className="font-medium capitalize">{evaluation.recommended_loan_type || '—'}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Recommended Duration</p>
+                        <p className="font-medium">{evaluation.recommended_duration_months || '—'} month(s)</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Evaluated On</p>
+                        <p className="font-medium">{evaluation.created_at ? new Date(evaluation.created_at).toLocaleDateString('en-GB') : '—'}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Valid Until</p>
+                        <p className="font-medium">{evaluation.valid_until ? new Date(evaluation.valid_until).toLocaleDateString('en-GB') : '—'}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Fee</p>
+                        <p className="font-medium">UGX {(evaluation.fee_amount || 0).toLocaleString()} {evaluation.fee_charged ? '(charged)' : ''}</p>
+                      </div>
+                    </div>
+
+                    {evaluation.factors && Object.keys(evaluation.factors).length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold mb-1">Decision Factors</p>
+                        <div className="bg-background rounded p-2 text-xs space-y-1 border">
+                          {Object.entries(evaluation.factors).map(([k, v]) => (
+                            <div key={k} className="flex justify-between gap-2 border-b last:border-0 py-0.5">
+                              <span className="capitalize text-muted-foreground">{k.replace(/_/g, ' ')}</span>
+                              <span className="font-medium text-right">{typeof v === 'object' ? JSON.stringify(v) : String(v)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {evaluation.history_summary && Object.keys(evaluation.history_summary).length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold mb-1">History & Behaviour Summary</p>
+                        <div className="bg-background rounded p-2 text-xs space-y-1 border">
+                          {Object.entries(evaluation.history_summary).map(([k, v]) => (
+                            <div key={k} className="flex justify-between gap-2 border-b last:border-0 py-0.5">
+                              <span className="capitalize text-muted-foreground">{k.replace(/_/g, ' ')}</span>
+                              <span className="font-medium text-right">{typeof v === 'object' ? JSON.stringify(v) : String(v)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Loan Summary */}
               <Card>
                 <CardHeader className="pb-2 p-4">
