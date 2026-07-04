@@ -605,35 +605,129 @@ export default function Treasury() {
           <div className="text-right">
             <div className="text-[10px] text-muted-foreground uppercase">Total profit captured</div>
             <div className="text-xl font-bold text-emerald-700">{fmt(totalProfits)}</div>
-            <div className="text-[10px] text-muted-foreground">{profitEntries.length} entries · OD fees · OD interest · loan interest · statement fees</div>
+            <div className="text-[10px] text-muted-foreground">
+              {profitEntries.length} entries · loan interest · OD fees · OD interest · OD penalty · statement fees
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
+        <CardContent className="overflow-x-auto space-y-3">
+          {/* Per-source breakdown chips */}
+          {profitByType.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {profitByType.map(([label, agg]) => (
+                <div key={label} className="rounded-md border border-emerald-200 bg-white px-3 py-1.5 text-xs">
+                  <span className="font-medium capitalize">{label}</span>
+                  <span className="ml-2 text-emerald-700 font-semibold">{fmt(agg.total)}</span>
+                  <span className="ml-1 text-muted-foreground">({agg.count})</span>
+                </div>
+              ))}
+            </div>
+          )}
           {profitEntries.length === 0 ? (
             <div className="text-center text-muted-foreground py-6 text-sm">No profit entries yet.</div>
           ) : (
-            <ul className="divide-y divide-emerald-200/60">
-              {profitEntries.slice(0, 200).map((e) => (
-                <li key={e.id} className="py-2 flex items-start gap-3 text-sm">
-                  <Badge variant="outline" className="text-[10px] bg-emerald-100 text-emerald-800 shrink-0 mt-0.5">
-                    {sourceLabel(e)}
-                  </Badge>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-emerald-800">+{fmt(e.amount)}</div>
-                    <div className="text-xs text-muted-foreground">
-                      from {e.related_user_name || e.related_user_email || "system"} ·{" "}
-                      {new Date(e.created_at).toLocaleString()}
+            <>
+              <ul className="divide-y divide-emerald-200/60">
+                {profitEntries.slice(0, 10).map((e) => (
+                  <li key={e.id} className="py-2 flex items-start gap-3 text-sm">
+                    <Badge variant="outline" className="text-[10px] bg-emerald-100 text-emerald-800 shrink-0 mt-0.5 capitalize">
+                      {sourceLabel(e)}
+                    </Badge>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-emerald-800">+{fmt(e.amount)}</div>
+                      <div className="text-xs text-muted-foreground">
+                        from {e.related_user_name || e.related_user_email || "system"} ·{" "}
+                        {new Date(e.created_at).toLocaleString()}
+                      </div>
+                      {e.description && (
+                        <div className="text-xs text-muted-foreground mt-0.5">{e.description}</div>
+                      )}
                     </div>
-                    {e.description && (
-                      <div className="text-xs text-muted-foreground mt-0.5">{e.description}</div>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  </li>
+                ))}
+              </ul>
+              {profitEntries.length > 10 && (
+                <div className="pt-2 flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Showing the 10 most recent of {profitEntries.length} entries.</span>
+                  <Button size="sm" variant="outline" onClick={() => setProfitsOpen(true)}>
+                    <Filter className="h-3 w-3 mr-1.5" /> View all · filter · print
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
+
+      {/* Profits — filter & print dialog */}
+      <Dialog open={profitsOpen} onOpenChange={setProfitsOpen}>
+        <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-emerald-600" /> Profits &amp; Revenue — full history
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div>
+              <Label className="text-xs">Source</Label>
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All sources</SelectItem>
+                  {profitByType.map(([label]) => (
+                    <SelectItem key={label} value={label} className="capitalize">{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">From</Label>
+              <Input type="date" value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">To</Label>
+              <Input type="date" value={filterTo} onChange={(e) => setFilterTo(e.target.value)} />
+            </div>
+            <div className="flex items-end gap-2">
+              <Button onClick={printProfits} className="w-full">
+                <Printer className="h-4 w-4 mr-2" /> Print
+              </Button>
+            </div>
+          </div>
+          <div className="rounded-md border bg-emerald-50 p-3 text-sm flex items-center justify-between">
+            <span className="text-muted-foreground">
+              <strong>{filteredProfits.length}</strong> entries match
+            </span>
+            <span className="font-semibold text-emerald-700">Total: {fmt(filteredTotal)}</span>
+          </div>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead>From</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredProfits.length === 0 ? (
+                  <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">No entries match the filter.</TableCell></TableRow>
+                ) : filteredProfits.map((e) => (
+                  <TableRow key={e.id}>
+                    <TableCell className="text-xs whitespace-nowrap">{new Date(e.created_at).toLocaleString()}</TableCell>
+                    <TableCell className="text-xs capitalize">{sourceLabel(e)}</TableCell>
+                    <TableCell className="text-xs">{e.related_user_name || e.related_user_email || "system"}</TableCell>
+                    <TableCell className="text-xs">{e.description || "—"}</TableCell>
+                    <TableCell className="text-xs font-mono text-right text-emerald-700 font-semibold">+{fmt(e.amount)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );
