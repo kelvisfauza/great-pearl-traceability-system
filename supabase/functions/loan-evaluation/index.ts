@@ -369,6 +369,17 @@ LOAN HISTORY
 - Loans recovered from GUARANTOR (borrower failed, guarantor wallet debited): ${guarantorDefaultCount} occurrence(s), total UGX ${guarantorDefaultAmount}
 - Times debited as guarantor for others: ${timesDebitedAsGuarantor}
 
+GUARANTOR BEHAVIOUR (this borrower acting AS guarantor for others)
+- Total loans guaranteed for others: ${guaranteedTotalCount}
+- Currently active as guarantor: ${guaranteedActiveCount} loans, exposure UGX ${guaranteedActiveExposure}
+- Guaranteed loans completed cleanly: ${guaranteedCompleted}
+- Guaranteed loans defaulted: ${guaranteedDefaulted}
+- Guaranteed loans currently overdue: ${guaranteedOverdue}
+
+BORROWER FREQUENCY
+- Total loans ever taken: ${totalLoansTaken}
+- Currently active/pending loans: ${activeLoanCount}
+
 OTHER DEBT
 - Overdraft: ${overdraftActive ? `ACTIVE, outstanding UGX ${overdraftOutstanding}, frozen=${overdraftFrozen}, days-negative=${overdraftStaleDays}` : 'none'}
 - Salary advance outstanding (UGX): ${salaryAdvanceOutstanding}
@@ -387,7 +398,14 @@ RULES (be fair — approve when reasonable; only deny on clear red flags)
 - Default for clean borrowers = the full ${maxLimit} (3× salary). Do not award less unless a rule below reduces it.
 - Subtract outstanding from any new approval.
 - "deny" if ANY of: 1+ true defaults; 2+ guarantor recoveries; salary is 0; overdraft frozen; overdraft negative >45 days; 2+ currently-overdue installments; debt-to-salary ratio ≥ 3×; on-time repayment ratio < 30% with ≥3 paid installments.
+- "deny" if 2+ active/pending loans already open (must finish one first).
+- "deny" if 2+ loans they GUARANTEED for others defaulted (poor judgement of who to back).
 - 1 guarantor recovery = reduce limit ~50% but still approve/top_up.
+- 1 guaranteed loan defaulted → reduce ~40%. Any guaranteed loan currently overdue → reduce ~25%.
+- Guaranteeing 2 active loans → reduce 20%; 3+ active guarantees → reduce 40%.
+- Reserve 50% of the borrower's active guarantor exposure from their headroom (it's already at risk on their neck).
+- Clean guarantor record (2+ guaranteed loans completed, none bad) → small +5% bonus within the cap.
+- Frequent borrower penalty: 3-4 lifetime loans → reduce 15%; 5-6 → reduce 30%; 7+ → reduce 45%.
 - Overdue loans (not yet defaulted) = reduce limit ~40%, do NOT deny.
 - Subtract active overdraft outstanding AND outstanding salary advances from any new approval (they share the same paycheck).
 - On-time ratio 30-80% with ≥2 paid → reduce 30-60%.
