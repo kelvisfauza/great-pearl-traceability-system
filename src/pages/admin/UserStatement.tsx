@@ -705,14 +705,14 @@ const UserStatement = () => {
                   <Card className="mt-2">
                     <CardContent className="p-0">
                       <div className="overflow-x-auto max-h-[60vh]">
-                        <Table>
+                        <Table className="min-w-[900px]">
                           <TableHeader className="sticky top-0 bg-background z-10">
                             <TableRow>
-                              <TableHead>Date</TableHead>
-                              <TableHead>Type</TableHead>
+                              <TableHead className="w-[170px]">Date</TableHead>
+                              <TableHead className="w-[140px]">Type</TableHead>
                               <TableHead>Description / Ref</TableHead>
-                              <TableHead className="text-right">Amount</TableHead>
-                              <TableHead className="text-right">Running</TableHead>
+                              <TableHead className="text-right w-[130px] whitespace-nowrap">Amount</TableHead>
+                              <TableHead className="text-right w-[150px] whitespace-nowrap">Running Balance</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -727,16 +727,18 @@ const UserStatement = () => {
                                     {e.entry_type}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="text-xs max-w-[420px]">
+                                <TableCell className="text-xs max-w-[420px] min-w-[220px]">
                                   <div className="truncate" title={e.metadata?.description || e.reference}>
                                     {e.metadata?.description || "—"}
                                   </div>
                                   <div className="text-[10px] text-muted-foreground truncate" title={e.reference}>{e.reference}</div>
                                 </TableCell>
-                                <TableCell className={`text-right font-mono ${Number(e.amount) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                                  {fmt(Number(e.amount))}
+                                <TableCell className={`text-right font-mono text-xs whitespace-nowrap tabular-nums ${Number(e.amount) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                                  {Number(e.amount) >= 0 ? "+" : ""}{fmt(Number(e.amount))}
                                 </TableCell>
-                                <TableCell className="text-right font-mono text-xs">{fmt(e.running)}</TableCell>
+                                <TableCell className={`text-right font-mono text-xs whitespace-nowrap tabular-nums font-semibold ${e.running < 0 ? "text-red-600" : "text-foreground"}`}>
+                                  {fmt(e.running)}
+                                </TableCell>
                               </TableRow>
                             ))}
                             {!isLoading && entries.length === 0 && (
