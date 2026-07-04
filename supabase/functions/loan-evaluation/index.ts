@@ -127,6 +127,28 @@ serve(async (req) => {
       .lt("amount", 0);
     const timesDebitedAsGuarantor = (actedAsGuarantor || []).length;
 
+    // Full guarantor portfolio — every loan where THIS employee stood as guarantor.
+    // We measure: total guaranteed, still-active exposure, completed cleanly,
+    // and how many of THEIR guaranteed loans went bad or overdue.
+    const { data: guaranteedLoans } = await supabase
+      .from("loans")
+      .select("id, loan_amount, remaining_balance, status, is_defaulted, employee_email")
+      .eq("guarantor_email", employee_email);
+    const guarList = guaranteedLoans || [];
+    const guaranteedActive = guarList.filter((l: any) => ["active", "pending_guarantor", "pending_admin"].includes(l.status));
+    const guaranteedActiveCount = guaranteedActive.length;
+    const guaranteedActiveExposure = guaranteedActive.reduce(
+      (s: number, l: any) => s + Number(l.remaining_balance || l.loan_amount || 0), 0
+    );
+    const guaranteedCompleted = guarList.filter((l: any) => l.status === "completed").length;
+    const guaranteedDefaulted = guarList.filter((l: any) => l.is_defaulted === true || l.status === "defaulted").length;
+    const guaranteedOverdue = guarList.filter((l: any) => l.status === "overdue").length;
+    const guaranteedTotalCount = guarList.length;
+
+    // Loan frequency posture — repeat borrowers get progressively tighter caps.
+    const totalLoansTaken = loans.length;
+    const activeLoanCount = active.length;
+
     // Wallet snapshot — use server-side RPC to avoid the 1000-row PostgREST cap
     // that silently truncated the ledger sum for high-volume users.
     const { data: walletBalRaw } = await supabase.rpc("get_effective_wallet_balance", { p_user_id: userId });
@@ -181,6 +203,16 @@ serve(async (req) => {
       fallbackDecision = "deny";
       fallbackAmount = 0;
       fallbackFactors.push(`${repayOverdueOpen} overdue installments on existing loan(s)`);
+    } else if (activeLoanCount >= 2) {
+      // Hard rule: no third loan while two are still open.
+      fallbackDecision = "deny";
+      fallbackAmount = 0;
+      fallbackFactors.push(`${activeLoanCount} loans already active/pending – finish one first`);
+    } else if (guaranteedDefaulted >= 2) {
+      // Two guarantees that went bad = serial poor judgement of who to back.
+      fallbackDecision = "deny";
+      fallbackAmount = 0;
+      fallbackFactors.push(`${guaranteedDefaulted} guaranteed loans defaulted – guarantor track record too weak`);
     } else if (debtToSalaryRatio >= 3) {
       fallbackDecision = "deny";
       fallbackAmount = 0;
@@ -210,6 +242,47 @@ serve(async (req) => {
       fallbackAmount = Math.round(fallbackAmount * 0.85);
       fallbackFactors.push(`Debited ${timesDebitedAsGuarantor}× as guarantor for others`);
     }
+
+    // Guarantor-behaviour reductions (borrower's own conduct as guarantor for others).
+    if (guaranteedDefaulted === 1) {
+      fallbackAmount = Math.round(fallbackAmount * 0.6);
+      fallbackFactors.push(`1 guaranteed loan defaulted – limit reduced 40%`);
+    }
+    if (guaranteedOverdue > 0) {
+      fallbackAmount = Math.round(fallbackAmount * 0.75);
+      fallbackFactors.push(`${guaranteedOverdue} guaranteed loan(s) currently overdue – limit reduced 25%`);
+    }
+    if (guaranteedActiveCount >= 3) {
+      fallbackAmount = Math.round(fallbackAmount * 0.6);
+      fallbackFactors.push(`Guaranteeing ${guaranteedActiveCount} active loans (UGX ${guaranteedActiveExposure.toLocaleString()} exposure) – limit reduced 40%`);
+    } else if (guaranteedActiveCount === 2) {
+      fallbackAmount = Math.round(fallbackAmount * 0.8);
+      fallbackFactors.push(`Guaranteeing 2 active loans – limit reduced 20%`);
+    }
+    // Subtract guarantor exposure from headroom (this money is already at risk on their neck)
+    if (guaranteedActiveExposure > 0) {
+      const exposureShare = Math.round(guaranteedActiveExposure * 0.5);
+      fallbackAmount = Math.max(0, fallbackAmount - exposureShare);
+      fallbackFactors.push(`50% of guarantor exposure (UGX ${exposureShare.toLocaleString()}) reserved`);
+    }
+    if (guaranteedCompleted >= 2 && guaranteedDefaulted === 0 && guaranteedOverdue === 0) {
+      // Reward a clean guarantor record — small boost within cap.
+      fallbackAmount = Math.min(maxLimit, Math.round(fallbackAmount * 1.05));
+      fallbackFactors.push(`Clean guarantor record: ${guaranteedCompleted} loans backed & completed`);
+    }
+
+    // Frequent-borrower reductions — cumulative loan history.
+    if (totalLoansTaken >= 7) {
+      fallbackAmount = Math.round(fallbackAmount * 0.55);
+      fallbackFactors.push(`Heavy borrower: ${totalLoansTaken} loans on file – limit reduced 45%`);
+    } else if (totalLoansTaken >= 5) {
+      fallbackAmount = Math.round(fallbackAmount * 0.7);
+      fallbackFactors.push(`Frequent borrower: ${totalLoansTaken} loans on file – limit reduced 30%`);
+    } else if (totalLoansTaken >= 3) {
+      fallbackAmount = Math.round(fallbackAmount * 0.85);
+      fallbackFactors.push(`Repeat borrower: ${totalLoansTaken} loans on file – limit reduced 15%`);
+    }
+
     if (overdraftActive && overdraftOutstanding > 0) {
       fallbackFactors.push(`Active overdraft draw: UGX ${overdraftOutstanding.toLocaleString()}`);
       fallbackAmount = Math.max(0, fallbackAmount - overdraftOutstanding);
@@ -265,7 +338,12 @@ serve(async (req) => {
         - (overdraftActive && overdraftOutstanding > 0 ? 10 : 0)
         - (salaryAdvanceOutstanding > 0 ? 5 : 0)
         - Math.round((1 - onTimeRatio) * 20)
+        - guaranteedDefaulted * 25
+        - guaranteedOverdue * 10
+        - Math.max(0, guaranteedActiveCount - 1) * 5
+        - Math.max(0, totalLoansTaken - 2) * 3
         + completed * 5
+        + (guaranteedCompleted >= 2 && guaranteedDefaulted === 0 ? 5 : 0)
         - (hasActive ? 10 : 0)
     );
     let factors = fallbackFactors.length ? fallbackFactors : ["Standard evaluation applied"];
