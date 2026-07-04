@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,9 +16,17 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Wallet, ArrowDownCircle, ArrowUpCircle, RefreshCw, Plus, Banknote, AlertTriangle, History,
+  ArrowLeft, Printer, Filter,
 } from "lucide-react";
 import { TrendingUp } from "lucide-react";
+import {
+  COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONE,
+  COMPANY_EMAIL, COMPANY_WEBSITE, COMPANY_REG,
+} from "@/utils/companyBrand";
 
 type Direction = "credit" | "debit";
 type Channel = "yo_payments" | "cash" | "bank" | "internal" | "other";
@@ -71,6 +80,7 @@ const fmt = (n: number | null | undefined) =>
 
 export default function Treasury() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [balance, setBalance] = useState<PoolBalance | null>(null);
   const [entries, setEntries] = useState<PoolEntry[]>([]);
   const [investments, setInvestments] = useState<InvestmentRow[]>([]);
@@ -189,16 +199,100 @@ export default function Treasury() {
   const profitEntries = entries.filter((e) => e.category === "fee" && e.direction === "credit");
   const totalProfits = profitEntries.reduce((s, e) => s + Number(e.amount), 0);
 
-  // Build a human-readable line per profit entry, e.g.
-  // "UGX 5,000 loan interest from Bwambale Denis on 21 Jun 2026"
+  // Human-readable label — driven by the authoritative `profit_type` metadata
+  // set by post_treasury_profit, so loan interest, statement fees, overdraft
+  // fees/interest/penalties all classify correctly.
   const sourceLabel = (e: PoolEntry) => {
-    const raw = (e.metadata?.source || e.reference || "").toString().toLowerCase();
-    if (raw.includes("overdraft_fee")) return "overdraft access fee";
-    if (raw.includes("overdraft_interest")) return "overdraft daily interest";
-    if (raw.includes("overdraft_penalty")) return "overdraft penalty";
+    const pt = String(e.metadata?.profit_type || "").toLowerCase();
+    if (pt === "loan_interest") return "loan interest";
+    if (pt === "overdraft_fee") return "overdraft access fee";
+    if (pt === "overdraft_interest") return "overdraft daily interest";
+    if (pt === "overdraft_penalty") return "overdraft penalty";
+    if (pt === "statement_fee") return "statement fee";
+    if (pt) return pt.replace(/_/g, " ");
+    // Fallback for older rows without profit_type metadata
+    const raw = String(e.metadata?.source || e.reference || "").toLowerCase();
     if (raw.includes("loan")) return "loan interest";
     if (raw.includes("statement")) return "statement fee";
+    if (raw.includes("overdraft")) return "overdraft charge";
     return raw.replace(/_/g, " ") || "fee";
+  };
+
+  // Breakdown of profits by source (drives the summary chips + filter list)
+  const profitByType = useMemo(() => {
+    const map = new Map<string, { count: number; total: number }>();
+    for (const e of profitEntries) {
+      const key = sourceLabel(e);
+      const cur = map.get(key) || { count: 0, total: 0 };
+      cur.count += 1;
+      cur.total += Number(e.amount);
+      map.set(key, cur);
+    }
+    return Array.from(map.entries()).sort((a, b) => b[1].total - a[1].total);
+  }, [profitEntries]);
+
+  // "View all" dialog state
+  const [profitsOpen, setProfitsOpen] = useState(false);
+  const [filterType, setFilterType] = useState<string>("all");
+  const [filterFrom, setFilterFrom] = useState<string>("");
+  const [filterTo, setFilterTo] = useState<string>("");
+
+  const filteredProfits = useMemo(() => {
+    return profitEntries.filter((e) => {
+      if (filterType !== "all" && sourceLabel(e) !== filterType) return false;
+      if (filterFrom && new Date(e.created_at) < new Date(filterFrom)) return false;
+      if (filterTo && new Date(e.created_at) > new Date(filterTo + "T23:59:59")) return false;
+      return true;
+    });
+  }, [profitEntries, filterType, filterFrom, filterTo]);
+  const filteredTotal = filteredProfits.reduce((s, e) => s + Number(e.amount), 0);
+
+  const printProfits = () => {
+    const w = window.open("", "_blank");
+    if (!w) return;
+    const rows = filteredProfits.map((e) => `
+      <tr>
+        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px">${new Date(e.created_at).toLocaleString()}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;text-transform:capitalize">${sourceLabel(e)}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px">${e.related_user_name || e.related_user_email || "system"}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px">${e.description || ""}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;text-align:right;color:#047857;font-weight:600">+UGX ${Number(e.amount).toLocaleString()}</td>
+      </tr>`).join("");
+    const periodLabel = filterFrom || filterTo
+      ? `${filterFrom || "beginning"} to ${filterTo || "today"}`
+      : "All time";
+    const typeLabel = filterType === "all" ? "All revenue sources" : filterType;
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"/><title>Treasury Profits & Revenue</title>
+      <style>
+        body{font:13px/1.5 system-ui;margin:0;padding:24px;color:#111}
+        .head{border-bottom:2px solid #1a5632;padding-bottom:12px;margin-bottom:16px}
+        .head h1{margin:0;font-size:18px;color:#1a5632}
+        .head .tag{color:#555;font-size:11px;font-style:italic}
+        .head .meta{color:#555;font-size:11px;margin-top:4px}
+        .title{font-size:15px;font-weight:700;margin:16px 0 6px}
+        .sub{color:#555;font-size:12px;margin-bottom:12px}
+        table{width:100%;border-collapse:collapse}
+        th{text-align:left;padding:8px;border-bottom:2px solid #333;font-size:11px;background:#f4f7f4;text-transform:uppercase;letter-spacing:0.5px}
+        .totals{margin-top:14px;padding:10px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:6px;font-size:13px}
+        .totals strong{color:#047857}
+        .footer{margin-top:20px;font-size:10px;color:#888;border-top:1px dashed #ccc;padding-top:8px}
+      </style></head><body onload="window.print();">
+      <div class="head">
+        <h1>${COMPANY_NAME}</h1>
+        <div class="tag">${COMPANY_TAGLINE}</div>
+        <div class="meta">${COMPANY_ADDRESS} · Tel: ${COMPANY_PHONE} · ${COMPANY_EMAIL} · ${COMPANY_WEBSITE}</div>
+        <div class="meta">${COMPANY_REG}</div>
+      </div>
+      <div class="title">Treasury Profits &amp; Revenue Statement</div>
+      <div class="sub">Source: <strong style="text-transform:capitalize">${typeLabel}</strong> · Period: <strong>${periodLabel}</strong> · Printed: ${new Date().toLocaleString()}</div>
+      <table>
+        <thead><tr><th>Date</th><th>Source</th><th>From</th><th>Description</th><th style="text-align:right">Amount</th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="5" style="padding:20px;text-align:center;color:#888">No entries match the filter</td></tr>`}</tbody>
+      </table>
+      <div class="totals"><strong>${filteredProfits.length}</strong> entries · Total revenue: <strong>UGX ${filteredTotal.toLocaleString()}</strong></div>
+      <div class="footer">Great Agro Coffee — internal treasury document. Prepared by the Treasury Pool module.</div>
+      </body></html>`);
+    w.document.close();
   };
 
   // Aggregates
@@ -216,13 +310,18 @@ export default function Treasury() {
   return (
     <div className="container mx-auto p-4 space-y-6 max-w-7xl">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Wallet className="h-6 w-6 text-primary" /> Treasury Pool
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Unified company money tracker — every withdrawal, deposit, transfer, and payout
-          </p>
+        <div className="flex items-start gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Back" className="mt-1">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <Wallet className="h-6 w-6 text-primary" /> Treasury Pool
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Unified company money tracker — every withdrawal, deposit, transfer, and payout
+            </p>
+          </div>
         </div>
         <Button onClick={handleSyncYo} disabled={syncing} variant="outline">
           <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
