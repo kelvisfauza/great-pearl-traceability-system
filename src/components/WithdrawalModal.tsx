@@ -205,7 +205,6 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     if (submittingRef.current || instantLoading) {
       return;
     }
-    submittingRef.current = true;
 
     if (withdrawalStatus.disabled) {
       toast({
@@ -236,6 +235,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     }
 
     setInstantLoading(true);
+    submittingRef.current = true;
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
