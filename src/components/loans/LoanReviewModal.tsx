@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
-import { CheckCircle, XCircle, User, Wallet, Shield, Calendar, AlertTriangle, TrendingUp, Banknote, Printer, HandCoins } from 'lucide-react';
+import { CheckCircle, XCircle, User, Wallet, Shield, Calendar, AlertTriangle, TrendingUp, Banknote, Printer, HandCoins, Brain } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface LoanReviewModalProps {
@@ -33,6 +33,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
   const [borrowerLedger, setBorrowerLedger] = useState<any[]>([]);
   const [borrowerWalletBalance, setBorrowerWalletBalance] = useState(0);
   const [guarantorWalletBalance, setGuarantorWalletBalance] = useState(0);
+  const [evaluation, setEvaluation] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -45,6 +46,29 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
     if (!loan) return;
     setLoading(true);
     try {
+      // Fetch the AI/system evaluation report attached to this loan (by applied_loan_id
+      // or, if not yet linked, the most recent evaluation for this borrower).
+      let evalRow: any = null;
+      const { data: byLoan } = await supabase
+        .from('loan_evaluations')
+        .select('*')
+        .eq('applied_loan_id', loan.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      evalRow = byLoan;
+      if (!evalRow && loan.employee_email) {
+        const { data: byEmail } = await supabase
+          .from('loan_evaluations')
+          .select('*')
+          .eq('employee_email', loan.employee_email)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        evalRow = byEmail;
+      }
+      setEvaluation(evalRow);
+
       // Fetch borrower employee details
       const { data: borrower } = await supabase
         .from('employees')
