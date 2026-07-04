@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -91,6 +91,10 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const [eligibilityResolved, setEligibilityResolved] = useState(false);
   const [useInstant, setUseInstant] = useState(false);
   const [overdraftAccepted, setOverdraftAccepted] = useState(false);
+
+  // Hard re-entry lock — a ref so simultaneous clicks can't slip past the
+  // async `instantLoading` state update and fire duplicate withdrawals.
+  const submittingRef = useRef(false);
 
   // Wallet-only spendable (fallback when not provided)
   const walletOnly = typeof walletBalance === 'number'
@@ -197,6 +201,11 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     const withdrawalAmount = parseFloat(amount);
     if (withdrawalAmount < 2000 || withdrawalAmount > (instantEligibility.max_instant_amount || 0)) return;
 
+    // Hard guard against double-click / re-entry storms.
+    if (submittingRef.current || instantLoading) {
+      return;
+    }
+
     if (withdrawalStatus.disabled) {
       toast({
         title: '🚫 Withdrawals Disabled',
@@ -226,6 +235,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     }
 
     setInstantLoading(true);
+    submittingRef.current = true;
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
@@ -264,6 +274,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
       });
     } finally {
       setInstantLoading(false);
+      submittingRef.current = false;
     }
   };
 
