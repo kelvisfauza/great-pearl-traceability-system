@@ -152,6 +152,30 @@ serve(async (req) => {
     const { data: unifiedId } = await supabase.rpc('get_unified_user_id', { input_email: userEmail });
     const resolvedUserId = unifiedId || userId;
 
+    // Duplicate-submit guard: reject if the same user submitted ANY instant
+    // withdrawal in the last 15 seconds. Prevents double-clicks / race storms
+    // that would otherwise create many parallel debits before balance checks
+    // can see each other. Applies to admins too — genuine second withdrawals
+    // 15s apart are extremely rare and can just retry.
+    try {
+      const recentCutoff = new Date(Date.now() - 15_000).toISOString();
+      const { data: recentDup } = await supabase
+        .from('instant_withdrawals')
+        .select('id, created_at, amount')
+        .eq('user_id', resolvedUserId)
+        .gte('created_at', recentCutoff)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (recentDup && recentDup.length > 0) {
+        return respond(false, {
+          error: "A withdrawal was just submitted a moment ago. Please wait 15 seconds before trying again — this prevents accidental duplicates.",
+          code: "DUPLICATE_SUBMIT",
+        });
+      }
+    } catch (e) {
+      console.warn('[instant-withdrawal] dedup check failed:', (e as Error).message);
+    }
+
     // 24-hour rolling throttle (non-admins only)
     if (!isAdmin) {
       try {
