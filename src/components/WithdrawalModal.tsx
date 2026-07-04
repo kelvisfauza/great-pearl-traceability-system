@@ -274,6 +274,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
       });
     } finally {
       setInstantLoading(false);
+      submittingRef.current = false;
     }
   };
 
