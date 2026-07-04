@@ -234,6 +234,32 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
       </div>
     ` : '<div style="color:green;font-weight:bold;margin-bottom:10px;">✅ No major risk flags detected</div>';
 
+    const factors = (evaluation?.factors && typeof evaluation.factors === 'object') ? evaluation.factors : {};
+    const history = (evaluation?.history_summary && typeof evaluation.history_summary === 'object') ? evaluation.history_summary : {};
+    const factorRows = Object.entries(factors).map(([k, v]) => `
+      <tr><td style="text-transform:capitalize">${k.replace(/_/g, ' ')}</td><td>${typeof v === 'object' ? JSON.stringify(v) : String(v)}</td></tr>
+    `).join('');
+    const historyRows = Object.entries(history).map(([k, v]) => `
+      <tr><td style="text-transform:capitalize">${k.replace(/_/g, ' ')}</td><td>${typeof v === 'object' ? JSON.stringify(v) : String(v)}</td></tr>
+    `).join('');
+    const evalHtml = evaluation ? `
+      <div class="section">
+        <div class="section-title">🧠 System Evaluation Report</div>
+        <div class="grid grid-4">
+          <div><div class="label">Decision</div><div class="value" style="text-transform:uppercase;color:${evaluation.decision === 'approve' ? '#28a745' : evaluation.decision === 'deny' ? '#dc3545' : '#e67e22'}">${evaluation.decision || '—'}</div></div>
+          <div><div class="label">Risk Score</div><div class="value">${evaluation.risk_score ?? '—'} / 100</div></div>
+          <div><div class="label">Recommended Amount</div><div class="value">UGX ${(evaluation.recommended_amount || 0).toLocaleString()}</div></div>
+          <div><div class="label">Max Limit</div><div class="value">UGX ${(evaluation.max_limit || 0).toLocaleString()}</div></div>
+          <div><div class="label">Recommended Type</div><div class="value">${evaluation.recommended_loan_type || '—'}</div></div>
+          <div><div class="label">Recommended Duration</div><div class="value">${evaluation.recommended_duration_months || '—'} month(s)</div></div>
+          <div><div class="label">Evaluated On</div><div class="value">${evaluation.created_at ? new Date(evaluation.created_at).toLocaleDateString('en-GB') : '—'}</div></div>
+          <div><div class="label">Valid Until</div><div class="value">${evaluation.valid_until ? new Date(evaluation.valid_until).toLocaleDateString('en-GB') : '—'}</div></div>
+        </div>
+        ${factorRows ? `<div style="margin-top:8px"><strong>Decision Factors</strong><table><tbody>${factorRows}</tbody></table></div>` : ''}
+        ${historyRows ? `<div style="margin-top:8px"><strong>History & Behaviour Summary</strong><table><tbody>${historyRows}</tbody></table></div>` : ''}
+      </div>
+    ` : '';
+
     const scheduleRows = repaymentSchedule.map((r: any) => `
       <tr>
         <td>${r.installment}</td>
@@ -301,6 +327,8 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
       </div>
 
       ${riskHtml}
+
+      ${evalHtml}
 
       <div class="section">
         <div class="section-title">📋 Loan Request Details</div>
