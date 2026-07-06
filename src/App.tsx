@@ -29,6 +29,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import EmployeeProfile from "./pages/EmployeeProfile";
 import Unsubscribe from "./pages/Unsubscribe";
+import OAuthConsent from "./pages/OAuthConsent";
 import Procurement from "./pages/Procurement";
 import QualityControl from "./pages/QualityControl";
 import Inventory from "./pages/Inventory";
