@@ -29,6 +29,7 @@ const COMPANY = {
   address: 'P.O Box 431420, Kasese, Uganda',
   phone: '+256 393 001 626',
   email: 'finance@greatpearlcoffee.com',
+  supportEmail: 'support@greatpearlcoffee.com',
   website: 'www.greatpearlcoffee.com',
 };
 
