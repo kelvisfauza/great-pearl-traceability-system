@@ -200,6 +200,7 @@ const App: React.ComponentType = () => {
               <MarqueeBanner />
               <Routes>
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
                 
                 {/* Public verification route - no auth required */}
                 <Route path="/verify" element={<Verify />} />
