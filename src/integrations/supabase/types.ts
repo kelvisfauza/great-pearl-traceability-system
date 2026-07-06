@@ -10522,6 +10522,110 @@ export type Database = {
         }
         Relationships: []
       }
+      support_ticket_replies: {
+        Row: {
+          author_email: string | null
+          author_name: string
+          author_type: string
+          author_user_id: string | null
+          created_at: string
+          id: string
+          is_internal_note: boolean
+          message: string
+          ticket_id: string
+        }
+        Insert: {
+          author_email?: string | null
+          author_name: string
+          author_type: string
+          author_user_id?: string | null
+          created_at?: string
+          id?: string
+          is_internal_note?: boolean
+          message: string
+          ticket_id: string
+        }
+        Update: {
+          author_email?: string | null
+          author_name?: string
+          author_type?: string
+          author_user_id?: string | null
+          created_at?: string
+          id?: string
+          is_internal_note?: boolean
+          message?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_replies_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          assigned_to: string | null
+          category: string | null
+          closed_at: string | null
+          created_at: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string | null
+          id: string
+          message: string
+          metadata: Json
+          priority: string
+          resolved_at: string | null
+          source: string
+          status: string
+          subject: string
+          ticket_code: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          category?: string | null
+          closed_at?: string | null
+          created_at?: string
+          customer_email: string
+          customer_name: string
+          customer_phone?: string | null
+          id?: string
+          message: string
+          metadata?: Json
+          priority?: string
+          resolved_at?: string | null
+          source?: string
+          status?: string
+          subject: string
+          ticket_code: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: string | null
+          closed_at?: string | null
+          created_at?: string
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string | null
+          id?: string
+          message?: string
+          metadata?: Json
+          priority?: string
+          resolved_at?: string | null
+          source?: string
+          status?: string
+          subject?: string
+          ticket_code?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       system_console_logs: {
         Row: {
           created_at: string
@@ -12652,6 +12756,7 @@ export type Database = {
       }
       expire_old_bookings: { Args: never; Returns: undefined }
       fix_denis_auth_final: { Args: never; Returns: Json }
+      generate_support_ticket_code: { Args: never; Returns: string }
       generate_verification_code: { Args: never; Returns: string }
       get_active_scheduled_meeting_for_user: {
         Args: { _user_id: string }
