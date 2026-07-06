@@ -29,6 +29,7 @@ const COMPANY = {
   address: 'P.O Box 431420, Kasese, Uganda',
   phone: '+256 393 001 626',
   email: 'finance@greatpearlcoffee.com',
+  supportEmail: 'support@greatpearlcoffee.com',
   website: 'www.greatpearlcoffee.com',
 };
 
@@ -303,7 +304,8 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.setTextColor(110, 110, 110);
-  doc.text(`${COMPANY.name}  •  ${COMPANY.address}  •  ${COMPANY.phone}  •  ${COMPANY.website}`, pageW / 2, pageH - 35, { align: 'center' });
+  doc.text(`${COMPANY.name}  •  ${COMPANY.address}  •  ${COMPANY.phone}  •  ${COMPANY.website}`, pageW / 2, pageH - 42, { align: 'center' });
+  doc.text(`Customer Support: ${COMPANY.supportEmail}`, pageW / 2, pageH - 30, { align: 'center' });
   doc.text('Thank you for doing business with us.', pageW / 2, pageH - 22, { align: 'center' });
 
   return doc.output('blob');

@@ -15,7 +15,7 @@ import { Mail } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { LOGO_URL, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONE, COMPANY_EMAIL, COMPANY_WEBSITE, COMPANY_REG } from "@/utils/companyBrand";
+import { LOGO_URL, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONE, COMPANY_EMAIL, COMPANY_SUPPORT_EMAIL, COMPANY_WEBSITE, COMPANY_REG } from "@/utils/companyBrand";
 
 type Entry = {
   id: string;
@@ -350,6 +350,7 @@ const UserStatement = () => {
     <div class="meta">
       <div>Tel: ${COMPANY_PHONE}</div>
       <div>Email: ${COMPANY_EMAIL}</div>
+      <div>Customer Support: ${COMPANY_SUPPORT_EMAIL}</div>
       <div>Web: ${COMPANY_WEBSITE}</div>
       <div>Generated: ${new Date().toLocaleString("en-GB")}</div>
     </div>
