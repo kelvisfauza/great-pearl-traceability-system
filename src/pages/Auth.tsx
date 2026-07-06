@@ -207,7 +207,15 @@ const Auth = () => {
 
     splashTimeoutRef.current = window.setTimeout(() => {
       setShowWelcomeSplash(false);
-      navigate('/', { replace: true });
+      const nextParam = new URLSearchParams(window.location.search).get('next');
+      const safeNext = nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//')
+        ? nextParam
+        : null;
+      if (safeNext) {
+        window.location.replace(safeNext);
+      } else {
+        navigate('/', { replace: true });
+      }
     }, 3200);
   }, [authLoading, user, employee, navigate, postAuthSource]);
 
