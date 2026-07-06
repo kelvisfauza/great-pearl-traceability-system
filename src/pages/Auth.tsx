@@ -381,6 +381,11 @@ const Auth = () => {
 
   const handleSystemSelection = (version: 'v1' | 'v2') => {
     console.log(`✅ User selected ${version.toUpperCase()} system`);
+    const nextParam = new URLSearchParams(window.location.search).get('next');
+    if (nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//')) {
+      window.location.replace(nextParam);
+      return;
+    }
     if (version === 'v2') {
       navigate('/v2');
     } else {
