@@ -394,6 +394,12 @@ const App: React.ComponentType = () => {
                     <LoanAppeals />
                   </ProtectedRoute>
                 } />
+                <Route path="/support" element={<Support />} />
+                <Route path="/admin/support-tickets" element={
+                  <ProtectedRoute>
+                    <SupportTickets />
+                  </ProtectedRoute>
+                } />
                 <Route path="/user-daily-reports" element={
                   <ProtectedRoute>
                     <UserDailyReports />
