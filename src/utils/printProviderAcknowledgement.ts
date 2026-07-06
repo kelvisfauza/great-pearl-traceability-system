@@ -52,7 +52,7 @@ export function printProviderAcknowledgement(d: AckData) {
     <h1>GREAT AGRO COFFEE LTD</h1>
     <p>A Member of YEDA Coffee Company Limited</p>
     <p>P.O Box 431420, Kasese, Uganda</p>
-    <p>Email: info@greatpearlcoffee.com • Tel: +256 393 001 626</p>
+    <p>Email: info@greatpearlcoffee.com • Tel: +256 393 001 626 • Customer Support: support@greatpearlcoffee.com</p>
   </div>
 </div>
 
