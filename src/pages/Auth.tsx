@@ -203,14 +203,15 @@ const Auth = () => {
     );
     setShowWelcomeSplash(true);
 
+    const nextParam = urlParams.get('next');
+    const safeNext = nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//')
+      ? nextParam
+      : null;
+
     window.history.replaceState({}, document.title, window.location.pathname);
 
     splashTimeoutRef.current = window.setTimeout(() => {
       setShowWelcomeSplash(false);
-      const nextParam = new URLSearchParams(window.location.search).get('next');
-      const safeNext = nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//')
-        ? nextParam
-        : null;
       if (safeNext) {
         window.location.replace(safeNext);
       } else {
