@@ -203,11 +203,20 @@ const Auth = () => {
     );
     setShowWelcomeSplash(true);
 
+    const nextParam = urlParams.get('next');
+    const safeNext = nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//')
+      ? nextParam
+      : null;
+
     window.history.replaceState({}, document.title, window.location.pathname);
 
     splashTimeoutRef.current = window.setTimeout(() => {
       setShowWelcomeSplash(false);
-      navigate('/', { replace: true });
+      if (safeNext) {
+        window.location.replace(safeNext);
+      } else {
+        navigate('/', { replace: true });
+      }
     }, 3200);
   }, [authLoading, user, employee, navigate, postAuthSource]);
 
@@ -372,6 +381,11 @@ const Auth = () => {
 
   const handleSystemSelection = (version: 'v1' | 'v2') => {
     console.log(`✅ User selected ${version.toUpperCase()} system`);
+    const nextParam = new URLSearchParams(window.location.search).get('next');
+    if (nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//')) {
+      window.location.replace(nextParam);
+      return;
+    }
     if (version === 'v2') {
       navigate('/v2');
     } else {
