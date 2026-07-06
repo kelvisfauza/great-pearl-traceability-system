@@ -60,6 +60,8 @@ import VerifyDevice from "./pages/VerifyDevice";
 import ResetPassword from "./pages/ResetPassword";
 import SubmitRequest from "./pages/SubmitRequest";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import Support from "./pages/Support";
+import SupportTickets from "./pages/admin/SupportTickets";
 
 // V2 System Pages
 import V2DepartmentRouter from "./components/v2/V2DepartmentRouter";
@@ -390,6 +392,12 @@ const App: React.ComponentType = () => {
                 <Route path="/admin/loan-appeals" element={
                   <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
                     <LoanAppeals />
+                  </ProtectedRoute>
+                } />
+                <Route path="/support" element={<Support />} />
+                <Route path="/admin/support-tickets" element={
+                  <ProtectedRoute>
+                    <SupportTickets />
                   </ProtectedRoute>
                 } />
                 <Route path="/user-daily-reports" element={
