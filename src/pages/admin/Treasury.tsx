@@ -25,7 +25,7 @@ import {
 import { TrendingUp } from "lucide-react";
 import {
   COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONE,
-  COMPANY_EMAIL, COMPANY_WEBSITE, COMPANY_REG,
+  COMPANY_EMAIL, COMPANY_SUPPORT_EMAIL, COMPANY_WEBSITE, COMPANY_REG,
 } from "@/utils/companyBrand";
 
 type Direction = "credit" | "debit";
@@ -280,7 +280,7 @@ export default function Treasury() {
       <div class="head">
         <h1>${COMPANY_NAME}</h1>
         <div class="tag">${COMPANY_TAGLINE}</div>
-        <div class="meta">${COMPANY_ADDRESS} · Tel: ${COMPANY_PHONE} · ${COMPANY_EMAIL} · ${COMPANY_WEBSITE}</div>
+        <div class="meta">${COMPANY_ADDRESS} · Tel: ${COMPANY_PHONE} · ${COMPANY_EMAIL} · Support: ${COMPANY_SUPPORT_EMAIL} · ${COMPANY_WEBSITE}</div>
         <div class="meta">${COMPANY_REG}</div>
       </div>
       <div class="title">Treasury Profits &amp; Revenue Statement</div>

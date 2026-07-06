@@ -4,7 +4,7 @@ import {
 } from 'docx';
 import {
   LOGO_URL, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS,
-  COMPANY_PHONE, COMPANY_EMAIL, COMPANY_WEBSITE, COMPANY_REG, COMPANY_REG_INC,
+  COMPANY_PHONE, COMPANY_EMAIL, COMPANY_SUPPORT_EMAIL, COMPANY_WEBSITE, COMPANY_REG, COMPANY_REG_INC,
 } from './companyBrand';
 
 export const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
@@ -128,6 +128,7 @@ export const createLetterheadFooter = (includeIncorporated = true): Table => {
           }),
           footCell('Telephone', COMPANY_PHONE),
           footCell('Email', COMPANY_EMAIL),
+          footCell('Customer Support', COMPANY_SUPPORT_EMAIL),
           footCell('Website', COMPANY_WEBSITE),
         ],
       }),
