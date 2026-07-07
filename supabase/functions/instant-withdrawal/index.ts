@@ -600,12 +600,19 @@ serve(async (req) => {
     // Calculate remaining balance for email
     let remainingBalance: number | undefined;
     try {
-      const { data: balData } = await supabase
-        .from('ledger_entries')
-        .select('amount')
-        .eq('user_id', resolvedUserId);
-      if (balData) {
-        remainingBalance = Math.max(0, balData.reduce((sum: number, e: any) => sum + Number(e.amount), 0));
+      const { data: balRpc } = await supabase.rpc('get_user_balance_safe', { user_email: userEmail });
+      const wallet = Number((balRpc as any)?.[0]?.wallet_balance);
+      if (Number.isFinite(wallet)) {
+        remainingBalance = Math.max(0, wallet);
+      } else {
+        // Fallback to summing ledger entries by resolved user id
+        const { data: balData } = await supabase
+          .from('ledger_entries')
+          .select('amount')
+          .eq('user_id', resolvedUserId);
+        if (balData) {
+          remainingBalance = Math.max(0, balData.reduce((sum: number, e: any) => sum + Number(e.amount), 0));
+        }
       }
     } catch (e) {
       console.error("Balance calc error:", e);
