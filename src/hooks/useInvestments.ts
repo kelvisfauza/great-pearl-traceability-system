@@ -45,75 +45,17 @@ export const useInvestments = () => {
     if (!user?.id || !user?.email) return false;
 
     try {
-      // Deduct from wallet first
-      const { data: userIdData } = await supabase.rpc('get_unified_user_id', { input_email: employee?.email || user.email });
-      const unifiedId = userIdData || user.id;
-
-      // Validate balance using the safe balance RPC instead of validate_withdrawal_balance (which has type issues)
-      const { data: balanceData } = await supabase.rpc('get_user_balance_safe', { user_email: employee?.email || user.email });
-      const userBalance = balanceData?.[0];
-      const availableBalance = Number(userBalance?.available_balance) || 0;
-      
-      if (amount > availableBalance) {
-        toast({ title: "Insufficient Balance", description: `Your available balance is UGX ${availableBalance.toLocaleString()}`, variant: "destructive" });
-        return false;
-      }
-
-      const investRef = `INVEST-${Date.now().toString().slice(-8)}`;
-
-      // Create ledger debit (freeze funds)
-      const { error: ledgerErr } = await supabase.from('ledger_entries' as any).insert([{
-        user_id: unifiedId,
-        entry_type: 'WITHDRAWAL',
-        amount: -amount,
-        reference: investRef,
-        source_category: 'WITHDRAWAL',
-        metadata: {
-          description: `Investment locked - ${investRef}`,
-          type: 'investment_lock',
-          investment_amount: amount,
-          bypass_treasury_check: true,
+      const { data, error } = await supabase.functions.invoke('create-investment', {
+        body: {
+          amount,
+          employeeName: employee?.name || user.email,
+          employeeEmail: employee?.email || user.email,
         },
-      }]);
-      if (ledgerErr) throw ledgerErr;
-
-      // Create the investment record
-      const { error: investErr } = await supabase.from('investments' as any).insert([{
-        user_id: user.id,
-        user_email: employee?.email || user.email,
-        employee_name: employee?.name || user.email,
-        amount,
-        start_date: new Date().toISOString().split('T')[0],
-      }]);
-      if (investErr) throw investErr;
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error || 'Failed to create investment');
 
       toast({ title: "Investment Created! 📈", description: `UGX ${amount.toLocaleString()} locked for 3 months at 25% interest. Money keeps growing if left!` });
-
-      // Send email notification
-      const startDate = new Date().toISOString().split('T')[0];
-      const maturityDate = new Date(Date.now() + 3 * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      try {
-        await supabase.functions.invoke('send-transactional-email', {
-          body: {
-            templateName: 'investment-confirmation',
-            recipientEmail: employee?.email || user.email,
-            idempotencyKey: `investment-confirm-${investRef}`,
-            templateData: {
-              employeeName: employee?.name || user.email,
-              amount,
-              interestRate: 25,
-              maturityMonths: 3,
-              expectedReturn: amount * 1.25,
-              startDate,
-              maturityDate,
-              investmentRef: investRef,
-            },
-          },
-        });
-      } catch (emailErr) {
-        console.warn('Failed to send investment email:', emailErr);
-      }
-
       fetchInvestments();
       return true;
     } catch (err: any) {
