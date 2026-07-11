@@ -1132,90 +1132,28 @@ const QuickLoans = () => {
         const loanShort = selectedLoanForPayment.id.slice(0, 8);
 
         if (borrowerUserId) {
-          if (earlyPayMethod === 'wallet') {
-            // Real wallet debit
+          if (earlyPayMethod === 'mobile_money') {
+            // MoMo direct path: gosentepay-callback posts the paired
+            // (+DEPOSIT, -LOAN_REPAYMENT) entries on SUCCESS. Do nothing here
+            // to avoid double posting.
+          } else {
+            // Wallet / Cash / Bank: debit the borrower's wallet directly.
+            // If the wallet goes negative the overdraft system absorbs it,
+            // exactly like any other outflow. Single-sided entry so the
+            // statement shows the real UGX -amount impact.
             await supabase.from('ledger_entries').insert({
               user_id: borrowerUserId,
               entry_type: 'LOAN_REPAYMENT',
               amount: -amount,
-              reference: `LOANREPAY-WALLET-${loanShort}-${ts}`,
+              reference: `LOANREPAY-${earlyPayMethod.toUpperCase()}-${loanShort}-${ts}`,
               metadata: {
-                description: `Loan repayment from wallet (UGX ${amount.toLocaleString()})`,
-                loan_id: selectedLoanForPayment.id,
-                method: 'wallet',
-                source: 'loan_repayment_out',
-                notes: earlyPayNotes,
-              },
+                description: `Loan repayment via ${earlyPayMethod === 'wallet' ? 'wallet' : earlyPayMethod === 'cash' ? 'cash' : 'bank deposit'} (UGX ${amount.toLocaleString()})`,
+                  loan_id: selectedLoanForPayment.id,
+                  method: earlyPayMethod,
+                  source: 'loan_repayment_out',
+                  notes: earlyPayNotes,
+                },
             });
-          } else if (earlyPayMethod === 'mobile_money') {
-            // MoMo direct path handled by gosentepay-callback; skip here to avoid double posting.
-            // (This admin form only records what finance was handed; no gateway call fires.)
-            // Still leave a paired memo so statement is not blank.
-            await supabase.from('ledger_entries').insert([
-              {
-                user_id: borrowerUserId,
-                entry_type: 'DEPOSIT',
-                amount,
-                reference: `LOAN-MOMO-IN-${loanShort}-${ts}`,
-                metadata: {
-                  description: `MoMo received for loan repayment (UGX ${amount.toLocaleString()})`,
-                  loan_id: selectedLoanForPayment.id,
-                  method: 'mobile_money',
-                  source: 'momo_loan_repayment_in',
-                  pair: 'loan_repayment_in',
-                  transaction_ref: `LOANREPAY-MOMO-${loanShort}-${ts}`,
-                  notes: earlyPayNotes,
-                },
-              },
-              {
-                user_id: borrowerUserId,
-                entry_type: 'LOAN_REPAYMENT',
-                amount: -amount,
-                reference: `LOANREPAY-MOMO-${loanShort}-${ts}`,
-                metadata: {
-                  description: `Loan repayment via MoMo (UGX ${amount.toLocaleString()})`,
-                  loan_id: selectedLoanForPayment.id,
-                  method: 'mobile_money',
-                  source: 'loan_repayment_out',
-                  pair: 'loan_repayment_out',
-                  transaction_ref: `LOANREPAY-MOMO-${loanShort}-${ts}`,
-                  notes: earlyPayNotes,
-                },
-              },
-            ]);
-          } else {
-            // Cash / bank_deposit: money reached finance directly, not the wallet.
-            // Post paired entries so wallet nets to zero but statement shows source.
-            await supabase.from('ledger_entries').insert([
-              {
-                user_id: borrowerUserId,
-                entry_type: 'DEPOSIT',
-                amount,
-                reference: `LOAN-${earlyPayMethod.toUpperCase()}-IN-${loanShort}-${ts}`,
-                metadata: {
-                  description: `${earlyPayMethod === 'cash' ? 'Cash' : 'Bank deposit'} received for loan repayment (UGX ${amount.toLocaleString()})`,
-                  loan_id: selectedLoanForPayment.id,
-                  method: earlyPayMethod,
-                  source: earlyPayMethod === 'cash' ? 'cash_loan_repayment_in' : 'bank_loan_repayment_in',
-                  pair: 'loan_repayment_in',
-                  notes: earlyPayNotes,
-                },
-              },
-              {
-                user_id: borrowerUserId,
-                entry_type: 'LOAN_REPAYMENT',
-                amount: -amount,
-                reference: `LOANREPAY-${earlyPayMethod.toUpperCase()}-${loanShort}-${ts}`,
-                metadata: {
-                  description: `Loan repayment via ${earlyPayMethod === 'cash' ? 'cash' : 'bank deposit'} (UGX ${amount.toLocaleString()})`,
-                  loan_id: selectedLoanForPayment.id,
-                  method: earlyPayMethod,
-                  source: 'loan_repayment_out',
-                  pair: 'loan_repayment_out',
-                  notes: earlyPayNotes,
-                },
-              },
-            ]);
           }
         }
       } catch (ledgerErr) {
