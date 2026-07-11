@@ -1326,89 +1326,24 @@ const QuickLoans = () => {
 
     setWalletRepayLoading(true);
     try {
-      const { data: borrowerEmp } = await supabase.from('employees').select('auth_user_id').eq('email', walletRepayLoan.employee_email).single();
-      if (!borrowerEmp?.auth_user_id) throw new Error('Could not find your account.');
-
-      const { data: unifiedId } = await supabase.rpc('get_unified_user_id', { input_email: walletRepayLoan.employee_email });
-      const userId = unifiedId || borrowerEmp.auth_user_id;
-
-      const txRef = `LOANREPAY-WALLET-${walletRepayLoan.id.slice(0, 8)}-${Date.now()}`;
-
-      // Deduct from wallet via ledger
-      const { error: ledgerErr } = await supabase.from('ledger_entries').insert({
-        user_id: userId,
-        entry_type: 'WITHDRAWAL',
-        amount: -amount,
-        reference: txRef,
-        source_category: 'LOAN_REPAYMENT',
-        metadata: {
+      // Delegate to service-role edge function so the ledger debit and
+      // loan update happen atomically. Client-side ledger inserts are
+      // blocked by RLS, so this is the only way the wallet actually gets
+      // debited (with overdraft absorption) and the loan gets marked paid.
+      const { data: repayResult, error: repayErr } = await supabase.functions.invoke('record-loan-repayment', {
+        body: {
           loan_id: walletRepayLoan.id,
-          source: 'wallet_loan_repayment',
-          type: 'internal_transfer_credit',
-          bypass_treasury_check: true,
-          description: `Loan repayment from wallet – UGX ${amount.toLocaleString()}${odPortion > 0 ? ` (incl. OD top-up UGX ${odPortion.toLocaleString()})` : ''}`,
-          overdraft_portion: odPortion > 0 ? odPortion : undefined,
+          amount,
+          method: 'wallet',
           uses_overdraft: odPortion > 0,
-        }
+          overdraft_portion: odPortion,
+          upfront_od_interest: upfrontOdInterest,
+        },
       });
-      if (ledgerErr) throw new Error(ledgerErr.message || 'Failed to deduct from wallet');
-
-      // Post upfront OD access interest fee (0.5% on OD portion)
-      if (odPortion > 0 && upfrontOdInterest > 0) {
-        await supabase.from('ledger_entries').insert({
-          user_id: userId,
-          entry_type: 'WITHDRAWAL',
-          amount: -upfrontOdInterest,
-          reference: `${txRef}-ODFEE`,
-          source_category: 'OVERDRAFT_INTEREST',
-          metadata: {
-            loan_id: walletRepayLoan.id,
-            type: 'overdraft_draw',
-            parent_reference: txRef,
-            overdraft_portion: odPortion,
-            description: `Overdraft access fee 0.5% on UGX ${odPortion.toLocaleString()}`,
-            bypass_treasury_check: true,
-          }
-        });
-      }
-
-      // For full early payoff, use daily pro-rata discount; for partial, use simple subtraction
-      const newPaidAmount = (walletRepayLoan.paid_amount || 0) + amount;
-      const isFullPayoff = amount >= earlyPayoff;
-      const newRemainingBalance = isFullPayoff ? 0 : Math.max(0, (walletRepayLoan.remaining_balance || walletRepayLoan.total_repayable) - amount);
-      const isFullyPaid = newRemainingBalance <= 0;
-
-      const { error: loanErr } = await supabase.from('loans').update({
-        paid_amount: newPaidAmount,
-        remaining_balance: newRemainingBalance,
-        status: isFullyPaid ? 'paid_off' : 'active',
-        is_defaulted: isFullyPaid ? false : walletRepayLoan.is_defaulted,
-      }).eq('id', walletRepayLoan.id);
-      if (loanErr) throw loanErr;
-
-      // Mark installments as paid (earliest first)
-      const { data: unpaidInstallments } = await supabase.from('loan_repayments')
-        .select('*')
-        .eq('loan_id', walletRepayLoan.id)
-        .in('status', ['pending', 'overdue'])
-        .order('due_date', { ascending: true });
-
-      let remaining = amount;
-      for (const inst of (unpaidInstallments || [])) {
-        if (remaining <= 0) break;
-        const owed = inst.amount_due - (inst.amount_paid || 0);
-        const payable = Math.min(remaining, owed);
-        const newPaid = (inst.amount_paid || 0) + payable;
-        const isPaid = newPaid >= inst.amount_due;
-        await supabase.from('loan_repayments').update({
-          amount_paid: newPaid,
-          status: isPaid ? 'paid' : inst.status,
-          paid_date: isPaid ? new Date().toISOString().split('T')[0] : null,
-          payment_reference: txRef,
-          deducted_from: 'Wallet Repayment',
-        }).eq('id', inst.id);
-        remaining -= payable;
-      }
+      if (repayErr) throw new Error(repayErr.message || 'Failed to record repayment');
+      if (!repayResult?.ok) throw new Error(repayResult?.error || 'Repayment failed');
+      const isFullyPaid = repayResult.is_fully_paid;
+      const newRemainingBalance = repayResult.new_remaining_balance;
 
       // Send loan repayment confirmation email
       try {
@@ -1419,8 +1354,8 @@ const QuickLoans = () => {
             idempotencyKey: `loan-repay-wallet-${walletRepayLoan.id}-${Date.now()}`,
             templateData: {
               employeeName: walletRepayLoan.employee_name,
-              installmentNumber: String((unpaidInstallments || [])[0]?.installment_number || ''),
-              amountDue: ((unpaidInstallments || [])[0]?.amount_due || amount).toLocaleString(),
+              installmentNumber: '',
+              amountDue: amount.toLocaleString(),
               amountCollected: amount.toLocaleString(),
               sources: `Wallet: UGX ${amount.toLocaleString()}`,
               remainingBalance: newRemainingBalance.toLocaleString(),
