@@ -13358,6 +13358,17 @@ export type Database = {
           request_type: string
         }[]
       }
+      reverse_treasury_profit: {
+        Args: {
+          p_amount: number
+          p_description: string
+          p_metadata?: Json
+          p_reference: string
+          p_user_email?: string
+          p_user_name?: string
+        }
+        Returns: string
+      }
       reverse_wallet_transfer: {
         Args: { p_admin_reason: string; p_ledger_entry_id: string }
         Returns: Json
