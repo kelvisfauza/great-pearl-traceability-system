@@ -126,46 +126,15 @@ export const useInvestments = () => {
   const withdrawEarly = async (investmentId: string) => {
     if (!user?.id) return false;
     try {
-      const investment = investments.find(i => i.id === investmentId);
-      if (!investment) return false;
-
-      const { data: userIdData } = await supabase.rpc('get_unified_user_id', { input_email: employee?.email || user.email });
-      const unifiedId = userIdData || user.id;
-
-      // Calculate pro-rated interest at 25% based on days elapsed
-      const totalDays = investment.maturity_months * 30; // ~90 days
-      const daysElapsed = Math.max(0, Math.floor((Date.now() - new Date(investment.start_date).getTime()) / (24 * 60 * 60 * 1000)));
-      const reducedInterest = investment.amount * 0.25 * (daysElapsed / totalDays);
-      const payout = investment.amount + reducedInterest;
-
-      const refundRef = `INVEST-EARLY-${investmentId.slice(0, 8)}`;
-
-      // Credit wallet with principal + reduced interest
-      const { error: ledgerErr } = await supabase.from('ledger_entries' as any).insert([{
-        user_id: unifiedId,
-        entry_type: 'DEPOSIT',
-        amount: payout,
-        reference: refundRef,
-        source_category: 'SYSTEM_AWARD',
-        metadata: {
-          description: `Early investment withdrawal (pro-rated 25%) - ${refundRef}`,
-          type: 'investment_early_withdrawal',
-          investment_id: investmentId,
-          reduced_interest: reducedInterest,
-          bypass_treasury_check: true,
-        },
-      }]);
-      if (ledgerErr) throw ledgerErr;
-
-      // Update investment status
-      const { error: updateErr } = await supabase.from('investments' as any)
-        .update({ status: 'withdrawn_early', earned_interest: reducedInterest, total_payout: payout, withdrawn_at: new Date().toISOString() } as any)
-        .eq('id', investmentId);
-      if (updateErr) throw updateErr;
+      const { data, error } = await supabase.functions.invoke('investment-early-withdraw', {
+        body: { investmentId },
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error || 'Failed to withdraw');
 
       toast({
         title: "Early Withdrawal Complete",
-        description: `UGX ${payout.toLocaleString()} returned (${Math.round(reducedInterest).toLocaleString()} interest for ${daysElapsed} days)`,
+        description: `UGX ${Number(data.payout).toLocaleString()} returned (${Math.round(Number(data.reducedInterest)).toLocaleString()} interest for ${data.daysElapsed} days)`,
       });
       fetchInvestments();
       return true;
