@@ -2,17 +2,19 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, Clock, CheckCircle, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { TrendingUp, Clock, CheckCircle, AlertTriangle, ChevronDown, ChevronUp, History } from 'lucide-react';
 import { useInvestments } from '@/hooks/useInvestments';
 import { format, differenceInDays } from 'date-fns';
 
 export const InvestmentsCard = () => {
   const { activeInvestments, investments, totalInvested, totalExpectedReturn, withdrawEarly } = useInvestments();
   const [expanded, setExpanded] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   if (investments.length === 0) return null;
 
-  const visibleInvestments = expanded ? investments : investments.slice(0, 1);
+  const completedInvestments = investments.filter(i => i.status !== 'active');
+  const visibleInvestments = expanded ? activeInvestments : activeInvestments.slice(0, 1);
 
   return (
     <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
@@ -22,12 +24,15 @@ export const InvestmentsCard = () => {
             <TrendingUp className="h-4 w-4 text-blue-600" />
             Investments
             <Badge variant="secondary" className="bg-blue-100 text-blue-800 ml-1">
-              {investments.length}
+              {activeInvestments.length} active
             </Badge>
           </CardTitle>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
+        {activeInvestments.length === 0 && (
+          <p className="text-xs text-muted-foreground text-center py-2">No active investments</p>
+        )}
         {activeInvestments.length > 0 && (
           <div className="flex justify-between text-sm">
             <div>
@@ -49,48 +54,33 @@ export const InvestmentsCard = () => {
             <div key={inv.id} className="bg-white/70 rounded-lg p-3 space-y-2">
               <div className="flex justify-between items-center">
                 <span className="font-medium text-sm">UGX {Number(inv.amount).toLocaleString()}</span>
-                <Badge variant={inv.status === 'active' ? 'default' : inv.status === 'matured' ? 'secondary' : 'outline'}
-                  className={inv.status === 'active' ? 'bg-blue-100 text-blue-800' : inv.status === 'matured' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}>
-                  {inv.status === 'active' ? 'Active' : inv.status === 'matured' ? 'Matured' : 'Early Exit'}
-                </Badge>
+                <Badge className="bg-blue-100 text-blue-800">Active</Badge>
               </div>
-              
-              {inv.status === 'active' && (
-                <>
-                  <div className="w-full bg-blue-100 rounded-full h-1.5">
-                    <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${Math.max(2, progress)}%` }} />
-                  </div>
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>{format(new Date(inv.start_date), 'MMM dd, yyyy')}</span>
-                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{daysLeft} days left</span>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full text-xs h-7 text-amber-700 border-amber-200 hover:bg-amber-50"
-                    onClick={() => {
-                      if (window.confirm('Early withdrawal will give you pro-rated 25% interest based on days completed. Continue?')) {
-                        withdrawEarly(inv.id);
-                      }
-                    }}
-                  >
-                    <AlertTriangle className="h-3 w-3 mr-1" />
-                    Withdraw Early (Pro-rated)
-                  </Button>
-                </>
-              )}
-
-              {inv.status !== 'active' && (
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Payout</span>
-                  <span className="font-medium text-green-700">UGX {Number(inv.total_payout).toLocaleString()}</span>
-                </div>
-              )}
+              <div className="w-full bg-blue-100 rounded-full h-1.5">
+                <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${Math.max(2, progress)}%` }} />
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{format(new Date(inv.start_date), 'MMM dd, yyyy')}</span>
+                <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{daysLeft} days left</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full text-xs h-7 text-amber-700 border-amber-200 hover:bg-amber-50"
+                onClick={() => {
+                  if (window.confirm('Early withdrawal will give you pro-rated 25% interest based on days completed. Continue?')) {
+                    withdrawEarly(inv.id);
+                  }
+                }}
+              >
+                <AlertTriangle className="h-3 w-3 mr-1" />
+                Withdraw Early (Pro-rated)
+              </Button>
             </div>
           );
         })}
 
-        {investments.length > 1 && (
+        {activeInvestments.length > 1 && (
           <Button
             variant="ghost"
             size="sm"
@@ -100,9 +90,42 @@ export const InvestmentsCard = () => {
             {expanded ? (
               <><ChevronUp className="h-3 w-3 mr-1" /> Show less</>
             ) : (
-              <><ChevronDown className="h-3 w-3 mr-1" /> Show all {investments.length} investments</>
+              <><ChevronDown className="h-3 w-3 mr-1" /> Show all {activeInvestments.length} active</>
             )}
           </Button>
+        )}
+
+        {completedInvestments.length > 0 && (
+          <div className="pt-2 border-t border-blue-200">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs h-8 text-muted-foreground hover:bg-blue-100/50"
+              onClick={() => setShowHistory(!showHistory)}
+            >
+              <History className="h-3 w-3 mr-1" />
+              {showHistory ? 'Hide' : 'Show'} history ({completedInvestments.length})
+              {showHistory ? <ChevronUp className="h-3 w-3 ml-1" /> : <ChevronDown className="h-3 w-3 ml-1" />}
+            </Button>
+            {showHistory && (
+              <div className="space-y-2 mt-2">
+                {completedInvestments.map(inv => (
+                  <div key={inv.id} className="bg-white/50 rounded-lg p-2 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">UGX {Number(inv.amount).toLocaleString()}</span>
+                      <Badge variant="outline" className={inv.status === 'matured' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}>
+                        {inv.status === 'matured' ? 'Matured' : 'Early Exit'}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between mt-1 text-muted-foreground">
+                      <span>{format(new Date(inv.withdrawn_at || inv.maturity_date), 'MMM dd, yyyy')}</span>
+                      <span className="font-medium text-green-700">Payout: UGX {Number(inv.total_payout).toLocaleString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </CardContent>
     </Card>
