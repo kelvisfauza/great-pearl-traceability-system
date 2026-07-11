@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import { 
   Search, AlertTriangle, CalendarDays, Users, History, 
   Send, ChevronDown, ChevronUp, Clock, CheckCircle, XCircle,
-  Banknote, TrendingDown, Calendar, User, Shield, Phone, Mail, MapPin, Briefcase, Printer
+  Banknote, TrendingDown, Calendar, User, Shield, Phone, Mail, MapPin, Briefcase, Printer, Wallet
 } from 'lucide-react';
 import LoanRepaymentSlip from './LoanRepaymentSlip';
 import LoanRepaymentHistorySlip from './LoanRepaymentHistorySlip';
@@ -153,7 +153,7 @@ const AdminLoanTracker = () => {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="summary">
-          <TabsList className="grid grid-cols-4 w-full mb-4">
+          <TabsList className="grid grid-cols-5 w-full mb-4">
             <TabsTrigger value="summary" className="text-xs sm:text-sm">
               <Users className="h-3.5 w-3.5 mr-1 hidden sm:inline" /> Borrowers
             </TabsTrigger>
@@ -165,6 +165,9 @@ const AdminLoanTracker = () => {
               {overdueInstallments.length > 0 && (
                 <Badge variant="destructive" className="ml-1 text-[10px] px-1.5 py-0">{overdueInstallments.length}</Badge>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="repayments" className="text-xs sm:text-sm">
+              <Wallet className="h-3.5 w-3.5 mr-1 hidden sm:inline" /> Repayments
             </TabsTrigger>
             <TabsTrigger value="history" className="text-xs sm:text-sm">
               <History className="h-3.5 w-3.5 mr-1 hidden sm:inline" /> History
@@ -376,6 +379,10 @@ const AdminLoanTracker = () => {
           </TabsContent>
 
           {/* ========= REPAYMENT HISTORY ========= */}
+          <TabsContent value="repayments">
+            <RepaymentsLedgerTab allRepayments={allRepayments || []} />
+          </TabsContent>
+
           <TabsContent value="history">
             <BorrowerHistoryTab allRepayments={allRepayments || []} activeLoans={activeLoans || []} />
           </TabsContent>
