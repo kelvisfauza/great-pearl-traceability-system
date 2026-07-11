@@ -178,6 +178,65 @@ serve(async (req) => {
 
     // 24-hour rolling throttle (non-admins only)
     if (!isAdmin) {
+      // Admin-configured hard limits (system_settings.withdrawal_limits)
+      // Applies to BOTH instant_withdrawals and withdrawal_requests on a
+      // calendar-day (00:00 local server) basis. This is the same limit
+      // enforced in the UI for standard withdrawals — instant withdrawals
+      // used to bypass it, which allowed multiple sub-limit payouts to
+      // exceed the daily cap. Enforced server-side now.
+      try {
+        const { data: limRow } = await supabase
+          .from('system_settings')
+          .select('setting_value')
+          .eq('setting_key', 'withdrawal_limits')
+          .maybeSingle();
+        const lim: any = limRow?.setting_value || {};
+        const perTx = Number(lim?.per_transaction || 0);
+        const daily = Number(lim?.daily || 0);
+        if (perTx > 0 && numAmount > perTx) {
+          return respond(false, {
+            error: `Per-transaction limit is UGX ${perTx.toLocaleString()}. Please reduce the amount.`,
+            code: 'PER_TX_LIMIT',
+          });
+        }
+        if (daily > 0) {
+          const startOfDay = new Date();
+          startOfDay.setHours(0, 0, 0, 0);
+          const sinceIso = startOfDay.toISOString();
+          const [iwRes, wrRes] = await Promise.all([
+            supabase
+              .from('instant_withdrawals')
+              .select('amount, payout_status, created_at')
+              .eq('user_id', resolvedUserId)
+              .gte('created_at', sinceIso),
+            supabase
+              .from('withdrawal_requests')
+              .select('amount, status, created_at')
+              .eq('user_id', resolvedUserId)
+              .gte('created_at', sinceIso),
+          ]);
+          const usedIW = (iwRes.data || [])
+            .filter((r: any) => !['failed', 'rejected', 'declined', 'cancelled', 'expired'].includes(String(r.payout_status || '').toLowerCase()))
+            .reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
+          const usedWR = (wrRes.data || [])
+            .filter((r: any) => !['failed', 'rejected', 'cancelled', 'expired'].includes(String(r.status || '').toLowerCase()))
+            .reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
+          const usedToday = usedIW + usedWR;
+          const remaining = Math.max(0, daily - usedToday);
+          if (numAmount > remaining) {
+            return respond(false, {
+              error: `Daily withdrawal limit is UGX ${daily.toLocaleString()}. You've used UGX ${usedToday.toLocaleString()} today (remaining: UGX ${remaining.toLocaleString()}).`,
+              code: 'DAILY_LIMIT',
+              daily,
+              used_today: usedToday,
+              remaining_today: remaining,
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('[instant-withdrawal] withdrawal_limits check failed:', (e as Error).message);
+      }
+
       try {
         const { data: throttleRow } = await supabase
           .from('system_settings')
