@@ -45,28 +45,32 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
   const fetchReviewData = async () => {
     if (!loan) return;
     setLoading(true);
+    setEvaluation(null);
     try {
       // Fetch the AI/system evaluation report attached to this loan (by applied_loan_id
       // or, if not yet linked, the most recent evaluation for this borrower).
       let evalRow: any = null;
-      const { data: byLoan } = await supabase
+      const { data: byLoan, error: byLoanErr } = await supabase
         .from('loan_evaluations')
         .select('*')
         .eq('applied_loan_id', loan.id)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
+      if (byLoanErr) console.warn('[LoanReview] eval by loan error:', byLoanErr);
       evalRow = byLoan;
       if (!evalRow && loan.employee_email) {
-        const { data: byEmail } = await supabase
+        const { data: byEmail, error: byEmailErr } = await supabase
           .from('loan_evaluations')
           .select('*')
           .eq('employee_email', loan.employee_email)
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
+        if (byEmailErr) console.warn('[LoanReview] eval by email error:', byEmailErr);
         evalRow = byEmail;
       }
+      console.log('[LoanReview] evaluation loaded:', evalRow?.id, evalRow?.decision);
       setEvaluation(evalRow);
 
       // Fetch borrower employee details
