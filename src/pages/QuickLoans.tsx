@@ -1118,8 +1118,8 @@ const QuickLoans = () => {
             idempotencyKey: `loan-repay-${selectedLoanForPayment.id}-${Date.now()}`,
             templateData: {
               employeeName: selectedLoanForPayment.employee_name,
-              installmentNumber: String((unpaidInstallments || [])[0]?.installment_number || ''),
-              amountDue: ((unpaidInstallments || [])[0]?.amount_due || amount).toLocaleString(),
+              installmentNumber: '',
+              amountDue: amount.toLocaleString(),
               amountCollected: amount.toLocaleString(),
               sources: `${earlyPayMethod === 'wallet' ? 'Wallet' : earlyPayMethod}: UGX ${amount.toLocaleString()}`,
               remainingBalance: newBalance.toLocaleString(),
