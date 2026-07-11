@@ -1085,80 +1085,29 @@ const QuickLoans = () => {
 
     setSubmitting(true);
     try {
-      // For full early payoff, use daily pro-rata discount; for partial, use simple subtraction
-      const isFullPayoff = amount >= earlyPayoff;
-      const newBalance = isFullPayoff ? 0 : Math.max(0, (selectedLoanForPayment.remaining_balance || selectedLoanForPayment.total_repayable) - amount);
-
-      // Update loan remaining balance and paid_amount
-      const newPaidAmount = (selectedLoanForPayment.paid_amount || 0) + amount;
-      const { error } = await supabase.from('loans').update({
-        remaining_balance: newBalance,
-        paid_amount: newPaidAmount,
-        status: newBalance <= 0 ? 'completed' : 'active',
-      }).eq('id', selectedLoanForPayment.id);
-      if (error) throw error;
-
-      // Mark unpaid installments as paid (earliest first) until amount is consumed
-      const { data: unpaidInstallments } = await supabase.from('loan_repayments')
-        .select('*')
-        .eq('loan_id', selectedLoanForPayment.id)
-        .eq('status', 'pending')
-        .order('due_date', { ascending: true });
-
-      let remaining = amount;
-      for (const inst of (unpaidInstallments || [])) {
-        if (remaining <= 0) break;
-        const payable = Math.min(remaining, inst.amount_due - (inst.amount_paid || 0));
-        const newPaid = (inst.amount_paid || 0) + payable;
-        const isPaid = newPaid >= inst.amount_due;
-        await supabase.from('loan_repayments').update({
-          amount_paid: newPaid,
-          status: isPaid ? 'paid' : 'pending',
-          paid_date: isPaid ? new Date().toISOString().split('T')[0] : inst.paid_date,
-        }).eq('id', inst.id);
-        remaining -= payable;
+      if (earlyPayMethod === 'mobile_money') {
+        toast({ title: 'Use MoMo repayment dialog', description: 'Mobile money repayments must go through the MoMo repayment flow so the money is actually collected.', variant: 'destructive' });
+        setSubmitting(false);
+        return;
       }
 
-      // Post ledger entries so the money source is visible on the borrower's statement
-      // and Treasury reconciliation. Every payment method MUST leave an audit trail.
-      try {
-        const borrowerEmployee = await supabase
-          .from('employees')
-          .select('auth_user_id')
-          .eq('email', selectedLoanForPayment.employee_email)
-          .single();
-        const borrowerUserId = borrowerEmployee.data?.auth_user_id;
-        const ts = Date.now();
-        const loanShort = selectedLoanForPayment.id.slice(0, 8);
-
-        if (borrowerUserId) {
-          if (earlyPayMethod === 'mobile_money') {
-            // MoMo direct path: gosentepay-callback posts the paired
-            // (+DEPOSIT, -LOAN_REPAYMENT) entries on SUCCESS. Do nothing here
-            // to avoid double posting.
-          } else {
-            // Wallet / Cash / Bank: debit the borrower's wallet directly.
-            // If the wallet goes negative the overdraft system absorbs it,
-            // exactly like any other outflow. Single-sided entry so the
-            // statement shows the real UGX -amount impact.
-            await supabase.from('ledger_entries').insert({
-              user_id: borrowerUserId,
-              entry_type: 'LOAN_REPAYMENT',
-              amount: -amount,
-              reference: `LOANREPAY-${earlyPayMethod.toUpperCase()}-${loanShort}-${ts}`,
-              metadata: {
-                description: `Loan repayment via ${earlyPayMethod === 'wallet' ? 'wallet' : earlyPayMethod === 'cash' ? 'cash' : 'bank deposit'} (UGX ${amount.toLocaleString()})`,
-                  loan_id: selectedLoanForPayment.id,
-                  method: earlyPayMethod,
-                  source: 'loan_repayment_out',
-                  notes: earlyPayNotes,
-                },
-            });
-          }
-        }
-      } catch (ledgerErr) {
-        console.error('Failed to post loan repayment ledger entries:', ledgerErr);
-      }
+      // ALL non-MoMo repayments (wallet, cash, bank) go through the
+      // service-role edge function: it posts the ledger debit FIRST,
+      // then updates the loan. If the ledger insert fails, the loan is
+      // NOT marked paid. This is the only way to keep wallet + loan
+      // state consistent (client-side inserts are blocked by RLS).
+      const { data: repayResult, error: repayErr } = await supabase.functions.invoke('record-loan-repayment', {
+        body: {
+          loan_id: selectedLoanForPayment.id,
+          amount,
+          method: earlyPayMethod,
+          notes: earlyPayNotes,
+        },
+      });
+      if (repayErr) throw new Error(repayErr.message || 'Failed to record repayment');
+      if (!repayResult?.ok) throw new Error(repayResult?.error || 'Repayment failed');
+      const isFullPayoff = repayResult.is_fully_paid;
+      const newBalance = repayResult.new_remaining_balance;
 
       // Send loan repayment confirmation email
       try {
