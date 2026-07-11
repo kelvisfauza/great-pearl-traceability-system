@@ -467,6 +467,14 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
               )}
 
               {/* System Evaluation Report */}
+              {!evaluation && !loading && (
+                <Card className="border-dashed border-amber-400 bg-amber-50 dark:bg-amber-950/20">
+                  <CardContent className="p-4 flex items-center gap-2 text-sm">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <span>No AI evaluation report is on file for this borrower. Approve with extra care.</span>
+                  </CardContent>
+                </Card>
+              )}
               {evaluation && (
                 <Card className="border-primary/30 bg-primary/5">
                   <CardHeader className="pb-2 p-4">
