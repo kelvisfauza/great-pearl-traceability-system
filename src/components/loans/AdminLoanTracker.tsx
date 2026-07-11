@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import { 
   Search, AlertTriangle, CalendarDays, Users, History, 
   Send, ChevronDown, ChevronUp, Clock, CheckCircle, XCircle,
-  Banknote, TrendingDown, Calendar, User, Shield, Phone, Mail, MapPin, Briefcase, Printer
+  Banknote, TrendingDown, Calendar, User, Shield, Phone, Mail, MapPin, Briefcase, Printer, Wallet
 } from 'lucide-react';
 import LoanRepaymentSlip from './LoanRepaymentSlip';
 import LoanRepaymentHistorySlip from './LoanRepaymentHistorySlip';
@@ -153,7 +153,7 @@ const AdminLoanTracker = () => {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="summary">
-          <TabsList className="grid grid-cols-4 w-full mb-4">
+          <TabsList className="grid grid-cols-5 w-full mb-4">
             <TabsTrigger value="summary" className="text-xs sm:text-sm">
               <Users className="h-3.5 w-3.5 mr-1 hidden sm:inline" /> Borrowers
             </TabsTrigger>
@@ -165,6 +165,9 @@ const AdminLoanTracker = () => {
               {overdueInstallments.length > 0 && (
                 <Badge variant="destructive" className="ml-1 text-[10px] px-1.5 py-0">{overdueInstallments.length}</Badge>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="repayments" className="text-xs sm:text-sm">
+              <Wallet className="h-3.5 w-3.5 mr-1 hidden sm:inline" /> Repayments
             </TabsTrigger>
             <TabsTrigger value="history" className="text-xs sm:text-sm">
               <History className="h-3.5 w-3.5 mr-1 hidden sm:inline" /> History
@@ -376,6 +379,10 @@ const AdminLoanTracker = () => {
           </TabsContent>
 
           {/* ========= REPAYMENT HISTORY ========= */}
+          <TabsContent value="repayments">
+            <RepaymentsLedgerTab allRepayments={allRepayments || []} />
+          </TabsContent>
+
           <TabsContent value="history">
             <BorrowerHistoryTab allRepayments={allRepayments || []} activeLoans={activeLoans || []} />
           </TabsContent>
@@ -920,6 +927,126 @@ const BorrowerHistoryTab = ({ allRepayments, activeLoans }: { allRepayments: any
               </div>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ========= REPAYMENTS LEDGER TAB =========
+const RepaymentsLedgerTab = ({ allRepayments }: { allRepayments: any[] }) => {
+  const [search, setSearch] = useState('');
+  const [methodFilter, setMethodFilter] = useState<string>('all');
+
+  const paid = useMemo(() => {
+    return (allRepayments || [])
+      .filter((r: any) => Number(r.amount_paid) > 0 || r.status === 'paid')
+      .sort((a: any, b: any) => {
+        const ad = new Date(a.paid_date || a.updated_at || a.created_at).getTime();
+        const bd = new Date(b.paid_date || b.updated_at || b.created_at).getTime();
+        return bd - ad;
+      });
+  }, [allRepayments]);
+
+  const filtered = useMemo(() => {
+    return paid.filter((r: any) => {
+      const name = (r.loans?.employee_name || '').toLowerCase();
+      const ref = (r.payment_reference || '').toLowerCase();
+      const q = search.toLowerCase();
+      const matchSearch = !q || name.includes(q) || ref.includes(q);
+      const matchMethod = methodFilter === 'all' || (r.deducted_from || 'wallet') === methodFilter;
+      return matchSearch && matchMethod;
+    });
+  }, [paid, search, methodFilter]);
+
+  const totalPaid = filtered.reduce((s: number, r: any) => s + Number(r.amount_paid || 0), 0);
+
+  return (
+    <div>
+      <div className="flex flex-col sm:flex-row gap-2 mb-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search borrower or reference..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <select
+          value={methodFilter}
+          onChange={(e) => setMethodFilter(e.target.value)}
+          className="border rounded-md px-3 py-2 bg-background text-sm"
+        >
+          <option value="all">All methods</option>
+          <option value="wallet">Wallet</option>
+          <option value="cash">Cash</option>
+          <option value="bank">Bank</option>
+          <option value="momo">Mobile Money</option>
+          <option value="salary">Salary</option>
+        </select>
+      </div>
+
+      <div className="flex flex-wrap gap-4 mb-3 text-sm">
+        <div className="px-3 py-1.5 rounded-md bg-muted">
+          <span className="text-muted-foreground">Payments: </span>
+          <span className="font-semibold">{filtered.length}</span>
+        </div>
+        <div className="px-3 py-1.5 rounded-md bg-muted">
+          <span className="text-muted-foreground">Total collected: </span>
+          <span className="font-semibold text-green-600">UGX {totalPaid.toLocaleString()}</span>
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <p className="text-muted-foreground text-center py-8">No repayments recorded</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Paid Date</TableHead>
+                <TableHead>Borrower</TableHead>
+                <TableHead>Loan Type</TableHead>
+                <TableHead className="text-center">Inst #</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+                <TableHead>Method</TableHead>
+                <TableHead>Reference</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((r: any) => (
+                <TableRow key={r.id}>
+                  <TableCell className="whitespace-nowrap text-xs">
+                    {r.paid_date ? new Date(r.paid_date).toLocaleDateString() : '—'}
+                  </TableCell>
+                  <TableCell className="font-medium">{r.loans?.employee_name || '—'}</TableCell>
+                  <TableCell className="text-xs capitalize">{r.loans?.loan_type || '—'}</TableCell>
+                  <TableCell className="text-center">{r.installment_number}</TableCell>
+                  <TableCell className="text-right font-semibold text-green-600">
+                    UGX {Number(r.amount_paid || 0).toLocaleString()}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="capitalize text-[10px]">
+                      {r.deducted_from || 'wallet'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="font-mono text-[11px] text-muted-foreground max-w-[180px] truncate">
+                    {r.payment_reference || '—'}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={r.status === 'paid' ? 'default' : 'secondary'}
+                      className="text-[10px] capitalize"
+                    >
+                      {r.status}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>
