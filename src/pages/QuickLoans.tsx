@@ -1102,6 +1102,7 @@ const QuickLoans = () => {
           amount,
           method: earlyPayMethod,
           notes: earlyPayNotes,
+          close_loan: amount >= earlyPayoff,
         },
       });
       if (repayErr) throw new Error(repayErr.message || 'Failed to record repayment');
@@ -1338,6 +1339,7 @@ const QuickLoans = () => {
           uses_overdraft: odPortion > 0,
           overdraft_portion: odPortion,
           upfront_od_interest: upfrontOdInterest,
+          close_loan: amount >= earlyPayoff,
         },
       });
       if (repayErr) throw new Error(repayErr.message || 'Failed to record repayment');
