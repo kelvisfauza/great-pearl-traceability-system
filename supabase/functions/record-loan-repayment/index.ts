@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { loan_id, amount, method, notes, uses_overdraft, overdraft_portion, upfront_od_interest } = body || {};
+    const { loan_id, amount, method, notes, uses_overdraft, overdraft_portion, upfront_od_interest, close_loan } = body || {};
 
     if (!loan_id || !amount || amount <= 0 || !method) {
       return new Response(JSON.stringify({ ok: false, error: "loan_id, amount, method required" }), {
@@ -116,10 +116,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 4) Compute loan totals
+    // 4) Compute loan totals. `close_loan` = client signalled this is an
+    //    early payoff (interest was discounted to daily pro-rata), so we
+    //    close the loan even though scheduled remaining_balance > 0.
     const newPaidAmount = (Number(loan.paid_amount) || 0) + Number(amount);
-    const newRemaining = Math.max(0, (Number(loan.remaining_balance) || Number(loan.total_repayable) || 0) - Number(amount));
-    const isFullyPaid = newRemaining <= 0;
+    const rawRemaining = Math.max(0, (Number(loan.remaining_balance) || Number(loan.total_repayable) || 0) - Number(amount));
+    const isFullyPaid = close_loan === true || rawRemaining <= 0;
+    const newRemaining = isFullyPaid ? 0 : rawRemaining;
 
     const { error: updErr } = await supabase.from("loans").update({
       paid_amount: newPaidAmount,
@@ -138,13 +141,15 @@ Deno.serve(async (req) => {
       .in("status", ["pending", "overdue"])
       .order("due_date", { ascending: true });
 
+    // On full payoff, close every remaining installment even if the
+    // discounted amount doesn't cover their scheduled `amount_due`.
     let remaining = Number(amount);
     for (const inst of unpaid || []) {
-      if (remaining <= 0) break;
+      if (remaining <= 0 && !isFullyPaid) break;
       const owed = Number(inst.amount_due) - (Number(inst.amount_paid) || 0);
-      const payable = Math.min(remaining, owed);
+      const payable = isFullyPaid ? owed : Math.min(remaining, owed);
       const newPaid = (Number(inst.amount_paid) || 0) + payable;
-      const isPaid = newPaid >= Number(inst.amount_due);
+      const isPaid = isFullyPaid || newPaid >= Number(inst.amount_due);
       await supabase.from("loan_repayments").update({
         amount_paid: newPaid,
         status: isPaid ? "paid" : inst.status,
@@ -152,7 +157,7 @@ Deno.serve(async (req) => {
         payment_reference: txRef,
         deducted_from: method === "wallet" ? "Wallet Repayment" : method === "cash" ? "Cash" : "Bank Deposit",
       }).eq("id", inst.id);
-      remaining -= payable;
+      remaining -= Math.min(remaining, payable);
     }
 
     return new Response(JSON.stringify({
