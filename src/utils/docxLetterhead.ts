@@ -101,40 +101,40 @@ export const createLetterheadRegLine = (includeIncorporated = false): Paragraph 
  */
 export const createLetterheadFooter = (includeIncorporated = true): Table => {
   const footCell = (heading: string, value: string, align: any = AlignmentType.LEFT) => new TableCell({
-    width: { size: 2340, type: WidthType.DXA },
+    width: { size: 1872, type: WidthType.DXA },
     borders: { ...noBorders, top: thinBlack },
-    margins: { top: 120, bottom: 60, left: 80, right: 80 },
+    margins: { top: 80, bottom: 40, left: 60, right: 60 },
     children: [
-      new Paragraph({ alignment: align, children: [new TextRun({ text: heading, bold: true, size: 18 })] }),
-      new Paragraph({ alignment: align, children: [new TextRun({ text: value, size: 18 })] }),
+      new Paragraph({ alignment: align, children: [new TextRun({ text: heading, bold: true, size: 14 })] }),
+      new Paragraph({ alignment: align, children: [new TextRun({ text: value, size: 14 })] }),
     ],
   });
 
   const phoneCell = new TableCell({
-    width: { size: 2340, type: WidthType.DXA },
+    width: { size: 1872, type: WidthType.DXA },
     borders: { ...noBorders, top: thinBlack },
-    margins: { top: 120, bottom: 60, left: 80, right: 80 },
+    margins: { top: 80, bottom: 40, left: 60, right: 60 },
     children: [
-      new Paragraph({ children: [new TextRun({ text: 'Telephone', bold: true, size: 18 })] }),
-      new Paragraph({ children: [new TextRun({ text: COMPANY_PHONE, size: 18 })] }),
-      new Paragraph({ children: [new TextRun({ text: `Operations: ${COMPANY_PHONE_OPS}`, size: 18 })] }),
+      new Paragraph({ children: [new TextRun({ text: 'Telephone', bold: true, size: 14 })] }),
+      new Paragraph({ children: [new TextRun({ text: COMPANY_PHONE, size: 14 })] }),
+      new Paragraph({ children: [new TextRun({ text: `Ops: ${COMPANY_PHONE_OPS}`, size: 14 })] }),
     ],
   });
 
   return new Table({
     width: { size: 9360, type: WidthType.DXA },
-    columnWidths: [2340, 2340, 2340, 2340],
+    columnWidths: [1872, 1872, 1872, 1872, 1872],
     borders: noBorders,
     rows: [
       new TableRow({
         children: [
           new TableCell({
-            width: { size: 2340, type: WidthType.DXA },
+            width: { size: 1872, type: WidthType.DXA },
             borders: { ...noBorders, top: thinBlack },
-            margins: { top: 120, bottom: 60, left: 0, right: 80 },
+            margins: { top: 80, bottom: 40, left: 0, right: 60 },
             children: [
-              new Paragraph({ children: [new TextRun({ text: 'Great Agro Coffee', bold: true, size: 18 })] }),
-              new Paragraph({ children: [new TextRun({ text: COMPANY_ADDRESS, size: 18 })] }),
+              new Paragraph({ children: [new TextRun({ text: 'Great Agro Coffee', bold: true, size: 14 })] }),
+              new Paragraph({ children: [new TextRun({ text: COMPANY_ADDRESS, size: 14 })] }),
             ],
           }),
           phoneCell,
@@ -147,12 +147,12 @@ export const createLetterheadFooter = (includeIncorporated = true): Table => {
         children: [
           new TableCell({
             width: { size: 9360, type: WidthType.DXA },
-            columnSpan: 4,
+            columnSpan: 5,
             borders: noBorders,
             margins: { top: 60, bottom: 0, left: 0, right: 0 },
             children: [new Paragraph({
               alignment: AlignmentType.CENTER,
-              children: [new TextRun({ text: includeIncorporated ? COMPANY_REG_INC : COMPANY_REG, size: 16, color: '666666' })],
+              children: [new TextRun({ text: includeIncorporated ? COMPANY_REG_INC : COMPANY_REG, size: 12, color: '666666' })],
             })],
           }),
         ],
