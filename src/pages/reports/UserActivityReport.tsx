@@ -389,6 +389,7 @@ export default function UserActivityReport() {
                     <SelectItem value="LOGOUT">Logout</SelectItem>
                     <SelectItem value="LOCATION">Location</SelectItem>
                     <SelectItem value="ACTION">Action (Audit)</SelectItem>
+                    <SelectItem value="ACTIVITY">Activity (Page / Form)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -411,13 +412,14 @@ export default function UserActivityReport() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
           <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Total Events</p><p className="text-2xl font-bold">{stats.total}</p></CardContent></Card>
           <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Unique Users</p><p className="text-2xl font-bold">{stats.uniqueUsers}</p></CardContent></Card>
           <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Logins</p><p className="text-2xl font-bold text-emerald-600">{stats.logins}</p></CardContent></Card>
           <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Sessions</p><p className="text-2xl font-bold text-blue-600">{stats.sessions}</p></CardContent></Card>
           <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Locations</p><p className="text-2xl font-bold text-amber-600">{stats.locations}</p></CardContent></Card>
           <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Actions</p><p className="text-2xl font-bold text-purple-600">{stats.actions}</p></CardContent></Card>
+          <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Activity</p><p className="text-2xl font-bold text-indigo-600">{stats.activities}</p></CardContent></Card>
         </div>
 
         <Card>
