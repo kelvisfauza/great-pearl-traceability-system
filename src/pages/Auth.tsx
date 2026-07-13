@@ -869,20 +869,20 @@ const Auth = () => {
             <p className="text-xs uppercase tracking-widest mb-3" style={{ color: 'rgba(6,78,59,0.5)' }}>
               Need help?
             </p>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 text-sm" style={{ color: 'rgba(6,78,59,0.75)' }}>
-              <a href="tel:+256393001626" className="flex items-center gap-2 hover:underline">
-                <Phone className="h-3.5 w-3.5" style={{ color: '#c9a84c' }} />
-                +256 393 001 626
+            <div className="grid gap-2 text-sm" style={{ color: 'rgba(6,78,59,0.8)' }}>
+              <a href="tel:+256393001626" className="flex items-center gap-2 hover:underline whitespace-nowrap">
+                <Phone className="h-3.5 w-3.5 shrink-0" style={{ color: '#c9a84c' }} />
+                <span>+256 393 001 626</span>
+                <span className="text-xs" style={{ color: 'rgba(6,78,59,0.5)' }}>· Main</span>
               </a>
-              <span className="hidden sm:inline" style={{ color: 'rgba(6,78,59,0.25)' }}>·</span>
-              <a href="tel:+256393101103" className="flex items-center gap-2 hover:underline">
-                <Phone className="h-3.5 w-3.5" style={{ color: '#c9a84c' }} />
-                +256 393 101 103 (Operations)
+              <a href="tel:+256393101103" className="flex items-center gap-2 hover:underline whitespace-nowrap">
+                <Phone className="h-3.5 w-3.5 shrink-0" style={{ color: '#c9a84c' }} />
+                <span>+256 393 101 103</span>
+                <span className="text-xs" style={{ color: 'rgba(6,78,59,0.5)' }}>· Operations</span>
               </a>
-              <span className="hidden sm:inline" style={{ color: 'rgba(6,78,59,0.25)' }}>·</span>
-              <a href="mailto:it.support@greatagrocoffee.com" className="flex items-center gap-2 hover:underline">
-                <Mail className="h-3.5 w-3.5" style={{ color: '#c9a84c' }} />
-                it.support@greatagrocoffee.com
+              <a href="mailto:it.support@greatagrocoffee.com" className="flex items-center gap-2 hover:underline break-all">
+                <Mail className="h-3.5 w-3.5 shrink-0" style={{ color: '#c9a84c' }} />
+                <span>it.support@greatagrocoffee.com</span>
               </a>
             </div>
             <p className="text-xs mt-3" style={{ color: 'rgba(6,78,59,0.45)' }}>
@@ -890,13 +890,14 @@ const Auth = () => {
             </p>
             <div className="mt-4 pt-3 text-xs" style={{ borderTop: '1px dashed rgba(6,78,59,0.12)', color: 'rgba(6,78,59,0.6)' }}>
               <span className="uppercase tracking-widest" style={{ fontSize: '10px', color: 'rgba(6,78,59,0.45)' }}>Customers & partners</span>
-              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-                <a href="/support" className="flex items-center gap-2 hover:underline font-medium" style={{ color: 'rgba(6,78,59,0.8)' }}>
-                  <Mail className="h-3.5 w-3.5" style={{ color: '#c9a84c' }} />
+              <div className="mt-1 grid gap-1.5">
+                <a href="/support" className="flex items-center gap-2 hover:underline font-medium" style={{ color: 'rgba(6,78,59,0.85)' }}>
+                  <Mail className="h-3.5 w-3.5 shrink-0" style={{ color: '#c9a84c' }} />
                   Contact customer support
                 </a>
-                <span style={{ color: 'rgba(6,78,59,0.25)' }}>·</span>
-                <a href="mailto:support@greatpearlcoffee.com" className="hover:underline">support@greatpearlcoffee.com</a>
+                <a href="mailto:support@greatpearlcoffee.com" className="hover:underline break-all pl-5.5" style={{ color: 'rgba(6,78,59,0.7)' }}>
+                  support@greatpearlcoffee.com
+                </a>
               </div>
             </div>
           </div>
