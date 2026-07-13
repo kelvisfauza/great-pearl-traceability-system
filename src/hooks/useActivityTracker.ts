@@ -20,14 +20,20 @@ export const useActivityTracker = () => {
     console.log('Tracking activity:', activityType, 'for user:', user.id);
 
     try {
+      // Build metadata (page, form, description) so audits can show what the user actually did
+      const meta: Record<string, any> = { ...(context || {}) };
+      if (description && !meta.description) meta.description = description;
+      if (typeof window !== 'undefined' && !meta.page) meta.page = window.location.pathname;
+
       // Record the activity
       const { error: activityError } = await supabase
         .from('user_activity')
         .insert([{
           user_id: user.id,
           activity_type: activityType,
-          activity_date: new Date().toISOString().split('T')[0]
-        }]);
+          activity_date: new Date().toISOString().split('T')[0],
+          metadata: meta as any,
+        } as any]);
 
       if (activityError) {
         console.error('Error recording activity:', activityError);
