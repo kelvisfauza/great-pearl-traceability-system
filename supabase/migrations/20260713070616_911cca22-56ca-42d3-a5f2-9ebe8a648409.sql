@@ -1,0 +1,1 @@
+ALTER TABLE public.user_activity ADD COLUMN IF NOT EXISTS metadata jsonb NOT NULL DEFAULT '{}'::jsonb; CREATE INDEX IF NOT EXISTS idx_user_activity_created_at ON public.user_activity(created_at DESC); CREATE INDEX IF NOT EXISTS idx_user_activity_user_id ON public.user_activity(user_id);
