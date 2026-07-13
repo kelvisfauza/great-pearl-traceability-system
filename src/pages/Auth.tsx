@@ -633,7 +633,7 @@ const Auth = () => {
           aria-hidden
           className="absolute inset-0 pointer-events-none"
           style={{
-            backgroundImage: "url(YEDA_LOGO_URL)",
+            backgroundImage: `url(${YEDA_LOGO_URL})`,
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center',
             backgroundSize: 'contain',
