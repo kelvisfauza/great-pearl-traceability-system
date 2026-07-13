@@ -11122,6 +11122,7 @@ export type Database = {
           activity_type: string
           created_at: string
           id: string
+          metadata: Json
           reward_amount: number | null
           user_id: string
         }
@@ -11130,6 +11131,7 @@ export type Database = {
           activity_type: string
           created_at?: string
           id?: string
+          metadata?: Json
           reward_amount?: number | null
           user_id: string
         }
@@ -11138,6 +11140,7 @@ export type Database = {
           activity_type?: string
           created_at?: string
           id?: string
+          metadata?: Json
           reward_amount?: number | null
           user_id?: string
         }
