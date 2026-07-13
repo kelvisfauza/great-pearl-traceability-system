@@ -16,6 +16,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Heart } from 'lucide-react';
 import { useHolidayTheme } from '@/hooks/useHolidayTheme';
 import { FaceCapture } from '@/components/auth/FaceCapture';
+import yedaLogoAsset from '@/assets/yeda-logo.png.asset.json';
+const YEDA_LOGO_URL = yedaLogoAsset.url;
 
 
 const Auth = () => {
