@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Printer, Filter, Download, RefreshCw, Activity } from "lucide-react";
 import { format, eachDayOfInterval, parseISO } from "date-fns";
 
-type EventType = "LOGIN" | "SESSION" | "LOCATION" | "ACTION" | "LOGOUT";
+type EventType = "LOGIN" | "SESSION" | "LOCATION" | "ACTION" | "LOGOUT" | "ACTIVITY";
 
 interface Row {
   id: string;
@@ -34,6 +34,7 @@ const eventColor = (e: EventType) => {
     case "SESSION": return "bg-blue-100 text-blue-800 border-blue-200";
     case "LOCATION": return "bg-amber-100 text-amber-800 border-amber-200";
     case "ACTION": return "bg-purple-100 text-purple-800 border-purple-200";
+    case "ACTIVITY": return "bg-indigo-100 text-indigo-800 border-indigo-200";
   }
 };
 
@@ -53,7 +54,7 @@ export default function UserActivityReport() {
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["user-activity-report", startDate, endDate],
     queryFn: async () => {
-      const [logins, sessions, locations, audits] = await Promise.all([
+      const [logins, sessions, locations, audits, activities, employeesRes] = await Promise.all([
         supabase
           .from("employee_login_tracker")
           .select("id, employee_name, employee_email, login_time")
@@ -74,7 +75,21 @@ export default function UserActivityReport() {
           .select("id, action, table_name, record_id, performed_by, department, reason, created_at, record_data")
           .gte("created_at", startISO).lte("created_at", endISO)
           .order("created_at", { ascending: false }).limit(5000),
+        (supabase as any)
+          .from("user_activity")
+          .select("id, user_id, activity_type, metadata, created_at")
+          .gte("created_at", startISO).lte("created_at", endISO)
+          .order("created_at", { ascending: false }).limit(10000),
+        (supabase as any)
+          .from("employees")
+          .select("auth_user_id, name, email")
+          .not("auth_user_id", "is", null),
       ]);
+
+      const empByAuth = new Map<string, { name: string; email: string }>();
+      (employeesRes.data || []).forEach((e: any) => {
+        if (e.auth_user_id) empByAuth.set(e.auth_user_id, { name: e.name || "—", email: e.email || "" });
+      });
 
       const rows: Row[] = [];
 
@@ -151,6 +166,42 @@ export default function UserActivityReport() {
         });
       });
 
+      const prettyType: Record<string, string> = {
+        page_visit: "Visited page",
+        data_entry: "Entered data",
+        form_submission: "Submitted form",
+        interaction: "Clicked button",
+        report_generation: "Generated report",
+        task_completion: "Completed task",
+        document_upload: "Uploaded document",
+        transaction: "Processed transaction",
+      };
+      (activities.data || []).forEach((a: any) => {
+        const emp = empByAuth.get(a.user_id);
+        const meta = a.metadata || {};
+        const page = meta.page || "";
+        const formName = meta.form_name || "";
+        const desc = meta.description || "";
+        const action = prettyType[a.activity_type] || a.activity_type;
+        const details = [
+          page && `Page: ${page}`,
+          formName && `Form: ${formName}`,
+          desc && !formName && !page && desc,
+        ].filter(Boolean).join(" • ");
+        rows.push({
+          id: `act-${a.id}`,
+          occurred_at: a.created_at,
+          employee_name: emp?.name || "—",
+          employee_email: emp?.email || "",
+          event: "ACTIVITY",
+          action,
+          details: details || desc || "",
+          location: "",
+          ip: "",
+          device: "",
+        });
+      });
+
       rows.sort((a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime());
       return rows;
     },
@@ -176,12 +227,13 @@ export default function UserActivityReport() {
   }, [data, employee, event, search]);
 
   const stats = useMemo(() => {
-    const s = { total: filtered.length, logins: 0, sessions: 0, locations: 0, actions: 0, uniqueUsers: new Set<string>() };
+    const s = { total: filtered.length, logins: 0, sessions: 0, locations: 0, actions: 0, activities: 0, uniqueUsers: new Set<string>() };
     filtered.forEach((r) => {
       if (r.event === "LOGIN") s.logins++;
       else if (r.event === "SESSION") s.sessions++;
       else if (r.event === "LOCATION") s.locations++;
       else if (r.event === "ACTION") s.actions++;
+      else if (r.event === "ACTIVITY") s.activities++;
       if (r.employee_name) s.uniqueUsers.add(r.employee_name);
     });
     return { ...s, uniqueUsers: s.uniqueUsers.size };
