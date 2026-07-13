@@ -16,6 +16,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Heart } from 'lucide-react';
 import { useHolidayTheme } from '@/hooks/useHolidayTheme';
 import { FaceCapture } from '@/components/auth/FaceCapture';
+import yedaLogoAsset from '@/assets/yeda-logo.png.asset.json';
+const YEDA_LOGO_URL = yedaLogoAsset.url;
 
 
 const Auth = () => {
@@ -494,7 +496,7 @@ const Auth = () => {
             style={{ background: '#022911', border: '1px solid rgba(201,168,76,0.3)' }}
           >
             <img
-              src="/lovable-uploads/great-agro-coffee-logo.png"
+              src={YEDA_LOGO_URL}
               alt="Great Agro Coffee"
               className="h-28 w-auto object-contain"
             />
@@ -560,7 +562,7 @@ const Auth = () => {
           <div className="text-center mb-8">
             <div className="flex justify-center mb-5">
               <div className="p-4 rounded-2xl shadow-xl" style={{ background: '#022911', border: '1px solid rgba(201,168,76,0.25)' }}>
-                <img src="/lovable-uploads/great-agro-coffee-logo.png" alt="Great Agro Coffee" className="h-16 w-auto object-contain" />
+                <img src={YEDA_LOGO_URL} alt="Great Agro Coffee" className="h-16 w-auto object-contain" />
               </div>
             </div>
             <h1
@@ -631,7 +633,7 @@ const Auth = () => {
           aria-hidden
           className="absolute inset-0 pointer-events-none"
           style={{
-            backgroundImage: "url('/lovable-uploads/great-agro-coffee-logo.png')",
+            backgroundImage: `url(${YEDA_LOGO_URL})`,
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center',
             backgroundSize: 'contain',
@@ -642,7 +644,7 @@ const Auth = () => {
 
         <div className="relative z-10 flex items-center gap-3">
           <div className="p-2 rounded-xl" style={{ background: 'rgba(245,240,224,0.06)', border: '1px solid rgba(201,168,76,0.3)' }}>
-            <img src="/lovable-uploads/great-agro-coffee-logo.png" alt="Great Agro Coffee" className="h-10 w-auto object-contain" />
+            <img src={YEDA_LOGO_URL} alt="Great Agro Coffee" className="h-10 w-auto object-contain" />
           </div>
           <span className="text-sm tracking-widest uppercase" style={{ color: 'rgba(245,240,224,0.7)' }}>
             Great Agro Coffee
@@ -694,7 +696,7 @@ const Auth = () => {
           {/* Mobile-only brand header */}
           <div className="lg:hidden text-center mb-8">
             <div className="inline-flex p-3 rounded-2xl mb-3" style={{ background: '#03361b' }}>
-              <img src="/lovable-uploads/great-agro-coffee-logo.png" alt="Great Agro Coffee" className="h-12 w-auto object-contain" />
+              <img src={YEDA_LOGO_URL} alt="Great Agro Coffee" className="h-12 w-auto object-contain" />
             </div>
             <h1 className="text-3xl" style={{ fontFamily: "'Instrument Serif', serif", color: '#03361b' }}>
               Great Agro Coffee
