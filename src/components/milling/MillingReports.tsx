@@ -381,7 +381,7 @@ ${reportData.cashTransactions.map((p: any) =>
             <div class="company-details">
               <p style="font-weight:bold;color:#1a5632;">A Member of YEDA Coffee Company Limited</p>
               <p>P.O Box 431420, Kasese, Uganda</p>
-              <p>+256 393 001 626</p>
+              <p>+256 393 001 626 / +256 393 101 103</p>
               <p>www.greatagrocoffee.com | info@greatpearlcoffee.com</p>
               <p>Uganda Coffee Development Authority Licensed</p>
             </div>

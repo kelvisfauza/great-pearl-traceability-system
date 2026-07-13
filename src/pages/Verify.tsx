@@ -276,7 +276,7 @@ const Verify = () => {
         {/* Footer */}
         <div className="text-center mt-8 text-green-100 text-sm">
           <p>Great Agro Coffee</p>
-          <p>+256 393 001 626</p>
+          <p>+256 393 001 626 / +256 393 101 103</p>
           <p className="mt-2">www.greatagrocoffee.com</p>
         </div>
       </div>

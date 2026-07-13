@@ -61,7 +61,7 @@ const HappyEidEmail = ({ name, image_url, pdf_url }: HappyEidProps) => {
         </Section>
 
         <Text style={footer}>
-          Great Agro Coffee — Kasese, Uganda · +256 393 001 626 · operations@greatpearlcoffee.com
+          Great Agro Coffee — Kasese, Uganda · +256 393 001 626 / +256 393 101 103 · operations@greatpearlcoffee.com
         </Text>
       </Container>
     </Body>

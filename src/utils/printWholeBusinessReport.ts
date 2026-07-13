@@ -264,7 +264,7 @@ export const printWholeBusinessReport = async (data: WholeBusinessData, periodLa
 
   <div class="footer">
     <p>Great Agro Coffee — A Member of YEDA Coffee Company Limited.</p>
-    <p>P.O Box 431420, Kasese, Uganda | +256 393 001 626 | www.greatagrocoffee.com</p>
+    <p>P.O Box 431420, Kasese, Uganda | +256 393 001 626 / +256 393 101 103 | www.greatagrocoffee.com</p>
     <p style="margin-top:4px;font-size:8px;color:#999;">© ${new Date().getFullYear()} Great Agro Coffee. All rights reserved.</p>
   </div>
 

@@ -196,7 +196,7 @@ const handleTestSMS = async (phoneNumber: string) => {
     try {
       setTestLoading(true);
       const date = new Date().toLocaleDateString('en-GB');
-      const message = `Great Agro Coffee - Price Update\nDate: ${date}\n\n☕ ARABICA:\nOutturn: ${prices.arabicaOutturn}%\nMoisture: ${prices.arabicaMoisture}%\nFM: ${prices.arabicaFm}%\nPrice: UGX ${prices.arabicaBuyingPrice.toLocaleString()}/kg\n\n☕ ROBUSTA:\nOutturn: ${prices.robustaOutturn}%\nMoisture: ${prices.robustaMoisture}%\nFM: ${prices.robustaFm}%\nPrice: UGX ${prices.robustaBuyingPrice.toLocaleString()}/kg\n\n☕ SORTED: UGX ${prices.sortedPrice.toLocaleString()}/kg\n\nDeliver your coffee now!\n📞 Contact: +256 393 001 626`;
+      const message = `Great Agro Coffee - Price Update\nDate: ${date}\n\n☕ ARABICA:\nOutturn: ${prices.arabicaOutturn}%\nMoisture: ${prices.arabicaMoisture}%\nFM: ${prices.arabicaFm}%\nPrice: UGX ${prices.arabicaBuyingPrice.toLocaleString()}/kg\n\n☕ ROBUSTA:\nOutturn: ${prices.robustaOutturn}%\nMoisture: ${prices.robustaMoisture}%\nFM: ${prices.robustaFm}%\nPrice: UGX ${prices.robustaBuyingPrice.toLocaleString()}/kg\n\n☕ SORTED: UGX ${prices.sortedPrice.toLocaleString()}/kg\n\nDeliver your coffee now!\n📞 Contact: +256 393 001 626 / +256 393 101 103`;
 
       console.log(`📱 Sending test SMS to ${phoneNumber}`);
       console.log('Message:', message);

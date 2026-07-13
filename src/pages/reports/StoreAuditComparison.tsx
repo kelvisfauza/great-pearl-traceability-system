@@ -160,7 +160,7 @@ const StoreAuditComparison = () => {
           <h1 class="company-name">GREAT AGRO COFFEE</h1>
           <div class="company-subtitle">A Member of YEDA Coffee Company Limited</div>
           <div class="company-details">
-            <p>P.O Box 431420, Kasese, Uganda · +256 393 001 626</p>
+            <p>P.O Box 431420, Kasese, Uganda · +256 393 001 626 / +256 393 101 103</p>
             <p>www.greatagrocoffee.com | info@greatpearlcoffee.com</p>
           </div>
           <h2 class="document-title">Store Management Audit</h2>

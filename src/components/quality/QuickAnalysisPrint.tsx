@@ -48,7 +48,7 @@ const QuickAnalysisPrint = forwardRef<HTMLDivElement, QuickAnalysisPrintProps>(
           />
           <h1 className="text-lg font-bold uppercase tracking-wide">GREAT AGRO COFFEE</h1>
           <p className="text-xs font-semibold text-green-700">A Member of YEDA Coffee Company Limited</p>
-          <p className="text-xs">P.O Box 431420, Kasese, Uganda | Tel: +256 393 001 626 | www.greatagrocoffee.com</p>
+          <p className="text-xs">P.O Box 431420, Kasese, Uganda | Tel: +256 393 001 626 / +256 393 101 103 | www.greatagrocoffee.com</p>
           <div className="mt-2 bg-gray-100 py-1">
             <h2 className="text-base font-bold">COFFEE QUALITY ANALYSIS REPORT</h2>
           </div>

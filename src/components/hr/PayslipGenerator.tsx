@@ -89,7 +89,7 @@ const PayslipGenerator = ({ payslips, onGeneratePayslips, loading }: PayslipGene
       pdf.setFont('helvetica', 'normal');
       pdf.text('P.O Box 431420, Kasese, Uganda', pageWidth / 2, currentY, { align: 'center' });
       currentY += 5;
-      pdf.text('+256 393 001 626', pageWidth / 2, currentY, { align: 'center' });
+      pdf.text('+256 393 001 626 / +256 393 101 103', pageWidth / 2, currentY, { align: 'center' });
       currentY += 5;
       pdf.text('www.greatagrocoffee.com | info@greatpearlcoffee.com', pageWidth / 2, currentY, { align: 'center' });
       currentY += 5;

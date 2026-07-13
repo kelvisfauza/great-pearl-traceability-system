@@ -210,7 +210,7 @@ const GRNGenerator: React.FC<GRNGeneratorProps> = ({ open, onClose }) => {
               <strong style="color:#1a1a1a;">GREAT AGRO COFFEE LIMITED</strong><br/>
               A Member of YEDA Coffee Company Limited<br/>
               P.O Box 431420, Kasese, Uganda<br/>
-              Tel: +256 393 001 626 &nbsp;|&nbsp; Email: info@greatpearlcoffee.com &nbsp;|&nbsp; Web: www.greatagrocoffee.com
+              Tel: +256 393 001 626 / +256 393 101 103 &nbsp;|&nbsp; Email: info@greatpearlcoffee.com &nbsp;|&nbsp; Web: www.greatagrocoffee.com
               ${verificationCode ? `<br/><span style="color:#0a6b2a;font-weight:bold;font-family:'Courier New',monospace;margin-top:4px;display:inline-block;">Verify code: ${verificationCode}</span>` : ''}
             </td>
             ${verificationCode ? `

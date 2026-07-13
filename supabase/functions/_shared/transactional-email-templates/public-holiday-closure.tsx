@@ -64,7 +64,7 @@ const PublicHolidayClosureEmail = ({ name }: PublicHolidayClosureProps) => (
         </Section>
 
         <Text style={footer}>
-          Great Agro Coffee — Kasese, Uganda · +256 393 001 626 · info@greatpearlcoffee.com
+          Great Agro Coffee — Kasese, Uganda · +256 393 001 626 / +256 393 101 103 · info@greatpearlcoffee.com
         </Text>
       </Container>
     </Body>

@@ -93,7 +93,7 @@ const generatePDF = async (
   doc.text('A Member of YEDA Coffee Company Limited', pageW / 2 + 5, 19);
   doc.setFontSize(8);
   doc.text('P.O Box 431420, Kasese, Uganda', pageW / 2 + 5, 25);
-  doc.text('Tel: +256 393 001 626  |  Email: info@greatpearlcoffee.com', pageW / 2 + 5, 31);
+  doc.text('Tel: +256 393 001 626 / +256 393 101 103  |  Email: info@greatpearlcoffee.com', pageW / 2 + 5, 31);
 
   doc.setTextColor(13, 61, 31);
   doc.setFontSize(13);

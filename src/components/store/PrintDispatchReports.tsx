@@ -171,7 +171,7 @@ const PrintDispatchReports = ({ reports }: PrintDispatchReportsProps) => {
         <div class="print-header">
           <div class="company-name">Great Agro Coffee.</div>
           <div class="company-subtitle">A Member of YEDA Coffee Company Limited</div>
-          <div class="company-details">P.O Box 431420, Kasese, Uganda<br/>+256 393 001 626</div>
+          <div class="company-details">P.O Box 431420, Kasese, Uganda<br/>+256 393 001 626 / +256 393 101 103</div>
           <div class="document-title">EUDR Dispatch Comparison Reports</div>
           <div class="document-info">Period: ${periodLabel} | Generated: ${format(now, 'dd MMM yyyy HH:mm')}</div>
         </div>

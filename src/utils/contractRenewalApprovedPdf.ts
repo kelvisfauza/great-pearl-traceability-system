@@ -42,7 +42,7 @@ export function generateApprovedContractBlob(d: ApprovedContractData): Blob {
   doc.setFontSize(8.5);
   doc.text('A Member of YEDA Coffee Company Limited', M, 17);
   doc.setFontSize(8);
-  doc.text('P.O Box 431420, Kasese, Uganda  |  +256 393 001 626  |  info@greatpearlcoffee.com  |  Customer Support: support@greatpearlcoffee.com', M, 23);
+  doc.text('P.O Box 431420, Kasese, Uganda  |  +256 393 001 626 / +256 393 101 103  |  info@greatpearlcoffee.com  |  Customer Support: support@greatpearlcoffee.com', M, 23);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.text('EMPLOYMENT CONTRACT', W - M, 11, { align: 'right' });

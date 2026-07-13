@@ -425,7 +425,7 @@ const generatePDF = async (
 
   // Contact info
   doc.setFontSize(7);
-  doc.text('Tel: +256 393 001 626  |  Email: info@greatpearlcoffee.com', pageW / 2 + 5, 31);
+  doc.text('Tel: +256 393 001 626 / +256 393 101 103  |  Email: info@greatpearlcoffee.com', pageW / 2 + 5, 31);
 
   // Title (no background)
   doc.setTextColor(13, 61, 31);

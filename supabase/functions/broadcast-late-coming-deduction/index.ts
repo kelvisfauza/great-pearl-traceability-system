@@ -90,7 +90,7 @@ const HTML = (name: string) => `<!doctype html>
         </tr>
         <tr>
           <td style="background:#faf6ef;padding:16px 32px;border-top:1px solid #ece4d4;text-align:center;">
-            <div style="font-size:11px;color:#9ca3af;">Great Agro Coffee \u2014 P.O Box 431420, Kasese, Uganda \u00b7 +256 393 001 626 \u00b7 info@greatpearlcoffee.com</div>
+            <div style="font-size:11px;color:#9ca3af;">Great Agro Coffee \u2014 P.O Box 431420, Kasese, Uganda \u00b7 +256 393 001 626 / +256 393 101 103 \u00b7 info@greatpearlcoffee.com</div>
           </td>
         </tr>
       </table>
