@@ -4,7 +4,7 @@ import {
 } from 'docx';
 import {
   LOGO_URL, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS,
-  COMPANY_PHONE, COMPANY_EMAIL, COMPANY_SUPPORT_EMAIL, COMPANY_WEBSITE, COMPANY_REG, COMPANY_REG_INC,
+  COMPANY_PHONE, COMPANY_PHONE_OPS, COMPANY_EMAIL, COMPANY_SUPPORT_EMAIL, COMPANY_WEBSITE, COMPANY_REG, COMPANY_REG_INC,
 } from './companyBrand';
 
 export const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
@@ -110,6 +110,17 @@ export const createLetterheadFooter = (includeIncorporated = true): Table => {
     ],
   });
 
+  const phoneCell = new TableCell({
+    width: { size: 2340, type: WidthType.DXA },
+    borders: { ...noBorders, top: thinBlack },
+    margins: { top: 120, bottom: 60, left: 80, right: 80 },
+    children: [
+      new Paragraph({ children: [new TextRun({ text: 'Telephone', bold: true, size: 18 })] }),
+      new Paragraph({ children: [new TextRun({ text: COMPANY_PHONE, size: 18 })] }),
+      new Paragraph({ children: [new TextRun({ text: `Operations: ${COMPANY_PHONE_OPS}`, size: 18 })] }),
+    ],
+  });
+
   return new Table({
     width: { size: 9360, type: WidthType.DXA },
     columnWidths: [2340, 2340, 2340, 2340],
@@ -126,7 +137,7 @@ export const createLetterheadFooter = (includeIncorporated = true): Table => {
               new Paragraph({ children: [new TextRun({ text: COMPANY_ADDRESS, size: 18 })] }),
             ],
           }),
-          footCell('Telephone', COMPANY_PHONE),
+          phoneCell,
           footCell('Email', COMPANY_EMAIL),
           footCell('Customer Support', COMPANY_SUPPORT_EMAIL),
           footCell('Website', COMPANY_WEBSITE),

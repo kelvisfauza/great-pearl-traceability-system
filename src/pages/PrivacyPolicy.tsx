@@ -1,4 +1,4 @@
-import { COMPANY_NAME, COMPANY_EMAIL, COMPANY_ADDRESS, COMPANY_PHONE } from '@/utils/companyBrand';
+import { COMPANY_NAME, COMPANY_EMAIL, COMPANY_ADDRESS, COMPANY_PHONES } from '@/utils/companyBrand';
 
 export default function PrivacyPolicy() {
   return (
@@ -9,7 +9,7 @@ export default function PrivacyPolicy() {
       <h2>1. Who We Are</h2>
       <p>
         {COMPANY_NAME}, a member of YEDA Coffee Company Limited, operates this
-        management system ("the App"). Contact: {COMPANY_EMAIL} · {COMPANY_PHONE} · {COMPANY_ADDRESS}.
+        management system ("the App"). Contact: {COMPANY_EMAIL} · {COMPANY_PHONES} · {COMPANY_ADDRESS}.
       </p>
 
       <h2>2. Information We Collect</h2>

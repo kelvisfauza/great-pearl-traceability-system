@@ -23,6 +23,7 @@ const ContactSlide = () => {
           <div>
             <p className="text-white/60 text-sm">Call Us Today</p>
             <p className="text-3xl font-bold text-white">+256 393 001 626</p>
+            <p className="text-xl font-semibold text-white/90">Operations: +256 393 101 103</p>
           </div>
         </div>
 
