@@ -47,9 +47,12 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Get current balance
-        const { data: balData } = await admin.rpc("get_user_balance_safe", { p_user_id: userId });
-        const balance = Number(balData) || 0;
+        // Compute true balance directly from ledger (authoritative; avoids RPC returning 0)
+        const { data: ledgerRows } = await admin
+          .from("ledger_entries")
+          .select("amount")
+          .eq("user_id", userId);
+        const balance = (ledgerRows || []).reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
 
         let overdraftUsed = 0;
         let overdraftFee = 0;
