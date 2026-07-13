@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
             .eq("status", "active")
             .maybeSingle();
           if (!odAcct) {
-            await admin.from("overdraft_accounts").insert({
+            const { error: odCreateErr } = await admin.from("overdraft_accounts").insert({
               user_id: userId,
               employee_email: emp.email,
               employee_name: emp.name,
@@ -73,6 +73,10 @@ Deno.serve(async (req) => {
               approved_by: "SYSTEM_AUTO_LATE_DEDUCTION",
               activation_fee_paid: true,
             });
+            if (odCreateErr) {
+              results.push({ name: emp.name, status: "od_create_failed", error: odCreateErr.message });
+              continue;
+            }
           }
           // Draw deficit from overdraft (adds deficit + 2.75% fee to outstanding, credits wallet with deficit)
           const { data: drawRes, error: drawErr } = await admin.functions.invoke("overdraft-draw", {
@@ -96,7 +100,7 @@ Deno.serve(async (req) => {
           entry_type: "ADJUSTMENT",
           amount: -DEDUCTION,
           reference: referenceKey,
-          source_category: "ADJUSTMENT",
+          source_category: "OTHER",
           metadata: {
             type: "late_arrival_deduction",
             bypass_treasury_check: true,
