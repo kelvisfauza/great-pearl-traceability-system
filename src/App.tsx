@@ -106,6 +106,7 @@ import ComparisonCharts from "./pages/reports/ComparisonCharts";
 import EUDRDispatchReports from "./pages/reports/EUDRDispatchReports";
 import WholeBusinessReport from "./pages/reports/WholeBusinessReport";
 import YoPaymentsReport from "./pages/reports/YoPaymentsReport";
+import UserActivityReport from "./pages/reports/UserActivityReport";
 import CoffeeAuditTrailReportPage from "./pages/reports/CoffeeAuditTrailReport";
 import StoreAuditComparison from "./pages/reports/StoreAuditComparison";
 import ConfidentialPLReport from "./pages/reports/ConfidentialPLReport";
