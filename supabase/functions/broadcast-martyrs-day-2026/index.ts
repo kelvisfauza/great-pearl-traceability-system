@@ -76,7 +76,7 @@ const HTML = (name: string) => `<!doctype html>
         </tr>
         <tr>
           <td style="background:#faf6ef;padding:18px 32px;border-top:1px solid #ece4d4;text-align:center;">
-            <div style="font-size:11px;color:#9ca3af;">Great Agro Coffee — Kasese, Uganda · +256 393 001 626 · info@greatpearlcoffee.com</div>
+            <div style="font-size:11px;color:#9ca3af;">Great Agro Coffee — Kasese, Uganda · +256 393 001 626 / +256 393 101 103 · info@greatpearlcoffee.com</div>
           </td>
         </tr>
       </table>

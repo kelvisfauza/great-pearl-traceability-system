@@ -60,7 +60,7 @@ const generateReceiptPdfBytes = (data: ServerReceiptInput): Uint8Array => {
   doc.setFontSize(9.5);
   doc.text("A Member of YEDA Coffee Company Limited", margin, 54);
   doc.setFontSize(8.5);
-  doc.text("P.O Box 431420, Kasese, Uganda  •  +256 393 001 626  •  finance@greatpearlcoffee.com", margin, 68);
+  doc.text("P.O Box 431420, Kasese, Uganda  •  +256 393 001 626 / +256 393 101 103  •  finance@greatpearlcoffee.com", margin, 68);
 
   // Title
   doc.setTextColor(0, 0, 0);
@@ -226,7 +226,7 @@ const generateReceiptPdfBytes = (data: ServerReceiptInput): Uint8Array => {
   doc.setFontSize(8.5);
   doc.setTextColor(110, 110, 110);
   doc.text(
-    "GREAT AGRO COFFEE  •  P.O Box 431420, Kasese, Uganda  •  +256 393 001 626  •  www.greatpearlcoffee.com",
+    "GREAT AGRO COFFEE  •  P.O Box 431420, Kasese, Uganda  •  +256 393 001 626 / +256 393 101 103  •  www.greatpearlcoffee.com",
     pageW / 2, pageH - 35, { align: "center" },
   );
   doc.text("Thank you for doing business with us.", pageW / 2, pageH - 22, { align: "center" });

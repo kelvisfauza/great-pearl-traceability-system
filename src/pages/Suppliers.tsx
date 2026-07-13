@@ -441,7 +441,7 @@ const Suppliers = () => {
             <h1 style="margin: 10px 0; font-size: 22px;">GREAT AGRO COFFEE</h1>
             <p style="margin: 5px 0; font-weight: bold; color: #1a5632;">A Member of YEDA Coffee Company Limited</p>
             <p style="margin: 5px 0;">P.O Box 431420, Kasese, Uganda</p>
-            <p style="margin: 5px 0;">+256 393 001 626</p>
+            <p style="margin: 5px 0;">+256 393 001 626 / +256 393 101 103</p>
             <p style="margin: 5px 0;">www.greatagrocoffee.com | info@greatpearlcoffee.com</p>
             <h2 style="margin-top: 15px; font-size: 18px;">SUPPLIER STATEMENT</h2>
             <p>Generated: ${new Date().toLocaleDateString('en-GB')} at ${new Date().toLocaleTimeString('en-GB')}</p>

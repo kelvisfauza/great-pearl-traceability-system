@@ -242,7 +242,7 @@ const MillingPrintReportModal: React.FC<MillingPrintReportModalProps> = ({ open,
             <div className="company-address">
               <p style={{ fontWeight: 'bold', color: '#1a5632' }}>A Member of YEDA Coffee Company Limited</p>
               <p>P.O Box 431420, Kasese, Uganda</p>
-              <p>+256 393 001 626</p>
+              <p>+256 393 001 626 / +256 393 101 103</p>
               <p>www.greatagrocoffee.com</p>
               <p>info@greatpearlcoffee.com</p>
             </div>

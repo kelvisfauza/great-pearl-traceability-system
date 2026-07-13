@@ -112,7 +112,7 @@ const DeliveryNoteModal: React.FC<DeliveryNoteModalProps> = ({ open, onClose, sa
                 </div>
               </div>
               <div style={{ textAlign: 'right', color: 'white', fontSize: '11px' }}>
-                <p style={{ margin: '0' }}>+256 393 001 626</p>
+                <p style={{ margin: '0' }}>+256 393 001 626 / +256 393 101 103</p>
                 <p style={{ margin: '2px 0 0 0' }}>info@greatpearlcoffee.com</p>
               </div>
             </div>

@@ -51,7 +51,7 @@ export const PaymentSlipModal: React.FC<PaymentSlipModalProps> = ({
           <div style="font-size: 8px; color: #666; line-height: 1.2;">
             <p style="margin: 1px 0; font-weight: bold; color: #1a5632;">A Member of YEDA Coffee Company Limited</p>
             <p style="margin: 1px 0;">P.O Box 431420, Kasese, Uganda</p>
-            <p style="margin: 1px 0;">+256 393 001 626</p>
+            <p style="margin: 1px 0;">+256 393 001 626 / +256 393 101 103</p>
             <p style="margin: 1px 0;">www.greatagrocoffee.com | info@greatpearlcoffee.com</p>
           </div>
           <h2 style="color: #333; margin: 6px 0 2px 0; font-size: 16px; font-weight: bold; text-transform: uppercase;">

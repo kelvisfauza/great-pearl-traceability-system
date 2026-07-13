@@ -123,7 +123,7 @@ const buildHtml = (templateNo: string, dateStr: string, rows: number) => {
     <div class="company">GREAT AGRO COFFEE</div>
     <div class="company-subtitle">A Member of YEDA Coffee Company Limited</div>
     <div class="contact">
-      P.O Box 431420, Kasese, Uganda &nbsp;|&nbsp; +256 393 001 626<br/>
+      P.O Box 431420, Kasese, Uganda &nbsp;|&nbsp; +256 393 001 626 / +256 393 101 103<br/>
       www.greatagrocoffee.com &nbsp;|&nbsp; info@greatpearlcoffee.com<br/>
       Uganda Coffee Development Authority Licensed
     </div>

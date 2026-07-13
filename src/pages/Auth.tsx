@@ -875,6 +875,11 @@ const Auth = () => {
                 +256 393 001 626
               </a>
               <span className="hidden sm:inline" style={{ color: 'rgba(6,78,59,0.25)' }}>·</span>
+              <a href="tel:+256393101103" className="flex items-center gap-2 hover:underline">
+                <Phone className="h-3.5 w-3.5" style={{ color: '#c9a84c' }} />
+                +256 393 101 103 (Operations)
+              </a>
+              <span className="hidden sm:inline" style={{ color: 'rgba(6,78,59,0.25)' }}>·</span>
               <a href="mailto:it.support@greatagrocoffee.com" className="flex items-center gap-2 hover:underline">
                 <Mail className="h-3.5 w-3.5" style={{ color: '#c9a84c' }} />
                 it.support@greatagrocoffee.com

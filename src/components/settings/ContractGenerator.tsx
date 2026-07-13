@@ -94,7 +94,7 @@ const ContractGenerator = ({ isOpen, onClose }: ContractGeneratorProps) => {
               <div class="company-address">
                 <strong>A Member of YEDA Coffee Company Limited</strong><br>
                 P.O Box 431420, Kasese, Uganda<br>
-                Tel: +256 393 001 626 | Email: info@greatpearlcoffee.com
+                Tel: +256 393 001 626 / +256 393 101 103 | Email: info@greatpearlcoffee.com
               </div>
             </div>
           </div>

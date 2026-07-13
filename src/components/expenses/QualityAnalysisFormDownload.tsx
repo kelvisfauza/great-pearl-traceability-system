@@ -64,7 +64,7 @@ const generateBlankQualityForm = async () => {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.text('a member of YEDA COFFEE COMPANY LIMITED', margin + 24, 16);
-  doc.text('P.O Box 431420, Kasese, Uganda  |  +256 393 001 626  |  info@greatpearlcoffee.com', margin + 24, 21);
+  doc.text('P.O Box 431420, Kasese, Uganda  |  +256 393 001 626 / +256 393 101 103  |  info@greatpearlcoffee.com', margin + 24, 21);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
