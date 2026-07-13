@@ -56,6 +56,24 @@ Deno.serve(async (req) => {
 
         if (balance < DEDUCTION) {
           const deficit = DEDUCTION - balance;
+          // Ensure an active overdraft account exists; auto-create with 50k limit if missing
+          const { data: odAcct } = await admin
+            .from("overdraft_accounts")
+            .select("id")
+            .eq("user_id", userId)
+            .eq("status", "active")
+            .maybeSingle();
+          if (!odAcct) {
+            await admin.from("overdraft_accounts").insert({
+              user_id: userId,
+              employee_email: emp.email,
+              employee_name: emp.name,
+              approved_limit: 50000,
+              status: "active",
+              approved_by: "SYSTEM_AUTO_LATE_DEDUCTION",
+              activation_fee_paid: true,
+            });
+          }
           // Draw deficit from overdraft (adds deficit + 2.75% fee to outstanding, credits wallet with deficit)
           const { data: drawRes, error: drawErr } = await admin.functions.invoke("overdraft-draw", {
             body: {
@@ -78,8 +96,10 @@ Deno.serve(async (req) => {
           entry_type: "ADJUSTMENT",
           amount: -DEDUCTION,
           reference: referenceKey,
+          source_category: "ADJUSTMENT",
           metadata: {
             type: "late_arrival_deduction",
+            bypass_treasury_check: true,
             employee_name: emp.name,
             employee_email: emp.email,
             date: today,
