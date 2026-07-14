@@ -1413,68 +1413,16 @@ const QuickLoans = () => {
 
     setAdvanceRepayLoading(true);
     try {
-      const { data: borrowerEmp } = await supabase.from('employees').select('auth_user_id').eq('email', myActiveAdvance.employee_email).single();
-      if (!borrowerEmp?.auth_user_id) throw new Error('Could not find your account.');
-      const { data: unifiedId } = await supabase.rpc('get_unified_user_id', { input_email: myActiveAdvance.employee_email });
-      const userId = unifiedId || borrowerEmp.auth_user_id;
-
-      const txRef = `ADVREPAY-WALLET-${myActiveAdvance.id.slice(0, 8)}-${Date.now()}`;
-
-      const { error: ledgerErr } = await supabase.from('ledger_entries').insert({
-        user_id: userId,
-        entry_type: 'WITHDRAWAL',
-        amount: -amount,
-        reference: txRef,
-        source_category: 'SALARY_ADVANCE_REPAYMENT',
-        metadata: {
-          advance_id: myActiveAdvance.id,
-          source: 'wallet_advance_repayment',
-          type: 'internal_transfer_credit',
-          bypass_treasury_check: true,
-          description: `Salary advance repayment from wallet – UGX ${amount.toLocaleString()}${odPortion > 0 ? ` (incl. OD top-up UGX ${odPortion.toLocaleString()})` : ''}`,
-          overdraft_portion: odPortion > 0 ? odPortion : undefined,
-          uses_overdraft: odPortion > 0,
-        }
+      const { data, error } = await supabase.rpc('repay_salary_advance_from_wallet', {
+        p_advance_id: myActiveAdvance.id,
+        p_amount: amount,
+        p_use_overdraft: odPortion > 0,
       });
-      if (ledgerErr) throw new Error(ledgerErr.message || 'Failed to deduct from wallet');
-
-      if (odPortion > 0 && upfrontOdInterest > 0) {
-        await supabase.from('ledger_entries').insert({
-          user_id: userId,
-          entry_type: 'WITHDRAWAL',
-          amount: -upfrontOdInterest,
-          reference: `${txRef}-ODFEE`,
-          source_category: 'OVERDRAFT_INTEREST',
-          metadata: {
-            advance_id: myActiveAdvance.id,
-            type: 'overdraft_draw',
-            parent_reference: txRef,
-            overdraft_portion: odPortion,
-            description: `Overdraft access fee 0.5% on UGX ${odPortion.toLocaleString()}`,
-            bypass_treasury_check: true,
-          }
-        });
-      }
-
-      const newRemaining = Math.max(0, owed - amount);
-      const isCleared = newRemaining <= 0;
-      const { error: advErr } = await supabase
-        .from('employee_salary_advances')
-        .update({
-          remaining_balance: newRemaining,
-          status: isCleared ? 'cleared' : 'active',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', myActiveAdvance.id);
-      if (advErr) throw advErr;
-
-      await supabase.from('salary_advance_payments').insert({
-        advance_id: myActiveAdvance.id,
-        employee_email: myActiveAdvance.employee_email,
-        amount_paid: amount,
-        status: 'approved',
-        approved_by: employee.email,
-      });
+      if (error) throw new Error(error.message || 'Repayment failed');
+      const result: any = data || {};
+      const newRemaining = Number(result.new_remaining ?? Math.max(0, owed - amount));
+      const isCleared = !!result.cleared;
+      const upfrontFee = Number(result.overdraft_fee || 0);
 
       toast({
         title: isCleared ? 'Advance Fully Repaid 🎉' : 'Advance Payment Successful ✅',
@@ -1485,7 +1433,7 @@ const QuickLoans = () => {
       setShowAdvanceRepayDialog(false);
       setAdvanceRepayAmount('');
       setAdvanceOdConfirmed(false);
-      setMyWalletBalance(prev => prev - amount - upfrontOdInterest);
+      setMyWalletBalance(prev => prev - amount - upfrontFee);
       fetchMyAdvance();
     } catch (err: any) {
       toast({ title: 'Repayment Failed ❌', description: err.message, variant: 'destructive' });
