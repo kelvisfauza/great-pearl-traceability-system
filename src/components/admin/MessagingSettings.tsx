@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Mail, MessageSquare, Phone, Send, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import NotificationChannelPrefs from './NotificationChannelPrefs';
 
 interface ProviderStatus {
   sendgrid: boolean;
@@ -139,6 +140,7 @@ const MessagingSettings = () => {
 
   return (
     <div className="space-y-6">
+      <NotificationChannelPrefs />
       {/* Provider Status Overview */}
       <Card>
         <CardHeader>

@@ -6485,6 +6485,33 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_channel_prefs: {
+        Row: {
+          channels: string[]
+          created_at: string
+          enabled: boolean
+          template_name: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          channels?: string[]
+          created_at?: string
+          enabled?: boolean
+          template_name: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          channels?: string[]
+          created_at?: string
+          enabled?: boolean
+          template_name?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
