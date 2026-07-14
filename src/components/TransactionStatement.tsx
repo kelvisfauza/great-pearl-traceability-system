@@ -266,20 +266,11 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         .rpc('get_unified_user_id', { input_email: user.email });
       const unifiedUserId = userIdData || user.id;
 
-      // Charge the UGX 500 statement fee to the user's wallet
-      const statementRef = `STMT-FEE-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-      const { error: feeError } = await supabase.from('ledger_entries').insert({
-        user_id: unifiedUserId,
-        entry_type: 'WITHDRAWAL',
-        source_category: 'STATEMENT_FEE',
-        amount: -STATEMENT_FEE,
-        reference: statementRef,
-        metadata: {
-          source: 'statement_fee',
-          description: 'Transaction Statement Charge',
-          period: `${dateFrom} to ${dateTo}`,
-          bypass_treasury_check: true,
-        },
+      // Charge the UGX 500 statement fee via SECURITY DEFINER RPC (bypasses ledger RLS safely)
+      const { error: feeError } = await supabase.rpc('charge_statement_fee', {
+        p_user_id: unifiedUserId,
+        p_period_from: dateFrom,
+        p_period_to: dateTo,
       });
       if (feeError) throw feeError;
 
