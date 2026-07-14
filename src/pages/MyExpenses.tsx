@@ -24,6 +24,7 @@ import ApprovalProgressTracker from '@/components/expenses/ApprovalProgressTrack
 import MySalaryPayments from '@/components/expenses/MySalaryPayments';
 import ExpenseTemplateDownload from '@/components/expenses/ExpenseTemplateDownload';
 import CompanyHeaderSheetDownload from '@/components/expenses/CompanyHeaderSheetDownload';
+import YedaHeaderSheetDownload from '@/components/expenses/YedaHeaderSheetDownload';
 import PerDiemTemplateDownload from '@/components/expenses/PerDiemTemplateDownload';
 import QualityAnalysisFormDownload from '@/components/expenses/QualityAnalysisFormDownload';
 import FuelOrderModal from '@/components/finance/FuelOrderModal';
@@ -607,6 +608,7 @@ const MyExpenses = () => {
           {/* Download Templates Tab */}
           <TabsContent value="templates" className="space-y-6">
             <CompanyHeaderSheetDownload />
+            <YedaHeaderSheetDownload />
             <PerDiemTemplateDownload />
             <ExpenseTemplateDownload />
             <QualityAnalysisFormDownload />
