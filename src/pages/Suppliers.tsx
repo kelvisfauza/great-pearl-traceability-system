@@ -70,6 +70,10 @@ const Suppliers = () => {
   const [statusFilter, setStatusFilter] = useState("all");
 
   const handleEditSupplier = async (supplierId: string, updates: { name: string; phone: string; origin: string; bank_name?: string; account_name?: string; account_number?: string; email?: string; alternative_phone?: string }) => {
+    if (!isAdmin()) {
+      toast({ title: 'Not allowed', description: 'Only admins can edit supplier information.', variant: 'destructive' });
+      return;
+    }
     console.log('🔧 Editing supplier and reloading transactions...', { 
       supplierId, 
       oldName: selectedSupplier?.name,
@@ -744,10 +748,12 @@ const Suppliers = () => {
                     </CardDescription>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setEditModalOpen(true)}>
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit Info
-                    </Button>
+                    {isAdmin() && (
+                      <Button variant="outline" onClick={() => setEditModalOpen(true)}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit Info
+                      </Button>
+                    )}
                     <Badge variant="outline" className="text-lg px-3 py-1">
                       Supplier
                     </Badge>
