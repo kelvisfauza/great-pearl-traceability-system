@@ -744,10 +744,12 @@ const Suppliers = () => {
                     </CardDescription>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setEditModalOpen(true)}>
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit Info
-                    </Button>
+                    {isAdmin() && (
+                      <Button variant="outline" onClick={() => setEditModalOpen(true)}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit Info
+                      </Button>
+                    )}
                     <Badge variant="outline" className="text-lg px-3 py-1">
                       Supplier
                     </Badge>
