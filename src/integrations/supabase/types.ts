@@ -12732,6 +12732,10 @@ export type Database = {
         Args: { _topic: string; _uid: string }
         Returns: boolean
       }
+      charge_statement_fee: {
+        Args: { p_period_from: string; p_period_to: string; p_user_id: string }
+        Returns: Json
+      }
       check_auth_user_exists: { Args: { user_uuid: string }; Returns: Json }
       check_unread_messages_for_sms: { Args: never; Returns: undefined }
       cleanup_expired_email_verification_codes: {
