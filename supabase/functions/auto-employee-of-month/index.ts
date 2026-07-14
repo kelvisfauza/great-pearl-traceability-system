@@ -195,9 +195,15 @@ Deno.serve(async (req) => {
     const winners = [];
 
     // Get auth user IDs for wallet crediting
-    const { data: authUsers } = await supabase.rpc("get_auth_users_by_emails", {
-      emails: ranked.map((r) => r.employee_email),
-    }).catch(() => ({ data: null }));
+    let authUsers: any[] | null = null;
+    try {
+      const res = await supabase.rpc("get_auth_users_by_emails", {
+        emails: ranked.map((r) => r.employee_email),
+      });
+      authUsers = (res as any)?.data ?? null;
+    } catch (_e) {
+      authUsers = null;
+    }
 
     // Fallback: query profiles or use employee_id mapping
     const authUserMap: Record<string, string> = {};
