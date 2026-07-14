@@ -512,6 +512,7 @@ const BorrowerDetailDialog = ({ selectedBorrower, onClose, today, getStatusBadge
             open={showHistory}
             onClose={() => setShowHistory(false)}
             loanInfo={{
+              loanId: selectedBorrower.id,
               employeeName: selectedBorrower.employee_name,
               employeeEmail: selectedBorrower.employee_email,
               loanAmount: Number(selectedBorrower.loan_amount || 0),
