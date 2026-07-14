@@ -19,19 +19,16 @@ Deno.serve(async (req) => {
     const todayStr = today.toISOString().split('T')[0]
     console.log(`Loan reminder check for ${todayStr}`)
 
-    // Find installments due in 0, 1, 2, or 3 days
-    const reminderDays = [0, 1, 2, 3]
-    const targetDates = reminderDays.map(d => {
-      const date = new Date(today)
-      date.setDate(date.getDate() + d)
-      return date.toISOString().split('T')[0]
-    })
+    // Regular reminders: upcoming (0-7 days) AND all overdue installments.
+    const upcomingEnd = new Date(today)
+    upcomingEnd.setDate(upcomingEnd.getDate() + 7)
+    const upcomingEndStr = upcomingEnd.toISOString().split('T')[0]
 
     const { data: dueInstallments, error } = await supabase
       .from('loan_repayments')
       .select('*, loans!inner(employee_name, employee_phone, employee_email, status)')
-      .in('status', ['pending', 'partial'])
-      .in('due_date', targetDates)
+      .in('status', ['pending', 'partial', 'overdue'])
+      .lte('due_date', upcomingEndStr)
       .order('due_date', { ascending: true })
 
     if (error) {
@@ -65,14 +62,15 @@ Deno.serve(async (req) => {
       const dueDateFormatted = dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 
       let message = ''
-      if (diffDays === 0) {
+      if (diffDays < 0) {
+        const overdueDays = Math.abs(diffDays)
+        message = `GREAT AGRO COFFEE: Dear ${loan.employee_name}, your loan installment ${inst.installment_number} of UGX ${remaining.toLocaleString()} is OVERDUE by ${overdueDays} day(s) (was due ${dueDateFormatted}). Penalties may apply and guarantors may be debited. Please clear immediately.`
+      } else if (diffDays === 0) {
         message = `GREAT AGRO COFFEE: Dear ${loan.employee_name}, your loan installment ${inst.installment_number} of UGX ${remaining.toLocaleString()} is DUE TODAY (${dueDateFormatted}). Please clear it to avoid penalties. Pay via wallet or contact admin.`
       } else if (diffDays === 1) {
         message = `GREAT AGRO COFFEE: Dear ${loan.employee_name}, your loan installment ${inst.installment_number} of UGX ${remaining.toLocaleString()} is due TOMORROW (${dueDateFormatted}). Please ensure funds are available in your wallet.`
-      } else if (diffDays === 2) {
-        message = `GREAT AGRO COFFEE: Dear ${loan.employee_name}, reminder that your loan installment ${inst.installment_number} of UGX ${remaining.toLocaleString()} is due in 2 days (${dueDateFormatted}). Prepare your payment.`
-      } else if (diffDays === 3) {
-        message = `GREAT AGRO COFFEE: Dear ${loan.employee_name}, your loan installment ${inst.installment_number} of UGX ${remaining.toLocaleString()} is due in 3 days (${dueDateFormatted}). Please prepare to clear this amount.`
+      } else if (diffDays >= 2 && diffDays <= 7) {
+        message = `GREAT AGRO COFFEE: Dear ${loan.employee_name}, reminder that your loan installment ${inst.installment_number} of UGX ${remaining.toLocaleString()} is due in ${diffDays} days (${dueDateFormatted}). Please prepare your payment.`
       }
 
       if (!message) continue
@@ -84,17 +82,19 @@ Deno.serve(async (req) => {
       if (smsErr) { console.error(`SMS failed for ${loan.employee_name}:`, smsErr) } else { sentCount++; console.log(`Reminder sent to ${loan.employee_name}`) }
 
       // Send email reminder
+      const emailTemplate = diffDays < 0 ? 'loan-overdue-reminder' : 'loan-reminder'
       await supabase.functions.invoke('send-transactional-email', {
         body: {
-          templateName: 'loan-reminder',
+          templateName: emailTemplate,
           recipientEmail: loan.employee_email,
-          idempotencyKey: `loan-reminder-${loan.id}-${inst.installment_number}-${todayStr}`,
+          idempotencyKey: `loan-reminder-${loan.id}-${inst.installment_number}-${todayStr}-${diffDays < 0 ? 'overdue' : 'upcoming'}`,
           templateData: {
             employeeName: loan.employee_name,
             installmentAmount: remaining.toLocaleString(),
             dueDate: dueDateFormatted,
             installmentNumber: String(inst.installment_number),
             remainingBalance: (loan.remaining_balance || 0).toLocaleString(),
+            daysOverdue: diffDays < 0 ? String(Math.abs(diffDays)) : '0',
           },
         },
       })
