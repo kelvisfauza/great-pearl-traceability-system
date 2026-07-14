@@ -12701,6 +12701,10 @@ export type Database = {
         Args: { _employee_email: string }
         Returns: boolean
       }
+      can_subscribe_realtime_topic: {
+        Args: { _topic: string; _uid: string }
+        Returns: boolean
+      }
       check_auth_user_exists: { Args: { user_uuid: string }; Returns: Json }
       check_unread_messages_for_sms: { Args: never; Returns: undefined }
       cleanup_expired_email_verification_codes: {
