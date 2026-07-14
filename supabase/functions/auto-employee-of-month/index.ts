@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
           totalScore: 0,
         };
       }
-      if (row.status === "Present") {
+      if (String(row.status || "").toLowerCase() === "present") {
         scores[row.employee_id].presentDays++;
       }
     }
