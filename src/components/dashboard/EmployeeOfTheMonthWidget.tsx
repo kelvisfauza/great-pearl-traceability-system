@@ -11,10 +11,8 @@ const EmployeeOfTheMonthWidget = () => {
   const { isManager, isSuperAdmin } = useRolePermissions();
   const canSeeBonusAmount = isManager() || isSuperAdmin();
 
-  // Only show widget during the first 10 days of the month
-  const today = new Date();
-  const dayOfMonth = today.getDate();
-  const isVisible = dayOfMonth <= 10;
+  // Show widget throughout the month while an active winner set exists
+  const isVisible = true;
 
   const { data: winners = [], isLoading } = useQuery({
     queryKey: ['employee-of-the-month'],

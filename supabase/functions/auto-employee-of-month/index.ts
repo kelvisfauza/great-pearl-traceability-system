@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
       .update({ is_active: false })
       .eq("is_active", true);
 
-    // 1. Get attendance scores: present days count
+    // 1. Get attendance scores: present days count (legacy table, may be empty)
     const { data: attendanceData } = await supabase
       .from("attendance")
       .select("employee_id, employee_name, employee_email, status")
@@ -65,14 +65,29 @@ Deno.serve(async (req) => {
       .gte("date", monthStart)
       .lt("date", monthEnd);
 
-    // 3. Get overtime/late data
+    // 3. Get overtime/late data (primary source of truth for presence)
     const { data: timeData } = await supabase
       .from("attendance_time_records")
-      .select("employee_id, employee_email, overtime_minutes, late_minutes")
+      .select("employee_id, employee_email, overtime_minutes, late_minutes, record_date")
       .gte("record_date", monthStart)
       .lt("record_date", monthEnd);
 
-    // Build scores per employee
+    // Build canonical email set from every source, then resolve to real employees
+    const allEmails = new Set<string>();
+    for (const r of attendanceData || []) if (r.employee_email) allEmails.add(String(r.employee_email).toLowerCase());
+    for (const r of timeData || []) if (r.employee_email) allEmails.add(String(r.employee_email).toLowerCase());
+    const { data: canonicalEmployees } = allEmails.size
+      ? await supabase
+          .from("employees")
+          .select("id, name, email, avatar_url, department, position, status")
+          .in("email", Array.from(allEmails))
+      : { data: [] as any[] } as any;
+    const empByEmail: Record<string, any> = {};
+    for (const e of canonicalEmployees || []) {
+      if (e.email) empByEmail[String(e.email).toLowerCase()] = e;
+    }
+
+    // Build scores per employee, keyed by canonical email (avoids id-format mismatches)
     const scores: Record<string, {
       employee_id: string;
       employee_name: string;
@@ -84,13 +99,17 @@ Deno.serve(async (req) => {
       totalScore: number;
     }> = {};
 
-    // Process attendance
-    for (const row of attendanceData || []) {
-      if (!scores[row.employee_id]) {
-        scores[row.employee_id] = {
-          employee_id: row.employee_id,
-          employee_name: row.employee_name,
-          employee_email: row.employee_email,
+    const keyFor = (email?: string | null) => (email ? String(email).toLowerCase() : "");
+    const ensureScore = (email?: string | null, fallbackName?: string) => {
+      const key = keyFor(email);
+      if (!key) return null;
+      const canon = empByEmail[key];
+      if (!canon) return null; // ignore unknown emails / non-active identities
+      if (!scores[key]) {
+        scores[key] = {
+          employee_id: canon.id,
+          employee_name: canon.name || fallbackName || "",
+          employee_email: canon.email,
           presentDays: 0,
           tasks: 0,
           overtimeMinutes: 0,
@@ -98,9 +117,14 @@ Deno.serve(async (req) => {
           totalScore: 0,
         };
       }
-      if (row.status === "Present") {
-        scores[row.employee_id].presentDays++;
-      }
+      return scores[key];
+    };
+
+    // Process attendance
+    for (const row of attendanceData || []) {
+      const s = ensureScore(row.employee_email, row.employee_name);
+      if (!s) continue;
+      if (String(row.status || "").toLowerCase() === "present") s.presentDays++;
     }
 
     // Process tasks (matched by email in completed_by)
@@ -108,16 +132,23 @@ Deno.serve(async (req) => {
       const match = Object.values(scores).find(
         (s) => s.employee_email === row.completed_by || s.employee_name === row.completed_by
       );
-      if (match) {
-        match.tasks++;
-      }
+      if (match) match.tasks++;
     }
 
-    // Process time records
+    // Process time records — primary source of presence
+    const presentDaysSet: Record<string, Set<string>> = {};
     for (const row of timeData || []) {
-      if (scores[row.employee_id]) {
-        scores[row.employee_id].overtimeMinutes += Number(row.overtime_minutes || 0);
-        scores[row.employee_id].lateMinutes += Number(row.late_minutes || 0);
+      const s = ensureScore(row.employee_email);
+      if (!s) continue;
+      s.overtimeMinutes += Number(row.overtime_minutes || 0);
+      s.lateMinutes += Number(row.late_minutes || 0);
+      const key = keyFor(row.employee_email);
+      if (!presentDaysSet[key]) presentDaysSet[key] = new Set();
+      presentDaysSet[key].add(String(row.record_date));
+    }
+    for (const key of Object.keys(scores)) {
+      if (scores[key].presentDays === 0 && presentDaysSet[key]) {
+        scores[key].presentDays = presentDaysSet[key].size;
       }
     }
 
@@ -143,25 +174,26 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get employee avatars
-    const employeeIds = ranked.map((r) => r.employee_id);
-    const { data: employees } = await supabase
-      .from("employees")
-      .select("id, avatar_url, department, position")
-      .in("id", employeeIds);
-
+    // Employee metadata already resolved via empByEmail
     const empMap: Record<string, any> = {};
-    for (const e of employees || []) {
-      empMap[e.id] = e;
+    for (const r of ranked) {
+      const canon = empByEmail[keyFor(r.employee_email)];
+      if (canon) empMap[r.employee_id] = canon;
     }
 
     const bonusAmount = 50000;
     const winners = [];
 
     // Get auth user IDs for wallet crediting
-    const { data: authUsers } = await supabase.rpc("get_auth_users_by_emails", {
-      emails: ranked.map((r) => r.employee_email),
-    }).catch(() => ({ data: null }));
+    let authUsers: any[] | null = null;
+    try {
+      const res = await supabase.rpc("get_auth_users_by_emails", {
+        emails: ranked.map((r) => r.employee_email),
+      });
+      authUsers = (res as any)?.data ?? null;
+    } catch (_e) {
+      authUsers = null;
+    }
 
     // Fallback: query profiles or use employee_id mapping
     const authUserMap: Record<string, string> = {};
