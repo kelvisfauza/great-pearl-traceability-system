@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
       .update({ is_active: false })
       .eq("is_active", true);
 
-    // 1. Get attendance scores: present days count
+    // 1. Get attendance scores: present days count (legacy table, may be empty)
     const { data: attendanceData } = await supabase
       .from("attendance")
       .select("employee_id, employee_name, employee_email, status")
@@ -65,12 +65,27 @@ Deno.serve(async (req) => {
       .gte("date", monthStart)
       .lt("date", monthEnd);
 
-    // 3. Get overtime/late data
+    // 3. Get overtime/late data (primary source of truth for presence)
     const { data: timeData } = await supabase
       .from("attendance_time_records")
-      .select("employee_id, employee_email, overtime_minutes, late_minutes")
+      .select("employee_id, employee_email, overtime_minutes, late_minutes, record_date")
       .gte("record_date", monthStart)
       .lt("record_date", monthEnd);
+
+    // Enrich employee metadata for anyone appearing only in time records
+    const timeEmployeeIds = Array.from(
+      new Set((timeData || []).map((r: any) => r.employee_id).filter(Boolean))
+    );
+    const { data: timeEmployees } = timeEmployeeIds.length
+      ? await supabase
+          .from("employees")
+          .select("id, name, email")
+          .in("id", timeEmployeeIds)
+      : { data: [] as any[] } as any;
+    const timeEmpMap: Record<string, { name: string; email: string }> = {};
+    for (const e of timeEmployees || []) {
+      timeEmpMap[e.id] = { name: e.name, email: e.email };
+    }
 
     // Build scores per employee
     const scores: Record<string, {
@@ -113,11 +128,32 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Process time records
+    // Process time records — also seed scores for employees missing from legacy attendance
+    const presentDaysSet: Record<string, Set<string>> = {};
     for (const row of timeData || []) {
-      if (scores[row.employee_id]) {
-        scores[row.employee_id].overtimeMinutes += Number(row.overtime_minutes || 0);
-        scores[row.employee_id].lateMinutes += Number(row.late_minutes || 0);
+      if (!row.employee_id) continue;
+      if (!scores[row.employee_id]) {
+        const meta = timeEmpMap[row.employee_id];
+        scores[row.employee_id] = {
+          employee_id: row.employee_id,
+          employee_name: meta?.name || "",
+          employee_email: row.employee_email || meta?.email || "",
+          presentDays: 0,
+          tasks: 0,
+          overtimeMinutes: 0,
+          lateMinutes: 0,
+          totalScore: 0,
+        };
+      }
+      scores[row.employee_id].overtimeMinutes += Number(row.overtime_minutes || 0);
+      scores[row.employee_id].lateMinutes += Number(row.late_minutes || 0);
+      if (!presentDaysSet[row.employee_id]) presentDaysSet[row.employee_id] = new Set();
+      presentDaysSet[row.employee_id].add(String(row.record_date));
+    }
+    // If legacy attendance yielded no presence, derive presentDays from time records
+    for (const empId of Object.keys(scores)) {
+      if (scores[empId].presentDays === 0 && presentDaysSet[empId]) {
+        scores[empId].presentDays = presentDaysSet[empId].size;
       }
     }
 
