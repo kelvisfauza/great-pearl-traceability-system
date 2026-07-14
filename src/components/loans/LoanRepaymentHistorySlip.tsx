@@ -64,13 +64,38 @@ const LoanRepaymentHistorySlip = ({ open, onClose, loanInfo, repayments }: Props
     (async () => {
       setLoadingTxns(true);
       try {
-        const { data, error } = await supabase
-          .from('ledger_entries')
-          .select('id, amount, entry_type, source_category, reference, metadata, created_at')
-          .filter('metadata->>loan_id', 'eq', loanInfo.loanId)
-          .order('created_at', { ascending: true });
-        if (error) throw error;
-        const rows: TxnRow[] = (data || []).map((e: any) => {
+        // Match by metadata.loan_id OR by reference patterns that embed the loan id
+        // (LOAN-REPAY-<id>-*, LOANREPAY-WALLET-<id>-*, LOAN-DISBURSE-<id>, etc.)
+        const loanId = loanInfo.loanId!;
+        const shortId = loanId.split('-')[0];
+        const orFilter = [
+          `reference.ilike.%${loanId}%`,
+          `reference.ilike.%${shortId}%`,
+        ].join(',');
+        const [byMeta, byRef] = await Promise.all([
+          supabase
+            .from('ledger_entries')
+            .select('id, amount, entry_type, source_category, reference, metadata, created_at')
+            .filter('metadata->>loan_id', 'eq', loanId)
+            .order('created_at', { ascending: true }),
+          supabase
+            .from('ledger_entries')
+            .select('id, amount, entry_type, source_category, reference, metadata, created_at')
+            .or(orFilter)
+            .order('created_at', { ascending: true }),
+        ]);
+        if (byMeta.error) throw byMeta.error;
+        const combined = [...(byMeta.data || []), ...(byRef.data || [])];
+        const seen = new Set<string>();
+        const deduped = combined.filter((e: any) => {
+          if (seen.has(e.id)) return false;
+          seen.add(e.id);
+          // Keep only entries clearly tied to THIS loan
+          const metaLoan = e?.metadata?.loan_id;
+          const refHit = typeof e.reference === 'string' && (e.reference.includes(loanId) || e.reference.includes(shortId));
+          return metaLoan === loanId || refHit;
+        });
+        const rows: TxnRow[] = deduped.map((e: any) => {
           const meta = e.metadata || {};
           const inst = meta.installment ? String(meta.installment) : (e.reference?.match(/-(\d+)$/)?.[1] || '—');
           const src = String(meta.source || e.source_category || e.entry_type || '').toLowerCase();
