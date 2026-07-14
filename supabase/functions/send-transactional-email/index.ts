@@ -160,7 +160,42 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     const supa = (supabaseUrl && serviceKey) ? createClient(supabaseUrl, serviceKey) : null
 
-    const emailTask = (async () => {
+    // -----------------------------------------------------------
+    // CHANNEL PREFERENCES: admin-controlled per-template routing
+    // Default: both email + sms. If a row exists in
+    // notification_channel_prefs, honor its channels array and
+    // 'enabled' flag. When disabled entirely, skip everything.
+    // -----------------------------------------------------------
+    let allowEmail = true
+    let allowSms = true
+    if (supa) {
+      try {
+        const { data: pref } = await supa
+          .from('notification_channel_prefs')
+          .select('channels, enabled')
+          .eq('template_name', templateName)
+          .maybeSingle()
+        if (pref) {
+          if ((pref as any).enabled === false) { allowEmail = false; allowSms = false }
+          else {
+            const ch = ((pref as any).channels || []) as string[]
+            allowEmail = ch.includes('email')
+            allowSms = ch.includes('sms')
+          }
+        }
+      } catch (prefErr) {
+        console.warn('channel prefs lookup failed (using defaults):', prefErr)
+      }
+    }
+    if (!allowEmail && !allowSms) {
+      console.log(`🚫 Template '${templateName}' disabled by admin channel preferences`)
+      return new Response(
+        JSON.stringify({ ok: true, skipped: true, reason: 'template_disabled_by_admin', templateName }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const emailTask = allowEmail ? (async () => {
       await sendLovableEmailWithRetry(
         {
           to: effectiveRecipient,
@@ -177,9 +212,9 @@ Deno.serve(async (req) => {
         },
         { apiKey: lovableApiKey, idempotencyKey }
       )
-    })()
+    })() : Promise.resolve('skipped_by_pref' as const)
 
-    const smsTask = (async () => {
+    const smsTask = allowSms ? (async () => {
       if (!supa) return 'skipped' as const
       const { data: emp } = await supa
         .from('employees')
@@ -208,7 +243,7 @@ Deno.serve(async (req) => {
       })
       if (smsErr) throw new Error(smsErr.message || 'sms_invoke_failed')
       return 'sent' as const
-    })()
+    })() : Promise.resolve('skipped' as const)
 
     const [emailRes, smsRes] = await Promise.allSettled([emailTask, smsTask])
 
