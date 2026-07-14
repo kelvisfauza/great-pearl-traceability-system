@@ -26,6 +26,7 @@ const loadImageAsBase64 = (url: string): Promise<string | null> =>
   });
 
 const ROWS: { label: string; hint?: string }[] = [
+  { label: 'Form No.' },
   { label: 'Supplier Name' },
   { label: 'Date' },
   { label: 'Grams Used (Sample Weight)' },
