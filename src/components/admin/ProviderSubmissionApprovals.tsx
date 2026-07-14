@@ -11,7 +11,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Inbox, Loader2, Check, X, Copy, ExternalLink } from 'lucide-react';
+import { Inbox, Loader2, Check, X, Copy, ExternalLink, Banknote, Smartphone } from 'lucide-react';
 import { printProviderAcknowledgement } from '@/utils/printProviderAcknowledgement';
 
 const ProviderSubmissionApprovals: React.FC = () => {
@@ -41,7 +41,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
 
   const publicLink = `${window.location.origin}/submit-request`;
 
-  const handleAction = async (action: 'approve' | 'reject') => {
+  const handleAction = async (action: 'approve' | 'reject', paymentMode: 'momo' | 'cash' = 'momo') => {
     if (!selected) return;
     const finalAmount = action === 'approve'
       ? Number(overrideAmount || selected.amount)
@@ -61,6 +61,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
           amountOverride: action === 'approve' && Number(overrideAmount) > 0 && Number(overrideAmount) !== Number(selected.amount)
             ? Number(overrideAmount)
             : undefined,
+          paymentMode: action === 'approve' ? paymentMode : undefined,
         },
       });
       if (error) throw error;
@@ -89,7 +90,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
           reference: ref,
           transactionId: (data as any)?.ref || null,
           requestType: selected.request_type === 'meal_plan' ? 'meal_plan' : 'service_provider',
-          processedBy: 'Finance / Admin',
+          processedBy: paymentMode === 'cash' ? 'Finance / Admin (Cash)' : 'Finance / Admin',
         });
       }
 
@@ -210,7 +211,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Approve & Disburse</DialogTitle>
             <DialogDescription>
-              {selected && `Send UGX ${Number(selected.amount).toLocaleString()} to ${selected.provider_name} (${selected.phone}). Yo Payments will be triggered immediately.`}
+              {selected && `Approve UGX ${Number(selected.amount).toLocaleString()} for ${selected.provider_name} (${selected.phone}). Choose Mobile Money (Yo Payments) or Cash below.`}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -266,11 +267,20 @@ const ProviderSubmissionApprovals: React.FC = () => {
               </div>
             )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setApproveOpen(false)}>Cancel</Button>
-            <Button onClick={() => handleAction('approve')} disabled={!!processing}>
-              {processing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
-              Confirm & Disburse
+          <DialogFooter className="gap-2 sm:gap-2 flex-col sm:flex-row">
+            <Button variant="outline" onClick={() => setApproveOpen(false)} disabled={!!processing}>Cancel</Button>
+            <Button
+              variant="secondary"
+              onClick={() => handleAction('approve', 'cash')}
+              disabled={!!processing}
+              title="Cash was handed to the provider physically. No Yo Payments call."
+            >
+              {processing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Banknote className="w-4 h-4 mr-2" />}
+              Approve with Cash
+            </Button>
+            <Button onClick={() => handleAction('approve', 'momo')} disabled={!!processing}>
+              {processing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Smartphone className="w-4 h-4 mr-2" />}
+              Send via Mobile Money
             </Button>
           </DialogFooter>
         </DialogContent>

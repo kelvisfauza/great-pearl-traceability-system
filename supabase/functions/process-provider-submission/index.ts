@@ -259,7 +259,8 @@ serve(async (req) => {
       });
     }
 
-    const { submissionId, action, rejectionReason, withdrawCharge, amountOverride } = await req.json();
+    const { submissionId, action, rejectionReason, withdrawCharge, amountOverride, paymentMode: rawMode } = await req.json();
+    const paymentMode: 'cash' | 'momo' = rawMode === 'cash' ? 'cash' : 'momo';
     if (!submissionId || !["approve", "reject"].includes(action)) {
       return new Response(JSON.stringify({ ok: false, error: "Invalid request" }), {
         status: 200,
@@ -458,7 +459,7 @@ serve(async (req) => {
       }
     }
 
-    // Trigger Yo Payout
+    // Trigger Yo Payout (skip entirely for cash payouts)
     const narrative =
       submission.request_type === "meal_plan"
         ? `Meal plan payment - ${submission.description} - ${submission.provider_name}`
@@ -466,24 +467,35 @@ serve(async (req) => {
           ? `Support staff per-diem - ${submission.description} - ${submission.provider_name}`
           : `Service provider payment - ${submission.description} - ${submission.provider_name}`;
 
-    // Generate our own PrivateTransactionReference so the every-2-minute poller
-    // can always look up status at Yo (even when Yo doesn't echo back a TransactionReference,
-    // e.g. when StatusCode=-22 "pending authorization").
     const privateRef = `PSUB-${record.id.slice(0, 8)}-${Date.now()}`;
-    const result = await yoPayout({ phone: cleanPhone, amount: totalAmount, narrative, privateRef });
-
-    const rawResp = result.rawResponse || "";
-    const isPending22 =
-      result.statusMessage?.includes("-22") || rawResp.includes("<StatusCode>-22</StatusCode>");
+    let result: { success: boolean; transactionRef?: string | null; errorMessage?: string; statusMessage?: string; rawResponse?: string } =
+      { success: false, transactionRef: null, errorMessage: "", statusMessage: "", rawResponse: "" };
 
     let yoStatus = "failed";
-    let displayMessage = result.errorMessage || "Payment failed";
-    if (result.success) {
-      yoStatus = "success";
-      displayMessage = "Payment sent successfully";
-    } else if (isPending22) {
-      yoStatus = "pending_approval";
-      displayMessage = "Payment sent, pending authorization in Yo dashboard";
+    let displayMessage = "Payment failed";
+    let paymentMethodLabel = "Mobile Money (Yo Payments)";
+
+    if (paymentMode === "cash") {
+      // ─── CASH PAYOUT ────────────────────────────────────────────────
+      // Admin has handed cash to the provider physically. No Yo call.
+      yoStatus = "cash";
+      displayMessage = "Cash disbursed to provider";
+      paymentMethodLabel = "Cash";
+      result.transactionRef = `CASH-${record.id.slice(0, 8)}-${Date.now()}`;
+    } else {
+      // ─── MOBILE MONEY PAYOUT ────────────────────────────────────────
+      result = await yoPayout({ phone: cleanPhone, amount: totalAmount, narrative, privateRef });
+      const rawResp = result.rawResponse || "";
+      const isPending22 =
+        result.statusMessage?.includes("-22") || rawResp.includes("<StatusCode>-22</StatusCode>");
+      displayMessage = result.errorMessage || "Payment failed";
+      if (result.success) {
+        yoStatus = "success";
+        displayMessage = "Payment sent successfully";
+      } else if (isPending22) {
+        yoStatus = "pending_approval";
+        displayMessage = "Payment sent, pending authorization in Yo dashboard";
+      }
     }
 
     await supabase
@@ -492,7 +504,7 @@ serve(async (req) => {
         // Persist our private ref as fallback so the poller has something to query.
         yo_reference: result.transactionRef || privateRef,
         yo_status: yoStatus,
-        yo_raw_response: rawResp || null,
+        yo_raw_response: paymentMode === "cash" ? "CASH_PAYOUT" : (result.rawResponse || null),
         updated_at: new Date().toISOString(),
       })
       .eq("id", record.id);
@@ -516,9 +528,11 @@ serve(async (req) => {
 
     // Notify provider via SMS
     try {
-      if (yoStatus === "success" || yoStatus === "pending_approval") {
+      if (yoStatus === "success" || yoStatus === "pending_approval" || yoStatus === "cash") {
         const shortRef = (result.transactionRef || record.id).slice(-8).toUpperCase();
-        const smsMessage = `Dear ${submission.provider_name}, UGX ${totalAmount.toLocaleString()} has been sent from Great Agro Coffee. Ref: ${shortRef}. Thank you.`;
+        const smsMessage = yoStatus === "cash"
+          ? `Dear ${submission.provider_name}, UGX ${totalAmount.toLocaleString()} has been handed to you in CASH by Great Agro Coffee. Ref: ${shortRef}. Thank you.`
+          : `Dear ${submission.provider_name}, UGX ${totalAmount.toLocaleString()} has been sent from Great Agro Coffee. Ref: ${shortRef}. Thank you.`;
         // (PDF link added in disbursement email below; SMS kept short to avoid extra segments)
         await supabase.functions.invoke("send-sms", {
           body: {
@@ -537,7 +551,7 @@ serve(async (req) => {
 
     // Notify provider via Email
     try {
-      if (yoStatus === "success" || yoStatus === "pending_approval") {
+      if (yoStatus === "success" || yoStatus === "pending_approval" || yoStatus === "cash") {
         const shortRef = (result.transactionRef || record.id).slice(-8).toUpperCase();
 
         // 📄 Generate signed PDF receipt and upload to payment-receipts bucket so
@@ -557,7 +571,7 @@ serve(async (req) => {
             amount: numAmount,
             charges: numCharge,
             total: totalAmount,
-            paymentMethod: "Mobile Money (Yo Payments)",
+            paymentMethod: paymentMethodLabel,
             transactionId: result.transactionRef || record.id,
             processedBy: reviewerName,
           });
@@ -616,7 +630,7 @@ serve(async (req) => {
               amount: `UGX ${numAmount.toLocaleString()}`,
               charges: numCharge > 0 ? `UGX ${numCharge.toLocaleString()}` : undefined,
               total: `UGX ${totalAmount.toLocaleString()}`,
-              paymentMethod: "Mobile Money (Yo Payments)",
+            paymentMethod: paymentMethodLabel,
               transactionId: result.transactionRef || record.id,
               processedBy: reviewerName,
                 pdfUrl,
