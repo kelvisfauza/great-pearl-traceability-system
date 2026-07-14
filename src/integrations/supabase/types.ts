@@ -13438,6 +13438,10 @@ export type Database = {
         Args: { p_admin_reason: string; p_ledger_entry_id: string }
         Returns: Json
       }
+      sync_overdraft_outstanding_from_wallet: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
       sync_overdraft_recovery_from_wallet:
         | {
             Args: { p_source_ledger_id?: string; p_user_id: string }
