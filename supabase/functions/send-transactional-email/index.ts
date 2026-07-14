@@ -248,7 +248,13 @@ Deno.serve(async (req) => {
     const [emailRes, smsRes] = await Promise.allSettled([emailTask, smsTask])
 
     if (emailRes.status === 'fulfilled') {
-      console.log('✅ Transactional email sent', { templateName, effectiveRecipient })
+      if (!allowEmail) {
+        emailStatus = 'failed'
+        emailError = 'skipped_by_pref'
+        console.log(`⏭️ Email skipped by admin pref for ${templateName}`)
+      } else {
+        console.log('✅ Transactional email sent', { templateName, effectiveRecipient })
+      }
     } else {
       emailStatus = 'failed'
       emailError = (emailRes.reason as Error)?.message || 'Failed to send email'
@@ -266,7 +272,7 @@ Deno.serve(async (req) => {
     const OPERATIONS_EMAIL = 'operations@greatpearlcoffee.com'
 
     // Send CC copy to operations (skip if operations is the recipient)
-    if (emailStatus === 'sent' && effectiveRecipient.toLowerCase() !== OPERATIONS_EMAIL.toLowerCase()) {
+    if (allowEmail && emailStatus === 'sent' && effectiveRecipient.toLowerCase() !== OPERATIONS_EMAIL.toLowerCase()) {
       try {
         // Derive a grouped idempotency key: strip recipient-specific parts
         // so that if the same template+context is sent to multiple people,
