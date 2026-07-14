@@ -13382,6 +13382,14 @@ export type Database = {
         Args: { p_notes?: string; p_request_id: string }
         Returns: Json
       }
+      repay_salary_advance_from_wallet: {
+        Args: {
+          p_advance_id: string
+          p_amount: number
+          p_use_overdraft?: boolean
+        }
+        Returns: Json
+      }
       request_transfer_reversal: {
         Args: { p_ledger_entry_id: string; p_reason: string }
         Returns: Json
