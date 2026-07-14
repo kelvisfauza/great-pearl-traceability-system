@@ -21,10 +21,11 @@ interface SendMoneyModalProps {
   availableBalance: number;
   overdraftHeadroom?: number;
   walletBalance?: number;
+  overdraftOutstanding?: number;
 }
 
 export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
-  open, onOpenChange, availableBalance, overdraftHeadroom = 0, walletBalance,
+  open, onOpenChange, availableBalance, overdraftHeadroom = 0, walletBalance, overdraftOutstanding = 0,
 }) => {
   const { user, employee, isAdmin } = useAuth();
   const { toast } = useToast();
@@ -77,6 +78,11 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
   const walletOnly = typeof walletBalance === 'number' ? walletBalance : Math.max(0, availableBalance - overdraftHeadroom);
   const employeeOdPortion = Math.max(0, Math.min(parsedAmount, availableBalance) - walletOnly);
   const mobileOdPortion = Math.max(0, Math.min(parsedMobileAmount, availableBalance) - walletOnly);
+  const OD_FEE_RATE = 0.0275;
+  const employeeOdFee = Math.round(employeeOdPortion * OD_FEE_RATE);
+  const mobileOdFee = Math.round(mobileOdPortion * OD_FEE_RATE);
+  const employeeNewOutstanding = overdraftOutstanding + employeeOdPortion + employeeOdFee;
+  const mobileNewOutstanding = overdraftOutstanding + mobileOdPortion + mobileOdFee;
   const employeeNeedsOdConfirm = employeeOdPortion > 0 && !overdraftConfirmed;
   const mobileNeedsOdConfirm = mobileOdPortion > 0 && !overdraftConfirmedMobile;
 
