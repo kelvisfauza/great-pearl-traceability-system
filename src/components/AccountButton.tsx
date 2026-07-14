@@ -400,19 +400,30 @@ export const AccountButton = () => {
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <Wallet className="h-4 w-4 text-green-600" />
-                  Wallet Balance
+                  {effectiveWalletBalance < 0 ? 'Overdraft Balance (Owed)' : 'Wallet Balance'}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className={`text-3xl font-bold ${effectiveWalletBalance < 0 ? 'text-red-600' : 'text-green-700'}`}>
                   {balanceHidden ? '••••••' : formatCurrency(effectiveWalletBalance)}
                 </div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  Available to spend: {formatCurrency(availableForWithdrawal)}
-                  {overdraftOutstanding > 0 && (
-                    <span className="ml-1 text-red-600">(overdraft used: {formatCurrency(overdraftOutstanding)})</span>
-                  )}
-                </div>
+                {effectiveWalletBalance < 0 ? (
+                  <div className="mt-1 text-xs text-muted-foreground space-y-0.5">
+                    <div className="text-red-600">
+                      You currently owe UGX {Math.abs(effectiveWalletBalance).toLocaleString()} (overdraft in use).
+                    </div>
+                    <div>
+                      Remaining overdraft headroom you can still spend: <span className="font-medium">{formatCurrency(overdraftHeadroom)}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    Available to spend: <span className="font-medium">{formatCurrency(availableForWithdrawal)}</span>
+                    {overdraftHeadroom > 0 && (
+                      <span className="ml-1">(incl. UGX {overdraftHeadroom.toLocaleString()} overdraft headroom)</span>
+                    )}
+                  </div>
+                )}
                 
                 <div className="mt-3 space-y-1 text-xs">
                   {/* Last month section */}
