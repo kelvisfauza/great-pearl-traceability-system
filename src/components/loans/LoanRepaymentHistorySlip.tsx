@@ -1,9 +1,10 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Printer } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface RepaymentRow {
   id: string;
@@ -23,6 +24,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   loanInfo: {
+    loanId?: string;
     employeeName: string;
     employeeEmail: string;
     loanAmount: number;
@@ -36,11 +38,77 @@ interface Props {
 }
 
 const fmtDate = (d?: string | null) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+const fmtDateTime = (d?: string | null) => d ? new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
 const fmtMoney = (n: number) => `UGX ${Math.round(n || 0).toLocaleString()}`;
+
+interface TxnRow {
+  id: string;
+  created_at: string;
+  amount: number;
+  entry_type: string;
+  source_category: string;
+  reference: string | null;
+  source: string;
+  description: string;
+  installment: string;
+  method: string;
+}
 
 const LoanRepaymentHistorySlip = ({ open, onClose, loanInfo, repayments }: Props) => {
   const slipRef = useRef<HTMLDivElement>(null);
+  const [txns, setTxns] = useState<TxnRow[]>([]);
+  const [loadingTxns, setLoadingTxns] = useState(false);
+
+  useEffect(() => {
+    if (!open || !loanInfo?.loanId) { setTxns([]); return; }
+    (async () => {
+      setLoadingTxns(true);
+      try {
+        const { data, error } = await supabase
+          .from('ledger_entries')
+          .select('id, amount, entry_type, source_category, reference, metadata, created_at')
+          .filter('metadata->>loan_id', 'eq', loanInfo.loanId)
+          .order('created_at', { ascending: true });
+        if (error) throw error;
+        const rows: TxnRow[] = (data || []).map((e: any) => {
+          const meta = e.metadata || {};
+          const inst = meta.installment ? String(meta.installment) : (e.reference?.match(/-(\d+)$/)?.[1] || '—');
+          const src = String(meta.source || e.source_category || e.entry_type || '').toLowerCase();
+          const method = src.includes('wallet') ? 'Wallet Deduction'
+            : src.includes('salary_advance') ? 'Salary Advance'
+            : src.includes('payroll') ? 'Payroll Deduction'
+            : src.includes('guarantor') ? 'Guarantor Wallet'
+            : src.includes('disburs') ? 'Loan Disbursement'
+            : src.includes('momo') || src.includes('mobile_money') ? 'Mobile Money'
+            : src.includes('overdraft') ? 'Overdraft Top-up'
+            : (meta.source || e.entry_type || 'Other');
+          return {
+            id: e.id,
+            created_at: e.created_at,
+            amount: Number(e.amount || 0),
+            entry_type: e.entry_type,
+            source_category: e.source_category,
+            reference: e.reference,
+            source: String(meta.source || ''),
+            description: String(meta.description || ''),
+            installment: inst,
+            method,
+          };
+        });
+        setTxns(rows);
+      } catch (err) {
+        console.error('Failed to load loan transactions', err);
+        setTxns([]);
+      } finally {
+        setLoadingTxns(false);
+      }
+    })();
+  }, [open, loanInfo?.loanId]);
+
   if (!loanInfo) return null;
+
+  const disbursements = txns.filter(t => t.amount > 0 || t.source_category === 'LOAN_DISBURSEMENT' || String(t.source).includes('disburs'));
+  const repaymentTxns = txns.filter(t => !(t.amount > 0 || t.source_category === 'LOAN_DISBURSEMENT' || String(t.source).includes('disburs')));
 
   const sorted = [...repayments].sort((a, b) => {
     const ad = a.paid_date || a.due_date;
@@ -104,7 +172,7 @@ const LoanRepaymentHistorySlip = ({ open, onClose, loanInfo, repayments }: Props
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Repayment History Statement</span>
@@ -214,6 +282,64 @@ const LoanRepaymentHistorySlip = ({ open, onClose, loanInfo, repayments }: Props
               </div>
             </div>
           )}
+
+          <div className="mt-6">
+            <p className="text-sm font-semibold mb-2">Detailed Payment Transactions Ledger</p>
+            <p className="text-[11px] text-muted-foreground mb-2">
+              Every recorded money movement against this loan — showing exact date, time, amount, source and reference.
+            </p>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">#</TableHead>
+                  <TableHead className="text-xs">Date &amp; Time</TableHead>
+                  <TableHead className="text-xs">Type</TableHead>
+                  <TableHead className="text-xs">Installment</TableHead>
+                  <TableHead className="text-xs">Source / Method</TableHead>
+                  <TableHead className="text-xs text-right">Amount</TableHead>
+                  <TableHead className="text-xs">Reference</TableHead>
+                  <TableHead className="text-xs">Description</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loadingTxns ? (
+                  <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-4">Loading transactions…</TableCell></TableRow>
+                ) : repaymentTxns.length === 0 ? (
+                  <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-4">
+                    No individual payment transactions logged yet. See installment schedule above for pending/paid status.
+                  </TableCell></TableRow>
+                ) : repaymentTxns.map((t, idx) => {
+                  const isCredit = t.amount > 0;
+                  return (
+                    <TableRow key={t.id}>
+                      <TableCell className="text-xs py-1">{idx + 1}</TableCell>
+                      <TableCell className="text-xs py-1 whitespace-nowrap">{fmtDateTime(t.created_at)}</TableCell>
+                      <TableCell className="text-xs py-1">
+                        <Badge variant={isCredit ? 'secondary' : 'default'} className="text-[10px]">
+                          {isCredit ? 'Credit' : 'Repayment'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs py-1">#{t.installment}</TableCell>
+                      <TableCell className="text-xs py-1">{t.method}</TableCell>
+                      <TableCell className="text-xs py-1 text-right font-semibold">
+                        <span className={isCredit ? 'text-green-600' : 'text-red-600'}>
+                          {isCredit ? '+' : '−'} {Math.abs(t.amount).toLocaleString()}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-xs py-1 font-mono text-[10px]">{t.reference || '—'}</TableCell>
+                      <TableCell className="text-xs py-1">{t.description || '—'}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+            {disbursements.length > 0 && (
+              <div className="mt-3 text-[11px] text-muted-foreground">
+                <span className="font-semibold">Disbursement record:</span>{' '}
+                {disbursements.map(d => `${fmtDateTime(d.created_at)} — ${fmtMoney(d.amount)} (${d.reference || 'n/a'})`).join(' | ')}
+              </div>
+            )}
+          </div>
 
           <div className="summary mt-4 border-t pt-3 space-y-1 text-sm">
             <div className="flex justify-between"><span>Total Repayable:</span><span>{fmtMoney(loanInfo.totalRepayable)}</span></div>
