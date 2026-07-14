@@ -12719,6 +12719,25 @@ export type Database = {
         Args: { user_email: string }
         Returns: boolean
       }
+      can_insert_own_salary_advance_payment: {
+        Args: {
+          _advance_id: string
+          _amount_paid: number
+          _employee_email: string
+          _status: string
+        }
+        Returns: boolean
+      }
+      can_insert_salary_advance_ledger_entry: {
+        Args: {
+          _amount: number
+          _entry_type: string
+          _metadata: Json
+          _source_category: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
       can_manage_employees: { Args: never; Returns: boolean }
       can_manage_quality_assessments: { Args: never; Returns: boolean }
       can_manage_users: { Args: never; Returns: boolean }
