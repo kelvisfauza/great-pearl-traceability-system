@@ -21,10 +21,11 @@ interface SendMoneyModalProps {
   availableBalance: number;
   overdraftHeadroom?: number;
   walletBalance?: number;
+  overdraftOutstanding?: number;
 }
 
 export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
-  open, onOpenChange, availableBalance, overdraftHeadroom = 0, walletBalance,
+  open, onOpenChange, availableBalance, overdraftHeadroom = 0, walletBalance, overdraftOutstanding = 0,
 }) => {
   const { user, employee, isAdmin } = useAuth();
   const { toast } = useToast();
@@ -77,6 +78,11 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
   const walletOnly = typeof walletBalance === 'number' ? walletBalance : Math.max(0, availableBalance - overdraftHeadroom);
   const employeeOdPortion = Math.max(0, Math.min(parsedAmount, availableBalance) - walletOnly);
   const mobileOdPortion = Math.max(0, Math.min(parsedMobileAmount, availableBalance) - walletOnly);
+  const OD_FEE_RATE = 0.0275;
+  const employeeOdFee = Math.round(employeeOdPortion * OD_FEE_RATE);
+  const mobileOdFee = Math.round(mobileOdPortion * OD_FEE_RATE);
+  const employeeNewOutstanding = overdraftOutstanding + employeeOdPortion + employeeOdFee;
+  const mobileNewOutstanding = overdraftOutstanding + mobileOdPortion + mobileOdFee;
   const employeeNeedsOdConfirm = employeeOdPortion > 0 && !overdraftConfirmed;
   const mobileNeedsOdConfirm = mobileOdPortion > 0 && !overdraftConfirmedMobile;
 
@@ -398,6 +404,11 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
                         <>
                           <div className="flex justify-between text-muted-foreground"><span>From wallet:</span><span>UGX {Math.min(parsedAmount, walletOnly).toLocaleString()}</span></div>
                           <div className="flex justify-between text-emerald-700"><span>From overdraft:</span><span>UGX {employeeOdPortion.toLocaleString()}</span></div>
+                          <div className="flex justify-between text-amber-700"><span>Overdraft access fee (2.75%):</span><span>UGX {employeeOdFee.toLocaleString()}</span></div>
+                          {overdraftOutstanding > 0 && (
+                            <div className="flex justify-between text-muted-foreground"><span>Previous overdraft balance:</span><span>UGX {overdraftOutstanding.toLocaleString()}</span></div>
+                          )}
+                          <div className="flex justify-between font-semibold text-red-700 border-t pt-1 mt-1"><span>New overdraft owed (shown on statement):</span><span>UGX {employeeNewOutstanding.toLocaleString()}</span></div>
                         </>
                       )}
                       <div className="flex justify-between text-muted-foreground"><span>Your new balance:</span><span>UGX {Math.max(0, walletOnly - parsedAmount).toLocaleString()}</span></div>
@@ -412,7 +423,7 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
                         <TrendingDown className="h-4 w-4 mt-0.5 shrink-0 text-amber-600" />
                         <div>
                           <p className="font-semibold">Overdraft will be applied: UGX {employeeOdPortion.toLocaleString()}</p>
-                          <p className="mt-0.5">Your wallet doesn't fully cover this. The shortfall will be taken from your overdraft and added to your outstanding balance (0.5% daily interest until cleared).</p>
+                          <p className="mt-0.5">Your wallet doesn't fully cover this. UGX {employeeOdPortion.toLocaleString()} will be drawn plus a 2.75% access fee of UGX {employeeOdFee.toLocaleString()}. Your total overdraft owed will become <strong>UGX {employeeNewOutstanding.toLocaleString()}</strong> (0.6% daily interest until cleared). This full amount will appear on your statement.</p>
                         </div>
                       </div>
                       <label className="flex items-center gap-2 cursor-pointer text-amber-900 dark:text-amber-200">
@@ -469,6 +480,11 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
                         <>
                           <div className="flex justify-between text-muted-foreground"><span>From wallet:</span><span>UGX {Math.min(parsedMobileAmount, walletOnly).toLocaleString()}</span></div>
                           <div className="flex justify-between text-emerald-700"><span>From overdraft:</span><span>UGX {mobileOdPortion.toLocaleString()}</span></div>
+                          <div className="flex justify-between text-amber-700"><span>Overdraft access fee (2.75%):</span><span>UGX {mobileOdFee.toLocaleString()}</span></div>
+                          {overdraftOutstanding > 0 && (
+                            <div className="flex justify-between text-muted-foreground"><span>Previous overdraft balance:</span><span>UGX {overdraftOutstanding.toLocaleString()}</span></div>
+                          )}
+                          <div className="flex justify-between font-semibold text-red-700 border-t pt-1 mt-1"><span>New overdraft owed (shown on statement):</span><span>UGX {mobileNewOutstanding.toLocaleString()}</span></div>
                         </>
                       )}
                       <div className="flex justify-between text-muted-foreground"><span>Your new balance:</span><span>UGX {Math.max(0, walletOnly - parsedMobileAmount).toLocaleString()}</span></div>
@@ -483,7 +499,7 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
                         <TrendingDown className="h-4 w-4 mt-0.5 shrink-0 text-amber-600" />
                         <div>
                           <p className="font-semibold">Overdraft will be applied: UGX {mobileOdPortion.toLocaleString()}</p>
-                          <p className="mt-0.5">Your wallet doesn't fully cover this. The shortfall will be taken from your overdraft (0.5% daily interest until cleared).</p>
+                          <p className="mt-0.5">Your wallet doesn't fully cover this. UGX {mobileOdPortion.toLocaleString()} will be drawn plus a 2.75% access fee of UGX {mobileOdFee.toLocaleString()}. Your total overdraft owed will become <strong>UGX {mobileNewOutstanding.toLocaleString()}</strong> (0.6% daily interest until cleared). This full amount will appear on your statement.</p>
                         </div>
                       </div>
                       <label className="flex items-center gap-2 cursor-pointer text-amber-900 dark:text-amber-200">
