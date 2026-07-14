@@ -242,7 +242,18 @@ Deno.serve(async (req) => {
       const authUserId = authUserMap[emp.employee_email];
       if (authUserId) {
         const ledgerRef = `EOTM-${monthNames[targetMonth].toUpperCase().slice(0, 3)}${targetYear}-RANK${rank}-${emp.employee_name.split(" ")[0].toUpperCase()}`;
-        await supabase.from("ledger_entries").insert({
+        // Idempotency guard: skip if any EOTM ledger entry already exists for this user/month/year
+        const monthTag = `EOTM-${monthNames[targetMonth].toUpperCase().slice(0, 3)}${targetYear}`;
+        const { data: existing } = await supabase
+          .from("ledger_entries")
+          .select("id")
+          .eq("user_id", authUserId)
+          .ilike("reference", `${monthTag}%`)
+          .limit(1);
+        if (existing && existing.length > 0) {
+          console.log(`Skipping duplicate EOTM credit for ${emp.employee_name} (${monthTag})`);
+        } else {
+          await supabase.from("ledger_entries").insert({
           user_id: authUserId,
           entry_type: "DEPOSIT",
           amount: bonusAmount,
@@ -253,7 +264,8 @@ Deno.serve(async (req) => {
             employee_name: emp.employee_name,
           },
         });
-        console.log(`Wallet credited for ${emp.employee_name}: UGX ${bonusAmount}`);
+          console.log(`Wallet credited for ${emp.employee_name}: UGX ${bonusAmount}`);
+        }
       } else {
         console.warn(`No auth user found for ${emp.employee_email}, wallet not credited`);
       }
