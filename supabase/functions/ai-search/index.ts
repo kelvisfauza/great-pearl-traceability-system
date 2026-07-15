@@ -23,19 +23,37 @@ function sanitizeQuery(input: string): string {
     .trim();
 }
 
-// Allowed navigateTo paths
-const ALLOWED_PATH_PREFIXES = [
-  '/suppliers', '/quality-control', '/eudr-documentation', '/human-resources',
-  '/finance', '/sales-marketing', '/store', '/inventory', '/reports',
-  '/admin', '/settings', '/attendance', '/daily-reports', '/expenses',
-  '/v2', '/approvals', '/coffee-bookings', '/field-operations', '/data-analyst',
-  '/it-department', '/logistics', '/processing', '/milling', '/procurement'
-];
+// Exact real routes in the app router. We only allow these top-level paths
+// (query strings are preserved). Deep segments like `/inventory/batches/:id`
+// are NOT real routes and would 404, so we strip them back to the base.
+const ALLOWED_ROUTES = new Set([
+  '/', '/suppliers', '/quality-control', '/eudr-documentation',
+  '/human-resources', '/finance', '/v2/finance', '/sales-marketing',
+  '/store', '/inventory', '/reports', '/admin', '/settings', '/attendance',
+  '/daily-reports', '/expenses', '/approvals', '/coffee-bookings',
+  '/field-operations', '/data-analyst', '/it-department', '/logistics',
+  '/processing', '/milling', '/procurement',
+  '/v2', '/v2/admin', '/v2/store', '/v2/quality', '/v2/inventory',
+  '/v2/sales', '/v2/hr', '/v2/eudr', '/v2/logistics', '/v2/processing',
+  '/v2/milling', '/v2/procurement', '/v2/it', '/v2/analytics',
+  '/v2/field-operations',
+]);
 
 function sanitizePath(path: string | undefined): string {
   if (!path || typeof path !== 'string') return '/';
-  const clean = path.split('?')[0].split('#')[0];
-  if (ALLOWED_PATH_PREFIXES.some(p => clean.startsWith(p))) return path;
+  const [cleanRaw, query = ''] = path.split('#')[0].split('?');
+  const clean = cleanRaw.replace(/\/+$/, '') || '/';
+  if (ALLOWED_ROUTES.has(clean)) return query ? `${clean}?${query}` : clean;
+  // Try trimming trailing segments back to a known route (handles AI-invented
+  // deep paths like `/inventory/batches/20260713006`).
+  const parts = clean.split('/').filter(Boolean);
+  while (parts.length > 0) {
+    parts.pop();
+    const candidate = '/' + parts.join('/');
+    if (ALLOWED_ROUTES.has(candidate)) {
+      return query ? `${candidate}?${query}` : candidate;
+    }
+  }
   return '/';
 }
 
