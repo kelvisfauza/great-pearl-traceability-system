@@ -27,14 +27,16 @@ function sanitizeQuery(input: string): string {
 const ALLOWED_PATH_PREFIXES = [
   '/suppliers', '/quality-control', '/eudr-documentation', '/human-resources',
   '/finance', '/sales-marketing', '/store', '/inventory', '/reports',
-  '/dashboard', '/admin', '/settings', '/attendance', '/daily-reports'
+  '/admin', '/settings', '/attendance', '/daily-reports', '/expenses',
+  '/v2', '/approvals', '/coffee-bookings', '/field-operations', '/data-analyst',
+  '/it-department', '/logistics', '/processing', '/milling', '/procurement'
 ];
 
 function sanitizePath(path: string | undefined): string {
-  if (!path || typeof path !== 'string') return '/dashboard';
+  if (!path || typeof path !== 'string') return '/';
   const clean = path.split('?')[0].split('#')[0];
   if (ALLOWED_PATH_PREFIXES.some(p => clean.startsWith(p))) return path;
-  return '/dashboard';
+  return '/';
 }
 
 serve(async (req) => {
