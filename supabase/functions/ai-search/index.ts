@@ -1,5 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { generateText, NoObjectGeneratedError, Output } from "npm:ai";
+import { z } from "npm:zod";
+import { createLovableAiGatewayProvider } from "../_shared/ai-gateway.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -45,6 +48,62 @@ function sanitizeQuery(input: string): string {
     .slice(0, 500)
     .trim();
 }
+
+function parseJsonObject(text: unknown) {
+  const raw = String(text || "").trim();
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if (fenced?.[1]) {
+      try {
+        return JSON.parse(fenced[1].trim());
+      } catch {
+        // Keep trying below.
+      }
+    }
+
+    const first = raw.indexOf("{");
+    const last = raw.lastIndexOf("}");
+    if (first >= 0 && last > first) {
+      try {
+        return JSON.parse(raw.slice(first, last + 1));
+      } catch {
+        return null;
+      }
+    }
+
+    return null;
+  }
+}
+
+const CommandTaskSchema = z.object({
+  capability_id: z.string(),
+  label: z.string(),
+  summary: z.string(),
+  params: z.record(z.string()).optional(),
+});
+
+const AICommandSchema = z.object({
+  answer: z.string(),
+  records: z.array(z.object({
+    id: z.string(),
+    type: z.string(),
+    title: z.string(),
+    subtitle: z.string().optional(),
+    route: z.string(),
+    params: z.record(z.string()).optional(),
+    relevance: z.number().optional(),
+  })),
+  navigations: z.array(z.object({
+    label: z.string(),
+    route: z.string(),
+  })),
+  creates: z.array(CommandTaskSchema),
+  actions: z.array(CommandTaskSchema),
+});
 
 function compactTerm(input: string): string {
   return input.replace(/[(),;:{}[\]<>]/g, " ").replace(/\s+/g, " ").trim();
@@ -442,89 +501,26 @@ Rules:
       data,
     });
 
-    const schema = {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        answer: { type: "string" },
-        records: {
-          type: "array",
-          items: {
-            type: "object", additionalProperties: false,
-            properties: {
-              id: { type: "string" },
-              type: { type: "string" },
-              title: { type: "string" },
-              subtitle: { type: "string" },
-              route: { type: "string" },
-              params: { type: "object", additionalProperties: { type: "string" } },
-              relevance: { type: "number" },
-            },
-            required: ["id", "type", "title", "route"],
-          },
-        },
-        navigations: {
-          type: "array",
-          items: {
-            type: "object", additionalProperties: false,
-            properties: { label: { type: "string" }, route: { type: "string" } },
-            required: ["label", "route"],
-          },
-        },
-        creates: {
-          type: "array",
-          items: {
-            type: "object", additionalProperties: false,
-            properties: {
-              capability_id: { type: "string" },
-              label: { type: "string" },
-              summary: { type: "string" },
-              params: { type: "object", additionalProperties: { type: "string" } },
-            },
-            required: ["capability_id", "label", "summary"],
-          },
-        },
-        actions: {
-          type: "array",
-          items: {
-            type: "object", additionalProperties: false,
-            properties: {
-              capability_id: { type: "string" },
-              label: { type: "string" },
-              summary: { type: "string" },
-              params: { type: "object", additionalProperties: { type: "string" } },
-            },
-            required: ["capability_id", "label", "summary"],
-          },
-        },
-      },
-      required: ["answer", "records", "navigations", "creates", "actions"],
-    };
-
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-3.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage },
-        ],
-        response_format: { type: "json_schema", json_schema: { name: "AICommand", schema, strict: true } },
-        temperature: 0.2,
-      }),
-    });
-
-    if (!aiRes.ok) {
-      const status = aiRes.status;
-      console.error("AI gateway error", status, await aiRes.text().catch(() => ""));
-      return json(fallbackResponse(sanitizedQuery, data, availableCapabilities));
-    }
-
-    const raw = await aiRes.json();
-    const content = raw.choices?.[0]?.message?.content ?? "{}";
     let parsed: any;
-    try { parsed = JSON.parse(content); } catch { parsed = null; }
+    try {
+      const gateway = createLovableAiGatewayProvider(LOVABLE_API_KEY);
+      const { output } = await generateText({
+        model: gateway("openai/gpt-5.5"),
+        output: Output.object({ schema: AICommandSchema }),
+        system: systemPrompt,
+        prompt: userMessage,
+        temperature: 0.2,
+      });
+      parsed = output;
+    } catch (aiError) {
+      if (NoObjectGeneratedError.isInstance(aiError)) {
+        parsed = parseJsonObject(aiError.text);
+      }
+      if (!parsed) {
+        console.error("AI gateway error", aiError);
+        return json(fallbackResponse(sanitizedQuery, data, availableCapabilities));
+      }
+    }
     if (!parsed || typeof parsed !== "object") {
       return json(fallbackResponse(sanitizedQuery, data, availableCapabilities));
     }
