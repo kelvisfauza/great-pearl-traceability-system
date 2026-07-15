@@ -8,7 +8,6 @@ import NotificationPanel from "./notifications/NotificationPanel";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { ThemeToggle } from "./ThemeToggle";
 import GlobalSearch from "./GlobalSearch";
-import GlobalHighlightBridge from "./GlobalHighlightBridge";
 import { useMessages } from "@/hooks/useMessages";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuth } from "@/contexts/AuthContext";
@@ -152,7 +151,6 @@ const DashboardLayout = ({ children, title, subtitle, showMessageButton = true }
       <FeatureAnnouncementModal onOpenAnnouncement={handleOpenAnnouncement} />
       <TrainingTour />
       <AttendanceReminder />
-      <GlobalHighlightBridge />
     </div>
   );
 };
