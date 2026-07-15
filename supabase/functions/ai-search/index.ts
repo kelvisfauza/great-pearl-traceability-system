@@ -19,7 +19,7 @@ function sanitizeQuery(input: string): string {
     .replace(/[\r\n]+/g, ' ')           // Remove newlines
     .replace(/["`]/g, '')                // Remove quotes that could break prompt structure
     .replace(/IGNORE\s*(ALL\s*)?PREVIOUS|SYSTEM\s*PROMPT|OVERRIDE|NEW\s*INSTRUCTION/gi, '') // Remove injection patterns
-    .slice(0, 150)                       // Limit length
+    .slice(0, 400)                       // Limit length
     .trim();
 }
 
