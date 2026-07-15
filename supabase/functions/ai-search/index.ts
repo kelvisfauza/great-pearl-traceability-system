@@ -611,26 +611,77 @@ function json(payload: unknown, status = 200) {
   });
 }
 
-function fallbackResponse(q: string, data: Record<string, any[]>, caps: Capability[]) {
-  const records: any[] = [];
-  const push = (id: string, type: string, title: string, subtitle: string, route: string) => {
-    const params = new URLSearchParams({ highlight: String(id), search: q, type });
-    records.push({ id: String(id), type, title, subtitle, url: `${route}?${params}`, relevance: 70 });
-  };
-  (data.suppliers || []).slice(0, 3).forEach((s: any) => push(s.id, "supplier", s.name, `${s.code || ""} • ${s.origin || ""}`, "/suppliers"));
-  (data.coffee_records || []).slice(0, 3).forEach((r: any) => push(r.id, "batch", `Batch ${r.batch_number}`, `${r.supplier_name} • ${r.kilograms}kg`, "/store"));
-  (data.employees || []).slice(0, 3).forEach((e: any) => push(e.id, "employee", e.name, `${e.position || ""} • ${e.department || ""}`, "/human-resources"));
-  (data.eudr_documents || []).slice(0, 2).forEach((d: any) => push(d.id, "eudr", `EUDR ${d.batch_number}`, `${d.coffee_type} • ${d.status}`, "/eudr-documentation"));
+function deepUrl(route: string, q: string, type: string, id: unknown, extra: Record<string, unknown> = {}) {
+  const params = new URLSearchParams({ highlight: String(id), id: String(id), search: q, type });
+  for (const [key, value] of Object.entries(extra)) {
+    if (value !== null && value !== undefined && String(value).trim()) params.set(key, String(value));
+  }
+  return `${route}?${params.toString()}`;
+}
 
-  const creates = caps.filter((c) => c.kind === "create").slice(0, 3).map((c) => ({
+function documentUrl(url: unknown, fallback: string) {
+  const raw = String(url || "").trim();
+  return /^https?:\/\//i.test(raw) ? raw : fallback;
+}
+
+function buildDeterministicRecords(q: string, data: Record<string, any[]>) {
+  const records: any[] = [];
+  const push = (id: unknown, type: string, title: string, subtitle: string, route: string, relevance = 90, extra: Record<string, unknown> = {}) => {
+    records.push({ id: String(id), type, title, subtitle, url: deepUrl(route, q, type, id, extra), relevance });
+  };
+  const pushDoc = (id: unknown, type: string, title: string, subtitle: string, url: unknown, fallbackRoute: string, relevance = 96, extra: Record<string, unknown> = {}) => {
+    const fallback = deepUrl(fallbackRoute, q, type, id, extra);
+    records.push({ id: String(id), type, title, subtitle, url: documentUrl(url, fallback), relevance });
+  };
+
+  (data.coffee_records || []).forEach((r: any) => push(r.id, "batch", `View batch ${r.batch_number}`, `${r.supplier_name || "Coffee record"} • ${r.kilograms || 0}kg • ${r.status || "recorded"}`, "/store", 98, { batch: r.batch_number }));
+  (data.store_records || []).forEach((r: any) => push(r.id, "batch", `View store record ${r.batch_number || r.reference_number}`, `${r.supplier_name || "Store"} • ${r.quantity_kg || 0}kg • ${r.status || "recorded"}`, "/store", 97, { batch: r.batch_number, reference: r.reference_number }));
+  (data.inventory_batches || []).forEach((r: any) => push(r.id, "inventory", `View inventory batch ${r.batch_code}`, `${r.coffee_type || "Coffee"} • ${r.remaining_kilograms ?? r.total_kilograms ?? 0}kg remaining • ${r.status || "active"}`, "/inventory", 97, { batch: r.batch_code }));
+  (data.inventory_batch_sources || []).forEach((r: any) => push(r.id, "inventory", `View batch source ${r.supplier_name || r.id}`, `${r.kilograms || 0}kg • purchased ${r.purchase_date || ""}`, "/inventory", 92, { batch_id: r.batch_id, coffee_record_id: r.coffee_record_id }));
+  (data.quality_assessments || []).forEach((r: any) => push(r.id, "quality", `View quality assessment ${r.batch_number}`, `${r.status || "assessed"} • moisture ${r.moisture ?? "-"}% • assessed by ${r.assessed_by || "quality"}`, "/quality-control", 96, { batch: r.batch_number, assessment_ref: r.assessment_ref }));
+  (data.quality_reevaluations || []).forEach((r: any) => push(r.id, "quality", `View quality re-evaluation ${r.batch_number}`, `${r.evaluated_by || "Evaluator"} • ${r.comment || "Re-evaluation record"}`, "/quality-control", 91, { batch: r.batch_number, original_assessment_id: r.original_assessment_id }));
+  (data.eudr_documents || []).forEach((r: any) => push(r.id, "eudr", `View EUDR document ${r.batch_number}`, `${r.coffee_type || "Coffee"} • ${r.total_kilograms ?? 0}kg • ${r.status || "documented"}`, "/eudr-documentation", 96, { batch: r.batch_number }));
+  (data.eudr_batches || []).forEach((r: any) => push(r.id, "eudr", `View EUDR batch ${r.batch_identifier}`, `${r.kilograms ?? 0}kg • ${r.status || "active"}`, "/eudr-documentation", 95, { batch: r.batch_identifier, document_id: r.document_id }));
+  (data.finance_coffee_lots || []).forEach((r: any) => pushDoc(r.id, "payment", `View coffee lot payment ${r.batch_number || r.grn_number}`, `${r.payment_status || r.finance_status || "finance"} • UGX ${Number(r.amount_paid_ugx || r.total_amount_ugx || 0).toLocaleString()} • GRN ${r.grn_number || "-"}`, r.grn_file_url, "/v2/finance", 95, { batch: r.batch_number, lot_id: r.id, grn: r.grn_number }));
+  (data.supplier_payments || []).forEach((r: any) => push(r.id, "payment", `View supplier payment ${r.reference || r.transaction_id || r.id}`, `UGX ${Number(r.amount_paid_ugx || 0).toLocaleString()} • ${r.status || r.provider_status || "payment"} • ${r.provider_name || "Finance"}`, "/v2/finance", 94, { reference: r.reference, transaction_id: r.transaction_id, lot_id: r.lot_id }));
+  (data.payment_receipts || []).forEach((r: any) => pushDoc(r.id, "receipt", `View receipt document ${r.receipt_name || r.id}`, `${r.receipt_type || "Receipt"} • lot ${r.lot_id || "-"} • uploaded by ${r.uploaded_by || "finance"}`, r.receipt_url, "/v2/finance", 99, { lot_id: r.lot_id }));
+  (data.receipts || []).forEach((r: any) => push(r.id, "receipt", `View receipt ${r.receipt_no || r.id}`, `${r.doc_type || "Document"} • issued by ${r.issued_by || "system"}`, "/v2/finance", 93, { doc_id: r.doc_id, receipt_no: r.receipt_no }));
+  (data.ledger_entries || []).forEach((r: any) => push(r.id, "transaction", `View ledger transaction ${r.reference || r.id}`, `${r.entry_type || "entry"} • UGX ${Number(r.amount || 0).toLocaleString()} • ${r.source_category || "ledger"}`, "/finance", 93, { reference: r.reference }));
+  (data.instant_withdrawals || []).forEach((r: any) => push(r.id, "transaction", `View instant withdrawal ${r.payout_ref || r.ledger_reference || r.id}`, `UGX ${Number(r.amount || 0).toLocaleString()} • ${r.payout_status || "pending"} • ${r.employee_name || r.phone_number || "user"}`, "/finance", 93, { reference: r.payout_ref || r.ledger_reference }));
+  (data.mobile_money_transactions || []).forEach((r: any) => push(r.id, "transaction", `View mobile money transaction ${r.transaction_ref || r.id}`, `UGX ${Number(r.amount || 0).toLocaleString()} • ${r.transaction_type || "transaction"} • ${r.status || "status"}`, "/finance", 92, { reference: r.transaction_ref }));
+  (data.approval_requests || []).forEach((r: any) => push(r.id, "expense", `View approval ${r.title || r.type || r.id}`, `${r.requestedby || "Requester"} • UGX ${Number(r.amount || 0).toLocaleString()} • ${r.status || "pending"}`, "/approvals", 91));
+  (data.sales_transactions || []).forEach((r: any) => push(r.id, "sale", `View sale to ${r.customer || "customer"}`, `${r.coffee_type || "Coffee"} • ${r.weight || 0}kg • UGX ${Number(r.total_amount || 0).toLocaleString()}`, "/sales-marketing", 90));
+  (data.sales_inventory_tracking || []).forEach((r: any) => push(r.id, "sale", `View sale allocation ${r.batch_number}`, `${r.customer_name || "Customer"} • ${r.quantity_kg || 0}kg • ${r.payment_method || "sale"}`, "/sales-marketing", 90, { batch: r.batch_number, sale_id: r.sale_id }));
+  (data.suppliers || []).forEach((s: any) => push(s.id, "supplier", `View supplier ${s.name}`, `${s.code || ""} • ${s.origin || ""} • ${s.status || "active"}`, "/suppliers", 88));
+  (data.employees || []).forEach((e: any) => push(e.id, "employee", `View employee ${e.name}`, `${e.position || ""} • ${e.department || ""} • ${e.employee_id || ""}`, "/human-resources", 88));
+  (data.overtime_awards || []).forEach((r: any) => push(r.id, "overtime", `View overtime award ${r.reference_number || r.id}`, `${r.employee_name || "Employee"} • UGX ${Number(r.amount || 0).toLocaleString()} • ${r.status || "status"}`, "/human-resources", 88));
+
+  const seen = new Set<string>();
+  return records
+    .sort((a, b) => (Number(b.relevance) || 0) - (Number(a.relevance) || 0))
+    .filter((record) => {
+      const key = `${record.type}:${record.id}:${record.url}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 12);
+}
+
+function fallbackResponse(q: string, data: Record<string, any[]>, caps: Capability[]) {
+  const records = buildDeterministicRecords(q, data).slice(0, 8);
+
+  const creates = records.length ? [] : caps.filter((c) => c.kind === "create").slice(0, 3).map((c) => ({
     capability_id: c.id, kind: "create", label: c.label, summary: c.description, url: c.route, params: {},
   }));
-  const actions = caps.filter((c) => c.kind === "action").slice(0, 2).map((c) => ({
+  const actions = records.length ? [] : caps.filter((c) => c.kind === "action").slice(0, 2).map((c) => ({
     capability_id: c.id, kind: "action", label: c.label, summary: c.description, url: c.route, params: {},
   }));
 
   return {
-    answer: `Here's what I could pull together for "${q}". Pick any record or task below.`,
+    answer: records.length
+      ? `I found existing records for "${q}". Use View to open the document, transaction, or page.`
+      : `I did not find an existing record for "${q}". Use the available create/action option if this is new.`,
     records, navigations: [
       { label: "Dashboard", url: "/" }, { label: "Approvals", url: "/approvals" },
     ], creates, actions,
