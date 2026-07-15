@@ -13,6 +13,7 @@ function OfflineSyncBoot() {
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import GlobalHighlightBridge from "@/components/GlobalHighlightBridge";
 import { PriceProvider } from "@/contexts/PriceContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { LeaveEnforcementProvider } from "@/contexts/LeaveEnforcementContext";
@@ -201,6 +202,7 @@ const App: React.ComponentType = () => {
               {/* <RoleNotificationHandler /> - Disabled due to performance issues */}
               
               <MarqueeBanner />
+              <GlobalHighlightBridge />
               <Routes>
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
