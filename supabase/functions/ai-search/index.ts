@@ -216,6 +216,131 @@ serve(async (req) => {
     if (has("Store")) tasks.push(supabase.from("store_records").select("id,batch_number,supplier_name,quantity_kg,transaction_date,reference_number").or(`batch_number.ilike.${like},supplier_name.ilike.${like},reference_number.ilike.${like}`).limit(10).then(({ data: d }) => { if (d?.length) data.store_records = d; }));
     if (has("Human Resources")) tasks.push(supabase.from("overtime_awards").select("id,reference_number,employee_name,employee_email,amount,status").or(`reference_number.ilike.${like},employee_name.ilike.${like},employee_email.ilike.${like}`).limit(10).then(({ data: d }) => { if (d?.length) data.overtime_awards = d; }));
 
+    // ---------- Analytical / time-window fetch ----------
+    // For questions like "who withdrew yesterday", "list pending payouts today",
+    // "how many loans this week" the keyword ilike above matches nothing.
+    // Detect intent and pull recent rows so the AI can actually answer.
+    const q = sanitizedQuery.toLowerCase();
+    const analytical = /\b(yesterday|today|tonight|this week|last week|this month|last month|recent|latest|who|which|whose|how many|list|show me|report|summary|total|breakdown)\b/.test(q);
+    let windowStart: Date | null = null;
+    let windowEnd: Date | null = null;
+    if (analytical) {
+      const now = new Date();
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      if (/\byesterday\b/.test(q)) {
+        windowStart = new Date(startOfToday.getTime() - 24 * 3600 * 1000);
+        windowEnd = startOfToday;
+      } else if (/\btoday|tonight\b/.test(q)) {
+        windowStart = startOfToday;
+        windowEnd = new Date(startOfToday.getTime() + 24 * 3600 * 1000);
+      } else if (/\blast week\b/.test(q)) {
+        windowStart = new Date(startOfToday.getTime() - 14 * 24 * 3600 * 1000);
+        windowEnd = new Date(startOfToday.getTime() - 7 * 24 * 3600 * 1000);
+      } else if (/\bthis week\b/.test(q)) {
+        windowStart = new Date(startOfToday.getTime() - 7 * 24 * 3600 * 1000);
+        windowEnd = new Date(startOfToday.getTime() + 24 * 3600 * 1000);
+      } else if (/\blast month\b/.test(q)) {
+        windowStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        windowEnd = new Date(now.getFullYear(), now.getMonth(), 1);
+      } else if (/\bthis month\b/.test(q)) {
+        windowStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        windowEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      } else {
+        // "recent" / "latest" / bare "who/which" — last 7 days
+        windowStart = new Date(startOfToday.getTime() - 7 * 24 * 3600 * 1000);
+        windowEnd = new Date(startOfToday.getTime() + 24 * 3600 * 1000);
+      }
+
+      const wsIso = windowStart.toISOString();
+      const weIso = windowEnd.toISOString();
+      const analyticalTasks: PromiseLike<void>[] = [];
+
+      const wantsWithdrawals = /\b(withdraw|withdrew|withdrawal|payout|instant)\b/.test(q);
+      const wantsApprovals = /\b(approval|approve|request|expense|salary advance|advance|loan)\b/.test(q);
+      const wantsSales = /\b(sale|sales|sold|customer|dispatch)\b/.test(q);
+      const wantsDeliveries = /\b(delivery|deliveries|received|receipt|coffee|batch|kilos|kg)\b/.test(q);
+      const wantsPayments = /\b(payment|paid|supplier payment)\b/.test(q);
+      const wantsAttendance = /\b(attendance|late|absent|clock)\b/.test(q);
+
+      // Broad "who/which/list" without a specific topic → include the main financial streams
+      const broad = !wantsWithdrawals && !wantsApprovals && !wantsSales && !wantsDeliveries && !wantsPayments && !wantsAttendance;
+
+      if (has("Finance") && (wantsWithdrawals || broad)) {
+        analyticalTasks.push(
+          supabase.from("instant_withdrawals")
+            .select("id,user_id,amount,phone_number,payout_status,payout_ref,created_at,completed_at")
+            .gte("created_at", wsIso).lt("created_at", weIso)
+            .order("created_at", { ascending: false }).limit(25)
+            .then(({ data: d }) => { if (d?.length) data.instant_withdrawals = d; }),
+        );
+        analyticalTasks.push(
+          supabase.from("approval_requests")
+            .select("id,title,requestedby,amount,status,type,department,created_at")
+            .eq("type", "withdrawal")
+            .gte("created_at", wsIso).lt("created_at", weIso)
+            .order("created_at", { ascending: false }).limit(25)
+            .then(({ data: d }) => { if (d?.length) data.withdrawal_requests = d; }),
+        );
+      }
+      if (has("Finance") && (wantsApprovals || broad)) {
+        analyticalTasks.push(
+          supabase.from("approval_requests")
+            .select("id,title,requestedby,amount,status,type,department,created_at")
+            .gte("created_at", wsIso).lt("created_at", weIso)
+            .order("created_at", { ascending: false }).limit(25)
+            .then(({ data: d }) => { if (d?.length) data.recent_approvals = d; }),
+        );
+      }
+      if (has("Sales") && (wantsSales || broad)) {
+        analyticalTasks.push(
+          supabase.from("sales_transactions")
+            .select("id,customer,weight,total_amount,coffee_type,date,truck_details")
+            .gte("date", windowStart.toISOString().slice(0, 10))
+            .lt("date", windowEnd.toISOString().slice(0, 10))
+            .order("date", { ascending: false }).limit(25)
+            .then(({ data: d }) => { if (d?.length) data.recent_sales = d; }),
+        );
+      }
+      if (has("Store") && (wantsDeliveries || broad)) {
+        analyticalTasks.push(
+          supabase.from("coffee_records")
+            .select("id,batch_number,supplier_name,kilograms,coffee_type,date,status")
+            .gte("date", windowStart.toISOString().slice(0, 10))
+            .lt("date", windowEnd.toISOString().slice(0, 10))
+            .order("date", { ascending: false }).limit(25)
+            .then(({ data: d }) => { if (d?.length) data.recent_deliveries = d; }),
+        );
+      }
+      if (has("Finance") && (wantsPayments || broad)) {
+        analyticalTasks.push(
+          supabase.from("supplier_payments")
+            .select("id,batch_number,supplier_id,amount_paid_ugx,status,requested_at")
+            .gte("requested_at", wsIso).lt("requested_at", weIso)
+            .order("requested_at", { ascending: false }).limit(25)
+            .then(({ data: d }) => { if (d?.length) data.recent_supplier_payments = d; }),
+        );
+      }
+
+      await Promise.all(analyticalTasks);
+
+      // Enrich instant_withdrawals with employee names so the AI can name users.
+      if (data.instant_withdrawals?.length) {
+        const userIds = Array.from(new Set(data.instant_withdrawals.map((w: any) => w.user_id).filter(Boolean)));
+        if (userIds.length) {
+          const { data: emps } = await supabase
+            .from("employees")
+            .select("auth_user_id,name,email,phone")
+            .in("auth_user_id", userIds);
+          const byId = new Map((emps || []).map((e: any) => [e.auth_user_id, e]));
+          data.instant_withdrawals = data.instant_withdrawals.map((w: any) => ({
+            ...w,
+            employee_name: byId.get(w.user_id)?.name || null,
+            employee_email: byId.get(w.user_id)?.email || null,
+          }));
+        }
+      }
+    }
+
     await Promise.all(tasks);
     console.log("📊 tables:", Object.keys(data).join(", "));
 
