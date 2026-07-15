@@ -46,6 +46,50 @@ function sanitizeQuery(input: string): string {
     .trim();
 }
 
+function compactTerm(input: string): string {
+  return input.replace(/[(),;:{}[\]<>]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function extractSearchTerms(query: string): string[] {
+  const refs = query.match(/\b[A-Z]{0,10}[-/]?[A-Z0-9]*\d{4,}[A-Z0-9\-/]*\b/gi) || [];
+  const cleaned = compactTerm(
+    query.replace(/\b(show|find|open|view|search|look|for|the|this|that|record|records|document|documents|transaction|transactions|batch|receipt|payment|where|is|are|me)\b/gi, " "),
+  );
+  return Array.from(new Set([...refs.map(compactTerm), cleaned, compactTerm(query)].filter((t) => t.length >= 2))).slice(0, 4);
+}
+
+function orIlike(columns: string[], term: string): string {
+  const like = `%${term}%`;
+  return columns.map((column) => `${column}.ilike.${like}`).join(",");
+}
+
+function pushById(bucket: Record<string, any>, rows: any[] | null | undefined) {
+  for (const row of rows || []) if (row?.id) bucket[String(row.id)] = row;
+}
+
+async function deepSearch(
+  supabase: ReturnType<typeof createClient>,
+  table: string,
+  select: string,
+  columns: string[],
+  terms: string[],
+  limit = 20,
+) {
+  const bucket: Record<string, any> = {};
+  await Promise.all(terms.map((term) =>
+    supabase
+      .from(table)
+      .select(select)
+      .or(orIlike(columns, term))
+      .limit(limit)
+      .then(({ data, error }) => {
+        if (error) console.warn(`Deep search skipped ${table}:`, error.message);
+        else pushById(bucket, data as any[]);
+      }),
+  ));
+  return Object.values(bucket).slice(0, limit);
+}
+
 // ---------- Capability registry: creates & admin actions ----------
 // Each entry describes a task the AI can propose. The AI never invents new
 // entries; it can only reference `id`s in this list. Frontend renders a
@@ -195,6 +239,7 @@ serve(async (req) => {
     }
 
     const sanitizedQuery = sanitizeQuery(query);
+    const searchTerms = extractSearchTerms(sanitizedQuery);
     console.log(`🧠 AI Command: "${sanitizedQuery}" by ${userEmail}`);
 
     // Pull permission-filtered data snapshots
@@ -203,18 +248,27 @@ serve(async (req) => {
     const data: Record<string, any[]> = {};
     const tasks: PromiseLike<void>[] = [];
 
-    const like = `%${sanitizedQuery}%`;
-    tasks.push(supabase.from("suppliers").select("id,name,code,phone,origin,status").or(`name.ilike.${like},code.ilike.${like},phone.ilike.${like}`).limit(10).then(({ data: d }) => { if (d?.length) data.suppliers = d; }));
-    tasks.push(supabase.from("coffee_records").select("id,batch_number,supplier_name,kilograms,coffee_type,date,status").or(`batch_number.ilike.${like},supplier_name.ilike.${like}`).limit(10).then(({ data: d }) => { if (d?.length) data.coffee_records = d; }));
-    tasks.push(supabase.from("employees").select("id,name,position,department,employee_id,email").or(`name.ilike.${like},employee_id.ilike.${like},email.ilike.${like},department.ilike.${like},position.ilike.${like}`).limit(10).then(({ data: d }) => { if (d?.length) data.employees = d; }));
-    if (has("EUDR") || has("Store")) tasks.push(supabase.from("eudr_documents").select("id,batch_number,coffee_type,total_kilograms,status,date").or(`batch_number.ilike.${like},coffee_type.ilike.${like}`).limit(10).then(({ data: d }) => { if (d?.length) data.eudr_documents = d; }));
-    if (has("Finance")) tasks.push(supabase.from("supplier_payments").select("id,batch_number,supplier_id,amount_paid_ugx,status,requested_at").or(`batch_number.ilike.${like},status.ilike.${like}`).limit(10).then(({ data: d }) => { if (d?.length) data.supplier_payments = d; }));
-    if (has("Finance")) tasks.push(supabase.from("approval_requests").select("id,title,requestedby,amount,status,type,department,created_at").or(`title.ilike.${like},requestedby.ilike.${like},type.ilike.${like}`).limit(10).then(({ data: d }) => { if (d?.length) data.approval_requests = d; }));
-    if (has("Quality")) tasks.push(supabase.from("quality_assessments").select("id,batch_number,moisture,status,created_at").ilike("batch_number", like).limit(10).then(({ data: d }) => { if (d?.length) data.quality_assessments = d; }));
-    if (has("Sales")) tasks.push(supabase.from("sales_transactions").select("id,customer,weight,total_amount,coffee_type,date,truck_details").or(`customer.ilike.${like},coffee_type.ilike.${like},truck_details.ilike.${like}`).limit(10).then(({ data: d }) => { if (d?.length) data.sales_transactions = d; }));
-    if (has("Store")) tasks.push(supabase.from("inventory_batches").select("id,batch_code,coffee_type,total_kilograms,remaining_kilograms,status").or(`batch_code.ilike.${like},coffee_type.ilike.${like}`).limit(10).then(({ data: d }) => { if (d?.length) data.inventory_batches = d; }));
-    if (has("Store")) tasks.push(supabase.from("store_records").select("id,batch_number,supplier_name,quantity_kg,transaction_date,reference_number").or(`batch_number.ilike.${like},supplier_name.ilike.${like},reference_number.ilike.${like}`).limit(10).then(({ data: d }) => { if (d?.length) data.store_records = d; }));
-    if (has("Human Resources")) tasks.push(supabase.from("overtime_awards").select("id,reference_number,employee_name,employee_email,amount,status").or(`reference_number.ilike.${like},employee_name.ilike.${like},employee_email.ilike.${like}`).limit(10).then(({ data: d }) => { if (d?.length) data.overtime_awards = d; }));
+    tasks.push(deepSearch(supabase, "suppliers", "id,name,code,phone,origin,status", ["name", "code", "phone", "origin"], searchTerms, 10).then((d) => { if (d.length) data.suppliers = d; }));
+    tasks.push(deepSearch(supabase, "coffee_records", "id,batch_number,supplier_name,kilograms,coffee_type,date,status", ["batch_number", "supplier_name", "coffee_type", "status"], searchTerms, 10).then((d) => { if (d.length) data.coffee_records = d; }));
+    tasks.push(deepSearch(supabase, "employees", "id,name,position,department,employee_id,email", ["name", "employee_id", "email", "department", "position"], searchTerms, 10).then((d) => { if (d.length) data.employees = d; }));
+    if (has("EUDR") || has("Store")) tasks.push(deepSearch(supabase, "eudr_documents", "id,batch_number,coffee_type,total_kilograms,status,date", ["batch_number", "coffee_type", "status", "documentation_notes"], searchTerms, 10).then((d) => { if (d.length) data.eudr_documents = d; }));
+    if (has("EUDR") || has("Store")) tasks.push(deepSearch(supabase, "eudr_batches", "id,document_id,batch_sequence,batch_identifier,kilograms,available_kilograms,status,created_at", ["batch_identifier", "status"], searchTerms, 10).then((d) => { if (d.length) data.eudr_batches = d; }));
+    if (has("Finance")) tasks.push(deepSearch(supabase, "supplier_payments", "id,lot_id,supplier_id,amount_paid_ugx,status,requested_at,reference,external_reference,transaction_id,provider_name,provider_status,provider_message,payment_date", ["reference", "external_reference", "transaction_id", "provider_name", "provider_status", "provider_message", "status"], searchTerms, 10).then((d) => { if (d.length) data.supplier_payments = d; }));
+    if (has("Finance")) tasks.push(deepSearch(supabase, "finance_coffee_lots", "id,quality_assessment_id,coffee_record_id,supplier_id,batch_number,total_amount_ugx,amount_paid_ugx,payment_status,finance_status,grn_number,grn_file_url,created_at", ["batch_number", "grn_number", "payment_status", "finance_status"], searchTerms, 10).then((d) => { if (d.length) data.finance_coffee_lots = d; }));
+    if (has("Finance")) tasks.push(deepSearch(supabase, "payment_receipts", "id,lot_id,receipt_url,receipt_name,receipt_type,uploaded_by,notes,created_at", ["lot_id", "receipt_name", "receipt_type", "uploaded_by", "notes"], searchTerms, 10).then((d) => { if (d.length) data.payment_receipts = d; }));
+    if (has("Finance")) tasks.push(deepSearch(supabase, "receipts", "id,doc_type,doc_id,issued_at,issued_by,receipt_no,created_at", ["doc_type", "doc_id", "issued_by", "receipt_no"], searchTerms, 10).then((d) => { if (d.length) data.receipts = d; }));
+    if (has("Finance")) tasks.push(deepSearch(supabase, "approval_requests", "id,title,requestedby,amount,status,type,department,created_at", ["title", "requestedby", "type", "department", "status"], searchTerms, 10).then((d) => { if (d.length) data.approval_requests = d; }));
+    if (has("Finance")) tasks.push(deepSearch(supabase, "ledger_entries", "id,user_id,entry_type,amount,reference,source_category,metadata,created_at", ["reference", "entry_type", "source_category"], searchTerms, 10).then((d) => { if (d.length) data.ledger_entries = d; }));
+    if (has("Finance")) tasks.push(deepSearch(supabase, "instant_withdrawals", "id,user_id,amount,phone_number,payout_status,payout_ref,ledger_reference,created_at,completed_at", ["phone_number", "payout_status", "payout_ref", "ledger_reference"], searchTerms, 10).then((d) => { if (d.length) data.instant_withdrawals = d; }));
+    if (has("Finance")) tasks.push(deepSearch(supabase, "mobile_money_transactions", "id,user_id,transaction_ref,phone,amount,transaction_type,status,provider,created_at,completed_at", ["transaction_ref", "phone", "transaction_type", "status", "provider"], searchTerms, 10).then((d) => { if (d.length) data.mobile_money_transactions = d; }));
+    if (has("Quality")) tasks.push(deepSearch(supabase, "quality_assessments", "id,batch_number,moisture,status,assessed_by,assessment_ref,final_price,created_at", ["batch_number", "status", "assessed_by", "assessment_ref"], searchTerms, 10).then((d) => { if (d.length) data.quality_assessments = d; }));
+    if (has("Quality")) tasks.push(deepSearch(supabase, "quality_reevaluations", "id,original_assessment_id,batch_number,comment,evaluated_by,evaluated_at,created_at", ["batch_number", "comment", "evaluated_by"], searchTerms, 10).then((d) => { if (d.length) data.quality_reevaluations = d; }));
+    if (has("Sales")) tasks.push(deepSearch(supabase, "sales_transactions", "id,customer,weight,total_amount,coffee_type,date,truck_details,status", ["customer", "coffee_type", "truck_details", "status"], searchTerms, 10).then((d) => { if (d.length) data.sales_transactions = d; }));
+    if (has("Sales") || has("Store")) tasks.push(deepSearch(supabase, "sales_inventory_tracking", "id,sale_id,coffee_record_id,batch_number,coffee_type,quantity_kg,sale_date,customer_name,price_per_kg,payment_method,created_at", ["batch_number", "coffee_type", "customer_name", "payment_method"], searchTerms, 10).then((d) => { if (d.length) data.sales_inventory_tracking = d; }));
+    if (has("Store")) tasks.push(deepSearch(supabase, "inventory_batches", "id,batch_code,coffee_type,total_kilograms,remaining_kilograms,status,batch_date", ["batch_code", "coffee_type", "status"], searchTerms, 10).then((d) => { if (d.length) data.inventory_batches = d; }));
+    if (has("Store")) tasks.push(deepSearch(supabase, "inventory_batch_sources", "id,batch_id,coffee_record_id,kilograms,supplier_name,purchase_date,eudr_traced,eudr_document_id,eudr_batch_id,created_at", ["supplier_name"], searchTerms, 10).then((d) => { if (d.length) data.inventory_batch_sources = d; }));
+    if (has("Store")) tasks.push(deepSearch(supabase, "store_records", "id,batch_number,supplier_name,quantity_kg,transaction_date,reference_number,status", ["batch_number", "supplier_name", "reference_number", "status"], searchTerms, 10).then((d) => { if (d.length) data.store_records = d; }));
+    if (has("Human Resources")) tasks.push(deepSearch(supabase, "overtime_awards", "id,reference_number,employee_name,employee_email,amount,status", ["reference_number", "employee_name", "employee_email", "status"], searchTerms, 10).then((d) => { if (d.length) data.overtime_awards = d; }));
 
     // ---------- Analytical / time-window fetch ----------
     // For questions like "who withdrew yesterday", "list pending payouts today",
@@ -462,7 +516,7 @@ Rules:
     const dataIds = new Set<string>();
     for (const rows of Object.values(data)) for (const r of rows) if (r?.id) dataIds.add(String(r.id));
 
-    const records = Array.isArray(parsed.records) ? parsed.records
+    const aiRecords = Array.isArray(parsed.records) ? parsed.records
       .filter((r: any) => r?.id && dataIds.has(String(r.id))) // must be real
       .slice(0, 8)
       .map((r: any) => {
@@ -479,6 +533,16 @@ Rules:
           relevance: Number(r.relevance) || 60,
         };
       }) : [];
+
+    const deterministicRecords = buildDeterministicRecords(sanitizedQuery, data);
+    const recordIndex = new Map<string, any>();
+    [...deterministicRecords, ...aiRecords]
+      .sort((a, b) => (Number(b.relevance) || 0) - (Number(a.relevance) || 0))
+      .forEach((record) => {
+        const key = `${record.type}:${record.id}`;
+        if (!recordIndex.has(key)) recordIndex.set(key, record);
+      });
+    const records = Array.from(recordIndex.values()).slice(0, 8);
 
     const navigations = Array.isArray(parsed.navigations) ? parsed.navigations
       .slice(0, 4)
@@ -520,12 +584,18 @@ Rules:
     }
 
     // Guarantee we NEVER return an empty response
-    if (records.length === 0 && creates.length === 0 && actions.length === 0 && navigations.length === 0) {
+    const visibleCreates = records.length ? [] : creates;
+
+    if (records.length && /\b(no|not|couldn['’]?t|cannot)\b.*\b(record|found|exist|match)/i.test(answer)) {
+      answer = `I found existing records for "${sanitizedQuery}". Use View to open the exact document, transaction, or page.`;
+    }
+
+    if (records.length === 0 && visibleCreates.length === 0 && actions.length === 0 && navigations.length === 0) {
       const fb = fallbackResponse(sanitizedQuery, data, availableCapabilities);
       return json({ ...fb, answer: answer || fb.answer });
     }
 
-    return json({ answer, records, navigations, creates, actions });
+    return json({ answer, records, navigations, creates: visibleCreates, actions });
   } catch (err) {
     console.error("AI Command error:", err);
     return json({
@@ -545,26 +615,77 @@ function json(payload: unknown, status = 200) {
   });
 }
 
-function fallbackResponse(q: string, data: Record<string, any[]>, caps: Capability[]) {
-  const records: any[] = [];
-  const push = (id: string, type: string, title: string, subtitle: string, route: string) => {
-    const params = new URLSearchParams({ highlight: String(id), search: q, type });
-    records.push({ id: String(id), type, title, subtitle, url: `${route}?${params}`, relevance: 70 });
-  };
-  (data.suppliers || []).slice(0, 3).forEach((s: any) => push(s.id, "supplier", s.name, `${s.code || ""} • ${s.origin || ""}`, "/suppliers"));
-  (data.coffee_records || []).slice(0, 3).forEach((r: any) => push(r.id, "batch", `Batch ${r.batch_number}`, `${r.supplier_name} • ${r.kilograms}kg`, "/store"));
-  (data.employees || []).slice(0, 3).forEach((e: any) => push(e.id, "employee", e.name, `${e.position || ""} • ${e.department || ""}`, "/human-resources"));
-  (data.eudr_documents || []).slice(0, 2).forEach((d: any) => push(d.id, "eudr", `EUDR ${d.batch_number}`, `${d.coffee_type} • ${d.status}`, "/eudr-documentation"));
+function deepUrl(route: string, q: string, type: string, id: unknown, extra: Record<string, unknown> = {}) {
+  const params = new URLSearchParams({ highlight: String(id), id: String(id), search: q, type });
+  for (const [key, value] of Object.entries(extra)) {
+    if (value !== null && value !== undefined && String(value).trim()) params.set(key, String(value));
+  }
+  return `${route}?${params.toString()}`;
+}
 
-  const creates = caps.filter((c) => c.kind === "create").slice(0, 3).map((c) => ({
+function documentUrl(url: unknown, fallback: string) {
+  const raw = String(url || "").trim();
+  return /^https?:\/\//i.test(raw) ? raw : fallback;
+}
+
+function buildDeterministicRecords(q: string, data: Record<string, any[]>) {
+  const records: any[] = [];
+  const push = (id: unknown, type: string, title: string, subtitle: string, route: string, relevance = 90, extra: Record<string, unknown> = {}) => {
+    records.push({ id: String(id), type, title, subtitle, url: deepUrl(route, q, type, id, extra), relevance });
+  };
+  const pushDoc = (id: unknown, type: string, title: string, subtitle: string, url: unknown, fallbackRoute: string, relevance = 96, extra: Record<string, unknown> = {}) => {
+    const fallback = deepUrl(fallbackRoute, q, type, id, extra);
+    records.push({ id: String(id), type, title, subtitle, url: documentUrl(url, fallback), relevance });
+  };
+
+  (data.coffee_records || []).forEach((r: any) => push(r.id, "batch", `View batch ${r.batch_number}`, `${r.supplier_name || "Coffee record"} • ${r.kilograms || 0}kg • ${r.status || "recorded"}`, "/store", 98, { batch: r.batch_number }));
+  (data.store_records || []).forEach((r: any) => push(r.id, "batch", `View store record ${r.batch_number || r.reference_number}`, `${r.supplier_name || "Store"} • ${r.quantity_kg || 0}kg • ${r.status || "recorded"}`, "/store", 97, { batch: r.batch_number, reference: r.reference_number }));
+  (data.inventory_batches || []).forEach((r: any) => push(r.id, "inventory", `View inventory batch ${r.batch_code}`, `${r.coffee_type || "Coffee"} • ${r.remaining_kilograms ?? r.total_kilograms ?? 0}kg remaining • ${r.status || "active"}`, "/inventory", 97, { batch: r.batch_code }));
+  (data.inventory_batch_sources || []).forEach((r: any) => push(r.id, "inventory", `View batch source ${r.supplier_name || r.id}`, `${r.kilograms || 0}kg • purchased ${r.purchase_date || ""}`, "/inventory", 92, { batch_id: r.batch_id, coffee_record_id: r.coffee_record_id }));
+  (data.quality_assessments || []).forEach((r: any) => push(r.id, "quality", `View quality assessment ${r.batch_number}`, `${r.status || "assessed"} • moisture ${r.moisture ?? "-"}% • assessed by ${r.assessed_by || "quality"}`, "/quality-control", 96, { batch: r.batch_number, assessment_ref: r.assessment_ref }));
+  (data.quality_reevaluations || []).forEach((r: any) => push(r.id, "quality", `View quality re-evaluation ${r.batch_number}`, `${r.evaluated_by || "Evaluator"} • ${r.comment || "Re-evaluation record"}`, "/quality-control", 91, { batch: r.batch_number, original_assessment_id: r.original_assessment_id }));
+  (data.eudr_documents || []).forEach((r: any) => push(r.id, "eudr", `View EUDR document ${r.batch_number}`, `${r.coffee_type || "Coffee"} • ${r.total_kilograms ?? 0}kg • ${r.status || "documented"}`, "/eudr-documentation", 96, { batch: r.batch_number }));
+  (data.eudr_batches || []).forEach((r: any) => push(r.id, "eudr", `View EUDR batch ${r.batch_identifier}`, `${r.kilograms ?? 0}kg • ${r.status || "active"}`, "/eudr-documentation", 95, { batch: r.batch_identifier, document_id: r.document_id }));
+  (data.finance_coffee_lots || []).forEach((r: any) => pushDoc(r.id, "payment", `View coffee lot payment ${r.batch_number || r.grn_number}`, `${r.payment_status || r.finance_status || "finance"} • UGX ${Number(r.amount_paid_ugx || r.total_amount_ugx || 0).toLocaleString()} • GRN ${r.grn_number || "-"}`, r.grn_file_url, "/v2/finance", 95, { batch: r.batch_number, lot_id: r.id, grn: r.grn_number }));
+  (data.supplier_payments || []).forEach((r: any) => push(r.id, "payment", `View supplier payment ${r.reference || r.transaction_id || r.id}`, `UGX ${Number(r.amount_paid_ugx || 0).toLocaleString()} • ${r.status || r.provider_status || "payment"} • ${r.provider_name || "Finance"}`, "/v2/finance", 94, { reference: r.reference, transaction_id: r.transaction_id, lot_id: r.lot_id }));
+  (data.payment_receipts || []).forEach((r: any) => pushDoc(r.id, "receipt", `View receipt document ${r.receipt_name || r.id}`, `${r.receipt_type || "Receipt"} • lot ${r.lot_id || "-"} • uploaded by ${r.uploaded_by || "finance"}`, r.receipt_url, "/v2/finance", 99, { lot_id: r.lot_id }));
+  (data.receipts || []).forEach((r: any) => push(r.id, "receipt", `View receipt ${r.receipt_no || r.id}`, `${r.doc_type || "Document"} • issued by ${r.issued_by || "system"}`, "/v2/finance", 93, { doc_id: r.doc_id, receipt_no: r.receipt_no }));
+  (data.ledger_entries || []).forEach((r: any) => push(r.id, "transaction", `View ledger transaction ${r.reference || r.id}`, `${r.entry_type || "entry"} • UGX ${Number(r.amount || 0).toLocaleString()} • ${r.source_category || "ledger"}`, "/finance", 93, { reference: r.reference }));
+  (data.instant_withdrawals || []).forEach((r: any) => push(r.id, "transaction", `View instant withdrawal ${r.payout_ref || r.ledger_reference || r.id}`, `UGX ${Number(r.amount || 0).toLocaleString()} • ${r.payout_status || "pending"} • ${r.employee_name || r.phone_number || "user"}`, "/finance", 93, { reference: r.payout_ref || r.ledger_reference }));
+  (data.mobile_money_transactions || []).forEach((r: any) => push(r.id, "transaction", `View mobile money transaction ${r.transaction_ref || r.id}`, `UGX ${Number(r.amount || 0).toLocaleString()} • ${r.transaction_type || "transaction"} • ${r.status || "status"}`, "/finance", 92, { reference: r.transaction_ref }));
+  (data.approval_requests || []).forEach((r: any) => push(r.id, "expense", `View approval ${r.title || r.type || r.id}`, `${r.requestedby || "Requester"} • UGX ${Number(r.amount || 0).toLocaleString()} • ${r.status || "pending"}`, "/approvals", 91));
+  (data.sales_transactions || []).forEach((r: any) => push(r.id, "sale", `View sale to ${r.customer || "customer"}`, `${r.coffee_type || "Coffee"} • ${r.weight || 0}kg • UGX ${Number(r.total_amount || 0).toLocaleString()}`, "/sales-marketing", 90));
+  (data.sales_inventory_tracking || []).forEach((r: any) => push(r.id, "sale", `View sale allocation ${r.batch_number}`, `${r.customer_name || "Customer"} • ${r.quantity_kg || 0}kg • ${r.payment_method || "sale"}`, "/sales-marketing", 90, { batch: r.batch_number, sale_id: r.sale_id }));
+  (data.suppliers || []).forEach((s: any) => push(s.id, "supplier", `View supplier ${s.name}`, `${s.code || ""} • ${s.origin || ""} • ${s.status || "active"}`, "/suppliers", 88));
+  (data.employees || []).forEach((e: any) => push(e.id, "employee", `View employee ${e.name}`, `${e.position || ""} • ${e.department || ""} • ${e.employee_id || ""}`, "/human-resources", 88));
+  (data.overtime_awards || []).forEach((r: any) => push(r.id, "overtime", `View overtime award ${r.reference_number || r.id}`, `${r.employee_name || "Employee"} • UGX ${Number(r.amount || 0).toLocaleString()} • ${r.status || "status"}`, "/human-resources", 88));
+
+  const seen = new Set<string>();
+  return records
+    .sort((a, b) => (Number(b.relevance) || 0) - (Number(a.relevance) || 0))
+    .filter((record) => {
+      const key = `${record.type}:${record.id}:${record.url}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 12);
+}
+
+function fallbackResponse(q: string, data: Record<string, any[]>, caps: Capability[]) {
+  const records = buildDeterministicRecords(q, data).slice(0, 8);
+
+  const creates = records.length ? [] : caps.filter((c) => c.kind === "create").slice(0, 3).map((c) => ({
     capability_id: c.id, kind: "create", label: c.label, summary: c.description, url: c.route, params: {},
   }));
-  const actions = caps.filter((c) => c.kind === "action").slice(0, 2).map((c) => ({
+  const actions = records.length ? [] : caps.filter((c) => c.kind === "action").slice(0, 2).map((c) => ({
     capability_id: c.id, kind: "action", label: c.label, summary: c.description, url: c.route, params: {},
   }));
 
   return {
-    answer: `Here's what I could pull together for "${q}". Pick any record or task below.`,
+    answer: records.length
+      ? `I found existing records for "${q}". Use View to open the document, transaction, or page.`
+      : `I did not find an existing record for "${q}". Use the available create/action option if this is new.`,
     records, navigations: [
       { label: "Dashboard", url: "/" }, { label: "Approvals", url: "/approvals" },
     ], creates, actions,
