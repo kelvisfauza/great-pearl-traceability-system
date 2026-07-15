@@ -516,7 +516,7 @@ Rules:
     const dataIds = new Set<string>();
     for (const rows of Object.values(data)) for (const r of rows) if (r?.id) dataIds.add(String(r.id));
 
-    const records = Array.isArray(parsed.records) ? parsed.records
+    const aiRecords = Array.isArray(parsed.records) ? parsed.records
       .filter((r: any) => r?.id && dataIds.has(String(r.id))) // must be real
       .slice(0, 8)
       .map((r: any) => {
@@ -533,6 +533,16 @@ Rules:
           relevance: Number(r.relevance) || 60,
         };
       }) : [];
+
+    const deterministicRecords = buildDeterministicRecords(sanitizedQuery, data);
+    const recordIndex = new Map<string, any>();
+    [...deterministicRecords, ...aiRecords]
+      .sort((a, b) => (Number(b.relevance) || 0) - (Number(a.relevance) || 0))
+      .forEach((record) => {
+        const key = `${record.type}:${record.id}`;
+        if (!recordIndex.has(key)) recordIndex.set(key, record);
+      });
+    const records = Array.from(recordIndex.values()).slice(0, 8);
 
     const navigations = Array.isArray(parsed.navigations) ? parsed.navigations
       .slice(0, 4)
@@ -574,12 +584,14 @@ Rules:
     }
 
     // Guarantee we NEVER return an empty response
-    if (records.length === 0 && creates.length === 0 && actions.length === 0 && navigations.length === 0) {
+    const visibleCreates = records.length ? creates.slice(0, 2) : creates;
+
+    if (records.length === 0 && visibleCreates.length === 0 && actions.length === 0 && navigations.length === 0) {
       const fb = fallbackResponse(sanitizedQuery, data, availableCapabilities);
       return json({ ...fb, answer: answer || fb.answer });
     }
 
-    return json({ answer, records, navigations, creates, actions });
+    return json({ answer, records, navigations, creates: visibleCreates, actions });
   } catch (err) {
     console.error("AI Command error:", err);
     return json({
