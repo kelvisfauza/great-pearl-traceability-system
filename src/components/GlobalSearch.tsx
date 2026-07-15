@@ -23,6 +23,7 @@ function recordIcon(type: string) {
     case "employee": return <User className={cls} />;
     case "batch": case "inventory": return <Package className={cls} />;
     case "payment": case "expense": case "transaction": return <DollarSign className={cls} />;
+    case "receipt": return <FileText className={cls} />;
     case "quality": return <ClipboardCheck className={cls} />;
     case "eudr": return <FileText className={cls} />;
     case "sale": return <TrendingUp className={cls} />;
@@ -67,7 +68,12 @@ const GlobalSearch = () => {
     }
   }, [isOpen, pendingTask]);
 
-  const go = (url: string) => { navigate(url); setIsOpen(false); setQuery(""); };
+  const go = (url: string) => {
+    if (/^https?:\/\//i.test(url)) window.open(url, "_blank", "noopener,noreferrer");
+    else navigate(url);
+    setIsOpen(false);
+    setQuery("");
+  };
   const confirmTask = () => {
     if (!pendingTask) return;
     const url = pendingTask.url;
@@ -193,7 +199,8 @@ const GlobalSearch = () => {
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
                               <span className="truncate font-medium text-sm">{r.title}</span>
-                              <Badge variant="secondary" className="shrink-0 text-[10px]">{r.type}</Badge>
+                               <Badge variant="secondary" className="shrink-0 text-[10px]">{r.type}</Badge>
+                               <Badge variant="outline" className="shrink-0 text-[10px]">View</Badge>
                             </div>
                             {r.subtitle && (
                               <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
