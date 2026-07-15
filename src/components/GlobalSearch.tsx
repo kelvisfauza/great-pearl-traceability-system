@@ -175,10 +175,14 @@ const GlobalSearch = () => {
   };
 
   const handleResultClick = (result: AISearchResult) => {
-    // Build URL with highlight parameters
-    const basePath = result.navigateTo.split('?')[0];
-    const highlightUrl = buildHighlightUrl(basePath, result.id, result.type, searchTerm);
-    navigate(highlightUrl);
+    // Preserve the original query (e.g. ?id=, ?batch=, ?payment=) so the target
+    // page can open the specific record, and append highlight params on top.
+    const [basePath, existingQuery = ''] = result.navigateTo.split('?');
+    const params = new URLSearchParams(existingQuery);
+    params.set('highlight', result.id);
+    params.set('type', result.type);
+    if (searchTerm) params.set('search', searchTerm);
+    navigate(`${basePath}?${params.toString()}`);
     setIsOpen(false);
     setSearchTerm('');
   };
