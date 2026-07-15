@@ -175,13 +175,50 @@ const GlobalSearch = () => {
   };
 
   const handleResultClick = (result: AISearchResult) => {
-    // Preserve the original query (e.g. ?id=, ?batch=, ?payment=) so the target
-    // page can open the specific record, and append highlight params on top.
-    const [basePath, existingQuery = ''] = result.navigateTo.split('?');
+    // Map result type -> a REAL route that exists in the app router.
+    // The AI can occasionally invent paths like `/inventory/batches/:id`
+    // which don't exist and produce a 404. Always normalize by type.
+    const TYPE_ROUTES: Record<string, string> = {
+      supplier: '/suppliers',
+      batch: '/store',
+      inventory: '/store',
+      quality: '/quality-control',
+      eudr: '/eudr-documentation',
+      employee: '/human-resources',
+      overtime: '/human-resources',
+      payment: '/v2/finance',
+      expense: '/expenses',
+      transaction: '/v2/finance',
+      department: '/',
+    };
+    // Known top-level routes we trust from the AI navigateTo.
+    const KNOWN_ROUTES = new Set([
+      '/', '/suppliers', '/store', '/quality-control', '/eudr-documentation',
+      '/human-resources', '/finance', '/v2/finance', '/expenses', '/reports',
+      '/inventory', '/sales-marketing', '/procurement', '/coffee-bookings',
+      '/logistics', '/processing', '/milling', '/field-operations',
+      '/data-analyst', '/it-department', '/settings', '/approvals',
+      '/admin', '/attendance', '/daily-reports',
+    ]);
+
+    const [aiPath, existingQuery = ''] = (result.navigateTo || '').split('?');
+    const trustedPath = KNOWN_ROUTES.has(aiPath) ? aiPath : null;
+    const basePath = trustedPath || TYPE_ROUTES[result.type] || '/';
+
     const params = new URLSearchParams(existingQuery);
+    // If we fell back (AI path wasn't a known route), drop any AI query
+    // params that referenced the invented path.
+    if (!trustedPath) {
+      for (const key of Array.from(params.keys())) params.delete(key);
+    }
     params.set('highlight', result.id);
     params.set('type', result.type);
     if (searchTerm) params.set('search', searchTerm);
+    // For batch-like results, also pass batch_number when available so the
+    // destination page can open the exact record.
+    const batchNo = (result as any)?.metadata?.batch_number;
+    if (batchNo && !params.has('batch')) params.set('batch', String(batchNo));
+
     navigate(`${basePath}?${params.toString()}`);
     setIsOpen(false);
     setSearchTerm('');
