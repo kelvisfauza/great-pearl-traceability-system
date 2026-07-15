@@ -46,6 +46,48 @@ function sanitizeQuery(input: string): string {
     .trim();
 }
 
+function compactTerm(input: string): string {
+  return input.replace(/[(),;:{}[\]<>]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function extractSearchTerms(query: string): string[] {
+  const refs = query.match(/\b[A-Z]{0,10}[-/]?[A-Z0-9]*\d{4,}[A-Z0-9\-/]*\b/gi) || [];
+  const cleaned = compactTerm(
+    query.replace(/\b(show|find|open|view|search|look|for|the|this|that|record|records|document|documents|transaction|transactions|batch|receipt|payment|where|is|are|me)\b/gi, " "),
+  );
+  return Array.from(new Set([...refs.map(compactTerm), cleaned, compactTerm(query)].filter((t) => t.length >= 2))).slice(0, 4);
+}
+
+function orIlike(columns: string[], term: string): string {
+  const like = `%${term}%`;
+  return columns.map((column) => `${column}.ilike.${like}`).join(",");
+}
+
+function pushById(bucket: Record<string, any>, rows: any[] | null | undefined) {
+  for (const row of rows || []) if (row?.id) bucket[String(row.id)] = row;
+}
+
+async function deepSearch(
+  supabase: ReturnType<typeof createClient>,
+  table: string,
+  select: string,
+  columns: string[],
+  terms: string[],
+  limit = 20,
+) {
+  const bucket: Record<string, any> = {};
+  await Promise.all(terms.map((term) =>
+    supabase
+      .from(table)
+      .select(select)
+      .or(orIlike(columns, term))
+      .limit(limit)
+      .then(({ data }) => pushById(bucket, data as any[]))
+      .catch((error) => console.warn(`Deep search skipped ${table}:`, error?.message || error)),
+  ));
+  return Object.values(bucket).slice(0, limit);
+}
+
 // ---------- Capability registry: creates & admin actions ----------
 // Each entry describes a task the AI can propose. The AI never invents new
 // entries; it can only reference `id`s in this list. Frontend renders a
