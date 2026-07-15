@@ -82,8 +82,10 @@ async function deepSearch(
       .select(select)
       .or(orIlike(columns, term))
       .limit(limit)
-      .then(({ data }) => pushById(bucket, data as any[]))
-      .catch((error) => console.warn(`Deep search skipped ${table}:`, error?.message || error)),
+      .then(({ data, error }) => {
+        if (error) console.warn(`Deep search skipped ${table}:`, error.message);
+        else pushById(bucket, data as any[]);
+      }),
   ));
   return Object.values(bucket).slice(0, limit);
 }
