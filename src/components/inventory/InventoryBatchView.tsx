@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -14,8 +15,44 @@ const isArabica = (type: string) => type?.toLowerCase().includes('arabica');
 
 const InventoryBatchView = () => {
   const { batches, loading, getSummary, fetchBatches } = useInventoryBatches();
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialSearch = searchParams.get("search") || searchParams.get("highlight") || "";
+  const highlightTarget = (searchParams.get("highlight") || searchParams.get("search") || "").toLowerCase();
+  const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [coffeeTypeFilter, setCoffeeTypeFilter] = useState<string>("all");
+
+  // Which tab to open initially based on which pool the highlighted batch lives in
+  const initialTab = useMemo(() => {
+    if (!highlightTarget) return "active";
+    const inSoldOut = batches.some(
+      (b) => b.status === "sold_out" && b.batch_code?.toLowerCase().includes(highlightTarget)
+    );
+    return inSoldOut ? "soldout" : "active";
+  }, [batches, highlightTarget]);
+
+  // Scroll + pulse the matched batch card once batches are loaded
+  useEffect(() => {
+    if (!highlightTarget || loading) return;
+    const match = batches.find((b) => b.batch_code?.toLowerCase().includes(highlightTarget));
+    if (!match) return;
+    const t = setTimeout(() => {
+      const el = document.getElementById(`batch-${match.batch_code}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("animate-highlight-pulse", "ring-2", "ring-primary", "rounded-lg");
+        setTimeout(() => {
+          el.classList.remove("animate-highlight-pulse", "ring-2", "ring-primary", "rounded-lg");
+          // Clean URL after highlight expires
+          const next = new URLSearchParams(searchParams);
+          next.delete("highlight");
+          next.delete("type");
+          next.delete("search");
+          setSearchParams(next, { replace: true });
+        }, 4000);
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [batches, loading, highlightTarget]);
   
   const summary = getSummary();
   
@@ -185,7 +222,7 @@ const InventoryBatchView = () => {
       </div>
 
       {/* Batch Tabs */}
-      <Tabs defaultValue="active" className="space-y-4">
+      <Tabs value={initialTab} defaultValue={initialTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="active" className="gap-2">
             <Package className="h-4 w-4" />
@@ -210,7 +247,9 @@ const InventoryBatchView = () => {
             </Card>
           ) : (
             filterBatches(activeBatches).map(batch => (
-              <BatchCard key={batch.id} batch={batch} />
+              <div key={batch.id} id={`batch-${batch.batch_code}`}>
+                <BatchCard batch={batch} />
+              </div>
             ))
           )}
         </TabsContent>
@@ -228,7 +267,9 @@ const InventoryBatchView = () => {
             </Card>
           ) : (
             filterBatches(soldOutBatches).map(batch => (
-              <BatchCard key={batch.id} batch={batch} />
+              <div key={batch.id} id={`batch-${batch.batch_code}`}>
+                <BatchCard batch={batch} />
+              </div>
             ))
           )}
         </TabsContent>
