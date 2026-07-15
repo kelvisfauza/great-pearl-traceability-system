@@ -21,13 +21,14 @@ const InventoryBatchView = () => {
   const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [coffeeTypeFilter, setCoffeeTypeFilter] = useState<string>("all");
 
-  // Which tab to open initially based on which pool the highlighted batch lives in
-  const initialTab = useMemo(() => {
-    if (!highlightTarget) return "active";
+  const [activeTab, setActiveTab] = useState<string>("active");
+  // Switch to the tab that contains the highlighted batch, once batches load
+  useEffect(() => {
+    if (!highlightTarget) return;
     const inSoldOut = batches.some(
       (b) => b.status === "sold_out" && b.batch_code?.toLowerCase().includes(highlightTarget)
     );
-    return inSoldOut ? "soldout" : "active";
+    setActiveTab(inSoldOut ? "soldout" : "active");
   }, [batches, highlightTarget]);
 
   // Scroll + pulse the matched batch card once batches are loaded
@@ -222,7 +223,7 @@ const InventoryBatchView = () => {
       </div>
 
       {/* Batch Tabs */}
-      <Tabs value={initialTab} defaultValue={initialTab} className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="active" className="gap-2">
             <Package className="h-4 w-4" />
