@@ -201,6 +201,7 @@ const App: React.ComponentType = () => {
               {/* <RoleNotificationHandler /> - Disabled due to performance issues */}
               
               <MarqueeBanner />
+              <GlobalHighlightBridge />
               <Routes>
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
