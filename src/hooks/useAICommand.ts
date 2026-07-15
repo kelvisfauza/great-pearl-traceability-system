@@ -43,19 +43,37 @@ export function useAICommand(query: string, debounceMs = 350) {
     setLoading(true); setError(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setData({
+          ...EMPTY,
+          answer: "Please sign in again to use the AI Command Center.",
+          navigations: [{ label: "Sign in", url: "/auth" }],
+        });
+        return;
+      }
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-search`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            Authorization: `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({ query: q }),
           signal: abortRef.current.signal,
         },
       );
-      if (!res.ok) throw new Error(`AI command failed: ${res.status}`);
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          setData({
+            ...EMPTY,
+            answer: "Your session is not authorized for AI search. Please sign in again.",
+            navigations: [{ label: "Sign in", url: "/auth" }],
+          });
+          return;
+        }
+        throw new Error(`AI command failed: ${res.status}`);
+      }
       const payload = (await res.json()) as AICommandResponse;
       setData({ ...EMPTY, ...payload });
     } catch (e: any) {
