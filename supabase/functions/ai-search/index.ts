@@ -584,7 +584,11 @@ Rules:
     }
 
     // Guarantee we NEVER return an empty response
-    const visibleCreates = records.length ? creates.slice(0, 2) : creates;
+    const visibleCreates = records.length ? [] : creates;
+
+    if (records.length && /\b(no|not|couldn['’]?t|cannot)\b.*\b(record|found|exist|match)/i.test(answer)) {
+      answer = `I found existing records for "${sanitizedQuery}". Use View to open the exact document, transaction, or page.`;
+    }
 
     if (records.length === 0 && visibleCreates.length === 0 && actions.length === 0 && navigations.length === 0) {
       const fb = fallbackResponse(sanitizedQuery, data, availableCapabilities);
