@@ -279,12 +279,23 @@ serve(async (req) => {
     const { query }: SearchRequest = await req.json();
 
     // Resolve real permissions server-side
-    const { data: emp } = await supabase
+    let { data: emp } = await supabase
       .from("employees")
-      .select("email, department, permissions, role, status")
+      .select("email, department, permissions, role, status, disabled")
       .eq("auth_user_id", authData.user.id)
       .maybeSingle();
-    if (!emp || emp.status !== "Active") return json({ error: "Forbidden" }, 403);
+
+    if (!emp && authData.user.email) {
+      const { data: emailEmp } = await supabase
+        .from("employees")
+        .select("email, department, permissions, role, status, disabled")
+        .ilike("email", authData.user.email.toLowerCase().trim())
+        .maybeSingle();
+      emp = emailEmp;
+    }
+
+    const isInactive = !emp || String(emp.status || "").toLowerCase() !== "active" || emp.disabled === true;
+    if (isInactive) return json({ error: "Forbidden" }, 403);
 
     const userEmail = emp.email as string;
     const userDepartment = (emp.department as string) || "";
