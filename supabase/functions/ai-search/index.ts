@@ -638,8 +638,20 @@ function buildDeterministicRecords(q: string, data: Record<string, any[]>) {
     records.push({ id: String(id), type, title, subtitle, url: documentUrl(url, fallback), relevance });
   };
 
-  (data.coffee_records || []).forEach((r: any) => push(r.id, "batch", `View batch ${r.batch_number}`, `${r.supplier_name || "Coffee record"} • ${r.kilograms || 0}kg • ${r.status || "recorded"}`, "/store", 98, { batch: r.batch_number }));
-  (data.store_records || []).forEach((r: any) => push(r.id, "batch", `View store record ${r.batch_number || r.reference_number}`, `${r.supplier_name || "Store"} • ${r.quantity_kg || 0}kg • ${r.status || "recorded"}`, "/store", 97, { batch: r.batch_number, reference: r.reference_number }));
+  (data.coffee_records || []).forEach((r: any) => {
+    const st = String(r.status || "").toLowerCase();
+    // Route the batch to the page where it actually lives right now.
+    const inQuality = /pending|submitted|assess|quality/.test(st);
+    const inFinance = /finance|paid|payment/.test(st);
+    const route = inQuality ? "/quality-control" : inFinance ? "/v2/finance" : "/store";
+    push(r.id, "batch", `View batch ${r.batch_number}`, `${r.supplier_name || "Coffee record"} • ${r.kilograms || 0}kg • ${r.status || "recorded"}`, route, 98, { batch: r.batch_number });
+  });
+  (data.store_records || []).forEach((r: any) => {
+    const st = String(r.status || "").toLowerCase();
+    const inQuality = /pending|submitted|assess|quality/.test(st);
+    const route = inQuality ? "/quality-control" : "/store";
+    push(r.id, "batch", `View store record ${r.batch_number || r.reference_number}`, `${r.supplier_name || "Store"} • ${r.quantity_kg || 0}kg • ${r.status || "recorded"}`, route, 97, { batch: r.batch_number, reference: r.reference_number });
+  });
   (data.inventory_batches || []).forEach((r: any) => push(r.id, "inventory", `View inventory batch ${r.batch_code}`, `${r.coffee_type || "Coffee"} • ${r.remaining_kilograms ?? r.total_kilograms ?? 0}kg remaining • ${r.status || "active"}`, "/inventory", 97, { batch: r.batch_code }));
   (data.inventory_batch_sources || []).forEach((r: any) => push(r.id, "inventory", `View batch source ${r.supplier_name || r.id}`, `${r.kilograms || 0}kg • purchased ${r.purchase_date || ""}`, "/inventory", 92, { batch_id: r.batch_id, coffee_record_id: r.coffee_record_id }));
   (data.quality_assessments || []).forEach((r: any) => push(r.id, "quality", `View quality assessment ${r.batch_number}`, `${r.status || "assessed"} • moisture ${r.moisture ?? "-"}% • assessed by ${r.assessed_by || "quality"}`, "/quality-control", 96, { batch: r.batch_number, assessment_ref: r.assessment_ref }));
