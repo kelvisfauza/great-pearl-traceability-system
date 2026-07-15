@@ -1,438 +1,357 @@
-import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, X, FileText, User, Package, DollarSign, ClipboardCheck, TrendingUp, History, Trash2, Clock, Sparkles, Lightbulb, Zap } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { useAISearch, AISearchResult, AISearchSuggestion } from '@/hooks/useAISearch';
-import { supabase } from '@/integrations/supabase/client';
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
-import { buildHighlightUrl } from '@/hooks/useSearchHighlight';
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Sparkles, Search, X, ArrowRight, Plus, Zap, Loader2, Command,
+  FileText, User, Package, DollarSign, ClipboardCheck, TrendingUp,
+  Clock, ShieldAlert, AlertTriangle,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { useAICommand, AITask, AIRecord } from "@/hooks/useAICommand";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-interface SearchHistory {
-  id: string;
-  search_term: string;
-  result_count: number;
-  searched_at: string;
+function recordIcon(type: string) {
+  const cls = "h-4 w-4";
+  switch (type) {
+    case "supplier": return <User className={cls} />;
+    case "employee": return <User className={cls} />;
+    case "batch": case "inventory": return <Package className={cls} />;
+    case "payment": case "expense": case "transaction": return <DollarSign className={cls} />;
+    case "quality": return <ClipboardCheck className={cls} />;
+    case "eudr": return <FileText className={cls} />;
+    case "sale": return <TrendingUp className={cls} />;
+    case "overtime": return <Clock className={cls} />;
+    default: return <FileText className={cls} />;
+  }
 }
 
 const GlobalSearch = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchHistory, setSearchHistory] = useState<SearchHistory[]>([]);
+  const [query, setQuery] = useState("");
+  const [pendingTask, setPendingTask] = useState<AITask | null>(null);
   const navigate = useNavigate();
-  const modalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  
-  const { results, suggestions, loading, usingFallback } = useAISearch(searchTerm);
+  const modalRef = useRef<HTMLDivElement>(null);
 
-  // Load search history when modal opens
+  const { data, loading } = useAICommand(query);
+
   useEffect(() => {
-    if (isOpen) {
-      loadSearchHistory();
-    }
-  }, [isOpen]);
-
-  // Save search to history when results are loaded
-  useEffect(() => {
-    if (searchTerm && !loading && results.length >= 0) {
-      saveSearchToHistory(searchTerm, results.length);
-    }
-  }, [results, loading, searchTerm]);
-
-  const loadSearchHistory = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from('search_history')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('searched_at', { ascending: false })
-      .limit(5);
-
-    if (!error && data) {
-      setSearchHistory(data);
-    }
-  };
-
-  const saveSearchToHistory = async (term: string, count: number) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user || term.length < 2) return;
-
-    try {
-      await supabase.from('search_history').insert([{
-        user_id: user.id,
-        search_term: term,
-        result_count: count
-      }]);
-    } catch (error) {
-      console.error('Error saving search history:', error);
-    }
-  };
-
-  const deleteSearchHistory = async (id: string) => {
-    await supabase.from('search_history').delete().eq('id', id);
-    setSearchHistory(prev => prev.filter(item => item.id !== id));
-  };
-
-  const clearAllHistory = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    await supabase.from('search_history').delete().eq('user_id', user.id);
-    setSearchHistory([]);
-  };
-
-  // Close search when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault(); setIsOpen(true);
       }
+      if (e.key === "Escape") setIsOpen(false);
     };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [isOpen]);
-
-  // Focus input when opening
-  useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isOpen]);
-
-  // Keyboard shortcut (Ctrl+K or Cmd+K)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        setIsOpen(true);
-      }
-      if (e.key === 'Escape') {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
   }, []);
 
-  const getResultIcon = (type: AISearchResult['type']) => {
-    switch (type) {
-      case 'supplier':
-        return <User className="h-4 w-4" />;
-      case 'batch':
-        return <Package className="h-4 w-4" />;
-      case 'employee':
-        return <User className="h-4 w-4" />;
-      case 'transaction':
-        return <TrendingUp className="h-4 w-4" />;
-      case 'quality':
-        return <ClipboardCheck className="h-4 w-4" />;
-      case 'payment':
-      case 'expense':
-        return <DollarSign className="h-4 w-4" />;
-      case 'department':
-        return <Search className="h-4 w-4" />;
-      case 'eudr':
-        return <FileText className="h-4 w-4" />;
-      case 'overtime':
-        return <Clock className="h-4 w-4" />;
-      default:
-        return <FileText className="h-4 w-4" />;
-    }
-  };
+  useEffect(() => {
+    if (isOpen && inputRef.current) setTimeout(() => inputRef.current?.focus(), 30);
+  }, [isOpen]);
 
-  const getResultColor = (type: AISearchResult['type']) => {
-    switch (type) {
-      case 'supplier':
-        return 'text-blue-500';
-      case 'batch':
-        return 'text-green-500';
-      case 'employee':
-        return 'text-purple-500';
-      case 'transaction':
-        return 'text-orange-500';
-      case 'quality':
-        return 'text-teal-500';
-      case 'payment':
-      case 'expense':
-        return 'text-emerald-500';
-      case 'department':
-        return 'text-primary';
-      case 'eudr':
-        return 'text-yellow-500';
-      case 'overtime':
-        return 'text-indigo-500';
-      default:
-        return 'text-gray-500';
-    }
-  };
-
-  const handleResultClick = (result: AISearchResult) => {
-    // Map result type -> a REAL route that exists in the app router.
-    // The AI can occasionally invent paths like `/inventory/batches/:id`
-    // which don't exist and produce a 404. Always normalize by type.
-    const TYPE_ROUTES: Record<string, string> = {
-      supplier: '/suppliers',
-      batch: '/store',
-      inventory: '/store',
-      quality: '/quality-control',
-      eudr: '/eudr-documentation',
-      employee: '/human-resources',
-      overtime: '/human-resources',
-      payment: '/v2/finance',
-      expense: '/expenses',
-      transaction: '/v2/finance',
-      department: '/',
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (pendingTask) return;
+      if (modalRef.current && !modalRef.current.contains(e.target as Node)) setIsOpen(false);
     };
-    // Known top-level routes we trust from the AI navigateTo.
-    const KNOWN_ROUTES = new Set([
-      '/', '/suppliers', '/store', '/quality-control', '/eudr-documentation',
-      '/human-resources', '/finance', '/v2/finance', '/expenses', '/reports',
-      '/inventory', '/sales-marketing', '/procurement', '/coffee-bookings',
-      '/logistics', '/processing', '/milling', '/field-operations',
-      '/data-analyst', '/it-department', '/settings', '/approvals',
-      '/admin', '/attendance', '/daily-reports',
-    ]);
-
-    const [aiPath, existingQuery = ''] = (result.navigateTo || '').split('?');
-    const trustedPath = KNOWN_ROUTES.has(aiPath) ? aiPath : null;
-    const basePath = trustedPath || TYPE_ROUTES[result.type] || '/';
-
-    const params = new URLSearchParams(existingQuery);
-    // If we fell back (AI path wasn't a known route), drop any AI query
-    // params that referenced the invented path.
-    if (!trustedPath) {
-      for (const key of Array.from(params.keys())) params.delete(key);
+    if (isOpen) {
+      document.addEventListener("mousedown", onClick);
+      return () => document.removeEventListener("mousedown", onClick);
     }
-    params.set('highlight', result.id);
-    params.set('type', result.type);
-    if (searchTerm) params.set('search', searchTerm);
-    // For batch-like results, also pass batch_number when available so the
-    // destination page can open the exact record.
-    const batchNo = (result as any)?.metadata?.batch_number;
-    if (batchNo && !params.has('batch')) params.set('batch', String(batchNo));
+  }, [isOpen, pendingTask]);
 
-    navigate(`${basePath}?${params.toString()}`);
-    setIsOpen(false);
-    setSearchTerm('');
+  const go = (url: string) => { navigate(url); setIsOpen(false); setQuery(""); };
+  const confirmTask = () => {
+    if (!pendingTask) return;
+    const url = pendingTask.url;
+    setPendingTask(null);
+    go(url);
   };
 
-  const handleSuggestionClick = (suggestion: AISearchSuggestion) => {
-    if (suggestion.action.startsWith('/')) {
-      navigate(suggestion.action);
-      setIsOpen(false);
-    } else {
-      setSearchTerm(suggestion.action);
-    }
-  };
+  const nothing =
+    !loading && !data.answer && data.records.length === 0 &&
+    data.creates.length === 0 && data.actions.length === 0 && data.navigations.length === 0;
 
   return (
-    <div className="relative">
-      <Button
+    <>
+      {/* Trigger button — animated AI orb */}
+      <button
         onClick={() => setIsOpen(true)}
-        variant="ghost"
-        size="sm"
-        className="relative hover-scale transition-all duration-200 hover:bg-primary/10 gap-2"
+        className="group relative inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm
+                   bg-gradient-to-r from-primary/10 via-fuchsia-500/10 to-primary/10
+                   border border-primary/20 hover:border-primary/40 transition-all
+                   hover:shadow-[0_0_20px_hsl(var(--primary)/0.35)]"
+        aria-label="Open AI Command"
       >
-        <Search className="h-5 w-5 text-muted-foreground" />
-        <Sparkles className="h-3 w-3 text-primary absolute -top-0.5 -right-0.5" />
-      </Button>
+        <span className="relative flex h-6 w-6 items-center justify-center">
+          <span className="absolute inset-0 rounded-full bg-primary/30 blur-md animate-pulse" />
+          <Sparkles className="relative h-4 w-4 text-primary" />
+        </span>
+        <span className="hidden sm:inline font-medium bg-gradient-to-r from-primary to-fuchsia-500 bg-clip-text text-transparent">
+          Ask AI
+        </span>
+        <kbd className="hidden md:inline-flex items-center gap-0.5 text-[10px] text-muted-foreground border border-border rounded px-1.5 py-0.5">
+          <Command className="h-2.5 w-2.5" />K
+        </kbd>
+      </button>
 
       {isOpen && (
         <>
-          {/* Backdrop */}
-          <div 
-            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
-          />
-          
-          {/* Search Modal */}
-          <div ref={modalRef} className="fixed top-20 left-1/2 -translate-x-1/2 w-full max-w-2xl z-50 px-4">
-            <div className="bg-card border border-border rounded-lg shadow-2xl overflow-hidden">
-              {/* Search Input */}
-              <div className="flex items-center gap-2 p-4 border-b border-border">
-                <div className="flex items-center gap-1">
-                  <Search className="h-5 w-5 text-muted-foreground" />
-                  <Sparkles className="h-3 w-3 text-primary" />
+          <div className="fixed inset-0 z-40 bg-background/70 backdrop-blur-md" />
+          <div
+            ref={modalRef}
+            className="fixed left-1/2 top-16 z-50 w-full max-w-2xl -translate-x-1/2 px-3"
+          >
+            <div className="overflow-hidden rounded-2xl border border-primary/20 bg-card shadow-2xl
+                            shadow-primary/20 ring-1 ring-primary/10">
+              {/* Header */}
+              <div className="relative border-b border-border">
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-fuchsia-500/10" />
+                <div className="relative flex items-center gap-3 p-4">
+                  <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full
+                                  bg-gradient-to-br from-primary to-fuchsia-500">
+                    {loading
+                      ? <Loader2 className="h-4 w-4 animate-spin text-primary-foreground" />
+                      : <Sparkles className="h-4 w-4 text-primary-foreground" />}
+                  </div>
+                  <Input
+                    ref={inputRef}
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Ask, search, or command — e.g. 'create receipt for Denis 50,000', 'freeze wallet for Godwin', 'find batch 20260714002'"
+                    className="border-0 bg-transparent text-base shadow-none focus-visible:ring-0"
+                  />
+                  {query && (
+                    <Button variant="ghost" size="icon" onClick={() => setQuery("")}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
-                <Input
-                  ref={inputRef}
-                  type="text"
-                  placeholder="AI-powered search across all departments... (Ctrl+K)"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-                />
-                {searchTerm && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSearchTerm('')}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
               </div>
 
-              {/* AI Badge */}
-              {searchTerm && (
-                <div className="px-4 py-2 bg-primary/5 border-b border-border flex items-center gap-2">
-                  <Zap className="h-3 w-3 text-primary" />
-                  <span className="text-xs text-muted-foreground">
-                    {loading ? 'AI is searching...' : usingFallback ? 'Using quick search' : 'AI-enhanced results'}
-                  </span>
-                </div>
-              )}
-
-              {/* Results */}
-              <ScrollArea className="max-h-96">
-                {loading && (
-                  <div className="p-8 text-center text-muted-foreground">
-                    <div className="flex items-center justify-center gap-2">
-                      <Sparkles className="h-5 w-5 animate-pulse text-primary" />
-                      <span>AI is searching across all departments...</span>
-                    </div>
-                  </div>
-                )}
-
-                {!loading && searchTerm && results.length === 0 && (
-                  <div className="p-8 text-center text-muted-foreground">
-                    No results found for "{searchTerm}"
-                  </div>
-                )}
-
-                {!loading && results.length > 0 && (
-                  <div className="p-2">
-                    {/* AI Suggestions */}
-                    {suggestions.length > 0 && (
-                      <div className="mb-3 px-2">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
-                          <span className="text-xs font-medium text-muted-foreground">AI Suggestions</span>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {suggestions.map((suggestion, idx) => (
-                            <button
-                              key={idx}
-                              onClick={() => handleSuggestionClick(suggestion)}
-                              className="text-xs px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-colors"
-                            >
-                              {suggestion.text}
-                            </button>
-                          ))}
-                        </div>
+              <ScrollArea className="max-h-[70vh]">
+                <div className="p-3 space-y-3">
+                  {/* Empty / welcome state */}
+                  {!query && (
+                    <div className="p-6 text-center space-y-3">
+                      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full
+                                      bg-gradient-to-br from-primary/20 to-fuchsia-500/20">
+                        <Sparkles className="h-7 w-7 text-primary" />
                       </div>
-                    )}
-
-                    {/* Search Results */}
-                    {results.map((result) => (
-                      <button
-                        key={`${result.type}-${result.id}`}
-                        onClick={() => handleResultClick(result)}
-                        className="w-full flex items-start gap-3 p-3 rounded-lg hover:bg-accent transition-colors text-left"
-                      >
-                        <div className={cn("mt-0.5", getResultColor(result.type))}>
-                          {getResultIcon(result.type)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <div className="font-medium text-sm truncate">
-                              {result.title}
-                            </div>
-                            {(result.department || result.module) && (
-                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">
-                                {result.module || result.department}
-                              </Badge>
-                            )}
-                            {result.relevance && result.relevance >= 80 && (
-                              <Sparkles className="h-3 w-3 text-primary shrink-0" />
-                            )}
-                          </div>
-                          <div className="text-xs text-muted-foreground truncate">
-                            {result.subtitle}
-                          </div>
-                        </div>
-                        <div className="text-xs text-muted-foreground capitalize shrink-0">
-                          {result.type}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {!searchTerm && searchHistory.length > 0 && (
-                  <div className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2 text-sm font-medium">
-                        <History className="h-4 w-4" />
-                        <span>Recent Searches</span>
+                      <div>
+                        <p className="font-semibold">AI Command Center</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Find records, create things, or run admin actions — in your own words.
+                        </p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={clearAllHistory}
-                        className="h-7 text-xs"
-                      >
-                        Clear All
-                      </Button>
-                    </div>
-                    <div className="space-y-1">
-                      {searchHistory.map((item) => (
-                        <div
-                          key={item.id}
-                          className="flex items-center justify-between p-2 rounded-lg hover:bg-accent group"
-                        >
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 text-left">
+                        {[
+                          "Show batch 20260714002",
+                          "Create receipt for Benson 25,000",
+                          "File EUDR complaint for batch 20260713006",
+                          "Retry failed payout for Denis",
+                        ].map((t) => (
                           <button
-                            onClick={() => setSearchTerm(item.search_term)}
-                            className="flex-1 flex items-center gap-2 text-left"
+                            key={t}
+                            onClick={() => setQuery(t)}
+                            className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs
+                                       hover:bg-muted transition-colors text-left"
                           >
-                            <Search className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-sm">{item.search_term}</span>
-                            <span className="text-xs text-muted-foreground">
-                              ({item.result_count} results)
-                            </span>
+                            <Zap className="inline h-3 w-3 mr-1 text-primary" />{t}
                           </button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteSearchHistory(item.id)}
-                            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {!searchTerm && searchHistory.length === 0 && (
-                  <div className="p-8 text-center text-muted-foreground">
-                    <div className="flex items-center justify-center gap-2 mb-3">
-                      <Sparkles className="h-10 w-10 text-primary/50" />
+                  {/* AI answer */}
+                  {query && data.answer && (
+                    <div className="flex gap-3 rounded-xl border border-primary/15 bg-primary/5 p-3">
+                      <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                      <p className="text-sm leading-relaxed">{data.answer}</p>
                     </div>
-                    <p className="text-sm font-medium">AI-Powered Search</p>
-                    <p className="text-xs mt-2 opacity-70">
-                      Search across suppliers, batches, employees, payments, EUDR docs and more
-                    </p>
-                    <p className="text-xs mt-1 opacity-50">
-                      Results are filtered based on your permissions
-                    </p>
-                  </div>
-                )}
+                  )}
+
+                  {/* Records */}
+                  {data.records.length > 0 && (
+                    <Section title="Matching records">
+                      {data.records.map((r: AIRecord) => (
+                        <button
+                          key={`${r.type}-${r.id}`}
+                          onClick={() => go(r.url)}
+                          className="flex w-full items-start gap-3 rounded-lg border border-transparent
+                                     p-3 text-left hover:bg-accent hover:border-border transition-colors"
+                        >
+                          <div className="mt-0.5 text-primary">{recordIcon(r.type)}</div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="truncate font-medium text-sm">{r.title}</span>
+                              <Badge variant="secondary" className="shrink-0 text-[10px]">{r.type}</Badge>
+                            </div>
+                            {r.subtitle && (
+                              <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
+                            )}
+                          </div>
+                          <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
+                        </button>
+                      ))}
+                    </Section>
+                  )}
+
+                  {/* Create tasks */}
+                  {data.creates.length > 0 && (
+                    <Section title="Create" icon={<Plus className="h-3.5 w-3.5 text-emerald-500" />}>
+                      {data.creates.map((t) => (
+                        <TaskCard key={t.capability_id} task={t} onPick={setPendingTask} tone="create" />
+                      ))}
+                    </Section>
+                  )}
+
+                  {/* Admin actions */}
+                  {data.actions.length > 0 && (
+                    <Section title="Actions" icon={<ShieldAlert className="h-3.5 w-3.5 text-amber-500" />}>
+                      {data.actions.map((t) => (
+                        <TaskCard key={t.capability_id} task={t} onPick={setPendingTask} tone="action" />
+                      ))}
+                    </Section>
+                  )}
+
+                  {/* Navigation shortcuts */}
+                  {data.navigations.length > 0 && (
+                    <Section title="Jump to">
+                      <div className="flex flex-wrap gap-2">
+                        {data.navigations.map((n) => (
+                          <button
+                            key={n.url}
+                            onClick={() => go(n.url)}
+                            className="rounded-full border border-border bg-muted/30 px-3 py-1 text-xs
+                                       hover:bg-muted transition-colors"
+                          >
+                            {n.label}
+                          </button>
+                        ))}
+                      </div>
+                    </Section>
+                  )}
+
+                  {loading && !data.answer && (
+                    <div className="flex items-center justify-center gap-2 p-8 text-muted-foreground text-sm">
+                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      Thinking…
+                    </div>
+                  )}
+
+                  {nothing && query.length >= 2 && (
+                    <div className="p-6 text-center text-sm text-muted-foreground">
+                      Try rephrasing — e.g. "batch 20260714", "add supplier", "approve request".
+                    </div>
+                  )}
+                </div>
               </ScrollArea>
+
+              <div className="flex items-center justify-between border-t border-border px-3 py-2 text-[10px] text-muted-foreground">
+                <span>Powered by AI · results filtered by your permissions</span>
+                <span className="inline-flex items-center gap-1"><kbd className="rounded border px-1">Esc</kbd> close</span>
+              </div>
             </div>
           </div>
         </>
       )}
-    </div>
+
+      {/* Preview + confirm */}
+      <AlertDialog open={!!pendingTask} onOpenChange={(o) => !o && setPendingTask(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              {pendingTask?.kind === "action"
+                ? <AlertTriangle className="h-4 w-4 text-amber-500" />
+                : <Plus className="h-4 w-4 text-emerald-500" />}
+              {pendingTask?.label}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <span className="block">{pendingTask?.summary}</span>
+              {pendingTask?.params && Object.keys(pendingTask.params).length > 0 && (
+                <span className="block rounded-md border border-border bg-muted/40 p-3 text-xs">
+                  <span className="mb-1 block font-semibold text-foreground">Prefilled fields</span>
+                  {Object.entries(pendingTask.params).map(([k, v]) => (
+                    <span key={k} className="grid grid-cols-[110px_1fr] gap-2 py-0.5">
+                      <span className="text-muted-foreground">{k}</span>
+                      <span className="font-medium text-foreground">{v}</span>
+                    </span>
+                  ))}
+                </span>
+              )}
+              <span className="block text-xs text-muted-foreground">
+                You'll be taken to the relevant page with these details pre-filled. Nothing is submitted until you click the final button on that page.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmTask}>
+              {pendingTask?.kind === "action" ? "Open action" : "Open form"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
+
+function Section({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="mb-1 flex items-center gap-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {icon}{title}
+      </div>
+      <div className="space-y-1">{children}</div>
+    </div>
+  );
+}
+
+function TaskCard({ task, onPick, tone }: { task: AITask; onPick: (t: AITask) => void; tone: "create" | "action" }) {
+  const isAction = tone === "action";
+  return (
+    <button
+      onClick={() => onPick(task)}
+      className={cn(
+        "flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors",
+        isAction
+          ? "border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10"
+          : "border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10",
+      )}
+    >
+      <div className={cn("mt-0.5", isAction ? "text-amber-500" : "text-emerald-500")}>
+        {isAction ? <ShieldAlert className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="truncate font-medium text-sm">{task.label}</span>
+          <Badge variant="outline" className="shrink-0 text-[10px]">
+            {isAction ? "Needs confirm" : "Preview"}
+          </Badge>
+        </div>
+        <p className="text-xs text-muted-foreground">{task.summary}</p>
+        {task.params && Object.keys(task.params).length > 0 && (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {Object.entries(task.params).slice(0, 4).map(([k, v]) => (
+              <span key={k} className="rounded bg-background/60 px-1.5 py-0.5 text-[10px] text-muted-foreground border border-border/60">
+                <span className="opacity-70">{k}:</span> <span className="text-foreground">{v}</span>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+      <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
+    </button>
+  );
+}
 
 export default GlobalSearch;
