@@ -483,6 +483,55 @@ serve(async (req) => {
     
     console.log('Formatted phone:', formattedPhone)
     
+    // 🛡️ DEDUP GUARD: prevent double-sends when a caller invokes both
+    // send-transactional-email (which auto-fires SMS in SMS-PRIMARY mode)
+    // AND send-sms directly. If the same phone+message was already sent
+    // in the last 90 seconds, skip this one.
+    try {
+      const sinceIso = new Date(Date.now() - 90 * 1000).toISOString()
+      const { data: recentDup } = await supabase
+        .from('sms_logs')
+        .select('id, status, created_at')
+        .eq('recipient_phone', formattedPhone)
+        .eq('message_content', message)
+        .in('status', ['sent', 'redirected_to_email'])
+        .gte('created_at', sinceIso)
+        .limit(1)
+        .maybeSingle()
+
+      if (recentDup?.id) {
+        console.log(`🔁 Duplicate SMS suppressed for ${formattedPhone} (matches log ${recentDup.id} sent at ${recentDup.created_at})`)
+        try {
+          await supabase.from('sms_logs').insert({
+            recipient_phone: formattedPhone,
+            recipient_name: userName,
+            recipient_email: recipientEmail,
+            message_content: (message || '').substring(0, 60) + ' [duplicate-suppressed]',
+            message_type: messageType || 'general',
+            status: 'duplicate_suppressed',
+            provider: 'DEDUP',
+            credits_used: 0,
+            department,
+            triggered_by: triggeredBy,
+            request_id: requestId,
+          })
+        } catch (logErr) {
+          console.error('Failed to log duplicate suppression:', logErr)
+        }
+        return new Response(
+          JSON.stringify({
+            success: true,
+            deduplicated: true,
+            reason: 'Identical SMS was already sent within the last 90 seconds.',
+            matchedLogId: recentDup.id,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    } catch (dedupErr) {
+      console.error('Dedup check failed (continuing to send):', dedupErr)
+    }
+
     const callerPriority = (parsedBody.priority || '').toString().toLowerCase();
     const isPremium =
       callerPriority === 'premium' ||
