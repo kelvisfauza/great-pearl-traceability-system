@@ -686,4 +686,5 @@ interface SearchRequest {
   userEmail?: string;
   userPermissions?: string[];
   userDepartment?: string;
+  messages?: { role: "user" | "assistant"; content: string }[];
 }
