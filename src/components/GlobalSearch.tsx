@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Sparkles, Search, X, ArrowRight, Plus, Zap, Loader2, Command,
+  Sparkles, X, ArrowRight, Plus, Zap, Loader2, Command, Send, RotateCcw,
   FileText, User, Package, DollarSign, ClipboardCheck, TrendingUp,
   Clock, ShieldAlert, AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { useAICommand, AITask, AIRecord } from "@/hooks/useAICommand";
+import { useAIChat, AITask, AIRecord } from "@/hooks/useAICommand";
+import ReactMarkdown from "react-markdown";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -34,13 +34,14 @@ function recordIcon(type: string) {
 
 const GlobalSearch = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [query, setQuery] = useState("");
+  const [input, setInput] = useState("");
   const [pendingTask, setPendingTask] = useState<AITask | null>(null);
   const navigate = useNavigate();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  const scrollBottomRef = useRef<HTMLDivElement>(null);
 
-  const { data, loading } = useAICommand(query);
+  const { messages, loading, send, reset } = useAIChat();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -58,6 +59,10 @@ const GlobalSearch = () => {
   }, [isOpen]);
 
   useEffect(() => {
+    if (scrollBottomRef.current) scrollBottomRef.current.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
+  useEffect(() => {
     const onClick = (e: MouseEvent) => {
       if (pendingTask) return;
       if (modalRef.current && !modalRef.current.contains(e.target as Node)) setIsOpen(false);
@@ -72,7 +77,6 @@ const GlobalSearch = () => {
     if (/^https?:\/\//i.test(url)) window.open(url, "_blank", "noopener,noreferrer");
     else navigate(url);
     setIsOpen(false);
-    setQuery("");
   };
   const confirmTask = () => {
     if (!pendingTask) return;
@@ -81,9 +85,19 @@ const GlobalSearch = () => {
     go(url);
   };
 
-  const nothing =
-    !loading && !data.answer && data.records.length === 0 &&
-    data.creates.length === 0 && data.actions.length === 0 && data.navigations.length === 0;
+  const submit = () => {
+    const text = input.trim();
+    if (!text || loading) return;
+    setInput("");
+    send(text);
+  };
+
+  const suggestions = [
+    "What's the available stock for arabica now?",
+    "Who withdrew money today?",
+    "Summarize this month's sales",
+    "Show pending approvals",
+  ];
 
   return (
     <>
@@ -113,60 +127,54 @@ const GlobalSearch = () => {
           <div className="fixed inset-0 z-40 bg-background/70 backdrop-blur-md" />
           <div
             ref={modalRef}
-            className="fixed left-1/2 top-16 z-50 w-full max-w-2xl -translate-x-1/2 px-3"
+            className="fixed left-1/2 top-8 z-50 w-full max-w-3xl -translate-x-1/2 px-3"
           >
             <div className="overflow-hidden rounded-2xl border border-primary/20 bg-card shadow-2xl
-                            shadow-primary/20 ring-1 ring-primary/10">
+                            shadow-primary/20 ring-1 ring-primary/10 flex flex-col max-h-[90vh]">
               {/* Header */}
               <div className="relative border-b border-border">
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-fuchsia-500/10" />
                 <div className="relative flex items-center gap-3 p-4">
                   <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full
                                   bg-gradient-to-br from-primary to-fuchsia-500">
-                    {loading
-                      ? <Loader2 className="h-4 w-4 animate-spin text-primary-foreground" />
-                      : <Sparkles className="h-4 w-4 text-primary-foreground" />}
+                    <Sparkles className="h-4 w-4 text-primary-foreground" />
                   </div>
-                  <Input
-                    ref={inputRef}
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Ask, search, or command — e.g. 'create receipt for Denis 50,000', 'freeze wallet for Godwin', 'find batch 20260714002'"
-                    className="border-0 bg-transparent text-base shadow-none focus-visible:ring-0"
-                  />
-                  {query && (
-                    <Button variant="ghost" size="icon" onClick={() => setQuery("")}>
-                      <X className="h-4 w-4" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm">Ask AI</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Conversational assistant · aware of your data & permissions
+                    </p>
+                  </div>
+                  {messages.length > 0 && (
+                    <Button variant="ghost" size="sm" onClick={reset} title="New chat">
+                      <RotateCcw className="h-3.5 w-3.5 mr-1" /> New
                     </Button>
                   )}
+                  <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
 
-              <ScrollArea className="max-h-[70vh]">
-                <div className="p-3 space-y-3">
-                  {/* Empty / welcome state */}
-                  {!query && (
+              <ScrollArea className="flex-1 min-h-[300px]">
+                <div className="p-4 space-y-4">
+                  {messages.length === 0 && (
                     <div className="p-6 text-center space-y-3">
                       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full
                                       bg-gradient-to-br from-primary/20 to-fuchsia-500/20">
                         <Sparkles className="h-7 w-7 text-primary" />
                       </div>
                       <div>
-                        <p className="font-semibold">AI Command Center</p>
+                        <p className="font-semibold">How can I help you today?</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Find records, create things, or run admin actions — in your own words.
+                          Ask about your data, run reports, find records, or start a new action.
                         </p>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 text-left">
-                        {[
-                          "Show batch 20260714002",
-                          "Create receipt for Benson 25,000",
-                          "File EUDR complaint for batch 20260713006",
-                          "Retry failed payout for Denis",
-                        ].map((t) => (
+                        {suggestions.map((t) => (
                           <button
                             key={t}
-                            onClick={() => setQuery(t)}
+                            onClick={() => send(t)}
                             className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs
                                        hover:bg-muted transition-colors text-left"
                           >
@@ -177,91 +185,132 @@ const GlobalSearch = () => {
                     </div>
                   )}
 
-                  {/* AI answer */}
-                  {query && data.answer && (
-                    <div className="flex gap-3 rounded-xl border border-primary/15 bg-primary/5 p-3">
-                      <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                      <p className="text-sm leading-relaxed">{data.answer}</p>
-                    </div>
-                  )}
-
-                  {/* Records */}
-                  {data.records.length > 0 && (
-                    <Section title="Matching records">
-                      {data.records.map((r: AIRecord) => (
-                        <button
-                          key={`${r.type}-${r.id}`}
-                          onClick={() => go(r.url)}
-                          className="flex w-full items-start gap-3 rounded-lg border border-transparent
-                                     p-3 text-left hover:bg-accent hover:border-border transition-colors"
-                        >
-                          <div className="mt-0.5 text-primary">{recordIcon(r.type)}</div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="truncate font-medium text-sm">{r.title}</span>
-                               <Badge variant="secondary" className="shrink-0 text-[10px]">{r.type}</Badge>
-                               <Badge variant="outline" className="shrink-0 text-[10px]">View</Badge>
+                  {messages.map((m, i) => (
+                    <div key={i} className={cn("flex gap-3", m.role === "user" && "flex-row-reverse")}>
+                      <div className={cn(
+                        "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+                        m.role === "user"
+                          ? "bg-muted"
+                          : "bg-gradient-to-br from-primary to-fuchsia-500 text-primary-foreground",
+                      )}>
+                        {m.role === "user" ? <User className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+                      </div>
+                      <div className={cn("min-w-0 flex-1 space-y-2", m.role === "user" && "flex justify-end")}>
+                        <div className={cn(
+                          "rounded-2xl px-4 py-2.5 text-sm leading-relaxed max-w-[85%]",
+                          m.role === "user"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted/50 border border-border/60",
+                        )}>
+                          {m.role === "assistant" ? (
+                            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-headings:mt-2 prose-headings:mb-1">
+                              <ReactMarkdown>{m.content}</ReactMarkdown>
                             </div>
-                            {r.subtitle && (
-                              <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
+                          ) : (
+                            <p className="whitespace-pre-wrap">{m.content}</p>
+                          )}
+                        </div>
+                        {m.role === "assistant" && m.suggestions && (
+                          <div className="space-y-2 w-full">
+                            {m.suggestions.records.length > 0 && (
+                              <Section title="Matching records">
+                                {m.suggestions.records.map((r: AIRecord) => (
+                                  <button
+                                    key={`${r.type}-${r.id}`}
+                                    onClick={() => go(r.url)}
+                                    className="flex w-full items-start gap-3 rounded-lg border border-border/40
+                                               p-2.5 text-left hover:bg-accent transition-colors"
+                                  >
+                                    <div className="mt-0.5 text-primary">{recordIcon(r.type)}</div>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="truncate font-medium text-sm">{r.title}</span>
+                                        <Badge variant="secondary" className="shrink-0 text-[10px]">{r.type}</Badge>
+                                      </div>
+                                      {r.subtitle && (
+                                        <p className="truncate text-xs text-muted-foreground">{r.subtitle}</p>
+                                      )}
+                                    </div>
+                                    <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
+                                  </button>
+                                ))}
+                              </Section>
+                            )}
+                            {m.suggestions.creates.length > 0 && (
+                              <Section title="Create" icon={<Plus className="h-3.5 w-3.5 text-emerald-500" />}>
+                                {m.suggestions.creates.map((t) => (
+                                  <TaskCard key={t.capability_id} task={t} onPick={setPendingTask} tone="create" />
+                                ))}
+                              </Section>
+                            )}
+                            {m.suggestions.actions.length > 0 && (
+                              <Section title="Actions" icon={<ShieldAlert className="h-3.5 w-3.5 text-amber-500" />}>
+                                {m.suggestions.actions.map((t) => (
+                                  <TaskCard key={t.capability_id} task={t} onPick={setPendingTask} tone="action" />
+                                ))}
+                              </Section>
+                            )}
+                            {m.suggestions.navigations.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5">
+                                {m.suggestions.navigations.map((n) => (
+                                  <button
+                                    key={n.url}
+                                    onClick={() => go(n.url)}
+                                    className="rounded-full border border-border bg-muted/30 px-3 py-1 text-xs
+                                               hover:bg-muted transition-colors"
+                                  >
+                                    {n.label}
+                                  </button>
+                                ))}
+                              </div>
                             )}
                           </div>
-                          <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
-                        </button>
-                      ))}
-                    </Section>
-                  )}
-
-                  {/* Create tasks */}
-                  {data.creates.length > 0 && (
-                    <Section title="Create" icon={<Plus className="h-3.5 w-3.5 text-emerald-500" />}>
-                      {data.creates.map((t) => (
-                        <TaskCard key={t.capability_id} task={t} onPick={setPendingTask} tone="create" />
-                      ))}
-                    </Section>
-                  )}
-
-                  {/* Admin actions */}
-                  {data.actions.length > 0 && (
-                    <Section title="Actions" icon={<ShieldAlert className="h-3.5 w-3.5 text-amber-500" />}>
-                      {data.actions.map((t) => (
-                        <TaskCard key={t.capability_id} task={t} onPick={setPendingTask} tone="action" />
-                      ))}
-                    </Section>
-                  )}
-
-                  {/* Navigation shortcuts */}
-                  {data.navigations.length > 0 && (
-                    <Section title="Jump to">
-                      <div className="flex flex-wrap gap-2">
-                        {data.navigations.map((n) => (
-                          <button
-                            key={n.url}
-                            onClick={() => go(n.url)}
-                            className="rounded-full border border-border bg-muted/30 px-3 py-1 text-xs
-                                       hover:bg-muted transition-colors"
-                          >
-                            {n.label}
-                          </button>
-                        ))}
+                        )}
                       </div>
-                    </Section>
-                  )}
+                    </div>
+                  ))}
 
-                  {loading && !data.answer && (
-                    <div className="flex items-center justify-center gap-2 p-8 text-muted-foreground text-sm">
-                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                      Thinking…
+                  {loading && (
+                    <div className="flex gap-3">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-fuchsia-500">
+                        <Loader2 className="h-4 w-4 animate-spin text-primary-foreground" />
+                      </div>
+                      <div className="rounded-2xl px-4 py-2.5 text-sm bg-muted/50 border border-border/60 text-muted-foreground">
+                        Thinking…
+                      </div>
                     </div>
                   )}
-
-                  {nothing && query.length >= 2 && (
-                    <div className="p-6 text-center text-sm text-muted-foreground">
-                      Try rephrasing — e.g. "batch 20260714", "add supplier", "approve request".
-                    </div>
-                  )}
+                  <div ref={scrollBottomRef} />
                 </div>
               </ScrollArea>
+
+              {/* Composer */}
+              <div className="border-t border-border p-3">
+                <div className="flex items-end gap-2 rounded-2xl border border-border bg-background focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/20 transition p-2">
+                  <textarea
+                    ref={inputRef}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        submit();
+                      }
+                    }}
+                    rows={1}
+                    placeholder="Message AI… (Shift+Enter for a new line)"
+                    className="flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none max-h-40"
+                  />
+                  <Button
+                    size="icon"
+                    onClick={submit}
+                    disabled={!input.trim() || loading}
+                    className="h-9 w-9 shrink-0 rounded-xl"
+                  >
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
 
               <div className="flex items-center justify-between border-t border-border px-3 py-2 text-[10px] text-muted-foreground">
                 <span>Powered by AI · results filtered by your permissions</span>
