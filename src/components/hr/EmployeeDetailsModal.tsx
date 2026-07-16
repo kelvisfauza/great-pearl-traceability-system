@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, Briefcase, Settings, Clock, Send } from "lucide-react";
 import SalaryPaymentMessageDialog from "./SalaryPaymentMessageDialog";
+import { useIsITOfficer } from "@/hooks/useITReadOnly";
 
 interface EmployeeDetailsModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ interface EmployeeDetailsModalProps {
 }
 
 const EmployeeDetailsModal = ({ isOpen, onClose, employee }: EmployeeDetailsModalProps) => {
+  const isITOfficer = useIsITOfficer();
   const [formData, setFormData] = useState({
     name: "", email: "", phone: "", position: "", department: "", salary: "",
     address: "", emergency_contact: "", role: "", permissions: [] as string[],
