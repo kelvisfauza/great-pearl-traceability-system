@@ -10,61 +10,57 @@ export const updateEmployeePermissions = async (email: string, updates: {
   disabled?: boolean;
 }) => {
   console.log('Updating employee permissions for:', email, updates);
-  
-  // Primary: Use Firebase for role updates (more reliable)
+
+  // Primary: Supabase (source of truth)
+  const { data: employee, error: findError } = await supabase
+    .from('employees')
+    .select('id')
+    .eq('email', email)
+    .maybeSingle();
+
+  if (findError) {
+    console.error('❌ Error looking up employee in Supabase:', findError);
+    throw findError;
+  }
+  if (!employee) {
+    throw new Error(`Employee not found in Supabase for email: ${email}`);
+  }
+
+  const { error: updateError } = await supabase
+    .from('employees')
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('email', email);
+
+  if (updateError) {
+    console.error('❌ Supabase update failed:', updateError);
+    throw updateError;
+  }
+
+  console.log('✅ Employee updated in Supabase successfully');
+
+  // Best-effort Firebase mirror (non-critical)
   try {
     const employeesQuery = query(collection(db, 'employees'), where('email', '==', email));
     const employeeSnapshot = await getDocs(employeesQuery);
-    
     if (!employeeSnapshot.empty) {
       const employeeDoc = employeeSnapshot.docs[0];
-      const employeeRef = doc(db, 'employees', employeeDoc.id);
-      
-      await updateDoc(employeeRef, {
+      await updateDoc(doc(db, 'employees', employeeDoc.id), {
         ...updates,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       });
-      
-      console.log('✅ Employee updated in Firebase successfully');
-      
-      // Secondary: Try to sync with Supabase (optional)
-      try {
-        const { data: employee } = await supabase
-          .from('employees')
-          .select('*')
-          .eq('email', email)
-          .maybeSingle();
-        
-        if (employee) {
-          await supabase
-            .from('employees')
-            .update({
-              ...updates,
-              updated_at: new Date().toISOString()
-            })
-            .eq('email', email);
-          
-          console.log('✅ Employee synced to Supabase successfully');
-        } else {
-          console.log('ℹ️ Employee not found in Supabase, skipping sync');
-        }
-      } catch (supabaseError) {
-        console.warn('⚠️ Supabase sync failed (non-critical):', supabaseError);
-      }
-      
-      return { 
-        success: true, 
-        message: 'Employee permissions updated successfully',
-        primary: 'firebase'
-      };
-    } else {
-      throw new Error('Employee not found in Firebase');
     }
-    
-  } catch (error) {
-    console.error('❌ Error updating employee permissions:', error);
-    throw error;
+  } catch (firebaseError) {
+    console.warn('⚠️ Firebase mirror failed (non-critical):', firebaseError);
   }
+
+  return {
+    success: true,
+    message: 'Employee permissions updated successfully',
+    primary: 'supabase',
+  };
 };
 
 // Predefined permission sets for different roles
