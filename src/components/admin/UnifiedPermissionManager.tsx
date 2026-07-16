@@ -37,6 +37,7 @@ const USER_ROLES = [
   { value: 'Manager', label: 'Manager', description: 'Can approve, print, delete' },
   { value: 'Administrator', label: 'Administrator', description: 'Can approve & print (no delete)' },
   { value: 'Supervisor', label: 'Supervisor', description: 'Can edit & export (no approve/print)' },
+  { value: 'IT Officer', label: 'IT Officer', description: 'View-only ops; manages IT, attendance, SMS, procurement, security' },
   { value: 'User', label: 'User', description: 'Data entry only' }
 ];
 

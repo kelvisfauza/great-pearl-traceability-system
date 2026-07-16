@@ -35,6 +35,7 @@ const USER_ROLES = [
   'Manager', 
   'Data Analyst',
   'Supervisor',
+  'IT Officer',
   'User'
 ];
 
