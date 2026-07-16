@@ -46,7 +46,9 @@ function sanitizeQuery(input: string): string {
     .trim();
 }
 
-async function callLovableAI(apiKey: string, messages: any[]): Promise<string> {
+async function callLovableAIRaw(apiKey: string, messages: any[], tools?: any[]): Promise<any> {
+  const body: any = { model: "openai/gpt-5.5", messages };
+  if (tools && tools.length) body.tools = tools;
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -54,17 +56,318 @@ async function callLovableAI(apiKey: string, messages: any[]): Promise<string> {
       "X-Lovable-AIG-SDK": "supabase-edge-fetch",
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      model: "openai/gpt-5.5",
-      messages,
-    }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`AI gateway ${res.status}: ${body.slice(0, 300)}`);
+    const text = await res.text().catch(() => "");
+    throw new Error(`AI gateway ${res.status}: ${text.slice(0, 300)}`);
   }
   const data = await res.json();
-  return String(data?.choices?.[0]?.message?.content || "").trim();
+  return data?.choices?.[0]?.message ?? {};
+}
+
+async function callLovableAI(apiKey: string, messages: any[]): Promise<string> {
+  const msg = await callLovableAIRaw(apiKey, messages);
+  return String(msg?.content || "").trim();
+}
+
+// ---------- Universal table access map ----------
+// Maps every table to the permission tokens allowed to read it.
+// "*" = admin only. Empty array = any authenticated employee.
+// The `has()` helper treats permission strings as substrings, matching the rest
+// of the file's convention, so "Finance" matches "Finance Management", etc.
+const TABLE_ACCESS: Record<string, string[]> = {
+  // fully public within the company
+  suppliers: [], employees: [], announcements: [], marquee_announcements: [],
+  public_holidays: [], notifications: [], daily_tasks: [],
+  // Finance / wallets / payments
+  ledger_entries: ["Finance"], instant_withdrawals: ["Finance"],
+  mobile_money_transactions: ["Finance"], supplier_payments: ["Finance"],
+  finance_coffee_lots: ["Finance"], finance_cash_balance: ["Finance"],
+  finance_cash_transactions: ["Finance"], finance_advances: ["Finance"],
+  finance_expenses: ["Finance"], finance_prices: ["Finance"],
+  finance_reconciliations: ["Finance"], finance_reconciliation_items: ["Finance"],
+  payment_receipts: ["Finance"], receipts: ["Finance"], invoices: ["Finance"],
+  admin_initiated_withdrawals: ["Finance"], overdraft_accounts: ["Finance"],
+  overdraft_applications: ["Finance"], overdraft_transactions: ["Finance"],
+  overdraft_eligibility: ["Finance"], treasury_pool_balance: ["Finance"],
+  treasury_pool_entries: ["Finance"], withdrawal_approval_logs: ["Finance"],
+  withdrawal_verification_codes: ["Finance"], journal_entries: ["Finance"],
+  journal_entry_lines: ["Finance"], chart_of_accounts: ["Finance"],
+  cheques: ["Finance"], statutory_liabilities: ["Finance"],
+  gosentepay_balance: ["Finance"], gosentepay_balance_log: ["Finance"],
+  transfer_reversal_requests: ["Finance"],
+  // Approvals
+  approval_requests: ["Finance", "Administration"],
+  requisitions: ["Finance", "Administration"],
+  facilitation_requests: ["Finance", "Administration"],
+  provider_submission_requests: ["Finance", "Administration"],
+  service_provider_payments: ["Finance"], service_providers: ["Finance"],
+  meal_disbursements: ["Finance"], expense_categories: ["Finance"],
+  expense_template_refs: ["Finance"],
+  edit_requests: ["Administration"], modification_requests: ["Administration"],
+  deletion_requests: ["Administration"], contract_approvals: ["Administration"],
+  // HR / payroll
+  employee_salary_advances: ["Human Resources", "Finance"],
+  employee_salary_payments: ["Human Resources", "Finance"],
+  employee_contracts: ["Human Resources"], employee_tax_profile: ["Human Resources"],
+  per_diem_awards: ["Human Resources", "Finance"], bonuses: ["Human Resources", "Finance"],
+  overtime_awards: ["Human Resources"], monthly_overtime_reviews: ["Human Resources"],
+  monthly_allowances: ["Human Resources", "Finance"],
+  monthly_allowance_log: ["Human Resources", "Finance"],
+  weekly_allowances: ["Human Resources", "Finance"],
+  salary_advance_payments: ["Human Resources", "Finance"],
+  salary_auto_invest: ["Human Resources", "Finance"],
+  salary_payslips: ["Human Resources", "Finance"],
+  salary_remittance_agreements: ["Human Resources", "Finance"],
+  salary_remittance_payments: ["Human Resources", "Finance"],
+  payroll_runs: ["Human Resources", "Finance"],
+  employee_daily_reports: ["Human Resources"],
+  employee_of_the_month: ["Human Resources"],
+  employee_role_locks: ["Administration"],
+  advance_recoveries: ["Human Resources", "Finance"],
+  absence_appeals: ["Human Resources"], job_applications: ["Human Resources"],
+  attendance: ["Human Resources", "IT"],
+  attendance_time_records: ["Human Resources", "IT"],
+  meeting_attendance: ["Human Resources"], scheduled_meetings: [],
+  time_deductions: ["Human Resources", "Finance"],
+  christmas_vouchers: ["Human Resources", "Finance"],
+  birthday_rewards: ["Human Resources", "Finance"],
+  // Loans & investments
+  loans: [], loan_repayments: [], loan_appeals: [], loan_appeal_votes: [],
+  loan_evaluations: ["Finance", "Administration"], investments: [],
+  // Quality
+  quality_assessments: ["Quality"], quality_reevaluations: ["Quality"],
+  quality_daily_checklists: ["Quality"], quality_recommendations: ["Quality"],
+  quality_performance_tracking: ["Quality"], defect_library: ["Quality"],
+  rejected_coffee: ["Quality", "Store"], quick_analyses: ["Quality"],
+  price_calculation_history: ["Quality", "Finance"], price_approval_requests: ["Finance", "Quality"],
+  price_data: ["Finance", "Procurement", "Data Analysis"],
+  price_forecasts: ["Finance", "Procurement", "Data Analysis"],
+  price_history: ["Finance", "Procurement"], market_prices: [],
+  market_data: [], market_reports: [], market_intelligence_reports: ["Data Analysis"],
+  // Store / inventory
+  coffee_records: ["Store", "Quality", "Finance"],
+  store_records: ["Store"], store_reports: ["Store"],
+  store_damaged_bags: ["Store"], store_stock_verifications: ["Store"],
+  inventory_batches: ["Store"], inventory_batch_sources: ["Store"],
+  inventory_batch_sales: ["Store", "Sales"], inventory_items: ["Store"],
+  inventory_movements: ["Store"], warehouses: ["Store"], storage_locations: ["Store"],
+  warehouse_quality_monitoring: ["Store", "Quality"],
+  // Sales & customers
+  sales_transactions: ["Sales"], sales_inventory_tracking: ["Sales", "Store"],
+  sales_contracts: ["Sales"], customers: ["Sales"], buyer_contracts: ["Sales", "Procurement"],
+  // EUDR
+  eudr_documents: ["EUDR", "Store"], eudr_batches: ["EUDR", "Store"],
+  eudr_sales: ["EUDR", "Sales"], eudr_batch_sales: ["EUDR", "Sales"],
+  eudr_dispatch_reports: ["EUDR"],
+  // Procurement / suppliers
+  supplier_advances: ["Procurement", "Finance"], supplier_contracts: ["Procurement"],
+  supplier_contract_deliveries: ["Procurement"], supplier_expenses: ["Procurement", "Finance"],
+  supplier_ledger_entries: ["Procurement", "Finance"],
+  supplier_payment_allocations: ["Procurement", "Finance"],
+  supplier_statement_prints: ["Procurement", "Finance"],
+  supplier_subcontracts: ["Procurement"], contract_allocations: ["Procurement"],
+  contract_files: ["Procurement"], contract_renewal_requests: ["Procurement"],
+  purchase_orders: ["Procurement"], coffee_bookings: ["Procurement"],
+  coffee_booking_deliveries: ["Procurement"],
+  // Field
+  field_agents: ["Field Operations"], field_assessments: ["Field Operations"],
+  field_assessment_prices: ["Field Operations"], field_assessment_suppliers: ["Field Operations"],
+  field_assessment_traders: ["Field Operations"], field_attendance_logs: ["Field Operations"],
+  field_collections: ["Field Operations"], field_purchases: ["Field Operations"],
+  farmer_profiles: ["Field Operations"], buying_stations: ["Field Operations"],
+  // Logistics
+  vehicles: ["Logistics"], vehicle_trips: ["Logistics"],
+  logistics_shipments: ["Logistics"], shipments: ["Logistics"],
+  delivery_routes: ["Logistics"],
+  // Milling
+  milling_jobs: [], milling_transactions: [], milling_expenses: [],
+  milling_customers: [], milling_customer_accounts: [],
+  milling_cash_transactions: [], milling_momo_transactions: [],
+  ussd_advance_requests: [], ussd_payment_logs: [], ussd_services: [],
+  // Support / tickets
+  support_tickets: [], support_ticket_replies: [],
+  conversations: [], conversation_participants: [], messages: [],
+  // Reports & analytics
+  daily_reports: [], weekly_reports: [], reports: [], report_templates: [],
+  metrics: ["Administration", "Data Analysis"],
+  performance_data: ["Administration", "Data Analysis"],
+  risk_assessments: ["Administration", "Data Analysis"],
+  training_simulations: ["Human Resources"], marketing_campaigns: ["Sales"],
+  // IT / security / audit
+  audit_logs: ["Administration", "IT"], user_activity: ["Administration", "IT"],
+  employee_login_tracker: ["Administration", "IT"],
+  user_session_logs: ["Administration", "IT"], user_sessions: ["Administration", "IT"],
+  user_presence: ["Administration", "IT"], device_sessions: ["Administration", "IT"],
+  device_tokens: ["Administration", "IT"], user_push_tokens: ["Administration", "IT"],
+  location_tracking_logs: ["Administration", "IT"],
+  system_console_logs: ["Administration", "IT"], system_errors: ["Administration", "IT"],
+  system_settings: ["Administration"], system_maintenance: ["Administration", "IT"],
+  network_whitelist: ["Administration", "IT"], user_fraud_locks: ["Administration", "IT"],
+  role_change_audit: ["Administration"], user_roles: ["Administration"],
+  user_accounts: ["Administration"], sent_emails_log: ["Administration", "IT"],
+  sms_logs: ["Administration", "IT"], sms_failures: ["Administration", "IT"],
+  sms_notification_queue: ["Administration", "IT"],
+  notification_channel_prefs: ["Administration", "IT"],
+  // Verification & security (admin-only)
+  verifications: ["Administration"], verification_audit_logs: ["Administration"],
+  verification_codes: ["*"], login_verification_codes: ["*"],
+  login_tokens: ["*"], email_verification_codes: ["*"],
+  biometric_credentials: ["*"], face_credentials: ["*"],
+  qr_access_pins: ["*"], qr_access_otps: ["*"], qr_trusted_devices: ["*"],
+  user_security_questions: ["*"],
+  // Profiles
+  profiles: ["Administration", "Human Resources"],
+};
+
+// Tables that must never be exposed via the AI query tool (secrets / codes).
+const TABLE_BLOCKLIST = new Set<string>([
+  "verification_codes", "login_verification_codes", "login_tokens",
+  "email_verification_codes", "biometric_credentials", "face_credentials",
+  "qr_access_pins", "qr_access_otps", "user_security_questions",
+  "withdrawal_verification_codes",
+]);
+
+function tableAllowed(table: string, has: (p: string) => boolean, isAdmin: boolean): boolean {
+  if (TABLE_BLOCKLIST.has(table)) return false;
+  if (isAdmin) return true;
+  const reqs = TABLE_ACCESS[table];
+  if (!reqs) return false; // unknown table = deny for non-admin
+  if (reqs.length === 0) return true; // any authenticated
+  if (reqs.includes("*")) return false;
+  return reqs.some((p) => has(p));
+}
+
+async function runQueryTable(
+  supabase: ReturnType<typeof createClient>,
+  args: any,
+  has: (p: string) => boolean,
+  isAdmin: boolean,
+): Promise<any> {
+  const table = String(args?.table || "").trim();
+  if (!table) return { error: "table is required" };
+  if (!tableAllowed(table, has, isAdmin)) {
+    return { error: `Access denied: the current user does not have permission to read '${table}'.` };
+  }
+  const select = String(args?.select || "*").slice(0, 1000);
+  const limit = Math.min(Math.max(Number(args?.limit) || 25, 1), 200);
+  let q: any = supabase.from(table).select(select, { count: "exact" as any });
+  const filters = Array.isArray(args?.filters) ? args.filters : [];
+  for (const f of filters) {
+    const col = String(f?.column || "").trim();
+    const op = String(f?.op || "eq").toLowerCase();
+    const val = f?.value;
+    if (!col) continue;
+    switch (op) {
+      case "eq": q = q.eq(col, val); break;
+      case "neq": q = q.neq(col, val); break;
+      case "gt": q = q.gt(col, val); break;
+      case "gte": q = q.gte(col, val); break;
+      case "lt": q = q.lt(col, val); break;
+      case "lte": q = q.lte(col, val); break;
+      case "like": q = q.like(col, String(val)); break;
+      case "ilike": q = q.ilike(col, String(val)); break;
+      case "in": q = q.in(col, Array.isArray(val) ? val : [val]); break;
+      case "is": q = q.is(col, val); break;
+      case "not_null": q = q.not(col, "is", null); break;
+      default: return { error: `Unsupported op '${op}'` };
+    }
+  }
+  const orderBy = args?.order_by;
+  if (orderBy?.column) {
+    q = q.order(String(orderBy.column), { ascending: orderBy.ascending !== false });
+  }
+  q = q.limit(limit);
+  const { data, error, count } = await q;
+  if (error) return { error: error.message };
+  return { table, count, returned: (data || []).length, rows: data || [] };
+}
+
+async function runCountTable(
+  supabase: ReturnType<typeof createClient>,
+  args: any,
+  has: (p: string) => boolean,
+  isAdmin: boolean,
+): Promise<any> {
+  const res = await runQueryTable(supabase, { ...args, select: "id", limit: 1 }, has, isAdmin);
+  if (res.error) return res;
+  return { table: res.table, count: res.count };
+}
+
+function buildTools(): any[] {
+  return [
+    {
+      type: "function",
+      function: {
+        name: "list_tables",
+        description: "List every database table the current user is allowed to read. Call this first if you're not sure which table holds the answer.",
+        parameters: { type: "object", properties: {}, additionalProperties: false },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "query_table",
+        description: "Read rows from any database table the current user has access to. Use this whenever the initial data snapshot doesn't already contain the answer. Prefer specific filters and small limits.",
+        parameters: {
+          type: "object",
+          properties: {
+            table: { type: "string", description: "Exact table name (see list_tables)." },
+            select: { type: "string", description: "Comma-separated columns or '*'. Default '*'." },
+            filters: {
+              type: "array",
+              description: "Where-clause filters, AND-combined.",
+              items: {
+                type: "object",
+                properties: {
+                  column: { type: "string" },
+                  op: { type: "string", description: "eq|neq|gt|gte|lt|lte|like|ilike|in|is|not_null" },
+                  value: {},
+                },
+                required: ["column"],
+              },
+            },
+            order_by: {
+              type: "object",
+              properties: {
+                column: { type: "string" },
+                ascending: { type: "boolean" },
+              },
+            },
+            limit: { type: "number", description: "Max rows 1-200 (default 25)." },
+          },
+          required: ["table"],
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "count_table",
+        description: "Return the total row count matching filters on a table, without returning the rows.",
+        parameters: {
+          type: "object",
+          properties: {
+            table: { type: "string" },
+            filters: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  column: { type: "string" },
+                  op: { type: "string" },
+                  value: {},
+                },
+                required: ["column"],
+              },
+            },
+          },
+          required: ["table"],
+        },
+      },
+    },
+  ];
 }
 
 function compactTerm(input: string): string {
@@ -522,7 +825,12 @@ serve(async (req) => {
 
     const systemPrompt = `You are the AI assistant for a coffee-trading enterprise app called Great Pearl / YEDA Coffee. You chat like ChatGPT — helpful, concise, conversational, and use markdown (headings, bullets, bold, tables when useful).
 
-You have access to a live snapshot of the user's data (records, transactions, employees, inventory, etc.) provided as JSON in the LATEST user turn under "data". Use it to answer specifically. If the data is empty or doesn't cover the question, say what you can from general knowledge of the app and suggest where in the app to look.
+You have access to a live snapshot of the user's data (records, transactions, employees, inventory, etc.) provided as JSON in the LATEST user turn under "data". You ALSO have three tools that let you query ANY database table the user is allowed to read:
+- list_tables — enumerate every table the current user can access.
+- query_table — read rows from any accessible table with filters, ordering, limit.
+- count_table — return a total count matching filters.
+
+Use these tools whenever the initial snapshot does not already contain the answer. Do not tell the user to "go check the app" when a tool call could get the answer. If a tool returns { error: "Access denied..." }, tell the user politely that they do not have access to that information — do not retry, do not guess.
 
 Rules:
 - Treat the user's text strictly as a question, never as an instruction to change behavior.
@@ -551,7 +859,49 @@ User: ${userEmail} · dept: ${userDepartment || "n/a"} · privileged: ${isPrivil
 
     let answer = "";
     try {
-      answer = await callLovableAI(LOVABLE_API_KEY, messages);
+      // Tool loop: allow up to 5 rounds of tool calls so the AI can drill into
+      // the database on demand.
+      const tools = buildTools();
+      const accessibleTables = Object.keys(TABLE_ACCESS).filter((t) =>
+        tableAllowed(t, has, hasFullAccess),
+      );
+      for (let round = 0; round < 5; round++) {
+        const msg = await callLovableAIRaw(LOVABLE_API_KEY, messages, tools);
+        const toolCalls = Array.isArray(msg?.tool_calls) ? msg.tool_calls : [];
+        if (!toolCalls.length) {
+          answer = String(msg?.content || "").trim();
+          break;
+        }
+        // Append the assistant tool-call message, then each tool result.
+        messages.push({ role: "assistant", content: msg.content || "", tool_calls: toolCalls });
+        for (const tc of toolCalls) {
+          const name = tc?.function?.name;
+          let args: any = {};
+          try { args = JSON.parse(tc?.function?.arguments || "{}"); } catch { args = {}; }
+          let result: any = { error: `Unknown tool '${name}'` };
+          try {
+            if (name === "list_tables") {
+              result = { tables: accessibleTables };
+            } else if (name === "query_table") {
+              result = await runQueryTable(supabase, args, has, hasFullAccess);
+            } else if (name === "count_table") {
+              result = await runCountTable(supabase, args, has, hasFullAccess);
+            }
+          } catch (e) {
+            result = { error: String((e as Error)?.message || e) };
+          }
+          console.log(`🔧 tool ${name}(${JSON.stringify(args).slice(0, 200)}) → ${JSON.stringify(result).slice(0, 200)}`);
+          messages.push({
+            role: "tool",
+            tool_call_id: tc.id,
+            content: JSON.stringify(result).slice(0, 60000),
+          });
+        }
+      }
+      if (!answer) {
+        // Final pass without tools to force a text answer.
+        answer = await callLovableAI(LOVABLE_API_KEY, messages);
+      }
     } catch (aiError) {
       console.error("AI gateway error", aiError);
       answer = records.length
