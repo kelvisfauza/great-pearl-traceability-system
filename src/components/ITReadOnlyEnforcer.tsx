@@ -10,37 +10,57 @@ const MUTATE_KEYWORDS = [
   'freeze', 'unfreeze', 'lock', 'unlock', 'reset', 'generate', 'confirm',
 ];
 
-// Substrings on buttons/links we should ALWAYS allow (nav, filters, print,
-// exports, search UI, etc.).
-const ALLOW_KEYWORDS = [
-  'search', 'filter', 'export', 'download', 'print', 'view', 'open',
-  'refresh', 'reload', 'close', 'cancel', 'back', 'next', 'previous',
-  'expand', 'collapse', 'copy', 'share',
+// Substrings on buttons/links that must be BLOCKED for IT Officers — they
+// cannot print, export, download, share, or copy data out of the system.
+const OUTPUT_KEYWORDS = [
+  'print', 'export', 'download', 'share', 'copy', 'save as', 'save pdf',
+  'save excel', 'save csv', 'pdf', 'excel', 'csv', 'email pdf', 'send pdf',
 ];
 
-function shouldBlock(el: HTMLElement): boolean {
-  // Respect explicit opt-outs
-  if (el.closest('[data-it-allow="true"]')) return false;
-  // Allow anything inside the sidebar / global nav / dialogs' close controls
-  if (el.closest('[data-sidebar]')) return false;
-  if (el.closest('[role="navigation"]')) return false;
+// Substrings on buttons/links we should ALWAYS allow (nav, filters, search).
+const ALLOW_KEYWORDS = [
+  'search', 'filter', 'view', 'open',
+  'refresh', 'reload', 'close', 'cancel', 'back', 'next', 'previous',
+  'expand', 'collapse',
+];
 
-  const label = (el.getAttribute('aria-label') || el.textContent || '')
+function labelOf(el: HTMLElement): string {
+  return (el.getAttribute('aria-label') || el.textContent || '')
     .trim()
     .toLowerCase();
-  if (!label) return false;
+}
 
-  if (ALLOW_KEYWORDS.some((k) => label.includes(k))) return false;
-  return MUTATE_KEYWORDS.some((k) => {
+function isOutputAction(label: string): boolean {
+  return OUTPUT_KEYWORDS.some((k) => label.includes(k));
+}
+
+function shouldBlock(el: HTMLElement): { block: boolean; reason: 'mutate' | 'output' | null } {
+  // Respect explicit opt-outs
+  if (el.closest('[data-it-allow="true"]')) return { block: false, reason: null };
+  // Allow anything inside the sidebar / global nav / dialogs' close controls
+  if (el.closest('[data-sidebar]')) return { block: false, reason: null };
+  if (el.closest('[role="navigation"]')) return { block: false, reason: null };
+
+  const label = labelOf(el);
+  if (!label) return { block: false, reason: null };
+
+  // Output actions (print/export/download/share/copy) are always blocked,
+  // even if the label also matches an allow keyword.
+  if (isOutputAction(label)) return { block: true, reason: 'output' };
+
+  if (ALLOW_KEYWORDS.some((k) => label.includes(k))) return { block: false, reason: null };
+  const mutates = MUTATE_KEYWORDS.some((k) => {
     // word-boundary-ish match
     const re = new RegExp(`(^|[^a-z])${k}([^a-z]|$)`, 'i');
     return re.test(label);
   });
+  return { block: mutates, reason: mutates ? 'mutate' : null };
 }
 
 /**
  * Globally intercepts mutating clicks on read-only routes for IT Officers.
- * Also disables form submissions on those pages.
+ * Also blocks print, export, download, share and copy actions, disables form
+ * submissions, and intercepts native print + share flows.
  */
 export function ITReadOnlyEnforcer() {
   const readOnly = useITReadOnly();
@@ -56,10 +76,15 @@ export function ITReadOnlyEnforcer() {
       ) as HTMLElement | null;
       if (!el) return;
       if (el.hasAttribute('disabled') || el.getAttribute('aria-disabled') === 'true') return;
-      if (shouldBlock(el)) {
+      const { block, reason } = shouldBlock(el);
+      if (block) {
         e.preventDefault();
         e.stopPropagation();
-        toast.warning('Read-only for IT Officers — request an Administrator to make this change.', {
+        const msg =
+          reason === 'output'
+            ? 'IT Officers cannot print, export, download or share data from the system.'
+            : 'Read-only for IT Officers — request an Administrator to make this change.';
+        toast.warning(msg, {
           position: 'top-center',
           duration: 3500,
         });
@@ -78,11 +103,50 @@ export function ITReadOnlyEnforcer() {
       });
     };
 
+    // Block Ctrl/Cmd+P (print) and Ctrl/Cmd+S (save page)
+    const onKeydown = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && (key === 'p' || key === 's')) {
+        e.preventDefault();
+        e.stopPropagation();
+        toast.warning('IT Officers cannot print or save documents from the system.', {
+          position: 'top-center',
+          duration: 3500,
+        });
+      }
+    };
+
+    // Intercept programmatic window.print()
+    const originalPrint = window.print;
+    window.print = () => {
+      toast.warning('IT Officers cannot print documents from the system.', {
+        position: 'top-center',
+        duration: 3500,
+      });
+    };
+
+    // Intercept navigator.share()
+    const nav = navigator as Navigator & { share?: (data: ShareData) => Promise<void> };
+    const originalShare = nav.share ? nav.share.bind(nav) : undefined;
+    if (originalShare) {
+      nav.share = () => {
+        toast.warning('IT Officers cannot share data from the system.', {
+          position: 'top-center',
+          duration: 3500,
+        });
+        return Promise.reject(new Error('Sharing disabled for IT Officers.'));
+      };
+    }
+
     document.addEventListener('click', onClick, true);
     document.addEventListener('submit', onSubmit, true);
+    document.addEventListener('keydown', onKeydown, true);
     return () => {
       document.removeEventListener('click', onClick, true);
       document.removeEventListener('submit', onSubmit, true);
+      document.removeEventListener('keydown', onKeydown, true);
+      window.print = originalPrint;
+      if (originalShare) nav.share = originalShare;
     };
   }, [readOnly]);
 
