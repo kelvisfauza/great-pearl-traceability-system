@@ -1,8 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { generateText, NoObjectGeneratedError, Output } from "npm:ai";
-import { z } from "npm:zod";
-import { createLovableAiGatewayProvider } from "../_shared/ai-gateway.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -49,61 +46,25 @@ function sanitizeQuery(input: string): string {
     .trim();
 }
 
-function parseJsonObject(text: unknown) {
-  const raw = String(text || "").trim();
-  if (!raw) return null;
-
-  try {
-    return JSON.parse(raw);
-  } catch {
-    const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-    if (fenced?.[1]) {
-      try {
-        return JSON.parse(fenced[1].trim());
-      } catch {
-        // Keep trying below.
-      }
-    }
-
-    const first = raw.indexOf("{");
-    const last = raw.lastIndexOf("}");
-    if (first >= 0 && last > first) {
-      try {
-        return JSON.parse(raw.slice(first, last + 1));
-      } catch {
-        return null;
-      }
-    }
-
-    return null;
+async function callLovableAI(apiKey: string, messages: any[]): Promise<string> {
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "openai/gpt-5.5",
+      messages,
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`AI gateway ${res.status}: ${body.slice(0, 300)}`);
   }
+  const data = await res.json();
+  return String(data?.choices?.[0]?.message?.content || "").trim();
 }
-
-const CommandTaskSchema = z.object({
-  capability_id: z.string(),
-  label: z.string(),
-  summary: z.string(),
-  params: z.record(z.string()).optional(),
-});
-
-const AICommandSchema = z.object({
-  answer: z.string(),
-  records: z.array(z.object({
-    id: z.string(),
-    type: z.string(),
-    title: z.string(),
-    subtitle: z.string().optional(),
-    route: z.string(),
-    params: z.record(z.string()).optional(),
-    relevance: z.number().optional(),
-  })),
-  navigations: z.array(z.object({
-    label: z.string(),
-    route: z.string(),
-  })),
-  creates: z.array(CommandTaskSchema),
-  actions: z.array(CommandTaskSchema),
-});
 
 function compactTerm(input: string): string {
   return input.replace(/[(),;:{}[\]<>]/g, " ").replace(/\s+/g, " ").trim();
