@@ -124,6 +124,7 @@ import { DailyReportReminder } from "./components/reports/DailyReportReminder";
 import { MonthlyReportReminder } from "./components/reports/MonthlyReportReminder";
 import { GlobalActivityTracker } from "./components/GlobalActivityTracker";
 import { ITReadOnlyEnforcer } from "./components/ITReadOnlyEnforcer";
+import { ITReadOnlyBanner } from "./components/ITReadOnlyBanner";
 import { OvertimeNotification } from "./components/OvertimeNotification";
 import RoleNotificationHandler from "./components/RoleNotificationHandler";
 import MaintenanceGuard from "./components/MaintenanceGuard";
