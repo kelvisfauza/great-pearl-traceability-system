@@ -280,7 +280,14 @@ async function runQueryTable(
   }
   q = q.limit(limit);
   const { data, error, count } = await q;
-  if (error) return { error: error.message };
+  if (error) {
+    const msg = String(error.message || "");
+    // RLS denial from PostgREST — surface as clean access-denied so the AI tells the user.
+    if (/row-level security|permission denied|not allowed/i.test(msg)) {
+      return { error: `Access denied: the current user does not have permission to read rows from '${table}'.` };
+    }
+    return { error: msg };
+  }
   return { table, count, returned: (data || []).length, rows: data || [] };
 }
 
@@ -535,10 +542,19 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    // Admin client: used ONLY for auth resolution and employee lookup.
+    const adminClient = createClient(supabaseUrl, supabaseKey);
+    // User-scoped client: forwards the caller's JWT so RLS enforces per-user
+    // visibility on every table read. All data queries below use this client
+    // so the AI can never see rows the user is not allowed to see.
+    const supabase = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: authData, error: authErr } = await supabase.auth.getUser(token);
+    const { data: authData, error: authErr } = await adminClient.auth.getUser(token);
     if (authErr || !authData?.user) return json({ error: "Unauthorized" }, 401);
 
     const body: SearchRequest = await req.json();
@@ -546,14 +562,14 @@ serve(async (req) => {
     const history = Array.isArray(body.messages) ? body.messages.slice(-10) : [];
 
     // Resolve real permissions server-side
-    let { data: emp } = await supabase
+    let { data: emp } = await adminClient
       .from("employees")
       .select("email, department, permissions, role, status, disabled")
       .eq("auth_user_id", authData.user.id)
       .maybeSingle();
 
     if (!emp && authData.user.email) {
-      const { data: emailEmp } = await supabase
+      const { data: emailEmp } = await adminClient
         .from("employees")
         .select("email, department, permissions, role, status, disabled")
         .ilike("email", authData.user.email.toLowerCase().trim())
@@ -766,7 +782,7 @@ serve(async (req) => {
       if (data.instant_withdrawals?.length) {
         const userIds = Array.from(new Set(data.instant_withdrawals.map((w: any) => w.user_id).filter(Boolean)));
         if (userIds.length) {
-          const { data: emps } = await supabase
+          const { data: emps } = await adminClient
             .from("employees")
             .select("auth_user_id,name,email,phone")
             .in("auth_user_id", userIds);
