@@ -259,7 +259,9 @@ const EmployeeDetailsModal = ({ isOpen, onClose, employee }: EmployeeDetailsModa
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Monthly Salary (UGX)</Label>
-                {isEditing ? (
+                {isITOfficer ? (
+                  <p className="p-2 bg-gray-50 rounded text-muted-foreground italic">Restricted</p>
+                ) : isEditing ? (
                   <Input
                     type="number"
                     value={formData.salary}
@@ -297,14 +299,14 @@ const EmployeeDetailsModal = ({ isOpen, onClose, employee }: EmployeeDetailsModa
             </div>
 
             <div className="pt-4 border-t">
-              <Button 
+              {!isITOfficer && <Button 
                 onClick={() => setShowMessageDialog(true)}
                 className="w-full"
                 variant="outline"
               >
                 <Send className="h-4 w-4 mr-2" />
                 Send Salary Payment Message
-              </Button>
+              </Button>}
             </div>
           </TabsContent>
           
