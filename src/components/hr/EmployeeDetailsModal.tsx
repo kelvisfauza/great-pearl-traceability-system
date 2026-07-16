@@ -121,7 +121,7 @@ const EmployeeDetailsModal = ({ isOpen, onClose, employee }: EmployeeDetailsModa
               <DialogDescription>View and manage employee information</DialogDescription>
             </div>
             <div className="flex space-x-2">
-              {isEditing ? (
+              {isITOfficer ? null : isEditing ? (
                 <>
                   <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
                   <Button onClick={handleSave}>Save Changes</Button>
