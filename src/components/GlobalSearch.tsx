@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useAIChat, AITask, AIRecord } from "@/hooks/useAICommand";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -127,10 +128,10 @@ const GlobalSearch = () => {
           <div className="fixed inset-0 z-40 bg-background/70 backdrop-blur-md" />
           <div
             ref={modalRef}
-            className="fixed left-1/2 top-8 z-50 w-full max-w-3xl -translate-x-1/2 px-3"
+            className="fixed left-1/2 top-4 z-50 w-full max-w-5xl -translate-x-1/2 px-3"
           >
             <div className="overflow-hidden rounded-2xl border border-primary/20 bg-card shadow-2xl
-                            shadow-primary/20 ring-1 ring-primary/10 flex flex-col max-h-[90vh]">
+                            shadow-primary/20 ring-1 ring-primary/10 flex flex-col h-[92vh]">
               {/* Header */}
               <div className="relative border-b border-border">
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-fuchsia-500/10" />
@@ -156,7 +157,7 @@ const GlobalSearch = () => {
                 </div>
               </div>
 
-              <ScrollArea className="flex-1 min-h-[300px]">
+              <ScrollArea className="flex-1 min-h-0">
                 <div className="p-4 space-y-4">
                   {messages.length === 0 && (
                     <div className="p-6 text-center space-y-3">
@@ -197,14 +198,14 @@ const GlobalSearch = () => {
                       </div>
                       <div className={cn("min-w-0 flex-1 space-y-2", m.role === "user" && "flex justify-end")}>
                         <div className={cn(
-                          "rounded-2xl px-4 py-2.5 text-sm leading-relaxed max-w-[85%]",
+                          "rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
                           m.role === "user"
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted/50 border border-border/60",
+                            ? "bg-primary text-primary-foreground max-w-[85%]"
+                            : "bg-muted/50 border border-border/60 w-full",
                         )}>
                           {m.role === "assistant" ? (
-                            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-headings:mt-2 prose-headings:mb-1">
-                              <ReactMarkdown>{m.content}</ReactMarkdown>
+                            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-headings:mt-2 prose-headings:mb-1 prose-table:my-2 prose-th:bg-muted prose-th:px-2 prose-th:py-1 prose-td:px-2 prose-td:py-1 prose-table:border prose-th:border prose-td:border prose-table:border-border prose-th:border-border prose-td:border-border overflow-x-auto">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
                             </div>
                           ) : (
                             <p className="whitespace-pre-wrap">{m.content}</p>
