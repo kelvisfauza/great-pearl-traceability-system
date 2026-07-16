@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, Briefcase, Settings, Clock, Send } from "lucide-react";
 import SalaryPaymentMessageDialog from "./SalaryPaymentMessageDialog";
+import { useIsITOfficer } from "@/hooks/useITReadOnly";
 
 interface EmployeeDetailsModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ interface EmployeeDetailsModalProps {
 }
 
 const EmployeeDetailsModal = ({ isOpen, onClose, employee }: EmployeeDetailsModalProps) => {
+  const isITOfficer = useIsITOfficer();
   const [formData, setFormData] = useState({
     name: "", email: "", phone: "", position: "", department: "", salary: "",
     address: "", emergency_contact: "", role: "", permissions: [] as string[],
@@ -109,6 +111,34 @@ const EmployeeDetailsModal = ({ isOpen, onClose, employee }: EmployeeDetailsModa
 
   if (!employee) return null;
 
+  // IT Officers get a limited directory-style view (name, role, department, phone, email only).
+  if (isITOfficer) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Employee Directory</DialogTitle>
+            <DialogDescription>Limited directory view (IT Officer)</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <div><Label>Full Name</Label><p className="p-2 bg-muted rounded">{employee.name}</p></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Role</Label><p className="p-2 bg-muted rounded">{employee.role || 'User'}</p></div>
+              <div><Label>Department</Label><p className="p-2 bg-muted rounded">{employee.department || '—'}</p></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Email</Label><p className="p-2 bg-muted rounded break-all">{employee.email || '—'}</p></div>
+              <div><Label>Phone</Label><p className="p-2 bg-muted rounded">{employee.phone || '—'}</p></div>
+            </div>
+            <p className="text-xs text-muted-foreground italic pt-2 border-t">
+              Salary, contracts, banking and permission details are restricted for IT Officers.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -119,7 +149,7 @@ const EmployeeDetailsModal = ({ isOpen, onClose, employee }: EmployeeDetailsModa
               <DialogDescription>View and manage employee information</DialogDescription>
             </div>
             <div className="flex space-x-2">
-              {isEditing ? (
+              {isITOfficer ? null : isEditing ? (
                 <>
                   <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
                   <Button onClick={handleSave}>Save Changes</Button>
@@ -257,7 +287,9 @@ const EmployeeDetailsModal = ({ isOpen, onClose, employee }: EmployeeDetailsModa
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Monthly Salary (UGX)</Label>
-                {isEditing ? (
+                {isITOfficer ? (
+                  <p className="p-2 bg-gray-50 rounded text-muted-foreground italic">Restricted</p>
+                ) : isEditing ? (
                   <Input
                     type="number"
                     value={formData.salary}
@@ -295,14 +327,14 @@ const EmployeeDetailsModal = ({ isOpen, onClose, employee }: EmployeeDetailsModa
             </div>
 
             <div className="pt-4 border-t">
-              <Button 
+              {!isITOfficer && <Button 
                 onClick={() => setShowMessageDialog(true)}
                 className="w-full"
                 variant="outline"
               >
                 <Send className="h-4 w-4 mr-2" />
                 Send Salary Payment Message
-              </Button>
+              </Button>}
             </div>
           </TabsContent>
           

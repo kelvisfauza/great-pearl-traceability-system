@@ -123,6 +123,8 @@ import UserDailyReports from "./pages/UserDailyReports";
 import { DailyReportReminder } from "./components/reports/DailyReportReminder";
 import { MonthlyReportReminder } from "./components/reports/MonthlyReportReminder";
 import { GlobalActivityTracker } from "./components/GlobalActivityTracker";
+import { ITReadOnlyEnforcer } from "./components/ITReadOnlyEnforcer";
+import { ITReadOnlyBanner } from "./components/ITReadOnlyBanner";
 import { OvertimeNotification } from "./components/OvertimeNotification";
 import RoleNotificationHandler from "./components/RoleNotificationHandler";
 import MaintenanceGuard from "./components/MaintenanceGuard";
@@ -188,6 +190,7 @@ const App: React.ComponentType = () => {
               <MaintenanceGuard>
               <LocationPermissionGate>
               <GlobalActivityTracker />
+              <ITReadOnlyEnforcer />
               {/* Global notifications and reminders */}
               <OvertimeNotification />
               <DailyReportReminder />
@@ -202,6 +205,7 @@ const App: React.ComponentType = () => {
               {/* <RoleNotificationHandler /> - Disabled due to performance issues */}
               
               <MarqueeBanner />
+              <div className="px-4 pt-2"><ITReadOnlyBanner /></div>
               <GlobalHighlightBridge />
               <Routes>
                 <Route path="/auth" element={<Auth />} />
