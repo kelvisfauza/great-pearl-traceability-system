@@ -418,10 +418,13 @@ const JobApplicationsManager = () => {
                     {STATUSES.map((s) => {
                       const currentIndex = STATUSES.indexOf(selectedApp.status as typeof STATUSES[number]);
                       const optionIndex = STATUSES.indexOf(s);
-                      const isDisabled = optionIndex <= currentIndex;
+                      // Allow moving forward, and allow reactivating back to "Pending" (received) from any status
+                      const isDisabled = optionIndex <= currentIndex && s !== "Pending";
                       return (
                         <SelectItem key={s} value={s} disabled={isDisabled}>
-                          {s}{isDisabled && optionIndex < currentIndex ? " ✓" : ""}
+                          {s}
+                          {optionIndex < currentIndex && s !== "Pending" ? " ✓" : ""}
+                          {s === "Pending" && currentIndex > 0 ? " (Reactivate)" : ""}
                         </SelectItem>
                       );
                     })}
