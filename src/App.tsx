@@ -189,6 +189,7 @@ const App: React.ComponentType = () => {
               <MaintenanceGuard>
               <LocationPermissionGate>
               <GlobalActivityTracker />
+              <ITReadOnlyEnforcer />
               {/* Global notifications and reminders */}
               <OvertimeNotification />
               <DailyReportReminder />
