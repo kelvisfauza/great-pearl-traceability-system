@@ -429,6 +429,36 @@ serve(async (req) => {
 
       await Promise.all(analyticalTasks);
 
+      // Fallback: if user asked about sales/deliveries/payments in a window that
+      // has no rows, fetch the latest available records so the AI can still
+      // answer with real numbers instead of "no data".
+      const fallbackTasks: PromiseLike<void>[] = [];
+      if (has("Sales") && wantsSales && !data.recent_sales?.length) {
+        fallbackTasks.push(
+          supabase.from("sales_transactions")
+            .select("id,customer,weight,total_amount,coffee_type,date,truck_details")
+            .order("date", { ascending: false }).limit(25)
+            .then(({ data: d }) => { if (d?.length) { data.recent_sales = d; data.recent_sales_is_fallback = [{ note: `No sales found in the requested window (${wsIso.slice(0,10)} to ${weIso.slice(0,10)}). Showing latest available sales instead.` }] as any; } }),
+        );
+      }
+      if (has("Store") && wantsDeliveries && !data.recent_deliveries?.length) {
+        fallbackTasks.push(
+          supabase.from("coffee_records")
+            .select("id,batch_number,supplier_name,kilograms,coffee_type,date,status")
+            .order("date", { ascending: false }).limit(25)
+            .then(({ data: d }) => { if (d?.length) { data.recent_deliveries = d; data.recent_deliveries_is_fallback = [{ note: `No deliveries in the requested window. Showing latest available.` }] as any; } }),
+        );
+      }
+      if (has("Finance") && wantsPayments && !data.recent_supplier_payments?.length) {
+        fallbackTasks.push(
+          supabase.from("supplier_payments")
+            .select("id,batch_number,supplier_id,amount_paid_ugx,status,requested_at")
+            .order("requested_at", { ascending: false }).limit(25)
+            .then(({ data: d }) => { if (d?.length) { data.recent_supplier_payments = d; data.recent_supplier_payments_is_fallback = [{ note: `No supplier payments in the requested window. Showing latest available.` }] as any; } }),
+        );
+      }
+      if (fallbackTasks.length) await Promise.all(fallbackTasks);
+
       // Enrich instant_withdrawals with employee names so the AI can name users.
       if (data.instant_withdrawals?.length) {
         const userIds = Array.from(new Set(data.instant_withdrawals.map((w: any) => w.user_id).filter(Boolean)));
