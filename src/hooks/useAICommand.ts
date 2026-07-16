@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface AIRecord {
@@ -26,73 +26,90 @@ export interface AICommandResponse {
   actions: AITask[];
 }
 
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  suggestions?: AICommandResponse;
+}
+
 const EMPTY: AICommandResponse = {
   answer: "", records: [], navigations: [], creates: [], actions: [],
 };
 
-export function useAICommand(query: string, debounceMs = 350) {
-  const [data, setData] = useState<AICommandResponse>(EMPTY);
+const SUPABASE_URL = "https://pudfybkyfedeggmokhco.supabase.co";
+
+export function useAIChat() {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const run = useCallback(async (q: string) => {
-    if (!q || q.trim().length < 2) { setData(EMPTY); return; }
+  const send = useCallback(async (text: string) => {
+    const q = text.trim();
+    if (!q) return;
     abortRef.current?.abort();
     abortRef.current = new AbortController();
-    setLoading(true); setError(null);
+
+    // Build history BEFORE adding this turn (server just needs prior context)
+    const historyForServer = messages.map((m) => ({ role: m.role, content: m.content }));
+
+    setMessages((prev) => [...prev, { role: "user", content: q }]);
+    setLoading(true);
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        setData({
-          ...EMPTY,
-          answer: "Please sign in again to use the AI Command Center.",
-          navigations: [{ label: "Sign in", url: "/auth" }],
-        });
+        setMessages((prev) => [...prev, {
+          role: "assistant",
+          content: "Please sign in again to use the AI assistant.",
+          suggestions: { ...EMPTY, navigations: [{ label: "Sign in", url: "/auth" }] },
+        }]);
         return;
       }
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-search`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ query: q }),
-          signal: abortRef.current.signal,
+
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-search`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
         },
-      );
+        body: JSON.stringify({ query: q, messages: historyForServer }),
+        signal: abortRef.current.signal,
+      });
+
       if (!res.ok) {
-        if (res.status === 401 || res.status === 403) {
-          setData({
-            ...EMPTY,
-            answer: "Your session is not authorized for AI search. Please sign in again.",
-            navigations: [{ label: "Sign in", url: "/auth" }],
-          });
-          return;
-        }
-        throw new Error(`AI command failed: ${res.status}`);
+        const body = await res.text().catch(() => "");
+        console.error("ai-search error", res.status, body);
+        setMessages((prev) => [...prev, {
+          role: "assistant",
+          content: res.status === 401 || res.status === 403
+            ? "Your session isn't authorized. Please sign in again."
+            : "I hit a snag reaching the AI. Try again in a moment.",
+        }]);
+        return;
       }
-      const payload = (await res.json()) as AICommandResponse;
-      setData({ ...EMPTY, ...payload });
+
+      const payload = { ...EMPTY, ...(await res.json()) } as AICommandResponse;
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        content: payload.answer || "…",
+        suggestions: payload,
+      }]);
     } catch (e: any) {
       if (e?.name === "AbortError") return;
-      console.error("AI command error", e);
-      setError(e?.message ?? "AI command failed");
-      setData({
-        ...EMPTY,
-        answer: "I couldn't reach the AI. Try again in a moment.",
-      });
-    } finally { setLoading(false); }
+      console.error("AI chat error", e);
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        content: "I couldn't reach the AI. Try again in a moment.",
+      }]);
+    } finally {
+      setLoading(false);
+    }
+  }, [messages]);
+
+  const reset = useCallback(() => {
+    abortRef.current?.abort();
+    setMessages([]);
   }, []);
 
-  useEffect(() => {
-    const t = setTimeout(() => run(query), debounceMs);
-    return () => clearTimeout(t);
-  }, [query, debounceMs, run]);
-
-  useEffect(() => () => abortRef.current?.abort(), []);
-
-  return { data, loading, error, rerun: () => run(query) };
+  return { messages, loading, send, reset };
 }
