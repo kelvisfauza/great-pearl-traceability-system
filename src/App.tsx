@@ -205,6 +205,7 @@ const App: React.ComponentType = () => {
               {/* <RoleNotificationHandler /> - Disabled due to performance issues */}
               
               <MarqueeBanner />
+              <div className="px-4 pt-2"><ITReadOnlyBanner /></div>
               <GlobalHighlightBridge />
               <Routes>
                 <Route path="/auth" element={<Auth />} />
