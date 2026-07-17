@@ -435,13 +435,13 @@ serve(async (req) => {
     // the Yo Payments direct payout flow below.
     const useGosente = numAmount < 50000;
 
-    // GosentePay service fee — charged in addition to the withdrawal amount
-    // and credited to the treasury as profit. Displayed to the user in the UI
-    // before they submit.
-    const GOSENTE_FEE = useGosente ? 1000 : 0;
-    if (useGosente && spendable < numAmount + GOSENTE_FEE) {
+    // Tiered withdrawal service fee — applied to every instant withdrawal
+    // (both GosentePay and Yo Payments), charged in addition to the amount
+    // and posted to the treasury as profit.
+    const WITHDRAW_FEE = computeWithdrawFee(numAmount);
+    if (spendable < numAmount + WITHDRAW_FEE) {
       return respond(false, {
-        error: `Insufficient funds to cover the withdrawal plus the UGX ${GOSENTE_FEE.toLocaleString()} GosentePay service fee. Available: UGX ${spendable.toLocaleString()}.`,
+        error: `Insufficient funds to cover the withdrawal plus the UGX ${WITHDRAW_FEE.toLocaleString()} service fee. Available: UGX ${spendable.toLocaleString()}.`,
       });
     }
 
