@@ -465,6 +465,41 @@ export const useUnifiedApprovalRequests = () => {
           if (refundErr && refundErr.code !== '23505') {
             console.error('Refund error:', refundErr);
           }
+
+          // If this was a GosentePay withdrawal, also refund the UGX 1,000
+          // service fee and reverse the treasury profit entry.
+          if (isGosente) {
+            const feeRefundRef = `REFUND-GOSENTE-FEE-${iwId}`;
+            const { error: feeRefundErr } = await supabase.from('ledger_entries' as any).insert({
+              user_id: (currentIW as any).user_id,
+              entry_type: 'DEPOSIT',
+              amount: 1000,
+              reference: feeRefundRef,
+              source_category: 'SYSTEM_AWARD',
+              metadata: {
+                type: 'gosente_fee_refund',
+                instant_withdrawal_id: iwId,
+                reason: 'GosentePay withdrawal rejected — service fee refunded',
+                rejected_by: adminName,
+                description: 'GosentePay service fee refund (admin rejected)',
+              },
+            });
+            if (feeRefundErr && feeRefundErr.code !== '23505') {
+              console.error('Fee refund error:', feeRefundErr);
+            }
+            try {
+              await supabase.rpc('reverse_treasury_profit', {
+                p_amount: 1000,
+                p_description: 'Reversal: GosentePay service fee (withdrawal rejected)',
+                p_reference: `PROFIT-REVERSAL-GOSENTE-FEE-${iwId}`,
+                p_user_email: request.details.requester_email || null,
+                p_user_name: null,
+                p_metadata: { source: 'instant_withdrawal', instant_withdrawal_id: iwId, profit_type: 'gosente_fee', reversal: true },
+              });
+            } catch (e) {
+              console.error('Treasury reversal error (non-blocking):', e);
+            }
+          }
         }
 
         // SMS to requester
