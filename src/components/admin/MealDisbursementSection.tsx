@@ -472,7 +472,16 @@ const MealDisbursementSection = () => {
         ) : (
           <div className="overflow-x-auto">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-              <p className="text-sm text-muted-foreground">Most recent meal disbursements</p>
+              <p className="text-sm text-muted-foreground">
+                {getPeriodRange().label} — {periodFiltered.length} record(s)
+              </p>
+              {period === 'custom' && (
+                <div className="flex items-center gap-2">
+                  <Input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="h-9 text-sm w-[150px]" />
+                  <span className="text-xs text-muted-foreground">to</span>
+                  <Input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="h-9 text-sm w-[150px]" />
+                </div>
+              )}
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
