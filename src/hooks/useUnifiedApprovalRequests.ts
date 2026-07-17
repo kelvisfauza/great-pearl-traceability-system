@@ -236,8 +236,10 @@ export const useUnifiedApprovalRequests = () => {
                 source: 'supabase' as const,
                 department: 'Wallet',
                 requestType: 'Instant Withdrawal',
-                title: `⚡ Instant Withdrawal - UGX ${Number(wd.amount).toLocaleString()}`,
-                description: `${empName} instantly withdrew UGX ${Number(wd.amount).toLocaleString()} to ${empPhone || 'Mobile Money'}. Approve if money reached the user, reject to refund their wallet.`,
+                title: `⚡ Instant Withdrawal${wd.payment_provider === 'gosente' ? ' (GosentePay)' : ''} - UGX ${Number(wd.amount).toLocaleString()}`,
+                description: wd.payment_provider === 'gosente'
+                  ? `${empName} requested a UGX ${Number(wd.amount).toLocaleString()} instant withdrawal to ${empPhone || 'Mobile Money'} via GosentePay. Approve to send the money now, reject to refund their wallet.`
+                  : `${empName} instantly withdrew UGX ${Number(wd.amount).toLocaleString()} to ${empPhone || 'Mobile Money'}. Approve if money reached the user, reject to refund their wallet.`,
                 amount: wd.amount,
                 requestedBy: empEmail,
                 dateRequested: new Date(wd.created_at).toLocaleDateString(),
@@ -252,6 +254,7 @@ export const useUnifiedApprovalRequests = () => {
                   requester_email: empEmail,
                   user_id: wd.user_id,
                   is_instant_withdrawal: true,
+                  payment_provider: wd.payment_provider || 'yo',
                 },
                 createdAt: wd.created_at,
                 updatedAt: wd.created_at,
