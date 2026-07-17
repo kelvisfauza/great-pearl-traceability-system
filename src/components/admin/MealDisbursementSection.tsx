@@ -31,6 +31,7 @@ const MealDisbursementSection = () => {
   const [period, setPeriod] = useState<'all' | 'today' | 'week' | 'month' | 'year' | 'custom'>('month');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'failed'>('all');
 
   const [form, setForm] = useState({
     receiverPhone: '',
@@ -273,53 +274,87 @@ const MealDisbursementSection = () => {
 
   const periodFiltered = disbursements.filter((d: any) => inRange(d.created_at));
 
+  const isPaid = (d: any) => d.yo_status === 'success' || d.yo_status === 'paid';
+  const isFailed = (d: any) => !isPaid(d) && d.yo_status !== 'pending' && d.yo_status !== 'pending_approval';
+  const paidRecords = periodFiltered.filter(isPaid);
+  const failedRecords = periodFiltered.filter(isFailed);
+
+  const statusFiltered = statusFilter === 'paid'
+    ? paidRecords
+    : statusFilter === 'failed'
+      ? failedRecords
+      : periodFiltered;
+
   const term = search.trim().toLowerCase();
   const visibleDisbursements = term
-    ? periodFiltered.filter((d: any) =>
+    ? statusFiltered.filter((d: any) =>
         (d.receiver_name || '').toLowerCase().includes(term) ||
         (d.receiver_phone || '').toLowerCase().includes(term) ||
         (d.description || '').toLowerCase().includes(term) ||
         (d.initiated_by_name || '').toLowerCase().includes(term)
       )
-    : periodFiltered;
+    : statusFiltered;
 
   const handlePrint = () => {
     const range = getPeriodRange();
-    const printData = periodFiltered;
-    const totals = printData.reduce((acc: any, d: any) => {
+    const sectionsToPrint: Array<{ title: string; data: any[] }> = [];
+    if (statusFilter === 'paid') {
+      sectionsToPrint.push({ title: 'Paid / Successful', data: paidRecords });
+    } else if (statusFilter === 'failed') {
+      sectionsToPrint.push({ title: 'Failed', data: failedRecords });
+    } else {
+      sectionsToPrint.push({ title: 'Paid / Successful', data: paidRecords });
+      sectionsToPrint.push({ title: 'Failed', data: failedRecords });
+    }
+    const totalsOf = (arr: any[]) => arr.reduce((acc: any, d: any) => {
       acc.amount += Number(d.amount || 0);
       acc.charge += Number(d.withdraw_charge || 0);
       acc.total += Number(d.total_amount || 0);
       return acc;
     }, { amount: 0, charge: 0, total: 0 });
-    const rows = printData.map((d: any) => `
-      <tr>
-        <td>${new Date(d.created_at).toLocaleDateString('en-UG', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-        <td>${d.receiver_name || '—'}</td>
-        <td>${d.receiver_phone || ''}</td>
-        <td>${d.description || ''}</td>
-        <td style="text-align:right">${formatAmount(d.amount)}</td>
-        <td style="text-align:right">${formatAmount(d.withdraw_charge)}</td>
-        <td style="text-align:right">${formatAmount(d.total_amount)}</td>
-        <td>${d.yo_status || ''}</td>
-        <td>${d.initiated_by_name || ''}</td>
-      </tr>`).join('');
-    const html = `<!doctype html><html><head><title>Meal Disbursements</title>
-      <style>body{font-family:Arial,sans-serif;padding:24px;color:#111}h1{margin:0 0 4px}small{color:#666}
-      table{width:100%;border-collapse:collapse;margin-top:16px;font-size:12px}
+    const renderSection = (title: string, data: any[]) => {
+      const t = totalsOf(data);
+      const rows = data.length ? data.map((d: any) => `
+        <tr>
+          <td>${new Date(d.created_at).toLocaleDateString('en-UG', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+          <td>${d.receiver_name || '—'}</td>
+          <td>${d.receiver_phone || ''}</td>
+          <td>${d.description || ''}</td>
+          <td style="text-align:right">${formatAmount(d.amount)}</td>
+          <td style="text-align:right">${formatAmount(d.withdraw_charge)}</td>
+          <td style="text-align:right">${formatAmount(d.total_amount)}</td>
+          <td>${d.yo_status || ''}</td>
+          <td>${d.initiated_by_name || ''}</td>
+        </tr>`).join('') : `<tr><td colspan="9" style="text-align:center;color:#888">No records in this category</td></tr>`;
+      return `
+        <h2 style="margin:20px 0 6px;font-size:15px">${title} <span style="color:#666;font-weight:normal">(${data.length})</span></h2>
+        <table><thead><tr>
+          <th>Date</th><th>Receiver</th><th>Phone</th><th>Description</th>
+          <th>Amount</th><th>Charge</th><th>Total</th><th>Status</th><th>Initiated By</th>
+        </tr></thead><tbody>${rows}</tbody>
+        <tfoot><tr><td colspan="4" style="text-align:right">SUBTOTAL</td>
+          <td style="text-align:right">${formatAmount(t.amount)}</td>
+          <td style="text-align:right">${formatAmount(t.charge)}</td>
+          <td style="text-align:right">${formatAmount(t.total)}</td>
+          <td colspan="2"></td></tr></tfoot></table>`;
+    };
+    const combined = sectionsToPrint.reduce((a, s) => {
+      a.amount += totalsOf(s.data).amount;
+      a.charge += totalsOf(s.data).charge;
+      a.total += totalsOf(s.data).total;
+      a.count += s.data.length;
+      return a;
+    }, { amount: 0, charge: 0, total: 0, count: 0 });
+    const html = `<!doctype html><html><head><title>Meal Disbursements Report</title>
+      <style>body{font-family:Arial,sans-serif;padding:24px;color:#111}h1{margin:0 0 4px}h2{border-bottom:2px solid #333;padding-bottom:4px}small{color:#666}
+      table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px}
       th,td{border:1px solid #ddd;padding:6px 8px;text-align:left}
-      th{background:#f3f4f6}tfoot td{font-weight:bold;background:#fafafa}</style></head><body>
-      <h1>Meal Disbursements</h1>
-      <small>Period: <strong>${range.label}</strong> • Generated ${new Date().toLocaleString('en-UG')} • ${printData.length} record(s)</small>
-      <table><thead><tr>
-        <th>Date</th><th>Receiver</th><th>Phone</th><th>Description</th>
-        <th>Amount</th><th>Charge</th><th>Total</th><th>Status</th><th>Initiated By</th>
-      </tr></thead><tbody>${rows}</tbody>
-      <tfoot><tr><td colspan="4" style="text-align:right">TOTALS</td>
-        <td style="text-align:right">${formatAmount(totals.amount)}</td>
-        <td style="text-align:right">${formatAmount(totals.charge)}</td>
-        <td style="text-align:right">${formatAmount(totals.total)}</td>
-        <td colspan="2"></td></tr></tfoot></table>
+      th{background:#f3f4f6}tfoot td{font-weight:bold;background:#fafafa}
+      .grand{margin-top:18px;padding:10px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:6px;font-size:13px}</style></head><body>
+      <h1>Meal Disbursements Report</h1>
+      <small>Period: <strong>${range.label}</strong> • Generated ${new Date().toLocaleString('en-UG')} • ${combined.count} record(s)</small>
+      ${sectionsToPrint.map(s => renderSection(s.title, s.data)).join('')}
+      ${sectionsToPrint.length > 1 ? `<div class="grand"><strong>GRAND TOTAL:</strong> Amount ${formatAmount(combined.amount)} • Charge ${formatAmount(combined.charge)} • Total ${formatAmount(combined.total)}</div>` : ''}
       <script>window.onload=()=>{window.print();setTimeout(()=>window.close(),300)}</script>
       </body></html>`;
     const w = window.open('', '_blank', 'width=1024,height=768');
@@ -349,6 +384,14 @@ const MealDisbursementSection = () => {
               <SelectItem value="year">This Year</SelectItem>
               <SelectItem value="custom">Custom Range</SelectItem>
               <SelectItem value="all">All Time</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+            <SelectTrigger className="w-[130px] h-9 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="paid">Paid Only</SelectItem>
+              <SelectItem value="failed">Failed Only</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline" size="sm" onClick={handlePrint} disabled={disbursements.length === 0} className="gap-1">
@@ -473,7 +516,7 @@ const MealDisbursementSection = () => {
           <div className="overflow-x-auto">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
               <p className="text-sm text-muted-foreground">
-                {getPeriodRange().label} — {periodFiltered.length} record(s)
+                {getPeriodRange().label} — {periodFiltered.length} record(s) • <span className="text-green-700">Paid: {paidRecords.length}</span> • <span className="text-red-700">Failed: {failedRecords.length}</span>
               </p>
               {period === 'custom' && (
                 <div className="flex items-center gap-2">
