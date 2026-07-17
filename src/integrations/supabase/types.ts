@@ -4152,6 +4152,7 @@ export type Database = {
           created_at: string | null
           id: string
           ledger_reference: string | null
+          payment_provider: string | null
           payout_ref: string | null
           payout_status: string | null
           phone_number: string
@@ -4163,6 +4164,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           ledger_reference?: string | null
+          payment_provider?: string | null
           payout_ref?: string | null
           payout_status?: string | null
           phone_number: string
@@ -4174,6 +4176,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           ledger_reference?: string | null
+          payment_provider?: string | null
           payout_ref?: string | null
           payout_status?: string | null
           phone_number?: string
