@@ -236,8 +236,10 @@ export const useUnifiedApprovalRequests = () => {
                 source: 'supabase' as const,
                 department: 'Wallet',
                 requestType: 'Instant Withdrawal',
-                title: `⚡ Instant Withdrawal - UGX ${Number(wd.amount).toLocaleString()}`,
-                description: `${empName} instantly withdrew UGX ${Number(wd.amount).toLocaleString()} to ${empPhone || 'Mobile Money'}. Approve if money reached the user, reject to refund their wallet.`,
+                title: `⚡ Instant Withdrawal${wd.payment_provider === 'gosente' ? ' (GosentePay)' : ''} - UGX ${Number(wd.amount).toLocaleString()}`,
+                description: wd.payment_provider === 'gosente'
+                  ? `${empName} requested a UGX ${Number(wd.amount).toLocaleString()} instant withdrawal to ${empPhone || 'Mobile Money'} via GosentePay. Approve to send the money now, reject to refund their wallet.`
+                  : `${empName} instantly withdrew UGX ${Number(wd.amount).toLocaleString()} to ${empPhone || 'Mobile Money'}. Approve if money reached the user, reject to refund their wallet.`,
                 amount: wd.amount,
                 requestedBy: empEmail,
                 dateRequested: new Date(wd.created_at).toLocaleDateString(),
@@ -252,6 +254,7 @@ export const useUnifiedApprovalRequests = () => {
                   requester_email: empEmail,
                   user_id: wd.user_id,
                   is_instant_withdrawal: true,
+                  payment_provider: wd.payment_provider || 'yo',
                 },
                 createdAt: wd.created_at,
                 updatedAt: wd.created_at,
@@ -410,6 +413,21 @@ export const useUnifiedApprovalRequests = () => {
         }
         if ((currentIW as any).payout_status !== 'pending_approval') {
           return { blocked: true, reason: 'This instant withdrawal has already been processed.' };
+        }
+
+        // GosentePay approvals actually dispatch the payout via edge fn.
+        const isGosente = (request.details.payment_provider || (currentIW as any).payment_provider) === 'gosente';
+        if (status === 'Approved' && isGosente) {
+          const { data: dispatched, error: dispatchErr } = await supabase.functions.invoke(
+            'dispatch-gosente-instant',
+            { body: { instant_withdrawal_id: iwId } }
+          );
+          if (dispatchErr || !dispatched?.ok) {
+            return { blocked: true, reason: dispatched?.error || dispatchErr?.message || 'GosentePay payout failed. The request remains pending — you can retry.' };
+          }
+          // dispatch fn already updated record → refresh & exit
+          await fetchAllRequests();
+          return true;
         }
 
         const newStatus = status === 'Approved' ? 'success' : 'failed';

@@ -1,0 +1,2 @@
+ALTER TABLE public.instant_withdrawals ADD COLUMN IF NOT EXISTS payment_provider TEXT;
+CREATE INDEX IF NOT EXISTS idx_instant_withdrawals_pending_provider ON public.instant_withdrawals(payment_provider, payout_status) WHERE payout_status = 'pending_approval';
