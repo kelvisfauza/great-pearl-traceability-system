@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { gosenteWithdraw, isGosenteSuccess, normalizePhone } from "../_shared/gosentepay.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,14 +33,11 @@ serve(async (req) => {
       );
     }
 
-    const apiKey = Deno.env.get("GOSENTEPAY_API_KEY");
-    const secretKey = Deno.env.get("GOSENTEPAY_SECRET_KEY");
-
-    if (!apiKey || !secretKey) {
+    if (!Deno.env.get("GOSENTEPAY_API_KEY") || !Deno.env.get("GOSENTEPAY_SECRET_KEY")) {
       throw new Error("GosentePay API credentials not configured");
     }
 
-    const { phone, amount, reason, emailAddress } = await req.json();
+    const { phone, amount, reason, emailAddress, ref } = await req.json();
 
     if (!phone || !amount) {
       return new Response(
@@ -48,20 +46,13 @@ serve(async (req) => {
       );
     }
 
-    // Validate phone format (must start with 256)
-    const cleanPhone = phone.replace(/\+/g, "").replace(/\s/g, "");
-    if (!cleanPhone.startsWith("256")) {
-      // Auto-prefix if starts with 0
-      const normalizedPhone = cleanPhone.startsWith("0") ? "256" + cleanPhone.slice(1) : "256" + cleanPhone;
-      if (normalizedPhone.length < 12) {
-        return new Response(
-          JSON.stringify({ error: "Phone number must be at least 12 digits with country code 256" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+    const finalPhone = normalizePhone(phone);
+    if (finalPhone.length < 12) {
+      return new Response(
+        JSON.stringify({ error: "Phone number must be at least 12 digits with country code 256" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
-
-    const finalPhone = cleanPhone.startsWith("256") ? cleanPhone : (cleanPhone.startsWith("0") ? "256" + cleanPhone.slice(1) : "256" + cleanPhone);
 
     const numAmount = Number(amount);
     if (isNaN(numAmount) || numAmount < 500) {
@@ -71,43 +62,31 @@ serve(async (req) => {
       );
     }
 
-    const requestBody = {
-      secret_key: secretKey,
-      currency: "UGX",
-      amount: String(numAmount),
-      emailAddress: emailAddress || "system@greatagrocoffee.com",
+    const withdrawRef = ref || `GP-WD-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+    const finalReason = reason || "Withdraw collection";
+
+    console.log("Initiating GosentePay withdraw (v1):", { phone: finalPhone, amount: numAmount, ref: withdrawRef });
+
+    const { status, body: data } = await gosenteWithdraw({
       phone: finalPhone,
-      reason: reason || "Withdraw collection",
-    };
-
-    console.log("Initiating GosentePay withdraw collection:", { phone: finalPhone, amount: numAmount, reason: requestBody.reason });
-
-    const response = await fetch("https://api.gosentepay.com/v1/withdraw_collections.php", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": apiKey,
-      },
-      body: JSON.stringify(requestBody),
+      amount: numAmount,
+      email: emailAddress || "system@greatagrocoffee.com",
+      reason: finalReason,
+      ref: withdrawRef,
     });
 
-    const data = await response.json();
-    console.log("GosentePay withdraw collection response:", JSON.stringify(data));
-    console.log("GosentePay withdraw collection HTTP status:", response.status);
+    console.log("GosentePay withdraw response:", status, JSON.stringify(data));
 
-    // GosentePay returns nested: { data: { status: 200, message: "transfer accepted" }, txRef: "..." }
-    const innerData = data.data || data;
-    const isSuccess = 
-      (innerData.status === 200 || innerData.status === 202 || innerData.code === 200 || innerData.code === 202) &&
-      (innerData.message?.toLowerCase().includes("accepted") || innerData.message?.toLowerCase().includes("success") || data.status === "success");
+    const inner = data?.data || data;
 
-    if (isSuccess) {
+    if (isGosenteSuccess(status, data)) {
       return new Response(
         JSON.stringify({
           status: "success",
-          code: innerData.code || innerData.status || 200,
-          message: innerData.message || "Withdraw collection initiated successfully",
-          ref: data.txRef || '',
+          code: inner?.code || inner?.status || 200,
+          message: inner?.message || "Withdraw initiated successfully",
+          ref: data?.gateway_reference || data?.txRef || withdrawRef,
+          clientRef: withdrawRef,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -115,8 +94,8 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           status: "error",
-          code: innerData.code || innerData.status || response.status,
-          message: innerData.message || "Failed to initiate withdraw collection",
+          code: inner?.code || inner?.status || status,
+          message: inner?.message || data?.message || "Failed to initiate withdraw",
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
