@@ -41,6 +41,7 @@ const ServiceProviderPayments = () => {
   });
   const [saveProvider, setSaveProvider] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState<'mobile_money' | 'cash'>('mobile_money');
+  const [paymentProvider, setPaymentProvider] = useState<'yo' | 'gosente'>('yo');
 
   // Fetch saved service providers
   const { data: savedProviders = [] } = useQuery({
@@ -151,6 +152,7 @@ const ServiceProviderPayments = () => {
           invoiceNumber: form.invoiceNumber,
           providerEmail: form.email,
           paymentMethod: 'mobile_money',
+          paymentProvider,
         },
       });
 
