@@ -415,6 +415,21 @@ export const useUnifiedApprovalRequests = () => {
           return { blocked: true, reason: 'This instant withdrawal has already been processed.' };
         }
 
+        // GosentePay approvals actually dispatch the payout via edge fn.
+        const isGosente = (request.details.payment_provider || (currentIW as any).payment_provider) === 'gosente';
+        if (status === 'Approved' && isGosente) {
+          const { data: dispatched, error: dispatchErr } = await supabase.functions.invoke(
+            'dispatch-gosente-instant',
+            { body: { instant_withdrawal_id: iwId } }
+          );
+          if (dispatchErr || !dispatched?.ok) {
+            return { blocked: true, reason: dispatched?.error || dispatchErr?.message || 'GosentePay payout failed. The request remains pending — you can retry.' };
+          }
+          // dispatch fn already updated record → refresh & exit
+          await fetchAllRequests();
+          return true;
+        }
+
         const newStatus = status === 'Approved' ? 'success' : 'failed';
         const { data: updated, error: updErr } = await supabase
           .from('instant_withdrawals' as any)
