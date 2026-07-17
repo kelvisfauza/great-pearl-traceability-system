@@ -765,6 +765,43 @@ serve(async (req) => {
       })
       .eq('id', instantRecord.id);
 
+    // Tiered withdrawal service fee (Yo Payments branch) — debit + treasury profit
+    if (WITHDRAW_FEE > 0) {
+      const feeRef = `WD-FEE-${instantRecord.id}`;
+      const { error: feeErr } = await supabase.from('ledger_entries').insert({
+        user_id: resolvedUserId,
+        entry_type: 'FEE',
+        amount: -WITHDRAW_FEE,
+        reference: feeRef,
+        source_category: 'WITHDRAW_FEE',
+        metadata: {
+          type: 'withdraw_service_fee',
+          instant_withdrawal_id: instantRecord.id,
+          payout_ref: txRef,
+          provider: 'yo',
+          fee_amount: WITHDRAW_FEE,
+          description: `Withdrawal service fee (UGX ${WITHDRAW_FEE.toLocaleString()}) for instant withdrawal via Yo Payments`,
+          bypass_treasury_check: true,
+        },
+      });
+      if (feeErr) {
+        console.error('[instant-withdrawal/yo] fee ledger insert failed:', feeErr.message);
+      } else {
+        try {
+          await supabase.rpc('post_treasury_profit', {
+            p_amount: WITHDRAW_FEE,
+            p_description: `Withdrawal service fee — ${employeeName} instant withdrawal (Yo)`,
+            p_reference: `PROFIT-WD-FEE-${instantRecord.id}`,
+            p_user_email: userEmail,
+            p_user_name: employeeName,
+            p_metadata: { source: 'instant_withdrawal', instant_withdrawal_id: instantRecord.id, profit_type: 'withdraw_fee', provider: 'yo', fee_amount: WITHDRAW_FEE },
+          });
+        } catch (e) {
+          console.error('[instant-withdrawal/yo] treasury profit post failed:', (e as Error).message);
+        }
+      }
+    }
+
     // Sync overdraft account if this draw consumed overdraft
     if (overdraftPortion > 0 && odAccountId) {
       try {
