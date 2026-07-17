@@ -35,6 +35,23 @@ function normalizePhone(phone: string): string {
   return clean;
 }
 
+// Tiered withdrawal service fee — applied to ALL instant withdrawals
+// (both GosentePay and Yo Payments). Charged in addition to the payout
+// amount and credited to the treasury as profit.
+//   500       – 60,000     → 1,100
+//   60,001    – 500,000    → 1,700
+//   500,001   – 1,000,000  → 2,500
+//   1,000,001 – 5,000,000  → 2,900
+//   5,000,001 and above    → 2,900
+export function computeWithdrawFee(amount: number): number {
+  const a = Number(amount) || 0;
+  if (a < 500) return 0;
+  if (a <= 60_000) return 1_100;
+  if (a <= 500_000) return 1_700;
+  if (a <= 1_000_000) return 2_500;
+  return 2_900;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -418,13 +435,13 @@ serve(async (req) => {
     // the Yo Payments direct payout flow below.
     const useGosente = numAmount < 50000;
 
-    // GosentePay service fee — charged in addition to the withdrawal amount
-    // and credited to the treasury as profit. Displayed to the user in the UI
-    // before they submit.
-    const GOSENTE_FEE = useGosente ? 1000 : 0;
-    if (useGosente && spendable < numAmount + GOSENTE_FEE) {
+    // Tiered withdrawal service fee — applied to every instant withdrawal
+    // (both GosentePay and Yo Payments), charged in addition to the amount
+    // and posted to the treasury as profit.
+    const WITHDRAW_FEE = computeWithdrawFee(numAmount);
+    if (spendable < numAmount + WITHDRAW_FEE) {
       return respond(false, {
-        error: `Insufficient funds to cover the withdrawal plus the UGX ${GOSENTE_FEE.toLocaleString()} GosentePay service fee. Available: UGX ${spendable.toLocaleString()}.`,
+        error: `Insufficient funds to cover the withdrawal plus the UGX ${WITHDRAW_FEE.toLocaleString()} service fee. Available: UGX ${spendable.toLocaleString()}.`,
       });
     }
 
@@ -480,38 +497,41 @@ serve(async (req) => {
         return respond(false, { error: 'Failed to hold funds: ' + ledgerErr.message });
       }
 
-      // Debit the GosentePay service fee as a separate ledger line so it is
-      // clearly visible on the user's statement.
-      const feeRef = `GOSENTE-FEE-${instantRecord.id}`;
-      const { error: feeErr } = await supabase.from('ledger_entries').insert({
-        user_id: resolvedUserId,
-        entry_type: 'FEE',
-        amount: -GOSENTE_FEE,
-        reference: feeRef,
-        source_category: 'GOSENTE_FEE',
-        metadata: {
-          type: 'gosente_service_fee',
-          instant_withdrawal_id: instantRecord.id,
-          payout_ref: ref,
-          description: `GosentePay service fee (UGX ${GOSENTE_FEE.toLocaleString()}) for instant withdrawal`,
-          bypass_treasury_check: true,
-        },
-      });
-      if (feeErr) {
-        console.error('[instant-withdrawal/gosente] fee ledger insert failed:', feeErr.message);
-      } else {
-        // Post the fee as treasury profit
-        try {
-          await supabase.rpc('post_treasury_profit', {
-            p_amount: GOSENTE_FEE,
-            p_description: `GosentePay service fee — ${employeeName} instant withdrawal`,
-            p_reference: `PROFIT-GOSENTE-FEE-${instantRecord.id}`,
-            p_user_email: userEmail,
-            p_user_name: employeeName,
-            p_metadata: { source: 'instant_withdrawal', instant_withdrawal_id: instantRecord.id, profit_type: 'gosente_fee' },
-          });
-        } catch (e) {
-          console.error('[instant-withdrawal/gosente] treasury profit post failed:', (e as Error).message);
+      // Debit the tiered withdrawal service fee as a separate ledger line so
+      // it is clearly visible on the user's statement.
+      if (WITHDRAW_FEE > 0) {
+        const feeRef = `WD-FEE-${instantRecord.id}`;
+        const { error: feeErr } = await supabase.from('ledger_entries').insert({
+          user_id: resolvedUserId,
+          entry_type: 'FEE',
+          amount: -WITHDRAW_FEE,
+          reference: feeRef,
+          source_category: 'WITHDRAW_FEE',
+          metadata: {
+            type: 'withdraw_service_fee',
+            instant_withdrawal_id: instantRecord.id,
+            payout_ref: ref,
+            provider: 'gosente',
+            fee_amount: WITHDRAW_FEE,
+            description: `Withdrawal service fee (UGX ${WITHDRAW_FEE.toLocaleString()}) for instant withdrawal via GosentePay`,
+            bypass_treasury_check: true,
+          },
+        });
+        if (feeErr) {
+          console.error('[instant-withdrawal/gosente] fee ledger insert failed:', feeErr.message);
+        } else {
+          try {
+            await supabase.rpc('post_treasury_profit', {
+              p_amount: WITHDRAW_FEE,
+              p_description: `Withdrawal service fee — ${employeeName} instant withdrawal (GosentePay)`,
+              p_reference: `PROFIT-WD-FEE-${instantRecord.id}`,
+              p_user_email: userEmail,
+              p_user_name: employeeName,
+              p_metadata: { source: 'instant_withdrawal', instant_withdrawal_id: instantRecord.id, profit_type: 'withdraw_fee', provider: 'gosente', fee_amount: WITHDRAW_FEE },
+            });
+          } catch (e) {
+            console.error('[instant-withdrawal/gosente] treasury profit post failed:', (e as Error).message);
+          }
         }
       }
 
@@ -744,6 +764,43 @@ serve(async (req) => {
         completed_at: isPending ? null : new Date().toISOString(),
       })
       .eq('id', instantRecord.id);
+
+    // Tiered withdrawal service fee (Yo Payments branch) — debit + treasury profit
+    if (WITHDRAW_FEE > 0) {
+      const feeRef = `WD-FEE-${instantRecord.id}`;
+      const { error: feeErr } = await supabase.from('ledger_entries').insert({
+        user_id: resolvedUserId,
+        entry_type: 'FEE',
+        amount: -WITHDRAW_FEE,
+        reference: feeRef,
+        source_category: 'WITHDRAW_FEE',
+        metadata: {
+          type: 'withdraw_service_fee',
+          instant_withdrawal_id: instantRecord.id,
+          payout_ref: txRef,
+          provider: 'yo',
+          fee_amount: WITHDRAW_FEE,
+          description: `Withdrawal service fee (UGX ${WITHDRAW_FEE.toLocaleString()}) for instant withdrawal via Yo Payments`,
+          bypass_treasury_check: true,
+        },
+      });
+      if (feeErr) {
+        console.error('[instant-withdrawal/yo] fee ledger insert failed:', feeErr.message);
+      } else {
+        try {
+          await supabase.rpc('post_treasury_profit', {
+            p_amount: WITHDRAW_FEE,
+            p_description: `Withdrawal service fee — ${employeeName} instant withdrawal (Yo)`,
+            p_reference: `PROFIT-WD-FEE-${instantRecord.id}`,
+            p_user_email: userEmail,
+            p_user_name: employeeName,
+            p_metadata: { source: 'instant_withdrawal', instant_withdrawal_id: instantRecord.id, profit_type: 'withdraw_fee', provider: 'yo', fee_amount: WITHDRAW_FEE },
+          });
+        } catch (e) {
+          console.error('[instant-withdrawal/yo] treasury profit post failed:', (e as Error).message);
+        }
+      }
+    }
 
     // Sync overdraft account if this draw consumed overdraft
     if (overdraftPortion > 0 && odAccountId) {
