@@ -567,12 +567,9 @@ const MealDisbursementSection = () => {
                 ))}
               </TableBody>
             </Table>
-            {disbursements.length > 3 && (
-              <div className="flex items-center justify-between px-2 py-3 text-sm text-muted-foreground">
-                <span>Showing {visibleDisbursements.length} of {disbursements.length} disbursements</span>
-                {!search.trim() && <span>{disbursements.length - 3} more hidden — filter to search</span>}
-              </div>
-            )}
+            <div className="flex items-center justify-between px-2 py-3 text-sm text-muted-foreground">
+              <span>Showing {visibleDisbursements.length} of {disbursements.length} total disbursements</span>
+            </div>
           </div>
         )}
       </CardContent>
