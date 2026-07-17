@@ -41,6 +41,7 @@ const ServiceProviderPayments = () => {
   });
   const [saveProvider, setSaveProvider] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState<'mobile_money' | 'cash'>('mobile_money');
+  const [paymentProvider, setPaymentProvider] = useState<'yo' | 'gosente'>('yo');
 
   // Fetch saved service providers
   const { data: savedProviders = [] } = useQuery({
@@ -151,6 +152,7 @@ const ServiceProviderPayments = () => {
           invoiceNumber: form.invoiceNumber,
           providerEmail: form.email,
           paymentMethod: 'mobile_money',
+          paymentProvider,
         },
       });
 
@@ -451,6 +453,43 @@ const ServiceProviderPayments = () => {
                   </button>
                 </div>
               </div>
+              {paymentMethod === 'mobile_money' && (
+                <div className="space-y-2">
+                  <Label>Mobile Money Provider *</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentProvider('yo')}
+                      className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                        paymentProvider === 'yo'
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:bg-accent'
+                      }`}
+                    >
+                      <Smartphone className={`w-5 h-5 ${paymentProvider === 'yo' ? 'text-primary' : 'text-muted-foreground'}`} />
+                      <div className="text-left">
+                        <p className="text-sm font-medium">Yo Payments</p>
+                        <p className="text-xs text-muted-foreground">MTN / Airtel via Yo</p>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentProvider('gosente')}
+                      className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                        paymentProvider === 'gosente'
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:bg-accent'
+                      }`}
+                    >
+                      <Smartphone className={`w-5 h-5 ${paymentProvider === 'gosente' ? 'text-primary' : 'text-muted-foreground'}`} />
+                      <div className="text-left">
+                        <p className="text-sm font-medium">GosentePay</p>
+                        <p className="text-xs text-muted-foreground">MTN / Airtel via Gosente</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              )}
               {savedProviders.length > 0 && (
                 <div className="space-y-2">
                   <Label className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> Select Saved Provider</Label>
@@ -581,7 +620,11 @@ const ServiceProviderPayments = () => {
               <Button variant="outline" onClick={() => setOpen(false)} className="w-full sm:w-auto">Cancel</Button>
               <Button onClick={handleSubmit} disabled={submitting} className="gap-2 w-full sm:w-auto">
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : paymentMethod === 'cash' ? <Banknote className="w-4 h-4" /> : <Send className="w-4 h-4" />}
-                {submitting ? (paymentMethod === 'cash' ? 'Recording...' : 'Sending...') : paymentMethod === 'cash' ? 'Record Cash Payment' : 'Send via Yo'}
+                {submitting
+                  ? (paymentMethod === 'cash' ? 'Recording...' : 'Sending...')
+                  : paymentMethod === 'cash'
+                    ? 'Record Cash Payment'
+                    : `Send via ${paymentProvider === 'gosente' ? 'GosentePay' : 'Yo'}`}
               </Button>
             </DialogFooter>
           </DialogContent>

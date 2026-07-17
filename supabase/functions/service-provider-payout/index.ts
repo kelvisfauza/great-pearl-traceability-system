@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { yoPayout, normalizePhone } from "../_shared/yo-payments.ts";
+import { gosenteWithdraw, isGosenteSuccess } from "../_shared/gosentepay.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,7 +22,8 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { phone, amount, withdrawCharge, description, receiverName, initiatedBy, initiatedByName, notes, invoiceNumber, providerEmail } = await req.json();
+    const { phone, amount, withdrawCharge, description, receiverName, initiatedBy, initiatedByName, notes, invoiceNumber, providerEmail, paymentProvider } = await req.json();
+    const provider: "yo" | "gosente" = paymentProvider === "gosente" ? "gosente" : "yo";
 
     if (!phone || !amount || !description) {
       return new Response(
@@ -63,6 +65,7 @@ serve(async (req) => {
         initiated_by: initiatedBy,
         initiated_by_name: initiatedByName,
         notes: notes || null,
+        payment_provider: provider,
       })
       .select()
       .single();
@@ -72,45 +75,77 @@ serve(async (req) => {
       throw new Error("Failed to create payment record");
     }
 
-    // Initiate Yo Payment
+    // Initiate payout via selected provider
     const narrative = `Service provider payment - ${description} - ${receiverName || cleanPhone}`;
-    console.log(`[Service Provider Payout] Sending UGX ${totalAmount} to ${cleanPhone}: ${narrative}`);
-
-    const result = await yoPayout({
-      phone: cleanPhone,
-      amount: totalAmount,
-      narrative,
-    });
-
-    // Check for -22 (pending authorization) and -13 (insufficient balance)
-    const rawResp = result.rawResponse || '';
-    const isPending22 = result.statusMessage?.includes("-22") || rawResp.includes("<StatusCode>-22</StatusCode>");
-    const isInsufficientBalance = rawResp.includes("<StatusCode>-13</StatusCode>");
+    console.log(`[Service Provider Payout] (${provider}) Sending UGX ${totalAmount} to ${cleanPhone}: ${narrative}`);
 
     let yoStatus = "failed";
-    let displayMessage = result.errorMessage || "Payment failed";
-    if (result.success) {
-      yoStatus = "success";
-      displayMessage = "Payment sent successfully to service provider";
-    } else if (isPending22) {
-      yoStatus = "pending_approval";
-      displayMessage = "Payment sent, pending authorization in Yo dashboard";
-    } else if (isInsufficientBalance) {
-      // Extract the actual balance message from Yo
-      const balanceMsg = rawResp.match(/<StatusMessage>(.*?)<\/StatusMessage>/)?.[1];
-      displayMessage = balanceMsg || "Yo Payments account has insufficient balance. Please top up your Yo Payments account.";
-      console.error("[Service Provider Payout] Insufficient Yo balance:", balanceMsg);
+    let displayMessage = "Payment failed";
+    let transactionRef: string | null = null;
+    let rawResponseStr: string | null = null;
+    let isSuccessful = false;
+
+    if (provider === "gosente") {
+      const ref = `SP-GP-${record.id}-${Date.now().toString(36)}`;
+      try {
+        const { status, body } = await gosenteWithdraw({
+          phone: cleanPhone,
+          amount: totalAmount,
+          email: providerEmail || "system@greatagrocoffee.com",
+          reason: narrative.slice(0, 120),
+          ref,
+        });
+        rawResponseStr = JSON.stringify({ status, body });
+        const inner = body?.data || body;
+        transactionRef = body?.gateway_reference || body?.txRef || inner?.ref || ref;
+        if (isGosenteSuccess(status, body)) {
+          yoStatus = "success";
+          isSuccessful = true;
+          displayMessage = "Payment sent successfully via GosentePay";
+        } else {
+          displayMessage = inner?.message || body?.message || "GosentePay payout failed";
+        }
+      } catch (e) {
+        rawResponseStr = String(e instanceof Error ? e.message : e);
+        displayMessage = `GosentePay error: ${rawResponseStr}`;
+      }
+    } else {
+      const result = await yoPayout({
+        phone: cleanPhone,
+        amount: totalAmount,
+        narrative,
+      });
+      rawResponseStr = result.rawResponse || null;
+      transactionRef = result.transactionRef || null;
+      const rawResp = result.rawResponse || '';
+      const isPending22 = result.statusMessage?.includes("-22") || rawResp.includes("<StatusCode>-22</StatusCode>");
+      const isInsufficientBalance = rawResp.includes("<StatusCode>-13</StatusCode>");
+      if (result.success) {
+        yoStatus = "success";
+        isSuccessful = true;
+        displayMessage = "Payment sent successfully via Yo Payments";
+      } else if (isPending22) {
+        yoStatus = "pending_approval";
+        displayMessage = "Payment sent, pending authorization in Yo dashboard";
+      } else if (isInsufficientBalance) {
+        const balanceMsg = rawResp.match(/<StatusMessage>(.*?)<\/StatusMessage>/)?.[1];
+        displayMessage = balanceMsg || "Yo Payments account has insufficient balance. Please top up your Yo Payments account.";
+      } else {
+        displayMessage = result.errorMessage || "Yo payout failed";
+      }
     }
 
     await supabase
       .from("service_provider_payments")
       .update({
-        yo_reference: result.transactionRef || null,
+        yo_reference: transactionRef,
         yo_status: yoStatus,
-        yo_raw_response: result.rawResponse || null,
+        yo_raw_response: rawResponseStr,
         updated_at: new Date().toISOString(),
       })
       .eq("id", record.id);
+
+    const result = { success: isSuccessful, transactionRef };
 
     // Send SMS notification to service provider
     if ((result.success || yoStatus === "pending_approval") && cleanPhone) {
