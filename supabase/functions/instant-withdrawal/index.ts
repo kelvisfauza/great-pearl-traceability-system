@@ -412,6 +412,12 @@ serve(async (req) => {
     const ref = `INSTANT-WD-${Date.now()}`;
     const remainingAfter = walletBalance - numAmount;
 
+    // ── Provider routing ───────────────────────────────────────────────
+    // Amounts < UGX 50,000 route via GosentePay AND require admin approval
+    // before the money is actually sent. Amounts ≥ 50,000 continue to use
+    // the Yo Payments direct payout flow below.
+    const useGosente = numAmount < 50000;
+
     // Create tracking record
     const { data: instantRecord, error: insertErr } = await supabase
       .from('instant_withdrawals')
@@ -420,7 +426,8 @@ serve(async (req) => {
         amount: numAmount,
         phone_number: cleanPhone,
         payout_ref: ref,
-        payout_status: 'pending',
+        payout_status: useGosente ? 'pending_approval' : 'pending',
+        payment_provider: useGosente ? 'gosente' : 'yo',
       })
       .select('id')
       .single();
@@ -428,6 +435,115 @@ serve(async (req) => {
     if (insertErr) {
       console.error("[instant-withdrawal] Insert error:", insertErr);
       return respond(false, { error: "Failed to create withdrawal record: " + insertErr.message });
+    }
+
+    // ── GosentePay branch: hold funds, notify admins, wait for approval ──
+    if (useGosente) {
+      // Debit wallet immediately (holds the funds). Refund happens on reject
+      // via the existing approval flow in useUnifiedApprovalRequests.
+      const ledgerRef = `INSTANT-WD-${instantRecord.id}`;
+      const { error: ledgerErr } = await supabase.from('ledger_entries').insert({
+        user_id: resolvedUserId,
+        entry_type: 'WITHDRAWAL',
+        amount: -numAmount,
+        reference: ledgerRef,
+        source_category: overdraftPortion > 0 ? 'OVERDRAFT_DRAW' : 'WITHDRAWAL',
+        metadata: {
+          type: 'instant_withdrawal',
+          phone: cleanPhone,
+          payout_ref: ref,
+          instant_withdrawal_id: instantRecord.id,
+          payment_provider: 'gosente',
+          status: 'pending_approval',
+          wallet_portion: walletPortion,
+          overdraft_portion: overdraftPortion,
+          interest_charged: upfrontInterest,
+          interest_rate_bps: odInterestRateBps,
+          bypass_treasury_check: true,
+          description: 'Instant withdrawal (GosentePay) held pending admin approval',
+        },
+      });
+      if (ledgerErr) {
+        await supabase.from('instant_withdrawals')
+          .update({ payout_status: 'failed', completed_at: new Date().toISOString() })
+          .eq('id', instantRecord.id);
+        return respond(false, { error: 'Failed to hold funds: ' + ledgerErr.message });
+      }
+      await supabase.from('instant_withdrawals')
+        .update({ ledger_reference: ledgerRef })
+        .eq('id', instantRecord.id);
+
+      // Notify admins via email + SMS about the pending GosentePay approval
+      const adminRecipients = [
+        { name: 'Musema Wyclif', email: 'musemawyclif@greatpearlcoffee.com', phone: '256772000000' },
+        { name: 'Bwambale Denis', email: 'bwambaledenis@greatpearlcoffee.com', phone: '256772000000' },
+        { name: 'Fauza Kusa', email: 'fauzakusa@greatpearlcoffee.com', phone: '256772000000' },
+      ];
+      // Pull real admin phones from employees table
+      try {
+        const { data: adminEmps } = await supabase
+          .from('employees')
+          .select('name, email, phone')
+          .in('email', adminRecipients.map(a => a.email));
+        if (adminEmps) {
+          for (const a of adminRecipients) {
+            const match = adminEmps.find((e: any) => e.email === a.email);
+            if (match?.phone) a.phone = match.phone;
+          }
+        }
+      } catch (_) { /* best-effort */ }
+
+      for (const admin of adminRecipients) {
+        // Email
+        try {
+          await supabase.functions.invoke('send-transactional-email', {
+            body: {
+              templateName: 'instant-withdrawal-approval-request',
+              recipientEmail: admin.email,
+              idempotencyKey: `wd-gp-approval-${instantRecord.id}-${admin.email}`,
+              templateData: {
+                approverName: admin.name.split(' ')[0],
+                employeeName,
+                amount: numAmount,
+                phone: depositPhone,
+                ref,
+                remainingBalance: Math.max(0, remainingAfter),
+                requestDate: new Date().toLocaleDateString('en-UG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+                provider: 'GosentePay',
+              },
+            },
+          });
+        } catch (e) {
+          console.error(`[instant-withdrawal/gosente] email err ${admin.email}:`, (e as Error).message);
+        }
+        // SMS
+        if (admin.phone) {
+          try {
+            await supabase.functions.invoke('send-sms', {
+              body: {
+                phone: admin.phone,
+                message: `APPROVAL NEEDED: ${employeeName} requested instant withdrawal UGX ${numAmount.toLocaleString()} to ${depositPhone} via GosentePay. Ref ${ref}. Approve in the Approvals page. - Great Agro Coffee`,
+                userName: admin.name,
+                messageType: 'approval_request',
+                department: 'Admin',
+                triggeredBy: userEmail,
+              },
+            });
+          } catch (e) {
+            console.error(`[instant-withdrawal/gosente] sms err ${admin.phone}:`, (e as Error).message);
+          }
+        }
+      }
+
+      return respond(true, {
+        success: true,
+        status: 'pending_approval',
+        provider: 'gosente',
+        ref,
+        amount: numAmount,
+        phone: cleanPhone,
+        message: `Withdrawal request UGX ${numAmount.toLocaleString()} submitted for admin approval via GosentePay. You'll be notified once processed.`,
+      });
     }
 
     // Trigger Yo Payments payout - include employee name and balance in narrative
