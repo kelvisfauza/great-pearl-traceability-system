@@ -744,6 +744,18 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                   </Alert>
                 )}
 
+                {/* GosentePay service-fee notice (amounts < 50k route via GosentePay) */}
+                {instantEligibility?.eligible && parsedAmount >= 2000 && parsedAmount < 50000 && (
+                  <Alert className="border-amber-300 bg-amber-50 py-2">
+                    <AlertTriangle className="h-3 w-3 text-amber-600" />
+                    <AlertDescription className="text-xs text-amber-800">
+                      A <strong>UGX 1,000 GosentePay service fee</strong> will be charged in addition to your withdrawal.
+                      Total deducted from your wallet: <strong>UGX {(parsedAmount + 1000).toLocaleString()}</strong>
+                      {' '}(UGX {parsedAmount.toLocaleString()} payout + UGX 1,000 fee).
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 {/* Overdraft acceptance for instant withdraw */}
                 {instantEligibility?.eligible && usesOverdraft && parsedAmount >= 2000 && parsedAmount <= instantMaxAmount && (
                   <div className="rounded-md border border-amber-300 bg-amber-50 p-3 space-y-2 text-xs text-amber-900">
