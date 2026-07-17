@@ -1,0 +1,1 @@
+ALTER TABLE public.service_provider_payments ADD COLUMN IF NOT EXISTS payment_provider TEXT DEFAULT 'yo';
