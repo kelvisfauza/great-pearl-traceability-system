@@ -466,22 +466,29 @@ export const useUnifiedApprovalRequests = () => {
             console.error('Refund error:', refundErr);
           }
 
-          // If this was a GosentePay withdrawal, also refund the UGX 1,000
-          // service fee and reverse the treasury profit entry.
-          if (isGosente) {
-            const feeRefundRef = `REFUND-GOSENTE-FEE-${iwId}`;
+          // Refund the tiered withdrawal service fee and reverse the treasury
+          // profit entry (fee tiers: <=60k → 1,100; <=500k → 1,700; <=1M → 2,500; >1M → 2,900).
+          const wdAmt = Number((currentIW as any).amount) || 0;
+          const feeAmt =
+            wdAmt < 500 ? 0 :
+            wdAmt <= 60_000 ? 1_100 :
+            wdAmt <= 500_000 ? 1_700 :
+            wdAmt <= 1_000_000 ? 2_500 : 2_900;
+          if (feeAmt > 0) {
+            const feeRefundRef = `REFUND-WD-FEE-${iwId}`;
             const { error: feeRefundErr } = await supabase.from('ledger_entries' as any).insert({
               user_id: (currentIW as any).user_id,
               entry_type: 'DEPOSIT',
-              amount: 1000,
+              amount: feeAmt,
               reference: feeRefundRef,
               source_category: 'SYSTEM_AWARD',
               metadata: {
-                type: 'gosente_fee_refund',
+                type: 'withdraw_fee_refund',
                 instant_withdrawal_id: iwId,
-                reason: 'GosentePay withdrawal rejected — service fee refunded',
+                fee_amount: feeAmt,
+                reason: 'Withdrawal rejected — service fee refunded',
                 rejected_by: adminName,
-                description: 'GosentePay service fee refund (admin rejected)',
+                description: `Withdrawal service fee refund (UGX ${feeAmt.toLocaleString()} — admin rejected)`,
               },
             });
             if (feeRefundErr && feeRefundErr.code !== '23505') {
@@ -489,12 +496,12 @@ export const useUnifiedApprovalRequests = () => {
             }
             try {
               await supabase.rpc('reverse_treasury_profit', {
-                p_amount: 1000,
-                p_description: 'Reversal: GosentePay service fee (withdrawal rejected)',
-                p_reference: `PROFIT-REVERSAL-GOSENTE-FEE-${iwId}`,
+                p_amount: feeAmt,
+                p_description: `Reversal: withdrawal service fee (UGX ${feeAmt.toLocaleString()} — withdrawal rejected)`,
+                p_reference: `PROFIT-REVERSAL-WD-FEE-${iwId}`,
                 p_user_email: request.details.requester_email || null,
                 p_user_name: null,
-                p_metadata: { source: 'instant_withdrawal', instant_withdrawal_id: iwId, profit_type: 'gosente_fee', reversal: true },
+                p_metadata: { source: 'instant_withdrawal', instant_withdrawal_id: iwId, profit_type: 'withdraw_fee', reversal: true, fee_amount: feeAmt },
               });
             } catch (e) {
               console.error('Treasury reversal error (non-blocking):', e);
