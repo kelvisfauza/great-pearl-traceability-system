@@ -225,6 +225,7 @@ const MealDisbursementSection = () => {
     switch (status) {
       case 'success': return <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Sent</Badge>;
       case 'paid': return <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">Paid</Badge>;
+      case 'cash': return <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">Paid (Cash)</Badge>;
       case 'pending_approval': return <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Pending Yo</Badge>;
       case 'pending': return <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">Processing</Badge>;
       default: return <Badge variant="destructive">Failed</Badge>;
@@ -274,7 +275,7 @@ const MealDisbursementSection = () => {
 
   const periodFiltered = disbursements.filter((d: any) => inRange(d.created_at));
 
-  const isPaid = (d: any) => d.yo_status === 'success' || d.yo_status === 'paid';
+  const isPaid = (d: any) => d.yo_status === 'success' || d.yo_status === 'paid' || d.yo_status === 'cash';
   const isFailed = (d: any) => !isPaid(d) && d.yo_status !== 'pending' && d.yo_status !== 'pending_approval';
   const paidRecords = periodFiltered.filter(isPaid);
   const failedRecords = periodFiltered.filter(isFailed);
