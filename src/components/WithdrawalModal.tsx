@@ -926,6 +926,18 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                   <span className="text-muted-foreground">Method</span>
                   <span className="font-medium text-foreground">Mobile Money (Instant)</span>
                 </div>
+                  {parsedAmount < 50000 && (
+                    <>
+                      <div className="flex justify-between text-amber-700">
+                        <span>GosentePay service fee</span>
+                        <span className="font-medium">UGX 1,000</span>
+                      </div>
+                      <div className="flex justify-between border-t pt-2">
+                        <span className="text-muted-foreground">Total deducted</span>
+                        <span className="font-bold text-foreground">UGX {(parsedAmount + 1000).toLocaleString()}</span>
+                      </div>
+                    </>
+                  )}
               </div>
               {parsedAmount > 100000 ? (
                 <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
