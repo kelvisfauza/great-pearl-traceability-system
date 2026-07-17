@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { UtensilsCrossed, Send, Loader2, Phone, DollarSign, RefreshCw, RotateCcw, CheckCheck, Printer, Receipt, Search } from 'lucide-react';
 import { sendPaymentReceipt } from '@/utils/sendPaymentReceipt';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
@@ -27,6 +28,9 @@ const MealDisbursementSection = () => {
   const [markingId, setMarkingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [receiptingId, setReceiptingId] = useState<string | null>(null);
+  const [period, setPeriod] = useState<'all' | 'today' | 'week' | 'month' | 'year' | 'custom'>('month');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
 
   const [form, setForm] = useState({
     receiverPhone: '',
@@ -230,18 +234,65 @@ const MealDisbursementSection = () => {
 
   const hasPending = disbursements.some((d: any) => d.yo_status === 'pending_approval');
 
+  // Period filter (weekly / monthly / etc.)
+  const getPeriodRange = (): { from: Date | null; to: Date | null; label: string } => {
+    const now = new Date();
+    if (period === 'today') {
+      const from = new Date(now); from.setHours(0, 0, 0, 0);
+      return { from, to: null, label: 'Today' };
+    }
+    if (period === 'week') {
+      const from = new Date(now); const day = from.getDay();
+      const diff = (day === 0 ? -6 : 1 - day); // Monday start
+      from.setDate(from.getDate() + diff); from.setHours(0, 0, 0, 0);
+      return { from, to: null, label: 'This Week' };
+    }
+    if (period === 'month') {
+      const from = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { from, to: null, label: now.toLocaleString('en-UG', { month: 'long', year: 'numeric' }) };
+    }
+    if (period === 'year') {
+      const from = new Date(now.getFullYear(), 0, 1);
+      return { from, to: null, label: String(now.getFullYear()) };
+    }
+    if (period === 'custom' && (customFrom || customTo)) {
+      const from = customFrom ? new Date(customFrom + 'T00:00:00') : null;
+      const to = customTo ? new Date(customTo + 'T23:59:59') : null;
+      return { from, to, label: `${customFrom || '…'} → ${customTo || '…'}` };
+    }
+    return { from: null, to: null, label: 'All Time' };
+  };
+
+  const inRange = (createdAt: string) => {
+    const { from, to } = getPeriodRange();
+    const t = new Date(createdAt).getTime();
+    if (from && t < from.getTime()) return false;
+    if (to && t > to.getTime()) return false;
+    return true;
+  };
+
+  const periodFiltered = disbursements.filter((d: any) => inRange(d.created_at));
+
   const term = search.trim().toLowerCase();
   const visibleDisbursements = term
-    ? disbursements.filter((d: any) =>
+    ? periodFiltered.filter((d: any) =>
         (d.receiver_name || '').toLowerCase().includes(term) ||
         (d.receiver_phone || '').toLowerCase().includes(term) ||
         (d.description || '').toLowerCase().includes(term) ||
         (d.initiated_by_name || '').toLowerCase().includes(term)
       )
-    : disbursements.slice(0, 3);
+    : periodFiltered;
 
   const handlePrint = () => {
-    const rows = disbursements.map((d: any) => `
+    const range = getPeriodRange();
+    const printData = periodFiltered;
+    const totals = printData.reduce((acc: any, d: any) => {
+      acc.amount += Number(d.amount || 0);
+      acc.charge += Number(d.withdraw_charge || 0);
+      acc.total += Number(d.total_amount || 0);
+      return acc;
+    }, { amount: 0, charge: 0, total: 0 });
+    const rows = printData.map((d: any) => `
       <tr>
         <td>${new Date(d.created_at).toLocaleDateString('en-UG', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
         <td>${d.receiver_name || '—'}</td>
@@ -257,13 +308,18 @@ const MealDisbursementSection = () => {
       <style>body{font-family:Arial,sans-serif;padding:24px;color:#111}h1{margin:0 0 4px}small{color:#666}
       table{width:100%;border-collapse:collapse;margin-top:16px;font-size:12px}
       th,td{border:1px solid #ddd;padding:6px 8px;text-align:left}
-      th{background:#f3f4f6}</style></head><body>
+      th{background:#f3f4f6}tfoot td{font-weight:bold;background:#fafafa}</style></head><body>
       <h1>Meal Disbursements</h1>
-      <small>Generated ${new Date().toLocaleString('en-UG')} • ${disbursements.length} record(s)</small>
+      <small>Period: <strong>${range.label}</strong> • Generated ${new Date().toLocaleString('en-UG')} • ${printData.length} record(s)</small>
       <table><thead><tr>
         <th>Date</th><th>Receiver</th><th>Phone</th><th>Description</th>
         <th>Amount</th><th>Charge</th><th>Total</th><th>Status</th><th>Initiated By</th>
-      </tr></thead><tbody>${rows}</tbody></table>
+      </tr></thead><tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="4" style="text-align:right">TOTALS</td>
+        <td style="text-align:right">${formatAmount(totals.amount)}</td>
+        <td style="text-align:right">${formatAmount(totals.charge)}</td>
+        <td style="text-align:right">${formatAmount(totals.total)}</td>
+        <td colspan="2"></td></tr></tfoot></table>
       <script>window.onload=()=>{window.print();setTimeout(()=>window.close(),300)}</script>
       </body></html>`;
     const w = window.open('', '_blank', 'width=1024,height=768');
