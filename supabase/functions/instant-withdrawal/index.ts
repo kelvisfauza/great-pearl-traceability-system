@@ -418,6 +418,16 @@ serve(async (req) => {
     // the Yo Payments direct payout flow below.
     const useGosente = numAmount < 50000;
 
+    // GosentePay service fee — charged in addition to the withdrawal amount
+    // and credited to the treasury as profit. Displayed to the user in the UI
+    // before they submit.
+    const GOSENTE_FEE = useGosente ? 1000 : 0;
+    if (useGosente && spendable < numAmount + GOSENTE_FEE) {
+      return respond(false, {
+        error: `Insufficient funds to cover the withdrawal plus the UGX ${GOSENTE_FEE.toLocaleString()} GosentePay service fee. Available: UGX ${spendable.toLocaleString()}.`,
+      });
+    }
+
     // Create tracking record
     const { data: instantRecord, error: insertErr } = await supabase
       .from('instant_withdrawals')
@@ -469,6 +479,42 @@ serve(async (req) => {
           .eq('id', instantRecord.id);
         return respond(false, { error: 'Failed to hold funds: ' + ledgerErr.message });
       }
+
+      // Debit the GosentePay service fee as a separate ledger line so it is
+      // clearly visible on the user's statement.
+      const feeRef = `GOSENTE-FEE-${instantRecord.id}`;
+      const { error: feeErr } = await supabase.from('ledger_entries').insert({
+        user_id: resolvedUserId,
+        entry_type: 'FEE',
+        amount: -GOSENTE_FEE,
+        reference: feeRef,
+        source_category: 'GOSENTE_FEE',
+        metadata: {
+          type: 'gosente_service_fee',
+          instant_withdrawal_id: instantRecord.id,
+          payout_ref: ref,
+          description: `GosentePay service fee (UGX ${GOSENTE_FEE.toLocaleString()}) for instant withdrawal`,
+          bypass_treasury_check: true,
+        },
+      });
+      if (feeErr) {
+        console.error('[instant-withdrawal/gosente] fee ledger insert failed:', feeErr.message);
+      } else {
+        // Post the fee as treasury profit
+        try {
+          await supabase.rpc('post_treasury_profit', {
+            p_amount: GOSENTE_FEE,
+            p_description: `GosentePay service fee — ${employeeName} instant withdrawal`,
+            p_reference: `PROFIT-GOSENTE-FEE-${instantRecord.id}`,
+            p_user_email: userEmail,
+            p_user_name: employeeName,
+            p_metadata: { source: 'instant_withdrawal', instant_withdrawal_id: instantRecord.id, profit_type: 'gosente_fee' },
+          });
+        } catch (e) {
+          console.error('[instant-withdrawal/gosente] treasury profit post failed:', (e as Error).message);
+        }
+      }
+
       await supabase.from('instant_withdrawals')
         .update({ ledger_reference: ledgerRef })
         .eq('id', instantRecord.id);
