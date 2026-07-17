@@ -35,6 +35,23 @@ function normalizePhone(phone: string): string {
   return clean;
 }
 
+// Tiered withdrawal service fee — applied to ALL instant withdrawals
+// (both GosentePay and Yo Payments). Charged in addition to the payout
+// amount and credited to the treasury as profit.
+//   500       – 60,000     → 1,100
+//   60,001    – 500,000    → 1,700
+//   500,001   – 1,000,000  → 2,500
+//   1,000,001 – 5,000,000  → 2,900
+//   5,000,001 and above    → 2,900
+export function computeWithdrawFee(amount: number): number {
+  const a = Number(amount) || 0;
+  if (a < 500) return 0;
+  if (a <= 60_000) return 1_100;
+  if (a <= 500_000) return 1_700;
+  if (a <= 1_000_000) return 2_500;
+  return 2_900;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
