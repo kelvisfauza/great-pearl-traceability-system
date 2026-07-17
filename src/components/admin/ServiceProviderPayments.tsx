@@ -746,7 +746,7 @@ const ServiceProviderPayments = () => {
           <div className="overflow-x-auto">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
               <p className="text-sm text-muted-foreground">
-                {getPeriodRange().label} — {periodFiltered.length} record(s)
+                {getPeriodRange().label} — {periodFiltered.length} record(s) • <span className="text-green-700">Paid: {paidRecords.length}</span> • <span className="text-red-700">Failed: {failedRecords.length}</span>
               </p>
               {period === 'custom' && (
                 <div className="flex items-center gap-2">
