@@ -446,6 +446,17 @@ const ServiceProviderPayments = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          <Select value={period} onValueChange={(v: any) => setPeriod(v)}>
+            <SelectTrigger className="w-[140px] h-9 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="week">This Week</SelectItem>
+              <SelectItem value="month">This Month</SelectItem>
+              <SelectItem value="year">This Year</SelectItem>
+              <SelectItem value="custom">Custom Range</SelectItem>
+              <SelectItem value="all">All Time</SelectItem>
+            </SelectContent>
+          </Select>
           <Button variant="outline" size="sm" onClick={handlePrint} disabled={payments.length === 0} className="gap-1">
             <Printer className="w-4 h-4" /> Print
           </Button>
@@ -694,7 +705,16 @@ const ServiceProviderPayments = () => {
         ) : (
           <div className="overflow-x-auto">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-              <p className="text-sm text-muted-foreground">Most recent service provider payments</p>
+              <p className="text-sm text-muted-foreground">
+                {getPeriodRange().label} — {periodFiltered.length} record(s)
+              </p>
+              {period === 'custom' && (
+                <div className="flex items-center gap-2">
+                  <Input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="h-9 text-sm w-[150px]" />
+                  <span className="text-xs text-muted-foreground">to</span>
+                  <Input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="h-9 text-sm w-[150px]" />
+                </div>
+              )}
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -792,12 +812,9 @@ const ServiceProviderPayments = () => {
                 ))}
               </TableBody>
             </Table>
-            {payments.length > 3 && (
-              <div className="flex items-center justify-between px-2 py-3 text-sm text-muted-foreground">
-                <span>Showing {visiblePayments.length} of {payments.length} payments</span>
-                {!search.trim() && <span>{payments.length - 3} more hidden — filter to search</span>}
-              </div>
-            )}
+            <div className="flex items-center justify-between px-2 py-3 text-sm text-muted-foreground">
+              <span>Showing {visiblePayments.length} of {payments.length} total payments</span>
+            </div>
           </div>
         )}
       </CardContent>
