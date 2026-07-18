@@ -633,6 +633,222 @@ export type Database = {
         }
         Relationships: []
       }
+      budget_allocations: {
+        Row: {
+          allocated_amount: number
+          allocated_by: string | null
+          category: string
+          created_at: string
+          description: string | null
+          employee_id: string
+          id: string
+          notes: string | null
+          season_id: string | null
+          spent_amount: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          allocated_amount?: number
+          allocated_by?: string | null
+          category: string
+          created_at?: string
+          description?: string | null
+          employee_id: string
+          id?: string
+          notes?: string | null
+          season_id?: string | null
+          spent_amount?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          allocated_amount?: number
+          allocated_by?: string | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          season_id?: string | null
+          spent_amount?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_allocations_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "budget_seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      budget_ledger_entries: {
+        Row: {
+          allocation_id: string | null
+          amount: number
+          balance_after: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          employee_id: string
+          entry_type: string
+          id: string
+          metadata: Json
+          reference_id: string | null
+        }
+        Insert: {
+          allocation_id?: string | null
+          amount: number
+          balance_after: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          employee_id: string
+          entry_type: string
+          id?: string
+          metadata?: Json
+          reference_id?: string | null
+        }
+        Update: {
+          allocation_id?: string | null
+          amount?: number
+          balance_after?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          employee_id?: string
+          entry_type?: string
+          id?: string
+          metadata?: Json
+          reference_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_ledger_entries_allocation_id_fkey"
+            columns: ["allocation_id"]
+            isOneToOne: false
+            referencedRelation: "budget_allocations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      budget_seasons: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          end_date: string
+          id: string
+          name: string
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          end_date: string
+          id?: string
+          name: string
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          end_date?: string
+          id?: string
+          name?: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      budget_withdrawal_requests: {
+        Row: {
+          allocation_id: string
+          amount: number
+          completed_at: string | null
+          created_at: string
+          employee_id: string
+          first_approved_at: string | null
+          first_approver_id: string | null
+          id: string
+          payout_mode: string
+          payout_reference: string | null
+          payout_status: string | null
+          provider: string | null
+          reason: string
+          receipt_url: string | null
+          recipient_name: string
+          recipient_phone: string | null
+          rejection_reason: string | null
+          second_approved_at: string | null
+          second_approver_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          allocation_id: string
+          amount: number
+          completed_at?: string | null
+          created_at?: string
+          employee_id: string
+          first_approved_at?: string | null
+          first_approver_id?: string | null
+          id?: string
+          payout_mode: string
+          payout_reference?: string | null
+          payout_status?: string | null
+          provider?: string | null
+          reason: string
+          receipt_url?: string | null
+          recipient_name: string
+          recipient_phone?: string | null
+          rejection_reason?: string | null
+          second_approved_at?: string | null
+          second_approver_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          allocation_id?: string
+          amount?: number
+          completed_at?: string | null
+          created_at?: string
+          employee_id?: string
+          first_approved_at?: string | null
+          first_approver_id?: string | null
+          id?: string
+          payout_mode?: string
+          payout_reference?: string | null
+          payout_status?: string | null
+          provider?: string | null
+          reason?: string
+          receipt_url?: string | null
+          recipient_name?: string
+          recipient_phone?: string | null
+          rejection_reason?: string | null
+          second_approved_at?: string | null
+          second_approver_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_withdrawal_requests_allocation_id_fkey"
+            columns: ["allocation_id"]
+            isOneToOne: false
+            referencedRelation: "budget_allocations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       buyer_contracts: {
         Row: {
           allocated_quantity: number
@@ -12674,6 +12890,17 @@ export type Database = {
         Args: { p_account_id: string; p_admin_email: string }
         Returns: Json
       }
+      allocate_budget_funds: {
+        Args: {
+          _amount: number
+          _category: string
+          _description: string
+          _employee_id: string
+          _notes: string
+          _season_id: string
+        }
+        Returns: string
+      }
       apply_overdraft_recovery: {
         Args: {
           p_credit_amount: number
@@ -12682,6 +12909,10 @@ export type Database = {
           p_user_id: string
         }
         Returns: number
+      }
+      approve_budget_withdrawal: {
+        Args: { _request_id: string }
+        Returns: Json
       }
       approve_transfer_reversal: {
         Args: { p_notes?: string; p_request_id: string }
@@ -12866,6 +13097,10 @@ export type Database = {
       }
       get_available_to_request_text: {
         Args: { user_uuid: string }
+        Returns: number
+      }
+      get_budget_wallet_balance: {
+        Args: { _employee_id: string }
         Returns: number
       }
       get_chat_participants_info: {
@@ -13403,6 +13638,10 @@ export type Database = {
       }
       refresh_current_week_allowances: { Args: never; Returns: Json }
       refresh_monthly_payment_summary: { Args: never; Returns: undefined }
+      reject_budget_withdrawal: {
+        Args: { _reason: string; _request_id: string }
+        Returns: Json
+      }
       reject_transfer_reversal: {
         Args: { p_notes?: string; p_request_id: string }
         Returns: Json
