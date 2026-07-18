@@ -544,6 +544,16 @@ const App: React.ComponentType = () => {
                     <WalletAudit />
                   </ProtectedRoute>
                 } />
+                <Route path="/budget-wallet" element={
+                  <ProtectedRoute>
+                    <BudgetWallet />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/budget-management" element={
+                  <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
+                    <BudgetManagement />
+                  </ProtectedRoute>
+                } />
                 <Route path="/admin/point-in-time-balances" element={
                   <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
                     <PointInTimeBalances />
