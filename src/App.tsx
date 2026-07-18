@@ -118,6 +118,8 @@ import Treasury from "./pages/admin/Treasury";
 import UserStatement from "./pages/admin/UserStatement";
 import BackfillTrace from "./pages/admin/BackfillTrace";
 import WalletAudit from "./pages/admin/WalletAudit";
+import BudgetWallet from "./pages/BudgetWallet";
+import BudgetManagement from "./pages/admin/BudgetManagement";
 import PointInTimeBalances from "./pages/admin/PointInTimeBalances";
 import UserDailyReports from "./pages/UserDailyReports";
 import { DailyReportReminder } from "./components/reports/DailyReportReminder";
@@ -540,6 +542,16 @@ const App: React.ComponentType = () => {
                 <Route path="/admin/wallet-audit" element={
                   <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
                     <WalletAudit />
+                  </ProtectedRoute>
+                } />
+                <Route path="/budget-wallet" element={
+                  <ProtectedRoute>
+                    <BudgetWallet />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/budget-management" element={
+                  <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
+                    <BudgetManagement />
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/point-in-time-balances" element={
