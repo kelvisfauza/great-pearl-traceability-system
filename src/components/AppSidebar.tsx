@@ -74,6 +74,8 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
         { name: "Suppliers", icon: UserCheck, path: "/suppliers", permission: null },
         { name: "Sales & Marketing", icon: TrendingUp, path: "/sales-marketing", permission: "Sales Marketing" },
         { name: "Company Forms", icon: DollarSign, path: "/my-expenses", permission: null },
+        { name: "Budget Wallet", icon: Wallet, path: "/budget-wallet", permission: null },
+        { name: "Budget Management", icon: Wallet, path: "/admin/budget-management", permission: null, requiresAdmin: true },
         { name: "Quick Loans", icon: Banknote, path: "/quick-loans", permission: null },
         { name: "Human Resources", icon: Users, path: "/human-resources", permission: "Human Resources" },
         { name: "Data Analyst", icon: LineChart, path: "/data-analyst", permission: "Data Analysis" },
