@@ -102,9 +102,9 @@ serve(async (req) => {
             phone: yoNormalize(reqRow.recipient_phone),
             amount: Number(reqRow.amount),
             narrative: `Budget: ${reqRow.reason}`.slice(0, 120),
-            externalReference: payoutRef,
+            privateRef: payoutRef,
           });
-          if (!res.ok) throw new Error(`Yo Payments failed: ${res.error || res.status}`);
+          if (!res.success) throw new Error(`Yo Payments failed: ${res.errorMessage || res.statusMessage || "unknown"}`);
           payoutStatus = "sent_yo";
           payoutMessage = "Sent via Yo Payments";
         }
