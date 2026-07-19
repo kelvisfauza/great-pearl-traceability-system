@@ -29,11 +29,16 @@ serve(async (req) => {
       });
     }
 
-    // Fetch all pending_approval instant withdrawals
+    // Fetch pending_approval instant withdrawals — EXCLUDE GosentePay.
+    // GosentePay withdrawals stay in 'pending_approval' until an admin
+    // approves/rejects them in the Approvals page; they are NOT held at Yo,
+    // so polling Yo for their status always returns "failed" and would
+    // wrongly refund the user and hide the request from admins.
     const { data: pendingWds, error: fetchErr } = await supabase
       .from("instant_withdrawals")
       .select("*")
       .eq("payout_status", "pending_approval")
+      .neq("payment_provider", "gosente")
       .order("created_at", { ascending: true });
 
     if (fetchErr) {
