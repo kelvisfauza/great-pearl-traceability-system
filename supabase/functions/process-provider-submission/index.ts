@@ -261,7 +261,8 @@ serve(async (req) => {
     }
 
     const { submissionId, action, rejectionReason, withdrawCharge, amountOverride, paymentMode: rawMode } = await req.json();
-    const paymentMode: 'cash' | 'momo' = rawMode === 'cash' ? 'cash' : 'momo';
+    const paymentMode: 'cash' | 'momo' | 'gosente' =
+      rawMode === 'cash' ? 'cash' : rawMode === 'gosente' ? 'gosente' : 'momo';
     if (!submissionId || !["approve", "reject"].includes(action)) {
       return new Response(JSON.stringify({ ok: false, error: "Invalid request" }), {
         status: 200,
