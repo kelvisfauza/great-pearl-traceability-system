@@ -373,7 +373,12 @@ export const useUnifiedApprovalRequests = () => {
 
       // POLICY: Check self-approval and SoD for approvals on supabase requests
       // Skip for withdrawal requests – they have their own SoD checks below
-      if (status === 'Approved' && request.source === 'supabase' && !request.details?.is_withdrawal) {
+      if (
+        status === 'Approved' &&
+        request.source === 'supabase' &&
+        !request.details?.is_withdrawal &&
+        !request.details?.is_instant_withdrawal
+      ) {
         const sodCheck = await checkExpenseRequestEligibility(request.id);
         if (!sodCheck.canApprove) {
           return { blocked: true, reason: sodCheck.reason || 'Approval blocked by policy' };
