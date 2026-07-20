@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { yoPayout, normalizePhone } from "../_shared/yo-payments.ts";
+import { gosenteWithdraw, isGosenteSuccess } from "../_shared/gosentepay.ts";
 import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
 
 const formatUGX = (n: number) => `UGX ${Number(n || 0).toLocaleString("en-UG")}`;
