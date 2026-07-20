@@ -24,6 +24,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
   const [withdrawCharge, setWithdrawCharge] = useState('');
   const [overrideAmount, setOverrideAmount] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
+  const [payMethod, setPayMethod] = useState<'momo' | 'gosente' | 'cash'>('momo');
 
   const { data: submissions = [], isLoading } = useQuery({
     queryKey: ['provider-submissions-pending'],
@@ -196,7 +197,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
                   </Button>
                   <Button
                     size="sm"
-                    onClick={() => { setSelected(s); setWithdrawCharge(''); setOverrideAmount(String(s.amount || '')); setApproveOpen(true); }}
+                    onClick={() => { setSelected(s); setWithdrawCharge(''); setOverrideAmount(String(s.amount || '')); setPayMethod('momo'); setApproveOpen(true); }}
                     disabled={processing === s.id}
                   >
                     {processing === s.id ? (
@@ -215,89 +216,117 @@ const ProviderSubmissionApprovals: React.FC = () => {
 
       {/* Approve dialog */}
       <Dialog open={approveOpen} onOpenChange={setApproveOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Approve & Disburse</DialogTitle>
             <DialogDescription>
-              {selected && `Approve UGX ${Number(selected.amount).toLocaleString()} for ${selected.provider_name} (${selected.phone}). Choose Yo Payments, GosentePay, or Cash below.`}
+              {selected && `Review the request, pick a payment method, then confirm.`}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {selected && (
-              <div className="rounded-md border bg-muted/40 p-3 text-sm space-y-1">
-                <p><span className="text-muted-foreground">Provider:</span> <strong>{selected.provider_name}</strong></p>
-                <p><span className="text-muted-foreground">Phone:</span> {selected.phone}</p>
-                <p><span className="text-muted-foreground">Description:</span> {selected.description}</p>
-                {selected.invoice_number && (
-                  <p><span className="text-muted-foreground">Invoice:</span> {selected.invoice_number}</p>
-                )}
-                <p><span className="text-muted-foreground">Requested amount:</span> <strong>UGX {Number(selected.amount).toLocaleString()}</strong></p>
-              </div>
-            )}
-            <div>
-              <Label>Amount to Send (UGX)</Label>
-              <Input
-                type="number"
-                value={overrideAmount}
-                onChange={(e) => setOverrideAmount(e.target.value)}
-                placeholder={selected ? String(selected.amount) : '0'}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                You can adjust the amount before disbursing if the request needs correction.
-              </p>
-            </div>
-            <div>
-              <Label>Withdraw Charge (optional, UGX)</Label>
-              <Input
-                type="number"
-                value={withdrawCharge}
-                onChange={(e) => setWithdrawCharge(e.target.value)}
-                placeholder="0"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Added to the amount sent (covers MoMo fees).
-              </p>
-            </div>
-            {(Number(overrideAmount) > 0 || Number(withdrawCharge) > 0) && (
-              <div className="bg-muted/50 rounded-lg p-3 text-sm">
-                <div className="flex justify-between">
-                  <span>Amount:</span>
-                  <span>UGX {Number(overrideAmount || 0).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Withdraw Charge:</span>
-                  <span>UGX {Number(withdrawCharge || 0).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between font-bold border-t pt-1 mt-1">
-                  <span>Total to Send:</span>
-                  <span>UGX {(Number(overrideAmount || 0) + Number(withdrawCharge || 0)).toLocaleString()}</span>
+              <div className="rounded-md border bg-muted/40 p-3 text-sm">
+                <div className="grid grid-cols-[110px_1fr] gap-y-1.5 gap-x-3">
+                  <span className="text-muted-foreground">Provider</span>
+                  <span className="font-semibold">{selected.provider_name}</span>
+                  <span className="text-muted-foreground">Phone</span>
+                  <span>{selected.phone}</span>
+                  {selected.invoice_number && (<>
+                    <span className="text-muted-foreground">Invoice</span>
+                    <span className="font-mono text-xs">{selected.invoice_number}</span>
+                  </>)}
+                  <span className="text-muted-foreground">Requested</span>
+                  <span className="font-semibold">UGX {Number(selected.amount).toLocaleString()}</span>
+                  <span className="text-muted-foreground pt-1">Description</span>
+                  <span className="pt-1 break-words">{selected.description}</span>
                 </div>
               </div>
             )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Amount (UGX)</Label>
+                <Input
+                  type="number"
+                  value={overrideAmount}
+                  onChange={(e) => setOverrideAmount(e.target.value)}
+                  placeholder={selected ? String(selected.amount) : '0'}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Withdraw Charge (UGX)</Label>
+                <Input
+                  type="number"
+                  value={withdrawCharge}
+                  onChange={(e) => setWithdrawCharge(e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-xs mb-1.5 block">Payment Method</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { id: 'momo', label: 'Yo Payments', icon: Smartphone, hint: 'Mobile Money' },
+                  { id: 'gosente', label: 'GosentePay', icon: Wallet, hint: 'Mobile Money' },
+                  { id: 'cash', label: 'Cash', icon: Banknote, hint: 'Handed physically' },
+                ] as const).map((opt) => {
+                  const Icon = opt.icon;
+                  const active = payMethod === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setPayMethod(opt.id)}
+                      disabled={!!processing}
+                      className={`rounded-md border p-2.5 text-left transition ${
+                        active
+                          ? 'border-primary bg-primary/10 ring-1 ring-primary'
+                          : 'border-border hover:bg-muted'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 mb-1" />
+                      <div className="text-sm font-medium leading-tight">{opt.label}</div>
+                      <div className="text-[10px] text-muted-foreground">{opt.hint}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="bg-muted/50 rounded-md p-3 text-sm space-y-1">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Amount</span>
+                <span>UGX {Number(overrideAmount || 0).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Withdraw Charge</span>
+                <span>UGX {Number(withdrawCharge || 0).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between font-semibold border-t pt-1 mt-1">
+                <span>Total to Send</span>
+                <span>UGX {(Number(overrideAmount || 0) + Number(withdrawCharge || 0)).toLocaleString()}</span>
+              </div>
+            </div>
           </div>
-          <DialogFooter className="gap-2 sm:gap-2 flex-col sm:flex-row">
+          <DialogFooter className="gap-2 sm:gap-2">
             <Button variant="outline" onClick={() => setApproveOpen(false)} disabled={!!processing}>Cancel</Button>
-            <Button
-              variant="secondary"
-              onClick={() => handleAction('approve', 'cash')}
-              disabled={!!processing}
-              title="Cash was handed to the provider physically. No Yo Payments call."
-            >
-              {processing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Banknote className="w-4 h-4 mr-2" />}
-              Approve with Cash
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleAction('approve', 'gosente')}
-              disabled={!!processing}
-              title="Send via GosentePay mobile money."
-            >
-              {processing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wallet className="w-4 h-4 mr-2" />}
-              Send via GosentePay
-            </Button>
-            <Button onClick={() => handleAction('approve', 'momo')} disabled={!!processing}>
-              {processing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Smartphone className="w-4 h-4 mr-2" />}
-              Send via Yo Payments
+            <Button onClick={() => handleAction('approve', payMethod)} disabled={!!processing}>
+              {processing ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : payMethod === 'cash' ? (
+                <Banknote className="w-4 h-4 mr-2" />
+              ) : payMethod === 'gosente' ? (
+                <Wallet className="w-4 h-4 mr-2" />
+              ) : (
+                <Smartphone className="w-4 h-4 mr-2" />
+              )}
+              {payMethod === 'cash'
+                ? 'Confirm Cash Payout'
+                : payMethod === 'gosente'
+                  ? 'Send via GosentePay'
+                  : 'Send via Yo Payments'}
             </Button>
           </DialogFooter>
         </DialogContent>
