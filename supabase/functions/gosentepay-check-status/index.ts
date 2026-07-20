@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import { gosenteStatus } from "../_shared/gosentepay.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -50,6 +51,34 @@ serve(async (req) => {
       });
     }
 
+    // ==============================================================
+    // GosentePay-backed deposit: poll the v1 transaction-status API.
+    // ==============================================================
+    let newStatus: string | null = null;
+    if (transaction.provider === "gosentepay") {
+      try {
+        const { status: httpStatus, body: gpBody } = await gosenteStatus(transactionRef);
+        const inner = gpBody?.data ?? gpBody;
+        const gpStatus = String(inner?.status ?? inner?.state ?? gpBody?.status ?? "").toLowerCase();
+        const gpMsg = String(inner?.message ?? gpBody?.message ?? "").toLowerCase();
+        console.log(`[Gosente Check Status] http=${httpStatus} status=${gpStatus} msg=${gpMsg}`);
+
+        if (gpStatus.includes("success") || gpStatus === "completed" || gpStatus === "successful" || gpMsg.includes("success")) {
+          newStatus = "completed";
+        } else if (gpStatus.includes("fail") || gpStatus === "cancelled" || gpStatus === "expired" || gpStatus === "rejected") {
+          newStatus = "failed";
+        } else {
+          return new Response(JSON.stringify({ status: "pending" }), {
+            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } catch (e) {
+        console.error("[Gosente Check Status] error:", e);
+        return new Response(JSON.stringify({ status: "pending" }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else {
     // Poll Yo Payments for status
     const username = Deno.env.get("YO_API_USERNAME");
     const password = Deno.env.get("YO_API_PASSWORD");
@@ -86,7 +115,6 @@ serve(async (req) => {
     const txStatus = txStatusMatch?.[1]?.trim()?.toUpperCase();
     const yoStatus = statusMatch?.[1]?.trim()?.toUpperCase();
 
-    let newStatus: string | null = null;
     if (txStatus === "SUCCEEDED" || txStatus === "COMPLETED" || yoStatus === "OK") {
       newStatus = "completed";
     } else if (txStatus === "FAILED" || txStatus === "EXPIRED" || txStatus === "CANCELLED") {
@@ -99,6 +127,7 @@ serve(async (req) => {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    }
 
     // Update transaction
     await supabaseClient
@@ -106,7 +135,7 @@ serve(async (req) => {
       .update({
         status: newStatus,
         completed_at: new Date().toISOString(),
-        provider_response: { yo_check_status: responseText },
+        provider_response: { checked_at: new Date().toISOString(), provider: transaction.provider },
       })
       .eq("transaction_ref", transactionRef)
       .eq("status", "pending"); // Only update if still pending (idempotent)
@@ -148,7 +177,7 @@ serve(async (req) => {
             transaction_ref: transactionRef,
             phone: transaction.phone,
             currency: "UGX",
-            provider: "yo_payments",
+            provider: transaction.provider || "yo_payments",
             source: "mobile_money",
           },
         });
