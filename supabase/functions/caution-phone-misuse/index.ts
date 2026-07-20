@@ -1,4 +1,15 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendLovableEmail } from "npm:@lovable.dev/email-js@0.0.4";
+
+const SITE_NAME = "Great Agro Coffee";
+const SENDER_DOMAIN = "notify.greatpearlcoffeesystem.site";
+const FROM_DOMAIN = "notify.greatpearlcoffeesystem.site";
+const OPERATIONS_EMAIL = "operations@greatpearlcoffee.com";
+
+function token(): string {
+  const b = new Uint8Array(32); crypto.getRandomValues(b);
+  return Array.from(b).map(x => x.toString(16).padStart(2, "0")).join("");
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,6 +40,30 @@ const cautionHtml = (recipientName: string, offenders: string) => `
   <p>Regards,<br/>Management<br/>Great Agro Coffee — a member of Hello YEDA Coffee Company Limited</p>
   <p style="color:#666;font-size:12px;">P.O Box 431420, Kasese, Uganda · Operations: +256 393 101103</p>
 `;
+
+const cautionText = (recipientName: string, offenders: string) => `Dear ${recipientName},
+
+This is an official caution to all employees of Great Agro Coffee (a member of Hello YEDA Coffee Company Limited) regarding improper use of the office landline and company-issued phones.
+
+It has come to management's attention that these lines are being used for personal, non-business calls to friends and family, causing the company to lose airtime and credit on unproductive communication.
+
+Primary offenders in this review:
+ - Bwambale Benson
+ - Onesmus Masika
+
+${offenders}
+
+Effective immediately:
+ - Office landline and company phones are strictly for business use only.
+ - Personal calls will be surcharged and may lead to disciplinary action.
+ - Repeat offences escalate to HR.
+
+A recovery deduction of UGX 20,000 has been applied to the wallets of the two named employees. Where balance is insufficient, the deduction draws from the overdraft facility (2.75% access fee applies).
+
+Regards,
+Management
+Great Agro Coffee — a member of Hello YEDA Coffee Company Limited
+P.O Box 431420, Kasese, Uganda · Operations: +256 393 101103`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -113,21 +148,57 @@ Deno.serve(async (req) => {
 
     // Broadcast caution email to all active employees
     const emailResults: any[] = [];
+    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!lovableApiKey) {
+      return new Response(JSON.stringify({ ok: false, error: "LOVABLE_API_KEY not configured" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const stamp = Date.now();
     for (const emp of active) {
       try {
-        await admin.functions.invoke("send-transactional-email", {
-          body: {
+        const idem = `phone-misuse-${stamp}-${String(emp.email).toLowerCase()}`;
+        await sendLovableEmail(
+          {
             to: emp.email,
-            cc: "operations@greatpearlcoffee.com",
+            from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+            sender_domain: SENDER_DOMAIN,
             subject: CAUTION_SUBJECT,
             html: cautionHtml(emp.name, offenderLine),
+            text: cautionText(emp.name, offenderLine),
+            purpose: "transactional",
+            label: "phone-misuse-caution",
+            idempotency_key: idem,
+            unsubscribe_token: token(),
           },
-        });
+          { apiKey: lovableApiKey, idempotencyKey: idem },
+        );
         emailResults.push({ name: emp.name, status: "sent" });
       } catch (e: any) {
-        emailResults.push({ name: emp.name, status: "email_failed", error: e.message });
+        const errMsg = e?.message || String(e);
+        console.error(`Email failed for ${emp.email}:`, errMsg);
+        emailResults.push({ name: emp.name, email: emp.email, status: "email_failed", error: errMsg });
       }
     }
+
+    // CC operations
+    try {
+      const opsIdem = `phone-misuse-ops-${stamp}`;
+      await sendLovableEmail(
+        {
+          to: OPERATIONS_EMAIL,
+          from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+          sender_domain: SENDER_DOMAIN,
+          subject: `[CC] ${CAUTION_SUBJECT}`,
+          html: cautionHtml("Operations Team", offenderLine),
+          text: cautionText("Operations Team", offenderLine),
+          purpose: "transactional",
+          label: "phone-misuse-caution-ops",
+          idempotency_key: opsIdem,
+          unsubscribe_token: token(),
+        },
+        { apiKey: lovableApiKey, idempotencyKey: opsIdem },
+      );
+    } catch (_) {}
 
     return new Response(
       JSON.stringify({
@@ -135,6 +206,7 @@ Deno.serve(async (req) => {
         deductions,
         emails_sent: emailResults.filter((r) => r.status === "sent").length,
         emails_failed: emailResults.filter((r) => r.status !== "sent").length,
+        results: emailResults,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
