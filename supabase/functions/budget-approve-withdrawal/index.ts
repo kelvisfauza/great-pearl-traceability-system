@@ -62,20 +62,13 @@ serve(async (req) => {
         payoutStatus = "cash_disbursed";
         payoutMessage = "Cash disbursed and recorded";
       } else if (reqRow.payout_mode === "personal_wallet") {
-        // Credit user personal ledger
-        const { data: curBal } = await svcClient.rpc("get_wallet_balance", { p_user_id: reqRow.employee_id }).maybeSingle?.() ?? { data: null } as any;
-        // Fallback: compute directly
-        const { data: ledger } = await svcClient
-          .from("ledger_entries").select("amount").eq("user_id", reqRow.employee_id);
-        const prevBal = (ledger || []).reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
-        const newBal = prevBal + Number(reqRow.amount);
+        // Credit user personal wallet via ledger (DEPOSIT is included in wallet balance calc)
         const { error: insErr } = await svcClient.from("ledger_entries").insert({
           user_id: reqRow.employee_id,
-          entry_type: "CREDIT",
+          entry_type: "DEPOSIT",
           amount: Number(reqRow.amount),
-          balance_after: newBal,
+          reference: payoutRef,
           source_category: "BUDGET_TRANSFER",
-          source_id: reqRow.id,
           metadata: {
             description: `Budget transfer to personal wallet: ${reqRow.reason}`,
             budget_request_id: reqRow.id,
