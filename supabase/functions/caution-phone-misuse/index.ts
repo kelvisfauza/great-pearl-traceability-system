@@ -1,4 +1,15 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendLovableEmail } from "npm:@lovable.dev/email-js@0.0.4";
+
+const SITE_NAME = "Great Agro Coffee";
+const SENDER_DOMAIN = "notify.greatpearlcoffeesystem.site";
+const FROM_DOMAIN = "notify.greatpearlcoffeesystem.site";
+const OPERATIONS_EMAIL = "operations@greatpearlcoffee.com";
+
+function token(): string {
+  const b = new Uint8Array(32); crypto.getRandomValues(b);
+  return Array.from(b).map(x => x.toString(16).padStart(2, "0")).join("");
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -113,21 +124,53 @@ Deno.serve(async (req) => {
 
     // Broadcast caution email to all active employees
     const emailResults: any[] = [];
+    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!lovableApiKey) {
+      return new Response(JSON.stringify({ ok: false, error: "LOVABLE_API_KEY not configured" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const stamp = Date.now();
     for (const emp of active) {
       try {
-        await admin.functions.invoke("send-transactional-email", {
-          body: {
+        const idem = `phone-misuse-${stamp}-${String(emp.email).toLowerCase()}`;
+        await sendLovableEmail(
+          {
             to: emp.email,
-            cc: "operations@greatpearlcoffee.com",
+            from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+            sender_domain: SENDER_DOMAIN,
             subject: CAUTION_SUBJECT,
             html: cautionHtml(emp.name, offenderLine),
+            purpose: "transactional",
+            label: "phone-misuse-caution",
+            idempotency_key: idem,
+            unsubscribe_token: token(),
           },
-        });
+          { apiKey: lovableApiKey, idempotencyKey: idem },
+        );
         emailResults.push({ name: emp.name, status: "sent" });
       } catch (e: any) {
         emailResults.push({ name: emp.name, status: "email_failed", error: e.message });
       }
     }
+
+    // CC operations
+    try {
+      const opsIdem = `phone-misuse-ops-${stamp}`;
+      await sendLovableEmail(
+        {
+          to: OPERATIONS_EMAIL,
+          from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+          sender_domain: SENDER_DOMAIN,
+          subject: `[CC] ${CAUTION_SUBJECT}`,
+          html: cautionHtml("Operations Team", offenderLine),
+          purpose: "transactional",
+          label: "phone-misuse-caution-ops",
+          idempotency_key: opsIdem,
+          unsubscribe_token: token(),
+        },
+        { apiKey: lovableApiKey, idempotencyKey: opsIdem },
+      );
+    } catch (_) {}
 
     return new Response(
       JSON.stringify({
