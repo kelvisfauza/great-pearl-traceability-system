@@ -4227,6 +4227,69 @@ export type Database = {
         }
         Relationships: []
       }
+      generated_receipts: {
+        Row: {
+          amount: number | null
+          charges: number | null
+          created_at: string
+          description: string | null
+          id: string
+          metadata: Json
+          payment_method: string | null
+          processed_by: string | null
+          recipient_email: string | null
+          recipient_name: string | null
+          recipient_phone: string | null
+          reference: string
+          source: string
+          source_id: string | null
+          storage_bucket: string
+          storage_path: string
+          total: number | null
+          transaction_id: string | null
+        }
+        Insert: {
+          amount?: number | null
+          charges?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json
+          payment_method?: string | null
+          processed_by?: string | null
+          recipient_email?: string | null
+          recipient_name?: string | null
+          recipient_phone?: string | null
+          reference: string
+          source: string
+          source_id?: string | null
+          storage_bucket?: string
+          storage_path: string
+          total?: number | null
+          transaction_id?: string | null
+        }
+        Update: {
+          amount?: number | null
+          charges?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json
+          payment_method?: string | null
+          processed_by?: string | null
+          recipient_email?: string | null
+          recipient_name?: string | null
+          recipient_phone?: string | null
+          reference?: string
+          source?: string
+          source_id?: string | null
+          storage_bucket?: string
+          storage_path?: string
+          total?: number | null
+          transaction_id?: string | null
+        }
+        Relationships: []
+      }
       gosentepay_balance: {
         Row: {
           balance: number
