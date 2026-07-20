@@ -81,8 +81,16 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
 
         const userId = emp.auth_user_id;
 
-        // Use the EXACT same entry-type set and exclusion rules as the admin
-        // User Statement so the numbers reconcile. See src/pages/admin/UserStatement.tsx.
+        // Authoritative balance from the DB RPC used by employee view + admin
+        // statement. This is the single source of truth — no client-side sum.
+        const { data: rpcBalance } = await supabase.rpc(
+          'get_effective_wallet_balance',
+          { p_user_id: String(userId) }
+        );
+        const balance = Number(rpcBalance) || 0;
+
+        // Fetch the 10 most recent wallet entries (display only, does not
+        // affect the balance calculation above).
         const WALLET_TYPES = [
           'LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'REVERSAL',
           'MONTHLY_SALARY', 'ADVANCE_RECOVERY',
@@ -92,12 +100,11 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
         ];
         const { data: entries } = await supabase
           .from('ledger_entries')
-          .select('*')
+          .select('id, created_at, entry_type, source_category, amount, reference, metadata')
           .eq('user_id', userId)
           .in('entry_type', WALLET_TYPES)
-          .order('created_at', { ascending: false });
-
-        // Exclude airtime/data allowance payouts (mirror get_effective_wallet_balance RPC)
+          .order('created_at', { ascending: false })
+          .limit(20);
         const allEntries = (entries || []).filter((e: any) => {
           const meta = e.metadata
             ? (typeof e.metadata === 'string' ? JSON.parse(e.metadata) : e.metadata)
@@ -107,9 +114,6 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
             ['DEPOSIT', 'PAYOUT'].includes(e.entry_type);
           return !isAllowancePayout;
         });
-
-        // Net balance = sum of all reconciling wallet entries (matches admin statement Net)
-        const balance = allEntries.reduce((sum: number, e: any) => sum + Number(e.amount), 0);
 
         // Freeze all approval-stage withdrawals (including this current request)
         const { data: pendingW } = await supabase
