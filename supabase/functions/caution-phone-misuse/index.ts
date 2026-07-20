@@ -76,52 +76,6 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const { data: ledgerRows } = await admin
-          .from("ledger_entries")
-          .select("amount")
-          .eq("user_id", userId);
-        const balance = (ledgerRows || []).reduce(
-          (s: number, r: any) => s + Number(r.amount || 0),
-          0,
-        );
-
-        let overdraftUsed = 0;
-        let overdraftFee = 0;
-
-        if (balance < DEDUCTION) {
-          const deficit = DEDUCTION - Math.max(balance, 0);
-          const { data: odAcct } = await admin
-            .from("overdraft_accounts")
-            .select("id")
-            .eq("user_id", userId)
-            .eq("status", "active")
-            .maybeSingle();
-          if (!odAcct) {
-            await admin.from("overdraft_accounts").insert({
-              user_id: userId,
-              employee_email: emp.email,
-              employee_name: emp.name,
-              approved_limit: 50000,
-              status: "active",
-              approved_by: "SYSTEM_AUTO_PHONE_MISUSE",
-              activation_fee_paid: true,
-            });
-          }
-          const { data: drawRes, error: drawErr } = await admin.functions.invoke("overdraft-draw", {
-            body: {
-              user_email: emp.email,
-              amount: deficit,
-              reason: `Auto overdraft for phone-misuse recovery ${today}`,
-            },
-          });
-          if (drawErr || !drawRes?.ok) {
-            deductions.push({ name: emp.name, status: "overdraft_failed", error: drawRes?.error || drawErr?.message });
-            continue;
-          }
-          overdraftUsed = deficit;
-          overdraftFee = drawRes.fee || 0;
-        }
-
         const { error: ledgerErr } = await admin.from("ledger_entries").insert({
           user_id: userId,
           entry_type: "ADJUSTMENT",
