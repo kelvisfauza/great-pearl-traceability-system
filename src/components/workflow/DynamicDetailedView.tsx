@@ -696,6 +696,15 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
                   <div className="flex-1 p-4 rounded-lg bg-muted border">
                     <p className="text-xs font-medium text-muted-foreground">Requesting</p>
                     <p className="text-2xl font-bold text-destructive">− UGX {requestAmount.toLocaleString()}</p>
+                    {serviceFee > 0 && (
+                      <div className="mt-2 pt-2 border-t border-border/60">
+                        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Service Fee</p>
+                        <p className="text-sm font-semibold text-destructive">− UGX {serviceFee.toLocaleString()}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          Total debited: UGX {(requestAmount + serviceFee).toLocaleString()}
+                        </p>
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1 p-4 rounded-lg bg-muted border">
                     <p className="text-xs font-medium text-muted-foreground">Balance After Approval</p>
