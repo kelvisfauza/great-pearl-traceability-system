@@ -11,12 +11,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Wallet, Loader2, Printer, PlusCircle, ShieldCheck } from "lucide-react";
+import { Wallet, Loader2, Printer, PlusCircle, ShieldCheck, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const fmt = (n: number) => `UGX ${Number(n || 0).toLocaleString()}`;
 
 export default function BudgetWallet() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [balance, setBalance] = useState(0);
   const [allocations, setAllocations] = useState<any[]>([]);
   const [ledger, setLedger] = useState<any[]>([]);
@@ -118,6 +120,9 @@ export default function BudgetWallet() {
 
   return (
     <div className="container mx-auto p-4 md:p-6 space-y-6">
+      <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="-ml-2 w-fit">
+        <ArrowLeft className="w-4 h-4 mr-2" /> Back
+      </Button>
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-3xl font-bold">Budget Wallet</h1>
