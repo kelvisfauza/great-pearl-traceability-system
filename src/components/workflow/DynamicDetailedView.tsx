@@ -145,10 +145,16 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
   const isWithdrawalRequest =
     (request.requestType || '').toLowerCase().includes('withdrawal') ||
     Boolean(request.details?.withdrawal_id);
+  // Instant withdrawals (GosentePay / Yo pending approval) have ALREADY debited
+  // the wallet and the service fee at request-time. Approving does not
+  // subtract again — it just releases the payout. Rejecting refunds both.
+  const isAlreadyHeld = Boolean(request.details?.is_instant_withdrawal);
   // For withdrawals: total balance → minus this request → remaining after approval
   // Show total balance and calculate projected balance after this withdrawal/request is approved
   const displayBalance = isWithdrawalRequest ? walletData.balance : walletData.availableBalance;
-  const projectedBalanceAfterApproval = displayBalance - requestAmount;
+  const projectedBalanceAfterApproval = isAlreadyHeld
+    ? displayBalance
+    : displayBalance - requestAmount;
   const withdrawalChannel = request.details?.channel || request.details?.payment_channel || 'MOBILE_MONEY';
 
   const renderStoreReportDeletion = () => (
