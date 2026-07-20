@@ -6,6 +6,7 @@ const BASE_URL = "https://api.gosentepay.com/v1";
 
 interface CachedToken {
   token: string;
+  apiKey: string;
   expiresAt: number; // epoch ms
 }
 let cachedToken: CachedToken | null = null;
@@ -31,21 +32,22 @@ export function normalizePhone(input: string): string {
 
 export async function getAuthToken(force = false): Promise<string> {
   const now = Date.now();
-  if (!force && cachedToken && cachedToken.expiresAt - now > 60_000) {
+  const currentApiKey = apiKey();
+  if (!force && cachedToken && cachedToken.apiKey === currentApiKey && cachedToken.expiresAt - now > 60_000) {
     return cachedToken.token;
   }
 
   const resp = await fetch(`${BASE_URL}/authorization_token`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ api_key: apiKey() }),
+    body: JSON.stringify({ api_key: currentApiKey }),
   });
   const data = await resp.json().catch(() => ({}));
   if (!resp.ok || data?.status !== "success" || !data?.token) {
     throw new Error(`GosentePay token exchange failed: ${resp.status} ${JSON.stringify(data)}`);
   }
   const expiresIn = Number(data.expires_in ?? 86400) * 1000;
-  cachedToken = { token: data.token, expiresAt: now + expiresIn };
+  cachedToken = { token: data.token, apiKey: currentApiKey, expiresAt: now + expiresIn };
   return cachedToken.token;
 }
 
