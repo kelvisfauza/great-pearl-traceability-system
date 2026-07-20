@@ -97,8 +97,8 @@ export default function BudgetManagement() {
       try {
         await supabase.functions.invoke("send-transactional-email", {
           body: {
-            to: emp.email,
-            template: "general-notification",
+            recipientEmail: emp.email,
+            templateName: "general-notification",
             data: {
               subject: `Budget Funds Allocated — UGX ${amt.toLocaleString()}`,
               title: "Budget Wallet Funded",
