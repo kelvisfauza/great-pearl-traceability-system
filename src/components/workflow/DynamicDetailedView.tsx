@@ -81,8 +81,16 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
 
         const userId = emp.auth_user_id;
 
-        // Use the EXACT same entry-type set and exclusion rules as the admin
-        // User Statement so the numbers reconcile. See src/pages/admin/UserStatement.tsx.
+        // Authoritative balance from the DB RPC used by employee view + admin
+        // statement. This is the single source of truth — no client-side sum.
+        const { data: rpcBalance } = await supabase.rpc(
+          'get_effective_wallet_balance',
+          { p_user_id: String(userId) }
+        );
+        const balance = Number(rpcBalance) || 0;
+
+        // Fetch the 10 most recent wallet entries (display only, does not
+        // affect the balance calculation above).
         const WALLET_TYPES = [
           'LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'REVERSAL',
           'MONTHLY_SALARY', 'ADVANCE_RECOVERY',
@@ -92,12 +100,11 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
         ];
         const { data: entries } = await supabase
           .from('ledger_entries')
-          .select('*')
+          .select('id, created_at, entry_type, source_category, amount, reference, metadata')
           .eq('user_id', userId)
           .in('entry_type', WALLET_TYPES)
-          .order('created_at', { ascending: false });
-
-        // Exclude airtime/data allowance payouts (mirror get_effective_wallet_balance RPC)
+          .order('created_at', { ascending: false })
+          .limit(20);
         const allEntries = (entries || []).filter((e: any) => {
           const meta = e.metadata
             ? (typeof e.metadata === 'string' ? JSON.parse(e.metadata) : e.metadata)
@@ -107,9 +114,6 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
             ['DEPOSIT', 'PAYOUT'].includes(e.entry_type);
           return !isAllowancePayout;
         });
-
-        // Net balance = sum of all reconciling wallet entries (matches admin statement Net)
-        const balance = allEntries.reduce((sum: number, e: any) => sum + Number(e.amount), 0);
 
         // Freeze all approval-stage withdrawals (including this current request)
         const { data: pendingW } = await supabase
@@ -165,6 +169,16 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
   // the wallet and the service fee at request-time. Approving does not
   // subtract again — it just releases the payout. Rejecting refunds both.
   const isAlreadyHeld = Boolean(request.details?.is_instant_withdrawal);
+  // Service fee (already deducted from the wallet at request time for instant
+  // withdrawals). Mirrors computeWithdrawFee in the edge function.
+  const computeWithdrawFee = (a: number) => {
+    if (a < 500) return 0;
+    if (a <= 60_000) return 1_100;
+    if (a <= 500_000) return 1_700;
+    if (a <= 1_000_000) return 2_500;
+    return 2_900;
+  };
+  const serviceFee = isAlreadyHeld ? computeWithdrawFee(requestAmount) : 0;
   // For withdrawals: total balance → minus this request → remaining after approval
   // Show total balance and calculate projected balance after this withdrawal/request is approved
   const displayBalance = isWithdrawalRequest ? walletData.balance : walletData.availableBalance;
@@ -682,6 +696,15 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
                   <div className="flex-1 p-4 rounded-lg bg-muted border">
                     <p className="text-xs font-medium text-muted-foreground">Requesting</p>
                     <p className="text-2xl font-bold text-destructive">− UGX {requestAmount.toLocaleString()}</p>
+                    {serviceFee > 0 && (
+                      <div className="mt-2 pt-2 border-t border-border/60">
+                        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Service Fee</p>
+                        <p className="text-sm font-semibold text-destructive">− UGX {serviceFee.toLocaleString()}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          Total debited: UGX {(requestAmount + serviceFee).toLocaleString()}
+                        </p>
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1 p-4 rounded-lg bg-muted border">
                     <p className="text-xs font-medium text-muted-foreground">Balance After Approval</p>
