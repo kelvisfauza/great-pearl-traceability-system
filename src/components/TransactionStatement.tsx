@@ -41,6 +41,9 @@ const ENTRY_CONFIG: Record<string, { label: string; icon: React.ElementType; col
   ADVANCE_RECOVERY: { label: 'Salary Advance Recovery', icon: ArrowUpRight, color: 'text-orange-700', badgeClass: 'bg-orange-100 text-orange-800' },
   HOST_MEETING_BONUS: { label: 'Meeting Host Bonus', icon: Gift, color: 'text-emerald-700', badgeClass: 'bg-emerald-100 text-emerald-800' },
   MEETING_ATTENDANCE_BONUS: { label: 'Meeting Attendance Bonus', icon: Gift, color: 'text-emerald-600', badgeClass: 'bg-emerald-100 text-emerald-800' },
+  FEE: { label: 'Service Fee', icon: Minus, color: 'text-red-600', badgeClass: 'bg-red-100 text-red-800' },
+  WITHDRAW_FEE: { label: 'Withdrawal Fee', icon: Minus, color: 'text-red-600', badgeClass: 'bg-red-100 text-red-800' },
+  GOSENTE_FEE: { label: 'GosentePay Fee', icon: Minus, color: 'text-red-600', badgeClass: 'bg-red-100 text-red-800' },
 };
 
 const DEFAULT_CONFIG = { label: 'Transaction', icon: FileText, color: 'text-gray-600', badgeClass: 'bg-gray-100 text-gray-800' };
