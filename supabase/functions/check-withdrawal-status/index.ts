@@ -164,6 +164,62 @@ serve(async (req) => {
             } else {
               refunded++;
             }
+
+            // Also refund the withdrawal service fee (if one was charged)
+            // and reverse the treasury profit posting so books balance.
+            const { data: feeEntry } = await supabase
+              .from("ledger_entries")
+              .select("id, amount, metadata")
+              .eq("reference", `WD-FEE-${wd.id}`)
+              .maybeSingle();
+
+            if (feeEntry) {
+              const feeAmount = Math.abs(Number(feeEntry.amount) || 0);
+              if (feeAmount > 0) {
+                const feeRefundRef = `REFUND-EXPIRED-FEE-${wd.id}`;
+                const { data: alreadyRefunded } = await supabase
+                  .from("ledger_entries")
+                  .select("id")
+                  .eq("reference", feeRefundRef)
+                  .maybeSingle();
+
+                if (!alreadyRefunded) {
+                  const { error: feeRefundErr } = await supabase
+                    .from("ledger_entries")
+                    .insert({
+                      user_id: wd.user_id,
+                      entry_type: "DEPOSIT",
+                      amount: feeAmount,
+                      reference: feeRefundRef,
+                      source_category: "SYSTEM_AWARD",
+                      metadata: {
+                        type: "instant_withdrawal_fee_refund",
+                        original_ref: wd.payout_ref,
+                        instant_withdrawal_id: wd.id,
+                        reason: "Fee refund: withdrawal auto-expired after 24 hours",
+                      },
+                    });
+                  if (feeRefundErr && feeRefundErr.code !== "23505") {
+                    console.error(`[WD Poller] Fee refund error:`, feeRefundErr);
+                  } else {
+                    // Reverse treasury profit by posting a negative profit entry
+                    try {
+                      await supabase.rpc("post_treasury_profit", {
+                        p_amount: -feeAmount,
+                        p_description: `Reversal: withdrawal service fee refunded (auto-expired) — ${wd.payout_ref}`,
+                        p_reference: `PROFIT-REVERSAL-WD-FEE-${wd.id}`,
+                        p_user_email: null,
+                        p_user_name: null,
+                        p_metadata: { source: "instant_withdrawal_expiry_refund", instant_withdrawal_id: wd.id, profit_type: "withdraw_fee_reversal", fee_amount: feeAmount },
+                      });
+                    } catch (e) {
+                      console.error(`[WD Poller] Treasury profit reversal failed:`, (e as Error).message);
+                    }
+                    console.log(`[WD Poller] Refunded fee UGX ${feeAmount} for ${wd.payout_ref}`);
+                  }
+                }
+              }
+            }
             resolved++;
           } else if (updated && updated.length === 0) {
             console.log(`[WD Poller] ${wd.payout_ref} already processed, skipping expiry refund`);
