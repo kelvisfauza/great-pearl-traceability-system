@@ -132,12 +132,13 @@ serve(async (req) => {
       if (emp?.email) {
         await svcClient.functions.invoke("send-transactional-email", {
           body: {
-            to: emp.email,
-            template: "generic",
+            recipientEmail: emp.email,
+            templateName: "general-notification",
             data: {
               subject: `Budget withdrawal completed — UGX ${Number(reqRow.amount).toLocaleString()}`,
-              heading: "Budget Withdrawal Completed",
-              body: `Your budget withdrawal request has been fully approved and disbursed.\n\nAmount: UGX ${Number(reqRow.amount).toLocaleString()}\nReason: ${reqRow.reason}\nMode: ${reqRow.payout_mode}\nReference: ${payoutRef}\nStatus: ${payoutMessage}`,
+              title: "Budget Withdrawal Completed",
+              recipientName: emp.name || "",
+              message: `Your budget withdrawal request has been fully approved and disbursed.\n\nAmount: UGX ${Number(reqRow.amount).toLocaleString()}\nReason: ${reqRow.reason}\nMode: ${reqRow.payout_mode}\nReference: ${payoutRef}\nStatus: ${payoutMessage}`,
             },
           },
         });

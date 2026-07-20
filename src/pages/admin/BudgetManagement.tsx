@@ -91,6 +91,41 @@ export default function BudgetManagement() {
     setSubmitting(false);
     if (error) return toast.error(error.message);
     toast.success("Funds allocated to budget wallet");
+
+    // Notify employee via email
+    if (emp?.email) {
+      try {
+        await supabase.functions.invoke("send-transactional-email", {
+          body: {
+            recipientEmail: emp.email,
+            templateName: "general-notification",
+            data: {
+              subject: `Budget Funds Allocated — UGX ${amt.toLocaleString()}`,
+              title: "Budget Wallet Funded",
+              recipientName: emp.name || "",
+              message:
+                `Funds have been allocated to your Budget Wallet.\n\n` +
+                `Amount: UGX ${amt.toLocaleString()}\n` +
+                `Category: ${aCategory}\n` +
+                (aDescription ? `Purpose: ${aDescription}\n` : "") +
+                (aNotes ? `Notes: ${aNotes}\n` : "") +
+                `\nHow to claim / use these funds:\n` +
+                `1. Open the app and go to "Budget Wallet" from the sidebar.\n` +
+                `2. Review your allocated balance under this category.\n` +
+                `3. Click "Request Withdrawal" and choose payout mode ` +
+                `(Personal Wallet, Mobile Money, or Cash).\n` +
+                `4. Two administrators must approve before disbursement — ` +
+                `you'll receive another email once it's paid out.\n\n` +
+                `Budget funds are isolated from your personal wallet and can only ` +
+                `be spent on the approved category.`,
+            },
+          },
+        });
+      } catch (e) {
+        console.error("Allocation email failed:", e);
+      }
+    }
+
     setOpenAlloc(false);
     setAEmployee(""); setACategory(""); setADescription(""); setAAmount(""); setANotes("");
     load();
