@@ -32,7 +32,7 @@ serve(async (req) => {
     const adminAuthId = userData.user.id;
 
     const svcClient = createClient(url, svc);
-    const { request_id } = await req.json();
+    const { request_id, provider_override } = await req.json();
     if (!request_id) return respond(false, { error: "Missing request_id" });
 
     // Call approval RPC (as the admin user for auth.uid())
@@ -79,7 +79,12 @@ serve(async (req) => {
         payoutMessage = "Funds transferred to personal wallet";
       } else if (reqRow.payout_mode === "mobile_money") {
         if (!reqRow.recipient_phone) throw new Error("Recipient phone required for mobile money");
-        if (reqRow.provider === "gosente") {
+        // Admin's choice at approval time takes precedence; fall back to stored provider or gosente
+        const chosenProvider = provider_override || reqRow.provider || "gosente";
+        // Persist the admin's choice for audit
+        await svcClient.from("budget_withdrawal_requests")
+          .update({ provider: chosenProvider }).eq("id", request_id);
+        if (chosenProvider === "gosente") {
           const { status, body } = await gosenteWithdraw({
             phone: gsNormalize(reqRow.recipient_phone),
             amount: Number(reqRow.amount),
