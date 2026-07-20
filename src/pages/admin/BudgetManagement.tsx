@@ -44,6 +44,10 @@ export default function BudgetManagement() {
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
+  // Provider selection dialog (admin picks GosentePay vs Yo at final approval for mobile money)
+  const [providerPickReq, setProviderPickReq] = useState<any | null>(null);
+  const [pickedProvider, setPickedProvider] = useState<"gosente" | "yo">("gosente");
+
   const load = async () => {
     setLoading(true);
     const [s, e, a, r] = await Promise.all([
@@ -133,9 +137,11 @@ export default function BudgetManagement() {
     load();
   };
 
-  const approve = async (id: string) => {
+  const approve = async (id: string, provider_override?: "gosente" | "yo") => {
     try {
-      const { data, error } = await supabase.functions.invoke("budget-approve-withdrawal", { body: { request_id: id } });
+      const { data, error } = await supabase.functions.invoke("budget-approve-withdrawal", {
+        body: { request_id: id, provider_override },
+      });
       if (error) throw error;
       if (!(data as any)?.ok) throw new Error((data as any)?.error || "Approval failed");
       const stage = (data as any).stage;
@@ -145,6 +151,16 @@ export default function BudgetManagement() {
     } catch (e: any) {
       toast.error(e.message || "Failed to approve");
     }
+  };
+
+  const handleApproveClick = (r: any) => {
+    // If this is the final approval AND mobile money, prompt admin to pick provider
+    if (r.status === "approved_1" && r.payout_mode === "mobile_money") {
+      setPickedProvider("gosente");
+      setProviderPickReq(r);
+      return;
+    }
+    approve(r.id);
   };
 
   const submitReject = async () => {
@@ -206,7 +222,7 @@ export default function BudgetManagement() {
                       <Badge className={statusColor(r.status)}>{r.status === "approved_1" ? `1 of 2 approved (by ${empLabel(r.first_approver_id)})` : "Awaiting first approval"}</Badge>
                     </div>
                     <div className="flex gap-2">
-                      <Button size="sm" onClick={() => approve(r.id)} disabled={r.employee_id === user?.id || r.first_approver_id === user?.id}>
+                      <Button size="sm" onClick={() => handleApproveClick(r)} disabled={r.employee_id === user?.id || r.first_approver_id === user?.id}>
                         <Check className="w-4 h-4 mr-1" /> {r.status === "approved_1" ? "Final approve + disburse" : "Approve"}
                       </Button>
                       <Button size="sm" variant="destructive" onClick={() => setRejectId(r.id)}><X className="w-4 h-4 mr-1" /> Reject</Button>
