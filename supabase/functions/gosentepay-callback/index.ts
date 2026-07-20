@@ -86,7 +86,17 @@ serve(async (req) => {
         const body = JSON.parse(bodyText);
         rawBody = body;
         ref = body.customer_reference || body.ref || body.external_reference;
-        status = (body.status || "").toLowerCase();
+        {
+          const raw = String(body.status ?? body.data?.status ?? body.state ?? "").toLowerCase();
+          const msg = String(body.message ?? body.data?.message ?? "").toLowerCase();
+          if (raw.includes("success") || raw === "completed" || msg.includes("success")) {
+            status = "successful";
+          } else if (raw.includes("fail") || raw === "cancelled" || raw === "expired" || raw === "rejected") {
+            status = "failed";
+          } else {
+            status = raw;
+          }
+        }
         phone = body.msisdn || body.phone;
       } catch {
         // Try as form-urlencoded
