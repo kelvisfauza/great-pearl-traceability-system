@@ -2594,6 +2594,7 @@ export type Database = {
           email: string
           emergency_contact: string | null
           employee_id: string | null
+          exclude_from_salary_increment: boolean
           gender: string | null
           id: string
           is_training_account: boolean | null
@@ -2614,6 +2615,8 @@ export type Database = {
           role: string
           role_notification_shown_at: string | null
           salary: number
+          salary_increment_excluded_at: string | null
+          salary_increment_excluded_reason: string | null
           status: string
           tin_number: string | null
           training_progress: number | null
@@ -2649,6 +2652,7 @@ export type Database = {
           email: string
           emergency_contact?: string | null
           employee_id?: string | null
+          exclude_from_salary_increment?: boolean
           gender?: string | null
           id?: string
           is_training_account?: boolean | null
@@ -2669,6 +2673,8 @@ export type Database = {
           role?: string
           role_notification_shown_at?: string | null
           salary?: number
+          salary_increment_excluded_at?: string | null
+          salary_increment_excluded_reason?: string | null
           status?: string
           tin_number?: string | null
           training_progress?: number | null
@@ -2704,6 +2710,7 @@ export type Database = {
           email?: string
           emergency_contact?: string | null
           employee_id?: string | null
+          exclude_from_salary_increment?: boolean
           gender?: string | null
           id?: string
           is_training_account?: boolean | null
@@ -2724,6 +2731,8 @@ export type Database = {
           role?: string
           role_notification_shown_at?: string | null
           salary?: number
+          salary_increment_excluded_at?: string | null
+          salary_increment_excluded_reason?: string | null
           status?: string
           tin_number?: string | null
           training_progress?: number | null
@@ -12836,6 +12845,7 @@ export type Database = {
           email: string
           emergency_contact: string | null
           employee_id: string | null
+          exclude_from_salary_increment: boolean
           gender: string | null
           id: string
           is_training_account: boolean | null
@@ -12856,6 +12866,8 @@ export type Database = {
           role: string
           role_notification_shown_at: string | null
           salary: number
+          salary_increment_excluded_at: string | null
+          salary_increment_excluded_reason: string | null
           status: string
           tin_number: string | null
           training_progress: number | null
@@ -13135,6 +13147,7 @@ export type Database = {
           email: string
           emergency_contact: string | null
           employee_id: string | null
+          exclude_from_salary_increment: boolean
           gender: string | null
           id: string
           is_training_account: boolean | null
@@ -13155,6 +13168,8 @@ export type Database = {
           role: string
           role_notification_shown_at: string | null
           salary: number
+          salary_increment_excluded_at: string | null
+          salary_increment_excluded_reason: string | null
           status: string
           tin_number: string | null
           training_progress: number | null
