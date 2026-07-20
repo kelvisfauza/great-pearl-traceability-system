@@ -31,7 +31,6 @@ export default function BudgetWallet() {
   const [allocationId, setAllocationId] = useState("");
   const [amount, setAmount] = useState("");
   const [payoutMode, setPayoutMode] = useState<"mobile_money" | "cash" | "personal_wallet">("mobile_money");
-  const [provider, setProvider] = useState<"yo" | "gosente">("gosente");
   const [recipientName, setRecipientName] = useState("");
   const [recipientPhone, setRecipientPhone] = useState("");
   const [reason, setReason] = useState("");
@@ -57,7 +56,7 @@ export default function BudgetWallet() {
 
   const resetForm = () => {
     setAllocationId(""); setAmount(""); setPayoutMode("mobile_money");
-    setProvider("gosente"); setRecipientName(""); setRecipientPhone("");
+    setRecipientName(""); setRecipientPhone("");
     setReason(""); setReceiptFile(null);
   };
 
@@ -90,7 +89,7 @@ export default function BudgetWallet() {
         allocation_id: allocationId,
         amount: amt,
         payout_mode: payoutMode,
-        provider: payoutMode === "mobile_money" ? provider : null,
+        provider: null, // Provider chosen by admin at approval time
         recipient_name: recipientName.trim(),
         recipient_phone: recipientPhone.trim() || null,
         reason: reason.trim(),
@@ -287,16 +286,10 @@ export default function BudgetWallet() {
               </Select>
             </div>
             {payoutMode === "mobile_money" && (
-              <div>
-                <Label>Provider *</Label>
-                <Select value={provider} onValueChange={(v: any) => setProvider(v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="gosente">GosentePay</SelectItem>
-                    <SelectItem value="yo">Yo Payments</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <p className="text-xs text-muted-foreground bg-muted p-2 rounded">
+                Mobile money: on final approval, an administrator will pick the payout channel
+                (GosentePay or Yo Payments) and dispatch funds directly to the recipient phone.
+              </p>
             )}
             <div>
               <Label>Recipient Name *</Label>
