@@ -488,12 +488,25 @@ serve(async (req) => {
       // ─── GOSENTEPAY PAYOUT ──────────────────────────────────────────
       paymentMethodLabel = "Mobile Money (GosentePay)";
       try {
+        // Match the format proven to work in dispatch-gosente-instant:
+        // short ref, sanitized email, reason sliced to 120 chars.
         const gRef = `GSP-${record.id.slice(0, 8)}-${Date.now()}`;
+        const emailRaw = (submission.email || "").trim();
+        const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailRaw);
+        const payoutEmail = emailValid ? emailRaw : "finance@greatpearlcoffee.com";
+        const shortReason =
+          (submission.request_type === "meal_plan"
+            ? `Meal plan ${submission.provider_name || ""}`
+            : submission.request_type === "support_staff_per_diem"
+              ? `Per-diem ${submission.provider_name || ""}`
+              : `Provider payment ${submission.provider_name || ""}`
+          ).replace(/\s+/g, " ").trim().slice(0, 120);
+        console.log(`[GosentePay] payout admin=${reviewerName} amount=${totalAmount} phone=${cleanPhone} ref=${gRef} email=${payoutEmail}`);
         const gResp = await gosenteWithdraw({
           phone: cleanPhone,
           amount: totalAmount,
-          email: submission.email || "finance@greatpearlcoffee.com",
-          reason: narrative,
+          email: payoutEmail,
+          reason: shortReason,
           ref: gRef,
         });
         console.log(`[GosentePay] status=${gResp?.status} body=${JSON.stringify(gResp?.body)}`);
