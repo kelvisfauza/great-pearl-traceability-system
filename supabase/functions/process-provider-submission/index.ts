@@ -496,6 +496,7 @@ serve(async (req) => {
           reason: narrative,
           ref: gRef,
         });
+        console.log(`[GosentePay] status=${gResp?.status} body=${JSON.stringify(gResp?.body)}`);
         result.rawResponse = JSON.stringify(gResp?.body ?? gResp);
         result.transactionRef = gRef;
         if (isGosenteSuccess(gResp?.status ?? 0, gResp?.body ?? {})) {
@@ -503,12 +504,20 @@ serve(async (req) => {
           yoStatus = "success";
           displayMessage = "Payment sent via GosentePay";
         } else {
-          const msg = (gResp?.body?.message || gResp?.body?.data?.message || "GosentePay rejected disbursement");
-          result.errorMessage = String(msg);
-          displayMessage = String(msg);
+          const b: any = gResp?.body ?? {};
+          const providerMsg =
+            b?.message ||
+            b?.data?.message ||
+            b?.error ||
+            b?.raw ||
+            "GosentePay rejected disbursement";
+          const detail = `GosentePay ${gResp?.status ?? ""}: ${String(providerMsg).slice(0, 200)}`.trim();
+          result.errorMessage = detail;
+          displayMessage = detail;
         }
       } catch (e: any) {
-        result.errorMessage = e?.message || "GosentePay call failed";
+        console.error("[GosentePay] exception:", e);
+        result.errorMessage = `GosentePay error: ${e?.message || "call failed"}`;
         displayMessage = result.errorMessage;
       }
     } else {
