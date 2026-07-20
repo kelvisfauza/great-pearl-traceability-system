@@ -45,7 +45,7 @@ const ENTRY_CONFIG: Record<string, { label: string; icon: React.ElementType; col
 
 const DEFAULT_CONFIG = { label: 'Transaction', icon: FileText, color: 'text-gray-600', badgeClass: 'bg-gray-100 text-gray-800' };
 
-const CANONICAL_WALLET_TYPES = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'REVERSAL', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY', 'HOST_MEETING_BONUS', 'MEETING_ATTENDANCE_BONUS'];
+const CANONICAL_WALLET_TYPES = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'REVERSAL', 'MONTHLY_SALARY', 'ADVANCE_RECOVERY', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY', 'HOST_MEETING_BONUS', 'MEETING_ATTENDANCE_BONUS', 'FEE', 'WITHDRAW_FEE', 'GOSENTE_FEE'];
 
 const parseMetadata = (metadata: unknown) => {
   if (!metadata) return null;
