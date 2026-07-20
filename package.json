@@ -99,9 +99,11 @@
     "vite": "^5.4.1"
   },
   "overrides": {
-    "protobufjs": ">=7.5.5 <8.0.0"
+    "protobufjs": ">=7.5.5 <8.0.0",
+    "websocket-driver": ">=0.7.5"
   },
   "resolutions": {
-    "protobufjs": ">=7.5.5 <8.0.0"
+    "protobufjs": ">=7.5.5 <8.0.0",
+    "websocket-driver": ">=0.7.5"
   }
 }
