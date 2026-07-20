@@ -149,7 +149,9 @@ Deno.serve(async (req) => {
         );
         emailResults.push({ name: emp.name, status: "sent" });
       } catch (e: any) {
-        emailResults.push({ name: emp.name, status: "email_failed", error: e.message });
+        const errMsg = e?.message || String(e);
+        console.error(`Email failed for ${emp.email}:`, errMsg);
+        emailResults.push({ name: emp.name, email: emp.email, status: "email_failed", error: errMsg });
       }
     }
 
@@ -178,6 +180,7 @@ Deno.serve(async (req) => {
         deductions,
         emails_sent: emailResults.filter((r) => r.status === "sent").length,
         emails_failed: emailResults.filter((r) => r.status !== "sent").length,
+        results: emailResults,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
