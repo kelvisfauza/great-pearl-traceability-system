@@ -484,6 +484,33 @@ serve(async (req) => {
       displayMessage = "Cash disbursed to provider";
       paymentMethodLabel = "Cash";
       result.transactionRef = `CASH-${record.id.slice(0, 8)}-${Date.now()}`;
+    } else if (paymentMode === "gosente") {
+      // ─── GOSENTEPAY PAYOUT ──────────────────────────────────────────
+      paymentMethodLabel = "Mobile Money (GosentePay)";
+      try {
+        const gRef = `GSP-${record.id.slice(0, 8)}-${Date.now()}`;
+        const gResp = await gosenteWithdraw({
+          phone: cleanPhone,
+          amount: totalAmount,
+          email: submission.email || "finance@greatpearlcoffee.com",
+          reason: narrative,
+          ref: gRef,
+        });
+        result.rawResponse = JSON.stringify(gResp?.body ?? gResp);
+        result.transactionRef = gRef;
+        if (isGosenteSuccess(gResp?.status ?? 0, gResp?.body ?? {})) {
+          result.success = true;
+          yoStatus = "success";
+          displayMessage = "Payment sent via GosentePay";
+        } else {
+          const msg = (gResp?.body?.message || gResp?.body?.data?.message || "GosentePay rejected disbursement");
+          result.errorMessage = String(msg);
+          displayMessage = String(msg);
+        }
+      } catch (e: any) {
+        result.errorMessage = e?.message || "GosentePay call failed";
+        displayMessage = result.errorMessage;
+      }
     } else {
       // ─── MOBILE MONEY PAYOUT ────────────────────────────────────────
       result = await yoPayout({ phone: cleanPhone, amount: totalAmount, narrative, privateRef });
