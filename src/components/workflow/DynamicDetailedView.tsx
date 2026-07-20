@@ -169,6 +169,16 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
   // the wallet and the service fee at request-time. Approving does not
   // subtract again — it just releases the payout. Rejecting refunds both.
   const isAlreadyHeld = Boolean(request.details?.is_instant_withdrawal);
+  // Service fee (already deducted from the wallet at request time for instant
+  // withdrawals). Mirrors computeWithdrawFee in the edge function.
+  const computeWithdrawFee = (a: number) => {
+    if (a < 500) return 0;
+    if (a <= 60_000) return 1_100;
+    if (a <= 500_000) return 1_700;
+    if (a <= 1_000_000) return 2_500;
+    return 2_900;
+  };
+  const serviceFee = isAlreadyHeld ? computeWithdrawFee(requestAmount) : 0;
   // For withdrawals: total balance → minus this request → remaining after approval
   // Show total balance and calculate projected balance after this withdrawal/request is approved
   const displayBalance = isWithdrawalRequest ? walletData.balance : walletData.availableBalance;
