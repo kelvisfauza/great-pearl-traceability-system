@@ -178,8 +178,11 @@ const ProviderSubmissionApprovals: React.FC = () => {
                 {s.payout_status === 'failed' && (
                   <div className="text-xs bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded px-2 py-1.5">
                     <strong>Previous payout failed.</strong>{' '}
-                    {s.payout_message || 'Yo Payments rejected the disbursement (often: account not funded).'}{' '}
-                    Top up the Yo wallet, then click <em>Approve &amp; Pay</em> again to retry — no duplicate record will be created.
+                    {s.payout_message || 'The disbursement was rejected by the payment provider.'}
+                    <div className="mt-1 opacity-90">
+                      Fix the underlying issue (top up wallet, correct phone, etc.) then click{' '}
+                      <em>Retry Payout</em> — no duplicate record will be created.
+                    </div>
                   </div>
                 )}
                 <div className="flex gap-2 justify-end">
