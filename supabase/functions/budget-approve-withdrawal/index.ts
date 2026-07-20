@@ -132,8 +132,8 @@ serve(async (req) => {
       if (emp?.email) {
         await svcClient.functions.invoke("send-transactional-email", {
           body: {
-            to: emp.email,
-            template: "general-notification",
+            recipientEmail: emp.email,
+            templateName: "general-notification",
             data: {
               subject: `Budget withdrawal completed — UGX ${Number(reqRow.amount).toLocaleString()}`,
               title: "Budget Withdrawal Completed",
