@@ -1,0 +1,3 @@
+CREATE POLICY "Admins can view all instant withdrawals" ON public.instant_withdrawals FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'Super Admin'::app_role) OR public.has_role(auth.uid(), 'Administrator'::app_role));
+
+CREATE POLICY "Admins can update instant withdrawals" ON public.instant_withdrawals FOR UPDATE TO authenticated USING (public.has_role(auth.uid(), 'Super Admin'::app_role) OR public.has_role(auth.uid(), 'Administrator'::app_role)) WITH CHECK (public.has_role(auth.uid(), 'Super Admin'::app_role) OR public.has_role(auth.uid(), 'Administrator'::app_role));
