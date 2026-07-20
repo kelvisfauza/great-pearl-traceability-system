@@ -482,7 +482,26 @@ serve(async (req) => {
     }
     
     console.log('Formatted phone:', formattedPhone)
-    
+
+    // Validate Uganda MSISDN: +256 followed by 9 digits starting with 7 (mobile)
+    const ugMsisdnRegex = /^\+256[7][0-9]{8}$/
+    if (!ugMsisdnRegex.test(formattedPhone)) {
+      console.warn(`⚠️ Invalid phone number format, skipping SMS: ${formattedPhone}`)
+      try {
+        await supabase.from('sms_logs').insert({
+          recipient_phone: formattedPhone,
+          message,
+          status: 'failed',
+          error_message: 'Invalid phone number format',
+          provider: 'validation',
+        })
+      } catch (_) {}
+      return new Response(
+        JSON.stringify({ success: false, skipped: true, error: 'Invalid phone number format', phone: formattedPhone }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // 🛡️ DEDUP GUARD: prevent double-sends when a caller invokes both
     // send-transactional-email (which auto-fires SMS in SMS-PRIMARY mode)
     // AND send-sms directly. If the same phone+message was already sent
