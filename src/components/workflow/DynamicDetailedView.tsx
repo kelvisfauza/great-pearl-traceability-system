@@ -672,6 +672,11 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
                     <p className={`text-2xl font-bold ${projectedBalanceAfterApproval < 0 ? 'text-destructive' : 'text-green-600'}`}>
                       UGX {projectedBalanceAfterApproval.toLocaleString()}
                     </p>
+                    {isAlreadyHeld && (
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        Amount + service fee already debited when the request was created. Reject to refund.
+                      </p>
+                    )}
                   </div>
                 </div>
 
