@@ -97,13 +97,7 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        deductions.push({
-          name: emp.name,
-          status: "deducted",
-          amount: DEDUCTION,
-          overdraft_drawn: overdraftUsed,
-          overdraft_fee: overdraftFee,
-        });
+        deductions.push({ name: emp.name, status: "deducted", amount: DEDUCTION });
       } catch (e: any) {
         deductions.push({ name: emp.name, status: "error", error: e.message });
       }
