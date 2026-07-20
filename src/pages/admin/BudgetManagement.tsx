@@ -372,6 +372,31 @@ export default function BudgetManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Provider picker (admin selects gateway for mobile money at final approval) */}
+      <Dialog open={!!providerPickReq} onOpenChange={(o) => !o && setProviderPickReq(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Select Payment Gateway</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Disburse {providerPickReq && fmt(providerPickReq.amount)} to {providerPickReq?.recipient_name} ({providerPickReq?.recipient_phone}) via:
+            </p>
+            <Select value={pickedProvider} onValueChange={(v: any) => setPickedProvider(v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="gosente">GosentePay</SelectItem>
+                <SelectItem value="yo">Yo Payments</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProviderPickReq(null)}>Cancel</Button>
+            <Button onClick={() => { const r = providerPickReq; setProviderPickReq(null); approve(r.id, pickedProvider); }}>
+              Approve &amp; Disburse
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
