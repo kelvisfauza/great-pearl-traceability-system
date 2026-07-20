@@ -41,6 +41,30 @@ const cautionHtml = (recipientName: string, offenders: string) => `
   <p style="color:#666;font-size:12px;">P.O Box 431420, Kasese, Uganda · Operations: +256 393 101103</p>
 `;
 
+const cautionText = (recipientName: string, offenders: string) => `Dear ${recipientName},
+
+This is an official caution to all employees of Great Agro Coffee (a member of Hello YEDA Coffee Company Limited) regarding improper use of the office landline and company-issued phones.
+
+It has come to management's attention that these lines are being used for personal, non-business calls to friends and family, causing the company to lose airtime and credit on unproductive communication.
+
+Primary offenders in this review:
+ - Bwambale Benson
+ - Onesmus Masika
+
+${offenders}
+
+Effective immediately:
+ - Office landline and company phones are strictly for business use only.
+ - Personal calls will be surcharged and may lead to disciplinary action.
+ - Repeat offences escalate to HR.
+
+A recovery deduction of UGX 20,000 has been applied to the wallets of the two named employees. Where balance is insufficient, the deduction draws from the overdraft facility (2.75% access fee applies).
+
+Regards,
+Management
+Great Agro Coffee — a member of Hello YEDA Coffee Company Limited
+P.O Box 431420, Kasese, Uganda · Operations: +256 393 101103`;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -140,6 +164,7 @@ Deno.serve(async (req) => {
             sender_domain: SENDER_DOMAIN,
             subject: CAUTION_SUBJECT,
             html: cautionHtml(emp.name, offenderLine),
+            text: cautionText(emp.name, offenderLine),
             purpose: "transactional",
             label: "phone-misuse-caution",
             idempotency_key: idem,
@@ -165,6 +190,7 @@ Deno.serve(async (req) => {
           sender_domain: SENDER_DOMAIN,
           subject: `[CC] ${CAUTION_SUBJECT}`,
           html: cautionHtml("Operations Team", offenderLine),
+          text: cautionText("Operations Team", offenderLine),
           purpose: "transactional",
           label: "phone-misuse-caution-ops",
           idempotency_key: opsIdem,
