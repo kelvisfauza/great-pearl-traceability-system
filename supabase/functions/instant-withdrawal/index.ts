@@ -382,14 +382,20 @@ serve(async (req) => {
       ? Math.round(overdraftPortion * odInterestRateBps) / 10000
       : 0;
 
+    // 2.75% access fee on the overdraft-funded portion (matches overdraft-draw / late-Monday path)
+    const overdraftAccessFee = overdraftPortion > 0
+      ? Math.round(overdraftPortion * 0.0275)
+      : 0;
+
     // Block draw if user hasn't explicitly approved using their overdraft
     if (overdraftPortion > 0 && !acceptOverdraft) {
       return respond(false, {
-        error: `This withdrawal exceeds your wallet by UGX ${overdraftPortion.toLocaleString()}. Approve using your overdraft (upfront interest UGX ${upfrontInterest.toLocaleString()}) to continue.`,
+        error: `This withdrawal exceeds your wallet by UGX ${overdraftPortion.toLocaleString()}. Approve using your overdraft (2.75% access fee UGX ${overdraftAccessFee.toLocaleString()} + upfront interest UGX ${upfrontInterest.toLocaleString()}) to continue.`,
         code: 'OVERDRAFT_NOT_ACCEPTED',
         wallet_portion: walletPortion,
         overdraft_portion: overdraftPortion,
         upfront_interest: upfrontInterest,
+        access_fee: overdraftAccessFee,
       });
     }
 
@@ -810,7 +816,7 @@ serve(async (req) => {
           .select('outstanding_balance, total_drawn, total_interest')
           .eq('id', odAccountId)
           .single();
-        const newOut = Number(acc2?.outstanding_balance || 0) + overdraftPortion + upfrontInterest;
+        const newOut = Number(acc2?.outstanding_balance || 0) + overdraftPortion + upfrontInterest + overdraftAccessFee;
         await supabase.from('overdraft_accounts').update({
           outstanding_balance: newOut,
           total_drawn: Number(acc2?.total_drawn || 0) + overdraftPortion,
@@ -826,8 +832,25 @@ serve(async (req) => {
           balance_after: Number(acc2?.outstanding_balance || 0) + overdraftPortion,
           ledger_entry_id: ledgerRow?.id || null,
           reference: ledgerRef,
-          metadata: { source: 'instant_withdrawal', wallet_portion: walletPortion, interest_charged: upfrontInterest },
+          metadata: { source: 'instant_withdrawal', wallet_portion: walletPortion, interest_charged: upfrontInterest, access_fee: overdraftAccessFee },
         });
+        if (overdraftAccessFee > 0) {
+          await supabase.from('overdraft_transactions').insert({
+            account_id: odAccountId,
+            user_id: resolvedUserId,
+            transaction_type: 'fee',
+            amount: overdraftAccessFee,
+            balance_after: Number(acc2?.outstanding_balance || 0) + overdraftPortion + overdraftAccessFee,
+            ledger_entry_id: null,
+            reference: ledgerRef + '-FEE',
+            metadata: {
+              source: 'instant_withdrawal',
+              fee_rate: 0.0275,
+              draw_amount: overdraftPortion,
+              note: '2.75% access fee on draw, added to outstanding',
+            },
+          });
+        }
         if (upfrontInterest > 0) {
           await supabase.from('overdraft_transactions').insert({
             account_id: odAccountId,
