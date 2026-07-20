@@ -26,9 +26,15 @@ export const useSeparationOfDuties = () => {
         .from('approval_requests' as any)
         .select('finance_approved_by, admin_approved_by, requested_by, user_id')
         .eq('id', requestId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+
+      // No matching approval_requests row (e.g. instant_withdrawals live in a
+      // different table). SoD has nothing to check here — allow approval.
+      if (!data) {
+        return { canApprove: true };
+      }
 
       const currentUserName = employee.name || employee.email;
       const currentUserEmail = employee.email;
@@ -82,9 +88,13 @@ export const useSeparationOfDuties = () => {
         .from('approval_requests')
         .select('finance_approved_by, admin_approved_by, admin_approved_1_by, admin_approved_2_by, requestedby, requestedby_name')
         .eq('id', requestId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+
+      if (!data) {
+        return { canApprove: true };
+      }
 
       const currentUserName = employee.name || employee.email;
       const currentUserEmail = employee.email;
