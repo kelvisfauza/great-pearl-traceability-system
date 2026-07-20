@@ -36,6 +36,7 @@ const WALLET_TYPES = [
   'MONTHLY_SALARY', 'ADVANCE_RECOVERY',
   'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY',
   'HOST_MEETING_BONUS', 'MEETING_ATTENDANCE_BONUS',
+  'FEE', 'WITHDRAW_FEE', 'GOSENTE_FEE',
 ];
 
 const isDirectAllowancePayout = (entry: { entry_type: string; metadata: any }) => {
