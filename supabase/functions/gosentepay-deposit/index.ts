@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { normalizePhone } from "../_shared/yo-payments.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { gosenteDeposit, isGosenteSuccess } from "../_shared/gosentepay.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -104,6 +105,58 @@ serve(async (req) => {
 
     // Build callback URL for Yo Payments notification
     const callbackUrl = `${supabaseUrl}/functions/v1/gosentepay-callback`;
+
+    // ==============================================================
+    // Route small deposits (<= 50,000 UGX) through GosentePay v1 API.
+    // Larger deposits continue via Yo Payments XML below.
+    // ==============================================================
+    if (numAmount <= 50000) {
+      try {
+        console.log(`[Deposit Router] Routing UGX ${numAmount} deposit via GosentePay for ${cleanPhone}, ref: ${ref}`);
+
+        // Flag the transaction as gosentepay so status-check + callback know how to handle it.
+        const svcUpdate = createClient(
+          supabaseUrl,
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+        );
+        await svcUpdate
+          .from("mobile_money_transactions")
+          .update({ provider: "gosentepay" })
+          .eq("transaction_ref", ref);
+
+        const { status, body: gpBody } = await gosenteDeposit({
+          phone: cleanPhone,
+          amount: numAmount,
+          email: (email && String(email).trim()) || "system@greatagrocoffee.com",
+          ref,
+          callback: callbackUrl,
+        });
+
+        const inner = gpBody?.data ?? gpBody;
+        if (isGosenteSuccess(status, gpBody)) {
+          return new Response(
+            JSON.stringify({
+              status: "success",
+              code: 200,
+              message: inner?.message || "A payment prompt has been sent to your phone. Enter your PIN to confirm.",
+              ref,
+              provider: "gosentepay",
+            }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const errMsg = inner?.message || gpBody?.message || `GosentePay rejected the deposit (HTTP ${status})`;
+        console.error(`[GosentePay Deposit] Failed: ${errMsg}`, gpBody);
+        return new Response(
+          JSON.stringify({ status: "error", code: 400, message: errMsg }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch (gpErr) {
+        console.error("[GosentePay Deposit] Exception, falling back to Yo Payments:", gpErr);
+        // fall through to Yo below
+      }
+    }
 
     // Build XML request for Yo Payments acdepositfunds (collect/receive money from user's mobile money)
     const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
