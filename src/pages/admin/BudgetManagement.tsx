@@ -11,12 +11,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, PlusCircle, Check, X } from "lucide-react";
+import { Loader2, PlusCircle, Check, X, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const fmt = (n: number) => `UGX ${Number(n || 0).toLocaleString()}`;
 
 export default function BudgetManagement() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [seasons, setSeasons] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
   const [allocations, setAllocations] = useState<any[]>([]);
@@ -167,6 +169,9 @@ export default function BudgetManagement() {
 
   return (
     <div className="container mx-auto p-4 md:p-6 space-y-6">
+      <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="-ml-2">
+        <ArrowLeft className="w-4 h-4 mr-2" /> Back
+      </Button>
       <div>
         <h1 className="text-3xl font-bold">Budget Management</h1>
         <p className="text-muted-foreground text-sm">Allocate season budgets to employees and approve budget withdrawals. Every withdrawal requires two distinct administrators.</p>
