@@ -642,6 +642,29 @@ serve(async (req) => {
               .from("payment-receipts")
               .createSignedUrl(path, 60 * 60 * 24 * 365);
             pdfUrl = signed?.signedUrl;
+            // Persist a searchable record so admins/AI can look up this receipt
+            try {
+              await supabase.from("generated_receipts").insert({
+                reference: pdfRef,
+                source: "provider_submission",
+                source_id: submissionId,
+                storage_bucket: "payment-receipts",
+                storage_path: path,
+                recipient_name: submission.provider_name,
+                recipient_phone: cleanPhone,
+                recipient_email: submission.email || null,
+                amount: numAmount,
+                charges: numCharge,
+                total: totalAmount,
+                payment_method: paymentMethodLabel,
+                transaction_id: result.transactionRef || record.id,
+                processed_by: reviewerName,
+                description: submission.description,
+                metadata: { payout_status: yoStatus, invoice_number: submission.invoice_number || null },
+              });
+            } catch (e) {
+              console.error("generated_receipts insert error:", e);
+            }
           }
         } catch (e) {
           console.error("PDF generation error:", e);
