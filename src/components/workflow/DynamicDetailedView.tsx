@@ -81,18 +81,34 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
 
         const userId = emp.auth_user_id;
 
-        // Fetch ALL ledger entries to calculate the same balance the user sees
-        // The user dashboard shows: loyalty + bonus + deposits - withdrawals - pending
+        // Use the EXACT same entry-type set and exclusion rules as the admin
+        // User Statement so the numbers reconcile. See src/pages/admin/UserStatement.tsx.
+        const WALLET_TYPES = [
+          'LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'REVERSAL',
+          'MONTHLY_SALARY', 'ADVANCE_RECOVERY',
+          'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY',
+          'HOST_MEETING_BONUS', 'MEETING_ATTENDANCE_BONUS',
+          'FEE', 'WITHDRAW_FEE', 'GOSENTE_FEE',
+        ];
         const { data: entries } = await supabase
           .from('ledger_entries')
           .select('*')
           .eq('user_id', userId)
-          .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'MONTHLY_SALARY', 'PAYOUT', 'FEE'])
+          .in('entry_type', WALLET_TYPES)
           .order('created_at', { ascending: false });
 
-        const allEntries = entries || [];
-        
-        // Sum only the types visible in the user's loyalty wallet
+        // Exclude airtime/data allowance payouts (mirror get_effective_wallet_balance RPC)
+        const allEntries = (entries || []).filter((e: any) => {
+          const meta = e.metadata
+            ? (typeof e.metadata === 'string' ? JSON.parse(e.metadata) : e.metadata)
+            : null;
+          const isAllowancePayout =
+            ['airtime_allowance', 'data_allowance'].includes(meta?.allowance_type) &&
+            ['DEPOSIT', 'PAYOUT'].includes(e.entry_type);
+          return !isAllowancePayout;
+        });
+
+        // Net balance = sum of all reconciling wallet entries (matches admin statement Net)
         const balance = allEntries.reduce((sum: number, e: any) => sum + Number(e.amount), 0);
 
         // Freeze all approval-stage withdrawals (including this current request)
