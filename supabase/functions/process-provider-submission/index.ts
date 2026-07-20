@@ -290,6 +290,25 @@ serve(async (req) => {
       );
     }
 
+    // 🔒 ATOMIC CLAIM — prevent double-send when admin double-clicks or two
+    // approvals race. Only the first caller flips 'pending' -> 'processing';
+    // any concurrent call gets 0 rows and exits without triggering a payout.
+    if (action === "approve") {
+      const { data: claimed, error: claimErr } = await supabase
+        .from("provider_submission_requests")
+        .update({ status: "processing" })
+        .eq("id", submissionId)
+        .eq("status", "pending")
+        .select("id")
+        .maybeSingle();
+      if (claimErr || !claimed) {
+        return new Response(
+          JSON.stringify({ ok: false, error: "Request is already being processed by another approval. Please refresh." }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     // Get reviewer name
     const { data: emp } = await supabase
       .from("employees")
