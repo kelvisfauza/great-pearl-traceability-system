@@ -699,7 +699,7 @@ const UserStatement = () => {
 
                   <Card className="mt-2">
                     <CardContent className="p-0">
-                      <div className="overflow-x-auto max-h-[60vh]">
+                      <div className="overflow-x-auto max-h-[45vh]">
                         <Table className="min-w-[900px]">
                           <TableHeader className="sticky top-0 bg-background z-10">
                             <TableRow>
