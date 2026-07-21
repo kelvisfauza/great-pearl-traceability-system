@@ -284,10 +284,20 @@ serve(async (req) => {
     }
 
     if (submission.status !== "pending") {
-      return new Response(
-        JSON.stringify({ ok: false, error: `Already ${submission.status}` }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      // Allow retry if a previous attempt got stuck in `processing` for >90s
+      // (payout call crashed before it could reset the row). Everything else
+      // (paid / rejected) is terminal.
+      const stale =
+        submission.status === "processing" &&
+        submission.updated_at &&
+        Date.now() - new Date(submission.updated_at).getTime() > 90_000;
+      if (!stale) {
+        return new Response(
+          JSON.stringify({ ok: false, error: `Already ${submission.status}` }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      console.warn(`[process-provider-submission] Recovering stale processing row ${submissionId}`);
     }
 
     // 🔒 ATOMIC CLAIM — prevent double-send when admin double-clicks or two
@@ -298,7 +308,7 @@ serve(async (req) => {
         .from("provider_submission_requests")
         .update({ status: "processing" })
         .eq("id", submissionId)
-        .eq("status", "pending")
+        .in("status", ["pending", "processing"])
         .select("id")
         .maybeSingle();
       if (claimErr || !claimed) {
