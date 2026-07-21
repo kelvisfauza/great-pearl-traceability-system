@@ -448,21 +448,19 @@ const UserStatement = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-6">
-        <Button variant="ghost" size="sm" className="mb-2" onClick={() => navigate(-1)}>
+      <div className="container mx-auto p-3">
+        <Button variant="ghost" size="sm" className="mb-1" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Back
         </Button>
-        <div className="mb-6 flex items-center gap-3">
-          <FileText className="h-7 w-7 text-primary" />
+        <div className="mb-3 flex items-center gap-2">
+          <FileText className="h-5 w-5 text-primary" />
           <div>
-            <h1 className="text-3xl font-bold">User Transaction Statement</h1>
-            <p className="text-sm text-muted-foreground">
-              Review any employee's full wallet ledger with running balance.
-            </p>
+            <h1 className="text-xl font-bold leading-tight">User Transaction Statement</h1>
+            <p className="text-xs text-muted-foreground">Review any employee's full wallet ledger with running balance.</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
           {/* Left: employee picker */}
           <Card className="lg:col-span-1 h-fit">
             <CardHeader>
@@ -648,28 +646,27 @@ const UserStatement = () => {
 
                 <Tabs defaultValue="entries">
                   {negativeAnalysis && (
-                    <Card className={`mb-2 border ${negativeAnalysis.currentlyNegative ? "border-orange-300 bg-orange-50" : "border-amber-200 bg-amber-50"}`}>
-                      <CardContent className="py-4">
-                        <div className="flex items-start gap-3">
-                          {negativeAnalysis.currentlyNegative ? (
-                            <AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5" />
-                          ) : (
-                            <Info className="h-5 w-5 text-amber-600 mt-0.5" />
-                          )}
-                          <div className="flex-1 text-sm">
-                            <div className="font-semibold text-foreground mb-1">
-                              {negativeAnalysis.currentlyNegative
-                                ? "Wallet is currently overdrawn"
-                                : "Historical negative balance (now recovered)"}
-                            </div>
-                            <p className="text-muted-foreground mb-2">
-                              The running balance went below zero <strong>{negativeAnalysis.count.toLocaleString()}</strong> time(s)
-                              between <strong>{new Date(negativeAnalysis.firstDate).toLocaleDateString()}</strong> and{" "}
-                              <strong>{new Date(negativeAnalysis.lastDate).toLocaleDateString()}</strong>.
-                              The lowest point was <strong className="text-orange-700">{fmt(negativeAnalysis.lowest)}</strong> on{" "}
-                              {new Date(negativeAnalysis.lowestDate).toLocaleDateString()}.
-                            </p>
-                            <div className="rounded bg-white/70 border border-amber-200 p-2 mb-2">
+                    <details className={`mb-2 rounded border ${negativeAnalysis.currentlyNegative ? "border-orange-300 bg-orange-50" : "border-amber-200 bg-amber-50"}`}>
+                      <summary className="cursor-pointer px-3 py-2 text-sm flex items-center gap-2">
+                        {negativeAnalysis.currentlyNegative ? (
+                          <AlertTriangle className="h-4 w-4 text-orange-600" />
+                        ) : (
+                          <Info className="h-4 w-4 text-amber-600" />
+                        )}
+                        <span className="font-semibold">
+                          {negativeAnalysis.currentlyNegative ? "Wallet currently overdrawn" : "Historical negative balance"}
+                        </span>
+                        <span className="text-muted-foreground text-xs">
+                          — {negativeAnalysis.count.toLocaleString()} dips, lowest {fmt(negativeAnalysis.lowest)} (click for details)
+                        </span>
+                      </summary>
+                      <div className="px-3 pb-3 text-sm">
+                        <p className="text-muted-foreground mb-2">
+                          Between <strong>{new Date(negativeAnalysis.firstDate).toLocaleDateString()}</strong> and{" "}
+                          <strong>{new Date(negativeAnalysis.lastDate).toLocaleDateString()}</strong>. Lowest on{" "}
+                          {new Date(negativeAnalysis.lowestDate).toLocaleDateString()}.
+                        </p>
+                        <div className="rounded bg-white/70 border border-amber-200 p-2 mb-2">
                               <div className="text-xs text-muted-foreground">First trigger entry</div>
                               <div className="font-medium">
                                 {new Date(negativeAnalysis.trigger.created_at).toLocaleString()} ·{" "}
@@ -686,17 +683,13 @@ const UserStatement = () => {
                                 </div>
                               )}
                             </div>
-                            <p className="text-xs text-muted-foreground">
-                              <strong>Why this can happen:</strong> approved transfers, withdrawals, loan recoveries,
-                              salary advance recoveries or adjustments can be posted before matching credits
-                              (salary, bonus, reversals) land. The running column shows the true ledger state at
-                              each point in time — it is not a bug. The <strong>Net</strong> figure above reflects the
-                              current effective wallet balance after all later credits and reversals.
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        <p className="text-xs text-muted-foreground">
+                          <strong>Why:</strong> approved transfers, withdrawals, loan/advance recoveries or
+                          adjustments can post before matching credits (salary, bonus, reversals) land. The
+                          <strong> Net</strong> figure above reflects the current effective balance.
+                        </p>
+                      </div>
+                    </details>
                   )}
 
                   <TabsList>
@@ -706,7 +699,7 @@ const UserStatement = () => {
 
                   <Card className="mt-2">
                     <CardContent className="p-0">
-                      <div className="overflow-x-auto max-h-[60vh]">
+                      <div className="overflow-x-auto max-h-[45vh]">
                         <Table className="min-w-[900px]">
                           <TableHeader className="sticky top-0 bg-background z-10">
                             <TableRow>
