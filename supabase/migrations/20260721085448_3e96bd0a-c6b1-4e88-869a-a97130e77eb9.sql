@@ -1,0 +1,2 @@
+ALTER TABLE public.provider_submission_requests DROP CONSTRAINT IF EXISTS provider_submission_requests_status_check;
+ALTER TABLE public.provider_submission_requests ADD CONSTRAINT provider_submission_requests_status_check CHECK (status = ANY (ARRAY['pending'::text, 'processing'::text, 'approved'::text, 'rejected'::text, 'paid'::text, 'failed'::text]));
