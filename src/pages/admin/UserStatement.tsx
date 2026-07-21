@@ -448,21 +448,19 @@ const UserStatement = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-6">
-        <Button variant="ghost" size="sm" className="mb-2" onClick={() => navigate(-1)}>
+      <div className="container mx-auto p-3">
+        <Button variant="ghost" size="sm" className="mb-1" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Back
         </Button>
-        <div className="mb-6 flex items-center gap-3">
-          <FileText className="h-7 w-7 text-primary" />
+        <div className="mb-3 flex items-center gap-2">
+          <FileText className="h-5 w-5 text-primary" />
           <div>
-            <h1 className="text-3xl font-bold">User Transaction Statement</h1>
-            <p className="text-sm text-muted-foreground">
-              Review any employee's full wallet ledger with running balance.
-            </p>
+            <h1 className="text-xl font-bold leading-tight">User Transaction Statement</h1>
+            <p className="text-xs text-muted-foreground">Review any employee's full wallet ledger with running balance.</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
           {/* Left: employee picker */}
           <Card className="lg:col-span-1 h-fit">
             <CardHeader>
