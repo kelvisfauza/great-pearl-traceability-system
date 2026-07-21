@@ -129,6 +129,22 @@ const UserStatement = () => {
     ].filter(Boolean) as string[]));
   }, [resolvedUserId, selectedEmployee?.auth_user_id, selectedEmployee?.id]);
 
+  // Authoritative wallet balance for the selected user — mirrors what the
+  // employee sees on their own wallet (get_effective_wallet_balance RPC).
+  // Admins previously had no single "current balance" figure on this page,
+  // so filtered/date-limited views made it look like the balance was wrong.
+  const { data: currentBalance } = useQuery({
+    queryKey: ["admin-statement-current-balance", resolvedUserId],
+    enabled: !!resolvedUserId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_effective_wallet_balance', {
+        p_user_id: resolvedUserId as string,
+      });
+      if (error) throw error;
+      return Number(data || 0);
+    },
+  });
+
   // Ledger entries for selected user
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["admin-statement-entries", candidateUserIds.join(','), typeFilter, from, to],
@@ -590,7 +606,16 @@ const UserStatement = () => {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                      <div className={`p-3 rounded border ${(currentBalance ?? 0) >= 0 ? "bg-emerald-50 border-emerald-300" : "bg-red-50 border-red-300"}`}>
+                        <div className={`flex items-center gap-2 text-xs ${(currentBalance ?? 0) >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                          <Wallet className="h-3 w-3" /> Current Wallet Balance
+                        </div>
+                        <div className={`text-lg font-bold ${(currentBalance ?? 0) >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                          {currentBalance == null ? "…" : fmt(currentBalance)}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5">Live · matches employee view</div>
+                      </div>
                       <div className="p-3 rounded bg-emerald-50 border border-emerald-200">
                         <div className="flex items-center gap-2 text-emerald-700 text-xs"><ArrowDownCircle className="h-3 w-3" /> Credits</div>
                         <div className="text-lg font-bold text-emerald-700">{fmt(totals.credits)}</div>
@@ -600,7 +625,7 @@ const UserStatement = () => {
                         <div className="text-lg font-bold text-red-700">{fmt(totals.debits)}</div>
                       </div>
                       <div className={`p-3 rounded border ${totals.net >= 0 ? "bg-blue-50 border-blue-200" : "bg-orange-50 border-orange-200"}`}>
-                        <div className={`flex items-center gap-2 text-xs ${totals.net >= 0 ? "text-blue-700" : "text-orange-700"}`}><Wallet className="h-3 w-3" /> Net (raw)</div>
+                        <div className={`flex items-center gap-2 text-xs ${totals.net >= 0 ? "text-blue-700" : "text-orange-700"}`}><Wallet className="h-3 w-3" /> Net (filtered)</div>
                         <div className={`text-lg font-bold ${totals.net >= 0 ? "text-blue-700" : "text-orange-700"}`}>{fmt(totals.net)}</div>
                       </div>
                       <div className="p-3 rounded bg-muted">

@@ -362,9 +362,18 @@ serve(async (req) => {
       return respond(false, { error: msg });
     }
 
-    // Compute how much of this withdrawal is overdraft-funded
-    const overdraftPortion = Math.max(0, numAmount - walletSpendableFinal);
+    // Compute how much of this withdrawal actually needs the overdraft.
+    // The real test is whether the raw wallet balance (not the reserved /
+    // pending-adjusted "spendable") cannot cover the amount + service fee.
+    // Using spendable inflated the OD portion whenever loan reserve or
+    // in-flight items reduced spendable but the wallet itself was still
+    // positive — leading to bogus OVERDRAFT_DRAW tags and missing / wrong
+    // access-fee handling. Fee is included here because it debits the
+    // wallet in the same transaction path.
+    const feeForOdCheck = computeWithdrawFee(numAmount);
+    const overdraftPortion = Math.max(0, (numAmount + feeForOdCheck) - walletBalance);
     const walletPortion = numAmount - overdraftPortion;
+    const isOverdraftDraw = overdraftPortion > 0;
 
     // Upfront interest charged when the user accepts to dip into overdraft
     let odInterestRateBps = 50; // 0.5% default
@@ -480,7 +489,7 @@ serve(async (req) => {
         entry_type: 'WITHDRAWAL',
         amount: -numAmount,
         reference: ledgerRef,
-        source_category: overdraftPortion > 0 ? 'OVERDRAFT_DRAW' : 'WITHDRAWAL',
+        source_category: isOverdraftDraw ? 'OVERDRAFT_DRAW' : 'INSTANT_WITHDRAWAL',
         metadata: {
           type: 'instant_withdrawal',
           phone: cleanPhone,
@@ -490,6 +499,7 @@ serve(async (req) => {
           status: 'pending_approval',
           wallet_portion: walletPortion,
           overdraft_portion: overdraftPortion,
+          is_overdraft: isOverdraftDraw,
           interest_charged: upfrontInterest,
           interest_rate_bps: odInterestRateBps,
           bypass_treasury_check: true,
@@ -706,7 +716,7 @@ serve(async (req) => {
       entry_type: 'WITHDRAWAL',
       amount: -numAmount,
       reference: ledgerRef,
-      source_category: overdraftPortion > 0 ? 'OVERDRAFT_DRAW' : 'WITHDRAWAL',
+      source_category: isOverdraftDraw ? 'OVERDRAFT_DRAW' : 'INSTANT_WITHDRAWAL',
       metadata: {
         type: 'instant_withdrawal',
         phone: cleanPhone,
@@ -715,6 +725,7 @@ serve(async (req) => {
         yo_status: txStatus,
         wallet_portion: walletPortion,
         overdraft_portion: overdraftPortion,
+        is_overdraft: isOverdraftDraw,
         interest_charged: upfrontInterest,
         interest_rate_bps: odInterestRateBps,
         // Yo payout has ALREADY succeeded at this point — the treasury/float
@@ -808,8 +819,8 @@ serve(async (req) => {
       }
     }
 
-    // Sync overdraft account if this draw consumed overdraft
-    if (overdraftPortion > 0 && odAccountId) {
+    // Sync overdraft account only if this draw actually consumed overdraft
+    if (isOverdraftDraw && odAccountId) {
       try {
         const { data: acc2 } = await supabase
           .from('overdraft_accounts')
