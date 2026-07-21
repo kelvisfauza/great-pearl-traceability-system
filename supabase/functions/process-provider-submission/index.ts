@@ -758,6 +758,23 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error("process-provider-submission error:", error);
+    // Release the atomic claim so the admin can retry instead of being stuck
+    // on "Already processing".
+    try {
+      const body = await req.clone().json().catch(() => ({} as any));
+      if (body?.submissionId && body?.action === "approve") {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const admin = createClient(supabaseUrl, serviceKey);
+        await admin
+          .from("provider_submission_requests")
+          .update({ status: "pending" })
+          .eq("id", body.submissionId)
+          .eq("status", "processing");
+      }
+    } catch (releaseErr) {
+      console.error("Failed to release stuck claim:", releaseErr);
+    }
     return new Response(
       JSON.stringify({
         ok: false,
