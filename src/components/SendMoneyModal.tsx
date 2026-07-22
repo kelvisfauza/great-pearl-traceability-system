@@ -244,8 +244,12 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
       });
       return;
     }
-    if (parsedMobileAmount > availableBalance) {
-      toast({ title: 'Insufficient balance', description: `Available: UGX ${availableBalance.toLocaleString()}`, variant: 'destructive' });
+    if (mobileTotalDebit > availableBalance) {
+      toast({
+        title: 'Insufficient balance',
+        description: `Available: UGX ${availableBalance.toLocaleString()}. This send needs UGX ${mobileTotalDebit.toLocaleString()} (amount + UGX ${mobileServiceFee.toLocaleString()} service fee).`,
+        variant: 'destructive',
+      });
       return;
     }
 
