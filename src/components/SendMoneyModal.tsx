@@ -77,13 +77,25 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
   // Wallet-only balance (without overdraft). Defaults to availableBalance if not provided.
   const walletOnly = typeof walletBalance === 'number' ? walletBalance : Math.max(0, availableBalance - overdraftHeadroom);
   const employeeOdPortion = Math.max(0, Math.min(parsedAmount, availableBalance) - walletOnly);
-  const mobileOdPortion = Math.max(0, Math.min(parsedMobileAmount, availableBalance) - walletOnly);
   const OD_FEE_RATE = 0.0275;
   const employeeOdFee = Math.round(employeeOdPortion * OD_FEE_RATE);
-  const mobileOdFee = Math.round(mobileOdPortion * OD_FEE_RATE);
   const employeeNewOutstanding = overdraftOutstanding + employeeOdPortion + employeeOdFee;
-  const mobileNewOutstanding = overdraftOutstanding + mobileOdPortion + mobileOdFee;
   const employeeNeedsOdConfirm = employeeOdPortion > 0 && !overdraftConfirmed;
+
+  // Tiered withdrawal service fee — mirrors supabase/functions/instant-withdrawal computeWithdrawFee.
+  // Charged in addition to the payout amount on every mobile-money send.
+  const computeWithdrawFee = (a: number): number => {
+    if (a < 500) return 0;
+    if (a <= 60_000) return 1_100;
+    if (a <= 500_000) return 1_700;
+    if (a <= 1_000_000) return 2_500;
+    return 2_900;
+  };
+  const mobileServiceFee = computeWithdrawFee(parsedMobileAmount);
+  const mobileTotalDebit = parsedMobileAmount + mobileServiceFee;
+  const mobileOdPortion = Math.max(0, Math.min(mobileTotalDebit, availableBalance) - walletOnly);
+  const mobileOdFee = Math.round(mobileOdPortion * OD_FEE_RATE);
+  const mobileNewOutstanding = overdraftOutstanding + mobileOdPortion + mobileOdFee;
   const mobileNeedsOdConfirm = mobileOdPortion > 0 && !overdraftConfirmedMobile;
 
   const handleSendToEmployee = async () => {
@@ -232,8 +244,12 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
       });
       return;
     }
-    if (parsedMobileAmount > availableBalance) {
-      toast({ title: 'Insufficient balance', description: `Available: UGX ${availableBalance.toLocaleString()}`, variant: 'destructive' });
+    if (mobileTotalDebit > availableBalance) {
+      toast({
+        title: 'Insufficient balance',
+        description: `Available: UGX ${availableBalance.toLocaleString()}. This send needs UGX ${mobileTotalDebit.toLocaleString()} (amount + UGX ${mobileServiceFee.toLocaleString()} service fee).`,
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -476,9 +492,13 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
                     <CardContent className="p-3 text-sm space-y-1">
                       <div className="flex justify-between"><span>Sending via Mobile Money:</span><span className="font-semibold">UGX {parsedMobileAmount.toLocaleString()}</span></div>
                       <div className="flex justify-between"><span>To:</span><span className="font-semibold">{mobilePhone}</span></div>
+                      {mobileServiceFee > 0 && (
+                        <div className="flex justify-between text-amber-700"><span>Service fee:</span><span>UGX {mobileServiceFee.toLocaleString()}</span></div>
+                      )}
+                      <div className="flex justify-between font-semibold border-t pt-1 mt-1"><span>Total charged to wallet:</span><span>UGX {mobileTotalDebit.toLocaleString()}</span></div>
                       {mobileOdPortion > 0 && (
                         <>
-                          <div className="flex justify-between text-muted-foreground"><span>From wallet:</span><span>UGX {Math.min(parsedMobileAmount, walletOnly).toLocaleString()}</span></div>
+                          <div className="flex justify-between text-muted-foreground"><span>From wallet:</span><span>UGX {Math.min(mobileTotalDebit, walletOnly).toLocaleString()}</span></div>
                           <div className="flex justify-between text-emerald-700"><span>From overdraft:</span><span>UGX {mobileOdPortion.toLocaleString()}</span></div>
                           <div className="flex justify-between text-amber-700"><span>Overdraft access fee (2.75%):</span><span>UGX {mobileOdFee.toLocaleString()}</span></div>
                           {overdraftOutstanding > 0 && (
@@ -487,7 +507,7 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
                           <div className="flex justify-between font-semibold text-red-700 border-t pt-1 mt-1"><span>New overdraft owed (shown on statement):</span><span>UGX {mobileNewOutstanding.toLocaleString()}</span></div>
                         </>
                       )}
-                      <div className="flex justify-between text-muted-foreground"><span>Your new balance:</span><span>UGX {Math.max(0, walletOnly - parsedMobileAmount).toLocaleString()}</span></div>
+                      <div className="flex justify-between text-muted-foreground"><span>Your new balance:</span><span>UGX {Math.max(0, walletOnly - mobileTotalDebit).toLocaleString()}</span></div>
                     </CardContent>
                   </Card>
                 )}
@@ -516,7 +536,7 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
 
                 <Button
                   onClick={handleSendToMobile}
-                  disabled={mobileLoading || !mobilePhone || parsedMobileAmount < 2000 || parsedMobileAmount > availableBalance || mobileNeedsOdConfirm}
+                  disabled={mobileLoading || !mobilePhone || parsedMobileAmount < 2000 || mobileTotalDebit > availableBalance || mobileNeedsOdConfirm}
                   className="w-full"
                 >
                   {mobileLoading ? (
