@@ -77,13 +77,25 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
   // Wallet-only balance (without overdraft). Defaults to availableBalance if not provided.
   const walletOnly = typeof walletBalance === 'number' ? walletBalance : Math.max(0, availableBalance - overdraftHeadroom);
   const employeeOdPortion = Math.max(0, Math.min(parsedAmount, availableBalance) - walletOnly);
-  const mobileOdPortion = Math.max(0, Math.min(parsedMobileAmount, availableBalance) - walletOnly);
   const OD_FEE_RATE = 0.0275;
   const employeeOdFee = Math.round(employeeOdPortion * OD_FEE_RATE);
-  const mobileOdFee = Math.round(mobileOdPortion * OD_FEE_RATE);
   const employeeNewOutstanding = overdraftOutstanding + employeeOdPortion + employeeOdFee;
-  const mobileNewOutstanding = overdraftOutstanding + mobileOdPortion + mobileOdFee;
   const employeeNeedsOdConfirm = employeeOdPortion > 0 && !overdraftConfirmed;
+
+  // Tiered withdrawal service fee — mirrors supabase/functions/instant-withdrawal computeWithdrawFee.
+  // Charged in addition to the payout amount on every mobile-money send.
+  const computeWithdrawFee = (a: number): number => {
+    if (a < 500) return 0;
+    if (a <= 60_000) return 1_100;
+    if (a <= 500_000) return 1_700;
+    if (a <= 1_000_000) return 2_500;
+    return 2_900;
+  };
+  const mobileServiceFee = computeWithdrawFee(parsedMobileAmount);
+  const mobileTotalDebit = parsedMobileAmount + mobileServiceFee;
+  const mobileOdPortion = Math.max(0, Math.min(mobileTotalDebit, availableBalance) - walletOnly);
+  const mobileOdFee = Math.round(mobileOdPortion * OD_FEE_RATE);
+  const mobileNewOutstanding = overdraftOutstanding + mobileOdPortion + mobileOdFee;
   const mobileNeedsOdConfirm = mobileOdPortion > 0 && !overdraftConfirmedMobile;
 
   const handleSendToEmployee = async () => {
