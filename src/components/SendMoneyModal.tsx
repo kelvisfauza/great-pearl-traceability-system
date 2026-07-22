@@ -492,9 +492,13 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
                     <CardContent className="p-3 text-sm space-y-1">
                       <div className="flex justify-between"><span>Sending via Mobile Money:</span><span className="font-semibold">UGX {parsedMobileAmount.toLocaleString()}</span></div>
                       <div className="flex justify-between"><span>To:</span><span className="font-semibold">{mobilePhone}</span></div>
+                      {mobileServiceFee > 0 && (
+                        <div className="flex justify-between text-amber-700"><span>Service fee:</span><span>UGX {mobileServiceFee.toLocaleString()}</span></div>
+                      )}
+                      <div className="flex justify-between font-semibold border-t pt-1 mt-1"><span>Total charged to wallet:</span><span>UGX {mobileTotalDebit.toLocaleString()}</span></div>
                       {mobileOdPortion > 0 && (
                         <>
-                          <div className="flex justify-between text-muted-foreground"><span>From wallet:</span><span>UGX {Math.min(parsedMobileAmount, walletOnly).toLocaleString()}</span></div>
+                          <div className="flex justify-between text-muted-foreground"><span>From wallet:</span><span>UGX {Math.min(mobileTotalDebit, walletOnly).toLocaleString()}</span></div>
                           <div className="flex justify-between text-emerald-700"><span>From overdraft:</span><span>UGX {mobileOdPortion.toLocaleString()}</span></div>
                           <div className="flex justify-between text-amber-700"><span>Overdraft access fee (2.75%):</span><span>UGX {mobileOdFee.toLocaleString()}</span></div>
                           {overdraftOutstanding > 0 && (
@@ -503,7 +507,7 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
                           <div className="flex justify-between font-semibold text-red-700 border-t pt-1 mt-1"><span>New overdraft owed (shown on statement):</span><span>UGX {mobileNewOutstanding.toLocaleString()}</span></div>
                         </>
                       )}
-                      <div className="flex justify-between text-muted-foreground"><span>Your new balance:</span><span>UGX {Math.max(0, walletOnly - parsedMobileAmount).toLocaleString()}</span></div>
+                      <div className="flex justify-between text-muted-foreground"><span>Your new balance:</span><span>UGX {Math.max(0, walletOnly - mobileTotalDebit).toLocaleString()}</span></div>
                     </CardContent>
                   </Card>
                 )}
@@ -532,7 +536,7 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
 
                 <Button
                   onClick={handleSendToMobile}
-                  disabled={mobileLoading || !mobilePhone || parsedMobileAmount < 2000 || parsedMobileAmount > availableBalance || mobileNeedsOdConfirm}
+                  disabled={mobileLoading || !mobilePhone || parsedMobileAmount < 2000 || mobileTotalDebit > availableBalance || mobileNeedsOdConfirm}
                   className="w-full"
                 >
                   {mobileLoading ? (
