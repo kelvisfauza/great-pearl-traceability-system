@@ -1,0 +1,30 @@
+
+-- Allow the new overdraft fee/interest source categories used by the
+-- GosentePay instant-withdrawal OD sync path.
+CREATE OR REPLACE FUNCTION public.validate_source_category()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  allowed text[] := ARRAY[
+    'DEPOSIT','WITHDRAWAL','TRANSFER','TRANSFER_IN','TRANSFER_OUT',
+    'SYSTEM_AWARD','SYSTEM_DEDUCTION','SALARY','SALARY_ADVANCE',
+    'LOAN','LOAN_REPAYMENT','LOAN_INTEREST','LOAN_PENALTY',
+    'OVERDRAFT_DRAW','OVERDRAFT_REPAY','OVERDRAFT_FEE','OVERDRAFT_INTEREST','OVERDRAFT_PENALTY',
+    'INSTANT_WITHDRAWAL','WITHDRAW_FEE','GOSENTE_FEE','FEE',
+    'MEAL','PROVIDER','ALLOWANCE','PER_DIEM','MEETING_BONUS','OVERTIME_AWARD',
+    'INVESTMENT','INVEST_MATURITY','REFUND','MANUAL_ADJUSTMENT','ADMIN_ADJUSTMENT',
+    'BUDGET_ALLOCATION','BUDGET_WITHDRAWAL','MOMO_TOPUP','CASH_TOPUP','STATEMENT_FEE'
+  ];
+BEGIN
+  IF NEW.source_category IS NULL OR NEW.source_category = '' THEN
+    RETURN NEW;
+  END IF;
+  IF NOT (NEW.source_category = ANY(allowed)) THEN
+    RAISE EXCEPTION 'Invalid source_category: %', NEW.source_category;
+  END IF;
+  RETURN NEW;
+END;
+$$;

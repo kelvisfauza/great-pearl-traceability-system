@@ -555,6 +555,119 @@ serve(async (req) => {
         .update({ ledger_reference: ledgerRef })
         .eq('id', instantRecord.id);
 
+      // ── Overdraft sync (GosentePay branch) ─────────────────────────────
+      // If this withdrawal actually dipped into overdraft, post the 2.75%
+      // access fee + upfront interest to the ledger AND sync the
+      // overdraft_accounts / overdraft_transactions rows. Previously this
+      // only ran in the Yo branch, so sub-50k OD draws via GosentePay had
+      // no fee, no interest, and no OD outstanding update.
+      if (isOverdraftDraw && odAccountId && overdraftPortion > 0) {
+        // 2.75% access fee on OD portion — ledger + treasury profit
+        if (overdraftAccessFee > 0) {
+          try {
+            await supabase.from('ledger_entries').insert({
+              user_id: resolvedUserId,
+              entry_type: 'FEE',
+              amount: -overdraftAccessFee,
+              reference: `OD-FEE-${instantRecord.id}`,
+              source_category: 'OVERDRAFT_FEE',
+              metadata: {
+                type: 'overdraft_access_fee',
+                instant_withdrawal_id: instantRecord.id,
+                overdraft_account_id: odAccountId,
+                fee_rate: 0.0275,
+                draw_amount: overdraftPortion,
+                bypass_treasury_check: true,
+                description: `Overdraft access fee (2.75%) on UGX ${overdraftPortion.toLocaleString()} draw via GosentePay`,
+              },
+            });
+            await supabase.rpc('post_treasury_profit', {
+              p_amount: overdraftAccessFee,
+              p_description: `Overdraft access fee (2.75%) — ${employeeName} instant withdrawal`,
+              p_reference: `PROFIT-OD-FEE-${instantRecord.id}`,
+              p_user_email: userEmail,
+              p_user_name: employeeName,
+              p_metadata: { source: 'instant_withdrawal', profit_type: 'overdraft_access_fee', provider: 'gosente', instant_withdrawal_id: instantRecord.id, fee_amount: overdraftAccessFee, draw_amount: overdraftPortion },
+            });
+          } catch (e) {
+            console.error('[instant-withdrawal/gosente] OD access fee post failed:', (e as Error).message);
+          }
+        }
+        // Upfront interest debit
+        if (upfrontInterest > 0) {
+          try {
+            await supabase.from('ledger_entries').insert({
+              user_id: resolvedUserId,
+              entry_type: 'FEE',
+              amount: -upfrontInterest,
+              reference: `OD-INT-${instantRecord.id}`,
+              source_category: 'OVERDRAFT_INTEREST',
+              metadata: {
+                type: 'overdraft_upfront_interest',
+                instant_withdrawal_id: instantRecord.id,
+                overdraft_account_id: odAccountId,
+                rate_bps: odInterestRateBps,
+                draw_amount: overdraftPortion,
+                bypass_treasury_check: true,
+                description: `Upfront overdraft interest (${odInterestRateBps / 100}%) on UGX ${overdraftPortion.toLocaleString()} draw via GosentePay`,
+              },
+            });
+          } catch (e) {
+            console.error('[instant-withdrawal/gosente] OD interest post failed:', (e as Error).message);
+          }
+        }
+        // Sync overdraft account + transactions
+        try {
+          const { data: acc2 } = await supabase
+            .from('overdraft_accounts')
+            .select('outstanding_balance, total_drawn, total_interest')
+            .eq('id', odAccountId)
+            .single();
+          const priorOut = Number(acc2?.outstanding_balance || 0);
+          const newOut = priorOut + overdraftPortion + upfrontInterest + overdraftAccessFee;
+          await supabase.from('overdraft_accounts').update({
+            outstanding_balance: newOut,
+            total_drawn: Number(acc2?.total_drawn || 0) + overdraftPortion,
+            total_interest: Number(acc2?.total_interest || 0) + upfrontInterest,
+            last_used_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }).eq('id', odAccountId);
+          await supabase.from('overdraft_transactions').insert({
+            account_id: odAccountId,
+            user_id: resolvedUserId,
+            transaction_type: 'draw',
+            amount: overdraftPortion,
+            balance_after: priorOut + overdraftPortion,
+            reference: ledgerRef,
+            metadata: { source: 'instant_withdrawal', provider: 'gosente', wallet_portion: walletPortion, interest_charged: upfrontInterest, access_fee: overdraftAccessFee },
+          });
+          if (overdraftAccessFee > 0) {
+            await supabase.from('overdraft_transactions').insert({
+              account_id: odAccountId,
+              user_id: resolvedUserId,
+              transaction_type: 'fee',
+              amount: overdraftAccessFee,
+              balance_after: priorOut + overdraftPortion + overdraftAccessFee,
+              reference: ledgerRef + '-FEE',
+              metadata: { source: 'instant_withdrawal', provider: 'gosente', fee_rate: 0.0275, draw_amount: overdraftPortion, note: '2.75% access fee on draw, added to outstanding' },
+            });
+          }
+          if (upfrontInterest > 0) {
+            await supabase.from('overdraft_transactions').insert({
+              account_id: odAccountId,
+              user_id: resolvedUserId,
+              transaction_type: 'interest',
+              amount: upfrontInterest,
+              balance_after: newOut,
+              reference: ledgerRef + '-INT',
+              metadata: { source: 'instant_withdrawal', provider: 'gosente', rate_bps: odInterestRateBps, draw_amount: overdraftPortion },
+            });
+          }
+        } catch (e) {
+          console.error('[instant-withdrawal/gosente] overdraft sync failed:', (e as Error).message);
+        }
+      }
+
       // Notify admins via email + SMS about the pending GosentePay approval
       const adminRecipients = [
         { name: 'Musema Wyclif', email: 'musemawyclif@greatpearlcoffee.com', phone: '256772000000' },
