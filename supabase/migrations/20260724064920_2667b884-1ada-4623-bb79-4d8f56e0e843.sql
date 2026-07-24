@@ -1,0 +1,1 @@
+DELETE FROM public.overdraft_transactions WHERE reference='INSTANT-WD-6e0a91cd-aa13-4ede-b08e-ba039e849d80-CORR-ACCOUNTED' AND transaction_type='correction_marker';
