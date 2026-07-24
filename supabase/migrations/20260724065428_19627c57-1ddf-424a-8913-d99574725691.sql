@@ -1,0 +1,1 @@
+SELECT 'verification handled by read-only database query' AS status;
