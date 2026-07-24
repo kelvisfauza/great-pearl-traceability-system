@@ -139,6 +139,7 @@ export type Database = {
           approved_by: string | null
           approved_by_email: string | null
           approved_by_name: string | null
+          confirmation_method: string
           created_at: string
           destination_email: string | null
           destination_name: string | null
@@ -154,6 +155,11 @@ export type Database = {
           ledger_reference: string | null
           metadata: Json
           operation_type: string
+          otp_attempts: number
+          otp_confirmed_at: string | null
+          otp_confirmed_by: string | null
+          otp_expires_at: string | null
+          otp_hash: string | null
           overdraft_access_fee: number
           payout_provider: string | null
           reason: string
@@ -173,6 +179,7 @@ export type Database = {
           approved_by?: string | null
           approved_by_email?: string | null
           approved_by_name?: string | null
+          confirmation_method?: string
           created_at?: string
           destination_email?: string | null
           destination_name?: string | null
@@ -188,6 +195,11 @@ export type Database = {
           ledger_reference?: string | null
           metadata?: Json
           operation_type: string
+          otp_attempts?: number
+          otp_confirmed_at?: string | null
+          otp_confirmed_by?: string | null
+          otp_expires_at?: string | null
+          otp_hash?: string | null
           overdraft_access_fee?: number
           payout_provider?: string | null
           reason: string
@@ -207,6 +219,7 @@ export type Database = {
           approved_by?: string | null
           approved_by_email?: string | null
           approved_by_name?: string | null
+          confirmation_method?: string
           created_at?: string
           destination_email?: string | null
           destination_name?: string | null
@@ -222,6 +235,11 @@ export type Database = {
           ledger_reference?: string | null
           metadata?: Json
           operation_type?: string
+          otp_attempts?: number
+          otp_confirmed_at?: string | null
+          otp_confirmed_by?: string | null
+          otp_expires_at?: string | null
+          otp_hash?: string | null
           overdraft_access_fee?: number
           payout_provider?: string | null
           reason?: string
