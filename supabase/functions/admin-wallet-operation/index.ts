@@ -27,12 +27,33 @@ function computeWithdrawFee(amount: number): number {
 // Overdraft access fee: 2.75% of the portion drawn from OD.
 const OD_ACCESS_FEE_BPS = 275;
 
-async function sendSms(supabase: any, phone: string | null, message: string, userName?: string) {
+async function sendSms(supabase: any, phone: string | null, message: string, userName?: string, authHeader?: string) {
   if (!phone) return;
   try {
-    await supabase.functions.invoke("send-sms", {
-      body: { phone, message, userName: userName || "User", messageType: "admin_wallet_op" },
+    // Call send-sms directly with the caller's JWT — invoking via the
+    // service-role client returns 401 (send-sms requires a bearer user token).
+    const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-sms`;
+    const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": anon,
+        "Authorization": authHeader || `Bearer ${anon}`,
+      },
+      body: JSON.stringify({
+        phone,
+        message,
+        userName: userName || "User",
+        messageType: "admin_wallet_otp",
+      }),
     });
+    if (!res.ok) {
+      const t = await res.text().catch(() => "");
+      console.warn("[admin-wallet-op] SMS send non-OK:", res.status, t.slice(0, 200));
+    } else {
+      await res.text().catch(() => "");
+    }
   } catch (e) {
     console.warn("[admin-wallet-op] SMS send failed:", (e as Error).message);
   }
