@@ -157,6 +157,29 @@ export default function AdminWalletOperations() {
     } finally { setApprovingId(null); }
   };
 
+  const handleConfirmOtp = async (op: Operation) => {
+    const code = (otpDrafts[op.id] || "").trim();
+    if (!/^\d{4,8}$/.test(code)) {
+      toast({ title: "Enter the code", description: "6-digit OTP sent to the wallet owner.", variant: "destructive" });
+      return;
+    }
+    setApprovingId(op.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-wallet-operation", {
+        body: { action: "confirm_otp", operation_id: op.id, otp_code: code },
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error || "Failed");
+      toast({ title: "Confirmed & executed", description: `Reference: ${data.reference || "-"}` });
+      setOtpDrafts(d => { const n = { ...d }; delete n[op.id]; return n; });
+      loadData();
+    } catch (e: any) {
+      toast({ title: "Confirmation failed", description: e.message, variant: "destructive" });
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
   const pending = operations.filter(o => o.status === "pending");
   const history = operations.filter(o => o.status !== "pending");
 
