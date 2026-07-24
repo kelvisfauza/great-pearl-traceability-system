@@ -27,12 +27,33 @@ function computeWithdrawFee(amount: number): number {
 // Overdraft access fee: 2.75% of the portion drawn from OD.
 const OD_ACCESS_FEE_BPS = 275;
 
-async function sendSms(supabase: any, phone: string | null, message: string, userName?: string) {
+async function sendSms(supabase: any, phone: string | null, message: string, userName?: string, authHeader?: string) {
   if (!phone) return;
   try {
-    await supabase.functions.invoke("send-sms", {
-      body: { phone, message, userName: userName || "User", messageType: "admin_wallet_op" },
+    // Call send-sms directly with the caller's JWT — invoking via the
+    // service-role client returns 401 (send-sms requires a bearer user token).
+    const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-sms`;
+    const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": anon,
+        "Authorization": authHeader || `Bearer ${anon}`,
+      },
+      body: JSON.stringify({
+        phone,
+        message,
+        userName: userName || "User",
+        messageType: "admin_wallet_otp",
+      }),
     });
+    if (!res.ok) {
+      const t = await res.text().catch(() => "");
+      console.warn("[admin-wallet-op] SMS send non-OK:", res.status, t.slice(0, 200));
+    } else {
+      await res.text().catch(() => "");
+    }
   } catch (e) {
     console.warn("[admin-wallet-op] SMS send failed:", (e as Error).message);
   }
@@ -221,7 +242,7 @@ serve(async (req) => {
           `withdraw UGX ${numAmount.toLocaleString()} from your wallet to ${destination_phone}`;
 
         const msg = `Great Agro: Admin ${actorEmp?.name || actorEmail} requests to ${opLabel}. Reason: ${String(reason).trim()}. Confirm with code ${otpPlain} (valid 15 min). If not you, reply STOP.`;
-        await sendSms(supabase, target.phone, msg, target.name);
+        await sendSms(supabase, target.phone, msg, target.name, authHeader);
 
         return respond(true, {
           operation: inserted,
@@ -360,7 +381,7 @@ serve(async (req) => {
             },
           });
           const smsMsg = `Dear ${op.target_name || "User"}, UGX ${amount.toLocaleString()} has been credited to your wallet by admin. Reason: ${op.reason}.`;
-          await sendSms(supabase, op.target_phone, smsMsg, op.target_name);
+          await sendSms(supabase, op.target_phone, smsMsg, op.target_name, authHeader);
         }
 
         else if (op.operation_type === "debit") {
@@ -390,7 +411,7 @@ serve(async (req) => {
             });
           }
           const smsMsg = `Dear ${op.target_name || "User"}, UGX ${amount.toLocaleString()} has been debited from your wallet by admin. Reason: ${op.reason}${overdraftAccessFee > 0 ? `. Overdraft fee: UGX ${overdraftAccessFee.toLocaleString()}` : ""}.`;
-          await sendSms(supabase, op.target_phone, smsMsg, op.target_name);
+          await sendSms(supabase, op.target_phone, smsMsg, op.target_name, authHeader);
         }
 
         else if (op.operation_type === "transfer") {
@@ -430,10 +451,10 @@ serve(async (req) => {
           });
           const smsSource = `Dear ${op.target_name || "User"}, UGX ${amount.toLocaleString()} has been transferred from your wallet to ${op.destination_name || op.destination_email} by admin. Reason: ${op.reason}.`;
           const smsDest = `Dear ${op.destination_name || "User"}, UGX ${amount.toLocaleString()} has been credited to your wallet from ${op.target_name || op.target_email} by admin.`;
-          await sendSms(supabase, op.target_phone, smsSource, op.target_name);
+          await sendSms(supabase, op.target_phone, smsSource, op.target_name, authHeader);
           // Fetch destination phone
           const { data: destEmp } = await supabase.from("employees").select("phone").eq("email", op.destination_email).maybeSingle();
-          await sendSms(supabase, destEmp?.phone, smsDest, op.destination_name);
+          await sendSms(supabase, destEmp?.phone, smsDest, op.destination_name, authHeader);
         }
 
         else if (op.operation_type === "withdraw") {
@@ -497,7 +518,7 @@ serve(async (req) => {
           }
 
           const smsMsg = `Dear ${op.target_name || "User"}, UGX ${amount.toLocaleString()} has been withdrawn from your wallet by admin to ${op.destination_phone}. Fee: UGX ${Number(op.service_fee).toLocaleString()}${overdraftAccessFee > 0 ? `, OD fee: UGX ${overdraftAccessFee.toLocaleString()}` : ""}. Reason: ${op.reason}.`;
-          await sendSms(supabase, op.target_phone, smsMsg, op.target_name);
+          await sendSms(supabase, op.target_phone, smsMsg, op.target_name, authHeader);
 
           await supabase.from("admin_wallet_operations").update({
             gateway_reference: gatewayRef,
