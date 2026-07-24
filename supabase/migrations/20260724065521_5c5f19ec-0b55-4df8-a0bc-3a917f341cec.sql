@@ -1,0 +1,1 @@
+SELECT 'completed' AS status;
