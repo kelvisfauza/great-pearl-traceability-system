@@ -120,6 +120,7 @@ serve(async (req) => {
       const {
         operation_type, target_email, amount, reason,
         destination_email, destination_phone, payout_provider, allow_overdraft,
+        confirmation_method,
       } = body;
 
       if (!["credit", "debit", "transfer", "withdraw"].includes(operation_type)) {
@@ -129,6 +130,8 @@ serve(async (req) => {
       if (!numAmount || numAmount <= 0) return respond(false, { error: "Amount must be > 0" });
       if (!target_email) return respond(false, { error: "target_email required" });
       if (!reason || String(reason).trim().length < 3) return respond(false, { error: "Reason required (min 3 chars)" });
+
+      const confMethod = confirmation_method === "user_otp" ? "user_otp" : "second_admin";
 
       const { data: target } = await supabase
         .from("employees")
@@ -162,6 +165,21 @@ serve(async (req) => {
         if (payout_provider !== "cash") serviceFee = computeWithdrawFee(numAmount);
       }
 
+      // If OTP mode, phone is required so we can SMS the code.
+      if (confMethod === "user_otp" && !target.phone) {
+        return respond(false, { error: "Target user has no phone on file; OTP confirmation not possible." });
+      }
+
+      // Pre-generate OTP + hash so we can store it atomically with the row.
+      let otpPlain: string | null = null;
+      let otpHash: string | null = null;
+      let otpExpiresAt: string | null = null;
+      if (confMethod === "user_otp") {
+        otpPlain = generateOtp();
+        // hashOtp needs an ID; use a random ref (final ID unknown yet). We'll re-hash post-insert.
+        otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 min
+      }
+
       const { data: inserted, error: insErr } = await supabase
         .from("admin_wallet_operations")
         .insert({
@@ -182,12 +200,41 @@ serve(async (req) => {
           initiated_by: actorId,
           initiated_by_email: actorEmail,
           initiated_by_name: actorEmp?.name || actorEmail,
+          confirmation_method: confMethod,
+          otp_expires_at: otpExpiresAt,
         })
         .select("*")
         .single();
       if (insErr) return respond(false, { error: insErr.message });
 
-      return respond(true, { operation: inserted, message: "Request created, awaiting second admin approval" });
+      // Now that we have op.id, hash OTP and persist, then SMS the user.
+      if (confMethod === "user_otp" && otpPlain) {
+        const h = await hashOtp(otpPlain, inserted.id);
+        await supabase.from("admin_wallet_operations")
+          .update({ otp_hash: h })
+          .eq("id", inserted.id);
+
+        const opLabel =
+          operation_type === "credit" ? `credit UGX ${numAmount.toLocaleString()} to your wallet` :
+          operation_type === "debit" ? `debit UGX ${numAmount.toLocaleString()} from your wallet` :
+          operation_type === "transfer" ? `transfer UGX ${numAmount.toLocaleString()} from your wallet to ${destName || destination_email}` :
+          `withdraw UGX ${numAmount.toLocaleString()} from your wallet to ${destination_phone}`;
+
+        const msg = `Great Agro: Admin ${actorEmp?.name || actorEmail} requests to ${opLabel}. Reason: ${String(reason).trim()}. Confirm with code ${otpPlain} (valid 15 min). If not you, reply STOP.`;
+        await sendSms(supabase, target.phone, msg, target.name);
+
+        return respond(true, {
+          operation: inserted,
+          message: `OTP sent to ${target.name || target.email} for confirmation`,
+          confirmation_method: "user_otp",
+        });
+      }
+
+      return respond(true, {
+        operation: inserted,
+        message: "Request created, awaiting second admin approval",
+        confirmation_method: "second_admin",
+      });
     }
 
     // ---------------------------------------------------------------- REJECT
