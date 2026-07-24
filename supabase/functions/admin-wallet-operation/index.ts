@@ -404,11 +404,17 @@ serve(async (req) => {
       } catch (execErr) {
         const errMsg = (execErr as Error).message || "Execution failed";
         console.error("[admin-wallet-op] execution error:", errMsg);
+        // Roll the operation back to pending so a second admin can retry.
+        // Keep the approval audit fields so we know who tried last.
         await supabase.from("admin_wallet_operations").update({
-          status: "failed",
+          status: "pending",
           execution_error: errMsg,
+          approved_by: null,
+          approved_by_email: null,
+          approved_by_name: null,
+          approved_at: null,
         }).eq("id", op.id);
-        return respond(false, { error: errMsg });
+        return respond(false, { error: errMsg, retryable: true });
       }
     }
 
