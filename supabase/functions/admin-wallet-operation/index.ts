@@ -259,31 +259,83 @@ serve(async (req) => {
     }
 
     // ---------------------------------------------------------------- APPROVE
-    if (action === "approve") {
-      const { operation_id } = body;
+    if (action === "approve" || action === "confirm_otp") {
+      const { operation_id, otp_code } = body;
       if (!operation_id) return respond(false, { error: "operation_id required" });
 
-      // Atomic claim: only pending -> approved, and only by a different admin
-      const { data: op, error: opErr } = await supabase
-        .from("admin_wallet_operations")
-        .update({
-          status: "approved",
-          approved_by: actorId,
-          approved_by_email: actorEmail,
-          approved_by_name: actorEmp?.name || actorEmail,
-          approved_at: new Date().toISOString(),
-        })
-        .eq("id", operation_id)
-        .eq("status", "pending")
-        .neq("initiated_by", actorId)
-        .select("*")
-        .maybeSingle();
+      let op: any = null;
+      let opErr: any = null;
 
-      if (opErr) return respond(false, { error: opErr.message });
-      if (!op) {
-        return respond(false, {
-          error: "Cannot approve: request is not pending, or you initiated it (second admin required).",
-        });
+      if (action === "approve") {
+        // Atomic claim: pending -> approved, by a *different* admin, only for second_admin flows.
+        const res = await supabase
+          .from("admin_wallet_operations")
+          .update({
+            status: "approved",
+            approved_by: actorId,
+            approved_by_email: actorEmail,
+            approved_by_name: actorEmp?.name || actorEmail,
+            approved_at: new Date().toISOString(),
+          })
+          .eq("id", operation_id)
+          .eq("status", "pending")
+          .eq("confirmation_method", "second_admin")
+          .neq("initiated_by", actorId)
+          .select("*")
+          .maybeSingle();
+        op = res.data; opErr = res.error;
+        if (opErr) return respond(false, { error: opErr.message });
+        if (!op) {
+          return respond(false, {
+            error: "Cannot approve: not pending, you initiated it, or it uses OTP confirmation.",
+          });
+        }
+      } else {
+        // confirm_otp — verify code and atomically claim.
+        if (!otp_code || String(otp_code).trim().length < 4) {
+          return respond(false, { error: "OTP code required" });
+        }
+        const { data: candidate } = await supabase
+          .from("admin_wallet_operations")
+          .select("*")
+          .eq("id", operation_id)
+          .maybeSingle();
+        if (!candidate) return respond(false, { error: "Operation not found" });
+        if (candidate.status !== "pending") return respond(false, { error: `Cannot confirm a ${candidate.status} operation` });
+        if (candidate.confirmation_method !== "user_otp") return respond(false, { error: "This request does not use OTP confirmation" });
+        if (!candidate.otp_hash || !candidate.otp_expires_at) return respond(false, { error: "OTP not set on this request" });
+        if (new Date(candidate.otp_expires_at).getTime() < Date.now()) {
+          return respond(false, { error: "OTP has expired. Ask the admin to re-issue the request." });
+        }
+        if ((candidate.otp_attempts || 0) >= 5) {
+          return respond(false, { error: "Too many attempts. Ask the admin to re-issue the request." });
+        }
+        const givenHash = await hashOtp(String(otp_code).trim(), candidate.id);
+        if (givenHash !== candidate.otp_hash) {
+          await supabase.from("admin_wallet_operations")
+            .update({ otp_attempts: (candidate.otp_attempts || 0) + 1 })
+            .eq("id", operation_id);
+          return respond(false, { error: "Invalid OTP code" });
+        }
+        // Atomic claim
+        const res = await supabase
+          .from("admin_wallet_operations")
+          .update({
+            status: "approved",
+            approved_at: new Date().toISOString(),
+            otp_confirmed_at: new Date().toISOString(),
+            otp_confirmed_by: actorEmail,
+            approved_by_email: actorEmail,
+            approved_by_name: actorEmp?.name || actorEmail,
+            approved_by: actorId,
+          })
+          .eq("id", operation_id)
+          .eq("status", "pending")
+          .select("*")
+          .maybeSingle();
+        op = res.data; opErr = res.error;
+        if (opErr) return respond(false, { error: opErr.message });
+        if (!op) return respond(false, { error: "Request status changed; refresh and retry." });
       }
 
       // ------------------------------------------------------------ EXECUTE
