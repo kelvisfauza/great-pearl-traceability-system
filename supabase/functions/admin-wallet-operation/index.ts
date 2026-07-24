@@ -76,16 +76,27 @@ async function getLedgerBalance(supabase: any, userId: string): Promise<number> 
   const { data } = await supabase
     .from("ledger_entries")
     .select("entry_type, amount")
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .in("entry_type", [
+      "LOYALTY_REWARD","BONUS","DEPOSIT","WITHDRAWAL","ADJUSTMENT","REVERSAL",
+      "MONTHLY_SALARY","ADVANCE_RECOVERY","LOAN_DISBURSEMENT","LOAN_REPAYMENT",
+      "LOAN_RECOVERY","HOST_MEETING_BONUS","MEETING_ATTENDANCE_BONUS",
+    ]);
   return (data || []).reduce((s: number, r: any) => {
     const amt = Number(r.amount) || 0;
-    return r.entry_type === "CREDIT" ? s + amt : s - amt;
+    // Credits: DEPOSIT, LOYALTY_REWARD, BONUS, MONTHLY_SALARY, LOAN_DISBURSEMENT,
+    // HOST_MEETING_BONUS, MEETING_ATTENDANCE_BONUS, REVERSAL, ADJUSTMENT (assume +).
+    const credits = new Set([
+      "DEPOSIT","LOYALTY_REWARD","BONUS","MONTHLY_SALARY","LOAN_DISBURSEMENT",
+      "HOST_MEETING_BONUS","MEETING_ATTENDANCE_BONUS","REVERSAL","ADJUSTMENT",
+    ]);
+    return credits.has(r.entry_type) ? s + amt : s - amt;
   }, 0);
 }
 
 async function postLedger(supabase: any, args: {
   user_id: string;
-  entry_type: "CREDIT" | "DEBIT";
+  entry_type: "DEPOSIT" | "WITHDRAWAL" | "ADJUSTMENT";
   amount: number;
   reference: string;
   source_category: string;
@@ -369,7 +380,7 @@ serve(async (req) => {
         if (op.operation_type === "credit") {
           await postLedger(supabase, {
             user_id: op.target_user_id,
-            entry_type: "CREDIT",
+            entry_type: "DEPOSIT",
             amount,
             reference: ref,
             source_category: "ADMIN_ADJUSTMENT",
@@ -395,7 +406,7 @@ serve(async (req) => {
             overdraftAccessFee = Math.round((odPortion * OD_ACCESS_FEE_BPS) / 10000);
           }
           await postLedger(supabase, {
-            user_id: op.target_user_id, entry_type: "DEBIT", amount, reference: ref,
+            user_id: op.target_user_id, entry_type: "WITHDRAWAL", amount, reference: ref,
             source_category: odPortion > 0 ? "OVERDRAFT_DRAW" : "ADMIN_ADJUSTMENT",
             metadata: {
               description: `Admin debit: ${op.reason}`,
@@ -405,7 +416,7 @@ serve(async (req) => {
           });
           if (overdraftAccessFee > 0) {
             await postLedger(supabase, {
-              user_id: op.target_user_id, entry_type: "DEBIT", amount: overdraftAccessFee, reference: `${ref}-ODFEE`,
+              user_id: op.target_user_id, entry_type: "WITHDRAWAL", amount: overdraftAccessFee, reference: `${ref}-ODFEE`,
               source_category: "OVERDRAFT_FEE",
               metadata: { description: "2.75% overdraft access fee", admin_wallet_operation_id: op.id },
             });
@@ -425,7 +436,7 @@ serve(async (req) => {
             overdraftAccessFee = Math.round((odPortion * OD_ACCESS_FEE_BPS) / 10000);
           }
           await postLedger(supabase, {
-            user_id: op.target_user_id, entry_type: "DEBIT", amount, reference: `${ref}-OUT`,
+            user_id: op.target_user_id, entry_type: "WITHDRAWAL", amount, reference: `${ref}-OUT`,
             source_category: "TRANSFER_OUT",
             metadata: {
               description: `Admin transfer to ${op.destination_name || op.destination_email}: ${op.reason}`,
@@ -435,13 +446,13 @@ serve(async (req) => {
           });
           if (overdraftAccessFee > 0) {
             await postLedger(supabase, {
-              user_id: op.target_user_id, entry_type: "DEBIT", amount: overdraftAccessFee, reference: `${ref}-ODFEE`,
+              user_id: op.target_user_id, entry_type: "WITHDRAWAL", amount: overdraftAccessFee, reference: `${ref}-ODFEE`,
               source_category: "OVERDRAFT_FEE",
               metadata: { description: "2.75% overdraft access fee", admin_wallet_operation_id: op.id },
             });
           }
           await postLedger(supabase, {
-            user_id: op.destination_user_id!, entry_type: "CREDIT", amount, reference: `${ref}-IN`,
+            user_id: op.destination_user_id!, entry_type: "DEPOSIT", amount, reference: `${ref}-IN`,
             source_category: "TRANSFER_IN",
             metadata: {
               description: `Admin transfer from ${op.target_name || op.target_email}: ${op.reason}`,
@@ -471,7 +482,7 @@ serve(async (req) => {
 
           // Post wallet debit for principal
           await postLedger(supabase, {
-            user_id: op.target_user_id, entry_type: "DEBIT", amount, reference: ref,
+            user_id: op.target_user_id, entry_type: "WITHDRAWAL", amount, reference: ref,
             source_category: "INSTANT_WITHDRAWAL",
             metadata: {
               description: `Admin-initiated withdrawal to ${op.destination_phone} (${op.payout_provider}): ${op.reason}`,
@@ -482,14 +493,14 @@ serve(async (req) => {
           });
           if (Number(op.service_fee) > 0) {
             await postLedger(supabase, {
-              user_id: op.target_user_id, entry_type: "DEBIT", amount: Number(op.service_fee),
+              user_id: op.target_user_id, entry_type: "WITHDRAWAL", amount: Number(op.service_fee),
               reference: `${ref}-FEE`, source_category: "WITHDRAW_FEE",
               metadata: { description: "Withdrawal service fee", admin_wallet_operation_id: op.id },
             });
           }
           if (overdraftAccessFee > 0) {
             await postLedger(supabase, {
-              user_id: op.target_user_id, entry_type: "DEBIT", amount: overdraftAccessFee,
+              user_id: op.target_user_id, entry_type: "WITHDRAWAL", amount: overdraftAccessFee,
               reference: `${ref}-ODFEE`, source_category: "OVERDRAFT_FEE",
               metadata: { description: "2.75% overdraft access fee", admin_wallet_operation_id: op.id },
             });
