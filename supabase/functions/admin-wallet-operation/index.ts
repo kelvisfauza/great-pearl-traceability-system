@@ -38,6 +38,19 @@ async function sendSms(supabase: any, phone: string | null, message: string, use
   }
 }
 
+// ------------------------------------------------------------------ OTP utils
+function generateOtp(): string {
+  // 6-digit numeric, no leading zero problem (padded).
+  const n = Math.floor(Math.random() * 1_000_000);
+  return n.toString().padStart(6, "0");
+}
+
+async function hashOtp(code: string, opId: string): Promise<string> {
+  const enc = new TextEncoder();
+  const buf = await crypto.subtle.digest("SHA-256", enc.encode(`${opId}:${code}`));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
 async function getLedgerBalance(supabase: any, userId: string): Promise<number> {
   const { data } = await supabase
     .from("ledger_entries")
@@ -107,6 +120,7 @@ serve(async (req) => {
       const {
         operation_type, target_email, amount, reason,
         destination_email, destination_phone, payout_provider, allow_overdraft,
+        confirmation_method,
       } = body;
 
       if (!["credit", "debit", "transfer", "withdraw"].includes(operation_type)) {
@@ -116,6 +130,8 @@ serve(async (req) => {
       if (!numAmount || numAmount <= 0) return respond(false, { error: "Amount must be > 0" });
       if (!target_email) return respond(false, { error: "target_email required" });
       if (!reason || String(reason).trim().length < 3) return respond(false, { error: "Reason required (min 3 chars)" });
+
+      const confMethod = confirmation_method === "user_otp" ? "user_otp" : "second_admin";
 
       const { data: target } = await supabase
         .from("employees")
@@ -149,6 +165,21 @@ serve(async (req) => {
         if (payout_provider !== "cash") serviceFee = computeWithdrawFee(numAmount);
       }
 
+      // If OTP mode, phone is required so we can SMS the code.
+      if (confMethod === "user_otp" && !target.phone) {
+        return respond(false, { error: "Target user has no phone on file; OTP confirmation not possible." });
+      }
+
+      // Pre-generate OTP + hash so we can store it atomically with the row.
+      let otpPlain: string | null = null;
+      let otpHash: string | null = null;
+      let otpExpiresAt: string | null = null;
+      if (confMethod === "user_otp") {
+        otpPlain = generateOtp();
+        // hashOtp needs an ID; use a random ref (final ID unknown yet). We'll re-hash post-insert.
+        otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 min
+      }
+
       const { data: inserted, error: insErr } = await supabase
         .from("admin_wallet_operations")
         .insert({
@@ -169,12 +200,41 @@ serve(async (req) => {
           initiated_by: actorId,
           initiated_by_email: actorEmail,
           initiated_by_name: actorEmp?.name || actorEmail,
+          confirmation_method: confMethod,
+          otp_expires_at: otpExpiresAt,
         })
         .select("*")
         .single();
       if (insErr) return respond(false, { error: insErr.message });
 
-      return respond(true, { operation: inserted, message: "Request created, awaiting second admin approval" });
+      // Now that we have op.id, hash OTP and persist, then SMS the user.
+      if (confMethod === "user_otp" && otpPlain) {
+        const h = await hashOtp(otpPlain, inserted.id);
+        await supabase.from("admin_wallet_operations")
+          .update({ otp_hash: h })
+          .eq("id", inserted.id);
+
+        const opLabel =
+          operation_type === "credit" ? `credit UGX ${numAmount.toLocaleString()} to your wallet` :
+          operation_type === "debit" ? `debit UGX ${numAmount.toLocaleString()} from your wallet` :
+          operation_type === "transfer" ? `transfer UGX ${numAmount.toLocaleString()} from your wallet to ${destName || destination_email}` :
+          `withdraw UGX ${numAmount.toLocaleString()} from your wallet to ${destination_phone}`;
+
+        const msg = `Great Agro: Admin ${actorEmp?.name || actorEmail} requests to ${opLabel}. Reason: ${String(reason).trim()}. Confirm with code ${otpPlain} (valid 15 min). If not you, reply STOP.`;
+        await sendSms(supabase, target.phone, msg, target.name);
+
+        return respond(true, {
+          operation: inserted,
+          message: `OTP sent to ${target.name || target.email} for confirmation`,
+          confirmation_method: "user_otp",
+        });
+      }
+
+      return respond(true, {
+        operation: inserted,
+        message: "Request created, awaiting second admin approval",
+        confirmation_method: "second_admin",
+      });
     }
 
     // ---------------------------------------------------------------- REJECT
@@ -199,31 +259,83 @@ serve(async (req) => {
     }
 
     // ---------------------------------------------------------------- APPROVE
-    if (action === "approve") {
-      const { operation_id } = body;
+    if (action === "approve" || action === "confirm_otp") {
+      const { operation_id, otp_code } = body;
       if (!operation_id) return respond(false, { error: "operation_id required" });
 
-      // Atomic claim: only pending -> approved, and only by a different admin
-      const { data: op, error: opErr } = await supabase
-        .from("admin_wallet_operations")
-        .update({
-          status: "approved",
-          approved_by: actorId,
-          approved_by_email: actorEmail,
-          approved_by_name: actorEmp?.name || actorEmail,
-          approved_at: new Date().toISOString(),
-        })
-        .eq("id", operation_id)
-        .eq("status", "pending")
-        .neq("initiated_by", actorId)
-        .select("*")
-        .maybeSingle();
+      let op: any = null;
+      let opErr: any = null;
 
-      if (opErr) return respond(false, { error: opErr.message });
-      if (!op) {
-        return respond(false, {
-          error: "Cannot approve: request is not pending, or you initiated it (second admin required).",
-        });
+      if (action === "approve") {
+        // Atomic claim: pending -> approved, by a *different* admin, only for second_admin flows.
+        const res = await supabase
+          .from("admin_wallet_operations")
+          .update({
+            status: "approved",
+            approved_by: actorId,
+            approved_by_email: actorEmail,
+            approved_by_name: actorEmp?.name || actorEmail,
+            approved_at: new Date().toISOString(),
+          })
+          .eq("id", operation_id)
+          .eq("status", "pending")
+          .eq("confirmation_method", "second_admin")
+          .neq("initiated_by", actorId)
+          .select("*")
+          .maybeSingle();
+        op = res.data; opErr = res.error;
+        if (opErr) return respond(false, { error: opErr.message });
+        if (!op) {
+          return respond(false, {
+            error: "Cannot approve: not pending, you initiated it, or it uses OTP confirmation.",
+          });
+        }
+      } else {
+        // confirm_otp — verify code and atomically claim.
+        if (!otp_code || String(otp_code).trim().length < 4) {
+          return respond(false, { error: "OTP code required" });
+        }
+        const { data: candidate } = await supabase
+          .from("admin_wallet_operations")
+          .select("*")
+          .eq("id", operation_id)
+          .maybeSingle();
+        if (!candidate) return respond(false, { error: "Operation not found" });
+        if (candidate.status !== "pending") return respond(false, { error: `Cannot confirm a ${candidate.status} operation` });
+        if (candidate.confirmation_method !== "user_otp") return respond(false, { error: "This request does not use OTP confirmation" });
+        if (!candidate.otp_hash || !candidate.otp_expires_at) return respond(false, { error: "OTP not set on this request" });
+        if (new Date(candidate.otp_expires_at).getTime() < Date.now()) {
+          return respond(false, { error: "OTP has expired. Ask the admin to re-issue the request." });
+        }
+        if ((candidate.otp_attempts || 0) >= 5) {
+          return respond(false, { error: "Too many attempts. Ask the admin to re-issue the request." });
+        }
+        const givenHash = await hashOtp(String(otp_code).trim(), candidate.id);
+        if (givenHash !== candidate.otp_hash) {
+          await supabase.from("admin_wallet_operations")
+            .update({ otp_attempts: (candidate.otp_attempts || 0) + 1 })
+            .eq("id", operation_id);
+          return respond(false, { error: "Invalid OTP code" });
+        }
+        // Atomic claim
+        const res = await supabase
+          .from("admin_wallet_operations")
+          .update({
+            status: "approved",
+            approved_at: new Date().toISOString(),
+            otp_confirmed_at: new Date().toISOString(),
+            otp_confirmed_by: actorEmail,
+            approved_by_email: actorEmail,
+            approved_by_name: actorEmp?.name || actorEmail,
+            approved_by: actorId,
+          })
+          .eq("id", operation_id)
+          .eq("status", "pending")
+          .select("*")
+          .maybeSingle();
+        op = res.data; opErr = res.error;
+        if (opErr) return respond(false, { error: opErr.message });
+        if (!op) return respond(false, { error: "Request status changed; refresh and retry." });
       }
 
       // ------------------------------------------------------------ EXECUTE

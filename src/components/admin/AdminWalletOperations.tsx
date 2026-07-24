@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ArrowRightLeft, PlusCircle, MinusCircle, Send, Wallet, Loader2, Check, X } from "lucide-react";
 
 type OpType = "credit" | "debit" | "transfer" | "withdraw";
+type ConfirmMethod = "second_admin" | "user_otp";
 
 interface Employee { id: string; name: string; email: string; phone: string | null; role?: string }
 
@@ -31,6 +32,8 @@ interface Operation {
   rejected_reason: string | null; execution_error: string | null;
   ledger_reference: string | null; gateway_reference: string | null;
   created_at: string; executed_at: string | null;
+  confirmation_method?: ConfirmMethod;
+  otp_expires_at?: string | null;
 }
 
 const OP_ICONS: Record<OpType, JSX.Element> = {
@@ -58,6 +61,8 @@ export default function AdminWalletOperations() {
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [allowOverdraft, setAllowOverdraft] = useState(false);
+  const [confirmMethod, setConfirmMethod] = useState<ConfirmMethod>("second_admin");
+  const [otpDrafts, setOtpDrafts] = useState<Record<string, string>>({});
 
   const loadData = async () => {
     setLoading(true);
@@ -98,11 +103,17 @@ export default function AdminWalletOperations() {
           destination_phone: opType === "withdraw" ? destinationPhone : undefined,
           payout_provider: opType === "withdraw" ? payoutProvider : undefined,
           allow_overdraft: allowOverdraft,
+          confirmation_method: confirmMethod,
         },
       });
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.error || "Failed");
-      toast({ title: "Request created", description: "Awaiting a second administrator to approve." });
+      toast({
+        title: "Request created",
+        description: confirmMethod === "user_otp"
+          ? "OTP sent to the wallet owner by SMS. Enter the 6-digit code below to confirm."
+          : "Awaiting a second administrator to approve.",
+      });
       setAmount(""); setReason(""); setDestinationPhone(""); setDestinationEmail("");
       loadData();
     } catch (e: any) {
@@ -144,6 +155,29 @@ export default function AdminWalletOperations() {
     } catch (e: any) {
       toast({ title: "Reject failed", description: e.message, variant: "destructive" });
     } finally { setApprovingId(null); }
+  };
+
+  const handleConfirmOtp = async (op: Operation) => {
+    const code = (otpDrafts[op.id] || "").trim();
+    if (!/^\d{4,8}$/.test(code)) {
+      toast({ title: "Enter the code", description: "6-digit OTP sent to the wallet owner.", variant: "destructive" });
+      return;
+    }
+    setApprovingId(op.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-wallet-operation", {
+        body: { action: "confirm_otp", operation_id: op.id, otp_code: code },
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error || "Failed");
+      toast({ title: "Confirmed & executed", description: `Reference: ${data.reference || "-"}` });
+      setOtpDrafts(d => { const n = { ...d }; delete n[op.id]; return n; });
+      loadData();
+    } catch (e: any) {
+      toast({ title: "Confirmation failed", description: e.message, variant: "destructive" });
+    } finally {
+      setApprovingId(null);
+    }
   };
 
   const pending = operations.filter(o => o.status === "pending");
@@ -239,12 +273,28 @@ export default function AdminWalletOperations() {
                     <Switch checked={allowOverdraft} onCheckedChange={setAllowOverdraft} />
                   </div>
                 )}
+
+                <div className="md:col-span-2">
+                  <Label>Confirmation method</Label>
+                  <Select value={confirmMethod} onValueChange={(v) => setConfirmMethod(v as ConfirmMethod)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="second_admin">Second administrator approval</SelectItem>
+                      <SelectItem value="user_otp">SMS code to wallet owner (no 2nd admin)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {confirmMethod === "user_otp"
+                      ? "A 6-digit code will be SMS-sent to the wallet owner. Enter it here to execute (valid 15 min)."
+                      : "A different administrator must approve the request before it executes."}
+                  </p>
+                </div>
               </div>
 
               <div className="flex justify-end">
                 <Button onClick={handleSubmit} disabled={submitting}>
                   {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Submit for second admin approval
+                  {confirmMethod === "user_otp" ? "Send SMS code to wallet owner" : "Submit for second admin approval"}
                 </Button>
               </div>
             </TabsContent>
@@ -262,11 +312,15 @@ export default function AdminWalletOperations() {
           {!loading && pending.length === 0 && <p className="text-sm text-muted-foreground">No pending requests.</p>}
           {pending.map(op => {
             const isSameAdmin = op.initiated_by_email === user?.email;
+            const isOtp = op.confirmation_method === "user_otp";
             return (
               <div key={op.id} className="flex flex-col md:flex-row md:items-center gap-3 border rounded-md p-3">
                 <div className="flex items-center gap-2 min-w-[130px]">
                   {OP_ICONS[op.operation_type]}
                   <span className="font-medium capitalize">{op.operation_type}</span>
+                  <Badge variant={isOtp ? "secondary" : "outline"} className="ml-1">
+                    {isOtp ? "OTP" : "2-admin"}
+                  </Badge>
                 </div>
                 <div className="flex-1 text-sm">
                   <p><b>{op.target_name || op.target_email}</b> — UGX {Number(op.amount).toLocaleString()}
@@ -275,16 +329,35 @@ export default function AdminWalletOperations() {
                   </p>
                   <p className="text-xs text-muted-foreground">{op.reason}</p>
                   <p className="text-xs text-muted-foreground">Initiated by {op.initiated_by_name || op.initiated_by_email}</p>
+                  {isOtp && op.target_phone && (
+                    <p className="text-xs text-muted-foreground">Code sent by SMS to {op.target_phone}</p>
+                  )}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center flex-wrap">
                   <Button size="sm" variant="outline" onClick={() => handleReject(op)} disabled={approvingId === op.id}>
                     <X className="h-4 w-4 mr-1" /> Reject
                   </Button>
-                  <Button size="sm" onClick={() => handleApprove(op)} disabled={isSameAdmin || approvingId === op.id}
-                    title={isSameAdmin ? "You initiated this — another admin must approve" : ""}>
-                    {approvingId === op.id ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
-                    Approve & Execute
-                  </Button>
+                  {isOtp ? (
+                    <>
+                      <Input
+                        className="w-28 h-9"
+                        inputMode="numeric"
+                        placeholder="6-digit"
+                        value={otpDrafts[op.id] || ""}
+                        onChange={(e) => setOtpDrafts(d => ({ ...d, [op.id]: e.target.value.replace(/\D/g, "").slice(0, 8) }))}
+                      />
+                      <Button size="sm" onClick={() => handleConfirmOtp(op)} disabled={approvingId === op.id}>
+                        {approvingId === op.id ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
+                        Confirm code
+                      </Button>
+                    </>
+                  ) : (
+                    <Button size="sm" onClick={() => handleApprove(op)} disabled={isSameAdmin || approvingId === op.id}
+                      title={isSameAdmin ? "You initiated this — another admin must approve" : ""}>
+                      {approvingId === op.id ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
+                      Approve & Execute
+                    </Button>
+                  )}
                 </div>
               </div>
             );

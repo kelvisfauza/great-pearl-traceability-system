@@ -9,6 +9,7 @@ import MealDisbursementSection from '@/components/admin/MealDisbursementSection'
 import ServiceProviderPayments from '@/components/admin/ServiceProviderPayments';
 import ProviderSubmissionApprovals from '@/components/admin/ProviderSubmissionApprovals';
 import SupportStaffPerDiemSection from '@/components/admin/SupportStaffPerDiemSection';
+import AdminWalletOperations from '@/components/admin/AdminWalletOperations';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRoleBasedData } from '@/hooks/useRoleBasedData';
 import { Shield, ClipboardCheck, DollarSign } from 'lucide-react';
@@ -89,6 +90,9 @@ const Approvals = () => {
 
         {/* Support Staff Per-Diem */}
         <SupportStaffPerDiemSection />
+
+        {/* Admin-Initiated Wallet Operations (2-admin or OTP confirmation) */}
+        <AdminWalletOperations />
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
