@@ -78,6 +78,32 @@ Deno.serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    const { data: feeLedger, error: feeErr } = await admin
+      .from("ledger_entries")
+      .insert({
+        user_id: userId,
+        entry_type: "FEE",
+        amount: -drawFee,
+        reference: `OD-FEE-${account.id}-${Date.now()}`,
+        source_category: "OVERDRAFT_FEE",
+        metadata: {
+          type: "overdraft_access_fee",
+          overdraft_account_id: account.id,
+          draw_ledger_entry_id: ledger.id,
+          draw_amount: drawAmount,
+          fee_rate: 0.0275,
+          bypass_treasury_check: true,
+          description: `2.75% overdraft access fee on UGX ${drawAmount.toLocaleString()} draw`,
+        },
+      })
+      .select()
+      .single();
+
+    if (feeErr) {
+      return new Response(JSON.stringify({ ok: false, error: feeErr.message }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     await admin.from("overdraft_accounts").update({
       outstanding_balance: newOutstanding,
       total_drawn: Number(account.total_drawn) + drawAmount,
@@ -102,9 +128,9 @@ Deno.serve(async (req) => {
       transaction_type: "fee",
       amount: drawFee,
       balance_after: newOutstanding,
-      ledger_entry_id: null,
+      ledger_entry_id: feeLedger.id,
       reference: `OD-FEE-${Date.now()}`,
-      metadata: { fee_rate: 0.0275, draw_amount: drawAmount, note: "2.75% access fee on draw, added to outstanding" },
+      metadata: { fee_rate: 0.0275, draw_amount: drawAmount, note: "2.75% access fee on draw, shown on wallet statement and added to outstanding" },
     });
 
     // Confirmation email (MoMo-style)

@@ -1,0 +1,1 @@
+SELECT 'stop' AS status;

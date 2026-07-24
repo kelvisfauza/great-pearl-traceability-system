@@ -1,0 +1,2 @@
+-- No schema change required; this migration is intentionally empty because the application code posts the fee rows.
+SELECT 'direct overdraft draw wallet-fee visibility handled in edge function code' AS note;

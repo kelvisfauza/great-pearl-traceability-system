@@ -13457,6 +13457,10 @@ export type Database = {
       get_wallet_balance: { Args: { user_uuid: string }; Returns: number }
       get_wallet_balance_safe: { Args: { user_uuid: string }; Returns: number }
       get_wallet_balance_text: { Args: { user_uuid: string }; Returns: number }
+      get_wallet_ledger_balance: {
+        Args: { p_user_id: string }
+        Returns: number
+      }
       get_yo_payments_audit: {
         Args: {
           p_end_date?: string

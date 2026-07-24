@@ -1,9 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
 const fmt = (n: number) => Math.round(Number(n) || 0).toLocaleString();
 
@@ -67,9 +63,8 @@ Deno.serve(async (req) => {
     // ── PRODUCTION SWEEP — day 6 holders ───────────────────────────────
     const { data: accounts, error: accErr } = await admin
       .from("overdraft_accounts")
-      .select("id, employee_email, employee_name, outstanding_balance, first_negative_at, frozen, status")
+      .select("id, user_id, employee_email, employee_name, outstanding_balance, first_negative_at, frozen, status")
       .eq("status", "active")
-      .gt("outstanding_balance", 0)
       .not("first_negative_at", "is", null);
     if (accErr) throw accErr;
 
@@ -88,7 +83,10 @@ Deno.serve(async (req) => {
       const days = Math.floor((today.getTime() - negAt.getTime()) / 86_400_000);
       if (days !== 6) { skipped.push(`${a.employee_email}:day${days}`); continue; }
 
-      const outstanding = Number(a.outstanding_balance) || 0;
+      const { data: walletBalanceValue } = await admin.rpc("get_wallet_ledger_balance", { p_user_id: a.user_id });
+      const walletBalance = Number(walletBalanceValue) || 0;
+      const outstanding = Math.max(Number(a.outstanding_balance) || 0, Math.max(0, -walletBalance));
+      if (outstanding <= 0) { skipped.push(`${a.employee_email}:settled`); continue; }
       const todayPenalty = Math.round(outstanding * 0.10);
       let bal = outstanding;
       for (let i = 0; i < 3; i++) bal = bal + Math.round(bal * 0.10);
