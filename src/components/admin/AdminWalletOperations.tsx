@@ -103,11 +103,17 @@ export default function AdminWalletOperations() {
           destination_phone: opType === "withdraw" ? destinationPhone : undefined,
           payout_provider: opType === "withdraw" ? payoutProvider : undefined,
           allow_overdraft: allowOverdraft,
+          confirmation_method: confirmMethod,
         },
       });
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.error || "Failed");
-      toast({ title: "Request created", description: "Awaiting a second administrator to approve." });
+      toast({
+        title: "Request created",
+        description: confirmMethod === "user_otp"
+          ? "OTP sent to the wallet owner by SMS. Enter the 6-digit code below to confirm."
+          : "Awaiting a second administrator to approve.",
+      });
       setAmount(""); setReason(""); setDestinationPhone(""); setDestinationEmail("");
       loadData();
     } catch (e: any) {
