@@ -292,7 +292,7 @@ serve(async (req) => {
             overdraftAccessFee = Math.round((odPortion * OD_ACCESS_FEE_BPS) / 10000);
           }
           await postLedger(supabase, {
-            user_id: op.target_user_id, entry_type: "DEBIT", amount, reference: ref,
+            user_id: op.target_user_id, entry_type: "DEBIT", amount, reference: `${ref}-OUT`,
             source_category: "TRANSFER_OUT",
             metadata: {
               description: `Admin transfer to ${op.destination_name || op.destination_email}: ${op.reason}`,
@@ -308,7 +308,7 @@ serve(async (req) => {
             });
           }
           await postLedger(supabase, {
-            user_id: op.destination_user_id!, entry_type: "CREDIT", amount, reference: ref,
+            user_id: op.destination_user_id!, entry_type: "CREDIT", amount, reference: `${ref}-IN`,
             source_category: "TRANSFER_IN",
             metadata: {
               description: `Admin transfer from ${op.target_name || op.target_email}: ${op.reason}`,
@@ -404,11 +404,17 @@ serve(async (req) => {
       } catch (execErr) {
         const errMsg = (execErr as Error).message || "Execution failed";
         console.error("[admin-wallet-op] execution error:", errMsg);
+        // Roll the operation back to pending so a second admin can retry.
+        // Keep the approval audit fields so we know who tried last.
         await supabase.from("admin_wallet_operations").update({
-          status: "failed",
+          status: "pending",
           execution_error: errMsg,
+          approved_by: null,
+          approved_by_email: null,
+          approved_by_name: null,
+          approved_at: null,
         }).eq("id", op.id);
-        return respond(false, { error: errMsg });
+        return respond(false, { error: errMsg, retryable: true });
       }
     }
 
