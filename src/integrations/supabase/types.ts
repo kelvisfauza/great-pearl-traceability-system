@@ -131,6 +131,111 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_wallet_operations: {
+        Row: {
+          allow_overdraft: boolean
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          approved_by_email: string | null
+          approved_by_name: string | null
+          created_at: string
+          destination_email: string | null
+          destination_name: string | null
+          destination_phone: string | null
+          destination_user_id: string | null
+          executed_at: string | null
+          execution_error: string | null
+          gateway_reference: string | null
+          id: string
+          initiated_by: string
+          initiated_by_email: string
+          initiated_by_name: string | null
+          ledger_reference: string | null
+          metadata: Json
+          operation_type: string
+          overdraft_access_fee: number
+          payout_provider: string | null
+          reason: string
+          rejected_reason: string | null
+          service_fee: number
+          status: string
+          target_email: string
+          target_name: string | null
+          target_phone: string | null
+          target_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          allow_overdraft?: boolean
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_by_email?: string | null
+          approved_by_name?: string | null
+          created_at?: string
+          destination_email?: string | null
+          destination_name?: string | null
+          destination_phone?: string | null
+          destination_user_id?: string | null
+          executed_at?: string | null
+          execution_error?: string | null
+          gateway_reference?: string | null
+          id?: string
+          initiated_by: string
+          initiated_by_email: string
+          initiated_by_name?: string | null
+          ledger_reference?: string | null
+          metadata?: Json
+          operation_type: string
+          overdraft_access_fee?: number
+          payout_provider?: string | null
+          reason: string
+          rejected_reason?: string | null
+          service_fee?: number
+          status?: string
+          target_email: string
+          target_name?: string | null
+          target_phone?: string | null
+          target_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          allow_overdraft?: boolean
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          approved_by_email?: string | null
+          approved_by_name?: string | null
+          created_at?: string
+          destination_email?: string | null
+          destination_name?: string | null
+          destination_phone?: string | null
+          destination_user_id?: string | null
+          executed_at?: string | null
+          execution_error?: string | null
+          gateway_reference?: string | null
+          id?: string
+          initiated_by?: string
+          initiated_by_email?: string
+          initiated_by_name?: string | null
+          ledger_reference?: string | null
+          metadata?: Json
+          operation_type?: string
+          overdraft_access_fee?: number
+          payout_provider?: string | null
+          reason?: string
+          rejected_reason?: string | null
+          service_fee?: number
+          status?: string
+          target_email?: string
+          target_name?: string | null
+          target_phone?: string | null
+          target_user_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       advance_recoveries: {
         Row: {
           advance_id: string
