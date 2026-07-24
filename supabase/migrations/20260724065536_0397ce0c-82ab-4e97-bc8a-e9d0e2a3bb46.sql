@@ -1,0 +1,1 @@
+SELECT 'noop' AS status;
