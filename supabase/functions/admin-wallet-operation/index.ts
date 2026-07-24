@@ -76,16 +76,27 @@ async function getLedgerBalance(supabase: any, userId: string): Promise<number> 
   const { data } = await supabase
     .from("ledger_entries")
     .select("entry_type, amount")
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .in("entry_type", [
+      "LOYALTY_REWARD","BONUS","DEPOSIT","WITHDRAWAL","ADJUSTMENT","REVERSAL",
+      "MONTHLY_SALARY","ADVANCE_RECOVERY","LOAN_DISBURSEMENT","LOAN_REPAYMENT",
+      "LOAN_RECOVERY","HOST_MEETING_BONUS","MEETING_ATTENDANCE_BONUS",
+    ]);
   return (data || []).reduce((s: number, r: any) => {
     const amt = Number(r.amount) || 0;
-    return r.entry_type === "CREDIT" ? s + amt : s - amt;
+    // Credits: DEPOSIT, LOYALTY_REWARD, BONUS, MONTHLY_SALARY, LOAN_DISBURSEMENT,
+    // HOST_MEETING_BONUS, MEETING_ATTENDANCE_BONUS, REVERSAL, ADJUSTMENT (assume +).
+    const credits = new Set([
+      "DEPOSIT","LOYALTY_REWARD","BONUS","MONTHLY_SALARY","LOAN_DISBURSEMENT",
+      "HOST_MEETING_BONUS","MEETING_ATTENDANCE_BONUS","REVERSAL","ADJUSTMENT",
+    ]);
+    return credits.has(r.entry_type) ? s + amt : s - amt;
   }, 0);
 }
 
 async function postLedger(supabase: any, args: {
   user_id: string;
-  entry_type: "CREDIT" | "DEBIT";
+  entry_type: "DEPOSIT" | "WITHDRAWAL" | "ADJUSTMENT";
   amount: number;
   reference: string;
   source_category: string;
