@@ -61,6 +61,8 @@ export default function AdminWalletOperations() {
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [allowOverdraft, setAllowOverdraft] = useState(false);
+  const [confirmMethod, setConfirmMethod] = useState<ConfirmMethod>("second_admin");
+  const [otpDrafts, setOtpDrafts] = useState<Record<string, string>>({});
 
   const loadData = async () => {
     setLoading(true);
