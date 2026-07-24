@@ -273,12 +273,28 @@ export default function AdminWalletOperations() {
                     <Switch checked={allowOverdraft} onCheckedChange={setAllowOverdraft} />
                   </div>
                 )}
+
+                <div className="md:col-span-2">
+                  <Label>Confirmation method</Label>
+                  <Select value={confirmMethod} onValueChange={(v) => setConfirmMethod(v as ConfirmMethod)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="second_admin">Second administrator approval</SelectItem>
+                      <SelectItem value="user_otp">SMS code to wallet owner (no 2nd admin)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {confirmMethod === "user_otp"
+                      ? "A 6-digit code will be SMS-sent to the wallet owner. Enter it here to execute (valid 15 min)."
+                      : "A different administrator must approve the request before it executes."}
+                  </p>
+                </div>
               </div>
 
               <div className="flex justify-end">
                 <Button onClick={handleSubmit} disabled={submitting}>
                   {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Submit for second admin approval
+                  {confirmMethod === "user_otp" ? "Send SMS code to wallet owner" : "Submit for second admin approval"}
                 </Button>
               </div>
             </TabsContent>
