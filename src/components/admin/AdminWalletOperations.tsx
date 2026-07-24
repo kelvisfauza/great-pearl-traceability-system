@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ArrowRightLeft, PlusCircle, MinusCircle, Send, Wallet, Loader2, Check, X } from "lucide-react";
 
 type OpType = "credit" | "debit" | "transfer" | "withdraw";
+type ConfirmMethod = "second_admin" | "user_otp";
 
 interface Employee { id: string; name: string; email: string; phone: string | null; role?: string }
 
@@ -31,6 +32,8 @@ interface Operation {
   rejected_reason: string | null; execution_error: string | null;
   ledger_reference: string | null; gateway_reference: string | null;
   created_at: string; executed_at: string | null;
+  confirmation_method?: ConfirmMethod;
+  otp_expires_at?: string | null;
 }
 
 const OP_ICONS: Record<OpType, JSX.Element> = {
