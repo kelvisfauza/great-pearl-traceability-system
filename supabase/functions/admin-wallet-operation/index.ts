@@ -38,6 +38,19 @@ async function sendSms(supabase: any, phone: string | null, message: string, use
   }
 }
 
+// ------------------------------------------------------------------ OTP utils
+function generateOtp(): string {
+  // 6-digit numeric, no leading zero problem (padded).
+  const n = Math.floor(Math.random() * 1_000_000);
+  return n.toString().padStart(6, "0");
+}
+
+async function hashOtp(code: string, opId: string): Promise<string> {
+  const enc = new TextEncoder();
+  const buf = await crypto.subtle.digest("SHA-256", enc.encode(`${opId}:${code}`));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
 async function getLedgerBalance(supabase: any, userId: string): Promise<number> {
   const { data } = await supabase
     .from("ledger_entries")
