@@ -292,7 +292,7 @@ serve(async (req) => {
             overdraftAccessFee = Math.round((odPortion * OD_ACCESS_FEE_BPS) / 10000);
           }
           await postLedger(supabase, {
-            user_id: op.target_user_id, entry_type: "DEBIT", amount, reference: ref,
+            user_id: op.target_user_id, entry_type: "DEBIT", amount, reference: `${ref}-OUT`,
             source_category: "TRANSFER_OUT",
             metadata: {
               description: `Admin transfer to ${op.destination_name || op.destination_email}: ${op.reason}`,
@@ -308,7 +308,7 @@ serve(async (req) => {
             });
           }
           await postLedger(supabase, {
-            user_id: op.destination_user_id!, entry_type: "CREDIT", amount, reference: ref,
+            user_id: op.destination_user_id!, entry_type: "CREDIT", amount, reference: `${ref}-IN`,
             source_category: "TRANSFER_IN",
             metadata: {
               description: `Admin transfer from ${op.target_name || op.target_email}: ${op.reason}`,
