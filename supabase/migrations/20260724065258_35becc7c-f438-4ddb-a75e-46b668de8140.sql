@@ -1,0 +1,1 @@
+SELECT 'ready' AS status;
