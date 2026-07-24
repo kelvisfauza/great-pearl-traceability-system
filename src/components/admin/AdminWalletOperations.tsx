@@ -312,11 +312,15 @@ export default function AdminWalletOperations() {
           {!loading && pending.length === 0 && <p className="text-sm text-muted-foreground">No pending requests.</p>}
           {pending.map(op => {
             const isSameAdmin = op.initiated_by_email === user?.email;
+            const isOtp = op.confirmation_method === "user_otp";
             return (
               <div key={op.id} className="flex flex-col md:flex-row md:items-center gap-3 border rounded-md p-3">
                 <div className="flex items-center gap-2 min-w-[130px]">
                   {OP_ICONS[op.operation_type]}
                   <span className="font-medium capitalize">{op.operation_type}</span>
+                  <Badge variant={isOtp ? "secondary" : "outline"} className="ml-1">
+                    {isOtp ? "OTP" : "2-admin"}
+                  </Badge>
                 </div>
                 <div className="flex-1 text-sm">
                   <p><b>{op.target_name || op.target_email}</b> — UGX {Number(op.amount).toLocaleString()}
@@ -325,16 +329,35 @@ export default function AdminWalletOperations() {
                   </p>
                   <p className="text-xs text-muted-foreground">{op.reason}</p>
                   <p className="text-xs text-muted-foreground">Initiated by {op.initiated_by_name || op.initiated_by_email}</p>
+                  {isOtp && op.target_phone && (
+                    <p className="text-xs text-muted-foreground">Code sent by SMS to {op.target_phone}</p>
+                  )}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center flex-wrap">
                   <Button size="sm" variant="outline" onClick={() => handleReject(op)} disabled={approvingId === op.id}>
                     <X className="h-4 w-4 mr-1" /> Reject
                   </Button>
-                  <Button size="sm" onClick={() => handleApprove(op)} disabled={isSameAdmin || approvingId === op.id}
-                    title={isSameAdmin ? "You initiated this — another admin must approve" : ""}>
-                    {approvingId === op.id ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
-                    Approve & Execute
-                  </Button>
+                  {isOtp ? (
+                    <>
+                      <Input
+                        className="w-28 h-9"
+                        inputMode="numeric"
+                        placeholder="6-digit"
+                        value={otpDrafts[op.id] || ""}
+                        onChange={(e) => setOtpDrafts(d => ({ ...d, [op.id]: e.target.value.replace(/\D/g, "").slice(0, 8) }))}
+                      />
+                      <Button size="sm" onClick={() => handleConfirmOtp(op)} disabled={approvingId === op.id}>
+                        {approvingId === op.id ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
+                        Confirm code
+                      </Button>
+                    </>
+                  ) : (
+                    <Button size="sm" onClick={() => handleApprove(op)} disabled={isSameAdmin || approvingId === op.id}
+                      title={isSameAdmin ? "You initiated this — another admin must approve" : ""}>
+                      {approvingId === op.id ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
+                      Approve & Execute
+                    </Button>
+                  )}
                 </div>
               </div>
             );
