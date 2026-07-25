@@ -94,7 +94,7 @@ Respond with JSON only:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         temperature: 0.1,
         messages: [
           {
@@ -110,23 +110,19 @@ Respond with JSON only:
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
 
-      if (aiResponse.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "AI rate limit exceeded. Please try again shortly." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      if (aiResponse.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI credits exhausted. Please top up Lovable AI usage." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
       console.error("AI fraud evaluation failed:", aiResponse.status, errorText);
+      // Degrade gracefully — never block the user with a 4xx on fraud checks.
       return new Response(
-        JSON.stringify({ shouldLock: false, confidence: 0, reason: "AI evaluation unavailable" }),
+        JSON.stringify({
+          shouldLock: false,
+          confidence: 0,
+          reason:
+            aiResponse.status === 402
+              ? "AI credits exhausted — skipping fraud check"
+              : aiResponse.status === 429
+              ? "AI rate limited — skipping fraud check"
+              : "AI evaluation unavailable",
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
