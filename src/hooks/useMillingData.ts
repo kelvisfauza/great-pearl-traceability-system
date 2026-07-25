@@ -201,10 +201,23 @@ export const useMillingData = () => {
 
   const addCustomer = async (customerData: Omit<MillingCustomer, 'id' | 'created_at' | 'updated_at' | 'current_balance'>) => {
     try {
+      // Normalize phone to local 0XXXXXXXXX format so USSD lookups (which try
+      // 0/256/+256 variants) always find the customer.
+      const normalizePhoneLocal = (p?: string | null) => {
+        if (!p) return null;
+        const digits = String(p).replace(/\D/g, "");
+        if (!digits) return null;
+        if (digits.startsWith("256")) return "0" + digits.slice(3);
+        if (digits.startsWith("0")) return digits;
+        if (digits.length === 9) return "0" + digits;
+        return digits;
+      };
+      const normalizedPhone = normalizePhoneLocal(customerData.phone);
       const { data, error } = await supabase
         .from('milling_customers')
         .insert([{
           ...customerData,
+          phone: normalizedPhone,
           current_balance: customerData.opening_balance
         }])
         .select()
