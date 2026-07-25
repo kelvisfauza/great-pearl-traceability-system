@@ -41,13 +41,25 @@ serve(async (req) => {
 
     // ── product_key = 1: Pay Milling Fees ──
     if (product_key === "1" || product_key === 1) {
-      // Look up customer by phone number
-      const { data: customer, error: custError } = await supabase
+      // Build phone variants to match however the contact was stored
+      const local = cleanPhone.startsWith("256") ? "0" + cleanPhone.slice(3) : cleanPhone;
+      const local9 = local.replace(/^0/, "");
+      const variants = Array.from(new Set([
+        cleanPhone,            // 256XXXXXXXXX
+        `+${cleanPhone}`,      // +256XXXXXXXXX
+        local,                 // 0XXXXXXXXX
+        local9,                // XXXXXXXXX (no leading 0)
+        `+256${local9}`,
+        `256${local9}`,
+      ]));
+      // Look up customer by phone number (case-insensitive status)
+      const { data: customers, error: custError } = await supabase
         .from("milling_customers")
-        .select("id, full_name, current_balance, phone")
-        .or(`phone.eq.${cleanPhone},phone.eq.+${cleanPhone},phone.eq.0${cleanPhone.slice(3)}`)
-        .eq("status", "active")
-        .maybeSingle();
+        .select("id, full_name, current_balance, phone, status")
+        .in("phone", variants)
+        .ilike("status", "active")
+        .limit(1);
+      const customer = customers?.[0];
 
       if (custError) {
         console.error(`[USSD Callout] DB error:`, custError);
