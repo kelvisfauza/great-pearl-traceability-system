@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { yoPayout, normalizePhone } from "../_shared/yo-payments.ts";
+import { gosenteWithdraw, isGosenteSuccess } from "../_shared/gosentepay.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,15 +14,16 @@ serve(async (req) => {
   }
 
   try {
-    if (!Deno.env.get("YO_API_USERNAME") || !Deno.env.get("YO_API_PASSWORD")) {
-      throw new Error("Yo Payments API credentials not configured");
-    }
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { phone, amount, withdrawCharge, description, receiverName, initiatedBy, initiatedByName } = await req.json();
+    const { phone, amount, withdrawCharge, description, receiverName, initiatedBy, initiatedByName, gateway } = await req.json();
+    const chosenGateway = gateway === "gosente" ? "gosente" : "yo";
+
+    if (chosenGateway === "yo" && (!Deno.env.get("YO_API_USERNAME") || !Deno.env.get("YO_API_PASSWORD"))) {
+      throw new Error("Yo Payments API credentials not configured");
+    }
 
     if (!phone || !amount || !description) {
       return new Response(
@@ -73,13 +75,42 @@ serve(async (req) => {
 
     // Initiate Yo Payment
     const narrative = `Meal allowance - ${description} - ${receiverName || cleanPhone}`;
-    console.log(`[Meal Disbursement] Sending UGX ${totalAmount} to ${cleanPhone}: ${narrative}`);
+    console.log(`[Meal Disbursement] Sending UGX ${totalAmount} to ${cleanPhone} via ${chosenGateway}: ${narrative}`);
 
-    const result = await yoPayout({
-      phone: cleanPhone,
-      amount: totalAmount,
-      narrative,
-    });
+    let result: { success: boolean; transactionRef?: string | null; rawResponse?: string | null; statusMessage?: string; errorMessage?: string };
+
+    if (chosenGateway === "gosente") {
+      const ref = `MEAL-${record.id}-${Date.now()}`;
+      try {
+        const gs = await gosenteWithdraw({
+          phone: cleanPhone,
+          amount: totalAmount,
+          email: initiatedBy || "operations@greatpearlcoffee.com",
+          reason: narrative,
+          ref,
+        });
+        const ok = isGosenteSuccess(gs.status, gs.body);
+        result = {
+          success: ok,
+          transactionRef: gs.body?.data?.ref ?? gs.body?.ref ?? ref,
+          rawResponse: JSON.stringify(gs.body ?? {}),
+          errorMessage: ok ? undefined : (gs.body?.message || `GosentePay error ${gs.status}`),
+        };
+      } catch (gsErr) {
+        result = {
+          success: false,
+          transactionRef: ref,
+          rawResponse: String(gsErr),
+          errorMessage: gsErr instanceof Error ? gsErr.message : "GosentePay request failed",
+        };
+      }
+    } else {
+      result = await yoPayout({
+        phone: cleanPhone,
+        amount: totalAmount,
+        narrative,
+      });
+    }
 
     // Update record with Yo result
     // Check for -22 (pending authorization) in statusMessage or raw response
