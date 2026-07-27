@@ -111,13 +111,14 @@ function parseYoResponse(xml: string): YoPayoutResult {
     lower.includes("float") ||
     lower.includes("low funds") ||
     statusCode === "1217" || // Yo: insufficient funds on payment account
-    statusCode === "10403";
+    statusCode === "10403" ||
+    statusCode === "-13"; // Yo: payment account balance too low
 
   if (isUnfunded) {
     return {
       success: false,
-      errorMessage: "Account not funded",
-      statusMessage: "Account not funded",
+      errorMessage: "Company mobile money disbursement account has insufficient float",
+      statusMessage: "Company mobile money disbursement account has insufficient float",
       rawResponse: xml,
     };
   }

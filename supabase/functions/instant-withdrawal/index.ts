@@ -796,10 +796,14 @@ serve(async (req) => {
         lower.includes("float") ||
         lower.includes("low funds") ||
         statusCode === "1217" ||
-        statusCode === "10403";
+        statusCode === "10403" ||
+        statusCode === "-13";
 
       if (isUnfunded) {
-        return respond(false, { error: "Account not funded. Please try again later or contact support." });
+        return respond(false, {
+          error: "Payouts are temporarily unavailable: the company mobile money disbursement account has insufficient float. Your wallet has NOT been charged. Please try again once finance tops it up.",
+          code: "PROVIDER_FLOAT_EMPTY",
+        });
       }
 
       return respond(false, {
