@@ -32,6 +32,8 @@ const MealDisbursementSection = () => {
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'failed'>('all');
+  const [retryTarget, setRetryTarget] = useState<any | null>(null);
+  const [retryGateway, setRetryGateway] = useState<'yo' | 'gosente'>('yo');
 
   const [form, setForm] = useState({
     receiverPhone: '',
@@ -125,7 +127,7 @@ const MealDisbursementSection = () => {
     }
   };
 
-  const handleRetry = async (payment: any) => {
+  const openRetry = (payment: any) => {
     const ageHours = (Date.now() - new Date(payment.created_at).getTime()) / (1000 * 60 * 60);
     if (ageHours > 2) {
       toast({
@@ -135,7 +137,13 @@ const MealDisbursementSection = () => {
       });
       return;
     }
-    if (!confirm(`Retry sending UGX ${Number(payment.amount).toLocaleString()} to ${payment.receiver_name || payment.receiver_phone}?`)) return;
+    setRetryGateway('yo');
+    setRetryTarget(payment);
+  };
+
+  const handleRetry = async () => {
+    const payment = retryTarget;
+    if (!payment) return;
     setRetryingId(payment.id);
     try {
       const { data, error } = await supabase.functions.invoke('meal-disbursement', {
@@ -147,11 +155,13 @@ const MealDisbursementSection = () => {
           receiverName: payment.receiver_name,
           initiatedBy: employee?.email || '',
           initiatedByName: employee?.name || '',
+          gateway: retryGateway,
         },
       });
       if (error) throw error;
       toast({ title: data?.success ? 'Retry sent' : 'Retry issue', description: data?.message || 'Check status', variant: data?.success ? 'default' : 'destructive' });
       queryClient.invalidateQueries({ queryKey: ['meal-disbursements'] });
+      setRetryTarget(null);
     } catch (err: any) {
       toast({ title: 'Retry failed', description: err.message, variant: 'destructive' });
     } finally {
