@@ -583,7 +583,7 @@ const MealDisbursementSection = () => {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleRetry(d)}
+                                onClick={() => openRetry(d)}
                                 disabled={retryingId === d.id}
                                 className="gap-1 text-xs"
                               >
@@ -627,6 +627,41 @@ const MealDisbursementSection = () => {
           </div>
         )}
       </CardContent>
+
+      <Dialog open={!!retryTarget} onOpenChange={(o) => { if (!o) setRetryTarget(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Retry payment</DialogTitle>
+            <DialogDescription>
+              {retryTarget && (
+                <>Resend UGX {Number(retryTarget.total_amount || retryTarget.amount).toLocaleString()} to {retryTarget.receiver_name || retryTarget.receiver_phone}. Choose the payment gateway to use.</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Payment gateway</Label>
+            <Select value={retryGateway} onValueChange={(v) => setRetryGateway(v as 'yo' | 'gosente')}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select gateway" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="yo">Yo Payments</SelectItem>
+                <SelectItem value="gosente">GosentePay</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Switch gateways if one provider is failing or its float is empty.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRetryTarget(null)}>Cancel</Button>
+            <Button onClick={handleRetry} disabled={!!retryingId} className="gap-2">
+              {retryingId ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+              Retry via {retryGateway === 'yo' ? 'Yo Payments' : 'GosentePay'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
