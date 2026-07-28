@@ -283,6 +283,16 @@ Deno.serve(async (req) => {
 
         const walletCredit = Math.max(0, netAfterLoans - remittanceAmount);
 
+        // Human-readable deduction breakdown so employees can see exactly why
+        // an amount left their salary (loan deductions were previously invisible).
+        const deductionNotes = [
+          totalAdvanceDeduction > 0 ? `Salary advance recovery: UGX ${totalAdvanceDeduction.toLocaleString()}` : null,
+          totalLoanDeduction > 0
+            ? `Loan installment recovery: UGX ${totalLoanDeduction.toLocaleString()} (${loanDetails.map((d: any) => `loan ${String(d.loan_id).slice(0, 8)} – UGX ${Number(d.deduction).toLocaleString()}, balance left UGX ${Number(d.remaining_after).toLocaleString()}`).join('; ')})`
+            : null,
+          remittanceAmount > 0 ? `Salary remittance: UGX ${remittanceAmount.toLocaleString()}` : null,
+        ].filter(Boolean).join(' | ') || null;
+
         // 3. Create salary payment record
         const { data: paymentRecord, error: paymentError } = await supabase
           .from('employee_salary_payments')
@@ -302,7 +312,8 @@ Deno.serve(async (req) => {
             advance_id: advanceId,
             time_deduction: 0,
             time_deduction_hours: 0,
-            net_salary: netSalary,
+            net_salary: netAfterLoans,
+            notes: deductionNotes,
             payment_month: currentMonth,
             payment_label: 'FULL SALARY',
             payment_method: 'wallet',
