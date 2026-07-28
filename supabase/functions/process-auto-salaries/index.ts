@@ -168,14 +168,24 @@ Deno.serve(async (req) => {
 
               const newRemaining = Math.max(0, Number(loan.remaining_balance) - deduction);
               const newPaid = Number(loan.paid_amount || 0) + deduction;
-              const newStatus = newRemaining <= 0 ? 'paid_off' : 'active';
+              const newStatus = newRemaining <= 0 ? 'completed' : 'active';
 
-              await supabase.from('loans').update({
+              // The loan row MUST be updated first. If this fails we skip the
+              // deduction entirely instead of silently taking money while the
+              // balance stays unchanged (root cause of the July payroll issue).
+              const { error: loanUpdErr } = await supabase.from('loans').update({
                 paid_amount: newPaid,
                 remaining_balance: newRemaining,
                 status: newStatus,
                 updated_at: new Date().toISOString(),
               }).eq('id', loan.id);
+
+              if (loanUpdErr) {
+                console.error(`❌ Loan ${loan.id} balance update FAILED — skipping deduction:`, loanUpdErr);
+                totalLoanDeduction -= deduction;
+                remainingBudget += deduction;
+                continue;
+              }
 
               // Update next pending installment
               const { data: nextInst } = await supabase
@@ -189,7 +199,7 @@ Deno.serve(async (req) => {
               if (nextInst) {
                 const paidNow = Number(nextInst.amount_paid || 0) + deduction;
                 const fullyPaid = paidNow >= Number(nextInst.amount_due);
-                await supabase.from('loan_repayments').update({
+                const { error: instErr } = await supabase.from('loan_repayments').update({
                   amount_paid: paidNow,
                   status: fullyPaid ? 'paid' : 'partial',
                   paid_date: fullyPaid ? new Date().toISOString() : null,
@@ -197,6 +207,7 @@ Deno.serve(async (req) => {
                   payment_reference: `AUTO-SAL-LOAN-${loan.id}-${currentMonth.replace(/\s/g,'')}`,
                   updated_at: new Date().toISOString(),
                 }).eq('id', nextInst.id);
+                if (instErr) console.error(`❌ Installment update failed for loan ${loan.id}:`, instErr);
               }
 
               loanDetails.push({
@@ -272,6 +283,16 @@ Deno.serve(async (req) => {
 
         const walletCredit = Math.max(0, netAfterLoans - remittanceAmount);
 
+        // Human-readable deduction breakdown so employees can see exactly why
+        // an amount left their salary (loan deductions were previously invisible).
+        const deductionNotes = [
+          totalAdvanceDeduction > 0 ? `Salary advance recovery: UGX ${totalAdvanceDeduction.toLocaleString()}` : null,
+          totalLoanDeduction > 0
+            ? `Loan installment recovery: UGX ${totalLoanDeduction.toLocaleString()} (${loanDetails.map((d: any) => `loan ${String(d.loan_id).slice(0, 8)} – UGX ${Number(d.deduction).toLocaleString()}, balance left UGX ${Number(d.remaining_after).toLocaleString()}`).join('; ')})`
+            : null,
+          remittanceAmount > 0 ? `Salary remittance: UGX ${remittanceAmount.toLocaleString()}` : null,
+        ].filter(Boolean).join(' | ') || null;
+
         // 3. Create salary payment record
         const { data: paymentRecord, error: paymentError } = await supabase
           .from('employee_salary_payments')
@@ -291,7 +312,8 @@ Deno.serve(async (req) => {
             advance_id: advanceId,
             time_deduction: 0,
             time_deduction_hours: 0,
-            net_salary: netSalary,
+            net_salary: netAfterLoans,
+            notes: deductionNotes,
             payment_month: currentMonth,
             payment_label: 'FULL SALARY',
             payment_method: 'wallet',
