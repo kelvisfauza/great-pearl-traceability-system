@@ -36,6 +36,8 @@ const ApprovedRequestsHistory = () => {
 
   useEffect(() => {
     fetchRecentApprovals();
+    const interval = setInterval(fetchRecentApprovals, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const APPROVED_STATUSES = ['approved', 'Approved', 'completed', 'Completed', 'paid', 'Paid', 'disbursed', 'Disbursed', 'fully_approved', 'success', 'Success', 'cash', 'processed', 'Processed'];
