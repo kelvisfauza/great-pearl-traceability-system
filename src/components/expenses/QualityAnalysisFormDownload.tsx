@@ -1,8 +1,15 @@
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, ClipboardCheck } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import { Download, ClipboardCheck, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
+import { supabase } from '@/integrations/supabase/client';
 
 const LOGO_URL = '/lovable-uploads/great-agro-coffee-logo.png';
 
@@ -44,7 +51,7 @@ const ROWS: { label: string; hint?: string }[] = [
   { label: 'Comments' },
 ];
 
-const generateBlankQualityForm = async () => {
+const generateBlankQualityForm = async (formNumbers: string[]) => {
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageW = 210;
   const pageH = 297;
@@ -53,6 +60,7 @@ const generateBlankQualityForm = async () => {
 
   const logoData = await loadImageAsBase64(LOGO_URL);
 
+  const drawPage = (formNumber: string) => {
   // ---- Clean B&W Header (no coloured bands) ----
   if (logoData) {
     try { doc.addImage(logoData, 'PNG', margin, 4, 18, 18); } catch {}
@@ -103,7 +111,12 @@ const generateBlankQualityForm = async () => {
     doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
     doc.text(r.label, margin + 3, y + rowH / 2 + 1);
-    if (r.hint) {
+    if (r.label === 'Form No.') {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      doc.text(formNumber, margin + labelW + 4, y + rowH / 2 + 1);
+    } else if (r.hint) {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       doc.setTextColor(80, 80, 80);
@@ -125,9 +138,19 @@ const generateBlankQualityForm = async () => {
     pageH - 10,
     { align: 'center' },
   );
+  };
+
+  formNumbers.forEach((fn, idx) => {
+    if (idx > 0) doc.addPage();
+    drawPage(fn);
+  });
 
   // Download as PDF (primary action) + open print preview
-  doc.save('Quality-Analysis-Form-Blank.pdf');
+  doc.save(
+    formNumbers.length > 1
+      ? `Quality-Analysis-Forms-${formNumbers[0]}-to-${formNumbers[formNumbers.length - 1]}.pdf`.replace(/\s/g, '')
+      : `Quality-Analysis-Form-${formNumbers[0]}.pdf`.replace(/\s/g, ''),
+  );
   try {
     const blobUrl = doc.output('bloburl') as unknown as string;
     const printWin = window.open(blobUrl, '_blank');
@@ -140,17 +163,37 @@ const generateBlankQualityForm = async () => {
 };
 
 const QualityAnalysisFormDownload = () => {
+  const [open, setOpen] = useState(false);
+  const [copies, setCopies] = useState(1);
+  const [busy, setBusy] = useState(false);
+
   const handleGenerate = async () => {
+    const count = Math.max(1, Math.min(100, Number(copies) || 1));
     try {
-      await generateBlankQualityForm();
-      toast({ title: 'Quality Analysis Form ready', description: 'Blank form opened for printing.' });
-    } catch (e) {
+      setBusy(true);
+      const { data, error } = await (supabase as any).rpc('issue_quality_form_numbers', {
+        p_count: count,
+        p_issued_by_name: null,
+      });
+      if (error) throw error;
+      const numbers: string[] = (data as string[]) || [];
+      if (!numbers.length) throw new Error('No form numbers were issued');
+      await generateBlankQualityForm(numbers);
+      setOpen(false);
+      toast({
+        title: `${numbers.length} form(s) ready`,
+        description: `Form numbers ${numbers[0]}${numbers.length > 1 ? ` → ${numbers[numbers.length - 1]}` : ''} issued.`,
+      });
+    } catch (e: any) {
       console.error(e);
-      toast({ title: 'Error', description: 'Failed to generate form.', variant: 'destructive' });
+      toast({ title: 'Error', description: e?.message || 'Failed to generate form.', variant: 'destructive' });
+    } finally {
+      setBusy(false);
     }
   };
 
   return (
+    <>
     <Card className="border-2 border-primary/20 hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
@@ -158,16 +201,48 @@ const QualityAnalysisFormDownload = () => {
           Quality Analysis Form (Blank)
         </CardTitle>
         <CardDescription className="text-xs">
-          Printable blank quality analysis form with company header. Used by the Quality Department for manual sample assessments.
+          Printable blank quality analysis form with company header and an auto-generated form number
+          (GAC QA 0001), which restarts at 0001 at the beginning of every month.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Button onClick={handleGenerate} className="w-full gap-2">
+        <Button onClick={() => setOpen(true)} className="w-full gap-2">
           <Download className="h-4 w-4" />
           Download PDF for Printing
         </Button>
       </CardContent>
     </Card>
+
+    <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>How many copies?</DialogTitle>
+          <DialogDescription>
+            Each copy gets its own unique form number (e.g. GAC QA 0001, GAC QA 0002). Numbering resets
+            at the start of each month.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          <Label htmlFor="qa-copies">Number of forms to print (1 - 100)</Label>
+          <Input
+            id="qa-copies"
+            type="number"
+            min={1}
+            max={100}
+            value={copies}
+            onChange={(e) => setCopies(Number(e.target.value))}
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>Cancel</Button>
+          <Button onClick={handleGenerate} disabled={busy} className="gap-2">
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            Generate &amp; Print
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };
 
