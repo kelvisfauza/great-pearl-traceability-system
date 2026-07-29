@@ -413,7 +413,10 @@ export const useQualityControl = () => {
         status: isRejected ? 'rejected' : 'approved', // V2: approved status for inventory
         comments: assessment.comments || null,
         date_assessed: assessment.date_assessed || new Date().toISOString().split('T')[0],
-        assessed_by: assessment.assessed_by // This should now contain the actual user's name from the form
+        assessed_by: assessment.assessed_by, // This should now contain the actual user's name from the form
+        physical_assessment_by: (assessment as any).physical_assessment_by || null,
+        system_assessment_by: (assessment as any).system_assessment_by || null,
+        form_number: (assessment as any).form_number || null
       };
       
       console.log('Prepared assessment data:', JSON.stringify(assessmentData, null, 2));
