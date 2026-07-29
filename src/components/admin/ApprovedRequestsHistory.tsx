@@ -36,44 +36,59 @@ const ApprovedRequestsHistory = () => {
 
   useEffect(() => {
     fetchRecentApprovals();
+    const interval = setInterval(fetchRecentApprovals, 30000);
+    return () => clearInterval(interval);
   }, []);
 
-  const APPROVED_STATUSES = ['approved', 'Approved', 'completed', 'Completed', 'paid', 'Paid', 'disbursed', 'Disbursed'];
+  const APPROVED_STATUSES = ['approved', 'Approved', 'completed', 'Completed', 'paid', 'Paid', 'disbursed', 'Disbursed', 'fully_approved', 'success', 'Success', 'cash', 'processed', 'Processed'];
 
   const fetchAll = async (dateFilter?: { start: string; end: string }) => {
     const sb: any = supabase;
-    const apply = (q: any, col = 'updated_at') => {
-      if (dateFilter) {
-        return q.gte(col, dateFilter.start).lte(col, dateFilter.end + 'T23:59:59');
+    // Each source declares its own status column and date column — several tables
+    // do NOT have `status` / `updated_at` (e.g. instant_withdrawals uses payout_status
+    // + created_at, meal/provider payments use yo_status). Using the wrong column made
+    // those queries fail silently, which is why withdrawals never showed up here.
+    const SOURCES: { table: string; statusCol: string; dateCol: string; statuses?: string[] }[] = [
+      { table: 'approval_requests', statusCol: 'status', dateCol: 'updated_at' },
+      { table: 'deletion_requests', statusCol: 'status', dateCol: 'updated_at' },
+      { table: 'edit_requests', statusCol: 'status', dateCol: 'updated_at' },
+      { table: 'contract_renewal_requests', statusCol: 'status', dateCol: 'updated_at' },
+      { table: 'meal_disbursements', statusCol: 'yo_status', dateCol: 'updated_at' },
+      { table: 'service_provider_payments', statusCol: 'yo_status', dateCol: 'updated_at' },
+      { table: 'provider_submission_requests', statusCol: 'status', dateCol: 'updated_at' },
+      { table: 'support_staff_per_diem', statusCol: 'status', dateCol: 'updated_at' },
+      { table: 'employee_salary_advances', statusCol: 'status', dateCol: 'updated_at' },
+      { table: 'price_approval_requests', statusCol: 'status', dateCol: 'updated_at' },
+      { table: 'instant_withdrawals', statusCol: 'payout_status', dateCol: 'created_at' },
+      { table: 'admin_initiated_withdrawals', statusCol: 'status', dateCol: 'updated_at' },
+      { table: 'admin_wallet_operations', statusCol: 'status', dateCol: 'updated_at' },
+      { table: 'contract_approvals', statusCol: 'status', dateCol: 'created_at' },
+      { table: 'monthly_overtime_reviews', statusCol: 'status', dateCol: 'updated_at' },
+      { table: 'transfer_reversal_requests', statusCol: 'status', dateCol: 'created_at' },
+      { table: 'absence_appeals', statusCol: 'status', dateCol: 'updated_at' },
+      { table: 'loans', statusCol: 'status', dateCol: 'updated_at' },
+      { table: 'overtime_awards', statusCol: 'status', dateCol: 'created_at' },
+      { table: 'bonuses', statusCol: 'status', dateCol: 'updated_at' },
+    ];
+
+    const load = async (src: typeof SOURCES[number]) => {
+      try {
+        let q = sb.from(src.table).select('*')
+          .in(src.statusCol, src.statuses || APPROVED_STATUSES)
+          .order(src.dateCol, { ascending: false });
+        q = dateFilter
+          ? q.gte(src.dateCol, dateFilter.start).lte(src.dateCol, dateFilter.end + 'T23:59:59')
+          : q.limit(20);
+        const r = await q;
+        if (r.error) { console.warn(`approval source ${src.table} failed`, r.error.message); return []; }
+        return (r.data || []).map((row: any) => ({ ...row, __at: row[src.dateCol] }));
+      } catch (e) {
+        console.warn(`approval source ${src.table} failed`, e);
+        return [];
       }
-      return q.limit(20);
     };
 
-    const safe = async (p: Promise<any>) => {
-      try { const r = await p; return r.data || []; } catch (e) { console.warn('approval source failed', e); return []; }
-    };
-
-    const results: any[] = await Promise.all([
-      safe(apply(sb.from('approval_requests').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(sb.from('deletion_requests').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(sb.from('edit_requests').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(sb.from('contract_renewal_requests').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(sb.from('meal_disbursements').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(sb.from('service_provider_payments').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(sb.from('provider_submission_requests').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(sb.from('support_staff_per_diem').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(sb.from('employee_salary_advances').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(sb.from('price_approval_requests').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(sb.from('instant_withdrawals').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(sb.from('admin_initiated_withdrawals').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(sb.from('contract_approvals').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(sb.from('monthly_overtime_reviews').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(sb.from('transfer_reversal_requests').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(sb.from('absence_appeals').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(sb.from('loans').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(sb.from('overtime_awards').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-      safe(apply(sb.from('bonuses').select('*').in('status', APPROVED_STATUSES).order('updated_at', { ascending: false }))),
-    ]);
+    const results: any[] = await Promise.all(SOURCES.map(load));
     const [
       approvalRequests,
       deletionRequests,
@@ -87,6 +102,7 @@ const ApprovedRequestsHistory = () => {
       priceApprovals,
       instantWd,
       adminWd,
+      adminWalletOps,
       contractApprovals,
       overtimeReviews,
       transferReversals,
@@ -98,6 +114,7 @@ const ApprovedRequestsHistory = () => {
 
     const num = (v: any) => (v == null ? 0 : parseFloat(v.toString()) || 0);
     const d = (v: any) => (v ? new Date(v) : undefined);
+    const at = (r: any) => new Date(r.__at || r.updated_at || r.created_at);
 
     const unified: ApprovedRequest[] = [
       ...approvalRequests.map((r: any) => ({
@@ -108,23 +125,24 @@ const ApprovedRequestsHistory = () => {
         financeApproved: !!(r.finance_approved || r.finance_review_at), financeApprovedBy: r.finance_review_by || r.finance_approved_by, financeApprovedAt: d(r.finance_review_at || r.finance_approved_at),
         adminApproved: !!(r.admin_approved || r.admin_final_approval_at), adminApprovedBy: r.admin_final_approval_by || r.admin_approved_by, adminApprovedAt: d(r.admin_final_approval_at || r.admin_approved_at),
       })),
-      ...deletionRequests.map((r: any) => ({ id: r.id, type: 'deletion', title: `Delete ${r.table_name} record`, status: r.status, approvedAt: new Date(r.updated_at), approvedBy: r.reviewed_by, department: r.requested_by_department, adminApproved: true, adminApprovedBy: r.reviewed_by })),
+      ...deletionRequests.map((r: any) => ({ id: r.id, type: 'deletion', title: `Delete ${r.table_name} record`, status: r.status, approvedAt: at(r), approvedBy: r.reviewed_by, department: r.requested_by_department, adminApproved: true, adminApprovedBy: r.reviewed_by })),
       ...editRequests.map((r: any) => ({ id: r.id, type: 'modification', title: `Edit ${r.table_name} record`, status: r.status, approvedAt: new Date(r.updated_at), department: r.requested_by_department, adminApproved: true })),
       ...contractRenewals.map((r: any) => ({ id: r.id, type: 'contract renewal', title: `Contract renewal - ${r.employee_name || ''}`, status: r.status, approvedAt: new Date(r.updated_at), approvedBy: r.reviewed_by, department: r.department })),
-      ...mealDisbursements.map((r: any) => ({ id: r.id, type: 'meal disbursement', title: `Meal - ${r.recipient_name || r.provider_name || ''}`, status: r.status, approvedAt: new Date(r.updated_at), approvedBy: r.approved_by, amount: num(r.amount), department: 'Operations' })),
-      ...providerPayments.map((r: any) => ({ id: r.id, type: 'provider payment', title: `Provider - ${r.provider_name || ''}`, status: r.status, approvedAt: new Date(r.updated_at), approvedBy: r.approved_by, amount: num(r.amount), department: 'Finance' })),
+      ...mealDisbursements.map((r: any) => ({ id: r.id, type: 'meal disbursement', title: `Meal - ${r.receiver_name || ''}`, status: r.yo_status, approvedAt: at(r), approvedBy: r.initiated_by_name, amount: num(r.total_amount || r.amount), department: 'Operations' })),
+      ...providerPayments.map((r: any) => ({ id: r.id, type: 'provider payment', title: `Provider - ${r.receiver_name || ''} ${r.service_description ? `(${r.service_description})` : ''}`, status: r.yo_status, approvedAt: at(r), approvedBy: r.initiated_by_name, amount: num(r.total_amount || r.amount), department: 'Finance' })),
       ...providerSubmissions.map((r: any) => ({ id: r.id, type: 'provider submission', title: r.provider_name || 'Provider submission', status: r.status, approvedAt: new Date(r.updated_at), approvedBy: r.reviewed_by, amount: num(r.amount) })),
       ...supportPerDiem.map((r: any) => ({ id: r.id, type: 'per diem', title: `Per-diem - ${r.staff_name || ''}`, status: r.status, approvedAt: new Date(r.updated_at), approvedBy: r.approved_by, amount: num(r.amount), department: 'HR' })),
       ...salaryAdvances.map((r: any) => ({ id: r.id, type: 'salary advance', title: `Salary advance - ${r.employee_name || ''}`, status: r.status, approvedAt: new Date(r.updated_at), approvedBy: r.approved_by, amount: num(r.amount), department: 'HR' })),
       ...priceApprovals.map((r: any) => ({ id: r.id, type: 'price approval', title: r.title || 'Price approval', status: r.status, approvedAt: new Date(r.updated_at), approvedBy: r.approved_by, department: r.department })),
-      ...instantWd.map((r: any) => ({ id: r.id, type: 'withdrawal', title: `Instant withdrawal - ${r.channel || 'MoMo'}`, status: r.status, approvedAt: new Date(r.updated_at), approvedBy: r.approved_by, amount: num(r.amount), department: 'Finance' })),
-      ...adminWd.map((r: any) => ({ id: r.id, type: 'admin withdrawal', title: `Admin withdrawal - ${r.target_employee_name || ''}`, status: r.status, approvedAt: new Date(r.updated_at), approvedBy: r.initiated_by, amount: num(r.amount), department: 'Admin' })),
-      ...contractApprovals.map((r: any) => ({ id: r.id, type: 'contract', title: r.title || `Contract approval`, status: r.status, approvedAt: new Date(r.updated_at), approvedBy: r.approved_by, department: r.department })),
-      ...overtimeReviews.map((r: any) => ({ id: r.id, type: 'overtime', title: `Overtime review - ${r.employee_name || ''}`, status: r.status, approvedAt: new Date(r.updated_at), approvedBy: r.reviewed_by, amount: num(r.total_amount), department: 'HR' })),
-      ...transferReversals.map((r: any) => ({ id: r.id, type: 'reversal', title: `Transfer reversal`, status: r.status, approvedAt: new Date(r.updated_at), approvedBy: r.reviewed_by, amount: num(r.amount), department: 'Finance' })),
+      ...instantWd.map((r: any) => ({ id: r.id, type: 'withdrawal', title: `Instant withdrawal - ${r.phone_number || 'MoMo'}${r.payment_provider ? ` (${r.payment_provider})` : ''}`, status: r.payout_status, approvedAt: at(r), amount: num(r.amount), department: 'Finance' })),
+      ...adminWd.map((r: any) => ({ id: r.id, type: 'admin withdrawal', title: `Admin withdrawal - ${r.target_employee_name || ''}`, status: r.status, approvedAt: at(r), approvedBy: r.initiated_by, amount: num(r.amount), department: 'Admin' })),
+      ...adminWalletOps.map((r: any) => ({ id: r.id, type: 'wallet operation', title: `${(r.operation_type || 'operation').replace(/_/g, ' ')} - ${r.target_name || r.target_email || ''}`, status: r.status, approvedAt: at(r), approvedBy: r.approved_by_name || r.initiated_by_name, amount: num(r.amount), department: 'Admin', adminApproved: true, adminApprovedBy: r.approved_by_name || r.otp_confirmed_by })),
+      ...contractApprovals.map((r: any) => ({ id: r.id, type: 'contract', title: `Contract ${r.action_type || 'approval'}`, status: r.status, approvedAt: at(r), approvedBy: r.approved_by })),
+      ...overtimeReviews.map((r: any) => ({ id: r.id, type: 'overtime', title: `Overtime review - ${r.employee_name || ''}`, status: r.status, approvedAt: at(r), approvedBy: r.reviewed_by, amount: num(r.total_amount), department: 'HR' })),
+      ...transferReversals.map((r: any) => ({ id: r.id, type: 'reversal', title: `Transfer reversal - ${r.sender_name || ''} → ${r.receiver_name || ''}`, status: r.status, approvedAt: at(r), approvedBy: r.reviewed_by, amount: num(r.amount), department: 'Finance' })),
       ...absenceAppeals.map((r: any) => ({ id: r.id, type: 'absence appeal', title: `Absence appeal - ${r.employee_name || ''}`, status: r.status, approvedAt: new Date(r.updated_at), approvedBy: r.reviewed_by, department: 'HR' })),
       ...loans.map((r: any) => ({ id: r.id, type: 'loan', title: `Loan - ${r.borrower_name || ''}`, status: r.status, approvedAt: new Date(r.updated_at), approvedBy: r.approved_by, amount: num(r.amount), department: 'Finance' })),
-      ...overtimeAwards.map((r: any) => ({ id: r.id, type: 'overtime award', title: `Overtime award - ${r.employee_name || ''}`, status: r.status, approvedAt: new Date(r.updated_at), approvedBy: r.approved_by, amount: num(r.amount), department: 'HR' })),
+      ...overtimeAwards.map((r: any) => ({ id: r.id, type: 'overtime award', title: `Overtime award - ${r.employee_name || ''}`, status: r.status, approvedAt: at(r), approvedBy: r.completed_by, amount: num(r.total_amount), department: r.department || 'HR' })),
       ...bonuses.map((r: any) => ({ id: r.id, type: 'bonus', title: r.title || `Bonus - ${r.employee_name || ''}`, status: r.status, approvedAt: new Date(r.updated_at), approvedBy: r.approved_by, amount: num(r.amount), department: 'HR' })),
     ];
 

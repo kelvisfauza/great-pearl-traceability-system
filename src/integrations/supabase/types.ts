@@ -8140,6 +8140,7 @@ export type Database = {
           date_assessed: string
           final_price: number | null
           fm: number | null
+          form_number: string | null
           grn_printed: boolean | null
           grn_printed_at: string | null
           grn_printed_by: string | null
@@ -8183,6 +8184,7 @@ export type Database = {
           date_assessed?: string
           final_price?: number | null
           fm?: number | null
+          form_number?: string | null
           grn_printed?: boolean | null
           grn_printed_at?: string | null
           grn_printed_by?: string | null
@@ -8226,6 +8228,7 @@ export type Database = {
           date_assessed?: string
           final_price?: number | null
           fm?: number | null
+          form_number?: string | null
           grn_printed?: boolean | null
           grn_printed_at?: string | null
           grn_printed_by?: string | null
@@ -8296,6 +8299,39 @@ export type Database = {
           reevaluations_count?: number | null
           supplier_analysis_updated?: boolean | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      quality_form_numbers: {
+        Row: {
+          created_at: string
+          form_number: string
+          id: string
+          issued_by: string | null
+          issued_by_name: string | null
+          period_key: string
+          seq: number
+          used_by_assessment_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          form_number: string
+          id?: string
+          issued_by?: string | null
+          issued_by_name?: string | null
+          period_key: string
+          seq: number
+          used_by_assessment_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          form_number?: string
+          id?: string
+          issued_by?: string | null
+          issued_by_name?: string | null
+          period_key?: string
+          seq?: number
+          used_by_assessment_id?: string | null
         }
         Relationships: []
       }
@@ -13664,6 +13700,10 @@ export type Database = {
       is_super_admin: { Args: { _uid: string }; Returns: boolean }
       is_supervisor_or_above: { Args: never; Returns: boolean }
       is_user_role: { Args: never; Returns: boolean }
+      issue_quality_form_numbers: {
+        Args: { p_count?: number; p_issued_by_name?: string }
+        Returns: string[]
+      }
       list_overdraft_accounts_admin: {
         Args: { p_email: string }
         Returns: {

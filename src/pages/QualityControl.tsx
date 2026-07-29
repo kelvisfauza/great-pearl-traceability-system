@@ -169,7 +169,8 @@ const QualityControl = () => {
     manual_price: '',
     comments: '',
     use_manual_price: false,  // Toggle between calculator and manual price
-    physical_assessment_by: ''
+    physical_assessment_by: '',
+    form_number: ''
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -344,7 +345,8 @@ const QualityControl = () => {
       manual_price: '',
       comments: '',
       use_manual_price: false,
-      physical_assessment_by: ''
+      physical_assessment_by: '',
+      form_number: ''
     });
     setActiveTab("price-calculator");
   };
@@ -425,7 +427,8 @@ const QualityControl = () => {
       manual_price: '',
       comments: assessment.comments || '',
       use_manual_price: false,
-      physical_assessment_by: (assessment as any).physical_assessment_by || ''
+      physical_assessment_by: (assessment as any).physical_assessment_by || '',
+      form_number: (assessment as any).form_number || ''
     });
     
     setActiveTab("price-calculator");
@@ -535,7 +538,8 @@ const QualityControl = () => {
       manual_price: '',
       comments: `Modification requested due to: ${modificationRequest.reason}${modificationRequest.comments ? '. Additional notes: ' + modificationRequest.comments : ''}`,
       use_manual_price: false,
-      physical_assessment_by: ''
+      physical_assessment_by: '',
+      form_number: ''
     });
     
     setActiveTab("price-calculator");
@@ -689,6 +693,7 @@ const QualityControl = () => {
         date_assessed: new Date().toISOString().split('T')[0],
         assessed_by: employee?.name || employee?.email || 'Quality Controller',
         physical_assessment_by: assessmentForm.physical_assessment_by?.trim() || null,
+        form_number: assessmentForm.form_number?.trim() || null,
         system_assessment_by: employee?.name || employee?.email || 'Quality Controller',
       } as any;
 
@@ -778,7 +783,8 @@ const QualityControl = () => {
         manual_price: '',
         comments: '',
         use_manual_price: false,
-        physical_assessment_by: ''
+        physical_assessment_by: '',
+        form_number: ''
       });
       setActiveTab("assessments");
       
@@ -852,6 +858,7 @@ const QualityControl = () => {
         reject_outturn_price: false,
         reject_final: false,
         physical_assessment_by: assessmentForm.physical_assessment_by?.trim() || null,
+        form_number: assessmentForm.form_number?.trim() || null,
         system_assessment_by: employee?.name || employee?.email || 'Quality Controller',
       } as any;
 
@@ -883,7 +890,8 @@ const QualityControl = () => {
         fm: 0, actual_ott: 0, clean_d14: 0, outturn: 0, outturn_price: 0,
         final_price: 0, quality_note: '', reject_outturn_price: false,
         reject_final: false, manual_price: '', comments: '', use_manual_price: false,
-        physical_assessment_by: ''
+        physical_assessment_by: '',
+        form_number: ''
       });
       setActiveTab("pending");
       await refreshData();
@@ -1610,17 +1618,38 @@ const QualityControl = () => {
                 <CardContent className="space-y-6">
                   {/* Assessor identification — required before saving */}
                   <div className="border-2 border-primary/40 rounded-lg p-4 bg-primary/5">
-                    <Label htmlFor="physical_assessment_by" className="text-base font-semibold">
-                      Physical Assessment By <span className="text-destructive">*</span>
-                    </Label>
-                    <div className="mt-2">
-                      <EmployeeCombobox
-                        id="physical_assessment_by"
-                        value={assessmentForm.physical_assessment_by}
-                        onChange={(name) => setAssessmentForm({...assessmentForm, physical_assessment_by: name})}
-                        disabled={readOnly}
-                        placeholder="Select employee who did physical assessment..."
-                      />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="physical_assessment_by" className="text-base font-semibold">
+                          Physical Assessment By <span className="text-destructive">*</span>
+                        </Label>
+                        <div className="mt-2">
+                          <EmployeeCombobox
+                            id="physical_assessment_by"
+                            value={assessmentForm.physical_assessment_by}
+                            onChange={(name) => setAssessmentForm({...assessmentForm, physical_assessment_by: name})}
+                            disabled={readOnly}
+                            placeholder="Select employee who did physical assessment..."
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="form_number" className="text-base font-semibold">
+                          Physical Form Number <span className="text-destructive">*</span>
+                        </Label>
+                        <div className="mt-2">
+                          <Input
+                            id="form_number"
+                            value={assessmentForm.form_number}
+                            onChange={(e) => setAssessmentForm({ ...assessmentForm, form_number: e.target.value })}
+                            disabled={readOnly}
+                            placeholder="GAC QA 0001"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Number printed on the physical quality analysis form
+                        </p>
+                      </div>
                     </div>
                     <p className="text-xs text-muted-foreground mt-2">
                       System assessment by: <span className="font-medium text-foreground">{employee?.name || employee?.email || 'Quality Controller'}</span>

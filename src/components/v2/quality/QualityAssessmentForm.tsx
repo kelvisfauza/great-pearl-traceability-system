@@ -33,6 +33,7 @@ interface AssessmentForm {
   quantity_kg: number;
   comments: string;
   physical_assessment_by: string;
+  form_number: string;
 }
 
 const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
@@ -55,7 +56,8 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
       husks_percentage: 0,
       fm_percentage: 0,
       outturn_percentage: 62,
-      physical_assessment_by: ''
+      physical_assessment_by: '',
+      form_number: ''
     }
   });
 
@@ -74,6 +76,7 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
         batch_number: lot.batch_number,
         assessed_by: employee?.email || '',
         physical_assessment_by: data.physical_assessment_by,
+        form_number: data.form_number?.trim() || null,
         system_assessment_by: (employee as any)?.name || employee?.email || '',
         date_assessed: new Date().toISOString().split('T')[0],
         moisture: data.moisture_content,
@@ -164,6 +167,7 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
           batch_number: lot.batch_number,
           assessed_by: employee?.email || '',
           physical_assessment_by: data.physical_assessment_by,
+          form_number: data.form_number?.trim() || null,
           system_assessment_by: employee?.name || employee?.email || '',
           date_assessed: new Date().toISOString().split('T')[0],
           moisture: data.moisture_content,
@@ -213,6 +217,14 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
       });
       return;
     }
+    if (!data.form_number?.trim()) {
+      toast({
+        title: "Form Number Required",
+        description: "Enter the printed form number (e.g. GAC QA 0001) used for this physical analysis.",
+        variant: "destructive"
+      });
+      return;
+    }
     submitForPricing.mutate(data);
   };
 
@@ -221,6 +233,14 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
       toast({
         title: "Physical Assessor Required",
         description: "Please enter the name of the person who did the physical assessment.",
+        variant: "destructive"
+      });
+      return;
+    }
+    if (!data.form_number?.trim()) {
+      toast({
+        title: "Form Number Required",
+        description: "Enter the printed form number (e.g. GAC QA 0001) used for this physical analysis.",
         variant: "destructive"
       });
       return;
@@ -313,6 +333,18 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
           />
           <p className="text-xs text-muted-foreground mt-1">
             Auto-filled with your account (you are entering the results)
+          </p>
+        </div>
+        <div>
+          <Label htmlFor="form_number">Physical Form Number *</Label>
+          <Input
+            id="form_number"
+            type="text"
+            placeholder="GAC QA 0001"
+            {...register('form_number', { required: true })}
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Number printed on the physical quality analysis form
           </p>
         </div>
       </div>

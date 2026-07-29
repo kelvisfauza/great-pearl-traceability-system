@@ -28,7 +28,7 @@ const ServiceProviderPayments = () => {
   const [markingId, setMarkingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [receiptingId, setReceiptingId] = useState<string | null>(null);
-  const [period, setPeriod] = useState<'all' | 'today' | 'week' | 'month' | 'year' | 'custom'>('month');
+  const [period, setPeriod] = useState<'recent' | 'all' | 'today' | 'week' | 'month' | 'year' | 'custom'>('recent');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'failed'>('all');
@@ -342,6 +342,9 @@ const ServiceProviderPayments = () => {
 
   const getPeriodRange = (): { from: Date | null; to: Date | null; label: string } => {
     const now = new Date();
+    if (period === 'recent') {
+      return { from: null, to: null, label: 'Most Recent 3' };
+    }
     if (period === 'today') {
       const from = new Date(now); from.setHours(0, 0, 0, 0);
       return { from, to: null, label: 'Today' };
@@ -376,7 +379,12 @@ const ServiceProviderPayments = () => {
     return true;
   };
 
-  const periodFiltered = payments.filter((d: any) => inRange(d.created_at));
+  const sortedPayments = [...payments].sort(
+    (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  );
+  const periodFiltered = period === 'recent'
+    ? sortedPayments.slice(0, 3)
+    : payments.filter((d: any) => inRange(d.created_at));
 
   const isPaid = (d: any) => d.yo_status === 'success' || d.yo_status === 'paid';
   const isFailed = (d: any) => !isPaid(d) && d.yo_status !== 'pending' && d.yo_status !== 'pending_approval';
@@ -481,6 +489,7 @@ const ServiceProviderPayments = () => {
           <Select value={period} onValueChange={(v: any) => setPeriod(v)}>
             <SelectTrigger className="w-[140px] h-9 text-sm"><SelectValue /></SelectTrigger>
             <SelectContent>
+              <SelectItem value="recent">Most Recent 3</SelectItem>
               <SelectItem value="today">Today</SelectItem>
               <SelectItem value="week">This Week</SelectItem>
               <SelectItem value="month">This Month</SelectItem>
