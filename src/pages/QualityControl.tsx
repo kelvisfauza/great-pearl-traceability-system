@@ -1618,17 +1618,38 @@ const QualityControl = () => {
                 <CardContent className="space-y-6">
                   {/* Assessor identification — required before saving */}
                   <div className="border-2 border-primary/40 rounded-lg p-4 bg-primary/5">
-                    <Label htmlFor="physical_assessment_by" className="text-base font-semibold">
-                      Physical Assessment By <span className="text-destructive">*</span>
-                    </Label>
-                    <div className="mt-2">
-                      <EmployeeCombobox
-                        id="physical_assessment_by"
-                        value={assessmentForm.physical_assessment_by}
-                        onChange={(name) => setAssessmentForm({...assessmentForm, physical_assessment_by: name})}
-                        disabled={readOnly}
-                        placeholder="Select employee who did physical assessment..."
-                      />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="physical_assessment_by" className="text-base font-semibold">
+                          Physical Assessment By <span className="text-destructive">*</span>
+                        </Label>
+                        <div className="mt-2">
+                          <EmployeeCombobox
+                            id="physical_assessment_by"
+                            value={assessmentForm.physical_assessment_by}
+                            onChange={(name) => setAssessmentForm({...assessmentForm, physical_assessment_by: name})}
+                            disabled={readOnly}
+                            placeholder="Select employee who did physical assessment..."
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="form_number" className="text-base font-semibold">
+                          Physical Form Number <span className="text-destructive">*</span>
+                        </Label>
+                        <div className="mt-2">
+                          <Input
+                            id="form_number"
+                            value={assessmentForm.form_number}
+                            onChange={(e) => setAssessmentForm({ ...assessmentForm, form_number: e.target.value })}
+                            disabled={readOnly}
+                            placeholder="GAC QA 0001"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Number printed on the physical quality analysis form
+                        </p>
+                      </div>
                     </div>
                     <p className="text-xs text-muted-foreground mt-2">
                       System assessment by: <span className="font-medium text-foreground">{employee?.name || employee?.email || 'Quality Controller'}</span>
