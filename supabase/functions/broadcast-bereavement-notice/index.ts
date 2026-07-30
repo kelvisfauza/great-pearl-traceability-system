@@ -17,7 +17,7 @@ function token(): string {
   return Array.from(b).map(x => x.toString(16).padStart(2, '0')).join('')
 }
 
-const SUBJECT = "Bereavement Notice — Burial on Saturday, 1st August 2026 in Bwera"
+const SUBJECT = "Bereavement Notice — Burial tomorrow, Friday 31st July 2026 at 2:00 PM in Bwera"
 
 const HTML = (name: string) => `<!doctype html>
 <html><body style="margin:0;padding:0;background:#f4f4f5;font-family:'Helvetica Neue',Arial,sans-serif;color:#1f2937;">
@@ -42,7 +42,7 @@ const HTML = (name: string) => `<!doctype html>
             <tr><td style="background:#f9fafb;border-left:4px solid #4b5563;padding:18px 20px;border-radius:6px;">
               <div style="font-weight:600;color:#1f2937;font-size:15px;margin-bottom:10px;">Burial Arrangements</div>
               <div style="font-size:14px;color:#374151;line-height:1.9;">
-                &bull; <strong>Day:</strong> Saturday, 1st August 2026<br/>
+                &bull; <strong>Day:</strong> Tomorrow, Friday 31st July 2026 at 2:00 PM<br/>
                 &bull; <strong>Place:</strong> Bwera<br/>
                 &bull; <strong>Transport:</strong> Staff means of transport will be provided by the company<br/>
                 &bull; <strong>Departure:</strong> From Head Office, Kasese — please be at the office in good time
@@ -99,7 +99,7 @@ BEREAVEMENT NOTICE
 It is with deep sorrow that we inform you of the passing on of the grandmother (mother to the father) of our colleague Timothy. On behalf of management and the entire Great Agro Coffee family, we extend our heartfelt condolences to Timothy and his family.
 
 BURIAL ARRANGEMENTS
-- Day: Saturday, 1st August 2026
+- Day: Tomorrow, Friday 31st July 2026 at 2:00 PM
 - Place: Bwera
 - Transport: Staff means of transport will be provided by the company
 - Departure: From Head Office, Kasese - please be at the office in good time
@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
 
   for (const r of unique) {
     try {
-      const idem = `bereavement-timothy-2026-08-01-v1-${r.email.toLowerCase()}`
+      const idem = `bereavement-timothy-2026-07-31-v2-${r.email.toLowerCase()}`
       await sendLovableEmail(
         { to: r.email, from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`, sender_domain: SENDER_DOMAIN,
           subject: SUBJECT, html: HTML(r.name), text: TEXT(r.name),
