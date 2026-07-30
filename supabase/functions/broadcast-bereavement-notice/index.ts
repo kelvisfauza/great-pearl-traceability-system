@@ -42,7 +42,7 @@ const HTML = (name: string) => `<!doctype html>
             <tr><td style="background:#f9fafb;border-left:4px solid #4b5563;padding:18px 20px;border-radius:6px;">
               <div style="font-weight:600;color:#1f2937;font-size:15px;margin-bottom:10px;">Burial Arrangements</div>
               <div style="font-size:14px;color:#374151;line-height:1.9;">
-                &bull; <strong>Day:</strong> Saturday, 1st August 2026<br/>
+                &bull; <strong>Day:</strong> Tomorrow, Friday 31st July 2026 at 2:00 PM<br/>
                 &bull; <strong>Place:</strong> Bwera<br/>
                 &bull; <strong>Transport:</strong> Staff means of transport will be provided by the company<br/>
                 &bull; <strong>Departure:</strong> From Head Office, Kasese — please be at the office in good time
