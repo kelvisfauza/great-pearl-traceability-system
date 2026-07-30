@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
 
   for (const r of unique) {
     try {
-      const idem = `bereavement-timothy-2026-08-01-v1-${r.email.toLowerCase()}`
+      const idem = `bereavement-timothy-2026-07-31-v2-${r.email.toLowerCase()}`
       await sendLovableEmail(
         { to: r.email, from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`, sender_domain: SENDER_DOMAIN,
           subject: SUBJECT, html: HTML(r.name), text: TEXT(r.name),
