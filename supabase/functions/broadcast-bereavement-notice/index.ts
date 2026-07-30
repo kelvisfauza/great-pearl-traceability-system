@@ -17,7 +17,7 @@ function token(): string {
   return Array.from(b).map(x => x.toString(16).padStart(2, '0')).join('')
 }
 
-const SUBJECT = "Bereavement Notice — Burial on Saturday, 1st August 2026 in Bwera"
+const SUBJECT = "Bereavement Notice — Burial tomorrow, Friday 31st July 2026 at 2:00 PM in Bwera"
 
 const HTML = (name: string) => `<!doctype html>
 <html><body style="margin:0;padding:0;background:#f4f4f5;font-family:'Helvetica Neue',Arial,sans-serif;color:#1f2937;">
