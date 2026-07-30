@@ -99,7 +99,7 @@ BEREAVEMENT NOTICE
 It is with deep sorrow that we inform you of the passing on of the grandmother (mother to the father) of our colleague Timothy. On behalf of management and the entire Great Agro Coffee family, we extend our heartfelt condolences to Timothy and his family.
 
 BURIAL ARRANGEMENTS
-- Day: Saturday, 1st August 2026
+- Day: Tomorrow, Friday 31st July 2026 at 2:00 PM
 - Place: Bwera
 - Transport: Staff means of transport will be provided by the company
 - Departure: From Head Office, Kasese - please be at the office in good time
