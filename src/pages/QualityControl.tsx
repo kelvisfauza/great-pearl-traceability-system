@@ -41,6 +41,7 @@ import { usePrices } from "@/contexts/PriceContext";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQualityRole } from '@/hooks/useQualityRole';
+import QualityApprovalsTab from '@/components/v2/quality/tabs/QualityApprovalsTab';
 import { useRoleBasedAccess } from "@/hooks/useRoleBasedAccess";
 import { useSearchHighlight } from "@/hooks/useSearchHighlight";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
