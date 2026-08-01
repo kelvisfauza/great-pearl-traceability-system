@@ -645,7 +645,9 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
   }
   const createdAt = new Date(data.createdAt);
   const issueDate = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" });
-  const deliveryDate = createdAt.toLocaleDateString("en-GB");
+  const deliveryDate = formatDate(data.deliveryDate) || createdAt.toLocaleDateString("en-GB");
+  const assessmentDate = formatDate(data.assessmentDate) || createdAt.toLocaleDateString("en-GB");
+  const printedOn = formatDateTime(new Date());
   const totalAmount = data.totalAmount ?? data.totalKgs * data.unitPrice;
   const grnReference = data.grnNumber.startsWith("GAC-") ? data.grnNumber : `GAC-${data.grnNumber}`;
   const odNo = data.grnNumber.replace(/\D/g, "").slice(-4) || "0001";
@@ -714,9 +716,14 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
 
       <table class="gac-grn-detail-grid">
         <tr>
-          <td style="width:33%;">${field("Date:&nbsp;", deliveryDate)}</td>
-          <td style="width:34%;">${field("Supplier&rsquo;s Name:&nbsp;", data.supplierName)}</td>
-          <td style="width:33%;"></td>
+          <td style="width:33%;">${field("Delivery Date:&nbsp;", deliveryDate)}</td>
+          <td style="width:34%;">${field("Assessment Date:&nbsp;", assessmentDate)}</td>
+          <td style="width:33%;">${field("Printed On:&nbsp;", printedOn)}</td>
+        </tr>
+        <tr>
+          <td>${field("Supplier&rsquo;s Name:&nbsp;", data.supplierName)}</td>
+          <td></td>
+          <td></td>
         </tr>
         <tr>
           <td>${field("Supplier&rsquo;s Address:&nbsp;", data.supplierAddress)}</td>
