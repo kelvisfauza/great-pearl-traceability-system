@@ -41,6 +41,9 @@ export interface GRNDocumentData {
   supplierEmail?: string;
   inputBy?: string;
   physicalAssessmentBy?: string;
+  deliveryDate?: string;
+  assessmentDate?: string;
+  storeManagerName?: string;
   discretionBy?: string;
   inventoryBatchId?: string;
   batchNumber?: string;
@@ -95,6 +98,39 @@ function field(label: string, value: string | number | null | undefined, width =
       <span class="gac-grn-field-label">${label}</span>
       <span class="gac-grn-field-value">${displayValue(value)}</span>
     </span>
+  `;
+}
+
+function formatDate(value?: string | null): string | undefined {
+  if (!value) return undefined;
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return undefined;
+  return d.toLocaleDateString("en-GB");
+}
+
+function formatDateTime(value: Date): string {
+  return `${value.toLocaleDateString("en-GB")} ${value.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
+}
+
+function signatoryTable(data: GRNDocumentData): string {
+  const cells: Array<[string, string | undefined]> = [
+    ["Store Manager (Coffee Input By)", data.storeManagerName || data.inputBy],
+    ["Quality — Physical Analysis", data.physicalAssessmentBy],
+    ["Quality — System Analysis", data.assessedBy || data.qualityApprovedBy],
+    ["Manager (Authorised By)", data.managerName || data.printedBy],
+  ];
+  return `
+    <table class="gac-grn-sign-table">
+      <tr>
+        ${cells.map(([role, name]) => `
+          <td class="gac-grn-sign-cell" style="width:25%;vertical-align:top;">
+            <strong>${escapeHtml(role)}</strong><br/>
+            <span class="gac-grn-sign-value" style="font-family:'Courier New',monospace;font-weight:700;">${displayValue(name, "")}</span>
+            <div style="border-top:1px solid #1a1a1a;margin-top:20px;padding-top:2px;font-size:9px;">Signature &amp; Date</div>
+          </td>
+        `).join("")}
+      </tr>
+    </table>
   `;
 }
 
@@ -609,7 +645,9 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
   }
   const createdAt = new Date(data.createdAt);
   const issueDate = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" });
-  const deliveryDate = createdAt.toLocaleDateString("en-GB");
+  const deliveryDate = formatDate(data.deliveryDate) || createdAt.toLocaleDateString("en-GB");
+  const assessmentDate = formatDate(data.assessmentDate) || createdAt.toLocaleDateString("en-GB");
+  const printedOn = formatDateTime(new Date());
   const totalAmount = data.totalAmount ?? data.totalKgs * data.unitPrice;
   const grnReference = data.grnNumber.startsWith("GAC-") ? data.grnNumber : `GAC-${data.grnNumber}`;
   const odNo = data.grnNumber.replace(/\D/g, "").slice(-4) || "0001";
@@ -678,9 +716,14 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
 
       <table class="gac-grn-detail-grid">
         <tr>
-          <td style="width:33%;">${field("Date:&nbsp;", deliveryDate)}</td>
-          <td style="width:34%;">${field("Supplier&rsquo;s Name:&nbsp;", data.supplierName)}</td>
-          <td style="width:33%;"></td>
+          <td style="width:33%;">${field("Delivery Date:&nbsp;", deliveryDate)}</td>
+          <td style="width:34%;">${field("Assessment Date:&nbsp;", assessmentDate)}</td>
+          <td style="width:33%;">${field("Printed On:&nbsp;", printedOn)}</td>
+        </tr>
+        <tr>
+          <td>${field("Supplier&rsquo;s Name:&nbsp;", data.supplierName)}</td>
+          <td></td>
+          <td></td>
         </tr>
         <tr>
           <td>${field("Supplier&rsquo;s Address:&nbsp;", data.supplierAddress)}</td>
@@ -790,22 +833,7 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
         <span class="gac-grn-sign-line">&nbsp;</span>
       </div>
 
-      <table class="gac-grn-sign-table">
-        <tr>
-          <td class="gac-grn-sign-cell">
-            <strong>Signed QM/QC:</strong><br/>
-            <span class="gac-grn-sign-value">${displayValue(data.qualityApprovedBy || data.assessedBy, "")}</span>
-          </td>
-          <td class="gac-grn-sign-cell">
-            <strong>Signed PM/UM:</strong><br/>
-            <span class="gac-grn-sign-value">${displayValue(data.managerName || data.printedBy, "")}</span>
-          </td>
-          <td class="gac-grn-sign-cell">
-            <strong>Signed AM:</strong><br/>
-            <span class="gac-grn-sign-value">&nbsp;</span>
-          </td>
-        </tr>
-      </table>
+      ${signatoryTable(data)}
 
       <table class="gac-grn-footer-table">
         <tr>
@@ -816,6 +844,7 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
             Tel: +256 393 001 626 / +256 393 101 103 &nbsp;|&nbsp; Email: info@greatpearlcoffee.com &nbsp;|&nbsp; Customer Support: support@greatpearlcoffee.com &nbsp;|&nbsp; Web: www.greatagrocoffee.com
             ${data.verificationCode ? `<br/><span class="gac-grn-verify-code">Verify code: ${escapeHtml(data.verificationCode)}</span>` : ""}
             ${data.printedBy ? `<br/><span><strong>Printed by:</strong> ${escapeHtml(data.printedBy)}</span>` : ""}
+            <br/><span><strong>Printed on:</strong> ${escapeHtml(printedOn)}</span>
           </td>
           ${data.verificationCode ? `
             <td class="gac-grn-footer-right">
@@ -868,7 +897,9 @@ export function getPaymentOrderMarkup(data: GRNDocumentData): string {
   const createdAt = new Date(data.createdAt);
   const issueDate = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
   const todayFormatted = new Date().toLocaleDateString("en-GB");
-  const deliveryDate = createdAt.toLocaleDateString("en-GB");
+  const deliveryDate = formatDate(data.deliveryDate) || createdAt.toLocaleDateString("en-GB");
+  const assessmentDate = formatDate(data.assessmentDate) || createdAt.toLocaleDateString("en-GB");
+  const printedOn = formatDateTime(new Date());
   const totalAmount = data.totalAmount ?? data.totalKgs * data.unitPrice;
   const grnReference = data.grnNumber.startsWith("GAC-") ? data.grnNumber : `GAC-${data.grnNumber}`;
   const poNumber = `PO-${data.grnNumber.replace(/[^A-Z0-9]/gi, "").slice(-8) || "00000001"}`;
@@ -894,6 +925,7 @@ export function getPaymentOrderMarkup(data: GRNDocumentData): string {
             <div><strong>PO No:</strong> ${escapeHtml(poNumber)}</div>
             <div><strong>GRN Ref:</strong> ${escapeHtml(grnReference)}</div>
             <div><strong>Issue Date:</strong> ${escapeHtml(todayFormatted)}</div>
+            <div><strong>Printed On:</strong> ${escapeHtml(printedOn)}</div>
           </td>
         </tr>
       </table>
@@ -910,6 +942,14 @@ export function getPaymentOrderMarkup(data: GRNDocumentData): string {
 
       <div class="gac-grn-po-title">PAYMENT ORDER</div>
       <div class="gac-grn-po-subtitle">Authorisation to Finance Department to release supplier payment</div>
+
+      <table class="gac-grn-detail-grid">
+        <tr>
+          <td style="width:33%;">${field("Delivery Date:&nbsp;", deliveryDate)}</td>
+          <td style="width:34%;">${field("Assessment Date:&nbsp;", assessmentDate)}</td>
+          <td style="width:33%;">${field("Printed On:&nbsp;", printedOn)}</td>
+        </tr>
+      </table>
 
       <div class="gac-grn-po-instruction">
         <strong>To: Finance Department,</strong><br/>
@@ -1054,17 +1094,33 @@ export function getPaymentOrderMarkup(data: GRNDocumentData): string {
         </tr>
         <tr>
           <td>
-            <div class="role">Prepared By (Quality / Store)</div>
-            <div style="font-family:'Courier New',monospace;font-weight:700;margin-top:6px;">${displayValue(data.qualityApprovedBy || data.assessedBy, "")}</div>
+            <div class="role">Store Manager (Coffee Input By)</div>
+            <div style="font-family:'Courier New',monospace;font-weight:700;margin-top:6px;">${displayValue(data.storeManagerName || data.inputBy, "")}</div>
             <div class="sig-line">Signature &amp; Date</div>
           </td>
           <td>
-            <div class="role">Authorised By (Manager)</div>
+            <div class="role">Quality — Physical Analysis</div>
+            <div style="font-family:'Courier New',monospace;font-weight:700;margin-top:6px;">${displayValue(data.physicalAssessmentBy, "")}</div>
+            <div class="sig-line">Signature &amp; Date</div>
+          </td>
+          <td>
+            <div class="role">Quality — System Analysis</div>
+            <div style="font-family:'Courier New',monospace;font-weight:700;margin-top:6px;">${displayValue(data.assessedBy || data.qualityApprovedBy, "")}</div>
+            <div class="sig-line">Signature &amp; Date</div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div class="role">Manager (Authorised By)</div>
             <div style="font-family:'Courier New',monospace;font-weight:700;margin-top:6px;">${displayValue(data.managerName || data.printedBy, "")}</div>
             <div class="sig-line">Signature &amp; Date</div>
           </td>
           <td>
             <div class="role">Paid By (Finance)</div>
+            <div class="sig-line" style="margin-top:34px;">Name, Signature &amp; Date</div>
+          </td>
+          <td>
+            <div class="role">Received By (Supplier)</div>
             <div class="sig-line" style="margin-top:34px;">Name, Signature &amp; Date</div>
           </td>
         </tr>
@@ -1084,6 +1140,7 @@ export function getPaymentOrderMarkup(data: GRNDocumentData): string {
             Tel: +256 393 001 626 / +256 393 101 103 &nbsp;|&nbsp; Email: info@greatpearlcoffee.com &nbsp;|&nbsp; Customer Support: support@greatpearlcoffee.com &nbsp;|&nbsp; Web: www.greatagrocoffee.com
             ${data.verificationCode ? `<br/><span class="gac-grn-verify-code">Verify code: ${escapeHtml(data.verificationCode)}</span>` : ""}
             ${data.printedBy ? `<br/><span><strong>Printed by:</strong> ${escapeHtml(data.printedBy)}</span>` : ""}
+            <br/><span><strong>Printed on:</strong> ${escapeHtml(printedOn)}</span>
           </td>
           ${data.verificationCode ? `
             <td class="gac-grn-footer-right">

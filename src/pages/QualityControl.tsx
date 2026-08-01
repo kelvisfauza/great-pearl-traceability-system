@@ -189,6 +189,10 @@ const QualityControl = () => {
       unitPrice: number;
       assessedBy: string;
       createdAt: string;
+      physicalAssessmentBy?: string;
+      inputBy?: string;
+      deliveryDate?: string;
+      assessmentDate?: string;
       moisture?: number;
       group1_defects?: number;
       group2_defects?: number;
@@ -975,6 +979,10 @@ const QualityControl = () => {
           totalKgs: storeRecord.kilograms || 0,
           unitPrice: assessment.final_price || assessment.suggested_price || 0,
           assessedBy: assessment.assessed_by || 'Quality Controller',
+          physicalAssessmentBy: (assessment as any).physical_assessment_by || undefined,
+          inputBy: (storeRecord as any).created_by || undefined,
+          deliveryDate: (storeRecord as any).date || (storeRecord as any).created_at || undefined,
+          assessmentDate: assessment.date_assessed || (assessment as any).created_at || undefined,
           createdAt: assessment.date_assessed || new Date().toISOString(),
           moisture: assessment.moisture,
           group1_defects: assessment.group1_defects,
