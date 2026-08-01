@@ -5,6 +5,7 @@ const SITE_NAME = 'Great Agro Coffee'
 const SENDER_DOMAIN = 'notify.greatpearlcoffeesystem.site'
 const FROM_DOMAIN = 'notify.greatpearlcoffeesystem.site'
 const OPERATIONS_EMAIL = 'operations@greatpearlcoffee.com'
+const ADMIN_EMAIL = 'Fauzakusa@greatpearlcoffee.com'
 const LOGO_URL = 'https://great-pearl-traceability-system.lovable.app/lovable-uploads/great-agro-coffee-logo.png'
 
 const corsHeaders = {
@@ -138,7 +139,7 @@ Deno.serve(async (req) => {
     const isHead = blob.includes('quality manager') || blob.includes('head of quality')
 
     try {
-      const idem = `quality-role-change-2026-08-01-v2-${key}`
+      const idem = `quality-role-change-2026-08-01-v3-${key}`
       await sendLovableEmail(
         {
           to: email,
@@ -151,7 +152,7 @@ Deno.serve(async (req) => {
           label: 'quality-role-change',
           idempotency_key: idem,
           unsubscribe_token: token(),
-          cc: [OPERATIONS_EMAIL],
+          cc: [OPERATIONS_EMAIL, ADMIN_EMAIL],
         },
         { apiKey: lovableApiKey, idempotencyKey: idem }
       )
