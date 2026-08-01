@@ -868,6 +868,39 @@ export function getGRNPreviewHTML(data: GRNDocumentData, options?: { includeFina
   return `${getGRNDocumentStyles()}<div class="gac-grn-preview-shell">${getGRNDocumentMarkup(data, "supplier")}${includeFinance ? getPaymentOrderMarkup(data) : ""}</div>`;
 }
 
+/**
+ * Auto-shrinks each GRN / Payment Order block so that it always fits on a single
+ * A4 page (297mm tall minus the 10mm top/bottom @page margins).
+ */
+export function getGRNFitScript(): string {
+  return `
+    function gacFitGrnPages() {
+      var MM = 96 / 25.4;                 // px per mm at CSS 96dpi
+      var LIMIT = 275 * MM;               // usable A4 height (297mm - 2*10mm margin - safety)
+      var pages = document.querySelectorAll('.gac-grn-page');
+      for (var i = 0; i < pages.length; i++) {
+        var el = pages[i];
+        el.style.zoom = '';
+        // Measure with the exact geometry used when printing (A4 content box,
+        // no preview padding) so the shrink factor is accurate on paper.
+        el.style.width = (186 * MM) + 'px';
+        el.style.maxWidth = 'none';
+        el.style.padding = '0';
+        var scale = 1;
+        for (var pass = 0; pass < 5; pass++) {
+          var h = el.getBoundingClientRect().height;
+          if (h <= LIMIT) break;
+          scale = Math.max(0.5, scale * (LIMIT / h) * 0.985);
+          el.style.zoom = String(scale);
+        }
+        el.style.width = '';
+        el.style.maxWidth = '';
+        el.style.padding = '';
+      }
+    }
+  `;
+}
+
 export function getGRNPrintDocumentHTML(data: GRNDocumentData[], title: string, options?: { includeFinanceCopy?: boolean }): string {
   const includeFinance = options?.includeFinanceCopy !== false;
   return `
@@ -884,8 +917,12 @@ export function getGRNPrintDocumentHTML(data: GRNDocumentData[], title: string, 
           ${data.map((item) => `${getGRNDocumentMarkup(item, "supplier")}${includeFinance ? getPaymentOrderMarkup(item) : ""}`).join("")}
         </div>
         <script>
+          ${getGRNFitScript()}
           window.onload = function () {
-            setTimeout(function () { window.print(); }, 400);
+            setTimeout(function () {
+              try { gacFitGrnPages(); } catch (e) {}
+              setTimeout(function () { window.print(); }, 150);
+            }, 400);
           };
         <\/script>
       </body>
