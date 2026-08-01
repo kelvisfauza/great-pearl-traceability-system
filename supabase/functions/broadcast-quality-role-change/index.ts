@@ -5,6 +5,7 @@ const SITE_NAME = 'Great Agro Coffee'
 const SENDER_DOMAIN = 'notify.greatpearlcoffeesystem.site'
 const FROM_DOMAIN = 'notify.greatpearlcoffeesystem.site'
 const OPERATIONS_EMAIL = 'operations@greatpearlcoffee.com'
+const ADMIN_EMAIL = 'Fauzakusa@greatpearlcoffee.com'
 const LOGO_URL = 'https://great-pearl-traceability-system.lovable.app/lovable-uploads/great-agro-coffee-logo.png'
 
 const corsHeaders = {
