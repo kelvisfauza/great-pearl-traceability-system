@@ -449,6 +449,8 @@ const Store = () => {
       assessedBy: qualityAssessment?.assessed_by || "N/A",
       physicalAssessmentBy: (qualityAssessment as any)?.physical_assessment_by || undefined,
       inputBy: record.created_by || record.createdBy || record.recordedBy || undefined,
+      deliveryDate: record.date,
+      assessmentDate: (qualityAssessment as any)?.date_assessed || (qualityAssessment as any)?.created_at || undefined,
       discretionBy: (qualityAssessment as any)?.admin_discretion_by || undefined,
       isDiscretionBuy: (qualityAssessment as any)?.admin_discretion_buy || undefined,
       createdAt: record.date,
