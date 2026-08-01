@@ -41,6 +41,9 @@ export interface GRNDocumentData {
   supplierEmail?: string;
   inputBy?: string;
   physicalAssessmentBy?: string;
+  deliveryDate?: string;
+  assessmentDate?: string;
+  storeManagerName?: string;
   discretionBy?: string;
   inventoryBatchId?: string;
   batchNumber?: string;
@@ -95,6 +98,39 @@ function field(label: string, value: string | number | null | undefined, width =
       <span class="gac-grn-field-label">${label}</span>
       <span class="gac-grn-field-value">${displayValue(value)}</span>
     </span>
+  `;
+}
+
+function formatDate(value?: string | null): string | undefined {
+  if (!value) return undefined;
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return undefined;
+  return d.toLocaleDateString("en-GB");
+}
+
+function formatDateTime(value: Date): string {
+  return `${value.toLocaleDateString("en-GB")} ${value.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
+}
+
+function signatoryTable(data: GRNDocumentData): string {
+  const cells: Array<[string, string | undefined]> = [
+    ["Store Manager (Coffee Input By)", data.storeManagerName || data.inputBy],
+    ["Quality — Physical Analysis", data.physicalAssessmentBy],
+    ["Quality — System Analysis", data.assessedBy || data.qualityApprovedBy],
+    ["Manager (Authorised By)", data.managerName || data.printedBy],
+  ];
+  return `
+    <table class="gac-grn-sign-table">
+      <tr>
+        ${cells.map(([role, name]) => `
+          <td class="gac-grn-sign-cell" style="width:25%;vertical-align:top;">
+            <strong>${escapeHtml(role)}</strong><br/>
+            <span class="gac-grn-sign-value" style="font-family:'Courier New',monospace;font-weight:700;">${displayValue(name, "")}</span>
+            <div style="border-top:1px solid #1a1a1a;margin-top:20px;padding-top:2px;font-size:9px;">Signature &amp; Date</div>
+          </td>
+        `).join("")}
+      </tr>
+    </table>
   `;
 }
 
