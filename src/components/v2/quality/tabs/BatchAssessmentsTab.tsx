@@ -12,6 +12,7 @@ import { Loader2, FlaskConical, CheckCircle, XCircle, Clock, Printer } from "luc
 import { Ban } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQualityRole } from "@/hooks/useQualityRole";
 import { useToast } from "@/hooks/use-toast";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -20,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 const BatchAssessmentsTab = () => {
   const navigate = useNavigate();
   const { employee, isSuperAdmin } = useAuth();
+  const { canPrintGRN } = useQualityRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -307,7 +309,7 @@ const BatchAssessmentsTab = () => {
       </div>
 
       {/* Bulk Actions */}
-      {selectedIds.length > 0 && (
+      {selectedIds.length > 0 && canPrintGRN && (
         <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
           <span className="text-sm font-medium">{selectedIds.length} selected</span>
           <Button size="sm" onClick={handleBulkPrint} disabled={bulkPrinting}>
@@ -431,13 +433,13 @@ const BatchAssessmentsTab = () => {
                               Assess
                             </Button>
                           )}
-                          {hasAssessment && !grnPrinted && printable && !isPermRejected && (
+                          {hasAssessment && !grnPrinted && printable && !isPermRejected && canPrintGRN && (
                             <Button size="sm" variant="outline" onClick={() => openGRNForLot(lot, assessment)}>
                               <Printer className="mr-1 h-3.5 w-3.5" />
                               Print GRN
                             </Button>
                           )}
-                          {hasAssessment && grnPrinted && isAdmin && !isPermRejected && (
+                          {hasAssessment && grnPrinted && isAdmin && canPrintGRN && !isPermRejected && (
                             <Button size="sm" variant="ghost" onClick={() => openGRNForLot(lot, assessment)}>
                               <Printer className="mr-1 h-3.5 w-3.5" />
                               Reprint
