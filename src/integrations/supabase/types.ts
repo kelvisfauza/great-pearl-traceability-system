@@ -8157,6 +8157,11 @@ export type Database = {
           permanently_rejected_notes: string | null
           physical_assessment_by: string | null
           pods: number | null
+          qm_action: string | null
+          qm_notes: string | null
+          qm_original_price: number | null
+          qm_reviewed_at: string | null
+          qm_reviewed_by: string | null
           quality_note: string | null
           reject_final: boolean | null
           reject_outturn_price: boolean | null
@@ -8201,6 +8206,11 @@ export type Database = {
           permanently_rejected_notes?: string | null
           physical_assessment_by?: string | null
           pods?: number | null
+          qm_action?: string | null
+          qm_notes?: string | null
+          qm_original_price?: number | null
+          qm_reviewed_at?: string | null
+          qm_reviewed_by?: string | null
           quality_note?: string | null
           reject_final?: boolean | null
           reject_outturn_price?: boolean | null
@@ -8245,6 +8255,11 @@ export type Database = {
           permanently_rejected_notes?: string | null
           physical_assessment_by?: string | null
           pods?: number | null
+          qm_action?: string | null
+          qm_notes?: string | null
+          qm_original_price?: number | null
+          qm_reviewed_at?: string | null
+          qm_reviewed_by?: string | null
           quality_note?: string | null
           reject_final?: boolean | null
           reject_outturn_price?: boolean | null
@@ -8332,6 +8347,48 @@ export type Database = {
           period_key?: string
           seq?: number
           used_by_assessment_id?: string | null
+        }
+        Relationships: []
+      }
+      quality_manager_approvals: {
+        Row: {
+          action: string
+          approved_price: number | null
+          assessment_id: string | null
+          batch_number: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          original_price: number | null
+          reviewer_email: string | null
+          reviewer_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          action: string
+          approved_price?: number | null
+          assessment_id?: string | null
+          batch_number?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          original_price?: number | null
+          reviewer_email?: string | null
+          reviewer_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          action?: string
+          approved_price?: number | null
+          assessment_id?: string | null
+          batch_number?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          original_price?: number | null
+          reviewer_email?: string | null
+          reviewer_name?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
