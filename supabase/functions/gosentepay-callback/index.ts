@@ -216,6 +216,19 @@ serve(async (req) => {
     const isSuccess = status === "successful";
     console.log(`Transaction ${ref}: status=${status}, isSuccess=${isSuccess}, type=${transaction.transaction_type}`);
 
+    // Never finalize on an inconclusive callback — leave it pending for the poller.
+    if (status !== "successful" && status !== "failed") {
+      console.log(`Transaction ${ref} callback inconclusive (${status}) — leaving pending, no credit`);
+      await supabaseClient
+        .from("mobile_money_transactions")
+        .update({ provider_response: rawBody })
+        .eq("transaction_ref", ref);
+      return new Response(
+        JSON.stringify({ received: true, pending: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Update the transaction record
     const { error: updateError } = await supabaseClient
       .from("mobile_money_transactions")
