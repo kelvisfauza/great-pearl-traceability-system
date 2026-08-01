@@ -15,6 +15,7 @@ import { useActivityTracker } from "@/hooks/useActivityTracker";
 import { executeOrQueue } from "@/lib/offline/queue";
 import { notifyTeams } from "@/lib/teamsNotify";
 import EmployeeCombobox from "@/components/quality/EmployeeCombobox";
+import { useQualityRole } from "@/hooks/useQualityRole";
 
 interface QualityAssessmentFormProps {
   lot: any;
@@ -38,6 +39,8 @@ interface AssessmentForm {
 
 const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
   const { employee } = useAuth();
+  const { isQualityHead } = useQualityRole();
+  const submitStatus = isQualityHead ? 'pending_admin_pricing' : 'pending_quality_manager';
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -89,7 +92,8 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
         suggested_price: data.unit_price_ugx,
         final_price: null,
         comments: data.comments,
-        status: 'pending_admin_pricing',
+        status: submitStatus,
+        qm_original_price: data.unit_price_ugx,
         _coffee_record_status_update: 'AWAITING_PRICING',
       };
 
@@ -126,7 +130,9 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
           ? "You're offline — the assessment is saved on this device and will upload automatically when you reconnect."
           : ref
           ? `Reference: ${ref} — write this on the physical form.`
-          : "Quality assessment saved and sent to admin for final pricing."
+          : isQualityHead
+          ? "Quality assessment saved and sent to admin for final pricing."
+          : "Quality assessment sent to the Head of Quality for approval."
       });
       queryClient.invalidateQueries({ queryKey: ['v2-pending-quality'] });
       if (!queued) {
@@ -179,7 +185,8 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
           outturn: data.outturn_percentage,
           suggested_price: data.unit_price_ugx,
           comments: data.comments,
-          status: 'pending_admin_pricing',
+          status: submitStatus,
+          qm_original_price: data.unit_price_ugx,
           reject_final: true
         } as any)
         .select()
@@ -191,7 +198,7 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
       const ref = assessment?.assessment_ref;
       if (ref) setGeneratedRef(ref);
       toast({
-        title: "Lot Rejected — Sent to Admin",
+        title: isQualityHead ? "Lot Rejected — Sent to Admin" : "Lot Rejected — Sent to Head of Quality",
         description: ref
           ? `Reference: ${ref} — write this on the physical form.`
           : "Lot rejected with quality data and suggested price sent to admin for review"
