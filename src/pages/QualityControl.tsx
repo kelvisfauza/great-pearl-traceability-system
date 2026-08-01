@@ -54,6 +54,7 @@ import { cn } from "@/lib/utils";
 import EmployeeCombobox from "@/components/quality/EmployeeCombobox";
 
 const QualityControl = () => {
+  const { isQualityHead } = useQualityRole();
   const {
     storeRecords,
     qualityAssessments,
