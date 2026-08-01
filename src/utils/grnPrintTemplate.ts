@@ -881,13 +881,21 @@ export function getGRNFitScript(): string {
       for (var i = 0; i < pages.length; i++) {
         var el = pages[i];
         el.style.zoom = '';
+        // Measure with the exact geometry used when printing (A4 content box,
+        // no preview padding) so the shrink factor is accurate on paper.
+        el.style.width = (186 * MM) + 'px';
+        el.style.maxWidth = 'none';
+        el.style.padding = '0';
         var scale = 1;
-        for (var pass = 0; pass < 4; pass++) {
-          var h = el.getBoundingClientRect().height / scale;
+        for (var pass = 0; pass < 5; pass++) {
+          var h = el.getBoundingClientRect().height;
           if (h <= LIMIT) break;
-          scale = Math.max(0.55, scale * (LIMIT / h) * 0.995);
+          scale = Math.max(0.5, scale * (LIMIT / h) * 0.985);
           el.style.zoom = String(scale);
         }
+        el.style.width = '';
+        el.style.maxWidth = '';
+        el.style.padding = '';
       }
     }
   `;
