@@ -41,6 +41,7 @@ import { usePrices } from "@/contexts/PriceContext";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQualityRole } from '@/hooks/useQualityRole';
+import QualityApprovalsTab from '@/components/v2/quality/tabs/QualityApprovalsTab';
 import { useRoleBasedAccess } from "@/hooks/useRoleBasedAccess";
 import { useSearchHighlight } from "@/hooks/useSearchHighlight";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
@@ -54,7 +55,7 @@ import { cn } from "@/lib/utils";
 import EmployeeCombobox from "@/components/quality/EmployeeCombobox";
 
 const QualityControl = () => {
-  const { isQualityHead } = useQualityRole();
+  const { isQualityHead, canPrintGRN } = useQualityRole();
   const {
     storeRecords,
     qualityAssessments,
@@ -1152,9 +1153,16 @@ const QualityControl = () => {
               <TabsTrigger value="assessments" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                 Assessments ({qualityAssessments.length})
               </TabsTrigger>
-              <TabsTrigger value="reports" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                Reports
-              </TabsTrigger>
+              {isQualityHead && (
+                <TabsTrigger value="approvals" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                  Approvals
+                </TabsTrigger>
+              )}
+              {isQualityHead && (
+                <TabsTrigger value="reports" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                  Reports
+                </TabsTrigger>
+              )}
               <TabsTrigger value="calculator" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                 <Calculator className="h-4 w-4 mr-1" />
                 Calculator
@@ -1170,9 +1178,11 @@ const QualityControl = () => {
               <TabsTrigger value="price-calculator" disabled={!selectedRecord} className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                 {selectedRecord ? 'Price Assess' : 'Select First'}
               </TabsTrigger>
-              <TabsTrigger value="history" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                History
-              </TabsTrigger>
+              {isQualityHead && (
+                <TabsTrigger value="history" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                  History
+                </TabsTrigger>
+              )}
             </TabsList>
           </div>
 
@@ -1349,7 +1359,7 @@ const QualityControl = () => {
                       <Badge variant="outline" className="ml-2">
                         {filteredAssessments.length} assessment{filteredAssessments.length !== 1 ? 's' : ''}
                       </Badge>
-                      {selectedForBulkPrint.length > 0 && (
+                      {canPrintGRN && selectedForBulkPrint.length > 0 && (
                         <Button
                           size="sm"
                           onClick={async () => {
@@ -1555,7 +1565,7 @@ const QualityControl = () => {
                                 <Edit className="h-4 w-4 mr-1" />
                                 Edit
                               </Button>
-                              {!(assessment as any).grn_printed ? (
+                              {!canPrintGRN ? null : !(assessment as any).grn_printed ? (
                                 <Button 
                                   size="sm" 
                                   variant="outline"
@@ -1876,13 +1886,23 @@ const QualityControl = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="reports">
-            <QualityAssessmentReports assessments={qualityAssessments} />
-          </TabsContent>
+          {isQualityHead && (
+            <TabsContent value="approvals">
+              <QualityApprovalsTab />
+            </TabsContent>
+          )}
 
-          <TabsContent value="history">
-            <AssessmentHistoryTab />
-          </TabsContent>
+          {isQualityHead && (
+            <TabsContent value="reports">
+              <QualityAssessmentReports assessments={qualityAssessments} />
+            </TabsContent>
+          )}
+
+          {isQualityHead && (
+            <TabsContent value="history">
+              <AssessmentHistoryTab />
+            </TabsContent>
+          )}
 
         </Tabs>
         
