@@ -133,3 +133,46 @@ export function isGosenteSuccess(status: number, body: any): boolean {
   const okMsg = msg.includes("accept") || msg.includes("success") || msg.includes("sent") || msg.includes("please check");
   return Boolean(okCode || okMsg);
 }
+
+/**
+ * Interpret the FINAL transaction outcome from GosentePay.
+ * IMPORTANT: the top-level `status: "success"` field is only an API envelope flag
+ * (the request was accepted / the lookup worked) — it does NOT mean the customer
+ * paid. Only the inner transaction fields may be used to decide the money outcome.
+ * Anything not explicitly successful/failed stays PENDING (never credit on unknown).
+ */
+export function interpretGosenteTxStatus(body: any): "successful" | "failed" | "pending" {
+  const inner = body?.data ?? body ?? {};
+  const candidates = [
+    inner?.transaction_status,
+    inner?.payment_status,
+    inner?.state,
+    // `data.status` is the transaction status; top-level `status` is the envelope
+    inner !== body ? inner?.status : undefined,
+  ]
+    .filter((v) => v !== undefined && v !== null)
+    .map((v) => String(v).toLowerCase());
+
+  const msg = String(inner?.message ?? "").toLowerCase();
+
+  for (const c of candidates) {
+    if (c.includes("fail") || c.includes("cancel") || c.includes("expire") || c.includes("reject") || c.includes("declin") || c.includes("wrong pin") || c.includes("insufficient")) {
+      return "failed";
+    }
+  }
+  for (const c of candidates) {
+    if (c.includes("success") || c === "completed" || c === "complete" || c === "paid") {
+      return "successful";
+    }
+  }
+
+  if (msg.includes("fail") || msg.includes("cancel") || msg.includes("expire") || msg.includes("reject") || msg.includes("declin") || msg.includes("wrong pin") || msg.includes("insufficient")) {
+    return "failed";
+  }
+  // "transaction successful" / "payment received" style final messages
+  if (msg.includes("transaction success") || msg.includes("payment success") || msg.includes("payment received") || msg.includes("completed successfully")) {
+    return "successful";
+  }
+
+  return "pending";
+}
