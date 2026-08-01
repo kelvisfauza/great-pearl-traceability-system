@@ -897,7 +897,9 @@ export function getPaymentOrderMarkup(data: GRNDocumentData): string {
   const createdAt = new Date(data.createdAt);
   const issueDate = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
   const todayFormatted = new Date().toLocaleDateString("en-GB");
-  const deliveryDate = createdAt.toLocaleDateString("en-GB");
+  const deliveryDate = formatDate(data.deliveryDate) || createdAt.toLocaleDateString("en-GB");
+  const assessmentDate = formatDate(data.assessmentDate) || createdAt.toLocaleDateString("en-GB");
+  const printedOn = formatDateTime(new Date());
   const totalAmount = data.totalAmount ?? data.totalKgs * data.unitPrice;
   const grnReference = data.grnNumber.startsWith("GAC-") ? data.grnNumber : `GAC-${data.grnNumber}`;
   const poNumber = `PO-${data.grnNumber.replace(/[^A-Z0-9]/gi, "").slice(-8) || "00000001"}`;
@@ -923,6 +925,7 @@ export function getPaymentOrderMarkup(data: GRNDocumentData): string {
             <div><strong>PO No:</strong> ${escapeHtml(poNumber)}</div>
             <div><strong>GRN Ref:</strong> ${escapeHtml(grnReference)}</div>
             <div><strong>Issue Date:</strong> ${escapeHtml(todayFormatted)}</div>
+            <div><strong>Printed On:</strong> ${escapeHtml(printedOn)}</div>
           </td>
         </tr>
       </table>
@@ -939,6 +942,14 @@ export function getPaymentOrderMarkup(data: GRNDocumentData): string {
 
       <div class="gac-grn-po-title">PAYMENT ORDER</div>
       <div class="gac-grn-po-subtitle">Authorisation to Finance Department to release supplier payment</div>
+
+      <table class="gac-grn-detail-grid">
+        <tr>
+          <td style="width:33%;">${field("Delivery Date:&nbsp;", deliveryDate)}</td>
+          <td style="width:34%;">${field("Assessment Date:&nbsp;", assessmentDate)}</td>
+          <td style="width:33%;">${field("Printed On:&nbsp;", printedOn)}</td>
+        </tr>
+      </table>
 
       <div class="gac-grn-po-instruction">
         <strong>To: Finance Department,</strong><br/>
