@@ -4,8 +4,10 @@ import PriceTicker from "@/components/PriceTicker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   FlaskConical, RefreshCw, Settings2, BookOpen, BarChart3, 
-  Warehouse, FileText, Lightbulb, GraduationCap, CheckSquare, Trophy, History
+  Warehouse, FileText, Lightbulb, GraduationCap, CheckSquare, Trophy, History, ShieldCheck
 } from "lucide-react";
+import { useQualityRole } from "@/hooks/useQualityRole";
+import QualityApprovalsTab from "@/components/v2/quality/tabs/QualityApprovalsTab";
 import BatchAssessmentsTab from "@/components/v2/quality/tabs/BatchAssessmentsTab";
 import ReEvaluationTab from "@/components/v2/quality/tabs/ReEvaluationTab";
 import AssessmentHistoryTab from "@/components/v2/quality/tabs/AssessmentHistoryTab";
@@ -19,23 +21,26 @@ import TrainingTab from "@/components/v2/quality/tabs/TrainingTab";
 import DailyChecklistTab from "@/components/v2/quality/tabs/DailyChecklistTab";
 import PerformanceTab from "@/components/v2/quality/tabs/PerformanceTab";
 
-const tabs = [
+const allTabs = [
   { id: "assessments", label: "Assessments", icon: FlaskConical },
+  { id: "approvals", label: "Approvals", icon: ShieldCheck, headOnly: true },
   { id: "reevaluation", label: "Re-evaluation", icon: RefreshCw },
-  { id: "history", label: "History", icon: History },
+  { id: "history", label: "History", icon: History, headOnly: true },
   { id: "calibration", label: "Calibration", icon: Settings2 },
   { id: "defects", label: "Defect Library", icon: BookOpen },
-  { id: "analytics", label: "Analytics", icon: BarChart3 },
+  { id: "analytics", label: "Analytics", icon: BarChart3, headOnly: true },
   { id: "warehouse", label: "Warehouse", icon: Warehouse },
-  { id: "reports", label: "Reports", icon: FileText },
-  { id: "recommendations", label: "Recommendations", icon: Lightbulb },
+  { id: "reports", label: "Reports", icon: FileText, headOnly: true },
+  { id: "recommendations", label: "Recommendations", icon: Lightbulb, headOnly: true },
   { id: "training", label: "Training", icon: GraduationCap },
   { id: "checklist", label: "Checklist", icon: CheckSquare },
-  { id: "performance", label: "Performance", icon: Trophy },
+  { id: "performance", label: "Performance", icon: Trophy, headOnly: true },
 ];
 
 const QualityDepartment = () => {
   const [activeTab, setActiveTab] = useState("assessments");
+  const { isQualityHead } = useQualityRole();
+  const tabs = allTabs.filter((t) => !t.headOnly || isQualityHead);
 
   return (
     <div className="min-h-screen bg-background">
@@ -71,17 +76,18 @@ const QualityDepartment = () => {
               </TabsList>
 
               <TabsContent value="assessments"><BatchAssessmentsTab /></TabsContent>
+              {isQualityHead && <TabsContent value="approvals"><QualityApprovalsTab /></TabsContent>}
               <TabsContent value="reevaluation"><ReEvaluationTab /></TabsContent>
-              <TabsContent value="history"><AssessmentHistoryTab /></TabsContent>
+              {isQualityHead && <TabsContent value="history"><AssessmentHistoryTab /></TabsContent>}
               <TabsContent value="calibration"><CalibrationTab /></TabsContent>
               <TabsContent value="defects"><DefectLibraryTab /></TabsContent>
-              <TabsContent value="analytics"><SupplierAnalyticsTab /></TabsContent>
+              {isQualityHead && <TabsContent value="analytics"><SupplierAnalyticsTab /></TabsContent>}
               <TabsContent value="warehouse"><WarehouseMonitoringTab /></TabsContent>
-              <TabsContent value="reports"><ReportsTab /></TabsContent>
-              <TabsContent value="recommendations"><RecommendationsTab /></TabsContent>
+              {isQualityHead && <TabsContent value="reports"><ReportsTab /></TabsContent>}
+              {isQualityHead && <TabsContent value="recommendations"><RecommendationsTab /></TabsContent>}
               <TabsContent value="training"><TrainingTab /></TabsContent>
               <TabsContent value="checklist"><DailyChecklistTab /></TabsContent>
-              <TabsContent value="performance"><PerformanceTab /></TabsContent>
+              {isQualityHead && <TabsContent value="performance"><PerformanceTab /></TabsContent>}
             </Tabs>
           </div>
         </div>
