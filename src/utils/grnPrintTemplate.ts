@@ -833,22 +833,7 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
         <span class="gac-grn-sign-line">&nbsp;</span>
       </div>
 
-      <table class="gac-grn-sign-table">
-        <tr>
-          <td class="gac-grn-sign-cell">
-            <strong>Signed QM/QC:</strong><br/>
-            <span class="gac-grn-sign-value">${displayValue(data.qualityApprovedBy || data.assessedBy, "")}</span>
-          </td>
-          <td class="gac-grn-sign-cell">
-            <strong>Signed PM/UM:</strong><br/>
-            <span class="gac-grn-sign-value">${displayValue(data.managerName || data.printedBy, "")}</span>
-          </td>
-          <td class="gac-grn-sign-cell">
-            <strong>Signed AM:</strong><br/>
-            <span class="gac-grn-sign-value">&nbsp;</span>
-          </td>
-        </tr>
-      </table>
+      ${signatoryTable(data)}
 
       <table class="gac-grn-footer-table">
         <tr>
@@ -859,6 +844,7 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
             Tel: +256 393 001 626 / +256 393 101 103 &nbsp;|&nbsp; Email: info@greatpearlcoffee.com &nbsp;|&nbsp; Customer Support: support@greatpearlcoffee.com &nbsp;|&nbsp; Web: www.greatagrocoffee.com
             ${data.verificationCode ? `<br/><span class="gac-grn-verify-code">Verify code: ${escapeHtml(data.verificationCode)}</span>` : ""}
             ${data.printedBy ? `<br/><span><strong>Printed by:</strong> ${escapeHtml(data.printedBy)}</span>` : ""}
+            <br/><span><strong>Printed on:</strong> ${escapeHtml(printedOn)}</span>
           </td>
           ${data.verificationCode ? `
             <td class="gac-grn-footer-right">
