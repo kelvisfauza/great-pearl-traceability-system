@@ -1094,17 +1094,33 @@ export function getPaymentOrderMarkup(data: GRNDocumentData): string {
         </tr>
         <tr>
           <td>
-            <div class="role">Prepared By (Quality / Store)</div>
-            <div style="font-family:'Courier New',monospace;font-weight:700;margin-top:6px;">${displayValue(data.qualityApprovedBy || data.assessedBy, "")}</div>
+            <div class="role">Store Manager (Coffee Input By)</div>
+            <div style="font-family:'Courier New',monospace;font-weight:700;margin-top:6px;">${displayValue(data.storeManagerName || data.inputBy, "")}</div>
             <div class="sig-line">Signature &amp; Date</div>
           </td>
           <td>
-            <div class="role">Authorised By (Manager)</div>
+            <div class="role">Quality — Physical Analysis</div>
+            <div style="font-family:'Courier New',monospace;font-weight:700;margin-top:6px;">${displayValue(data.physicalAssessmentBy, "")}</div>
+            <div class="sig-line">Signature &amp; Date</div>
+          </td>
+          <td>
+            <div class="role">Quality — System Analysis</div>
+            <div style="font-family:'Courier New',monospace;font-weight:700;margin-top:6px;">${displayValue(data.assessedBy || data.qualityApprovedBy, "")}</div>
+            <div class="sig-line">Signature &amp; Date</div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div class="role">Manager (Authorised By)</div>
             <div style="font-family:'Courier New',monospace;font-weight:700;margin-top:6px;">${displayValue(data.managerName || data.printedBy, "")}</div>
             <div class="sig-line">Signature &amp; Date</div>
           </td>
           <td>
             <div class="role">Paid By (Finance)</div>
+            <div class="sig-line" style="margin-top:34px;">Name, Signature &amp; Date</div>
+          </td>
+          <td>
+            <div class="role">Received By (Supplier)</div>
             <div class="sig-line" style="margin-top:34px;">Name, Signature &amp; Date</div>
           </td>
         </tr>
@@ -1124,6 +1140,7 @@ export function getPaymentOrderMarkup(data: GRNDocumentData): string {
             Tel: +256 393 001 626 / +256 393 101 103 &nbsp;|&nbsp; Email: info@greatpearlcoffee.com &nbsp;|&nbsp; Customer Support: support@greatpearlcoffee.com &nbsp;|&nbsp; Web: www.greatagrocoffee.com
             ${data.verificationCode ? `<br/><span class="gac-grn-verify-code">Verify code: ${escapeHtml(data.verificationCode)}</span>` : ""}
             ${data.printedBy ? `<br/><span><strong>Printed by:</strong> ${escapeHtml(data.printedBy)}</span>` : ""}
+            <br/><span><strong>Printed on:</strong> ${escapeHtml(printedOn)}</span>
           </td>
           ${data.verificationCode ? `
             <td class="gac-grn-footer-right">
