@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
     const isHead = blob.includes('quality manager') || blob.includes('head of quality')
 
     try {
-      const idem = `quality-role-change-2026-08-01-v1-${key}`
+      const idem = `quality-role-change-2026-08-01-v2-${key}`
       await sendLovableEmail(
         {
           to: email,
