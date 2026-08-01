@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { checkIpnSecret } from "../_shared/ipn-auth.ts";
+import { interpretGosenteTxStatus } from "../_shared/gosentepay.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -86,17 +87,10 @@ serve(async (req) => {
         const body = JSON.parse(bodyText);
         rawBody = body;
         ref = body.customer_reference || body.ref || body.external_reference;
-        {
-          const raw = String(body.status ?? body.data?.status ?? body.state ?? "").toLowerCase();
-          const msg = String(body.message ?? body.data?.message ?? "").toLowerCase();
-          if (raw.includes("success") || raw === "completed" || msg.includes("success")) {
-            status = "successful";
-          } else if (raw.includes("fail") || raw === "cancelled" || raw === "expired" || raw === "rejected") {
-            status = "failed";
-          } else {
-            status = raw;
-          }
-        }
+        // NOTE: top-level `status: "success"` is only the API envelope flag, never
+        // the money outcome. Only the inner transaction fields decide.
+        status = interpretGosenteTxStatus(body);
+        console.log(`GosentePay JSON callback parsed: ref=${ref}, outcome=${status}`);
         phone = body.msisdn || body.phone;
       } catch {
         // Try as form-urlencoded
@@ -221,6 +215,19 @@ serve(async (req) => {
 
     const isSuccess = status === "successful";
     console.log(`Transaction ${ref}: status=${status}, isSuccess=${isSuccess}, type=${transaction.transaction_type}`);
+
+    // Never finalize on an inconclusive callback — leave it pending for the poller.
+    if (status !== "successful" && status !== "failed") {
+      console.log(`Transaction ${ref} callback inconclusive (${status}) — leaving pending, no credit`);
+      await supabaseClient
+        .from("mobile_money_transactions")
+        .update({ provider_response: rawBody })
+        .eq("transaction_ref", ref);
+      return new Response(
+        JSON.stringify({ received: true, pending: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Update the transaction record
     const { error: updateError } = await supabaseClient
