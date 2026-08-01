@@ -1885,13 +1885,23 @@ const QualityControl = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="reports">
-            <QualityAssessmentReports assessments={qualityAssessments} />
-          </TabsContent>
+          {isQualityHead && (
+            <TabsContent value="approvals">
+              <QualityApprovalsTab />
+            </TabsContent>
+          )}
 
-          <TabsContent value="history">
-            <AssessmentHistoryTab />
-          </TabsContent>
+          {isQualityHead && (
+            <TabsContent value="reports">
+              <QualityAssessmentReports assessments={qualityAssessments} />
+            </TabsContent>
+          )}
+
+          {isQualityHead && (
+            <TabsContent value="history">
+              <AssessmentHistoryTab />
+            </TabsContent>
+          )}
 
         </Tabs>
         
