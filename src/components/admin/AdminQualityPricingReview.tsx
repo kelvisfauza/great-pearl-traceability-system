@@ -393,6 +393,8 @@ const AdminQualityPricingReview = () => {
           assessedBy: selectedAssessment.assessed_by,
           physicalAssessmentBy: (selectedAssessment as any).physical_assessment_by || undefined,
           inputBy: (selectedAssessment.coffee_record as any).created_by || undefined,
+          deliveryDate: (selectedAssessment.coffee_record as any).date || (selectedAssessment.coffee_record as any).created_at || undefined,
+          assessmentDate: (selectedAssessment as any).date_assessed || (selectedAssessment as any).created_at || undefined,
           discretionBy: (selectedAssessment as any).admin_discretion_by || undefined,
           isDiscretionBuy: (selectedAssessment as any).admin_discretion_buy || undefined,
           createdAt: new Date().toISOString(),
