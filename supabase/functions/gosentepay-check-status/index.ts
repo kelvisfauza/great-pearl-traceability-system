@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
-import { gosenteStatus } from "../_shared/gosentepay.ts";
+import { gosenteStatus, interpretGosenteTxStatus } from "../_shared/gosentepay.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -58,14 +58,14 @@ serve(async (req) => {
     if (transaction.provider === "gosentepay") {
       try {
         const { status: httpStatus, body: gpBody } = await gosenteStatus(transactionRef);
-        const inner = gpBody?.data ?? gpBody;
-        const gpStatus = String(inner?.status ?? inner?.state ?? gpBody?.status ?? "").toLowerCase();
-        const gpMsg = String(inner?.message ?? gpBody?.message ?? "").toLowerCase();
-        console.log(`[Gosente Check Status] http=${httpStatus} status=${gpStatus} msg=${gpMsg}`);
+        // The envelope `status: "success"` only means the lookup worked — it is NOT
+        // the payment outcome. Only inner transaction fields decide.
+        const outcome = interpretGosenteTxStatus(gpBody);
+        console.log(`[Gosente Check Status] http=${httpStatus} outcome=${outcome} body=${JSON.stringify(gpBody)}`);
 
-        if (gpStatus.includes("success") || gpStatus === "completed" || gpStatus === "successful" || gpMsg.includes("success")) {
+        if (outcome === "successful") {
           newStatus = "completed";
-        } else if (gpStatus.includes("fail") || gpStatus === "cancelled" || gpStatus === "expired" || gpStatus === "rejected") {
+        } else if (outcome === "failed") {
           newStatus = "failed";
         } else {
           return new Response(JSON.stringify({ status: "pending" }), {
