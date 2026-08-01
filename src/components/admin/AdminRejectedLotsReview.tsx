@@ -186,6 +186,8 @@ const AdminRejectedLotsReview = () => {
           assessedBy: selectedLot.assessed_by,
           physicalAssessmentBy: (selectedLot as any).physical_assessment_by || undefined,
           inputBy: (cr as any).created_by || undefined,
+          deliveryDate: (cr as any).date || (cr as any).created_at || undefined,
+          assessmentDate: (selectedLot as any).date_assessed || (selectedLot as any).created_at || undefined,
           discretionBy: employee?.name || employee?.email || undefined,
           createdAt: new Date().toISOString(),
           moisture: selectedLot.moisture,
