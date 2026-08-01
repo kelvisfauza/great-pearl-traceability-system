@@ -40,6 +40,7 @@ import { useWorkflowTracking } from "@/hooks/useWorkflowTracking";
 import { usePrices } from "@/contexts/PriceContext";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQualityRole } from '@/hooks/useQualityRole';
 import { useRoleBasedAccess } from "@/hooks/useRoleBasedAccess";
 import { useSearchHighlight } from "@/hooks/useSearchHighlight";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
@@ -53,6 +54,7 @@ import { cn } from "@/lib/utils";
 import EmployeeCombobox from "@/components/quality/EmployeeCombobox";
 
 const QualityControl = () => {
+  const { isQualityHead } = useQualityRole();
   const {
     storeRecords,
     qualityAssessments,
@@ -832,7 +834,7 @@ const QualityControl = () => {
         .from('quality_assessments')
         .select('id')
         .eq('store_record_id', selectedRecord.id)
-        .eq('status', 'pending_admin_pricing')
+        .in('status', ['pending_admin_pricing', 'pending_quality_manager'])
         .maybeSingle();
 
       if (existing) {
@@ -858,7 +860,8 @@ const QualityControl = () => {
         suggested_price: suggestedPrice,
         final_price: 0,
         comments: assessmentForm.comments || null,
-        status: 'pending_admin_pricing',
+        status: isQualityHead ? 'pending_admin_pricing' : 'pending_quality_manager',
+        qm_original_price: suggestedPrice,
         reject_outturn_price: false,
         reject_final: false,
         physical_assessment_by: assessmentForm.physical_assessment_by?.trim() || null,
