@@ -1152,9 +1152,16 @@ const QualityControl = () => {
               <TabsTrigger value="assessments" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                 Assessments ({qualityAssessments.length})
               </TabsTrigger>
-              <TabsTrigger value="reports" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                Reports
-              </TabsTrigger>
+              {isQualityHead && (
+                <TabsTrigger value="approvals" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                  Approvals
+                </TabsTrigger>
+              )}
+              {isQualityHead && (
+                <TabsTrigger value="reports" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                  Reports
+                </TabsTrigger>
+              )}
               <TabsTrigger value="calculator" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                 <Calculator className="h-4 w-4 mr-1" />
                 Calculator
@@ -1170,9 +1177,11 @@ const QualityControl = () => {
               <TabsTrigger value="price-calculator" disabled={!selectedRecord} className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                 {selectedRecord ? 'Price Assess' : 'Select First'}
               </TabsTrigger>
-              <TabsTrigger value="history" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                History
-              </TabsTrigger>
+              {isQualityHead && (
+                <TabsTrigger value="history" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                  History
+                </TabsTrigger>
+              )}
             </TabsList>
           </div>
 
