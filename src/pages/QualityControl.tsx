@@ -189,6 +189,10 @@ const QualityControl = () => {
       unitPrice: number;
       assessedBy: string;
       createdAt: string;
+      physicalAssessmentBy?: string;
+      inputBy?: string;
+      deliveryDate?: string;
+      assessmentDate?: string;
       moisture?: number;
       group1_defects?: number;
       group2_defects?: number;
