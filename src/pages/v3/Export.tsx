@@ -320,6 +320,20 @@ export default function V3Export() {
           </Card>
         </div>
       )}
+
+      <Dialog open={loadOpen} onOpenChange={setLoadOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Record container loading — {current?.shipment_number}</DialogTitle></DialogHeader>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div><Label>Loaded kg</Label><Input type="number" value={loadForm.loaded_kg || ''} onChange={(e) => setLoadForm({ ...loadForm, loaded_kg: e.target.value })} /></div>
+            <div><Label>Bags</Label><Input type="number" value={loadForm.bags || ''} onChange={(e) => setLoadForm({ ...loadForm, bags: e.target.value })} /></div>
+            <div><Label>Container number</Label><Input value={loadForm.container ?? (current?.container_number || '')} onChange={(e) => setLoadForm({ ...loadForm, container: e.target.value })} /></div>
+            <div><Label>Seal number</Label><Input value={loadForm.seal ?? (current?.seal_number || '')} onChange={(e) => setLoadForm({ ...loadForm, seal: e.target.value })} /></div>
+            <div className="sm:col-span-2"><Label>Container tare (kg)</Label><Input type="number" value={loadForm.tare || ''} onChange={(e) => setLoadForm({ ...loadForm, tare: e.target.value })} /></div>
+          </div>
+          <DialogFooter><Button onClick={() => loadShipment.mutate()} disabled={loadShipment.isPending}>Confirm loading</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </V3Layout>
   );
 }
