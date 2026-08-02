@@ -12204,6 +12204,36 @@ export type Database = {
         }
         Relationships: []
       }
+      v3_coffee_types: {
+        Row: {
+          active: boolean
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       v3_contract_allocations: {
         Row: {
           allocated_by: string | null
