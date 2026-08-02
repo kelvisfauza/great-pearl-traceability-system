@@ -51,6 +51,9 @@ export default function V3Receiving() {
   const create = useMutation({
     mutationFn: async () => {
       const seq = Date.now().toString().slice(-6);
+      const gross = Number(form.gross_weight || 0);
+      const tare = Number(form.tare_weight || 0);
+      const net = gross > 0 ? gross - tare : 0;
       const { error } = await supabase.from('v3_receiving_records').insert({
         receiving_number: `YEDA-RCV-${seq}`,
         sample_code: `S-${seq}`,
@@ -60,6 +63,11 @@ export default function V3Receiving() {
         coffee_type: form.coffee_type,
         processing_type: form.processing_type || null,
         bags: Number(form.bags || 0),
+        packaging_type: form.packaging_type || null,
+        gross_weight: gross || null,
+        tare_weight: tare || null,
+        net_weight: net || null,
+        reference_price: form.reference_price ? Number(form.reference_price) : null,
         vehicle: form.vehicle || null,
         driver_name: form.driver_name || null,
         status: form.workflow === 'quality_first' ? 'awaiting_quality' : 'draft',
