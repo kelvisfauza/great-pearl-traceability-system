@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
         const yoResult = await yoSendAirtime({
           phone: cleanPhone,
           amount: Number(allowance.amount),
-          narrative: `Monthly ${typeLabel} ${monthYear} - Great Agro Coffee`,
+          narrative: `Monthly ${typeLabel} ${monthYear} - ${allowance.employee_name} - Great Agro Coffee`,
         })
 
         const isPending22 = yoResult.statusMessage?.includes('-22') ||
