@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import V3Layout from '@/components/v3/V3Layout';
@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useV3Roles } from '@/hooks/useV3Roles';
-import { FlaskConical, ClipboardCheck, SlidersHorizontal, History, Search } from 'lucide-react';
+import { FlaskConical, ClipboardCheck, SlidersHorizontal, History, Search, Undo2 } from 'lucide-react';
 import QualityWorksheet, { gradeTone } from './QualityWorksheet';
 
 const STANDARD_FIELDS: [string, string][] = [
@@ -34,6 +34,12 @@ export default function V3Quality() {
   const [review, setReview] = useState<any | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
   const [reviewAdj, setReviewAdj] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
+  }, []);
 
   const { data: queue = [] } = useQuery({
     queryKey: ['v3-quality-queue'],
@@ -67,6 +73,42 @@ export default function V3Quality() {
     return !a?.submitted;
   });
   const pendingReview = queue.filter((r: any) => (latestFor(r.id) as any)?.status === 'submitted');
+
+  const selectedRecord = labQueue.find((r: any) => r.id === selectedId) || null;
+  const selectedAnalysis: any = selectedRecord ? latestFor(selectedRecord.id) : null;
+
+  const claim = useMutation({
+    mutationFn: async (record: any) => {
+      const existing: any = latestFor(record.id);
+      if (existing) return existing.id as string;
+      const { data, error } = await (supabase.from('v3_quality_analyses') as any).insert({
+        receiving_id: record.id,
+        sample_code: record.sample_code,
+        coffee_type: record.coffee_type,
+        analysed_by: userId,
+      }).select('id').single();
+      if (error) throw error;
+      return data.id as string;
+    },
+    onSuccess: (_id, record) => {
+      setSelectedId(record.id);
+      qc.invalidateQueries({ queryKey: ['v3-quality-analyses'] });
+    },
+    onError: (e: any) => toast({ title: 'Could not start analysis', description: e.message, variant: 'destructive' }),
+  });
+
+  const release = useMutation({
+    mutationFn: async (analysisId: string) => {
+      const { error } = await (supabase.from('v3_quality_analyses') as any).delete().eq('id', analysisId).eq('submitted', false);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setSelectedId(null);
+      toast({ title: 'Sample returned to the bench list' });
+      qc.invalidateQueries({ queryKey: ['v3-quality-analyses'] });
+    },
+    onError: (e: any) => toast({ title: 'Release failed', description: e.message, variant: 'destructive' }),
+  });
 
   const stats = useMemo(() => {
     const submitted = analyses.filter((a: any) => a.submitted);
@@ -141,20 +183,74 @@ export default function V3Quality() {
         </TabsList>
 
         <TabsContent value="lab" className="mt-4 space-y-4">
-          {labQueue.length === 0 && (
-            <Card><CardContent className="p-6 text-sm text-muted-foreground">No samples waiting on the bench.</CardContent></Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Samples available for analysis</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Pick a sample to work on. Once started it shows as in progress; if the results are never submitted it stays on this list.
+              </p>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Sample</TableHead><TableHead>Type</TableHead><TableHead>Bags</TableHead>
+                    <TableHead>Received</TableHead><TableHead>State</TableHead><TableHead />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {labQueue.length === 0 && (
+                    <TableRow><TableCell colSpan={6} className="py-6 text-center text-sm text-muted-foreground">No samples waiting on the bench.</TableCell></TableRow>
+                  )}
+                  {labQueue.map((r: any) => {
+                    const a: any = latestFor(r.id);
+                    const mine = a && a.analysed_by === userId;
+                    const active = selectedId === r.id;
+                    return (
+                      <TableRow key={r.id} className={active ? 'bg-muted/50' : undefined}>
+                        <TableCell className="font-medium">{r.sample_code}</TableCell>
+                        <TableCell>{r.coffee_type}</TableCell>
+                        <TableCell>{r.bags}</TableCell>
+                        <TableCell className="text-xs">{new Date(r.created_at).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          {!a ? <Badge variant="outline">Available</Badge>
+                            : a.stage === 'retest'
+                              ? <Badge variant="outline" className="bg-amber-500/15 text-amber-600 border-amber-500/30">Retest — in progress</Badge>
+                              : <Badge variant="secondary">{mine ? 'In progress (you)' : 'In progress'}</Badge>}
+                        </TableCell>
+                        <TableCell className="text-right space-x-2">
+                          {a && (
+                            <Button size="sm" variant="ghost" disabled={release.isPending || !(isManager || mine)}
+                              onClick={() => release.mutate(a.id)} title="Return to the available list">
+                              <Undo2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          <Button size="sm" variant={active ? 'secondary' : 'outline'}
+                            disabled={!(isOfficer || isManager) || claim.isPending}
+                            onClick={() => (a ? setSelectedId(r.id) : claim.mutate(r))}>
+                            {active ? 'Open' : a ? 'Continue' : 'Start analysis'}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+              {!(isOfficer || isManager) && (
+                <p className="p-3 text-xs text-muted-foreground">Only quality personnel can analyse samples.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {selectedRecord && (
+            <QualityWorksheet
+              key={selectedRecord.id}
+              record={selectedRecord}
+              analysis={selectedAnalysis}
+              canEdit={isOfficer || isManager}
+              blind={!isManager}
+            />
           )}
-          <div className="grid gap-4 xl:grid-cols-2">
-            {labQueue.map((r: any) => (
-              <QualityWorksheet
-                key={r.id}
-                record={r}
-                analysis={latestFor(r.id)}
-                canEdit={isOfficer || isManager}
-                blind={!isManager}
-              />
-            ))}
-          </div>
         </TabsContent>
 
         <TabsContent value="review" className="mt-4">
