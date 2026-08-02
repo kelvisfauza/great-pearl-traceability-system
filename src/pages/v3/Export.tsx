@@ -90,7 +90,7 @@ export default function V3Export() {
 
   const updateShipment = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Record<string, any> }) => {
-      const { error } = await supabase.from('v3_export_shipments').update(patch).eq('id', id);
+      const { error } = await (supabase.from("v3_export_shipments") as any).update(patch).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['v3-shipments'] }),
@@ -99,7 +99,7 @@ export default function V3Export() {
 
   const updateDoc = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Record<string, any> }) => {
-      const { error } = await supabase.from('v3_export_documents').update(patch).eq('id', id);
+      const { error } = await (supabase.from("v3_export_documents") as any).update(patch).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['v3-shipment-docs', selected] }),
