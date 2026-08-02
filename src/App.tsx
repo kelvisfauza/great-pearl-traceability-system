@@ -95,6 +95,7 @@ import V3Dashboard from "./pages/v3/Dashboard";
 import V3Receiving from "./pages/v3/Receiving";
 import V3Quality from "./pages/v3/Quality";
 import V3Store from "./pages/v3/Store";
+import V3GRNs from "./pages/v3/GRNs";
 import V3Production from "./pages/v3/Production";
 import V3Trade from "./pages/v3/Trade";
 import V3Logistics from "./pages/v3/Logistics";
@@ -277,6 +278,7 @@ const App: React.ComponentType = () => {
                 <Route path="/v3/receiving" element={<ProtectedRoute><V3Receiving /></ProtectedRoute>} />
                 <Route path="/v3/quality" element={<ProtectedRoute><V3Quality /></ProtectedRoute>} />
                 <Route path="/v3/store" element={<ProtectedRoute><V3Store /></ProtectedRoute>} />
+                <Route path="/v3/grns" element={<ProtectedRoute><V3GRNs /></ProtectedRoute>} />
                 <Route path="/v3/production" element={<ProtectedRoute><V3Production /></ProtectedRoute>} />
                 <Route path="/v3/trade" element={<ProtectedRoute><V3Trade /></ProtectedRoute>} />
                 <Route path="/v3/logistics" element={<ProtectedRoute><V3Logistics /></ProtectedRoute>} />
