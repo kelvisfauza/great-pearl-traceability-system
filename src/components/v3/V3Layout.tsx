@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, PackagePlus, FlaskConical, Warehouse, Factory,
-  FileSignature, Truck, Ship, Banknote, ShieldCheck, Settings2, ArrowLeft, Menu, Receipt,
+  FileSignature, Truck, Ship, Banknote, ShieldCheck, Settings2, ArrowLeft, Menu, Receipt, Users,
 } from 'lucide-react';
 import { useV3Roles, V3Role, V3_ROLE_LABELS } from '@/hooks/useV3Roles';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ interface NavItem {
 export const V3_NAV: NavItem[] = [
   { to: '/v3', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/v3/receiving', label: 'Receiving', icon: PackagePlus, roles: ['storekeeper', 'store_manager', 'branch_manager'] },
+  { to: '/v3/suppliers', label: 'Suppliers & Coffee', icon: Users, roles: ['storekeeper', 'store_manager', 'branch_manager', 'trade_manager', 'quality_manager', 'procurement_it', 'finance_manager'] },
   { to: '/v3/quality', label: 'Quality Lab', icon: FlaskConical, roles: ['quality_officer', 'quality_manager'] },
   { to: '/v3/store', label: 'Store & Stock', icon: Warehouse, roles: ['storekeeper', 'store_manager', 'branch_manager'] },
   { to: '/v3/grns', label: 'GRNs', icon: Receipt, roles: ['store_manager', 'branch_manager', 'quality_manager', 'finance_officer', 'finance_manager'] },
