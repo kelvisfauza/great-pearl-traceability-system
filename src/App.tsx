@@ -91,6 +91,17 @@ import V2ProcurementDashboard from "./pages/v2/procurement/Dashboard";
 import V2ITDashboard from "./pages/v2/it/Dashboard";
 import V2HRAbsenceAppeals from "./pages/v2/hr/AbsenceAppeals";
 import MyDeductionsPage from "./pages/v2/MyDeductionsPage";
+import V3Dashboard from "./pages/v3/Dashboard";
+import V3Receiving from "./pages/v3/Receiving";
+import V3Quality from "./pages/v3/Quality";
+import V3Store from "./pages/v3/Store";
+import V3Production from "./pages/v3/Production";
+import V3Trade from "./pages/v3/Trade";
+import V3Logistics from "./pages/v3/Logistics";
+import V3Export from "./pages/v3/Export";
+import V3Finance from "./pages/v3/Finance";
+import V3Compliance from "./pages/v3/Compliance";
+import V3Admin from "./pages/v3/Admin";
 
 import FinanceReport from "./pages/reports/FinanceReport";
 import DayBookReport from "./pages/reports/DayBookReport";
@@ -260,6 +271,19 @@ const App: React.ComponentType = () => {
                 <Route path="/v2/milling" element={<ProtectedRoute requiredPermissions={["Milling"]}><V2MillingDashboard /></ProtectedRoute>} />
                 <Route path="/v2/procurement" element={<ProtectedRoute requiredPermissions={["Procurement"]}><V2ProcurementDashboard /></ProtectedRoute>} />
                 <Route path="/v2/it" element={<ProtectedRoute requiredPermissions={["IT Management"]}><V2ITDashboard /></ProtectedRoute>} />
+
+                {/* V3 Export Site — YEDA Coffee ERP */}
+                <Route path="/v3" element={<ProtectedRoute><V3Dashboard /></ProtectedRoute>} />
+                <Route path="/v3/receiving" element={<ProtectedRoute><V3Receiving /></ProtectedRoute>} />
+                <Route path="/v3/quality" element={<ProtectedRoute><V3Quality /></ProtectedRoute>} />
+                <Route path="/v3/store" element={<ProtectedRoute><V3Store /></ProtectedRoute>} />
+                <Route path="/v3/production" element={<ProtectedRoute><V3Production /></ProtectedRoute>} />
+                <Route path="/v3/trade" element={<ProtectedRoute><V3Trade /></ProtectedRoute>} />
+                <Route path="/v3/logistics" element={<ProtectedRoute><V3Logistics /></ProtectedRoute>} />
+                <Route path="/v3/export" element={<ProtectedRoute><V3Export /></ProtectedRoute>} />
+                <Route path="/v3/finance" element={<ProtectedRoute><V3Finance /></ProtectedRoute>} />
+                <Route path="/v3/compliance" element={<ProtectedRoute><V3Compliance /></ProtectedRoute>} />
+                <Route path="/v3/admin" element={<ProtectedRoute><V3Admin /></ProtectedRoute>} />
                 
                 {/* V1 System Routes */}
                 <Route path="/" element={
