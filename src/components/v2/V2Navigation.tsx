@@ -305,6 +305,18 @@ const V2Navigation = () => {
           </Link>
         </Button>
 
+        {/* Switch to V3 */}
+        <Button
+          variant="outline"
+          className="w-full justify-start"
+          asChild
+        >
+          <Link to="/v3">
+            <ArrowRight className="mr-2 h-4 w-4" />
+            Switch to V3 (Export)
+          </Link>
+        </Button>
+
         {/* My Dashboard */}
         <Button
           variant="ghost"
