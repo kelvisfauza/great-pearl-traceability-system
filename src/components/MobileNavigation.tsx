@@ -160,6 +160,16 @@ const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
             </Button>
             <Button
               variant="outline"
+              className="w-full justify-start text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 border-emerald-200"
+              asChild
+            >
+              <Link to="/v3" onClick={onClose}>
+                <ArrowRight className="h-4 w-4 mr-2" />
+                <span className="text-sm font-medium">Switch to V3 (Export)</span>
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
               className="w-full justify-start"
               onClick={() => {
                 signOut();

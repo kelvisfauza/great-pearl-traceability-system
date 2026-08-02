@@ -296,6 +296,18 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
           <ArrowRight className="h-4 w-4" />
           {!isCollapsed && <span>Switch to V2</span>}
         </Link>
+
+        <Link
+          to="/v3"
+          className={cn(
+            "flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-primary hover:bg-primary/10 transition-colors",
+            isCollapsed && "justify-center px-2"
+          )}
+          title={isCollapsed ? "Switch to V3 (Export Site)" : undefined}
+        >
+          <ArrowRight className="h-4 w-4" />
+          {!isCollapsed && <span>Switch to V3 (Export)</span>}
+        </Link>
         
         <button
           onClick={handleLogout}

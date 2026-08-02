@@ -385,14 +385,16 @@ const Auth = () => {
     setShowEmailVerification(true);
   };
 
-  const handleSystemSelection = (version: 'v1' | 'v2') => {
+  const handleSystemSelection = (version: 'v1' | 'v2' | 'v3') => {
     console.log(`✅ User selected ${version.toUpperCase()} system`);
     const nextParam = new URLSearchParams(window.location.search).get('next');
     if (nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//')) {
       window.location.replace(nextParam);
       return;
     }
-    if (version === 'v2') {
+    if (version === 'v3') {
+      navigate('/v3');
+    } else if (version === 'v2') {
       navigate('/v2');
     } else {
       navigate('/');
@@ -678,6 +680,14 @@ const Auth = () => {
               style={{ border: '1px solid rgba(201,168,76,0.4)', color: '#f5f0e0', background: 'transparent', fontFamily: "'Work Sans', sans-serif" }}
             >
               Enter V2 System
+            </button>
+            <button
+              onClick={() => handleSystemSelection('v3')}
+              className="w-full h-20 rounded-xl text-lg font-medium transition-all hover:bg-[rgba(201,168,76,0.08)]"
+              style={{ border: '1px solid rgba(201,168,76,0.4)', color: '#f5f0e0', background: 'transparent', fontFamily: "'Work Sans', sans-serif" }}
+            >
+              <span className="block">Enter V3 — Export Site</span>
+              <span className="block text-xs mt-1" style={{ color: 'rgba(245,240,224,0.6)' }}>Receiving, quality lab, stores, production, trade & export</span>
             </button>
           </div>
         </div>

@@ -24,7 +24,8 @@ import {
   Clock,
   ArrowLeftRight,
   Calculator,
-  FileText
+  FileText,
+  ArrowRight,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -302,6 +303,18 @@ const V2Navigation = () => {
           <Link to="/">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to V1
+          </Link>
+        </Button>
+
+        {/* Switch to V3 */}
+        <Button
+          variant="outline"
+          className="w-full justify-start"
+          asChild
+        >
+          <Link to="/v3">
+            <ArrowRight className="mr-2 h-4 w-4" />
+            Switch to V3 (Export)
           </Link>
         </Button>
 
