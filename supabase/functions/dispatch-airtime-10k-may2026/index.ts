@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
         const yoResult = await yoSendAirtime({
           phone: cleanPhone,
           amount: overrideAmount,
-          narrative: `Monthly Airtime Allowance ${monthYear} - ${employee.name} - Great Agro Coffee`,
+          narrative: `Monthly Airtime Allowance ${monthYear} - ${allowance.employee_name} - Great Agro Coffee`,
         })
 
         const isPending22 = yoResult.statusMessage?.includes('-22') ||
