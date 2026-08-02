@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { useV3Roles } from '@/hooks/useV3Roles';
-import { Plus, CheckCircle2, FileText } from 'lucide-react';
+import { Plus, CheckCircle2, FileText, FlaskConical } from 'lucide-react';
 
 export default function V3Receiving() {
   const { hasRole } = useV3Roles();
@@ -88,7 +88,10 @@ export default function V3Receiving() {
       const { error } = await (supabase.from('v3_receiving_records') as any).update(values).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['v3-receiving'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['v3-receiving'] });
+      qc.invalidateQueries({ queryKey: ['v3-quality-queue'] });
+    },
     onError: (e: any) => toast({ title: 'Update failed', description: e.message, variant: 'destructive' }),
   });
 
@@ -208,10 +211,23 @@ export default function V3Receiving() {
                   <TableCell className="tabular-nums">{r.bags}</TableCell>
                   <TableCell className="tabular-nums">
                     <Input className="h-8 w-24" type="number" defaultValue={r.net_weight ?? ''} disabled={!canCapture}
-                      onBlur={(e) => Number(e.target.value) !== Number(r.net_weight ?? 0) && patch.mutate({ id: r.id, values: { net_weight: Number(e.target.value), status: 'weighed' } })} />
+                      onBlur={(e) => Number(e.target.value) !== Number(r.net_weight ?? 0) && patch.mutate({
+                        id: r.id,
+                        values: ['awaiting_quality', 'quality_submitted'].includes(r.status)
+                          ? { net_weight: Number(e.target.value) }
+                          : { net_weight: Number(e.target.value), status: 'weighed' },
+                      })} />
                   </TableCell>
                   <TableCell><Badge variant="outline">{r.status.replace(/_/g, ' ')}</Badge></TableCell>
                   <TableCell className="text-right">
+                    {canCapture && ['draft', 'weighed'].includes(r.status) && (
+                      <Button size="sm" variant="outline" className="mr-2" onClick={() => {
+                        patch.mutate({ id: r.id, values: { status: 'awaiting_quality' } });
+                        toast({ title: 'Sample sent to the lab', description: `${r.sample_code} is now in the quality queue.` });
+                      }}>
+                        <FlaskConical className="h-4 w-4 mr-1" /> Send to lab
+                      </Button>
+                    )}
                     {canApprove && r.status === 'awaiting_approval' && (
                       <Button size="sm" variant="outline" onClick={async () => patch.mutate({
                         id: r.id,
