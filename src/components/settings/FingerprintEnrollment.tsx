@@ -22,10 +22,16 @@ const FingerprintEnrollment: React.FC = () => {
   const [existing, setExisting] = useState<{ created_at: string | null } | null>(null);
   const [busy, setBusy] = useState(false);
   const [supported, setSupported] = useState<boolean | null>(null);
+  const [inIframe, setInIframe] = useState(false);
 
   const email = user?.email?.toLowerCase() ?? '';
 
   useEffect(() => {
+    try {
+      setInIframe(window.self !== window.top);
+    } catch {
+      setInIframe(true);
+    }
     const check = async () => {
       if (!window.PublicKeyCredential) return setSupported(false);
       try {
@@ -58,6 +64,9 @@ const FingerprintEnrollment: React.FC = () => {
     if (!email) return;
     setBusy(true);
     try {
+      if (!window.isSecureContext) {
+        throw new Error('Fingerprint sign-in needs a secure (https) connection.');
+      }
       const challenge = new Uint8Array(32);
       crypto.getRandomValues(challenge);
 
@@ -87,9 +96,12 @@ const FingerprintEnrollment: React.FC = () => {
 
       const credentialId = toBase64(credential.rawId);
 
+      // Replace any previous credential for this email (avoids ON CONFLICT
+      // ambiguity from the multiple unique indexes on email).
+      await supabase.from('biometric_credentials').delete().ilike('email', email);
       const { error } = await supabase
         .from('biometric_credentials')
-        .upsert({ email, credential_id: credentialId }, { onConflict: 'email' });
+        .insert({ email, credential_id: credentialId });
       if (error) throw error;
 
       toast({
@@ -99,14 +111,20 @@ const FingerprintEnrollment: React.FC = () => {
       await refresh();
     } catch (err: any) {
       console.error('Fingerprint enrolment failed:', err);
-      toast({
-        title: 'Enrolment failed',
-        description:
-          err?.name === 'NotAllowedError'
-            ? 'The fingerprint prompt was cancelled. Please try again.'
-            : err?.message || 'Could not register your fingerprint.',
-        variant: 'destructive',
-      });
+      const name = err?.name;
+      const description =
+        name === 'NotAllowedError'
+          ? inIframe
+            ? 'The browser blocked the fingerprint prompt inside the preview frame. Open the app in its own browser tab and try again.'
+            : 'The fingerprint prompt was cancelled or timed out. Please try again.'
+          : name === 'SecurityError'
+            ? 'This page origin is not allowed to use fingerprints. Open the app in its own browser tab and try again.'
+            : name === 'NotSupportedError'
+              ? 'This device or browser does not support fingerprint sign-in.'
+              : name === 'InvalidStateError'
+                ? 'A fingerprint is already registered on this device for your account.'
+                : err?.message || 'Could not register your fingerprint.';
+      toast({ title: 'Enrolment failed', description, variant: 'destructive' });
     } finally {
       setBusy(false);
     }
@@ -152,6 +170,25 @@ const FingerprintEnrollment: React.FC = () => {
             <AlertDescription className="text-xs">
               This device has no fingerprint sensor available to the browser. Use a phone or laptop
               with a fingerprint reader.
+            </AlertDescription>
+          </Alert>
+        )}
+        {inIframe && (
+          <Alert>
+            <AlertDescription className="text-xs flex flex-col gap-2">
+              <span>
+                Fingerprint prompts are blocked inside an embedded preview frame. Open the app in its
+                own browser tab to enrol.
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="self-start"
+                onClick={() => window.open(window.location.href, '_blank', 'noopener')}
+              >
+                Open in new tab
+              </Button>
             </AlertDescription>
           </Alert>
         )}
