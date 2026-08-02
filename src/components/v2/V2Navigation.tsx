@@ -24,7 +24,7 @@ import {
   Clock,
   ArrowLeftRight,
   Calculator,
-  FileText
+  FileText,
   ArrowRight,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
