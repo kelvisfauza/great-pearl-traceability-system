@@ -37,7 +37,11 @@ export default function V3Receiving() {
 
   const { data: suppliers = [] } = useQuery({
     queryKey: ['v3-suppliers'],
-    queryFn: async () => (await supabase.from('v3_suppliers').select('id,code,name').eq('active', true)).data || [],
+    queryFn: async () => (await supabase.from('suppliers').select('id,code,name,phone,origin').order('name')).data || [],
+  });
+  const { data: coffeeTypes = [] } = useQuery({
+    queryKey: ['v3-coffee-types'],
+    queryFn: async () => ((await (supabase.from('v3_coffee_types' as any) as any).select('id,name,category,active').eq('active', true).order('category')).data || []) as any[],
   });
   const { data: branches = [] } = useQuery({
     queryKey: ['v3-branches'],
@@ -130,9 +134,43 @@ export default function V3Receiving() {
                   <SelectContent>{suppliers.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.code} — {s.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div><Label>Coffee type</Label><Input value={form.coffee_type || ''} onChange={(e) => setForm({ ...form, coffee_type: e.target.value })} /></div>
-              <div><Label>Processing type</Label><Input value={form.processing_type || ''} onChange={(e) => setForm({ ...form, processing_type: e.target.value })} /></div>
+              <div>
+                <Label>Coffee type</Label>
+                <Select value={form.coffee_type} onValueChange={(v) => setForm({ ...form, coffee_type: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select coffee type" /></SelectTrigger>
+                  <SelectContent>
+                    {coffeeTypes.map((t: any) => <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Processing type</Label>
+                <Select value={form.processing_type || ''} onValueChange={(v) => setForm({ ...form, processing_type: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Washed">Washed</SelectItem>
+                    <SelectItem value="Natural">Natural / Sun dried</SelectItem>
+                    <SelectItem value="Honey">Honey</SelectItem>
+                    <SelectItem value="Kiboko">Kiboko (unhulled)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div><Label>Bags</Label><Input type="number" value={form.bags || ''} onChange={(e) => setForm({ ...form, bags: e.target.value })} /></div>
+              <div>
+                <Label>Packaging</Label>
+                <Select value={form.packaging_type || ''} onValueChange={(v) => setForm({ ...form, packaging_type: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Sisal bags">Sisal bags</SelectItem>
+                    <SelectItem value="Polypropylene bags">Polypropylene bags</SelectItem>
+                    <SelectItem value="Loose">Loose / bulk</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div><Label>Gross weight (kg)</Label><Input type="number" value={form.gross_weight || ''} onChange={(e) => setForm({ ...form, gross_weight: e.target.value })} /></div>
+              <div><Label>Tare weight (kg)</Label><Input type="number" value={form.tare_weight || ''} onChange={(e) => setForm({ ...form, tare_weight: e.target.value })} /></div>
+              <div><Label>Reference price (UGX/kg)</Label><Input type="number" value={form.reference_price || ''} onChange={(e) => setForm({ ...form, reference_price: e.target.value })} /></div>
+              <div><Label>Driver name</Label><Input value={form.driver_name || ''} onChange={(e) => setForm({ ...form, driver_name: e.target.value })} /></div>
               <div><Label>Vehicle</Label><Input value={form.vehicle || ''} onChange={(e) => setForm({ ...form, vehicle: e.target.value })} /></div>
             </div>
             <DialogFooter><Button onClick={() => create.mutate()} disabled={create.isPending}>Create record</Button></DialogFooter>
