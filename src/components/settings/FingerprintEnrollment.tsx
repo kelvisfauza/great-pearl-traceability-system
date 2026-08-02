@@ -173,6 +173,25 @@ const FingerprintEnrollment: React.FC = () => {
             </AlertDescription>
           </Alert>
         )}
+        {inIframe && (
+          <Alert>
+            <AlertDescription className="text-xs flex flex-col gap-2">
+              <span>
+                Fingerprint prompts are blocked inside an embedded preview frame. Open the app in its
+                own browser tab to enrol.
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="self-start"
+                onClick={() => window.open(window.location.href, '_blank', 'noopener')}
+              >
+                Open in new tab
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
         <Alert>
           <ShieldCheck className="h-4 w-4" />
           <AlertDescription className="text-xs">
