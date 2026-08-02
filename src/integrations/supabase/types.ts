@@ -12120,6 +12120,1167 @@ export type Database = {
         }
         Relationships: []
       }
+      v3_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_name: string | null
+          after_data: Json | null
+          before_data: Json | null
+          branch_id: string | null
+          created_at: string
+          device: string | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_name?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          branch_id?: string | null
+          created_at?: string
+          device?: string | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_name?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          branch_id?: string | null
+          created_at?: string
+          device?: string | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
+      v3_branches: {
+        Row: {
+          active: boolean
+          approval_limit: number
+          code: string
+          created_at: string
+          float_balance: number
+          id: string
+          is_head_office: boolean
+          location: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          approval_limit?: number
+          code: string
+          created_at?: string
+          float_balance?: number
+          id?: string
+          is_head_office?: boolean
+          location?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          approval_limit?: number
+          code?: string
+          created_at?: string
+          float_balance?: number
+          id?: string
+          is_head_office?: boolean
+          location?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      v3_contract_allocations: {
+        Row: {
+          allocated_by: string | null
+          batch_id: string | null
+          contract_id: string
+          created_at: string
+          id: string
+          kilograms: number
+        }
+        Insert: {
+          allocated_by?: string | null
+          batch_id?: string | null
+          contract_id: string
+          created_at?: string
+          id?: string
+          kilograms: number
+        }
+        Update: {
+          allocated_by?: string | null
+          batch_id?: string | null
+          contract_id?: string
+          created_at?: string
+          id?: string
+          kilograms?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "v3_contract_allocations_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "v3_stock_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "v3_contract_allocations_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "v3_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v3_contracts: {
+        Row: {
+          allocated_kg: number
+          attachments: Json
+          coffee_type: string
+          contract_number: string
+          contract_type: string
+          counterparty_country: string | null
+          counterparty_name: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          delivery_from: string | null
+          delivery_to: string | null
+          grade: string | null
+          id: string
+          incoterm: string | null
+          payment_terms: string | null
+          price: number
+          quality_spec: string | null
+          quantity_kg: number
+          shipped_kg: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          allocated_kg?: number
+          attachments?: Json
+          coffee_type: string
+          contract_number: string
+          contract_type?: string
+          counterparty_country?: string | null
+          counterparty_name: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          delivery_from?: string | null
+          delivery_to?: string | null
+          grade?: string | null
+          id?: string
+          incoterm?: string | null
+          payment_terms?: string | null
+          price: number
+          quality_spec?: string | null
+          quantity_kg: number
+          shipped_kg?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          allocated_kg?: number
+          attachments?: Json
+          coffee_type?: string
+          contract_number?: string
+          contract_type?: string
+          counterparty_country?: string | null
+          counterparty_name?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          delivery_from?: string | null
+          delivery_to?: string | null
+          grade?: string | null
+          id?: string
+          incoterm?: string | null
+          payment_terms?: string | null
+          price?: number
+          quality_spec?: string | null
+          quantity_kg?: number
+          shipped_kg?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      v3_export_documents: {
+        Row: {
+          amount: number | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          currency: string | null
+          document_type: string
+          expiry_date: string | null
+          file_url: string | null
+          id: string
+          issue_date: string | null
+          issuing_body: string | null
+          mandatory: boolean
+          reference: string | null
+          shipment_id: string
+          status: string
+          updated_at: string
+          uploaded_by: string | null
+          version: number
+        }
+        Insert: {
+          amount?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          currency?: string | null
+          document_type: string
+          expiry_date?: string | null
+          file_url?: string | null
+          id?: string
+          issue_date?: string | null
+          issuing_body?: string | null
+          mandatory?: boolean
+          reference?: string | null
+          shipment_id: string
+          status?: string
+          updated_at?: string
+          uploaded_by?: string | null
+          version?: number
+        }
+        Update: {
+          amount?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          currency?: string | null
+          document_type?: string
+          expiry_date?: string | null
+          file_url?: string | null
+          id?: string
+          issue_date?: string | null
+          issuing_body?: string | null
+          mandatory?: boolean
+          reference?: string | null
+          shipment_id?: string
+          status?: string
+          updated_at?: string
+          uploaded_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "v3_export_documents_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "v3_export_shipments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v3_export_shipments: {
+        Row: {
+          bags: number
+          booking_reference: string | null
+          coffee_type: string | null
+          container_number: string | null
+          container_tare_kg: number | null
+          contract_id: string | null
+          created_at: string
+          created_by: string | null
+          customs_cleared_at: string | null
+          customs_reference: string | null
+          customs_status: string | null
+          cutoff_date: string | null
+          destination_country: string | null
+          eta: string | null
+          etd: string | null
+          fumigation_required: boolean
+          grade: string | null
+          id: string
+          loaded_kg: number
+          loading_approved_at: string | null
+          loading_approved_by: string | null
+          notes: string | null
+          photos: Json
+          planned_kg: number
+          port_of_discharge: string | null
+          port_of_loading: string | null
+          quality_approved: boolean
+          quality_approved_by: string | null
+          seal_number: string | null
+          shipment_number: string
+          shipping_line: string | null
+          status: Database["public"]["Enums"]["v3_shipment_status"]
+          updated_at: string
+          vessel_name: string | null
+          voyage_number: string | null
+        }
+        Insert: {
+          bags?: number
+          booking_reference?: string | null
+          coffee_type?: string | null
+          container_number?: string | null
+          container_tare_kg?: number | null
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          customs_cleared_at?: string | null
+          customs_reference?: string | null
+          customs_status?: string | null
+          cutoff_date?: string | null
+          destination_country?: string | null
+          eta?: string | null
+          etd?: string | null
+          fumigation_required?: boolean
+          grade?: string | null
+          id?: string
+          loaded_kg?: number
+          loading_approved_at?: string | null
+          loading_approved_by?: string | null
+          notes?: string | null
+          photos?: Json
+          planned_kg?: number
+          port_of_discharge?: string | null
+          port_of_loading?: string | null
+          quality_approved?: boolean
+          quality_approved_by?: string | null
+          seal_number?: string | null
+          shipment_number: string
+          shipping_line?: string | null
+          status?: Database["public"]["Enums"]["v3_shipment_status"]
+          updated_at?: string
+          vessel_name?: string | null
+          voyage_number?: string | null
+        }
+        Update: {
+          bags?: number
+          booking_reference?: string | null
+          coffee_type?: string | null
+          container_number?: string | null
+          container_tare_kg?: number | null
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          customs_cleared_at?: string | null
+          customs_reference?: string | null
+          customs_status?: string | null
+          cutoff_date?: string | null
+          destination_country?: string | null
+          eta?: string | null
+          etd?: string | null
+          fumigation_required?: boolean
+          grade?: string | null
+          id?: string
+          loaded_kg?: number
+          loading_approved_at?: string | null
+          loading_approved_by?: string | null
+          notes?: string | null
+          photos?: Json
+          planned_kg?: number
+          port_of_discharge?: string | null
+          port_of_loading?: string | null
+          quality_approved?: boolean
+          quality_approved_by?: string | null
+          seal_number?: string | null
+          shipment_number?: string
+          shipping_line?: string | null
+          status?: Database["public"]["Enums"]["v3_shipment_status"]
+          updated_at?: string
+          vessel_name?: string | null
+          voyage_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "v3_export_shipments_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "v3_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v3_grns: {
+        Row: {
+          bags: number
+          branch_id: string | null
+          created_at: string
+          grn_number: string
+          id: string
+          issued_at: string
+          issued_by: string | null
+          net_weight: number
+          printed_count: number
+          receiving_id: string
+          supplier_id: string | null
+          total_amount: number
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          bags?: number
+          branch_id?: string | null
+          created_at?: string
+          grn_number: string
+          id?: string
+          issued_at?: string
+          issued_by?: string | null
+          net_weight: number
+          printed_count?: number
+          receiving_id: string
+          supplier_id?: string | null
+          total_amount: number
+          unit_price: number
+          updated_at?: string
+        }
+        Update: {
+          bags?: number
+          branch_id?: string | null
+          created_at?: string
+          grn_number?: string
+          id?: string
+          issued_at?: string
+          issued_by?: string | null
+          net_weight?: number
+          printed_count?: number
+          receiving_id?: string
+          supplier_id?: string | null
+          total_amount?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "v3_grns_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v3_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "v3_grns_receiving_id_fkey"
+            columns: ["receiving_id"]
+            isOneToOne: false
+            referencedRelation: "v3_receiving_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "v3_grns_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v3_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v3_payments: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          branch_id: string | null
+          created_at: string
+          currency: string
+          failure_reason: string | null
+          grn_id: string | null
+          id: string
+          method: string
+          paid_at: string | null
+          payment_number: string
+          prepared_by: string | null
+          status: Database["public"]["Enums"]["v3_payment_status"]
+          supplier_id: string | null
+          transaction_reference: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          branch_id?: string | null
+          created_at?: string
+          currency?: string
+          failure_reason?: string | null
+          grn_id?: string | null
+          id?: string
+          method?: string
+          paid_at?: string | null
+          payment_number: string
+          prepared_by?: string | null
+          status?: Database["public"]["Enums"]["v3_payment_status"]
+          supplier_id?: string | null
+          transaction_reference?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          branch_id?: string | null
+          created_at?: string
+          currency?: string
+          failure_reason?: string | null
+          grn_id?: string | null
+          id?: string
+          method?: string
+          paid_at?: string | null
+          payment_number?: string
+          prepared_by?: string | null
+          status?: Database["public"]["Enums"]["v3_payment_status"]
+          supplier_id?: string | null
+          transaction_reference?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "v3_payments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v3_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "v3_payments_grn_id_fkey"
+            columns: ["grn_id"]
+            isOneToOne: true
+            referencedRelation: "v3_grns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "v3_payments_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v3_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v3_production_runs: {
+        Row: {
+          approved_by: string | null
+          batch_id: string | null
+          confirmed_input_kg: number | null
+          created_at: string
+          created_by: string | null
+          downtime_minutes: number | null
+          ended_at: string | null
+          id: string
+          input_kg: number
+          machine: string | null
+          moisture_loss_kg: number | null
+          operator_id: string | null
+          output_black_kg: number | null
+          output_dust_kg: number | null
+          output_exportable_kg: number | null
+          output_husks_kg: number | null
+          output_pods_kg: number | null
+          output_triage_kg: number | null
+          processing_method: string | null
+          run_number: string
+          started_at: string | null
+          status: string
+          updated_at: string
+          variance_investigation: string | null
+          variance_kg: number | null
+        }
+        Insert: {
+          approved_by?: string | null
+          batch_id?: string | null
+          confirmed_input_kg?: number | null
+          created_at?: string
+          created_by?: string | null
+          downtime_minutes?: number | null
+          ended_at?: string | null
+          id?: string
+          input_kg?: number
+          machine?: string | null
+          moisture_loss_kg?: number | null
+          operator_id?: string | null
+          output_black_kg?: number | null
+          output_dust_kg?: number | null
+          output_exportable_kg?: number | null
+          output_husks_kg?: number | null
+          output_pods_kg?: number | null
+          output_triage_kg?: number | null
+          processing_method?: string | null
+          run_number: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          variance_investigation?: string | null
+          variance_kg?: number | null
+        }
+        Update: {
+          approved_by?: string | null
+          batch_id?: string | null
+          confirmed_input_kg?: number | null
+          created_at?: string
+          created_by?: string | null
+          downtime_minutes?: number | null
+          ended_at?: string | null
+          id?: string
+          input_kg?: number
+          machine?: string | null
+          moisture_loss_kg?: number | null
+          operator_id?: string | null
+          output_black_kg?: number | null
+          output_dust_kg?: number | null
+          output_exportable_kg?: number | null
+          output_husks_kg?: number | null
+          output_pods_kg?: number | null
+          output_triage_kg?: number | null
+          processing_method?: string | null
+          run_number?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          variance_investigation?: string | null
+          variance_kg?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "v3_production_runs_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "v3_stock_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v3_quality_analyses: {
+        Row: {
+          analysed_by: string | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          cup_notes: string | null
+          cup_score: number | null
+          defect_black: number | null
+          defect_broken: number | null
+          defect_husks: number | null
+          defect_insect: number | null
+          defect_pods: number | null
+          defect_triage: number | null
+          foreign_matter: number | null
+          id: string
+          moisture: number | null
+          outturn: number | null
+          receiving_id: string
+          recommendation: string | null
+          retest_reason: string | null
+          retest_requested: boolean
+          sample_code: string
+          screen_size: string | null
+          stage: string
+          submitted: boolean
+          submitted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          analysed_by?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          cup_notes?: string | null
+          cup_score?: number | null
+          defect_black?: number | null
+          defect_broken?: number | null
+          defect_husks?: number | null
+          defect_insect?: number | null
+          defect_pods?: number | null
+          defect_triage?: number | null
+          foreign_matter?: number | null
+          id?: string
+          moisture?: number | null
+          outturn?: number | null
+          receiving_id: string
+          recommendation?: string | null
+          retest_reason?: string | null
+          retest_requested?: boolean
+          sample_code: string
+          screen_size?: string | null
+          stage?: string
+          submitted?: boolean
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          analysed_by?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          cup_notes?: string | null
+          cup_score?: number | null
+          defect_black?: number | null
+          defect_broken?: number | null
+          defect_husks?: number | null
+          defect_insect?: number | null
+          defect_pods?: number | null
+          defect_triage?: number | null
+          foreign_matter?: number | null
+          id?: string
+          moisture?: number | null
+          outturn?: number | null
+          receiving_id?: string
+          recommendation?: string | null
+          retest_reason?: string | null
+          retest_requested?: boolean
+          sample_code?: string
+          screen_size?: string | null
+          stage?: string
+          submitted?: boolean
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "v3_quality_analyses_receiving_id_fkey"
+            columns: ["receiving_id"]
+            isOneToOne: false
+            referencedRelation: "v3_receiving_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v3_receiving_records: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          bags: number
+          branch_id: string | null
+          client_id: string | null
+          coffee_type: string
+          created_at: string
+          created_by: string | null
+          driver_name: string | null
+          final_price: number | null
+          gross_weight: number | null
+          id: string
+          manual_weight_reason: string | null
+          net_weight: number | null
+          override_reason: string | null
+          packaging_type: string | null
+          photos: Json
+          price_adjustments: number | null
+          processing_type: string | null
+          receiving_number: string
+          reference_price: number | null
+          rejection_reason: string | null
+          sample_code: string
+          scale_device: string | null
+          status: Database["public"]["Enums"]["v3_receiving_status"]
+          supplier_id: string | null
+          synced_at: string | null
+          tare_weight: number | null
+          total_amount: number | null
+          updated_at: string
+          vehicle: string | null
+          weight_confirmed_at: string | null
+          weight_confirmed_by: string | null
+          workflow: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          bags?: number
+          branch_id?: string | null
+          client_id?: string | null
+          coffee_type: string
+          created_at?: string
+          created_by?: string | null
+          driver_name?: string | null
+          final_price?: number | null
+          gross_weight?: number | null
+          id?: string
+          manual_weight_reason?: string | null
+          net_weight?: number | null
+          override_reason?: string | null
+          packaging_type?: string | null
+          photos?: Json
+          price_adjustments?: number | null
+          processing_type?: string | null
+          receiving_number: string
+          reference_price?: number | null
+          rejection_reason?: string | null
+          sample_code: string
+          scale_device?: string | null
+          status?: Database["public"]["Enums"]["v3_receiving_status"]
+          supplier_id?: string | null
+          synced_at?: string | null
+          tare_weight?: number | null
+          total_amount?: number | null
+          updated_at?: string
+          vehicle?: string | null
+          weight_confirmed_at?: string | null
+          weight_confirmed_by?: string | null
+          workflow?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          bags?: number
+          branch_id?: string | null
+          client_id?: string | null
+          coffee_type?: string
+          created_at?: string
+          created_by?: string | null
+          driver_name?: string | null
+          final_price?: number | null
+          gross_weight?: number | null
+          id?: string
+          manual_weight_reason?: string | null
+          net_weight?: number | null
+          override_reason?: string | null
+          packaging_type?: string | null
+          photos?: Json
+          price_adjustments?: number | null
+          processing_type?: string | null
+          receiving_number?: string
+          reference_price?: number | null
+          rejection_reason?: string | null
+          sample_code?: string
+          scale_device?: string | null
+          status?: Database["public"]["Enums"]["v3_receiving_status"]
+          supplier_id?: string | null
+          synced_at?: string | null
+          tare_weight?: number | null
+          total_amount?: number | null
+          updated_at?: string
+          vehicle?: string | null
+          weight_confirmed_at?: string | null
+          weight_confirmed_by?: string | null
+          workflow?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "v3_receiving_records_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v3_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "v3_receiving_records_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v3_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v3_reference_prices: {
+        Row: {
+          bonus_rules: Json
+          coffee_type: string
+          created_at: string
+          currency: string
+          grade: string | null
+          id: string
+          penalty_rules: Json
+          price_date: string
+          reference_price: number
+          set_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          bonus_rules?: Json
+          coffee_type: string
+          created_at?: string
+          currency?: string
+          grade?: string | null
+          id?: string
+          penalty_rules?: Json
+          price_date?: string
+          reference_price: number
+          set_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bonus_rules?: Json
+          coffee_type?: string
+          created_at?: string
+          currency?: string
+          grade?: string | null
+          id?: string
+          penalty_rules?: Json
+          price_date?: string
+          reference_price?: number
+          set_by?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      v3_stock_batches: {
+        Row: {
+          available_kilograms: number
+          average_cost: number | null
+          bags: number
+          batch_number: string
+          branch_id: string | null
+          coffee_type: string
+          created_at: string
+          created_by: string | null
+          grade: string | null
+          id: string
+          kilograms: number
+          source_receiving_ids: Json
+          state: Database["public"]["Enums"]["v3_stock_state"]
+          updated_at: string
+          warehouse: string | null
+          zone: string | null
+        }
+        Insert: {
+          available_kilograms?: number
+          average_cost?: number | null
+          bags?: number
+          batch_number: string
+          branch_id?: string | null
+          coffee_type: string
+          created_at?: string
+          created_by?: string | null
+          grade?: string | null
+          id?: string
+          kilograms?: number
+          source_receiving_ids?: Json
+          state?: Database["public"]["Enums"]["v3_stock_state"]
+          updated_at?: string
+          warehouse?: string | null
+          zone?: string | null
+        }
+        Update: {
+          available_kilograms?: number
+          average_cost?: number | null
+          bags?: number
+          batch_number?: string
+          branch_id?: string | null
+          coffee_type?: string
+          created_at?: string
+          created_by?: string | null
+          grade?: string | null
+          id?: string
+          kilograms?: number
+          source_receiving_ids?: Json
+          state?: Database["public"]["Enums"]["v3_stock_state"]
+          updated_at?: string
+          warehouse?: string | null
+          zone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "v3_stock_batches_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v3_branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v3_suppliers: {
+        Row: {
+          active: boolean
+          bank_details: string | null
+          branch_id: string | null
+          code: string
+          created_at: string
+          created_by: string | null
+          district: string | null
+          gps_lat: number | null
+          gps_lng: number | null
+          id: string
+          name: string
+          national_id: string | null
+          phone: string | null
+          tin: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          bank_details?: string | null
+          branch_id?: string | null
+          code: string
+          created_at?: string
+          created_by?: string | null
+          district?: string | null
+          gps_lat?: number | null
+          gps_lng?: number | null
+          id?: string
+          name: string
+          national_id?: string | null
+          phone?: string | null
+          tin?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          bank_details?: string | null
+          branch_id?: string | null
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          district?: string | null
+          gps_lat?: number | null
+          gps_lng?: number | null
+          id?: string
+          name?: string
+          national_id?: string | null
+          phone?: string | null
+          tin?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "v3_suppliers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v3_branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v3_transfers: {
+        Row: {
+          approved_by: string | null
+          arrival_weight: number | null
+          arrived_at: string | null
+          bags: number
+          batch_id: string | null
+          created_at: string
+          created_by: string | null
+          dispatch_weight: number | null
+          dispatched_at: string | null
+          driver_name: string | null
+          driver_user_id: string | null
+          from_branch_id: string | null
+          id: string
+          notes: string | null
+          photos: Json
+          received_by: string | null
+          seal_intact: boolean | null
+          seal_number: string | null
+          status: Database["public"]["Enums"]["v3_transfer_status"]
+          to_branch_id: string | null
+          transfer_number: string
+          updated_at: string
+          variance_kg: number | null
+          vehicle: string | null
+        }
+        Insert: {
+          approved_by?: string | null
+          arrival_weight?: number | null
+          arrived_at?: string | null
+          bags?: number
+          batch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          dispatch_weight?: number | null
+          dispatched_at?: string | null
+          driver_name?: string | null
+          driver_user_id?: string | null
+          from_branch_id?: string | null
+          id?: string
+          notes?: string | null
+          photos?: Json
+          received_by?: string | null
+          seal_intact?: boolean | null
+          seal_number?: string | null
+          status?: Database["public"]["Enums"]["v3_transfer_status"]
+          to_branch_id?: string | null
+          transfer_number: string
+          updated_at?: string
+          variance_kg?: number | null
+          vehicle?: string | null
+        }
+        Update: {
+          approved_by?: string | null
+          arrival_weight?: number | null
+          arrived_at?: string | null
+          bags?: number
+          batch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          dispatch_weight?: number | null
+          dispatched_at?: string | null
+          driver_name?: string | null
+          driver_user_id?: string | null
+          from_branch_id?: string | null
+          id?: string
+          notes?: string | null
+          photos?: Json
+          received_by?: string | null
+          seal_intact?: boolean | null
+          seal_number?: string | null
+          status?: Database["public"]["Enums"]["v3_transfer_status"]
+          to_branch_id?: string | null
+          transfer_number?: string
+          updated_at?: string
+          variance_kg?: number | null
+          vehicle?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "v3_transfers_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "v3_stock_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "v3_transfers_from_branch_id_fkey"
+            columns: ["from_branch_id"]
+            isOneToOne: false
+            referencedRelation: "v3_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "v3_transfers_to_branch_id_fkey"
+            columns: ["to_branch_id"]
+            isOneToOne: false
+            referencedRelation: "v3_branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v3_user_roles: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["v3_role"]
+          user_id: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["v3_role"]
+          user_id: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["v3_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       vehicle_trips: {
         Row: {
           arrival_time: string | null
@@ -13704,6 +14865,13 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: boolean
       }
+      has_any_v3_role: {
+        Args: {
+          _roles: Database["public"]["Enums"]["v3_role"][]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_face_credential: { Args: { p_email: string }; Returns: boolean }
       has_overdraft_loan_backstop: {
         Args: { p_reserve?: number; p_user_id: string }
@@ -13712,6 +14880,13 @@ export type Database = {
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      has_v3_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["v3_role"]
           _user_id: string
         }
         Returns: boolean
@@ -13757,6 +14932,7 @@ export type Database = {
       is_super_admin: { Args: { _uid: string }; Returns: boolean }
       is_supervisor_or_above: { Args: never; Returns: boolean }
       is_user_role: { Args: never; Returns: boolean }
+      is_v3_admin: { Args: { _user_id: string }; Returns: boolean }
       issue_quality_form_numbers: {
         Args: { p_count?: number; p_issued_by_name?: string }
         Returns: string[]
@@ -14184,6 +15360,81 @@ export type Database = {
         | "fee"
       treasury_channel: "yo_payments" | "cash" | "bank" | "internal" | "other"
       treasury_direction: "credit" | "debit"
+      v3_payment_status:
+        | "draft"
+        | "pending_approval"
+        | "approved"
+        | "paid"
+        | "failed"
+        | "cancelled"
+      v3_receiving_status:
+        | "draft"
+        | "awaiting_quality"
+        | "quality_submitted"
+        | "awaiting_approval"
+        | "approved"
+        | "weighed"
+        | "grn_issued"
+        | "paid"
+        | "rejected"
+        | "cancelled"
+      v3_role:
+        | "managing_director"
+        | "operations_manager"
+        | "branch_manager"
+        | "quality_manager"
+        | "quality_officer"
+        | "store_manager"
+        | "storekeeper"
+        | "production_manager"
+        | "production_operator"
+        | "trade_manager"
+        | "logistics_manager"
+        | "driver"
+        | "export_manager"
+        | "export_officer"
+        | "compliance_officer"
+        | "finance_manager"
+        | "finance_officer"
+        | "procurement_it"
+        | "hr_admin"
+        | "v3_admin"
+      v3_shipment_status:
+        | "planned"
+        | "allocated"
+        | "processing"
+        | "documents_pending"
+        | "ready_to_load"
+        | "loaded"
+        | "customs"
+        | "shipped"
+        | "delivered"
+        | "closed"
+        | "cancelled"
+      v3_stock_state:
+        | "awaiting_quality"
+        | "awaiting_purchase"
+        | "branch_stock"
+        | "in_transit"
+        | "main_store_received"
+        | "production"
+        | "processed_stock"
+        | "allocated"
+        | "export_ready"
+        | "loaded"
+        | "shipped"
+        | "rejected"
+        | "quarantined"
+      v3_transfer_status:
+        | "awaiting_approval"
+        | "loading"
+        | "dispatched"
+        | "in_transit"
+        | "arrived"
+        | "under_verification"
+        | "received"
+        | "received_with_variance"
+        | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -14340,6 +15591,87 @@ export const Constants = {
       ],
       treasury_channel: ["yo_payments", "cash", "bank", "internal", "other"],
       treasury_direction: ["credit", "debit"],
+      v3_payment_status: [
+        "draft",
+        "pending_approval",
+        "approved",
+        "paid",
+        "failed",
+        "cancelled",
+      ],
+      v3_receiving_status: [
+        "draft",
+        "awaiting_quality",
+        "quality_submitted",
+        "awaiting_approval",
+        "approved",
+        "weighed",
+        "grn_issued",
+        "paid",
+        "rejected",
+        "cancelled",
+      ],
+      v3_role: [
+        "managing_director",
+        "operations_manager",
+        "branch_manager",
+        "quality_manager",
+        "quality_officer",
+        "store_manager",
+        "storekeeper",
+        "production_manager",
+        "production_operator",
+        "trade_manager",
+        "logistics_manager",
+        "driver",
+        "export_manager",
+        "export_officer",
+        "compliance_officer",
+        "finance_manager",
+        "finance_officer",
+        "procurement_it",
+        "hr_admin",
+        "v3_admin",
+      ],
+      v3_shipment_status: [
+        "planned",
+        "allocated",
+        "processing",
+        "documents_pending",
+        "ready_to_load",
+        "loaded",
+        "customs",
+        "shipped",
+        "delivered",
+        "closed",
+        "cancelled",
+      ],
+      v3_stock_state: [
+        "awaiting_quality",
+        "awaiting_purchase",
+        "branch_stock",
+        "in_transit",
+        "main_store_received",
+        "production",
+        "processed_stock",
+        "allocated",
+        "export_ready",
+        "loaded",
+        "shipped",
+        "rejected",
+        "quarantined",
+      ],
+      v3_transfer_status: [
+        "awaiting_approval",
+        "loading",
+        "dispatched",
+        "in_transit",
+        "arrived",
+        "under_verification",
+        "received",
+        "received_with_variance",
+        "cancelled",
+      ],
     },
   },
 } as const
