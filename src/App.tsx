@@ -93,6 +93,7 @@ import V2HRAbsenceAppeals from "./pages/v2/hr/AbsenceAppeals";
 import MyDeductionsPage from "./pages/v2/MyDeductionsPage";
 import V3Dashboard from "./pages/v3/Dashboard";
 import V3Receiving from "./pages/v3/Receiving";
+import V3Suppliers from "./pages/v3/Suppliers";
 import V3Quality from "./pages/v3/Quality";
 import V3Store from "./pages/v3/Store";
 import V3GRNs from "./pages/v3/GRNs";
@@ -276,6 +277,7 @@ const App: React.ComponentType = () => {
                 {/* V3 Export Site — YEDA Coffee ERP */}
                 <Route path="/v3" element={<ProtectedRoute><V3Dashboard /></ProtectedRoute>} />
                 <Route path="/v3/receiving" element={<ProtectedRoute><V3Receiving /></ProtectedRoute>} />
+                <Route path="/v3/suppliers" element={<ProtectedRoute><V3Suppliers /></ProtectedRoute>} />
                 <Route path="/v3/quality" element={<ProtectedRoute><V3Quality /></ProtectedRoute>} />
                 <Route path="/v3/store" element={<ProtectedRoute><V3Store /></ProtectedRoute>} />
                 <Route path="/v3/grns" element={<ProtectedRoute><V3GRNs /></ProtectedRoute>} />
