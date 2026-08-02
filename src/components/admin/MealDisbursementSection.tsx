@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UtensilsCrossed, Send, Loader2, Phone, DollarSign, RefreshCw, RotateCcw, CheckCheck, Printer, Receipt, Search } from 'lucide-react';
+import { UtensilsCrossed, Send, Loader2, Phone, DollarSign, RefreshCw, RotateCcw, CheckCheck, Printer, Receipt, Search, Smartphone, Banknote } from 'lucide-react';
 import { sendPaymentReceipt } from '@/utils/sendPaymentReceipt';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -34,6 +34,8 @@ const MealDisbursementSection = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'failed'>('all');
   const [retryTarget, setRetryTarget] = useState<any | null>(null);
   const [retryGateway, setRetryGateway] = useState<'yo' | 'gosente'>('yo');
+  const [paymentMethod, setPaymentMethod] = useState<'mobile_money' | 'cash'>('mobile_money');
+  const [paymentProvider, setPaymentProvider] = useState<'yo' | 'gosente'>('yo');
 
   const [form, setForm] = useState({
     receiverPhone: '',
@@ -69,6 +71,30 @@ const MealDisbursementSection = () => {
 
     setSubmitting(true);
     try {
+      if (paymentMethod === 'cash') {
+        const charge = parseFloat(form.withdrawCharge) || 0;
+        const { error: cashError } = await supabase.from('meal_disbursements').insert({
+          receiver_phone: form.receiverPhone.replace(/\D/g, ''),
+          receiver_name: form.receiverName || null,
+          description: form.description,
+          amount,
+          withdraw_charge: charge,
+          total_amount: amount + charge,
+          yo_status: 'cash',
+          initiated_by: employee?.email || '',
+          initiated_by_name: employee?.name || '',
+        } as any);
+        if (cashError) throw cashError;
+        toast({
+          title: 'Cash payment recorded',
+          description: `UGX ${(amount + charge).toLocaleString()} cash meal payment to ${form.receiverName || form.receiverPhone} logged.`,
+        });
+        setForm({ receiverPhone: '', receiverName: '', description: '', amount: '', withdrawCharge: '' });
+        setOpen(false);
+        queryClient.invalidateQueries({ queryKey: ['meal-disbursements'] });
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('meal-disbursement', {
         body: {
           phone: form.receiverPhone,
@@ -78,6 +104,7 @@ const MealDisbursementSection = () => {
           receiverName: form.receiverName,
           initiatedBy: employee?.email || '',
           initiatedByName: employee?.name || '',
+          gateway: paymentProvider,
         },
       });
 
@@ -441,6 +468,70 @@ const MealDisbursementSection = () => {
 
             <div className="space-y-4 py-2">
               <div className="space-y-2">
+                <Label>Payment Method *</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('mobile_money')}
+                    className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                      paymentMethod === 'mobile_money' ? 'border-primary bg-primary/5' : 'border-border hover:bg-accent'
+                    }`}
+                  >
+                    <Smartphone className={`w-5 h-5 ${paymentMethod === 'mobile_money' ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <div className="text-left">
+                      <p className="text-sm font-medium">Mobile Money</p>
+                      <p className="text-xs text-muted-foreground">Yo / Gosente</p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('cash')}
+                    className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                      paymentMethod === 'cash' ? 'border-primary bg-primary/5' : 'border-border hover:bg-accent'
+                    }`}
+                  >
+                    <Banknote className={`w-5 h-5 ${paymentMethod === 'cash' ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <div className="text-left">
+                      <p className="text-sm font-medium">Cash</p>
+                      <p className="text-xs text-muted-foreground">Paid in person</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+              {paymentMethod === 'mobile_money' && (
+                <div className="space-y-2">
+                  <Label>Mobile Money Provider *</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentProvider('yo')}
+                      className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                        paymentProvider === 'yo' ? 'border-primary bg-primary/5' : 'border-border hover:bg-accent'
+                      }`}
+                    >
+                      <Smartphone className={`w-5 h-5 ${paymentProvider === 'yo' ? 'text-primary' : 'text-muted-foreground'}`} />
+                      <div className="text-left">
+                        <p className="text-sm font-medium">Yo Payments</p>
+                        <p className="text-xs text-muted-foreground">MTN / Airtel via Yo</p>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentProvider('gosente')}
+                      className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                        paymentProvider === 'gosente' ? 'border-primary bg-primary/5' : 'border-border hover:bg-accent'
+                      }`}
+                    >
+                      <Smartphone className={`w-5 h-5 ${paymentProvider === 'gosente' ? 'text-primary' : 'text-muted-foreground'}`} />
+                      <div className="text-left">
+                        <p className="text-sm font-medium">GosentePay</p>
+                        <p className="text-xs text-muted-foreground">MTN / Airtel via Gosente</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div className="space-y-2">
                 <Label htmlFor="receiverName">Receiver Name</Label>
                 <Input
                   id="receiverName"
@@ -518,8 +609,12 @@ const MealDisbursementSection = () => {
             <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
               <Button variant="outline" onClick={() => setOpen(false)} className="w-full sm:w-auto">Cancel</Button>
               <Button onClick={handleSubmit} disabled={submitting} className="gap-2 w-full sm:w-auto">
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                {submitting ? 'Sending...' : 'Send Money'}
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : paymentMethod === 'cash' ? <Banknote className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+                {submitting
+                  ? (paymentMethod === 'cash' ? 'Recording...' : 'Sending...')
+                  : paymentMethod === 'cash'
+                    ? 'Record Cash Payment'
+                    : `Send via ${paymentProvider === 'gosente' ? 'GosentePay' : 'Yo'}`}
               </Button>
             </DialogFooter>
           </DialogContent>
