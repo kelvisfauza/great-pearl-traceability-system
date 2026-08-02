@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, AlertCircle, Phone, Mail, MessageCircle, Lock, KeyRound, Eye, EyeOff, ScanFace, X } from 'lucide-react';
+import { Loader2, AlertCircle, Phone, Mail, MessageCircle, Lock, KeyRound, Eye, EyeOff, ScanFace, Fingerprint, X } from 'lucide-react';
 import PasswordChangeModal from '@/components/PasswordChangeModal';
 import { UnifiedVerification } from '@/components/auth/UnifiedVerification';
 import { supabase } from '@/integrations/supabase/client';
@@ -46,6 +46,10 @@ const Auth = () => {
   const [faceError, setFaceError] = useState('');
   const [faceVerified, setFaceVerified] = useState(false);
   const faceVerifiedRef = useRef(false);
+
+  // Fingerprint sign-in
+  const [fingerBusy, setFingerBusy] = useState(false);
+  const [fingerError, setFingerError] = useState('');
   
   const { signIn, user, employee, loading: authLoading } = useAuth();
   const navigate = useNavigate();
