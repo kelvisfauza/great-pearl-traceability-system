@@ -127,7 +127,7 @@ const Auth = () => {
       setLoading(true);
       // Show the welcome splash immediately so face-ID users see the logo
       // while we exchange the token in the background.
-      if (callbackSource === 'face' || callbackSource === 'auto' || tokenHash || code) {
+      if (callbackSource === 'face' || callbackSource === 'fingerprint' || callbackSource === 'auto' || tokenHash || code) {
         setShowWelcomeSplash(true);
       }
       setError('');
@@ -192,7 +192,7 @@ const Auth = () => {
     const type = urlParams.get('type');
     const code = urlParams.get('code');
     const tokenHash = urlParams.get('token_hash');
-    const isMagicLinkReturn = !!postAuthSource || postAuth === 'face' || postAuth === 'auto' || type === 'magiclink' || !!tokenHash || !!code;
+    const isMagicLinkReturn = !!postAuthSource || postAuth === 'face' || postAuth === 'fingerprint' || postAuth === 'auto' || type === 'magiclink' || !!tokenHash || !!code;
 
     if (!isMagicLinkReturn) return;
 
