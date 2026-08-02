@@ -88,7 +88,10 @@ export default function V3Receiving() {
       const { error } = await (supabase.from('v3_receiving_records') as any).update(values).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['v3-receiving'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['v3-receiving'] });
+      qc.invalidateQueries({ queryKey: ['v3-quality-queue'] });
+    },
     onError: (e: any) => toast({ title: 'Update failed', description: e.message, variant: 'destructive' }),
   });
 
