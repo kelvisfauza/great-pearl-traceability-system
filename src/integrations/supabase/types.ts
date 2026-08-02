@@ -15264,6 +15264,68 @@ export type Database = {
         Args: { conversation_uuid: string }
         Returns: boolean
       }
+      v3_complete_production_run: {
+        Args: {
+          p_black?: number
+          p_dust?: number
+          p_exportable: number
+          p_grade?: string
+          p_husks?: number
+          p_moisture_loss?: number
+          p_pods?: number
+          p_run_id: string
+          p_triage?: number
+        }
+        Returns: Json
+      }
+      v3_dispatch_transfer: {
+        Args: {
+          p_bags: number
+          p_batch_id: string
+          p_driver?: string
+          p_kg: number
+          p_seal?: string
+          p_to_branch_id: string
+          p_vehicle?: string
+        }
+        Returns: Json
+      }
+      v3_issue_grn: {
+        Args: { p_receiving_id: string; p_unit_price?: number }
+        Returns: Json
+      }
+      v3_log: {
+        Args: {
+          p_action: string
+          p_after?: Json
+          p_entity: string
+          p_id: string
+          p_reason?: string
+        }
+        Returns: undefined
+      }
+      v3_next_number: {
+        Args: { p_column: string; p_prefix: string; p_table: string }
+        Returns: string
+      }
+      v3_receive_transfer: {
+        Args: {
+          p_arrival_weight: number
+          p_notes?: string
+          p_seal_intact?: boolean
+          p_transfer_id: string
+        }
+        Returns: Json
+      }
+      v3_start_production_run: {
+        Args: {
+          p_batch_id: string
+          p_input_kg: number
+          p_machine?: string
+          p_method?: string
+        }
+        Returns: Json
+      }
       validate_withdrawal_balance: {
         Args: { p_amount: number; p_user_id: string }
         Returns: boolean
