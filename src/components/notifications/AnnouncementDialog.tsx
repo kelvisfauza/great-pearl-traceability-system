@@ -42,18 +42,21 @@ export default function AnnouncementDialog({ trigger }: AnnouncementDialogProps)
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
+  const [allDepartments, setAllDepartments] = useState(false);
   const [priority, setPriority] = useState<"High" | "Medium" | "Low">("Medium");
   const [sendSms, setSendSms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const handleDepartmentChange = (dept: string, checked: boolean) => {
     if (dept === "All Departments") {
+      setAllDepartments(checked);
       if (checked) {
         setSelectedDepartments(departments.filter(d => d !== "All Departments"));
       } else {
         setSelectedDepartments([]);
       }
     } else {
+      setAllDepartments(false);
       if (checked) {
         setSelectedDepartments(prev => [...prev, dept]);
       } else {
@@ -68,12 +71,15 @@ export default function AnnouncementDialog({ trigger }: AnnouncementDialogProps)
       toast({ title: "Not allowed", description: "Sign in to send announcements.", variant: "destructive" });
       return;
     }
-    if (!title.trim() || !message.trim() || selectedDepartments.length === 0) {
+    if (!title.trim() || !message.trim() || (!allDepartments && selectedDepartments.length === 0)) {
       toast({ title: "Missing info", description: "Please fill title, message and select at least one department." });
       return;
     }
     try {
       setSubmitting(true);
+
+      // "All Departments" = every active employee, regardless of department label
+      const targetDepartments = allDepartments ? ["All Departments"] : selectedDepartments;
       
       // Create announcement record for tracking
       const { data: announcement, error } = await supabase
@@ -82,7 +88,7 @@ export default function AnnouncementDialog({ trigger }: AnnouncementDialogProps)
           title: title.trim(),
           message: message.trim(),
           priority: priority.toLowerCase(),
-          target_departments: selectedDepartments,
+          target_departments: targetDepartments,
           target_roles: [],
           send_sms: sendSms,
           created_by: employee.name || employee.email,
@@ -114,14 +120,17 @@ export default function AnnouncementDialog({ trigger }: AnnouncementDialogProps)
       }
       
       // Send regular in-app notifications - create directly in notifications table
-      console.log('Sending announcement to departments:', selectedDepartments);
+      console.log('Sending announcement to departments:', targetDepartments);
       
       // Get all employees from targeted departments
-      const { data: targetEmployees, error: empError } = await supabase
+      let empQuery = supabase
         .from('employees')
         .select('id, department')
-        .in('department', selectedDepartments)
         .eq('status', 'Active');
+      if (!allDepartments) {
+        empQuery = empQuery.in('department', selectedDepartments);
+      }
+      const { data: targetEmployees, error: empError } = await empQuery;
 
       if (empError) {
         console.error('Error fetching target employees:', empError);
@@ -150,12 +159,15 @@ export default function AnnouncementDialog({ trigger }: AnnouncementDialogProps)
       
       toast({ 
         title: "Announcement sent", 
-        description: `Sent to ${selectedDepartments.length} department${selectedDepartments.length > 1 ? 's' : ''}${sendSms ? ' with SMS alerts' : ''}` 
+        description: allDepartments
+          ? `Sent to all active employees${sendSms ? ' with SMS alerts' : ''}`
+          : `Sent to ${selectedDepartments.length} department${selectedDepartments.length > 1 ? 's' : ''}${sendSms ? ' with SMS alerts' : ''}`
       });
       setOpen(false);
       setTitle("");
       setMessage("");
       setSelectedDepartments([]);
+      setAllDepartments(false);
       setPriority("Medium");
       setSendSms(false);
     } catch (err) {
@@ -194,19 +206,23 @@ export default function AnnouncementDialog({ trigger }: AnnouncementDialogProps)
                 <div key={dept} className="flex items-center space-x-2">
                   <Checkbox
                     id={dept}
-                    checked={dept === "All Departments" ? 
-                      selectedDepartments.length === departments.length - 1 : 
-                      selectedDepartments.includes(dept)
-                    }
+                    checked={dept === "All Departments" ? allDepartments : selectedDepartments.includes(dept)}
                     onCheckedChange={(checked) => handleDepartmentChange(dept, checked as boolean)}
                   />
                   <Label htmlFor={dept} className="text-sm cursor-pointer">
                     {dept}
+                    {dept === "All Departments" && (
+                      <span className="ml-1 text-xs text-muted-foreground">(every active employee)</span>
+                    )}
                   </Label>
                 </div>
               ))}
             </div>
-            {selectedDepartments.length > 0 && (
+            {allDepartments ? (
+              <p className="text-xs text-muted-foreground">
+                Selected: every active employee, including departments not listed above.
+              </p>
+            ) : selectedDepartments.length > 0 && (
               <p className="text-xs text-muted-foreground">
                 Selected: {selectedDepartments.join(", ")}
               </p>
