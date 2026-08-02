@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, PackagePlus, FlaskConical, Warehouse, Factory,
-  FileSignature, Truck, Ship, Banknote, ShieldCheck, Settings2, ArrowLeft, Menu,
+  FileSignature, Truck, Ship, Banknote, ShieldCheck, Settings2, ArrowLeft, Menu, Receipt,
 } from 'lucide-react';
 import { useV3Roles, V3Role, V3_ROLE_LABELS } from '@/hooks/useV3Roles';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ export const V3_NAV: NavItem[] = [
   { to: '/v3/receiving', label: 'Receiving', icon: PackagePlus, roles: ['storekeeper', 'store_manager', 'branch_manager'] },
   { to: '/v3/quality', label: 'Quality Lab', icon: FlaskConical, roles: ['quality_officer', 'quality_manager'] },
   { to: '/v3/store', label: 'Store & Stock', icon: Warehouse, roles: ['storekeeper', 'store_manager', 'branch_manager'] },
+  { to: '/v3/grns', label: 'GRNs', icon: Receipt, roles: ['store_manager', 'branch_manager', 'quality_manager', 'finance_officer', 'finance_manager'] },
   { to: '/v3/production', label: 'Production', icon: Factory, roles: ['production_manager', 'production_operator'] },
   { to: '/v3/trade', label: 'Trade & Contracts', icon: FileSignature, roles: ['trade_manager'] },
   { to: '/v3/logistics', label: 'Transport', icon: Truck, roles: ['logistics_manager', 'driver', 'store_manager'] },
