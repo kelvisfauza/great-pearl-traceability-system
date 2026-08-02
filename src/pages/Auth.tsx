@@ -948,8 +948,35 @@ const Auth = () => {
               <ScanFace className="h-5 w-5" style={{ color: '#0a5a30' }} />
               Sign in with Face ID
             </button>
+
+            {/* Fingerprint sign-in */}
+            <button
+              type="button"
+              onClick={handleFingerprintLogin}
+              disabled={loading || fingerBusy}
+              className="w-full h-12 rounded-xl font-medium transition-all hover:-translate-y-0.5 hover:shadow-md disabled:opacity-60 flex items-center justify-center gap-2"
+              style={{
+                background: '#ffffff',
+                color: '#03361b',
+                border: '1px solid rgba(6,78,59,0.2)',
+                fontFamily: "'Work Sans', sans-serif",
+              }}
+            >
+              {fingerBusy ? (
+                <Loader2 className="h-5 w-5 animate-spin" style={{ color: '#0a5a30' }} />
+              ) : (
+                <Fingerprint className="h-5 w-5" style={{ color: '#0a5a30' }} />
+              )}
+              {fingerBusy ? 'Waiting for fingerprint…' : 'Sign in with fingerprint'}
+            </button>
+            {fingerError && (
+              <p className="text-[11px] text-center" style={{ color: '#b91c1c' }}>
+                {fingerError}
+              </p>
+            )}
             <p className="text-[11px] text-center" style={{ color: 'rgba(6,78,59,0.55)' }}>
-              Register your face once in Settings, then sign in instantly without a password.
+              Enrol your face or fingerprint once in Settings → Profile, then sign in instantly
+              without a password. Enter your email above before using fingerprint.
             </p>
           </form>
 
