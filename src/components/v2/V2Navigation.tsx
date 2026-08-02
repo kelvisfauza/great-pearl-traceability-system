@@ -25,6 +25,7 @@ import {
   ArrowLeftRight,
   Calculator,
   FileText
+  ArrowRight,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
