@@ -12544,6 +12544,60 @@ export type Database = {
           },
         ]
       }
+      v3_float_transactions: {
+        Row: {
+          amount: number
+          balance_after: number | null
+          branch_id: string
+          created_at: string
+          created_by: string | null
+          direction: string
+          id: string
+          note: string | null
+          payment_id: string | null
+          reference: string | null
+        }
+        Insert: {
+          amount: number
+          balance_after?: number | null
+          branch_id: string
+          created_at?: string
+          created_by?: string | null
+          direction: string
+          id?: string
+          note?: string | null
+          payment_id?: string | null
+          reference?: string | null
+        }
+        Update: {
+          amount?: number
+          balance_after?: number | null
+          branch_id?: string
+          created_at?: string
+          created_by?: string | null
+          direction?: string
+          id?: string
+          note?: string | null
+          payment_id?: string | null
+          reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "v3_float_transactions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v3_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "v3_float_transactions_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "v3_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v3_grns: {
         Row: {
           bags: number
@@ -15294,6 +15348,11 @@ export type Database = {
         Args: { conversation_uuid: string }
         Returns: boolean
       }
+      v3_allocate_to_contract: {
+        Args: { p_batch_id: string; p_contract_id: string; p_kilograms: number }
+        Returns: Json
+      }
+      v3_approve_payment: { Args: { p_payment_id: string }; Returns: Json }
       v3_complete_production_run: {
         Args: {
           p_black?: number
@@ -15320,8 +15379,23 @@ export type Database = {
         }
         Returns: Json
       }
+      v3_execute_payment: {
+        Args: { p_method?: string; p_payment_id: string; p_reference?: string }
+        Returns: Json
+      }
       v3_issue_grn: {
         Args: { p_receiving_id: string; p_unit_price?: number }
+        Returns: Json
+      }
+      v3_load_shipment: {
+        Args: {
+          p_bags?: number
+          p_container?: string
+          p_loaded_kg: number
+          p_seal?: string
+          p_shipment_id: string
+          p_tare_kg?: number
+        }
         Returns: Json
       }
       v3_log: {
@@ -15347,12 +15421,25 @@ export type Database = {
         }
         Returns: Json
       }
+      v3_release_allocation: {
+        Args: { p_allocation_id: string; p_reason?: string }
+        Returns: Json
+      }
       v3_start_production_run: {
         Args: {
           p_batch_id: string
           p_input_kg: number
           p_machine?: string
           p_method?: string
+        }
+        Returns: Json
+      }
+      v3_topup_branch_float: {
+        Args: {
+          p_amount: number
+          p_branch_id: string
+          p_note?: string
+          p_reference?: string
         }
         Returns: Json
       }
