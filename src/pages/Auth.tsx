@@ -404,6 +404,89 @@ const Auth = () => {
     setShowFaceLogin(true);
   };
 
+  const handleFingerprintLogin = async () => {
+    setFingerError('');
+    const targetEmail = email.trim().toLowerCase();
+    if (!targetEmail || !targetEmail.includes('@')) {
+      setFingerError('Enter your work email above, then tap the fingerprint button.');
+      return;
+    }
+    if (!window.PublicKeyCredential) {
+      setFingerError('This device or browser does not support fingerprint sign-in.');
+      return;
+    }
+    setFingerBusy(true);
+    try {
+      const { data: begin, error: beginErr } = await supabase.functions.invoke('fingerprint-login', {
+        body: { action: 'begin', email: targetEmail },
+      });
+      if (beginErr) throw beginErr;
+      if (!begin?.ok) {
+        setFingerError(begin?.error || 'Fingerprint sign-in is not available for this account.');
+        return;
+      }
+
+      const challenge = new Uint8Array(32);
+      crypto.getRandomValues(challenge);
+      const assertion = (await navigator.credentials.get({
+        publicKey: {
+          challenge,
+          allowCredentials: [
+            {
+              id: Uint8Array.from(atob(begin.credential_id), (c) => c.charCodeAt(0)),
+              type: 'public-key',
+              transports: ['internal'],
+            },
+          ],
+          timeout: 60000,
+          userVerification: 'required',
+        },
+      })) as PublicKeyCredential | null;
+
+      if (!assertion) throw new Error('Fingerprint was not confirmed.');
+
+      const presentedId = btoa(String.fromCharCode(...new Uint8Array(assertion.rawId)));
+
+      const { data, error: finishErr } = await supabase.functions.invoke('fingerprint-login', {
+        body: { action: 'finish', email: targetEmail, credential_id: presentedId },
+      });
+      if (finishErr) throw finishErr;
+      if (!data?.ok) {
+        setFingerError(data?.error || 'Fingerprint not recognized. Please try again.');
+        return;
+      }
+
+      toast({
+        title: 'Fingerprint verified',
+        description: `Welcome back, ${data.name || ''}. Signing you in…`,
+      });
+
+      if (data?.token_hash) {
+        const { error: otpErr } = await supabase.auth.verifyOtp({
+          token_hash: data.token_hash,
+          type: (data.verification_type as any) || 'magiclink',
+        });
+        if (otpErr) throw otpErr;
+        window.history.replaceState({}, document.title, `${window.location.pathname}?post_auth=fingerprint`);
+        return;
+      }
+      if (data?.auth_url) {
+        window.location.replace(data.auth_url);
+        return;
+      }
+      throw new Error('Fingerprint sign-in response was incomplete. Please try again.');
+    } catch (err: any) {
+      console.error('Fingerprint login failed:', err);
+      setFingerError(
+        err?.name === 'NotAllowedError'
+          ? 'The fingerprint prompt was cancelled or timed out.'
+          : err?.message || 'Fingerprint sign-in failed. Please try again.',
+      );
+    } finally {
+      setFingerBusy(false);
+    }
+  };
+
   const handleFaceCapture = async (descriptor: number[]) => {
     // Hard guard: never submit twice in a single session.
     if (faceVerifiedRef.current) return;
