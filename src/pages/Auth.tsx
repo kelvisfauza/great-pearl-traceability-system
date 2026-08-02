@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, AlertCircle, Phone, Mail, MessageCircle, Lock, KeyRound, Eye, EyeOff, ScanFace, X } from 'lucide-react';
+import { Loader2, AlertCircle, Phone, Mail, MessageCircle, Lock, KeyRound, Eye, EyeOff, ScanFace, Fingerprint, X } from 'lucide-react';
 import PasswordChangeModal from '@/components/PasswordChangeModal';
 import { UnifiedVerification } from '@/components/auth/UnifiedVerification';
 import { supabase } from '@/integrations/supabase/client';
@@ -46,6 +46,10 @@ const Auth = () => {
   const [faceError, setFaceError] = useState('');
   const [faceVerified, setFaceVerified] = useState(false);
   const faceVerifiedRef = useRef(false);
+
+  // Fingerprint sign-in
+  const [fingerBusy, setFingerBusy] = useState(false);
+  const [fingerError, setFingerError] = useState('');
   
   const { signIn, user, employee, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -123,7 +127,7 @@ const Auth = () => {
       setLoading(true);
       // Show the welcome splash immediately so face-ID users see the logo
       // while we exchange the token in the background.
-      if (callbackSource === 'face' || callbackSource === 'auto' || tokenHash || code) {
+      if (callbackSource === 'face' || callbackSource === 'fingerprint' || callbackSource === 'auto' || tokenHash || code) {
         setShowWelcomeSplash(true);
       }
       setError('');
@@ -188,7 +192,7 @@ const Auth = () => {
     const type = urlParams.get('type');
     const code = urlParams.get('code');
     const tokenHash = urlParams.get('token_hash');
-    const isMagicLinkReturn = !!postAuthSource || postAuth === 'face' || postAuth === 'auto' || type === 'magiclink' || !!tokenHash || !!code;
+    const isMagicLinkReturn = !!postAuthSource || postAuth === 'face' || postAuth === 'fingerprint' || postAuth === 'auto' || type === 'magiclink' || !!tokenHash || !!code;
 
     if (!isMagicLinkReturn) return;
 
@@ -398,6 +402,89 @@ const Auth = () => {
   const openFaceLogin = () => {
     setFaceError('');
     setShowFaceLogin(true);
+  };
+
+  const handleFingerprintLogin = async () => {
+    setFingerError('');
+    const targetEmail = email.trim().toLowerCase();
+    if (!targetEmail || !targetEmail.includes('@')) {
+      setFingerError('Enter your work email above, then tap the fingerprint button.');
+      return;
+    }
+    if (!window.PublicKeyCredential) {
+      setFingerError('This device or browser does not support fingerprint sign-in.');
+      return;
+    }
+    setFingerBusy(true);
+    try {
+      const { data: begin, error: beginErr } = await supabase.functions.invoke('fingerprint-login', {
+        body: { action: 'begin', email: targetEmail },
+      });
+      if (beginErr) throw beginErr;
+      if (!begin?.ok) {
+        setFingerError(begin?.error || 'Fingerprint sign-in is not available for this account.');
+        return;
+      }
+
+      const challenge = new Uint8Array(32);
+      crypto.getRandomValues(challenge);
+      const assertion = (await navigator.credentials.get({
+        publicKey: {
+          challenge,
+          allowCredentials: [
+            {
+              id: Uint8Array.from(atob(begin.credential_id), (c) => c.charCodeAt(0)),
+              type: 'public-key',
+              transports: ['internal'],
+            },
+          ],
+          timeout: 60000,
+          userVerification: 'required',
+        },
+      })) as PublicKeyCredential | null;
+
+      if (!assertion) throw new Error('Fingerprint was not confirmed.');
+
+      const presentedId = btoa(String.fromCharCode(...new Uint8Array(assertion.rawId)));
+
+      const { data, error: finishErr } = await supabase.functions.invoke('fingerprint-login', {
+        body: { action: 'finish', email: targetEmail, credential_id: presentedId },
+      });
+      if (finishErr) throw finishErr;
+      if (!data?.ok) {
+        setFingerError(data?.error || 'Fingerprint not recognized. Please try again.');
+        return;
+      }
+
+      toast({
+        title: 'Fingerprint verified',
+        description: `Welcome back, ${data.name || ''}. Signing you in…`,
+      });
+
+      if (data?.token_hash) {
+        const { error: otpErr } = await supabase.auth.verifyOtp({
+          token_hash: data.token_hash,
+          type: (data.verification_type as any) || 'magiclink',
+        });
+        if (otpErr) throw otpErr;
+        window.history.replaceState({}, document.title, `${window.location.pathname}?post_auth=fingerprint`);
+        return;
+      }
+      if (data?.auth_url) {
+        window.location.replace(data.auth_url);
+        return;
+      }
+      throw new Error('Fingerprint sign-in response was incomplete. Please try again.');
+    } catch (err: any) {
+      console.error('Fingerprint login failed:', err);
+      setFingerError(
+        err?.name === 'NotAllowedError'
+          ? 'The fingerprint prompt was cancelled or timed out.'
+          : err?.message || 'Fingerprint sign-in failed. Please try again.',
+      );
+    } finally {
+      setFingerBusy(false);
+    }
   };
 
   const handleFaceCapture = async (descriptor: number[]) => {
@@ -861,8 +948,35 @@ const Auth = () => {
               <ScanFace className="h-5 w-5" style={{ color: '#0a5a30' }} />
               Sign in with Face ID
             </button>
+
+            {/* Fingerprint sign-in */}
+            <button
+              type="button"
+              onClick={handleFingerprintLogin}
+              disabled={loading || fingerBusy}
+              className="w-full h-12 rounded-xl font-medium transition-all hover:-translate-y-0.5 hover:shadow-md disabled:opacity-60 flex items-center justify-center gap-2"
+              style={{
+                background: '#ffffff',
+                color: '#03361b',
+                border: '1px solid rgba(6,78,59,0.2)',
+                fontFamily: "'Work Sans', sans-serif",
+              }}
+            >
+              {fingerBusy ? (
+                <Loader2 className="h-5 w-5 animate-spin" style={{ color: '#0a5a30' }} />
+              ) : (
+                <Fingerprint className="h-5 w-5" style={{ color: '#0a5a30' }} />
+              )}
+              {fingerBusy ? 'Waiting for fingerprint…' : 'Sign in with fingerprint'}
+            </button>
+            {fingerError && (
+              <p className="text-[11px] text-center" style={{ color: '#b91c1c' }}>
+                {fingerError}
+              </p>
+            )}
             <p className="text-[11px] text-center" style={{ color: 'rgba(6,78,59,0.55)' }}>
-              Register your face once in Settings, then sign in instantly without a password.
+              Enrol your face or fingerprint once in Settings → Profile, then sign in instantly
+              without a password. Enter your email above before using fingerprint.
             </p>
           </form>
 
