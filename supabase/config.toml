@@ -159,6 +159,8 @@ project_id = "pudfybkyfedeggmokhco"
     verify_jwt = false
   [functions.send-salary-sms-manual]
     verify_jwt = false
+  [functions.fingerprint-login]
+    verify_jwt = false
   [functions.send-sms]
     verify_jwt = false
   [functions.send-whatsapp]
