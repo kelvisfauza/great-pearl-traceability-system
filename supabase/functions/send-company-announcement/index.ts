@@ -50,7 +50,11 @@ serve(async (req) => {
     // Filter employees based on target departments and roles
     let targetEmployees = employees || [];
 
-    if (announcement.target_departments && announcement.target_departments.length > 0) {
+    const targetsAll = (announcement.target_departments || []).some(
+      (d: string) => typeof d === 'string' && ['all', 'all departments'].includes(d.trim().toLowerCase())
+    );
+
+    if (!targetsAll && announcement.target_departments && announcement.target_departments.length > 0) {
       targetEmployees = targetEmployees.filter(emp => 
         announcement.target_departments.includes(emp.department)
       );
