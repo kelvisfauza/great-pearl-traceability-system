@@ -12850,84 +12850,129 @@ export type Database = {
           analysed_by: string | null
           approved_at: string | null
           approved_by: string | null
+          coffee_type: string | null
           created_at: string
           cup_notes: string | null
           cup_score: number | null
           defect_black: number | null
           defect_broken: number | null
           defect_husks: number | null
+          defect_immature: number | null
           defect_insect: number | null
           defect_pods: number | null
+          defect_stones: number | null
           defect_triage: number | null
+          failures: Json
           foreign_matter: number | null
+          grade: string | null
           id: string
           moisture: number | null
           outturn: number | null
+          passed: boolean | null
+          price_adjustment: number | null
           receiving_id: string
           recommendation: string | null
+          retest_of: string | null
           retest_reason: string | null
           retest_requested: boolean
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           sample_code: string
+          sample_weight: number | null
+          screen_retention: number | null
           screen_size: string | null
           stage: string
+          status: string
           submitted: boolean
           submitted_at: string | null
+          total_defects: number | null
           updated_at: string
         }
         Insert: {
           analysed_by?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          coffee_type?: string | null
           created_at?: string
           cup_notes?: string | null
           cup_score?: number | null
           defect_black?: number | null
           defect_broken?: number | null
           defect_husks?: number | null
+          defect_immature?: number | null
           defect_insect?: number | null
           defect_pods?: number | null
+          defect_stones?: number | null
           defect_triage?: number | null
+          failures?: Json
           foreign_matter?: number | null
+          grade?: string | null
           id?: string
           moisture?: number | null
           outturn?: number | null
+          passed?: boolean | null
+          price_adjustment?: number | null
           receiving_id: string
           recommendation?: string | null
+          retest_of?: string | null
           retest_reason?: string | null
           retest_requested?: boolean
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           sample_code: string
+          sample_weight?: number | null
+          screen_retention?: number | null
           screen_size?: string | null
           stage?: string
+          status?: string
           submitted?: boolean
           submitted_at?: string | null
+          total_defects?: number | null
           updated_at?: string
         }
         Update: {
           analysed_by?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          coffee_type?: string | null
           created_at?: string
           cup_notes?: string | null
           cup_score?: number | null
           defect_black?: number | null
           defect_broken?: number | null
           defect_husks?: number | null
+          defect_immature?: number | null
           defect_insect?: number | null
           defect_pods?: number | null
+          defect_stones?: number | null
           defect_triage?: number | null
+          failures?: Json
           foreign_matter?: number | null
+          grade?: string | null
           id?: string
           moisture?: number | null
           outturn?: number | null
+          passed?: boolean | null
+          price_adjustment?: number | null
           receiving_id?: string
           recommendation?: string | null
+          retest_of?: string | null
           retest_reason?: string | null
           retest_requested?: boolean
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           sample_code?: string
+          sample_weight?: number | null
+          screen_retention?: number | null
           screen_size?: string | null
           stage?: string
+          status?: string
           submitted?: boolean
           submitted_at?: string | null
+          total_defects?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -12938,7 +12983,74 @@ export type Database = {
             referencedRelation: "v3_receiving_records"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "v3_quality_analyses_retest_of_fkey"
+            columns: ["retest_of"]
+            isOneToOne: false
+            referencedRelation: "v3_quality_analyses"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      v3_quality_standards: {
+        Row: {
+          active: boolean
+          coffee_type: string
+          created_at: string
+          defect_penalty_per_point: number
+          grade_a_max_defects: number
+          grade_b_max_defects: number
+          id: string
+          max_foreign_matter: number
+          max_moisture: number
+          max_total_defects: number
+          min_cup_score: number | null
+          min_outturn: number
+          min_screen_retention: number | null
+          moisture_penalty_per_point: number
+          notes: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          coffee_type: string
+          created_at?: string
+          defect_penalty_per_point?: number
+          grade_a_max_defects?: number
+          grade_b_max_defects?: number
+          id?: string
+          max_foreign_matter?: number
+          max_moisture?: number
+          max_total_defects?: number
+          min_cup_score?: number | null
+          min_outturn?: number
+          min_screen_retention?: number | null
+          moisture_penalty_per_point?: number
+          notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          coffee_type?: string
+          created_at?: string
+          defect_penalty_per_point?: number
+          grade_a_max_defects?: number
+          grade_b_max_defects?: number
+          id?: string
+          max_foreign_matter?: number
+          max_moisture?: number
+          max_total_defects?: number
+          min_cup_score?: number | null
+          min_outturn?: number
+          min_screen_retention?: number | null
+          moisture_penalty_per_point?: number
+          notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       v3_receiving_records: {
         Row: {
@@ -15425,6 +15537,15 @@ export type Database = {
         Args: { p_allocation_id: string; p_reason?: string }
         Returns: Json
       }
+      v3_review_quality_analysis: {
+        Args: {
+          p_action: string
+          p_analysis_id: string
+          p_notes?: string
+          p_price_adjustment?: number
+        }
+        Returns: Json
+      }
       v3_start_production_run: {
         Args: {
           p_batch_id: string
@@ -15432,6 +15553,10 @@ export type Database = {
           p_machine?: string
           p_method?: string
         }
+        Returns: Json
+      }
+      v3_submit_quality_analysis: {
+        Args: { p_analysis_id: string }
         Returns: Json
       }
       v3_topup_branch_float: {
