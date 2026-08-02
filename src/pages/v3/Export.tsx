@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { useV3Roles } from '@/hooks/useV3Roles';
-import { Ship, Plus, FileCheck2, Lock } from 'lucide-react';
+import { Ship, Plus, FileCheck2, Lock, ContainerIcon } from 'lucide-react';
 
 const SHIPMENT_STATUSES = ['planned','allocated','processing','documents_pending','ready_to_load','loaded','customs','shipped','delivered','closed','cancelled'] as const;
 
@@ -30,6 +30,8 @@ export default function V3Export() {
   const [openNew, setOpenNew] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [form, setForm] = useState<Record<string, string>>({ coffee_type: 'Arabica' });
+  const [loadOpen, setLoadOpen] = useState(false);
+  const [loadForm, setLoadForm] = useState<Record<string, string>>({});
 
   const { data: shipments = [] } = useQuery({
     queryKey: ['v3-shipments'],
@@ -109,6 +111,28 @@ export default function V3Export() {
   const current = shipments.find((s: any) => s.id === selected);
   const outstanding = docs.filter((d: any) => d.mandatory && d.status !== 'approved');
   const loadingBlocked = !current?.quality_approved || outstanding.length > 0;
+
+  const loadShipment = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await (supabase.rpc as any)('v3_load_shipment', {
+        p_shipment_id: current.id,
+        p_loaded_kg: Number(loadForm.loaded_kg || 0),
+        p_bags: loadForm.bags ? Number(loadForm.bags) : null,
+        p_container: loadForm.container || current.container_number || null,
+        p_seal: loadForm.seal || current.seal_number || null,
+        p_tare_kg: loadForm.tare ? Number(loadForm.tare) : null,
+      });
+      if (error) throw error;
+      return data as any;
+    },
+    onSuccess: (d: any) => {
+      toast({ title: `${d.shipment_number} loaded`, description: `${Number(d.loaded_kg).toLocaleString()} kg recorded against the contract.` });
+      setLoadOpen(false); setLoadForm({});
+      qc.invalidateQueries({ queryKey: ['v3-shipments'] });
+      qc.invalidateQueries({ queryKey: ['v3-contracts'] });
+    },
+    onError: (e: any) => toast({ title: 'Loading failed', description: e.message, variant: 'destructive' }),
+  });
 
   return (
     <V3Layout
@@ -250,6 +274,18 @@ export default function V3Export() {
                     {outstanding.length > 0 && `${outstanding.length} mandatory document(s) not approved`}.</span>
                 </div>
               )}
+              {canEdit && !loadingBlocked && current.status !== 'loaded' && current.status !== 'shipped' && (
+                <div className="sm:col-span-2">
+                  <Button className="w-full" onClick={() => { setLoadForm({ loaded_kg: String(current.planned_kg || ''), bags: String(current.bags || '') }); setLoadOpen(true); }}>
+                    <ContainerIcon className="h-4 w-4 mr-1" /> Record container loading
+                  </Button>
+                </div>
+              )}
+              {current.loaded_kg > 0 && (
+                <div className="sm:col-span-2 rounded-md border bg-muted/40 p-3 text-xs">
+                  Loaded {Number(current.loaded_kg).toLocaleString()} kg in container {current.container_number} (seal {current.seal_number}).
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -284,6 +320,20 @@ export default function V3Export() {
           </Card>
         </div>
       )}
+
+      <Dialog open={loadOpen} onOpenChange={setLoadOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Record container loading — {current?.shipment_number}</DialogTitle></DialogHeader>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div><Label>Loaded kg</Label><Input type="number" value={loadForm.loaded_kg || ''} onChange={(e) => setLoadForm({ ...loadForm, loaded_kg: e.target.value })} /></div>
+            <div><Label>Bags</Label><Input type="number" value={loadForm.bags || ''} onChange={(e) => setLoadForm({ ...loadForm, bags: e.target.value })} /></div>
+            <div><Label>Container number</Label><Input value={loadForm.container ?? (current?.container_number || '')} onChange={(e) => setLoadForm({ ...loadForm, container: e.target.value })} /></div>
+            <div><Label>Seal number</Label><Input value={loadForm.seal ?? (current?.seal_number || '')} onChange={(e) => setLoadForm({ ...loadForm, seal: e.target.value })} /></div>
+            <div className="sm:col-span-2"><Label>Container tare (kg)</Label><Input type="number" value={loadForm.tare || ''} onChange={(e) => setLoadForm({ ...loadForm, tare: e.target.value })} /></div>
+          </div>
+          <DialogFooter><Button onClick={() => loadShipment.mutate()} disabled={loadShipment.isPending}>Confirm loading</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </V3Layout>
   );
 }
