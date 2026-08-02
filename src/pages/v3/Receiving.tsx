@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { useV3Roles } from '@/hooks/useV3Roles';
-import { Plus, CheckCircle2 } from 'lucide-react';
+import { Plus, CheckCircle2, FileText } from 'lucide-react';
 
 export default function V3Receiving() {
   const { hasRole } = useV3Roles();
@@ -78,6 +78,22 @@ export default function V3Receiving() {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['v3-receiving'] }),
     onError: (e: any) => toast({ title: 'Update failed', description: e.message, variant: 'destructive' }),
+  });
+
+  const issueGrn = useMutation({
+    mutationFn: async ({ id, price }: { id: string; price?: number }) => {
+      const { data, error } = await (supabase.rpc as any)('v3_issue_grn', { p_receiving_id: id, p_unit_price: price ?? null });
+      if (error) throw error;
+      return data as any;
+    },
+    onSuccess: (d: any) => {
+      toast({ title: `GRN ${d.grn_number} issued`, description: `Batch ${d.batch_number} opened and payment ${d.payment_number} sent to finance.` });
+      qc.invalidateQueries({ queryKey: ['v3-receiving'] });
+      qc.invalidateQueries({ queryKey: ['v3-grns'] });
+      qc.invalidateQueries({ queryKey: ['v3-stock'] });
+      qc.invalidateQueries({ queryKey: ['v3-payments'] });
+    },
+    onError: (e: any) => toast({ title: 'Could not issue GRN', description: e.message, variant: 'destructive' }),
   });
 
   return (
@@ -156,6 +172,21 @@ export default function V3Receiving() {
                         values: { status: 'approved', approved_by: (await supabase.auth.getUser()).data.user?.id, approved_at: new Date().toISOString() },
                       })}>
                         <CheckCircle2 className="h-4 w-4 mr-1" /> Approve
+                      </Button>
+                    )}
+                    {canApprove && r.status === 'approved' && (
+                      <Button size="sm" disabled={issueGrn.isPending} onClick={() => {
+                        const preset = r.final_price ?? r.reference_price;
+                        const input = window.prompt('Unit price per kg (UGX)', preset ? String(preset) : '');
+                        if (input === null) return;
+                        const price = Number(input);
+                        if (!price || price <= 0) {
+                          toast({ title: 'A valid unit price is required', variant: 'destructive' });
+                          return;
+                        }
+                        issueGrn.mutate({ id: r.id, price });
+                      }}>
+                        <FileText className="h-4 w-4 mr-1" /> Issue GRN
                       </Button>
                     )}
                   </TableCell>
