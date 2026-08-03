@@ -6,7 +6,10 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Package, FlaskConical, Warehouse, Banknote, Boxes, Truck, Printer, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 import { getStandardPrintStyles } from "@/utils/printStyles";
 import {
   LOGO_URL,
@@ -61,8 +64,12 @@ const AssessmentChainDialog = ({ assessment, open, onOpenChange }: Props) => {
   const assessmentId = assessment?.id;
   const recordId = assessment?.store_record_id;
   const printRef = useRef<HTMLDivElement>(null);
+  const [saleId, setSaleId] = useState<string>("");
+  const [saleBatchId, setSaleBatchId] = useState<string>("");
+  const [saleKg, setSaleKg] = useState<string>("");
+  const [attaching, setAttaching] = useState(false);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["assessment-chain", assessmentId, recordId],
     enabled: open && !!assessmentId,
     queryFn: async () => {
@@ -123,9 +130,52 @@ const AssessmentChainDialog = ({ assessment, open, onOpenChange }: Props) => {
     },
   });
 
+  const { data: availableSales } = useQuery({
+    queryKey: ["chain-attachable-sales", open],
+    enabled: open,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("sales_transactions")
+        .select("id, date, customer, coffee_type, weight, unit_price, total_amount")
+        .order("date", { ascending: false })
+        .limit(100);
+      return data || [];
+    },
+  });
+
   if (!assessment) return null;
 
   const record = data?.record;
+  const chainBatches = data?.batches || [];
+
+  const handleAttachSale = async () => {
+    const batchId = saleBatchId || chainBatches[0]?.id;
+    const kg = Number(saleKg);
+    if (!saleId || !batchId || !kg || kg <= 0) {
+      toast.error("Select a sale, a batch and enter kilograms");
+      return;
+    }
+    setAttaching(true);
+    try {
+      const sale = (availableSales || []).find((s: any) => s.id === saleId);
+      const { error } = await supabase.from("inventory_batch_sales").insert({
+        batch_id: batchId,
+        sale_transaction_id: saleId,
+        kilograms_deducted: kg,
+        customer_name: sale?.customer || null,
+        sale_date: sale?.date || null,
+      });
+      if (error) throw error;
+      toast.success("Sale attached to this batch");
+      setSaleId("");
+      setSaleKg("");
+      await refetch();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to attach sale");
+    } finally {
+      setAttaching(false);
+    }
+  };
   const lot = data?.lot;
   const assessedKg = lot?.quantity_kg ?? record?.kilograms;
   const unitPrice = assessment.final_price || assessment.suggested_price;
@@ -291,6 +341,53 @@ const AssessmentChainDialog = ({ assessment, open, onOpenChange }: Props) => {
                       </div>
                     );
                   })
+                )}
+
+                {chainBatches.length > 0 && (
+                  <div className="no-print pt-3 space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      Attach a sale (if this coffee was sold)
+                    </p>
+                    <Select value={saleId} onValueChange={setSaleId}>
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue placeholder="Select sale" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover z-50">
+                        {(availableSales || []).map((s: any) => (
+                          <SelectItem key={s.id} value={s.id} className="text-xs">
+                            {s.date} · {s.customer} · {Number(s.weight || 0).toLocaleString()} kg
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={saleBatchId || chainBatches[0]?.id || ""}
+                      onValueChange={setSaleBatchId}
+                    >
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue placeholder="Select batch" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover z-50">
+                        {chainBatches.map((b: any) => (
+                          <SelectItem key={b.id} value={b.id} className="text-xs">
+                            {b.batch_code} · {Number(b.remaining_kilograms || 0).toLocaleString()} kg left
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        placeholder="Kilograms sold from this batch"
+                        value={saleKg}
+                        onChange={(e) => setSaleKg(e.target.value)}
+                        className="h-9 text-xs"
+                      />
+                      <Button size="sm" onClick={handleAttachSale} disabled={attaching}>
+                        {attaching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Attach"}
+                      </Button>
+                    </div>
+                  </div>
                 )}
               </Step>
 
