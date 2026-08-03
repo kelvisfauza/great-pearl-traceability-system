@@ -41,7 +41,9 @@ const EUDRDocumentation = () => {
     getDocumentsByStatus,
     getBatchesForDocument,
     getSalesForBatch,
-    getAvailableBatches
+    getAvailableBatches,
+    fetchEUDRBatches,
+    fetchEUDRSales
   } = useEUDRDocumentation();
 
   const { reports: dispatchReports, fetchReports: refetchDispatchReports, loading: dispatchLoading } = useEUDRDispatchReports();
@@ -620,7 +622,7 @@ const EUDRDocumentation = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {eudrBatches.filter(batch => batch.status !== 'sold_out').length > 0 ? (
+              {eudrBatches.filter(batch => batch.status !== 'sold_out' && Number(batch.available_kilograms) > 0).length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -635,7 +637,7 @@ const EUDRDocumentation = () => {
                   </TableHeader>
                   <TableBody>
                     {eudrBatches
-                      .filter(batch => batch.status !== 'sold_out')
+                      .filter(batch => batch.status !== 'sold_out' && Number(batch.available_kilograms) > 0)
                       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                       .map((batch) => {
                         const document = eudrDocuments.find(doc => doc.id === batch.document_id);
@@ -1536,6 +1538,9 @@ const EUDRDocumentation = () => {
         <AttachSaleDialog
           open={!!attachSaleBatch}
           onOpenChange={(open) => !open && setAttachSaleBatch(null)}
+          onAttached={async () => {
+            await Promise.all([fetchEUDRBatches(), fetchEUDRSales()]);
+          }}
           batch={attachSaleBatch}
         />
       )}
