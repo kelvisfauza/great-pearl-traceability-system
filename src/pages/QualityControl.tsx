@@ -53,6 +53,7 @@ import QualityAssessmentReports from "@/components/quality/QualityAssessmentRepo
 import AdminQualityPricingReview from "@/components/admin/AdminQualityPricingReview";
 import { cn } from "@/lib/utils";
 import EmployeeCombobox from "@/components/quality/EmployeeCombobox";
+import AssessmentChainDialog from "@/components/quality/AssessmentChainDialog";
 
 const QualityControl = () => {
   const { isQualityHead, canPrintGRN } = useQualityRole();
@@ -179,6 +180,8 @@ const QualityControl = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingAssessmentId, setEditingAssessmentId] = useState<string | null>(null);
   const [selectedForBulkPrint, setSelectedForBulkPrint] = useState<string[]>([]);
+  const [chainAssessment, setChainAssessment] = useState<any | null>(null);
+  const [chainOpen, setChainOpen] = useState(false);
   const [grnPrintModal, setGrnPrintModal] = useState<{
     open: boolean;
     grnData: {
@@ -1559,6 +1562,14 @@ const QualityControl = () => {
                               <Button 
                                 size="sm" 
                                 variant="outline"
+                                onClick={() => { setChainAssessment(assessment); setChainOpen(true); }}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                View
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
                                 onClick={() => handleEditAssessment(assessment)}
                                 disabled={readOnly}
                               >
@@ -1593,6 +1604,11 @@ const QualityControl = () => {
                 )}
               </CardContent>
             </Card>
+            <AssessmentChainDialog
+              assessment={chainAssessment}
+              open={chainOpen}
+              onOpenChange={setChainOpen}
+            />
           </TabsContent>
 
           <TabsContent value="calculator">
