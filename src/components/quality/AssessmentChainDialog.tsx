@@ -342,6 +342,53 @@ const AssessmentChainDialog = ({ assessment, open, onOpenChange }: Props) => {
                     );
                   })
                 )}
+
+                {chainBatches.length > 0 && (
+                  <div className="no-print pt-3 space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      Attach a sale (if this coffee was sold)
+                    </p>
+                    <Select value={saleId} onValueChange={setSaleId}>
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue placeholder="Select sale" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover z-50">
+                        {(availableSales || []).map((s: any) => (
+                          <SelectItem key={s.id} value={s.id} className="text-xs">
+                            {s.date} · {s.customer} · {Number(s.weight || 0).toLocaleString()} kg
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={saleBatchId || chainBatches[0]?.id || ""}
+                      onValueChange={setSaleBatchId}
+                    >
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue placeholder="Select batch" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover z-50">
+                        {chainBatches.map((b: any) => (
+                          <SelectItem key={b.id} value={b.id} className="text-xs">
+                            {b.batch_code} · {Number(b.remaining_kilograms || 0).toLocaleString()} kg left
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        placeholder="Kilograms sold from this batch"
+                        value={saleKg}
+                        onChange={(e) => setSaleKg(e.target.value)}
+                        className="h-9 text-xs"
+                      />
+                      <Button size="sm" onClick={handleAttachSale} disabled={attaching}>
+                        {attaching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Attach"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </Step>
 
               <Step
