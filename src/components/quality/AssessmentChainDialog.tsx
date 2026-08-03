@@ -177,6 +177,11 @@ const AssessmentChainDialog = ({ assessment, open, onOpenChange }: Props) => {
     }
   };
   const lot = data?.lot;
+  const grnNumber =
+    lot?.grn_number ||
+    (data?.record?.batch_number || assessment.batch_number
+      ? `GRN-${data?.record?.batch_number || assessment.batch_number}`
+      : null);
   const assessedKg = lot?.quantity_kg ?? record?.kilograms;
   const unitPrice = assessment.final_price || assessment.suggested_price;
   const grossValue = Number(assessedKg || 0) * Number(unitPrice || 0);
@@ -264,7 +269,7 @@ const AssessmentChainDialog = ({ assessment, open, onOpenChange }: Props) => {
         ["Comments", assessment.comments],
       ])),
       section(3, "GRN", assessment.grn_printed ? "Printed" : "Not printed", rows([
-        ["GRN number", lot?.grn_number],
+        ["GRN number", grnNumber],
         ["Printed by", assessment.grn_printed_by],
         ["Printed at", fmtDate(assessment.grn_printed_at)],
       ])),
@@ -408,7 +413,7 @@ const AssessmentChainDialog = ({ assessment, open, onOpenChange }: Props) => {
                 title="3. GRN"
                 status={assessment.grn_printed ? "Printed" : "Not printed"}
               >
-                <Row label="GRN number" value={lot?.grn_number} />
+                <Row label="GRN number" value={grnNumber} />
                 <Row label="Printed by" value={assessment.grn_printed_by} />
                 <Row label="Printed at" value={fmtDate(assessment.grn_printed_at)} />
               </Step>
