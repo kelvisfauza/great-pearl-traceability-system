@@ -1604,6 +1604,11 @@ const QualityControl = () => {
                 )}
               </CardContent>
             </Card>
+            <AssessmentChainDialog
+              assessment={chainAssessment}
+              open={chainOpen}
+              onOpenChange={setChainOpen}
+            />
           </TabsContent>
 
           <TabsContent value="calculator">
