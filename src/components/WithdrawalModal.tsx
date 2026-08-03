@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useUserAccount } from '@/hooks/useUserAccount';
 import { useAuth } from '@/contexts/AuthContext';
-import { Smartphone, AlertTriangle, Printer, ShieldCheck, Loader2, Clock, Zap, CheckCircle2 } from 'lucide-react';
+import { Smartphone, AlertTriangle, Printer, ShieldCheck, Loader2, Clock, Zap, CheckCircle2, Landmark } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -53,6 +53,32 @@ interface WithdrawalModalProps {
 
 type Step = 'amount' | 'verify' | 'done';
 
+const UG_BANKS = [
+  'Stanbic Bank Uganda',
+  'Centenary Bank',
+  'DFCU Bank',
+  'Absa Bank Uganda',
+  'Equity Bank Uganda',
+  'Bank of Africa',
+  'Housing Finance Bank',
+  'Post Bank Uganda',
+  'Standard Chartered Bank',
+  'KCB Bank Uganda',
+  'NCBA Bank Uganda',
+  'Diamond Trust Bank',
+  'Cairo Bank Uganda',
+  'Ecobank Uganda',
+  'Finance Trust Bank',
+  'Opportunity Bank',
+  'Pride Bank',
+  'Exim Bank Uganda',
+  'Bank of Baroda',
+  'Citibank Uganda',
+  'UBA Uganda',
+  'Guaranty Trust Bank',
+  'I&M Bank Uganda',
+];
+
 export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   open,
   onOpenChange,
@@ -91,6 +117,12 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const [eligibilityResolved, setEligibilityResolved] = useState(false);
   const [useInstant, setUseInstant] = useState(false);
   const [overdraftAccepted, setOverdraftAccepted] = useState(false);
+
+  // Bank deposit payout mode
+  const [payoutMode, setPayoutMode] = useState<'MOBILE' | 'BANK'>('MOBILE');
+  const [bankBranch, setBankBranch] = useState('');
+  const [bankSubmitting, setBankSubmitting] = useState(false);
+  const [bankSubmitted, setBankSubmitted] = useState(false);
 
   // Hard re-entry lock — a ref so simultaneous clicks can't slip past the
   // async `instantLoading` state update and fire duplicate withdrawals.
@@ -461,6 +493,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   };
 
   const handleVerifyAndWithdraw = async () => {
+    // (mobile / cash flow)
     if (verificationCode !== sentCode) {
       toast({
         title: "Invalid Code",
@@ -552,12 +585,16 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
 
   const handleClose = () => {
     setStep('amount');
+    setBankSubmitting(false);
     setAmount('');
     setChannel('CASH');
     setMobileNumber('');
     setBankName('');
     setAccountNumber('');
     setAccountName('');
+    setBankBranch('');
+    setPayoutMode('MOBILE');
+    setBankSubmitted(false);
     setVerificationCode('');
     setSentCode('');
     setCompletedRef('');
@@ -570,6 +607,75 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   };
 
   const parsedAmount = amount ? parseFloat(amount) : 0;
+
+  const getServiceFee = (amt: number) =>
+    amt < 500 ? 0
+      : amt <= 60_000 ? 1_100
+      : amt <= 500_000 ? 1_700
+      : amt <= 1_000_000 ? 2_500
+      : 2_900;
+
+  const bankFee = getServiceFee(parsedAmount);
+  const bankTotal = parsedAmount + bankFee;
+  const bankFieldsValid = Boolean(bankName.trim() && accountNumber.trim() && accountName.trim());
+  const bankAmountValid = parsedAmount >= 2000 && bankTotal <= availableAmount;
+
+  const handleBankDepositRequest = async () => {
+    if (withdrawalStatus.disabled || isWalletFrozen) {
+      toast({
+        title: isWalletFrozen ? 'Wallet Frozen' : 'Withdrawals Disabled',
+        description: isWalletFrozen
+          ? 'Your wallet is currently frozen. Withdrawals are not allowed.'
+          : (withdrawalStatus.reason || 'Withdrawals are temporarily paused.'),
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!bankFieldsValid || !bankAmountValid) return;
+
+    setBankSubmitting(true);
+    try {
+      const email = employee?.email || user?.email || '';
+      const { data: unified } = await supabase.rpc('get_unified_user_id', { input_email: email });
+      const ref = `BNK-${new Date().toISOString().split('T')[0]}-${Date.now().toString().slice(-5)}`;
+
+      const { error } = await supabase.from('bank_deposit_requests' as any).insert({
+        user_id: (unified as string | null) || user?.id || '',
+        employee_email: email,
+        employee_name: employee?.name || email,
+        amount: parsedAmount,
+        fee: bankFee,
+        total_deducted: bankTotal,
+        bank_name: bankName.trim(),
+        branch: bankBranch.trim() || null,
+        account_number: accountNumber.trim(),
+        account_name: accountName.trim(),
+        reference: ref,
+        status: 'pending_admin',
+      });
+      if (error) throw error;
+
+      setCompletedRef(ref);
+      setCompletedAmount(parsedAmount);
+      setBankSubmitted(true);
+      setStep('done');
+      toast({
+        title: 'Bank Deposit Request Submitted',
+        description: `Reference: ${ref}. Your request will be reviewed by an administrator, then finally approved and paid by the Managing Director.`,
+        duration: 8000,
+      });
+    } catch (e: any) {
+      console.error('Bank deposit request failed:', e);
+      toast({
+        title: 'Error',
+        description: e?.message || 'Failed to submit bank deposit request.',
+        variant: 'destructive',
+      });
+    } finally {
+      setBankSubmitting(false);
+    }
+  };
+
   const instantMaxAmount = Number(instantEligibility?.max_instant_amount ?? 0);
   const instantUnavailable = eligibilityResolved && !eligibilityLoading && !instantEligibility?.eligible;
   const isCashRoundAmount = channel !== 'CASH' || parsedAmount % 500 === 0;
@@ -714,7 +820,73 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                   )}
                 </div>
 
-                {needsInstantPhoneInput && (
+                {/* Payout destination */}
+                <div className="space-y-2">
+                  <Label>Where should the money go?</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPayoutMode('MOBILE')}
+                      className={`rounded-md border p-2 text-xs font-medium transition ${payoutMode === 'MOBILE' ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground'}`}
+                    >
+                      <Smartphone className="h-4 w-4 mx-auto mb-1" />
+                      Mobile Money
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPayoutMode('BANK')}
+                      className={`rounded-md border p-2 text-xs font-medium transition ${payoutMode === 'BANK' ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground'}`}
+                    >
+                      <Landmark className="h-4 w-4 mx-auto mb-1" />
+                      Bank Deposit
+                    </button>
+                  </div>
+                </div>
+
+                {payoutMode === 'BANK' && (
+                  <div className="space-y-3 rounded-md border p-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="bank-name">Bank</Label>
+                      <Input
+                        id="bank-name"
+                        list="ug-banks"
+                        placeholder="Select or type your bank"
+                        value={bankName}
+                        onChange={(e) => setBankName(e.target.value)}
+                      />
+                      <datalist id="ug-banks">
+                        {UG_BANKS.map((b) => <option key={b} value={b} />)}
+                      </datalist>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bank-branch">Branch (optional)</Label>
+                      <Input id="bank-branch" placeholder="e.g. Kasese" value={bankBranch} onChange={(e) => setBankBranch(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bank-account-number">Account Number</Label>
+                      <Input id="bank-account-number" inputMode="numeric" placeholder="Your bank account number" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bank-account-name">Account Name</Label>
+                      <Input id="bank-account-name" placeholder="Name on the account" value={accountName} onChange={(e) => setAccountName(e.target.value)} />
+                    </div>
+                    {parsedAmount >= 2000 && (
+                      <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 space-y-1">
+                        <div className="flex justify-between"><span>Deposit amount</span><span>UGX {parsedAmount.toLocaleString()}</span></div>
+                        <div className="flex justify-between"><span>Service fee</span><span>UGX {bankFee.toLocaleString()}</span></div>
+                        <div className="flex justify-between font-semibold border-t border-amber-200 pt-1"><span>Total deducted</span><span>UGX {bankTotal.toLocaleString()}</span></div>
+                        {bankTotal > availableAmount && (
+                          <p className="text-destructive">Insufficient available balance for this deposit plus fee.</p>
+                        )}
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Bank deposits are reviewed by an administrator and then finally approved and paid by the Managing Director. Money is deducted only when marked as paid.
+                    </p>
+                  </div>
+                )}
+
+                {payoutMode === 'MOBILE' && needsInstantPhoneInput && (
                   <div className="space-y-2">
                     <Label htmlFor="instant-mobile-number">Mobile Money Number</Label>
                     <Input
@@ -734,7 +906,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                 )}
 
                 {/* Instant withdrawal hint */}
-                {instantEligibility?.eligible && parsedAmount >= 2000 && parsedAmount <= instantMaxAmount && (
+                {payoutMode === 'MOBILE' && instantEligibility?.eligible && parsedAmount >= 2000 && parsedAmount <= instantMaxAmount && (
                   <Alert className="border-green-300 bg-green-50 py-2">
                     <Zap className="h-3 w-3 text-green-600" />
                     <AlertDescription className="text-xs text-green-700">
@@ -745,7 +917,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                 )}
 
                 {/* Tiered withdrawal service-fee notice */}
-                {instantEligibility?.eligible && parsedAmount >= 500 && (() => {
+                {payoutMode === 'MOBILE' && instantEligibility?.eligible && parsedAmount >= 500 && (() => {
                   const fee = parsedAmount <= 60_000 ? 1_100
                     : parsedAmount <= 500_000 ? 1_700
                     : parsedAmount <= 1_000_000 ? 2_500
@@ -763,7 +935,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                 })()}
 
                 {/* Overdraft acceptance for instant withdraw */}
-                {instantEligibility?.eligible && usesOverdraft && parsedAmount >= 2000 && parsedAmount <= instantMaxAmount && (
+                {payoutMode === 'MOBILE' && instantEligibility?.eligible && usesOverdraft && parsedAmount >= 2000 && parsedAmount <= instantMaxAmount && (
                   <div className="rounded-md border border-amber-300 bg-amber-50 p-3 space-y-2 text-xs text-amber-900">
                     <div className="flex justify-between"><span>From wallet:</span><span>UGX {walletPortion.toLocaleString()}</span></div>
                     <div className="flex justify-between text-emerald-700"><span>From overdraft:</span><span>UGX {odPortion.toLocaleString()}</span></div>
@@ -781,7 +953,20 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                   <Button type="button" variant="outline" onClick={handleClose} disabled={instantLoading}>
                     Cancel
                   </Button>
-                  {instantEligibility?.eligible && (
+                  {payoutMode === 'BANK' && (
+                    <Button
+                      type="button"
+                      onClick={handleBankDepositRequest}
+                      disabled={bankSubmitting || withdrawalStatus.disabled || isWalletFrozen || !bankFieldsValid || !bankAmountValid}
+                    >
+                      {bankSubmitting ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Submitting...</>
+                      ) : (
+                        <><Landmark className="h-4 w-4 mr-1" /> Submit Bank Deposit</>
+                      )}
+                    </Button>
+                  )}
+                  {payoutMode === 'MOBILE' && instantEligibility?.eligible && (
                     <Button
                       type="button"
                       onClick={() => setShowInstantConfirm(true)}
@@ -864,7 +1049,20 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
           {/* Step 3: Submitted for Approval */}
           {step === 'done' && (
             <div className="space-y-4 text-center">
-              {useInstant ? (
+              {bankSubmitted ? (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <Landmark className="h-10 w-10 text-blue-600 mx-auto mb-2" />
+                  <h3 className="font-bold text-blue-800">Bank Deposit Request Submitted</h3>
+                  <p className="text-sm text-blue-700 mt-1">Reference: <strong>{completedRef}</strong></p>
+                  <p className="text-lg font-bold text-blue-800 mt-2">{formatCurrency(completedAmount)}</p>
+                  <p className="text-xs text-blue-600 mt-2">
+                    🏦 To {bankName} — A/C {accountNumber} ({accountName}).
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    An administrator will review it, then the Managing Director gives final approval and marks it paid. Money (plus the service fee) is deducted only at that point.
+                  </p>
+                </div>
+              ) : useInstant ? (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <CheckCircle2 className="h-10 w-10 text-green-600 mx-auto mb-2" />
                   <h3 className="font-bold text-green-800">Instant Withdrawal Sent! 🎉</h3>
