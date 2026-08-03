@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Package, FlaskConical, Warehouse, Banknote, Boxes, Truck, Printer } from "lucide-react";
+import { Loader2, Package, FlaskConical, Warehouse, Banknote, Boxes, Truck, Printer, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRef } from "react";
 import { getStandardPrintStyles } from "@/utils/printStyles";
@@ -99,7 +99,27 @@ const AssessmentChainDialog = ({ assessment, open, onOpenChange }: Props) => {
         batches = b || [];
       }
 
-      return { record: (recordRes as any).data, lot, payments, sources, batches };
+      // Sales that consumed the inventory batches this delivery fed into
+      let batchSales: any[] = [];
+      let sales: any[] = [];
+      if (batchIds.length) {
+        const { data: bs } = await supabase
+          .from("inventory_batch_sales")
+          .select("*")
+          .in("batch_id", batchIds)
+          .order("sale_date", { ascending: false });
+        batchSales = bs || [];
+        const saleIds = [...new Set(batchSales.map((s: any) => s.sale_transaction_id).filter(Boolean))];
+        if (saleIds.length) {
+          const { data: st } = await supabase
+            .from("sales_transactions")
+            .select("*")
+            .in("id", saleIds);
+          sales = st || [];
+        }
+      }
+
+      return { record: (recordRes as any).data, lot, payments, sources, batches, batchSales, sales };
     },
   });
 
@@ -268,6 +288,44 @@ const AssessmentChainDialog = ({ assessment, open, onOpenChange }: Props) => {
                         <Row label="Batch total" value={fmtKg(batch?.total_kilograms)} />
                         <Row label="Batch remaining" value={fmtKg(batch?.remaining_kilograms)} />
                         <Row label="EUDR traced" value={s.eudr_traced ? "Yes" : "No"} />
+                      </div>
+                    );
+                  })
+                )}
+              </Step>
+
+              <Step
+                icon={ShoppingCart}
+                title="6. Sales"
+                status={`${data?.batchSales?.length || 0} sale link(s)`}
+              >
+                {(data?.batchSales || []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-1">
+                    Not yet sold — this coffee is still in stock.
+                  </p>
+                ) : (
+                  data!.batchSales.map((bs: any) => {
+                    const sale = data!.sales.find((s: any) => s.id === bs.sale_transaction_id);
+                    const batch = data!.batches.find((b: any) => b.id === bs.batch_id);
+                    return (
+                      <div key={bs.id} className="py-2">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-sm">
+                            {bs.customer_name || sale?.customer || "Unknown customer"}
+                          </span>
+                          {sale?.status && (
+                            <Badge variant="outline" className="text-[10px]">{sale.status}</Badge>
+                          )}
+                        </div>
+                        <Row label="Sale date" value={bs.sale_date || sale?.date || "—"} />
+                        <Row label="From batch" value={batch?.batch_code || bs.batch_id} />
+                        <Row label="Weight from this batch" value={fmtKg(bs.kilograms_deducted)} />
+                        <Row label="Sale coffee type" value={sale?.coffee_type} />
+                        <Row label="Total sale weight" value={fmtKg(sale?.weight)} />
+                        <Row label="Unit price" value={fmtUgx(sale?.unit_price)} />
+                        <Row label="Sale value" value={fmtUgx(sale?.total_amount)} />
+                        <Row label="Truck / driver" value={[sale?.truck_details, sale?.driver_details].filter(Boolean).join(" · ") || "—"} />
+                        <Row label="Sale ID" value={bs.sale_transaction_id} />
                       </div>
                     );
                   })
