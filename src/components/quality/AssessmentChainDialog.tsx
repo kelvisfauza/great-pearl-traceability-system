@@ -133,6 +133,36 @@ const AssessmentChainDialog = ({ assessment, open, onOpenChange }: Props) => {
   if (!assessment) return null;
 
   const record = data?.record;
+  const chainBatches = data?.batches || [];
+
+  const handleAttachSale = async () => {
+    const batchId = saleBatchId || chainBatches[0]?.id;
+    const kg = Number(saleKg);
+    if (!saleId || !batchId || !kg || kg <= 0) {
+      toast.error("Select a sale, a batch and enter kilograms");
+      return;
+    }
+    setAttaching(true);
+    try {
+      const sale = (availableSales || []).find((s: any) => s.id === saleId);
+      const { error } = await supabase.from("inventory_batch_sales").insert({
+        batch_id: batchId,
+        sale_transaction_id: saleId,
+        kilograms_deducted: kg,
+        customer_name: sale?.customer || null,
+        sale_date: sale?.date || null,
+      });
+      if (error) throw error;
+      toast.success("Sale attached to this batch");
+      setSaleId("");
+      setSaleKg("");
+      await refetch();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to attach sale");
+    } finally {
+      setAttaching(false);
+    }
+  };
   const lot = data?.lot;
   const assessedKg = lot?.quantity_kg ?? record?.kilograms;
   const unitPrice = assessment.final_price || assessment.suggested_price;
