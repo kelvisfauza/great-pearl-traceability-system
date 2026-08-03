@@ -41,7 +41,9 @@ const EUDRDocumentation = () => {
     getDocumentsByStatus,
     getBatchesForDocument,
     getSalesForBatch,
-    getAvailableBatches
+    getAvailableBatches,
+    fetchEUDRBatches,
+    fetchEUDRSales
   } = useEUDRDocumentation();
 
   const { reports: dispatchReports, fetchReports: refetchDispatchReports, loading: dispatchLoading } = useEUDRDispatchReports();
@@ -1536,6 +1538,9 @@ const EUDRDocumentation = () => {
         <AttachSaleDialog
           open={!!attachSaleBatch}
           onOpenChange={(open) => !open && setAttachSaleBatch(null)}
+          onAttached={async () => {
+            await Promise.all([fetchEUDRBatches(), fetchEUDRSales()]);
+          }}
           batch={attachSaleBatch}
         />
       )}
