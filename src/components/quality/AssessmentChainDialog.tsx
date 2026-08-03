@@ -6,7 +6,10 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Package, FlaskConical, Warehouse, Banknote, Boxes, Truck, Printer, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 import { getStandardPrintStyles } from "@/utils/printStyles";
 import {
   LOGO_URL,
@@ -61,8 +64,12 @@ const AssessmentChainDialog = ({ assessment, open, onOpenChange }: Props) => {
   const assessmentId = assessment?.id;
   const recordId = assessment?.store_record_id;
   const printRef = useRef<HTMLDivElement>(null);
+  const [saleId, setSaleId] = useState<string>("");
+  const [saleBatchId, setSaleBatchId] = useState<string>("");
+  const [saleKg, setSaleKg] = useState<string>("");
+  const [attaching, setAttaching] = useState(false);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["assessment-chain", assessmentId, recordId],
     enabled: open && !!assessmentId,
     queryFn: async () => {
