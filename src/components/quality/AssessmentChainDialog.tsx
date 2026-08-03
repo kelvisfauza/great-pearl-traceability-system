@@ -4,7 +4,19 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Package, FlaskConical, Warehouse, Banknote, Boxes, Truck } from "lucide-react";
+import { Loader2, Package, FlaskConical, Warehouse, Banknote, Boxes, Truck, Printer } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useRef } from "react";
+import { getStandardPrintStyles } from "@/utils/printStyles";
+import {
+  LOGO_URL,
+  COMPANY_NAME,
+  COMPANY_TAGLINE,
+  COMPANY_ADDRESS,
+  COMPANY_PHONES,
+  COMPANY_EMAIL,
+  COMPANY_REG,
+} from "@/utils/companyBrand";
 import { format } from "date-fns";
 
 interface Props {
@@ -48,6 +60,7 @@ const Step = ({
 const AssessmentChainDialog = ({ assessment, open, onOpenChange }: Props) => {
   const assessmentId = assessment?.id;
   const recordId = assessment?.store_record_id;
+  const printRef = useRef<HTMLDivElement>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["assessment-chain", assessmentId, recordId],
@@ -98,6 +111,41 @@ const AssessmentChainDialog = ({ assessment, open, onOpenChange }: Props) => {
   const unitPrice = assessment.final_price || assessment.suggested_price;
   const grossValue = Number(assessedKg || 0) * Number(unitPrice || 0);
 
+  const handlePrint = () => {
+    const body = printRef.current?.innerHTML || "";
+    const w = window.open("", "", "width=1000,height=1200");
+    if (!w) return;
+    w.document.write(`<!DOCTYPE html><html><head><title>Traceability Chain - ${assessment.batch_number}</title>
+      <style>${getStandardPrintStyles()}
+        .chain-body { font-size: 12px; }
+        .chain-body .rounded-md, .chain-body .rounded-lg, .chain-body .rounded { border: 1px solid #ddd; padding: 6px; }
+        .chain-body h4 { margin: 10px 0 4px; font-size: 13px; }
+        .letterhead { display:flex; align-items:center; gap:12px; border-bottom:2px solid #0d3d1f; padding-bottom:8px; margin-bottom:12px; }
+        .letterhead img { height:56px !important; max-width:none !important; margin:0 !important; }
+      </style></head><body>
+      <div class="letterhead">
+        <img src="${window.location.origin}${LOGO_URL}" alt="${COMPANY_NAME}" />
+        <div>
+          <div class="company-name">${COMPANY_NAME}</div>
+          <div class="company-subtitle">${COMPANY_TAGLINE}</div>
+          <div class="company-details">${COMPANY_ADDRESS} · ${COMPANY_PHONES}<br/>${COMPANY_EMAIL} · ${COMPANY_REG}</div>
+        </div>
+      </div>
+      <div class="document-title" style="text-align:center;">Coffee Traceability Chain Report</div>
+      <div class="document-info" style="text-align:center;">Batch ${assessment.batch_number || "—"} · Printed ${new Date().toLocaleString("en-GB")}</div>
+      <div class="chain-body">${body}</div>
+      <div class="signatures">
+        <div><div class="signature-line"></div>Quality Manager</div>
+        <div><div class="signature-line"></div>Store Manager</div>
+        <div><div class="signature-line"></div>Administrator</div>
+      </div>
+      <div class="footer">${COMPANY_NAME} — internal traceability document. Assessment ID: ${assessment.id}</div>
+      </body></html>`);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 400);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] p-0">
@@ -106,6 +154,12 @@ const AssessmentChainDialog = ({ assessment, open, onOpenChange }: Props) => {
           <DialogDescription>
             Delivery, quality, weights, inventory and payment trail for this assessment.
           </DialogDescription>
+          <div className="pt-2">
+            <Button size="sm" variant="outline" onClick={handlePrint} disabled={isLoading}>
+              <Printer className="h-4 w-4 mr-1" />
+              Print report
+            </Button>
+          </div>
         </DialogHeader>
         <ScrollArea className="max-h-[72vh] px-6 pb-6">
           {isLoading ? (
@@ -113,7 +167,7 @@ const AssessmentChainDialog = ({ assessment, open, onOpenChange }: Props) => {
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <div className="pt-2">
+            <div className="pt-2" ref={printRef}>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                 <div className="rounded-lg border p-3">
                   <p className="text-[11px] text-muted-foreground">Delivered weight</p>
