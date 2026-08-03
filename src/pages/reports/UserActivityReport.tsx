@@ -213,6 +213,60 @@ export default function UserActivityReport() {
     return Array.from(set).sort();
   }, [data]);
 
+  // Attendance for the same period (punctuality / overtime)
+  const { data: attendanceRows } = useQuery({
+    queryKey: ["user-activity-attendance", startDate, endDate],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("attendance_time_records")
+        .select("employee_name, record_date, is_late, late_minutes, is_overtime, overtime_minutes")
+        .gte("record_date", startDate)
+        .lte("record_date", endDate)
+        .limit(5000);
+      return (data || []) as any[];
+    },
+  });
+
+  const scorecard = useMemo(() => {
+    const map = new Map<string, {
+      name: string; logins: number; loginDays: Set<string>; activities: number;
+      actions: number; attDays: number; lateDays: number; lateMin: number; otMin: number;
+    }>();
+    const get = (name: string) => {
+      if (!map.has(name)) map.set(name, { name, logins: 0, loginDays: new Set(), activities: 0, actions: 0, attDays: 0, lateDays: 0, lateMin: 0, otMin: 0 });
+      return map.get(name)!;
+    };
+    (data || []).forEach((r) => {
+      if (!r.employee_name || r.employee_name === "—" || r.employee_name === "System") return;
+      const e = get(r.employee_name);
+      if (r.event === "LOGIN") { e.logins++; e.loginDays.add(format(new Date(r.occurred_at), "yyyy-MM-dd")); }
+      else if (r.event === "ACTIVITY") e.activities++;
+      else if (r.event === "ACTION") e.actions++;
+    });
+    (attendanceRows || []).forEach((a) => {
+      if (!a.employee_name) return;
+      const e = get(a.employee_name);
+      e.attDays++;
+      if (a.is_late) e.lateDays++;
+      e.lateMin += Number(a.late_minutes || 0);
+      e.otMin += Number(a.overtime_minutes || 0);
+    });
+    const rows = Array.from(map.values()).map((e) => ({
+      ...e,
+      loginDayCount: e.loginDays.size,
+      punctuality: e.attDays > 0 ? Math.round(((e.attDays - e.lateDays) / e.attDays) * 100) : null,
+      engagement: e.activities + e.actions,
+    }));
+    rows.sort((a, b) => (b.loginDayCount - a.loginDayCount) || (b.engagement - a.engagement));
+    return employee === "all" ? rows : rows.filter((r) => r.name === employee);
+  }, [data, attendanceRows, employee]);
+
+  const unusedEmployees = useMemo(() => {
+    const set = new Set<string>();
+    (data || []).forEach((r) => r.employee_name && set.add(r.employee_name));
+    return Array.from(set).sort();
+  }, [data]);
+
   const filtered = useMemo(() => {
     return (data || []).filter((r) => {
       if (employee !== "all" && r.employee_name !== employee) return false;
