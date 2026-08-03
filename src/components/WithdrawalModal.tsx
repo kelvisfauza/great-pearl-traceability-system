@@ -1049,7 +1049,20 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
           {/* Step 3: Submitted for Approval */}
           {step === 'done' && (
             <div className="space-y-4 text-center">
-              {useInstant ? (
+              {bankSubmitted ? (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <Landmark className="h-10 w-10 text-blue-600 mx-auto mb-2" />
+                  <h3 className="font-bold text-blue-800">Bank Deposit Request Submitted</h3>
+                  <p className="text-sm text-blue-700 mt-1">Reference: <strong>{completedRef}</strong></p>
+                  <p className="text-lg font-bold text-blue-800 mt-2">{formatCurrency(completedAmount)}</p>
+                  <p className="text-xs text-blue-600 mt-2">
+                    🏦 To {bankName} — A/C {accountNumber} ({accountName}).
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    An administrator will review it, then the Managing Director gives final approval and marks it paid. Money (plus the service fee) is deducted only at that point.
+                  </p>
+                </div>
+              ) : useInstant ? (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <CheckCircle2 className="h-10 w-10 text-green-600 mx-auto mb-2" />
                   <h3 className="font-bold text-green-800">Instant Withdrawal Sent! 🎉</h3>
