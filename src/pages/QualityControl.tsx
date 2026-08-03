@@ -180,6 +180,8 @@ const QualityControl = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingAssessmentId, setEditingAssessmentId] = useState<string | null>(null);
   const [selectedForBulkPrint, setSelectedForBulkPrint] = useState<string[]>([]);
+  const [chainAssessment, setChainAssessment] = useState<any | null>(null);
+  const [chainOpen, setChainOpen] = useState(false);
   const [grnPrintModal, setGrnPrintModal] = useState<{
     open: boolean;
     grnData: {
