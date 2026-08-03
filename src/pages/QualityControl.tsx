@@ -1558,15 +1558,17 @@ const QualityControl = () => {
                             )}
                           </TableCell>
                            <TableCell>
-                            <div className="flex gap-2">
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => { setChainAssessment(assessment); setChainOpen(true); }}
-                              >
-                                <Eye className="h-4 w-4 mr-1" />
-                                View
-                              </Button>
+                             <div className="flex gap-2">
+                               {isAdmin() && (
+                                 <Button 
+                                   size="sm" 
+                                   variant="outline"
+                                   onClick={() => { setChainAssessment(assessment); setChainOpen(true); }}
+                                 >
+                                   <Eye className="h-4 w-4 mr-1" />
+                                   View
+                                 </Button>
+                               )}
                               <Button 
                                 size="sm" 
                                 variant="outline"
