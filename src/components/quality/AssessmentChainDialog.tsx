@@ -182,16 +182,136 @@ const AssessmentChainDialog = ({ assessment, open, onOpenChange }: Props) => {
   const grossValue = Number(assessedKg || 0) * Number(unitPrice || 0);
 
   const handlePrint = () => {
-    const body = printRef.current?.innerHTML || "";
+    const esc = (v: any) =>
+      v === null || v === undefined || v === "" ? "—" : String(v).replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c] as string));
+    const rows = (pairs: [string, any][]) =>
+      `<table class="kv">${pairs
+        .map(([k, v]) => `<tr><th>${k}</th><td>${esc(v)}</td></tr>`)
+        .join("")}</table>`;
+    const section = (n: number, title: string, status: string, inner: string) =>
+      `<section class="sec"><h3><span class="num">${n}</span>${title}<span class="pill">${esc(status)}</span></h3>${inner}</section>`;
+
+    const summary = `<div class="summary">
+      ${[
+        ["Delivered weight", fmtKg(record?.kilograms)],
+        ["Bags", record?.bags ?? "—"],
+        ["Unit price", fmtUgx(unitPrice)],
+        ["Gross value", fmtUgx(lot?.total_amount_ugx ?? grossValue)],
+      ]
+        .map(([k, v]) => `<div class="card"><span>${k}</span><strong>${esc(v)}</strong></div>`)
+        .join("")}
+    </div>`;
+
+    const paymentsTable = (data?.payments || []).length
+      ? `<p class="sub">Payments</p><table class="grid"><thead><tr><th>Amount</th><th>Method</th><th>Date</th><th>Status</th><th>Reference</th></tr></thead><tbody>${data!.payments
+          .map(
+            (p: any) =>
+              `<tr><td>${esc(fmtUgx(p.amount_paid_ugx))}</td><td>${esc(p.method)}</td><td>${esc(
+                fmtDate(p.payment_date || p.created_at)
+              )}</td><td>${esc(p.status)}</td><td>${esc(p.reference)}</td></tr>`
+          )
+          .join("")}</tbody></table>`
+      : "";
+
+    const invTable = (data?.sources || []).length
+      ? `<table class="grid"><thead><tr><th>Batch</th><th>Contributed</th><th>Batch total</th><th>Remaining</th><th>EUDR</th></tr></thead><tbody>${data!.sources
+          .map((s: any) => {
+            const b = data!.batches.find((x: any) => x.id === s.batch_id);
+            return `<tr><td>${esc(b?.batch_code || s.batch_id)}</td><td>${esc(fmtKg(s.kilograms))}</td><td>${esc(
+              fmtKg(b?.total_kilograms)
+            )}</td><td>${esc(fmtKg(b?.remaining_kilograms))}</td><td>${s.eudr_traced ? "Yes" : "No"}</td></tr>`;
+          })
+          .join("")}</tbody></table>`
+      : `<p class="empty">Not yet allocated to an inventory batch.</p>`;
+
+    const salesTable = (data?.batchSales || []).length
+      ? `<table class="grid"><thead><tr><th>Date</th><th>Customer</th><th>From batch</th><th>Kg sold</th><th>Unit price</th><th>Sale value</th></tr></thead><tbody>${data!.batchSales
+          .map((bs: any) => {
+            const sale = data!.sales.find((s: any) => s.id === bs.sale_transaction_id);
+            const b = data!.batches.find((x: any) => x.id === bs.batch_id);
+            return `<tr><td>${esc(bs.sale_date || sale?.date)}</td><td>${esc(
+              bs.customer_name || sale?.customer
+            )}</td><td>${esc(b?.batch_code || bs.batch_id)}</td><td>${esc(
+              fmtKg(bs.kilograms_deducted)
+            )}</td><td>${esc(fmtUgx(sale?.unit_price))}</td><td>${esc(fmtUgx(sale?.total_amount))}</td></tr>`;
+          })
+          .join("")}</tbody></table>`
+      : `<p class="empty">Not yet sold — this coffee is still in stock.</p>`;
+
+    const body = [
+      section(1, "Store delivery", record?.status || "—", rows([
+        ["Supplier", record?.supplier_name || assessment.supplier_name],
+        ["Coffee type", record?.coffee_type],
+        ["Batch number", record?.batch_number || assessment.batch_number],
+        ["Delivery date", record?.date],
+        ["Weight received", fmtKg(record?.kilograms)],
+        ["Bags", record?.bags],
+        ["Recorded by", record?.created_by],
+        ["Recorded at", fmtDate(record?.created_at)],
+      ])),
+      section(2, "Quality assessment", assessment.status || "—", rows([
+        ["Moisture", `${assessment.moisture ?? "—"}%`],
+        ["Group 1 defects", `${assessment.group1_defects ?? 0}%`],
+        ["Group 2 defects", `${assessment.group2_defects ?? 0}%`],
+        ["Below 12 / Pods", `${assessment.below12 ?? 0}% / ${assessment.pods ?? 0}%`],
+        ["Husks / Stones", `${assessment.husks ?? 0}% / ${assessment.stones ?? 0}%`],
+        ["Outturn", assessment.outturn ? `${assessment.outturn}%` : "—"],
+        ["Suggested price", fmtUgx(assessment.suggested_price)],
+        ["Final price", fmtUgx(assessment.final_price || assessment.suggested_price)],
+        ["Physical assessment by", assessment.physical_assessment_by],
+        ["System entry by", assessment.system_assessment_by || assessment.assessed_by],
+        ["Date assessed", assessment.date_assessed],
+        ["Comments", assessment.comments],
+      ])),
+      section(3, "GRN", assessment.grn_printed ? "Printed" : "Not printed", rows([
+        ["GRN number", lot?.grn_number],
+        ["Printed by", assessment.grn_printed_by],
+        ["Printed at", fmtDate(assessment.grn_printed_at)],
+      ])),
+      section(4, "Finance & payment", lot?.finance_status || "Not sent to finance", rows([
+        ["Lot quantity", fmtKg(lot?.quantity_kg)],
+        ["Unit price (finance)", fmtUgx(lot?.unit_price_ugx)],
+        ["Total amount", fmtUgx(lot?.total_amount_ugx)],
+        ["Amount paid", fmtUgx(lot?.amount_paid_ugx)],
+        ["Advance recovered", fmtUgx(lot?.advance_recovered_ugx)],
+        ["Balance", fmtUgx(lot?.balance_ugx)],
+        ["Payment status", lot?.payment_status],
+      ]) + paymentsTable),
+      section(5, "Inventory allocation", `${data?.sources?.length || 0} batch link(s)`, invTable),
+      section(6, "Sales", `${data?.batchSales?.length || 0} sale link(s)`, salesTable),
+    ].join("");
+
     const w = window.open("", "", "width=1000,height=1200");
     if (!w) return;
     w.document.write(`<!DOCTYPE html><html><head><title>Traceability Chain - ${assessment.batch_number}</title>
       <style>${getStandardPrintStyles()}
-        .chain-body { font-size: 12px; }
-        .chain-body .rounded-md, .chain-body .rounded-lg, .chain-body .rounded { border: 1px solid #ddd; padding: 6px; }
-        .chain-body h4 { margin: 10px 0 4px; font-size: 13px; }
+        @page { size: A4; margin: 12mm; }
+        body { font-family: Arial, Helvetica, sans-serif; color:#111; }
+        .chain-body { font-size: 11px; }
+        .summary { display:flex; gap:8px; margin: 10px 0 14px; }
+        .summary .card { flex:1; border:1px solid #d8d8d8; border-radius:4px; padding:6px 8px; }
+        .summary .card span { display:block; font-size:9px; text-transform:uppercase; letter-spacing:.04em; color:#666; }
+        .summary .card strong { font-size:13px; }
+        .sec { margin-bottom: 12px; page-break-inside: avoid; }
+        .sec h3 { display:flex; align-items:center; gap:6px; font-size:12px; margin:0 0 4px;
+          background:#0d3d1f; color:#fff; padding:4px 8px; border-radius:3px; }
+        .sec h3 .num { background:#fff; color:#0d3d1f; width:15px; height:15px; border-radius:50%;
+          display:inline-flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; }
+        .sec h3 .pill { margin-left:auto; font-weight:400; font-size:9px; text-transform:uppercase; opacity:.9; }
+        table { width:100%; border-collapse:collapse; }
+        table.kv th { width:34%; text-align:left; font-weight:400; color:#555; padding:3px 8px; border:1px solid #e3e3e3; background:#fafafa; }
+        table.kv td { padding:3px 8px; border:1px solid #e3e3e3; font-weight:600; }
+        table.grid { margin-top:6px; }
+        table.grid th { background:#f0f4f1; text-align:left; font-size:10px; padding:4px 6px; border:1px solid #e3e3e3; }
+        table.grid td { padding:4px 6px; border:1px solid #e3e3e3; }
+        .sub { margin:8px 0 2px; font-size:10px; font-weight:700; text-transform:uppercase; color:#555; }
+        .empty { font-size:11px; color:#666; font-style:italic; margin:4px 0; }
         .letterhead { display:flex; align-items:center; gap:12px; border-bottom:2px solid #0d3d1f; padding-bottom:8px; margin-bottom:12px; }
         .letterhead img { height:56px !important; max-width:none !important; margin:0 !important; }
+        .signatures { display:flex; gap:24px; margin-top:24px; page-break-inside: avoid; text-align:center; font-size:10px; }
+        .signatures > div { flex:1; }
+        .signature-line { border-top:1px solid #333; margin-bottom:4px; height:28px; }
+        .footer { margin-top:14px; border-top:1px solid #ddd; padding-top:6px; font-size:9px; color:#666; text-align:center; }
       </style></head><body>
       <div class="letterhead">
         <img src="${window.location.origin}${LOGO_URL}" alt="${COMPANY_NAME}" />
@@ -203,7 +323,7 @@ const AssessmentChainDialog = ({ assessment, open, onOpenChange }: Props) => {
       </div>
       <div class="document-title" style="text-align:center;">Coffee Traceability Chain Report</div>
       <div class="document-info" style="text-align:center;">Batch ${assessment.batch_number || "—"} · Printed ${new Date().toLocaleString("en-GB")}</div>
-      <div class="chain-body">${body}</div>
+      <div class="chain-body">${summary}${body}</div>
       <div class="signatures">
         <div><div class="signature-line"></div>Quality Manager</div>
         <div><div class="signature-line"></div>Store Manager</div>
