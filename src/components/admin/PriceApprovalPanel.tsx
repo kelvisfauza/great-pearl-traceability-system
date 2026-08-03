@@ -239,7 +239,14 @@ await savePrices({
       const correctionPrefix = request.is_correction ? 'CORRECTION: ' : '';
       
       // Staff message - plain text, no emojis, keep short for 1 SMS credit
-      const message = `${correctionPrefix}Great Agro Coffee Price Update ${date}\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}%)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}%)\nSorted: UGX ${(request.sorted_price || 0).toLocaleString()}/kg\n${request.is_correction ? 'Disregard previous prices.' : 'Use these prices today.'}`;
+      const message = `${correctionPrefix}Great Agro Coffee Price Update ${date}\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}%)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}%)\nSorted: UGX ${(request.sorted_price || 0).toLocaleString()}/kg${buildReferenceBlock({
+        iceArabica: request.ice_arabica ?? currentPrices.iceArabica,
+        robusta: request.robusta ?? currentPrices.robusta,
+        exchangeRate: request.exchange_rate ?? currentPrices.exchangeRate,
+        drugarLocal: request.drugar_local ?? currentPrices.drugarLocal,
+        wugarLocal: request.wugar_local ?? currentPrices.wugarLocal,
+        robustaFaqLocal: request.robusta_faq_local ?? currentPrices.robustaFaqLocal,
+      })}\n${request.is_correction ? 'Disregard previous prices.' : 'Use these prices today.'}`;
 
       // Send to all recipients
       for (let i = 0; i < allPhones.length; i++) {
