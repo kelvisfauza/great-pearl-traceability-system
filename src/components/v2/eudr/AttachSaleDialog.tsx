@@ -12,6 +12,7 @@ import { Loader2 } from "lucide-react";
 interface AttachSaleDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onAttached?: () => void;
   batch: {
     id: string;
     batch_identifier: string;
@@ -19,7 +20,7 @@ interface AttachSaleDialogProps {
   };
 }
 
-const AttachSaleDialog = ({ open, onOpenChange, batch }: AttachSaleDialogProps) => {
+const AttachSaleDialog = ({ open, onOpenChange, onAttached, batch }: AttachSaleDialogProps) => {
   const [saleId, setSaleId] = useState("");
   const [kg, setKg] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -63,6 +64,7 @@ const AttachSaleDialog = ({ open, onOpenChange, batch }: AttachSaleDialogProps) 
       toast({ title: "Sale Attached", description: `${kg}kg linked to sale` });
       queryClient.invalidateQueries({ queryKey: ["eudr-batch-trace"] });
       queryClient.invalidateQueries({ queryKey: ["eudr"] });
+      onAttached?.();
       onOpenChange(false);
       setSaleId("");
       setKg("");
