@@ -261,12 +261,6 @@ export default function UserActivityReport() {
     return employee === "all" ? rows : rows.filter((r) => r.name === employee);
   }, [data, attendanceRows, employee]);
 
-  const unusedEmployees = useMemo(() => {
-    const set = new Set<string>();
-    (data || []).forEach((r) => r.employee_name && set.add(r.employee_name));
-    return Array.from(set).sort();
-  }, [data]);
-
   const filtered = useMemo(() => {
     return (data || []).filter((r) => {
       if (employee !== "all" && r.employee_name !== employee) return false;
