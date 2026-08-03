@@ -213,6 +213,54 @@ export default function UserActivityReport() {
     return Array.from(set).sort();
   }, [data]);
 
+  // Attendance for the same period (punctuality / overtime)
+  const { data: attendanceRows } = useQuery({
+    queryKey: ["user-activity-attendance", startDate, endDate],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("attendance_time_records")
+        .select("employee_name, record_date, is_late, late_minutes, is_overtime, overtime_minutes")
+        .gte("record_date", startDate)
+        .lte("record_date", endDate)
+        .limit(5000);
+      return (data || []) as any[];
+    },
+  });
+
+  const scorecard = useMemo(() => {
+    const map = new Map<string, {
+      name: string; logins: number; loginDays: Set<string>; activities: number;
+      actions: number; attDays: number; lateDays: number; lateMin: number; otMin: number;
+    }>();
+    const get = (name: string) => {
+      if (!map.has(name)) map.set(name, { name, logins: 0, loginDays: new Set(), activities: 0, actions: 0, attDays: 0, lateDays: 0, lateMin: 0, otMin: 0 });
+      return map.get(name)!;
+    };
+    (data || []).forEach((r) => {
+      if (!r.employee_name || r.employee_name === "—" || r.employee_name === "System") return;
+      const e = get(r.employee_name);
+      if (r.event === "LOGIN") { e.logins++; e.loginDays.add(format(new Date(r.occurred_at), "yyyy-MM-dd")); }
+      else if (r.event === "ACTIVITY") e.activities++;
+      else if (r.event === "ACTION") e.actions++;
+    });
+    (attendanceRows || []).forEach((a) => {
+      if (!a.employee_name) return;
+      const e = get(a.employee_name);
+      e.attDays++;
+      if (a.is_late) e.lateDays++;
+      e.lateMin += Number(a.late_minutes || 0);
+      e.otMin += Number(a.overtime_minutes || 0);
+    });
+    const rows = Array.from(map.values()).map((e) => ({
+      ...e,
+      loginDayCount: e.loginDays.size,
+      punctuality: e.attDays > 0 ? Math.round(((e.attDays - e.lateDays) / e.attDays) * 100) : null,
+      engagement: e.activities + e.actions,
+    }));
+    rows.sort((a, b) => (b.loginDayCount - a.loginDayCount) || (b.engagement - a.engagement));
+    return employee === "all" ? rows : rows.filter((r) => r.name === employee);
+  }, [data, attendanceRows, employee]);
+
   const filtered = useMemo(() => {
     return (data || []).filter((r) => {
       if (employee !== "all" && r.employee_name !== employee) return false;
@@ -283,6 +331,17 @@ export default function UserActivityReport() {
         <td style="text-align:right">${m.loggedDays}</td>
         <td>${m.missed.join(", ") || "—"}</td>
       </tr>`).join("");
+    const scoreHtml = scorecard.map((s) => `
+      <tr>
+        <td>${s.name}</td>
+        <td style="text-align:right">${s.loginDayCount}</td>
+        <td style="text-align:right">${s.engagement}</td>
+        <td style="text-align:right">${s.attDays}</td>
+        <td style="text-align:right">${s.lateDays}</td>
+        <td style="text-align:right">${s.lateMin}</td>
+        <td style="text-align:right">${s.otMin}</td>
+        <td style="text-align:right">${s.punctuality == null ? "—" : s.punctuality + "%"}</td>
+      </tr>`).join("");
     w.document.write(`<!doctype html><html><head><title>User Activity Report</title>
       <style>
         *{box-sizing:border-box;font-family:Arial,sans-serif;color:#000}
@@ -317,6 +376,11 @@ export default function UserActivityReport() {
       <table><thead><tr>
         <th>When</th><th>Employee</th><th>Event</th><th>Action</th><th>Details</th><th>Location</th><th>IP</th><th>Device</th>
       </tr></thead><tbody>${rowsHtml}</tbody></table>
+      <h2>Staff Scorecard — Usage, Attendance &amp; Engagement</h2>
+      <table><thead><tr>
+        <th>Employee</th><th>Login Days</th><th>System Actions</th><th>Attendance Days</th>
+        <th>Late Days</th><th>Late (min)</th><th>Overtime (min)</th><th>Punctuality</th>
+      </tr></thead><tbody>${scoreHtml || `<tr><td colspan="8">No data</td></tr>`}</tbody></table>
       <h2>Login Coverage &amp; Missed Days</h2>
       <table><thead><tr>
         <th>Employee</th><th>Days Logged In</th><th>Days Missed</th>
@@ -493,6 +557,48 @@ export default function UserActivityReport() {
                     <TableCell className="font-medium">{m.name}</TableCell>
                     <TableCell className="text-right">{m.loggedDays}</TableCell>
                     <TableCell className="text-xs">{m.missed.length === 0 ? "—" : m.missed.join(", ")}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Staff Scorecard — Usage, Attendance &amp; Engagement</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0 overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Employee</TableHead>
+                  <TableHead className="text-right">Login Days</TableHead>
+                  <TableHead className="text-right">System Actions</TableHead>
+                  <TableHead className="text-right">Attendance Days</TableHead>
+                  <TableHead className="text-right">Late Days</TableHead>
+                  <TableHead className="text-right">Late (min)</TableHead>
+                  <TableHead className="text-right">Overtime (min)</TableHead>
+                  <TableHead className="text-right">Punctuality</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {scorecard.length === 0 ? (
+                  <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">No data in range</TableCell></TableRow>
+                ) : scorecard.map((s) => (
+                  <TableRow key={s.name}>
+                    <TableCell className="font-medium">{s.name}</TableCell>
+                    <TableCell className="text-right">{s.loginDayCount}</TableCell>
+                    <TableCell className="text-right">{s.engagement}</TableCell>
+                    <TableCell className="text-right">{s.attDays}</TableCell>
+                    <TableCell className="text-right">{s.lateDays}</TableCell>
+                    <TableCell className="text-right">{s.lateMin}</TableCell>
+                    <TableCell className="text-right">{s.otMin}</TableCell>
+                    <TableCell className="text-right">
+                      {s.punctuality == null ? "—" : (
+                        <Badge variant="outline" className={s.punctuality >= 80 ? "bg-emerald-100 text-emerald-800 border-emerald-200" : s.punctuality >= 50 ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-red-100 text-red-800 border-red-200"}>{s.punctuality}%</Badge>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
