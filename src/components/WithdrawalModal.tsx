@@ -794,7 +794,73 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                   )}
                 </div>
 
-                {needsInstantPhoneInput && (
+                {/* Payout destination */}
+                <div className="space-y-2">
+                  <Label>Where should the money go?</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPayoutMode('MOBILE')}
+                      className={`rounded-md border p-2 text-xs font-medium transition ${payoutMode === 'MOBILE' ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground'}`}
+                    >
+                      <Smartphone className="h-4 w-4 mx-auto mb-1" />
+                      Mobile Money
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPayoutMode('BANK')}
+                      className={`rounded-md border p-2 text-xs font-medium transition ${payoutMode === 'BANK' ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground'}`}
+                    >
+                      <Landmark className="h-4 w-4 mx-auto mb-1" />
+                      Bank Deposit
+                    </button>
+                  </div>
+                </div>
+
+                {payoutMode === 'BANK' && (
+                  <div className="space-y-3 rounded-md border p-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="bank-name">Bank</Label>
+                      <Input
+                        id="bank-name"
+                        list="ug-banks"
+                        placeholder="Select or type your bank"
+                        value={bankName}
+                        onChange={(e) => setBankName(e.target.value)}
+                      />
+                      <datalist id="ug-banks">
+                        {UG_BANKS.map((b) => <option key={b} value={b} />)}
+                      </datalist>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bank-branch">Branch (optional)</Label>
+                      <Input id="bank-branch" placeholder="e.g. Kasese" value={bankBranch} onChange={(e) => setBankBranch(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bank-account-number">Account Number</Label>
+                      <Input id="bank-account-number" inputMode="numeric" placeholder="Your bank account number" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bank-account-name">Account Name</Label>
+                      <Input id="bank-account-name" placeholder="Name on the account" value={accountName} onChange={(e) => setAccountName(e.target.value)} />
+                    </div>
+                    {parsedAmount >= 2000 && (
+                      <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 space-y-1">
+                        <div className="flex justify-between"><span>Deposit amount</span><span>UGX {parsedAmount.toLocaleString()}</span></div>
+                        <div className="flex justify-between"><span>Service fee</span><span>UGX {bankFee.toLocaleString()}</span></div>
+                        <div className="flex justify-between font-semibold border-t border-amber-200 pt-1"><span>Total deducted</span><span>UGX {bankTotal.toLocaleString()}</span></div>
+                        {bankTotal > availableAmount && (
+                          <p className="text-destructive">Insufficient available balance for this deposit plus fee.</p>
+                        )}
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Bank deposits are reviewed by an administrator and then finally approved and paid by the Managing Director. Money is deducted only when marked as paid.
+                    </p>
+                  </div>
+                )}
+
+                {payoutMode === 'MOBILE' && needsInstantPhoneInput && (
                   <div className="space-y-2">
                     <Label htmlFor="instant-mobile-number">Mobile Money Number</Label>
                     <Input
@@ -814,7 +880,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                 )}
 
                 {/* Instant withdrawal hint */}
-                {instantEligibility?.eligible && parsedAmount >= 2000 && parsedAmount <= instantMaxAmount && (
+                {payoutMode === 'MOBILE' && instantEligibility?.eligible && parsedAmount >= 2000 && parsedAmount <= instantMaxAmount && (
                   <Alert className="border-green-300 bg-green-50 py-2">
                     <Zap className="h-3 w-3 text-green-600" />
                     <AlertDescription className="text-xs text-green-700">
@@ -825,7 +891,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                 )}
 
                 {/* Tiered withdrawal service-fee notice */}
-                {instantEligibility?.eligible && parsedAmount >= 500 && (() => {
+                {payoutMode === 'MOBILE' && instantEligibility?.eligible && parsedAmount >= 500 && (() => {
                   const fee = parsedAmount <= 60_000 ? 1_100
                     : parsedAmount <= 500_000 ? 1_700
                     : parsedAmount <= 1_000_000 ? 2_500
@@ -843,7 +909,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                 })()}
 
                 {/* Overdraft acceptance for instant withdraw */}
-                {instantEligibility?.eligible && usesOverdraft && parsedAmount >= 2000 && parsedAmount <= instantMaxAmount && (
+                {payoutMode === 'MOBILE' && instantEligibility?.eligible && usesOverdraft && parsedAmount >= 2000 && parsedAmount <= instantMaxAmount && (
                   <div className="rounded-md border border-amber-300 bg-amber-50 p-3 space-y-2 text-xs text-amber-900">
                     <div className="flex justify-between"><span>From wallet:</span><span>UGX {walletPortion.toLocaleString()}</span></div>
                     <div className="flex justify-between text-emerald-700"><span>From overdraft:</span><span>UGX {odPortion.toLocaleString()}</span></div>
@@ -861,7 +927,20 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                   <Button type="button" variant="outline" onClick={handleClose} disabled={instantLoading}>
                     Cancel
                   </Button>
-                  {instantEligibility?.eligible && (
+                  {payoutMode === 'BANK' && (
+                    <Button
+                      type="button"
+                      onClick={handleBankDepositRequest}
+                      disabled={bankSubmitting || withdrawalStatus.disabled || isWalletFrozen || !bankFieldsValid || !bankAmountValid}
+                    >
+                      {bankSubmitting ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Submitting...</>
+                      ) : (
+                        <><Landmark className="h-4 w-4 mr-1" /> Submit Bank Deposit</>
+                      )}
+                    </Button>
+                  )}
+                  {payoutMode === 'MOBILE' && instantEligibility?.eligible && (
                     <Button
                       type="button"
                       onClick={() => setShowInstantConfirm(true)}
