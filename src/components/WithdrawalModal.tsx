@@ -467,6 +467,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   };
 
   const handleVerifyAndWithdraw = async () => {
+    // (mobile / cash flow)
     if (verificationCode !== sentCode) {
       toast({
         title: "Invalid Code",
