@@ -286,32 +286,32 @@ const AssessmentChainDialog = ({ assessment, open, onOpenChange }: Props) => {
     w.document.write(`<!DOCTYPE html><html><head><title>Traceability Chain - ${assessment.batch_number}</title>
       <style>${getStandardPrintStyles()}
         @page { size: A4; margin: 12mm; }
-        body { font-family: Arial, Helvetica, sans-serif; color:#111; }
+        body { font-family: Arial, Helvetica, sans-serif; color:#000; }
         .chain-body { font-size: 11px; }
         .summary { display:flex; gap:8px; margin: 10px 0 14px; }
-        .summary .card { flex:1; border:1px solid #d8d8d8; border-radius:4px; padding:6px 8px; }
-        .summary .card span { display:block; font-size:9px; text-transform:uppercase; letter-spacing:.04em; color:#666; }
-        .summary .card strong { font-size:13px; }
+        .summary .card { flex:1; border:1px solid #333; border-radius:4px; padding:6px 8px; }
+        .summary .card span { display:block; font-size:9px; text-transform:uppercase; letter-spacing:.04em; color:#333; }
+        .summary .card strong { font-size:13px; color:#000; }
         .sec { margin-bottom: 12px; page-break-inside: avoid; }
         .sec h3 { display:flex; align-items:center; gap:6px; font-size:12px; margin:0 0 4px;
-          background:#0d3d1f; color:#fff; padding:4px 8px; border-radius:3px; }
-        .sec h3 .num { background:#fff; color:#0d3d1f; width:15px; height:15px; border-radius:50%;
+          background:#000; color:#fff; padding:4px 8px; border-radius:3px; }
+        .sec h3 .num { background:#fff; color:#000; width:15px; height:15px; border-radius:50%;
           display:inline-flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; }
         .sec h3 .pill { margin-left:auto; font-weight:400; font-size:9px; text-transform:uppercase; opacity:.9; }
         table { width:100%; border-collapse:collapse; }
-        table.kv th { width:34%; text-align:left; font-weight:400; color:#555; padding:3px 8px; border:1px solid #e3e3e3; background:#fafafa; }
-        table.kv td { padding:3px 8px; border:1px solid #e3e3e3; font-weight:600; }
+        table.kv th { width:34%; text-align:left; font-weight:400; color:#000; padding:3px 8px; border:1px solid #333; background:#f5f5f5; }
+        table.kv td { padding:3px 8px; border:1px solid #333; font-weight:600; color:#000; }
         table.grid { margin-top:6px; }
-        table.grid th { background:#f0f4f1; text-align:left; font-size:10px; padding:4px 6px; border:1px solid #e3e3e3; }
-        table.grid td { padding:4px 6px; border:1px solid #e3e3e3; }
-        .sub { margin:8px 0 2px; font-size:10px; font-weight:700; text-transform:uppercase; color:#555; }
-        .empty { font-size:11px; color:#666; font-style:italic; margin:4px 0; }
-        .letterhead { display:flex; align-items:center; gap:12px; border-bottom:2px solid #0d3d1f; padding-bottom:8px; margin-bottom:12px; }
-        .letterhead img { height:56px !important; max-width:none !important; margin:0 !important; }
+        table.grid th { background:#e8e8e8; text-align:left; font-size:10px; padding:4px 6px; border:1px solid #333; color:#000; }
+        table.grid td { padding:4px 6px; border:1px solid #333; color:#000; }
+        .sub { margin:8px 0 2px; font-size:10px; font-weight:700; text-transform:uppercase; color:#000; }
+        .empty { font-size:11px; color:#333; font-style:italic; margin:4px 0; }
+        .letterhead { display:flex; align-items:center; gap:12px; border-bottom:2px solid #000; padding-bottom:8px; margin-bottom:12px; }
+        .letterhead img { height:56px !important; max-width:none !important; margin:0 !important; filter: grayscale(100%) contrast(120%); }
         .signatures { display:flex; gap:24px; margin-top:24px; page-break-inside: avoid; text-align:center; font-size:10px; }
         .signatures > div { flex:1; }
-        .signature-line { border-top:1px solid #333; margin-bottom:4px; height:28px; }
-        .footer { margin-top:14px; border-top:1px solid #ddd; padding-top:6px; font-size:9px; color:#666; text-align:center; }
+        .signature-line { border-top:1px solid #000; margin-bottom:4px; height:28px; }
+        .footer { margin-top:14px; border-top:1px solid #333; padding-top:6px; font-size:9px; color:#333; text-align:center; }
       </style></head><body>
       <div class="letterhead">
         <img src="${window.location.origin}${LOGO_URL}" alt="${COMPANY_NAME}" />
