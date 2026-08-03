@@ -53,6 +53,7 @@ import QualityAssessmentReports from "@/components/quality/QualityAssessmentRepo
 import AdminQualityPricingReview from "@/components/admin/AdminQualityPricingReview";
 import { cn } from "@/lib/utils";
 import EmployeeCombobox from "@/components/quality/EmployeeCombobox";
+import AssessmentChainDialog from "@/components/quality/AssessmentChainDialog";
 
 const QualityControl = () => {
   const { isQualityHead, canPrintGRN } = useQualityRole();
@@ -1556,6 +1557,14 @@ const QualityControl = () => {
                           </TableCell>
                            <TableCell>
                             <div className="flex gap-2">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => { setChainAssessment(assessment); setChainOpen(true); }}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                View
+                              </Button>
                               <Button 
                                 size="sm" 
                                 variant="outline"
