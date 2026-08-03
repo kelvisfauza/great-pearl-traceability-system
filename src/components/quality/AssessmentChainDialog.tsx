@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Package, FlaskConical, Warehouse, Banknote, Boxes, Truck, Printer } from "lucide-react";
+import { Loader2, Package, FlaskConical, Warehouse, Banknote, Boxes, Truck, Printer, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRef } from "react";
 import { getStandardPrintStyles } from "@/utils/printStyles";
@@ -99,7 +99,27 @@ const AssessmentChainDialog = ({ assessment, open, onOpenChange }: Props) => {
         batches = b || [];
       }
 
-      return { record: (recordRes as any).data, lot, payments, sources, batches };
+      // Sales that consumed the inventory batches this delivery fed into
+      let batchSales: any[] = [];
+      let sales: any[] = [];
+      if (batchIds.length) {
+        const { data: bs } = await supabase
+          .from("inventory_batch_sales")
+          .select("*")
+          .in("batch_id", batchIds)
+          .order("sale_date", { ascending: false });
+        batchSales = bs || [];
+        const saleIds = [...new Set(batchSales.map((s: any) => s.sale_transaction_id).filter(Boolean))];
+        if (saleIds.length) {
+          const { data: st } = await supabase
+            .from("sales_transactions")
+            .select("*")
+            .in("id", saleIds);
+          sales = st || [];
+        }
+      }
+
+      return { record: (recordRes as any).data, lot, payments, sources, batches, batchSales, sales };
     },
   });
 
