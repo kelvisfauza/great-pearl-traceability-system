@@ -331,6 +331,17 @@ export default function UserActivityReport() {
         <td style="text-align:right">${m.loggedDays}</td>
         <td>${m.missed.join(", ") || "—"}</td>
       </tr>`).join("");
+    const scoreHtml = scorecard.map((s) => `
+      <tr>
+        <td>${s.name}</td>
+        <td style="text-align:right">${s.loginDayCount}</td>
+        <td style="text-align:right">${s.engagement}</td>
+        <td style="text-align:right">${s.attDays}</td>
+        <td style="text-align:right">${s.lateDays}</td>
+        <td style="text-align:right">${s.lateMin}</td>
+        <td style="text-align:right">${s.otMin}</td>
+        <td style="text-align:right">${s.punctuality == null ? "—" : s.punctuality + "%"}</td>
+      </tr>`).join("");
     w.document.write(`<!doctype html><html><head><title>User Activity Report</title>
       <style>
         *{box-sizing:border-box;font-family:Arial,sans-serif;color:#000}
@@ -365,6 +376,11 @@ export default function UserActivityReport() {
       <table><thead><tr>
         <th>When</th><th>Employee</th><th>Event</th><th>Action</th><th>Details</th><th>Location</th><th>IP</th><th>Device</th>
       </tr></thead><tbody>${rowsHtml}</tbody></table>
+      <h2>Staff Scorecard — Usage, Attendance &amp; Engagement</h2>
+      <table><thead><tr>
+        <th>Employee</th><th>Login Days</th><th>System Actions</th><th>Attendance Days</th>
+        <th>Late Days</th><th>Late (min)</th><th>Overtime (min)</th><th>Punctuality</th>
+      </tr></thead><tbody>${scoreHtml || `<tr><td colspan="8">No data</td></tr>`}</tbody></table>
       <h2>Login Coverage &amp; Missed Days</h2>
       <table><thead><tr>
         <th>Employee</th><th>Days Logged In</th><th>Days Missed</th>
