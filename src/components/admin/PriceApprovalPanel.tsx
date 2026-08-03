@@ -20,6 +20,29 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 
+// Reference market levels appended to internal (staff) price SMS only
+const buildReferenceBlock = (r: {
+  iceArabica?: number | null;
+  robusta?: number | null;
+  exchangeRate?: number | null;
+  drugarLocal?: number | null;
+  wugarLocal?: number | null;
+  robustaFaqLocal?: number | null;
+}) => {
+  const parts: string[] = [];
+  if (r.iceArabica) parts.push(`ICE Arabica ${Number(r.iceArabica).toFixed(2)}c/lb`);
+  if (r.robusta) parts.push(`Robusta USD ${Number(r.robusta).toLocaleString()}/MT`);
+  if (r.exchangeRate) parts.push(`USD/UGX ${Number(r.exchangeRate).toLocaleString()}`);
+  const locals: string[] = [];
+  if (r.drugarLocal) locals.push(`Drugar ${Number(r.drugarLocal).toLocaleString()}`);
+  if (r.wugarLocal) locals.push(`Wugar ${Number(r.wugarLocal).toLocaleString()}`);
+  if (r.robustaFaqLocal) locals.push(`Rob FAQ ${Number(r.robustaFaqLocal).toLocaleString()}`);
+  let block = '';
+  if (parts.length) block += `\nMarket ref: ${parts.join(', ')}`;
+  if (locals.length) block += `\nLocal ref (UGX/kg): ${locals.join(', ')}`;
+  return block;
+};
+
 const PriceApprovalPanel: React.FC = () => {
   const { employee } = useAuth();
   const { pendingRequests, approveRequest, rejectRequest, fetchPendingRequests } = usePriceApprovals();
@@ -59,6 +82,14 @@ const PriceApprovalPanel: React.FC = () => {
 
       const date = new Date().toLocaleDateString('en-GB');
       const message = `Great Agro Coffee Price Update - ${date}\n\nArabica: UGX ${currentPrices.arabicaBuyingPrice.toLocaleString()}/kg (${currentPrices.arabicaOutturn}% outturn)\nRobusta: UGX ${currentPrices.robustaBuyingPrice.toLocaleString()}/kg (${currentPrices.robustaOutturn}% outturn)\nSorted: UGX ${(currentPrices.sortedPrice || 0).toLocaleString()}/kg\n\nUse these prices for today's purchases.`;
+      const staffMessage = `${message}${buildReferenceBlock({
+        iceArabica: currentPrices.iceArabica,
+        robusta: currentPrices.robusta,
+        exchangeRate: currentPrices.exchangeRate,
+        drugarLocal: currentPrices.drugarLocal,
+        wugarLocal: currentPrices.wugarLocal,
+        robustaFaqLocal: currentPrices.robustaFaqLocal,
+      })}`;
 
       let sent = 0;
       for (let i = 0; i < allPhones.length; i++) {
@@ -70,7 +101,7 @@ const PriceApprovalPanel: React.FC = () => {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${accessToken}`
             },
-            body: JSON.stringify({ phone: allPhones[i], message, messageType: 'price_update' })
+            body: JSON.stringify({ phone: allPhones[i], message: staffMessage, messageType: 'price_update' })
           });
           if (response.ok) sent++;
         } catch { /* continue */ }
@@ -208,7 +239,14 @@ await savePrices({
       const correctionPrefix = request.is_correction ? 'CORRECTION: ' : '';
       
       // Staff message - plain text, no emojis, keep short for 1 SMS credit
-      const message = `${correctionPrefix}Great Agro Coffee Price Update ${date}\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}%)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}%)\nSorted: UGX ${(request.sorted_price || 0).toLocaleString()}/kg\n${request.is_correction ? 'Disregard previous prices.' : 'Use these prices today.'}`;
+      const message = `${correctionPrefix}Great Agro Coffee Price Update ${date}\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}%)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}%)\nSorted: UGX ${(request.sorted_price || 0).toLocaleString()}/kg${buildReferenceBlock({
+        iceArabica: request.ice_arabica ?? currentPrices.iceArabica,
+        robusta: request.robusta ?? currentPrices.robusta,
+        exchangeRate: request.exchange_rate ?? currentPrices.exchangeRate,
+        drugarLocal: request.drugar_local ?? currentPrices.drugarLocal,
+        wugarLocal: request.wugar_local ?? currentPrices.wugarLocal,
+        robustaFaqLocal: request.robusta_faq_local ?? currentPrices.robustaFaqLocal,
+      })}\n${request.is_correction ? 'Disregard previous prices.' : 'Use these prices today.'}`;
 
       // Send to all recipients
       for (let i = 0; i < allPhones.length; i++) {
