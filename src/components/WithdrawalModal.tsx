@@ -559,6 +559,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
 
   const handleClose = () => {
     setStep('amount');
+    setBankSubmitting(false);
     setAmount('');
     setChannel('CASH');
     setMobileNumber('');
