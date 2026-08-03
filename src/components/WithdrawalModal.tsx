@@ -92,6 +92,12 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const [useInstant, setUseInstant] = useState(false);
   const [overdraftAccepted, setOverdraftAccepted] = useState(false);
 
+  // Bank deposit payout mode
+  const [payoutMode, setPayoutMode] = useState<'MOBILE' | 'BANK'>('MOBILE');
+  const [bankBranch, setBankBranch] = useState('');
+  const [bankSubmitting, setBankSubmitting] = useState(false);
+  const [bankSubmitted, setBankSubmitted] = useState(false);
+
   // Hard re-entry lock — a ref so simultaneous clicks can't slip past the
   // async `instantLoading` state update and fire duplicate withdrawals.
   const submittingRef = useRef(false);
@@ -558,6 +564,9 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     setBankName('');
     setAccountNumber('');
     setAccountName('');
+    setBankBranch('');
+    setPayoutMode('MOBILE');
+    setBankSubmitted(false);
     setVerificationCode('');
     setSentCode('');
     setCompletedRef('');
