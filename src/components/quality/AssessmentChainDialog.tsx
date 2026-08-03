@@ -130,6 +130,19 @@ const AssessmentChainDialog = ({ assessment, open, onOpenChange }: Props) => {
     },
   });
 
+  const { data: availableSales } = useQuery({
+    queryKey: ["chain-attachable-sales", open],
+    enabled: open,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("sales_transactions")
+        .select("id, date, customer, coffee_type, weight, unit_price, total_amount")
+        .order("date", { ascending: false })
+        .limit(100);
+      return data || [];
+    },
+  });
+
   if (!assessment) return null;
 
   const record = data?.record;
