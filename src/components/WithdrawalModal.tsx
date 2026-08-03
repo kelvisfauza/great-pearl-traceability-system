@@ -581,6 +581,75 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   };
 
   const parsedAmount = amount ? parseFloat(amount) : 0;
+
+  const getServiceFee = (amt: number) =>
+    amt < 500 ? 0
+      : amt <= 60_000 ? 1_100
+      : amt <= 500_000 ? 1_700
+      : amt <= 1_000_000 ? 2_500
+      : 2_900;
+
+  const bankFee = getServiceFee(parsedAmount);
+  const bankTotal = parsedAmount + bankFee;
+  const bankFieldsValid = Boolean(bankName.trim() && accountNumber.trim() && accountName.trim());
+  const bankAmountValid = parsedAmount >= 2000 && bankTotal <= availableAmount;
+
+  const handleBankDepositRequest = async () => {
+    if (withdrawalStatus.disabled || isWalletFrozen) {
+      toast({
+        title: isWalletFrozen ? 'Wallet Frozen' : 'Withdrawals Disabled',
+        description: isWalletFrozen
+          ? 'Your wallet is currently frozen. Withdrawals are not allowed.'
+          : (withdrawalStatus.reason || 'Withdrawals are temporarily paused.'),
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!bankFieldsValid || !bankAmountValid) return;
+
+    setBankSubmitting(true);
+    try {
+      const email = employee?.email || user?.email || '';
+      const { data: unified } = await supabase.rpc('get_unified_user_id', { input_email: email });
+      const ref = `BNK-${new Date().toISOString().split('T')[0]}-${Date.now().toString().slice(-5)}`;
+
+      const { error } = await supabase.from('bank_deposit_requests' as any).insert({
+        user_id: (unified as string | null) || user?.id || '',
+        employee_email: email,
+        employee_name: employee?.name || email,
+        amount: parsedAmount,
+        fee: bankFee,
+        total_deducted: bankTotal,
+        bank_name: bankName.trim(),
+        branch: bankBranch.trim() || null,
+        account_number: accountNumber.trim(),
+        account_name: accountName.trim(),
+        reference: ref,
+        status: 'pending_admin',
+      });
+      if (error) throw error;
+
+      setCompletedRef(ref);
+      setCompletedAmount(parsedAmount);
+      setBankSubmitted(true);
+      setStep('done');
+      toast({
+        title: 'Bank Deposit Request Submitted',
+        description: `Reference: ${ref}. Your request will be reviewed by an administrator, then finally approved and paid by the Managing Director.`,
+        duration: 8000,
+      });
+    } catch (e: any) {
+      console.error('Bank deposit request failed:', e);
+      toast({
+        title: 'Error',
+        description: e?.message || 'Failed to submit bank deposit request.',
+        variant: 'destructive',
+      });
+    } finally {
+      setBankSubmitting(false);
+    }
+  };
+
   const instantMaxAmount = Number(instantEligibility?.max_instant_amount ?? 0);
   const instantUnavailable = eligibilityResolved && !eligibilityLoading && !instantEligibility?.eligible;
   const isCashRoundAmount = channel !== 'CASH' || parsedAmount % 500 === 0;
