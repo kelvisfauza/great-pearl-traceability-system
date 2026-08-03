@@ -82,6 +82,14 @@ const PriceApprovalPanel: React.FC = () => {
 
       const date = new Date().toLocaleDateString('en-GB');
       const message = `Great Agro Coffee Price Update - ${date}\n\nArabica: UGX ${currentPrices.arabicaBuyingPrice.toLocaleString()}/kg (${currentPrices.arabicaOutturn}% outturn)\nRobusta: UGX ${currentPrices.robustaBuyingPrice.toLocaleString()}/kg (${currentPrices.robustaOutturn}% outturn)\nSorted: UGX ${(currentPrices.sortedPrice || 0).toLocaleString()}/kg\n\nUse these prices for today's purchases.`;
+      const staffMessage = `${message}${buildReferenceBlock({
+        iceArabica: currentPrices.iceArabica,
+        robusta: currentPrices.robusta,
+        exchangeRate: currentPrices.exchangeRate,
+        drugarLocal: currentPrices.drugarLocal,
+        wugarLocal: currentPrices.wugarLocal,
+        robustaFaqLocal: currentPrices.robustaFaqLocal,
+      })}`;
 
       let sent = 0;
       for (let i = 0; i < allPhones.length; i++) {
@@ -93,7 +101,7 @@ const PriceApprovalPanel: React.FC = () => {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${accessToken}`
             },
-            body: JSON.stringify({ phone: allPhones[i], message, messageType: 'price_update' })
+            body: JSON.stringify({ phone: allPhones[i], message: staffMessage, messageType: 'price_update' })
           });
           if (response.ok) sent++;
         } catch { /* continue */ }
