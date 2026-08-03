@@ -168,6 +168,19 @@ Deno.serve(async (req) => {
     // -----------------------------------------------------------
     let allowEmail = true
     let allowSms = true
+
+    // Templates that already dispatch their own dedicated, fully-formatted SMS
+    // elsewhere. Mirroring them here produced a second, useless "subject only"
+    // SMS to the same person. Email only for these.
+    const NO_SMS_MIRROR_TEMPLATES = new Set([
+      'price-update',
+      'price-correction',
+      'supplier-price-notice',
+    ])
+    if (NO_SMS_MIRROR_TEMPLATES.has(templateName)) {
+      allowSms = false
+    }
+
     if (supa) {
       try {
         const { data: pref } = await supa
@@ -180,7 +193,7 @@ Deno.serve(async (req) => {
           else {
             const ch = ((pref as any).channels || []) as string[]
             allowEmail = ch.includes('email')
-            allowSms = ch.includes('sms')
+            allowSms = ch.includes('sms') && !NO_SMS_MIRROR_TEMPLATES.has(templateName)
           }
         }
       } catch (prefErr) {
