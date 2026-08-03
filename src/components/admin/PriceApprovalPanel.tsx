@@ -57,6 +57,29 @@ const PriceApprovalPanel: React.FC = () => {
   const [processing, setProcessing] = useState(false);
   const [resending, setResending] = useState(false);
 
+  // Normalize UG phone numbers so the same person is never messaged twice
+  // (e.g. 0772272455 / +256772272455 / 256772272455 are the same recipient).
+  const normalizePhone = (raw: string): string => {
+    const digits = (raw || '').replace(/\D/g, '');
+    if (digits.startsWith('256')) return `+${digits}`;
+    if (digits.startsWith('0')) return `+256${digits.slice(1)}`;
+    if (digits.length === 9) return `+256${digits}`;
+    return `+${digits}`;
+  };
+
+  const dedupePhones = (phones: (string | null | undefined)[]): string[] => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const p of phones) {
+      if (!p) continue;
+      const key = normalizePhone(p);
+      if (key.length < 12 || seen.has(key)) continue;
+      seen.add(key);
+      out.push(key);
+    }
+    return out;
+  };
+
   const handleResendCurrentPriceNotifications = async () => {
     if (!employee) return;
     setResending(true);
@@ -78,7 +101,7 @@ const PriceApprovalPanel: React.FC = () => {
       const additionalRecipients = [
         '0772272455', '0777510755', '0791052941', '0779637836', '0791832118', '0778970844', '0777676992'
       ];
-      const allPhones = [...staffList.map(e => e.phone!), ...additionalRecipients];
+      const allPhones = dedupePhones([...staffList.map(e => e.phone!), ...additionalRecipients]);
 
       const date = new Date().toLocaleDateString('en-GB');
       const message = `Great Agro Coffee Price Update - ${date}\n\nArabica: UGX ${currentPrices.arabicaBuyingPrice.toLocaleString()}/kg (${currentPrices.arabicaOutturn}% outturn)\nRobusta: UGX ${currentPrices.robustaBuyingPrice.toLocaleString()}/kg (${currentPrices.robustaOutturn}% outturn)\nSorted: UGX ${(currentPrices.sortedPrice || 0).toLocaleString()}/kg\n\nUse these prices for today's purchases.`;
@@ -228,10 +251,10 @@ await savePrices({
         '0772272455', '0777510755', '0791052941', '0779637836', '0791832118', '0778970844', '0777676992'
       ];
       
-      const allPhones = [
+      const allPhones = dedupePhones([
         ...staffList.map(e => e.phone!),
         ...additionalRecipients
-      ];
+      ]);
 
       const date = new Date().toLocaleDateString('en-GB');
       
@@ -259,7 +282,10 @@ await savePrices({
         .select('phone')
         .not('phone', 'is', null);
 
-      const supplierPhones = suppliers?.filter(s => s.phone).map(s => s.phone!) || [];
+      // Dedupe suppliers, and skip anyone already messaged in the staff batch
+      const staffSet = new Set(allPhones);
+      const supplierPhones = dedupePhones(suppliers?.map(s => s.phone) || [])
+        .filter(p => !staffSet.has(p));
       // Supplier message - plain text, no emojis, short for reliable delivery
       const supplierMessage = `${correctionPrefix}Great Agro Coffee Prices ${date}\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}%)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}%)\nSorted: UGX ${(request.sorted_price || 0).toLocaleString()}/kg\n${request.is_correction ? 'Disregard previous prices.' : 'Deliver your coffee now!'}`;
 
