@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useUserAccount } from '@/hooks/useUserAccount';
 import { useAuth } from '@/contexts/AuthContext';
-import { Smartphone, AlertTriangle, Printer, ShieldCheck, Loader2, Clock, Zap, CheckCircle2 } from 'lucide-react';
+import { Smartphone, AlertTriangle, Printer, ShieldCheck, Loader2, Clock, Zap, CheckCircle2, Landmark } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -52,6 +52,32 @@ interface WithdrawalModalProps {
 }
 
 type Step = 'amount' | 'verify' | 'done';
+
+const UG_BANKS = [
+  'Stanbic Bank Uganda',
+  'Centenary Bank',
+  'DFCU Bank',
+  'Absa Bank Uganda',
+  'Equity Bank Uganda',
+  'Bank of Africa',
+  'Housing Finance Bank',
+  'Post Bank Uganda',
+  'Standard Chartered Bank',
+  'KCB Bank Uganda',
+  'NCBA Bank Uganda',
+  'Diamond Trust Bank',
+  'Cairo Bank Uganda',
+  'Ecobank Uganda',
+  'Finance Trust Bank',
+  'Opportunity Bank',
+  'Pride Bank',
+  'Exim Bank Uganda',
+  'Bank of Baroda',
+  'Citibank Uganda',
+  'UBA Uganda',
+  'Guaranty Trust Bank',
+  'I&M Bank Uganda',
+];
 
 export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   open,
