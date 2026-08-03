@@ -294,6 +294,44 @@ const AssessmentChainDialog = ({ assessment, open, onOpenChange }: Props) => {
                 )}
               </Step>
 
+              <Step
+                icon={ShoppingCart}
+                title="6. Sales"
+                status={`${data?.batchSales?.length || 0} sale link(s)`}
+              >
+                {(data?.batchSales || []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-1">
+                    Not yet sold — this coffee is still in stock.
+                  </p>
+                ) : (
+                  data!.batchSales.map((bs: any) => {
+                    const sale = data!.sales.find((s: any) => s.id === bs.sale_transaction_id);
+                    const batch = data!.batches.find((b: any) => b.id === bs.batch_id);
+                    return (
+                      <div key={bs.id} className="py-2">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-sm">
+                            {bs.customer_name || sale?.customer || "Unknown customer"}
+                          </span>
+                          {sale?.status && (
+                            <Badge variant="outline" className="text-[10px]">{sale.status}</Badge>
+                          )}
+                        </div>
+                        <Row label="Sale date" value={bs.sale_date || sale?.date || "—"} />
+                        <Row label="From batch" value={batch?.batch_code || bs.batch_id} />
+                        <Row label="Weight from this batch" value={fmtKg(bs.kilograms_deducted)} />
+                        <Row label="Sale coffee type" value={sale?.coffee_type} />
+                        <Row label="Total sale weight" value={fmtKg(sale?.weight)} />
+                        <Row label="Unit price" value={fmtUgx(sale?.unit_price)} />
+                        <Row label="Sale value" value={fmtUgx(sale?.total_amount)} />
+                        <Row label="Truck / driver" value={[sale?.truck_details, sale?.driver_details].filter(Boolean).join(" · ") || "—"} />
+                        <Row label="Sale ID" value={bs.sale_transaction_id} />
+                      </div>
+                    );
+                  })
+                )}
+              </Step>
+
               <Separator className="my-2" />
               <p className="text-[11px] text-muted-foreground">
                 Assessment ID: {assessment.id}
