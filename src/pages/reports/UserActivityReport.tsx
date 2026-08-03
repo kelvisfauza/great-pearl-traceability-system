@@ -563,6 +563,48 @@ export default function UserActivityReport() {
             </Table>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Staff Scorecard — Usage, Attendance &amp; Engagement</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0 overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Employee</TableHead>
+                  <TableHead className="text-right">Login Days</TableHead>
+                  <TableHead className="text-right">System Actions</TableHead>
+                  <TableHead className="text-right">Attendance Days</TableHead>
+                  <TableHead className="text-right">Late Days</TableHead>
+                  <TableHead className="text-right">Late (min)</TableHead>
+                  <TableHead className="text-right">Overtime (min)</TableHead>
+                  <TableHead className="text-right">Punctuality</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {scorecard.length === 0 ? (
+                  <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">No data in range</TableCell></TableRow>
+                ) : scorecard.map((s) => (
+                  <TableRow key={s.name}>
+                    <TableCell className="font-medium">{s.name}</TableCell>
+                    <TableCell className="text-right">{s.loginDayCount}</TableCell>
+                    <TableCell className="text-right">{s.engagement}</TableCell>
+                    <TableCell className="text-right">{s.attDays}</TableCell>
+                    <TableCell className="text-right">{s.lateDays}</TableCell>
+                    <TableCell className="text-right">{s.lateMin}</TableCell>
+                    <TableCell className="text-right">{s.otMin}</TableCell>
+                    <TableCell className="text-right">
+                      {s.punctuality == null ? "—" : (
+                        <Badge variant="outline" className={s.punctuality >= 80 ? "bg-emerald-100 text-emerald-800 border-emerald-200" : s.punctuality >= 50 ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-red-100 text-red-800 border-red-200"}>{s.punctuality}%</Badge>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
     </Layout>
   );
