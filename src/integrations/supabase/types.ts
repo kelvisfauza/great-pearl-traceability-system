@@ -648,6 +648,93 @@ export type Database = {
         }
         Relationships: []
       }
+      bank_deposit_requests: {
+        Row: {
+          account_name: string
+          account_number: string
+          admin_approved_at: string | null
+          admin_approved_by: string | null
+          amount: number
+          bank_name: string
+          branch: string | null
+          created_at: string
+          employee_email: string
+          employee_name: string | null
+          fee: number
+          final_approved_at: string | null
+          final_approved_by: string | null
+          id: string
+          notes: string | null
+          paid_at: string | null
+          paid_by: string | null
+          payment_reference: string | null
+          reference: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          status: string
+          total_deducted: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_name: string
+          account_number: string
+          admin_approved_at?: string | null
+          admin_approved_by?: string | null
+          amount: number
+          bank_name: string
+          branch?: string | null
+          created_at?: string
+          employee_email: string
+          employee_name?: string | null
+          fee?: number
+          final_approved_at?: string | null
+          final_approved_by?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          payment_reference?: string | null
+          reference: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          status?: string
+          total_deducted?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_name?: string
+          account_number?: string
+          admin_approved_at?: string | null
+          admin_approved_by?: string | null
+          amount?: number
+          bank_name?: string
+          branch?: string | null
+          created_at?: string
+          employee_email?: string
+          employee_name?: string | null
+          fee?: number
+          final_approved_at?: string | null
+          final_approved_by?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          payment_reference?: string | null
+          reference?: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          status?: string
+          total_deducted?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       biometric_credentials: {
         Row: {
           created_at: string | null
@@ -14697,6 +14784,10 @@ export type Database = {
         Returns: Json
       }
       expire_old_bookings: { Args: never; Returns: undefined }
+      finalize_bank_deposit_request: {
+        Args: { p_payment_reference?: string; p_request_id: string }
+        Returns: Json
+      }
       fix_denis_auth_final: { Args: never; Returns: Json }
       generate_support_ticket_code: { Args: never; Returns: string }
       generate_verification_code: { Args: never; Returns: string }
