@@ -15198,6 +15198,8 @@ export type Database = {
         Args: { p_request_id: string }
         Returns: undefined
       }
+      is_admin_hr_or_finance: { Args: never; Returns: boolean }
+      is_admin_or_hr: { Args: never; Returns: boolean }
       is_conversation_member: { Args: { conv_id: string }; Returns: boolean }
       is_current_user_admin: { Args: never; Returns: boolean }
       is_current_user_admin_by_role: { Args: never; Returns: boolean }
@@ -15216,6 +15218,7 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      is_quality_or_admin: { Args: never; Returns: boolean }
       is_super_admin: { Args: { _uid: string }; Returns: boolean }
       is_supervisor_or_above: { Args: never; Returns: boolean }
       is_user_role: { Args: never; Returns: boolean }
