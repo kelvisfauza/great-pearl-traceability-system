@@ -20,6 +20,29 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 
+// Reference market levels appended to internal (staff) price SMS only
+const buildReferenceBlock = (r: {
+  iceArabica?: number | null;
+  robusta?: number | null;
+  exchangeRate?: number | null;
+  drugarLocal?: number | null;
+  wugarLocal?: number | null;
+  robustaFaqLocal?: number | null;
+}) => {
+  const parts: string[] = [];
+  if (r.iceArabica) parts.push(`ICE Arabica ${Number(r.iceArabica).toFixed(2)}c/lb`);
+  if (r.robusta) parts.push(`Robusta USD ${Number(r.robusta).toLocaleString()}/MT`);
+  if (r.exchangeRate) parts.push(`USD/UGX ${Number(r.exchangeRate).toLocaleString()}`);
+  const locals: string[] = [];
+  if (r.drugarLocal) locals.push(`Drugar ${Number(r.drugarLocal).toLocaleString()}`);
+  if (r.wugarLocal) locals.push(`Wugar ${Number(r.wugarLocal).toLocaleString()}`);
+  if (r.robustaFaqLocal) locals.push(`Rob FAQ ${Number(r.robustaFaqLocal).toLocaleString()}`);
+  let block = '';
+  if (parts.length) block += `\nMarket ref: ${parts.join(', ')}`;
+  if (locals.length) block += `\nLocal ref (UGX/kg): ${locals.join(', ')}`;
+  return block;
+};
+
 const PriceApprovalPanel: React.FC = () => {
   const { employee } = useAuth();
   const { pendingRequests, approveRequest, rejectRequest, fetchPendingRequests } = usePriceApprovals();
