@@ -215,6 +215,57 @@ async function processServicePayment(
     selectedServiceKey === "3" ||
     /advance\s*recovery/i.test(serviceName);
 
+  // ── Milling Collections: milling manager pays in the fees she collected ──
+  const isMillingRemittance =
+    selectedServiceKey === "6" || /milling\s*collections?/i.test(serviceName);
+
+  if (isMillingRemittance && amount > 0) {
+    const phoneVariants = [normalizedPhone, `+${normalizedPhone}`, `0${normalizedPhone.slice(3)}`];
+    const { data: collector } = await supabase
+      .from("employees")
+      .select("name")
+      .or(phoneVariants.map((p) => `phone.eq.${p}`).join(","))
+      .maybeSingle();
+
+    const { data: remittanceId, error: remitError } = await supabase.rpc(
+      "allocate_milling_remittance",
+      {
+        p_collector_name: collector?.name || "Milling Manager",
+        p_collector_phone: normalizedPhone,
+        p_amount: amount,
+        p_reference: externalRef,
+        p_yo_reference: transactionId || null,
+        p_channel: "USSD",
+      },
+    );
+
+    if (remitError) {
+      console.error(`[USSD Payment Success] Milling remittance failed:`, remitError);
+      return { userMessage: "Payment received but allocation failed. Contact Great Agro Coffee." };
+    }
+
+    const { data: remittance } = await supabase
+      .from("milling_collection_remittances")
+      .select("allocated_amount, allocated_count")
+      .eq("id", remittanceId)
+      .maybeSingle();
+
+    const outstanding = Number(
+      (await supabase.rpc("milling_unremitted_total")).data || 0,
+    );
+
+    console.log(
+      `[USSD Payment Success] ✅ Milling remittance UGX ${amount} by ${collector?.name}. Allocated ${remittance?.allocated_count} payments.`,
+    );
+
+    return {
+      userMessage:
+        `Thank you. UGX ${amount.toLocaleString()} received for milling collections. ` +
+        `${remittance?.allocated_count || 0} customer payment(s) allocated. ` +
+        `Balance to pay in: UGX ${outstanding.toLocaleString()}.`,
+    };
+  }
+
   if (isAdvanceRecovery && amount > 0) {
     const phoneVariants = [
       normalizedPhone,

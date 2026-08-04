@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, FileText } from "lucide-react";
 import { format, startOfDay, endOfDay } from "date-fns";
+import MillingCollectionsReport from "@/components/milling/MillingCollectionsReport";
 
 const MillingReportsTab = () => {
   const today = new Date();
@@ -30,6 +31,8 @@ const MillingReportsTab = () => {
           <p>• Revenue: <strong>UGX {data?.totalRevenue.toLocaleString()}</strong></p>
         </CardContent>
       </Card>
+
+      <MillingCollectionsReport />
     </div>
   );
 };
