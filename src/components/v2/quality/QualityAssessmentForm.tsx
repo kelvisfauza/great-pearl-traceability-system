@@ -165,7 +165,7 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
       if (error) throw error;
 
       // Create a quality assessment record with rejection — include all quality data and suggested price
-      // Status is 'pending_admin_pricing' so admin can review the price, but reject_final stays true
+      // Rejections skip the Quality Manager and go straight to the Admin rejected-lots queue
       const { data: assessment } = await supabase
         .from('quality_assessments')
         .insert({
@@ -185,7 +185,7 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
           outturn: data.outturn_percentage,
           suggested_price: data.unit_price_ugx,
           comments: data.comments,
-          status: submitStatus,
+          status: 'rejected',
           qm_original_price: data.unit_price_ugx,
           reject_final: true
         } as any)
