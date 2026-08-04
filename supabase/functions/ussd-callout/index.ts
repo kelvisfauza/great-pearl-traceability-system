@@ -210,12 +210,13 @@ serve(async (req) => {
 
       return new Response(JSON.stringify({
         validated: true,
-        message: `Select 1 to proceed to available services${walletOwnerLine}${loanLine}`,
+        message: `Select 1 to proceed to available services${walletOwnerLine}${loanLine}${millingLine}`,
         ussd_processor_params: {
           other_services: serviceList,
           payment_external_reference: paymentRef,
           wallet_owner_name: walletOwnerName,
           caller_phone: cleanPhone,
+          milling_unremitted: String(millingUnremitted),
         },
         success_ipn_url: successIpnUrl,
         failure_ipn_url: failureIpnUrl,
