@@ -543,6 +543,140 @@ export type Database = {
         }
         Relationships: []
       }
+      attendance_import_batches: {
+        Row: {
+          created_at: string
+          file_name: string
+          id: string
+          notes: string | null
+          period_end: string | null
+          period_start: string | null
+          status: string
+          total_rows: number
+          updated_at: string
+          uploaded_by: string
+          uploaded_by_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          id?: string
+          notes?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          status?: string
+          total_rows?: number
+          updated_at?: string
+          uploaded_by: string
+          uploaded_by_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          id?: string
+          notes?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          status?: string
+          total_rows?: number
+          updated_at?: string
+          uploaded_by?: string
+          uploaded_by_id?: string | null
+        }
+        Relationships: []
+      }
+      attendance_import_rows: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          arrival_time: string | null
+          assumed_arrival: boolean
+          assumed_departure: boolean
+          attendance_status: string
+          batch_id: string
+          created_at: string
+          departure_time: string | null
+          device_name: string | null
+          device_user_id: string | null
+          edited: boolean
+          employee_email: string | null
+          employee_id: string
+          employee_name: string
+          existing_arrival: string | null
+          existing_departure: string | null
+          existing_status: string | null
+          has_existing: boolean
+          id: string
+          notes: string | null
+          punches: string | null
+          record_date: string
+          row_status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          arrival_time?: string | null
+          assumed_arrival?: boolean
+          assumed_departure?: boolean
+          attendance_status?: string
+          batch_id: string
+          created_at?: string
+          departure_time?: string | null
+          device_name?: string | null
+          device_user_id?: string | null
+          edited?: boolean
+          employee_email?: string | null
+          employee_id: string
+          employee_name: string
+          existing_arrival?: string | null
+          existing_departure?: string | null
+          existing_status?: string | null
+          has_existing?: boolean
+          id?: string
+          notes?: string | null
+          punches?: string | null
+          record_date: string
+          row_status?: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          arrival_time?: string | null
+          assumed_arrival?: boolean
+          assumed_departure?: boolean
+          attendance_status?: string
+          batch_id?: string
+          created_at?: string
+          departure_time?: string | null
+          device_name?: string | null
+          device_user_id?: string | null
+          edited?: boolean
+          employee_email?: string | null
+          employee_id?: string
+          employee_name?: string
+          existing_arrival?: string | null
+          existing_departure?: string | null
+          existing_status?: string | null
+          has_existing?: boolean
+          id?: string
+          notes?: string | null
+          punches?: string | null
+          record_date?: string
+          row_status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_import_rows_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_import_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attendance_time_records: {
         Row: {
           arrival_time: string | null
