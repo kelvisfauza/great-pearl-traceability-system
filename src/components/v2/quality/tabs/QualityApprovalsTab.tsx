@@ -68,16 +68,55 @@ const QualityApprovalsTab = () => {
 
       if (action === "rejected") {
         update.status = "rejected";
+        update.reject_final = true;
+        update.final_price = 0;
       } else {
-        update.status = "pending_admin_pricing";
+        // Quality Manager approval is final — lot is ready for finance and downstream processes
+        update.status = "approved";
         update.suggested_price = approvedPrice;
+        update.final_price = approvedPrice;
+        update.quality_note = notes || row.quality_note || null;
       }
 
       const { error } = await supabase.from("quality_assessments").update(update).eq("id", row.id);
       if (error) throw error;
 
-      if (action === "rejected" && row.store_record_id) {
-        await supabase.from("coffee_records").update({ status: "pending" }).eq("id", row.store_record_id);
+      if (row.store_record_id) {
+        if (action === "rejected") {
+          // Rejected lots go to the Admin rejected-lots (discretion buy) queue
+          await supabase.from("coffee_records").update({ status: "QUALITY_REJECTED" }).eq("id", row.store_record_id);
+        } else {
+          const { data: record } = await supabase
+            .from("coffee_records")
+            .select("id, supplier_name, coffee_type, kilograms, bags, supplier_id")
+            .eq("id", row.store_record_id)
+            .maybeSingle();
+
+          await supabase.from("coffee_records").update({ status: "inventory" }).eq("id", row.store_record_id);
+
+          if (record) {
+            await supabase.from("finance_coffee_lots").insert({
+              quality_assessment_id: row.id,
+              coffee_record_id: row.store_record_id,
+              supplier_id: record.supplier_id,
+              assessed_by: row.assessed_by,
+              assessed_at: new Date().toISOString(),
+              quality_json: {
+                moisture_content: row.moisture,
+                group1_percentage: row.group1_defects,
+                group2_percentage: row.group2_defects,
+                pods_percentage: row.pods,
+                husks_percentage: row.husks,
+                fm_percentage: row.fm,
+                outturn_percentage: row.outturn,
+                comments: row.comments,
+              },
+              unit_price_ugx: approvedPrice,
+              quantity_kg: record.kilograms,
+              finance_status: "READY_FOR_FINANCE",
+            } as any);
+          }
+        }
       }
 
       const { error: logError } = await supabase.from("quality_manager_approvals" as any).insert({
@@ -102,8 +141,8 @@ const QualityApprovalsTab = () => {
             : "Quality Manager approval complete",
         description:
           vars.action === "rejected"
-            ? "Sent back to the quality team for re-assessment."
-            : "Forwarded to admin for final pricing — the usual process continues.",
+            ? "Sent to Admin as a rejected lot for discretion review."
+            : "Lot approved and released to Finance, inventory and downstream processes.",
       });
       setSelected(null);
       setPrice("");
@@ -283,7 +322,7 @@ const QualityApprovalsTab = () => {
                   }}
                 >
                   {review.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-1" />}
-                   Approve & Send to Admin
+                   Approve & Release to Finance
                 </Button>
               </div>
             </div>
