@@ -1,0 +1,2 @@
+ALTER TABLE public.quality_assessments DROP CONSTRAINT IF EXISTS quality_assessment_status_check;
+ALTER TABLE public.quality_assessments ADD CONSTRAINT quality_assessment_status_check CHECK (status = ANY (ARRAY['pending','assessed','approved','submitted_to_finance','rejected','pending_admin_pricing','pending_quality_manager']));
