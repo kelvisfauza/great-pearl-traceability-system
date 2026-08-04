@@ -43,10 +43,27 @@ const BiometricAttendanceImport = ({ people, onImported }: Props) => {
   const [markAbsent, setMarkAbsent] = useState(true);
 
   const [fileName, setFileName] = useState('');
-  const [parsed, setParsed] = useState<ParsedMachineFile | null>(null);
+  const [rawParsed, setRawParsed] = useState<ParsedMachineFile | null>(null);
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState(0);
+
+  // Only the days inside the selected range are imported
+  const parsed = useMemo<ParsedMachineFile | null>(() => {
+    if (!rawParsed) return null;
+    if (!fromDate && !toDate) return rawParsed;
+    return {
+      ...rawParsed,
+      people: rawParsed.people.map((p) => ({
+        ...p,
+        days: p.days.filter(
+          (d) => (!fromDate || d.date >= fromDate) && (!toDate || d.date <= toDate),
+        ),
+      })),
+    };
+  }, [rawParsed, fromDate, toDate]);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -69,7 +86,10 @@ const BiometricAttendanceImport = ({ people, onImported }: Props) => {
         auto[p.deviceUserId + '|' + p.deviceName] = found ? found.id : UNMATCHED;
       });
       setMapping(auto);
-      setParsed(result);
+      setRawParsed(result);
+      const allDates = result.people.flatMap((p) => p.days.map((d) => d.date)).sort();
+      setFromDate(result.periodStart || allDates[0] || '');
+      setToDate(result.periodEnd || allDates[allDates.length - 1] || '');
       setFileName(file.name);
       toast.success(`Parsed ${result.people.length} device users (${result.periodStart} → ${result.periodEnd})`);
     } catch (err: any) {
@@ -188,7 +208,7 @@ const BiometricAttendanceImport = ({ people, onImported }: Props) => {
       toast.success(
         `${rows.length} rows sent for approval${conflicts ? ` — ${conflicts} already exist in the system and will be overwritten if approved` : ''}`,
       );
-      setParsed(null);
+      setRawParsed(null);
       setFileName('');
       onImported?.();
     } catch (err: any) {
@@ -250,6 +270,35 @@ const BiometricAttendanceImport = ({ people, onImported }: Props) => {
               </Badge>
             )}
           </div>
+
+          {rawParsed && (
+            <div className="grid gap-4 md:grid-cols-3 rounded-lg border p-3">
+              <div>
+                <Label>Fetch from date</Label>
+                <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+              </div>
+              <div>
+                <Label>Fetch up to date</Label>
+                <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+              </div>
+              <div className="flex items-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const all = rawParsed.people.flatMap((p) => p.days.map((d) => d.date)).sort();
+                    setFromDate(all[0] || '');
+                    setToDate(all[all.length - 1] || '');
+                  }}
+                >
+                  Whole file
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Only days inside this range are imported.
+                </p>
+              </div>
+            </div>
+          )}
 
           {stats && (
             <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
