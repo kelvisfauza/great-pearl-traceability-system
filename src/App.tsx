@@ -122,6 +122,7 @@ import WholeBusinessReport from "./pages/reports/WholeBusinessReport";
 import YoPaymentsReport from "./pages/reports/YoPaymentsReport";
 import UserActivityReport from "./pages/reports/UserActivityReport";
 import CoffeeAuditTrailReportPage from "./pages/reports/CoffeeAuditTrailReport";
+import DocumentManager from "./pages/admin/DocumentManager";
 import StoreAuditComparison from "./pages/reports/StoreAuditComparison";
 import ConfidentialPLReport from "./pages/reports/ConfidentialPLReport";
 import SystemSettings from "./pages/admin/SystemSettings";
@@ -540,6 +541,11 @@ const App: React.ComponentType = () => {
                 <Route path="/admin/system-settings" element={
                   <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
                     <SystemSettings />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/documents" element={
+                  <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
+                    <DocumentManager />
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/system-transactions" element={
