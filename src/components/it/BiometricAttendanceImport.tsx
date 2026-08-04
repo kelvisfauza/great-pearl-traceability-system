@@ -98,7 +98,7 @@ const BiometricAttendanceImport = ({ people, onImported }: Props) => {
     return { present, absent, assumedIn, assumedOut, mapped, total: parsed.people.length };
   }, [parsed, mapping]);
 
-  const runImport = async () => {
+  const stageForApproval = async () => {
     if (!parsed) return;
     const rows: any[] = [];
     parsed.people.forEach((p) => {
@@ -113,49 +113,86 @@ const BiometricAttendanceImport = ({ people, onImported }: Props) => {
           employee_id: person.id,
           employee_name: person.name,
           employee_email: person.email,
+          device_user_id: p.deviceUserId,
+          device_name: p.deviceName,
           record_date: d.date,
+          punches: d.punches.join(', '),
           arrival_time: d.status === 'absent' ? null : d.arrival,
           departure_time: d.status === 'absent' ? null : d.departure,
-          status: d.status,
-          notes: [
-            `Biometric import (${fileName})`,
-            d.punches.length ? `taps: ${d.punches.join(', ')}` : 'no taps',
-            d.assumedArrival ? `arrival assumed ${defaultArrival}` : '',
-            d.assumedDeparture ? `departure assumed ${defaultDeparture}` : '',
-          ].filter(Boolean).join(' | '),
-          recorded_by: employee?.email || 'IT-BIOMETRIC',
+          attendance_status: d.status,
+          assumed_arrival: d.assumedArrival,
+          assumed_departure: d.assumedDeparture,
+          notes: `Biometric import (${fileName})`,
         });
       });
     });
 
     if (!rows.length) {
-      toast.error('Nothing to import — map at least one device user to an employee');
+      toast.error('Nothing to submit — map at least one device user to an employee');
       return;
     }
 
     setImporting(true);
     setProgress(0);
-    let saved = 0;
-    const failures: string[] = [];
     try {
+      // 1) Compare against what is already in the system for these employees/dates
+      const dates = rows.map((r) => r.record_date).sort();
+      const empIds = [...new Set(rows.map((r) => r.employee_id))];
+      const existingMap = new Map<string, any>();
+      const idChunk = 40;
+      for (let i = 0; i < empIds.length; i += idChunk) {
+        const { data } = await supabase
+          .from('attendance_time_records')
+          .select('employee_id, record_date, arrival_time, departure_time, status')
+          .in('employee_id', empIds.slice(i, i + idChunk))
+          .gte('record_date', dates[0])
+          .lte('record_date', dates[dates.length - 1]);
+        (data || []).forEach((r: any) => existingMap.set(`${r.employee_id}|${r.record_date}`, r));
+      }
+      rows.forEach((r) => {
+        const ex = existingMap.get(`${r.employee_id}|${r.record_date}`);
+        if (ex) {
+          r.has_existing = true;
+          r.existing_arrival = ex.arrival_time;
+          r.existing_departure = ex.departure_time;
+          r.existing_status = ex.status;
+        }
+      });
+      setProgress(25);
+
+      // 2) Create the batch awaiting IT approval
+      const { data: batch, error: batchErr } = await supabase
+        .from('attendance_import_batches' as any)
+        .insert({
+          file_name: fileName,
+          period_start: parsed.periodStart || null,
+          period_end: parsed.periodEnd || null,
+          uploaded_by: employee?.email || 'IT',
+          total_rows: rows.length,
+          status: 'pending',
+        } as any)
+        .select()
+        .single();
+      if (batchErr) throw batchErr;
+
+      // 3) Stage the rows
       const chunkSize = 200;
       for (let i = 0; i < rows.length; i += chunkSize) {
-        const chunk = rows.slice(i, i + chunkSize);
-        const { error } = await supabase
-          .from('attendance_time_records')
-          .upsert(chunk as any, { onConflict: 'employee_id,record_date' });
-        if (error) failures.push(error.message);
-        else saved += chunk.length;
-        setProgress(Math.round(((i + chunk.length) / rows.length) * 100));
+        const chunk = rows.slice(i, i + chunkSize).map((r) => ({ ...r, batch_id: (batch as any).id }));
+        const { error } = await supabase.from('attendance_import_rows' as any).insert(chunk as any);
+        if (error) throw error;
+        setProgress(25 + Math.round(((i + chunk.length) / rows.length) * 75));
       }
-      if (failures.length) {
-        toast.warning(`${saved} records saved, some batches failed: ${failures[0]}`);
-      } else {
-        toast.success(`${saved} attendance records imported successfully`);
-      }
+
+      const conflicts = rows.filter((r) => r.has_existing).length;
+      toast.success(
+        `${rows.length} rows sent for approval${conflicts ? ` — ${conflicts} already exist in the system and will be overwritten if approved` : ''}`,
+      );
+      setParsed(null);
+      setFileName('');
       onImported?.();
     } catch (err: any) {
-      toast.error('Import failed: ' + err.message);
+      toast.error('Could not submit for approval: ' + err.message);
     } finally {
       setImporting(false);
     }
@@ -303,15 +340,15 @@ const BiometricAttendanceImport = ({ people, onImported }: Props) => {
             </ScrollArea>
 
             <div className="mt-4 flex items-center gap-3">
-              <Button onClick={runImport} disabled={importing}>
+              <Button onClick={stageForApproval} disabled={importing}>
                 {importing ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Importing {progress}%</>
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Preparing {progress}%</>
                 ) : (
-                  <><Upload className="h-4 w-4 mr-2" /> Import attendance</>
+                  <><Upload className="h-4 w-4 mr-2" /> Send for IT approval</>
                 )}
               </Button>
               <p className="text-xs text-muted-foreground">
-                Existing records for the same employee and date are overwritten.
+                Records are compared with what is already in the system, then queued in the Approvals tab for review before saving.
               </p>
             </div>
           </CardContent>
