@@ -208,6 +208,32 @@ serve(async (req) => {
         console.error(`[USSD Callout] Loan lookup failed:`, e);
       }
 
+      // Milling manager: show the milling fees she has collected but not yet paid in.
+      let millingLine = "";
+      let millingUnremitted = 0;
+      try {
+        const phoneVariants = [cleanPhone, `+${cleanPhone}`, `0${cleanPhone.slice(3)}`];
+        const { data: collector } = await supabase
+          .from("employees")
+          .select("id, name, position, department")
+          .or(phoneVariants.map((p) => `phone.eq.${p}`).join(","))
+          .maybeSingle();
+        const isMillingCollector =
+          !!collector &&
+          (/milling/i.test(collector.department || "") || /milling/i.test(collector.position || ""));
+        if (isMillingCollector) {
+          const { data: total } = await supabase.rpc("milling_unremitted_total");
+          millingUnremitted = Number(total || 0);
+          if (millingUnremitted > 0) {
+            millingLine = `\nMilling collections to pay in: UGX ${millingUnremitted.toLocaleString()}`;
+          } else {
+            millingLine = `\nMilling collections to pay in: UGX 0`;
+          }
+        }
+      } catch (e) {
+        console.error(`[USSD Callout] Milling collections lookup failed:`, e);
+      }
+
       return new Response(JSON.stringify({
         validated: true,
         message: `Select 1 to proceed to available services${walletOwnerLine}${loanLine}${millingLine}`,
