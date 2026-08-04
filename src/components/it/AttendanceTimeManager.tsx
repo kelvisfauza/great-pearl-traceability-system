@@ -19,6 +19,7 @@ import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO } fr
 import { getStandardPrintStyles } from '@/utils/printStyles';
 import { cn } from '@/lib/utils';
 import BiometricAttendanceImport from './BiometricAttendanceImport';
+import AttendanceImportApprovals from './AttendanceImportApprovals';
 
 interface AttendanceRecord {
   id: string;
@@ -527,7 +528,7 @@ const AttendanceTimeManager = () => {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="entry" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="entry">
             <Clock className="h-4 w-4 mr-2" /> Record Entry
           </TabsTrigger>
@@ -536,6 +537,9 @@ const AttendanceTimeManager = () => {
           </TabsTrigger>
           <TabsTrigger value="machine">
             <FileSpreadsheet className="h-4 w-4 mr-2" /> Machine Import
+          </TabsTrigger>
+          <TabsTrigger value="approvals">
+            <Check className="h-4 w-4 mr-2" /> Import Approvals
           </TabsTrigger>
           <TabsTrigger value="rankings">
             <Trophy className="h-4 w-4 mr-2" /> Rankings & Reports
@@ -1034,6 +1038,10 @@ const AttendanceTimeManager = () => {
             }))}
             onImported={fetchRecords}
           />
+        </TabsContent>
+
+        <TabsContent value="approvals" className="space-y-4">
+          <AttendanceImportApprovals onApplied={fetchRecords} />
         </TabsContent>
       </Tabs>
     </div>
