@@ -1023,6 +1023,18 @@ const AttendanceTimeManager = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="machine" className="space-y-4">
+          <BiometricAttendanceImport
+            people={allAttendanceList.map((p) => ({
+              id: p.id,
+              name: p.name,
+              email: p.email,
+              department: p.department,
+            }))}
+            onImported={fetchRecords}
+          />
+        </TabsContent>
       </Tabs>
     </div>
   );
