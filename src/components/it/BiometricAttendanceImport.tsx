@@ -43,10 +43,27 @@ const BiometricAttendanceImport = ({ people, onImported }: Props) => {
   const [markAbsent, setMarkAbsent] = useState(true);
 
   const [fileName, setFileName] = useState('');
-  const [parsed, setParsed] = useState<ParsedMachineFile | null>(null);
+  const [rawParsed, setRawParsed] = useState<ParsedMachineFile | null>(null);
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState(0);
+
+  // Only the days inside the selected range are imported
+  const parsed = useMemo<ParsedMachineFile | null>(() => {
+    if (!rawParsed) return null;
+    if (!fromDate && !toDate) return rawParsed;
+    return {
+      ...rawParsed,
+      people: rawParsed.people.map((p) => ({
+        ...p,
+        days: p.days.filter(
+          (d) => (!fromDate || d.date >= fromDate) && (!toDate || d.date <= toDate),
+        ),
+      })),
+    };
+  }, [rawParsed, fromDate, toDate]);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -69,7 +86,10 @@ const BiometricAttendanceImport = ({ people, onImported }: Props) => {
         auto[p.deviceUserId + '|' + p.deviceName] = found ? found.id : UNMATCHED;
       });
       setMapping(auto);
-      setParsed(result);
+      setRawParsed(result);
+      const allDates = result.people.flatMap((p) => p.days.map((d) => d.date)).sort();
+      setFromDate(result.periodStart || allDates[0] || '');
+      setToDate(result.periodEnd || allDates[allDates.length - 1] || '');
       setFileName(file.name);
       toast.success(`Parsed ${result.people.length} device users (${result.periodStart} → ${result.periodEnd})`);
     } catch (err: any) {
@@ -189,6 +209,7 @@ const BiometricAttendanceImport = ({ people, onImported }: Props) => {
         `${rows.length} rows sent for approval${conflicts ? ` — ${conflicts} already exist in the system and will be overwritten if approved` : ''}`,
       );
       setParsed(null);
+      setRawParsed(null);
       setFileName('');
       onImported?.();
     } catch (err: any) {
