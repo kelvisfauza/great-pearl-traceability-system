@@ -6361,6 +6361,7 @@ export type Database = {
       milling_cash_transactions: {
         Row: {
           amount_paid: number
+          collected_by: string | null
           created_at: string
           created_by: string
           customer_id: string
@@ -6371,9 +6372,12 @@ export type Database = {
           notes: string | null
           payment_method: string
           previous_balance: number
+          remittance_id: string | null
+          remitted_at: string | null
         }
         Insert: {
           amount_paid: number
+          collected_by?: string | null
           created_at?: string
           created_by: string
           customer_id: string
@@ -6384,9 +6388,12 @@ export type Database = {
           notes?: string | null
           payment_method?: string
           previous_balance: number
+          remittance_id?: string | null
+          remitted_at?: string | null
         }
         Update: {
           amount_paid?: number
+          collected_by?: string | null
           created_at?: string
           created_by?: string
           customer_id?: string
@@ -6397,6 +6404,8 @@ export type Database = {
           notes?: string | null
           payment_method?: string
           previous_balance?: number
+          remittance_id?: string | null
+          remitted_at?: string | null
         }
         Relationships: [
           {
@@ -6406,7 +6415,71 @@ export type Database = {
             referencedRelation: "milling_customers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "milling_cash_transactions_remittance_id_fkey"
+            columns: ["remittance_id"]
+            isOneToOne: false
+            referencedRelation: "milling_collection_remittances"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      milling_collection_remittances: {
+        Row: {
+          allocated_amount: number
+          allocated_count: number
+          amount_paid: number
+          channel: string
+          collector_name: string
+          collector_phone: string
+          created_at: string
+          expected_amount: number
+          id: string
+          notes: string | null
+          period_end: string
+          period_start: string
+          reference: string | null
+          status: string
+          updated_at: string
+          yo_reference: string | null
+        }
+        Insert: {
+          allocated_amount?: number
+          allocated_count?: number
+          amount_paid?: number
+          channel?: string
+          collector_name: string
+          collector_phone: string
+          created_at?: string
+          expected_amount?: number
+          id?: string
+          notes?: string | null
+          period_end: string
+          period_start: string
+          reference?: string | null
+          status?: string
+          updated_at?: string
+          yo_reference?: string | null
+        }
+        Update: {
+          allocated_amount?: number
+          allocated_count?: number
+          amount_paid?: number
+          channel?: string
+          collector_name?: string
+          collector_phone?: string
+          created_at?: string
+          expected_amount?: number
+          id?: string
+          notes?: string | null
+          period_end?: string
+          period_start?: string
+          reference?: string | null
+          status?: string
+          updated_at?: string
+          yo_reference?: string | null
+        }
+        Relationships: []
       }
       milling_customer_accounts: {
         Row: {
@@ -14636,6 +14709,17 @@ export type Database = {
         }
         Returns: string
       }
+      allocate_milling_remittance: {
+        Args: {
+          p_amount: number
+          p_channel?: string
+          p_collector_name: string
+          p_collector_phone: string
+          p_reference: string
+          p_yo_reference?: string
+        }
+        Returns: string
+      }
       apply_overdraft_recovery: {
         Args: {
           p_credit_amount: number
@@ -15309,6 +15393,7 @@ export type Database = {
       }
       migrate_approved_assessments_to_finance: { Args: never; Returns: number }
       migrate_batch_numbers_to_new_format: { Args: never; Returns: Json }
+      milling_unremitted_total: { Args: never; Returns: number }
       overdraft_activate: { Args: { p_email: string }; Returns: Json }
       overdraft_daily_maintenance: { Args: never; Returns: Json }
       overdraft_deactivate: { Args: { p_email: string }; Returns: Json }
