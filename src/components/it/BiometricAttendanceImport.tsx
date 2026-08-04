@@ -208,7 +208,6 @@ const BiometricAttendanceImport = ({ people, onImported }: Props) => {
       toast.success(
         `${rows.length} rows sent for approval${conflicts ? ` — ${conflicts} already exist in the system and will be overwritten if approved` : ''}`,
       );
-      setParsed(null);
       setRawParsed(null);
       setFileName('');
       onImported?.();
