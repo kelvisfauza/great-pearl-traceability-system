@@ -16,6 +16,16 @@ import { format, subDays } from "date-fns";
 
 const PAGE_SIZE = 50;
 
+const assessmentStatusLabel = (status: string, qmAction?: string | null) => {
+  if (status === "pending_quality_manager") return "Awaiting Quality Manager";
+  if (status === "pending_admin_pricing" && qmAction) return "Quality Approved — Awaiting Admin Pricing";
+  if (status === "pending_admin_pricing") return "Awaiting Admin Pricing";
+  if (status === "submitted_to_finance") return "Submitted to Finance";
+  if (status === "approved") return "Approved";
+  if (status === "rejected") return "Rejected";
+  return status;
+};
+
 const AssessmentHistoryTab = () => {
   const { employee } = useAuth();
   const { toast } = useToast();
@@ -142,6 +152,7 @@ const AssessmentHistoryTab = () => {
                 <option value="approved">Approved</option>
                 <option value="submitted_to_finance">Submitted to Finance</option>
                 <option value="pending_admin_pricing">Pending Admin Pricing</option>
+                 <option value="pending_quality_manager">Pending Quality Manager</option>
                 <option value="rejected">Rejected</option>
               </select>
             </div>
@@ -186,7 +197,7 @@ const AssessmentHistoryTab = () => {
                         <TableCell>{a.moisture}%</TableCell>
                         <TableCell>{a.outturn}%</TableCell>
                         <TableCell>{a.final_price ? `UGX ${Number(a.final_price).toLocaleString()}` : "—"}</TableCell>
-                        <TableCell><Badge variant="outline">{a.status}</Badge></TableCell>
+                        <TableCell><Badge variant="outline">{assessmentStatusLabel(a.status, a.qm_action)}</Badge></TableCell>
                         <TableCell className="text-xs">{a.assessed_by}</TableCell>
                         <TableCell className="text-right space-x-1">
                           <Button size="sm" variant="ghost" onClick={() => setViewing(a)}>

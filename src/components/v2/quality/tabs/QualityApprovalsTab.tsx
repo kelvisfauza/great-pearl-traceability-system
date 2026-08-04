@@ -98,8 +98,8 @@ const QualityApprovalsTab = () => {
           vars.action === "rejected"
             ? "Assessment rejected"
             : vars.action === "adjusted"
-            ? "Price adjusted & approved"
-            : "Assessment approved",
+            ? "Price adjusted by Quality Manager"
+            : "Quality Manager approval complete",
         description:
           vars.action === "rejected"
             ? "Sent back to the quality team for re-assessment."
@@ -283,7 +283,7 @@ const QualityApprovalsTab = () => {
                   }}
                 >
                   {review.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-1" />}
-                  Approve
+                   Approve & Send to Admin
                 </Button>
               </div>
             </div>
