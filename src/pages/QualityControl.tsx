@@ -864,7 +864,7 @@ const QualityControl = () => {
         suggested_price: suggestedPrice,
         final_price: 0,
         comments: assessmentForm.comments || null,
-        status: isQualityHead ? 'pending_admin_pricing' : 'pending_quality_manager',
+        status: isQualityHead ? 'approved' : 'pending_quality_manager',
         qm_original_price: suggestedPrice,
         reject_outturn_price: false,
         reject_final: false,
@@ -883,14 +883,16 @@ const QualityControl = () => {
 
       const { error: updateError } = await supabase
         .from('coffee_records')
-        .update({ status: 'AWAITING_PRICING', updated_at: new Date().toISOString() })
+        .update({ status: isQualityHead ? 'inventory' : 'AWAITING_PRICING', updated_at: new Date().toISOString() })
         .eq('id', selectedRecord.id);
 
       if (updateError) throw updateError;
 
       toast({
-        title: "Submitted to Admin",
-        description: "Quality assessment saved and sent to admin for final pricing."
+        title: isQualityHead ? "Assessment Approved" : "Submitted to Quality Manager",
+        description: isQualityHead
+          ? "Quality assessment approved and released to Finance."
+          : "Quality assessment saved and sent to the Quality Manager."
       });
 
       setSelectedRecord(null);

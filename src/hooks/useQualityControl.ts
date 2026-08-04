@@ -412,10 +412,10 @@ export const useQualityControl = () => {
         reject_outturn_price: Boolean(assessment.reject_outturn_price),
         reject_final: isRejected,
         suggested_price: isRejected ? 0 : finalPrice, // Rejected batches have 0 price
-        // Route through the approval chain: personnel -> Head of Quality -> Admin pricing
+        // Rejections go to Admin discretion review; Head of Quality approvals are final.
         status: isRejected
           ? 'rejected'
-          : (isQualityHead ? 'pending_admin_pricing' : 'pending_quality_manager'),
+          : (isQualityHead ? 'approved' : 'pending_quality_manager'),
         comments: assessment.comments || null,
         date_assessed: assessment.date_assessed || new Date().toISOString().split('T')[0],
         assessed_by: assessment.assessed_by, // This should now contain the actual user's name from the form
@@ -519,9 +519,9 @@ export const useQualityControl = () => {
           .catch((e) => console.error('teams-notify (quality) failed', e));
 
         toast({
-          title: "Submitted for Approval",
+          title: isQualityHead ? "Assessment Approved" : "Submitted for Approval",
           description: isQualityHead
-            ? `Batch ${batchNumber} sent to admin for final pricing.`
+            ? `Batch ${batchNumber} approved and released to Finance.`
             : `Batch ${batchNumber} sent to the Head of Quality for approval.`
         });
       } else {
