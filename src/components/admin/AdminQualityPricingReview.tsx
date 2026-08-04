@@ -243,7 +243,7 @@ const AdminQualityPricingReview = () => {
       const { data, error } = await supabase
         .from('quality_assessments')
         .select('*')
-        .in('status', ['pending_admin_pricing', 'pending_quality_manager'])
+        .in('status', ['pending_admin_pricing'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
