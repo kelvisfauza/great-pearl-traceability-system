@@ -5,6 +5,7 @@ import { useSupplierContracts } from './useSupplierContracts';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useGlobalErrorHandler } from '@/hooks/useGlobalErrorHandler';
 import { formatSupplierDisplay, type SupplierRef } from '@/utils/supplierDisplay';
+import { useQualityRole } from '@/hooks/useQualityRole';
 
 export interface StoreRecord {
   id: string;
@@ -61,6 +62,7 @@ export const useQualityControl = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const { isQualityHead } = useQualityRole();
   const { getContractPriceForSupplier } = useSupplierContracts();
   const { createAnnouncement, createPricingNotification } = useNotifications();
   const { reportDatabaseError, reportWorkflowError } = useGlobalErrorHandler();
