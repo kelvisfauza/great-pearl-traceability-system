@@ -18,7 +18,7 @@ const PAGE_SIZE = 50;
 
 const assessmentStatusLabel = (status: string, qmAction?: string | null) => {
   if (status === "pending_quality_manager") return "Awaiting Quality Manager";
-  if (status === "pending_admin_pricing" && qmAction) return "Quality Approved — Awaiting Admin Pricing";
+  if (status === "pending_admin_pricing" && qmAction) return "Awaiting Admin Pricing";
   if (status === "pending_admin_pricing") return "Awaiting Admin Pricing";
   if (status === "submitted_to_finance") return "Submitted to Finance";
   if (status === "approved") return "Approved";
