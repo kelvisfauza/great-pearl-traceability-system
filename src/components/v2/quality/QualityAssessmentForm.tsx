@@ -40,7 +40,7 @@ interface AssessmentForm {
 const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
   const { employee } = useAuth();
   const { isQualityHead } = useQualityRole();
-  const submitStatus = isQualityHead ? 'pending_admin_pricing' : 'pending_quality_manager';
+  const submitStatus = isQualityHead ? 'approved' : 'pending_quality_manager';
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -131,7 +131,7 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
           : ref
           ? `Reference: ${ref} — write this on the physical form.`
           : isQualityHead
-          ? "Quality assessment saved and sent to admin for final pricing."
+          ? "Quality assessment approved and released to Finance."
           : "Quality assessment sent to the Head of Quality for approval."
       });
       queryClient.invalidateQueries({ queryKey: ['v2-pending-quality'] });
@@ -139,7 +139,7 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
         notifyTeams(
           "trade",
           `Quality Assessment Completed — Batch ${lot.batch_number}`,
-          `Supplier: ${lot.supplier_name ?? ""}\nCoffee: ${lot.coffee_type ?? ""}\nQuantity: ${lot.kilograms ?? ""} kg\nMoisture: ${assessment?.moisture ?? ""}%\nG1: ${assessment?.group1_defects ?? ""}% | G2: ${assessment?.group2_defects ?? ""}%\nOutturn: ${assessment?.outturn ?? ""}%\nSuggested Price: UGX ${Number(assessment?.suggested_price ?? 0).toLocaleString()}\nStatus: Awaiting admin final pricing\nAssessed by: ${employee?.name ?? employee?.email ?? ""}${ref ? `\nRef: ${ref}` : ""}`,
+          `Supplier: ${lot.supplier_name ?? ""}\nCoffee: ${lot.coffee_type ?? ""}\nQuantity: ${lot.kilograms ?? ""} kg\nMoisture: ${assessment?.moisture ?? ""}%\nG1: ${assessment?.group1_defects ?? ""}% | G2: ${assessment?.group2_defects ?? ""}%\nOutturn: ${assessment?.outturn ?? ""}%\nSuggested Price: UGX ${Number(assessment?.suggested_price ?? 0).toLocaleString()}\nStatus: ${isQualityHead ? "Approved — Ready for Finance" : "Awaiting Head of Quality approval"}\nAssessed by: ${employee?.name ?? employee?.email ?? ""}${ref ? `\nRef: ${ref}` : ""}`,
         );
       }
       // Stay on page only when there's a ref to copy

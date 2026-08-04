@@ -864,7 +864,7 @@ const QualityControl = () => {
         suggested_price: suggestedPrice,
         final_price: 0,
         comments: assessmentForm.comments || null,
-        status: isQualityHead ? 'pending_admin_pricing' : 'pending_quality_manager',
+        status: isQualityHead ? 'approved' : 'pending_quality_manager',
         qm_original_price: suggestedPrice,
         reject_outturn_price: false,
         reject_final: false,
