@@ -24,7 +24,8 @@ import {
   BookMarked,
   Banknote,
   Wallet,
-  TrendingDown
+  TrendingDown,
+  HardDrive
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRoleBasedData } from "@/hooks/useRoleBasedData";
@@ -88,6 +89,7 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
         { name: "My Deductions", icon: Shield, path: "/my-deductions", permission: null },
         { name: "My Daily Reports", icon: FileCheck, path: "/user-daily-reports", permission: null },
         { name: "Reports", icon: FileText, path: "/reports", permission: "Reports" },
+        { name: "Document Manager", icon: HardDrive, path: "/admin/documents", permission: null, requiresAdmin: true },
         { name: "Settings", icon: Settings, path: "/settings", permission: null },
         { name: "Logistics", icon: Truck, path: "/logistics", permission: "Logistics" },
       ]
