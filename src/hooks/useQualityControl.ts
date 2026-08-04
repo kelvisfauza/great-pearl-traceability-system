@@ -519,9 +519,9 @@ export const useQualityControl = () => {
           .catch((e) => console.error('teams-notify (quality) failed', e));
 
         toast({
-          title: "Submitted for Approval",
+          title: isQualityHead ? "Assessment Approved" : "Submitted for Approval",
           description: isQualityHead
-            ? `Batch ${batchNumber} sent to admin for final pricing.`
+            ? `Batch ${batchNumber} approved and released to Finance.`
             : `Batch ${batchNumber} sent to the Head of Quality for approval.`
         });
       } else {

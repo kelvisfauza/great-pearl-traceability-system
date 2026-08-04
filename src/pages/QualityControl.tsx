@@ -883,14 +883,16 @@ const QualityControl = () => {
 
       const { error: updateError } = await supabase
         .from('coffee_records')
-        .update({ status: 'AWAITING_PRICING', updated_at: new Date().toISOString() })
+        .update({ status: isQualityHead ? 'inventory' : 'AWAITING_PRICING', updated_at: new Date().toISOString() })
         .eq('id', selectedRecord.id);
 
       if (updateError) throw updateError;
 
       toast({
-        title: "Submitted to Admin",
-        description: "Quality assessment saved and sent to admin for final pricing."
+        title: isQualityHead ? "Assessment Approved" : "Submitted to Quality Manager",
+        description: isQualityHead
+          ? "Quality assessment approved and released to Finance."
+          : "Quality assessment saved and sent to the Quality Manager."
       });
 
       setSelectedRecord(null);
