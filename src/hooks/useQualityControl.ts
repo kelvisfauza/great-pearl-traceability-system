@@ -477,77 +477,23 @@ export const useQualityControl = () => {
         console.log(`✅ Coffee record status updated to "${newStatus}" in Supabase`);
       }
 
-      // V1 Inventory page (/inventory) reads from inventory_batches, not coffee_records directly.
-      // So when a lot is approved into inventory, also add it into the FIFO batch system.
-      if (!isRejected && newStatus === 'inventory') {
-        try {
-          const { addCoffeeRecordToBatches } = await import('@/utils/syncInventoryToBatches');
-          await addCoffeeRecordToBatches({
-            id: coffeeRecordId,
-            coffee_type: coffeeRecord.coffee_type,
-            kilograms: Number(coffeeRecord.kilograms || 0),
-            supplier_name: coffeeRecord.supplier_name,
-            date: coffeeRecord.date
-          });
-          console.log('✅ Added approved lot to inventory batch system');
-        } catch (batchError) {
-          console.error('Failed to add approved lot to inventory batch system:', batchError);
-          // Don't fail the approval flow if batch sync fails
-        }
-      }
+      // NOTE: inventory batching, finance lots and supplier payments are created
+      // downstream once the lot is approved (Head of Quality -> Admin final pricing),
+      // never at assessment time.
 
-      
-      // Only create payment record and send notifications if NOT rejected
+      // Only send notifications if NOT rejected
       if (!isRejected) {
         // Calculate total payment amount: kilograms × price per kg
         const kilograms = coffeeRecord?.kilograms || 0;
         const totalPaymentAmount = kilograms * finalPrice;
 
-        // Create finance_coffee_lots row so it shows in Ready for Payment
-        try {
-          const qualityJson = {
-            moisture_content: assessment.moisture,
-            group1_percentage: assessment.group1_defects,
-            group2_percentage: assessment.group2_defects,
-            pods_percentage: assessment.pods,
-            husks_percentage: assessment.husks,
-            fm_percentage: assessment.fm,
-            outturn_percentage: assessment.outturn,
-            comments: assessment.comments,
-          };
-          const { error: fclError } = await (supabase as any)
-            .from('finance_coffee_lots')
-            .upsert(
-              {
-                quality_assessment_id: newAssessment.id,
-                coffee_record_id: coffeeRecordId,
-                supplier_id: coffeeRecord.supplier_id,
-                assessed_by: assessment.assessed_by || null,
-                assessed_at: new Date().toISOString(),
-                quality_json: qualityJson,
-                unit_price_ugx: finalPrice,
-                quantity_kg: kilograms,
-                batch_number: batchNumber,
-                finance_status: 'READY_FOR_FINANCE',
-              },
-              { onConflict: 'quality_assessment_id' }
-            );
-          if (fclError) {
-            console.error('❌ Failed to create finance_coffee_lots row:', fclError);
-          } else {
-            console.log('✅ finance_coffee_lots row created (READY_FOR_FINANCE)');
-          }
-        } catch (fclEx) {
-          console.error('❌ Exception creating finance_coffee_lots row:', fclEx);
-        }
-
-        // Send notification to Finance department
+        // Notify the approvers that an assessment is waiting
         try {
           await (supabase as any).from('notifications').insert({
-            title: 'New Quality Assessment',
-            message: `Coffee quality assessed for batch ${batchNumber}. Total payment: ${totalPaymentAmount.toLocaleString()} UGX`,
-            type: 'payment',
-            recipient_role: 'Finance',
+            title: 'Quality Assessment Awaiting Approval',
+            message: `Batch ${batchNumber} assessed at UGX ${Number(finalPrice).toLocaleString()}/kg and is awaiting approval.`,
+            type: 'quality',
+            recipient_role: isQualityHead ? 'Administrator' : 'Quality Manager',
             metadata: {
               batch_number: batchNumber,
               supplier: coffeeRecord.supplier_name,
@@ -555,9 +501,9 @@ export const useQualityControl = () => {
               assessment_id: newAssessment.id
             }
           });
-          console.log('✅ Finance notification sent successfully');
+          console.log('✅ Approval notification sent successfully');
         } catch (notifError) {
-          console.error('Error sending Finance notification:', notifError);
+          console.error('Error sending approval notification:', notifError);
           // Don't fail the whole process for notification errors
         }
 
@@ -572,35 +518,11 @@ export const useQualityControl = () => {
           })
           .catch((e) => console.error('teams-notify (quality) failed', e));
 
-        console.log('Payment calculation:', {
-          kilograms,
-          pricePerKg: finalPrice,
-          totalAmount: totalPaymentAmount
-        });
-        
-        // Create payment record in Supabase
-        const { error: paymentError } = await supabase
-          .from('supplier_payments' as any)
-          .insert([{
-            supplier: coffeeRecord.supplier_name,
-            amount: totalPaymentAmount,
-            status: 'Pending',
-            method: 'Bank Transfer',
-            date: new Date().toISOString().split('T')[0],
-            batch_number: batchNumber,
-            quality_assessment_id: newAssessment.id
-          }]);
-
-        if (paymentError) {
-          console.error('Error creating payment record:', paymentError);
-          throw paymentError;
-        }
-        
-        console.log('Payment record created successfully');
-        
         toast({
-          title: "Success",
-          description: `Quality assessment saved and payment record created for UGX ${totalPaymentAmount.toLocaleString()}`
+          title: "Submitted for Approval",
+          description: isQualityHead
+            ? `Batch ${batchNumber} sent to admin for final pricing.`
+            : `Batch ${batchNumber} sent to the Head of Quality for approval.`
         });
       } else {
         // Batch is rejected - no payment record created
