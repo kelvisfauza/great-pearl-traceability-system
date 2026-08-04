@@ -271,6 +271,35 @@ const BiometricAttendanceImport = ({ people, onImported }: Props) => {
             )}
           </div>
 
+          {rawParsed && (
+            <div className="grid gap-4 md:grid-cols-3 rounded-lg border p-3">
+              <div>
+                <Label>Fetch from date</Label>
+                <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+              </div>
+              <div>
+                <Label>Fetch up to date</Label>
+                <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+              </div>
+              <div className="flex items-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const all = rawParsed.people.flatMap((p) => p.days.map((d) => d.date)).sort();
+                    setFromDate(all[0] || '');
+                    setToDate(all[all.length - 1] || '');
+                  }}
+                >
+                  Whole file
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Only days inside this range are imported.
+                </p>
+              </div>
+            </div>
+          )}
+
           {stats && (
             <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
               <div className="rounded-lg bg-muted/50 p-3">
