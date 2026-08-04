@@ -18,6 +18,7 @@ import { Clock, Upload, Trophy, AlertTriangle, TrendingUp, TrendingDown, Calenda
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO } from 'date-fns';
 import { getStandardPrintStyles } from '@/utils/printStyles';
 import { cn } from '@/lib/utils';
+import BiometricAttendanceImport from './BiometricAttendanceImport';
 
 interface AttendanceRecord {
   id: string;
@@ -526,12 +527,15 @@ const AttendanceTimeManager = () => {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="entry" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="entry">
             <Clock className="h-4 w-4 mr-2" /> Record Entry
           </TabsTrigger>
           <TabsTrigger value="records">
             <Calendar className="h-4 w-4 mr-2" /> Records
+          </TabsTrigger>
+          <TabsTrigger value="machine">
+            <FileSpreadsheet className="h-4 w-4 mr-2" /> Machine Import
           </TabsTrigger>
           <TabsTrigger value="rankings">
             <Trophy className="h-4 w-4 mr-2" /> Rankings & Reports
@@ -1018,6 +1022,18 @@ const AttendanceTimeManager = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="machine" className="space-y-4">
+          <BiometricAttendanceImport
+            people={allAttendanceList.map((p) => ({
+              id: p.id,
+              name: p.name,
+              email: p.email,
+              department: p.department,
+            }))}
+            onImported={fetchRecords}
+          />
         </TabsContent>
       </Tabs>
     </div>
