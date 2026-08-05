@@ -39,20 +39,28 @@ export default function GRNScanPay() {
   const { trackActivity } = useActivityTracker();
   const rawRef = useMemo(() => normalizeRef(reference), [reference]);
 
-  // Older GRNs encoded a document verification code (GPCF-DOC-YYYY-XXXXXX) in the QR.
-  // Resolve it back to the real batch number before looking up finance records.
+  // The QR now carries a secure random pay code (GAC-K7Q-M4X-T9); older GRNs carried a
+  // document verification code or the raw batch number. Resolve whatever we got.
   const { data: resolvedRef, isLoading: resolving } = useQuery({
     queryKey: ['grn-resolve-ref', rawRef],
     enabled: !!rawRef,
     queryFn: async () => {
-      if (!/^GPCF-[A-Z]{2,3}-\d{4}-[A-Z0-9]{4,10}$/i.test(rawRef)) return rawRef;
+      if (/^\d{6,16}$/.test(rawRef)) return rawRef;
       const { data, error } = await supabase.rpc('resolve_grn_reference' as any, { p_code: rawRef });
       if (error) return rawRef;
-      return (data as string) || rawRef;
+      return (data as string) || '';
     },
   });
 
-  const batch = resolvedRef || rawRef;
+  const unresolved = resolvedRef === '';
+  const batch = unresolved ? '' : resolvedRef || rawRef;
+
+  // Secure pay code for the resolved GRN, shown so Finance can quote it safely
+  const { data: payCode } = useQuery({
+    queryKey: ['grn-pay-code', batch],
+    enabled: !!batch,
+    queryFn: async () => (await getGrnPayCode(batch)) || null,
+  });
 
   const [payOpen, setPayOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
