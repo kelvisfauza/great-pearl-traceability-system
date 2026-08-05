@@ -370,7 +370,9 @@ serve(async (req) => {
     // positive — leading to bogus OVERDRAFT_DRAW tags and missing / wrong
     // access-fee handling. Fee is included here because it debits the
     // wallet in the same transaction path.
-    const feeForOdCheck = computeWithdrawFee(numAmount);
+    // Service fee applies ONLY to GosentePay payouts (amounts < UGX 50,000).
+    // Yo Payments withdrawals are fee-free.
+    const feeForOdCheck = numAmount < 50000 ? computeWithdrawFee(numAmount) : 0;
     const overdraftPortion = Math.max(0, (numAmount + feeForOdCheck) - walletBalance);
     const walletPortion = numAmount - overdraftPortion;
     const isOverdraftDraw = overdraftPortion > 0;
@@ -450,10 +452,9 @@ serve(async (req) => {
     // the Yo Payments direct payout flow below.
     const useGosente = numAmount < 50000;
 
-    // Tiered withdrawal service fee — applied to every instant withdrawal
-    // (both GosentePay and Yo Payments), charged in addition to the amount
-    // and posted to the treasury as profit.
-    const WITHDRAW_FEE = computeWithdrawFee(numAmount);
+    // Tiered withdrawal service fee — applied ONLY to GosentePay withdrawals.
+    // Yo Payments payouts (>= UGX 50,000) carry no service fee.
+    const WITHDRAW_FEE = useGosente ? computeWithdrawFee(numAmount) : 0;
     if (spendable < numAmount + WITHDRAW_FEE) {
       return respond(false, {
         error: `Insufficient funds to cover the withdrawal plus the UGX ${WITHDRAW_FEE.toLocaleString()} service fee. Available: UGX ${spendable.toLocaleString()}.`,

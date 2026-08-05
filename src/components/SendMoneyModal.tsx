@@ -82,10 +82,12 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
   const employeeNewOutstanding = overdraftOutstanding + employeeOdPortion + employeeOdFee;
   const employeeNeedsOdConfirm = employeeOdPortion > 0 && !overdraftConfirmed;
 
-  // Tiered withdrawal service fee — mirrors supabase/functions/instant-withdrawal computeWithdrawFee.
-  // Charged in addition to the payout amount on every mobile-money send.
+  // Tiered service fee — mirrors supabase/functions/instant-withdrawal.
+  // Applies ONLY to GosentePay payouts (amounts under UGX 50,000).
+  // Yo Payments sends (>= UGX 50,000) are fee-free.
   const computeWithdrawFee = (a: number): number => {
     if (a < 500) return 0;
+    if (a >= 50_000) return 0;
     if (a <= 60_000) return 1_100;
     if (a <= 500_000) return 1_700;
     if (a <= 1_000_000) return 2_500;
