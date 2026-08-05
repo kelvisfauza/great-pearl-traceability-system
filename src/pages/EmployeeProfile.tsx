@@ -104,8 +104,8 @@ const EmployeeProfile = () => {
         <Card className="max-w-md w-full shadow-2xl border-0 overflow-hidden">
           <div className="bg-gradient-to-r from-green-700 to-emerald-600 p-6 text-white text-center">
             <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg overflow-hidden">
-              {employee.avatar_url ? (
-                <img src={employee.avatar_url} alt={employee.name} className="w-full h-full object-cover" />
+              {avatarUrl ? (
+                <img src={avatarUrl} alt={employee.name} className="w-full h-full object-cover" />
               ) : (
                 <User className="w-10 h-10 text-green-600" />
               )}
@@ -160,8 +160,8 @@ const EmployeeProfile = () => {
             <ShieldCheck className="w-6 h-6 text-green-200" />
           </div>
           <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg overflow-hidden">
-            {employee.avatar_url ? (
-              <img src={employee.avatar_url} alt={employee.name} className="w-full h-full object-cover" />
+            {avatarUrl ? (
+              <img src={avatarUrl} alt={employee.name} className="w-full h-full object-cover" />
             ) : (
               <User className="w-12 h-12 text-green-600" />
             )}
