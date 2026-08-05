@@ -37,6 +37,11 @@ export function printGrnPaymentReceipt(d: GrnReceiptData) {
     th,td{border:1px solid #000;padding:6px 8px;text-align:left}
     th{background:#e6e6e6;width:26%;font-size:11px}
     .total{margin-top:14px;background:#000;color:#fff;padding:10px 12px;font-size:15px;font-weight:bold;display:flex;justify-content:space-between}
+    .sums{width:100%;border-collapse:collapse;margin-top:14px}
+    .sums td{border:1px solid #000;padding:6px 8px}
+    .sums td.k{width:74%;font-weight:bold}
+    .sums td.v{text-align:right;white-space:nowrap}
+    .sums tr.bal td{background:#e6e6e6;font-weight:bold}
     .signs{display:flex;gap:16px;margin-top:34px}
     .signs div{flex:1;text-align:center}
     .signs span{display:block;border-bottom:1px solid #000;height:34px}
