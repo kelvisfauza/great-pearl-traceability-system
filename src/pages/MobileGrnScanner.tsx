@@ -18,6 +18,8 @@ export default function MobileGrnScanner() {
   const [error, setError] = useState<string | null>(null);
   const [manual, setManual] = useState("");
   const [sent, setSent] = useState<string | null>(null);
+  const [lastRaw, setLastRaw] = useState<string | null>(null);
+  const lastSentRef = useRef<string>("");
 
   useEffect(() => {
     const channel = supabase.channel(`grn-scan-${sessionId}`, { config: { broadcast: { self: false } } });
@@ -29,6 +31,11 @@ export default function MobileGrnScanner() {
   }, [sessionId]);
 
   const send = async (reference: string) => {
+    if (lastSentRef.current === reference) return;
+    lastSentRef.current = reference;
+    setTimeout(() => {
+      if (lastSentRef.current === reference) lastSentRef.current = "";
+    }, 3000);
     await channelRef.current?.send({ type: "broadcast", event: "grn", payload: { reference } });
     setSent(reference);
     toast.success(`Sent ${reference} to the system`);
@@ -38,14 +45,32 @@ export default function MobileGrnScanner() {
     let cancelled = false;
     (async () => {
       try {
-        const { Html5Qrcode } = await import("html5-qrcode");
+        const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import("html5-qrcode");
         if (cancelled) return;
-        const scanner = new Html5Qrcode(REGION_ID);
+        const scanner = new Html5Qrcode(REGION_ID, {
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.EAN_13,
+          ],
+          useBarCodeDetectorIfSupported: true,
+          verbose: false,
+        } as any);
         scannerRef.current = scanner;
         await scanner.start(
           { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 250, height: 250 } },
+          {
+            fps: 15,
+            qrbox: (vw: number, vh: number) => {
+              const size = Math.floor(Math.min(vw, vh) * 0.8);
+              return { width: size, height: size };
+            },
+            aspectRatio: 1.0,
+            experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+          } as any,
           (decoded: string) => {
+            setLastRaw(decoded);
             const ref = parseGrnReference(decoded);
             if (!ref) return;
             send(ref);
@@ -85,6 +110,11 @@ export default function MobileGrnScanner() {
             </p>
           )}
           {error && <p className="text-sm text-destructive">{error}</p>}
+          {!sent && lastRaw && !parseGrnReference(lastRaw) && (
+            <p className="text-xs text-amber-600 break-all">
+              Read a code but it is not a GRN: {lastRaw}. Type the GRN number below instead.
+            </p>
+          )}
           {sent && (
             <p className="text-sm text-green-700 flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4" /> Sent {sent} — check the computer screen.

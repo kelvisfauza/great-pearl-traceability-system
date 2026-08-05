@@ -17,14 +17,41 @@ interface Props {
 
 const REGION_ID = "grn-qr-reader";
 
-/** Extracts a GRN reference from a scanned QR payload (URL or raw reference). */
+/**
+ * Extracts a GRN reference from a scanned QR payload.
+ * Tolerates every format we have ever printed:
+ *  - new scan-to-pay URLs:      https://.../grn/GRN-20260729009
+ *  - legacy verification URLs:  https://.../verify/20260729009  |  ?grn=...  |  ?batch=...
+ *  - raw references:            GRN-20260729009
+ *  - bare batch numbers:        20260729009
+ */
 export function parseGrnReference(text: string): string | null {
   const value = (text || "").trim();
   if (!value) return null;
-  const match = value.match(/\/grn\/([^/?#\s]+)/i);
-  if (match) return decodeURIComponent(match[1]);
-  if (/^GRN[-\w]+$/i.test(value)) return value.toUpperCase();
+
+  // Path-based: /grn/<ref>, /verify/<ref>, /grn-verify/<ref>
+  const path = value.match(/\/(?:grn|verify|grn-verify|verification)\/([^/?#\s]+)/i);
+  if (path) return normalizeRef(decodeURIComponent(path[1]));
+
+  // Query-string based: ?grn=... | ?batch=... | ?ref=... | ?code=...
+  const query = value.match(/[?&](?:grn|batch|batch_number|ref|reference|code)=([^&#\s]+)/i);
+  if (query) return normalizeRef(decodeURIComponent(query[1]));
+
+  // Raw reference or bare batch number
+  if (/^GRN[-_]?[\w-]+$/i.test(value)) return normalizeRef(value);
+  if (/^\d{6,16}$/.test(value)) return normalizeRef(value);
+
+  // Last resort: a GRN-looking token anywhere in the payload
+  const loose = value.match(/GRN[-_]?\d{6,16}/i) || value.match(/\b\d{8,14}\b/);
+  if (loose) return normalizeRef(loose[0]);
+
   return null;
+}
+
+function normalizeRef(raw: string): string | null {
+  const ref = (raw || "").trim().replace(/\s+/g, "");
+  if (!ref) return null;
+  return /^\d+$/.test(ref) ? ref : ref.toUpperCase();
 }
 
 const GRNScannerDialog = ({ open, onOpenChange }: Props) => {
