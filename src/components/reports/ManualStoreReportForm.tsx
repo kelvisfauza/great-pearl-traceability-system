@@ -315,7 +315,7 @@ const ManualStoreReportForm = () => {
 
           <Button 
             type="submit" 
-            disabled={loading} 
+            disabled={loading || uploadingFile} 
             className="w-full"
           >
             {loading ? 'Saving...' : 'Save Report'}
