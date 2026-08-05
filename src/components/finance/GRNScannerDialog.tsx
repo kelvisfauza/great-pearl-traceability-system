@@ -212,23 +212,28 @@ const GRNScannerDialog = ({ open, onOpenChange }: Props) => {
           </Tabs>
 
           <div className="pt-2 border-t space-y-2">
-            <p className="text-xs text-muted-foreground">Or enter the GRN number manually</p>
+            <p className="text-xs text-muted-foreground">Or enter the GRN number manually — digits only</p>
             <div className="flex gap-2">
-              <Input
-                value={manual}
-                onChange={(e) => setManual(e.target.value)}
-                placeholder="GRN-20260802001"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    const ref = parseGrnReference(manual) || manual.trim();
-                    if (ref) go(ref);
-                  }
-                }}
-              />
+              <div className="flex flex-1 items-center rounded-md border border-input bg-background focus-within:ring-1 focus-within:ring-ring">
+                <span className="pl-3 pr-1 text-sm text-muted-foreground select-none">GRN-</span>
+                <Input
+                  value={manual}
+                  inputMode="numeric"
+                  onChange={(e) => setManual(e.target.value.replace(/\D/g, ""))}
+                  placeholder="20260802001"
+                  className="border-0 shadow-none focus-visible:ring-0 px-1"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      const ref = manual.trim();
+                      if (ref) go(ref);
+                    }
+                  }}
+                />
+              </div>
               <Button
                 onClick={() => {
-                  const ref = parseGrnReference(manual) || manual.trim();
-                  if (!ref) return toast.error("Enter a GRN number");
+                  const ref = manual.trim();
+                  if (!ref) return toast.error("Enter the GRN digits");
                   go(ref);
                 }}
               >
