@@ -286,9 +286,14 @@ export default function GRNScanPay() {
 
   return (
     <div className="max-w-2xl mx-auto p-4 space-y-4">
-      <Button variant="ghost" size="sm" onClick={() => navigate('/v2/finance')}>
-        <ArrowLeft className="h-4 w-4 mr-1" /> Finance
-      </Button>
+      <div className="flex items-center justify-between gap-2">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/v2/finance')}>
+          <ArrowLeft className="h-4 w-4 mr-1" /> Finance
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => setScanOpen(true)}>
+          <QrCode className="h-4 w-4 mr-1" /> Scan other
+        </Button>
+      </div>
 
       <Card>
         <CardHeader className="pb-3">
