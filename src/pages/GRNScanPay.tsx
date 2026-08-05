@@ -373,7 +373,11 @@ export default function GRNScanPay() {
                     <button className="hover:underline" onClick={() => openRef(q.ref)}>
                       {q.ref}
                     </button>
-                    {q.paid && <CheckCircle2 className="h-3 w-3 text-green-600" />}
+                    {q.paid && (
+                      <span className="flex items-center gap-1 text-[10px] font-semibold text-green-700">
+                        <CheckCircle2 className="h-3 w-3" /> PAID
+                      </span>
+                    )}
                     <button
                       className="text-muted-foreground hover:text-destructive"
                       onClick={() => removeFromQueue(q.ref)}
