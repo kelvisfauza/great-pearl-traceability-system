@@ -365,6 +365,32 @@ export default function GRNScanPay() {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
   }
 
+  if (unresolved) {
+    return (
+      <div className="max-w-2xl mx-auto p-4 space-y-4">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/v2/finance')}>
+          <ArrowLeft className="h-4 w-4 mr-1" /> Finance
+        </Button>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg text-destructive">Unknown pay code</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-mono">{rawRef}</span> is not a valid GRN pay code. Nothing was opened, so no
+              payment can go to the wrong supplier. Re-scan the QR on the printed GRN, or type the pay code exactly
+              as printed under it.
+            </p>
+            <Button variant="outline" size="sm" className="w-full" onClick={() => setScanOpen(true)}>
+              <QrCode className="h-4 w-4 mr-2" /> Scan GRN
+            </Button>
+          </CardContent>
+        </Card>
+        <GRNScannerDialog open={scanOpen} onOpenChange={setScanOpen} />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto p-4 space-y-4">
       <div className="flex items-center justify-between gap-2">
@@ -423,7 +449,12 @@ export default function GRNScanPay() {
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2">
-            <CardTitle className="text-lg">GRN-{lot?.batch_number || batch}</CardTitle>
+             <div>
+               <CardTitle className="text-lg">GRN-{lot?.batch_number || batch}</CardTitle>
+               {payCode && (
+                 <p className="text-xs text-muted-foreground font-mono mt-1">Pay code: {formatPayCode(payCode)}</p>
+               )}
+             </div>
             {lot && (
               <Badge variant={paid ? 'default' : 'secondary'}>
                 {paid ? 'PAID' : lot.finance_status}
