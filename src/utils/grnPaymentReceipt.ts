@@ -81,9 +81,41 @@ export function printGrnPaymentReceipt(d: GrnReceiptData) {
     </footer>
   </body></html>`;
 
-  const w = window.open('', '_blank', 'width=900,height=1000');
-  if (!w) return;
-  w.document.write(html);
-  w.document.close();
-  w.onload = () => { w.focus(); w.print(); };
+  // Print in-place using a hidden iframe (no new tab/window)
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  iframe.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(iframe);
+
+  const cleanup = () => {
+    setTimeout(() => {
+      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+    }, 1000);
+  };
+
+  iframe.onload = () => {
+    try {
+      const win = iframe.contentWindow;
+      if (!win) return cleanup();
+      // Give images (logo / QR) a moment to load before printing
+      setTimeout(() => {
+        win.focus();
+        win.print();
+        cleanup();
+      }, 400);
+    } catch {
+      cleanup();
+    }
+  };
+
+  const doc = iframe.contentWindow?.document;
+  if (!doc) return cleanup();
+  doc.open();
+  doc.write(html);
+  doc.close();
 }
