@@ -20,7 +20,7 @@ const money = (n: number) => `UGX ${Number(n || 0).toLocaleString()}`;
 export function printGrnPaymentReceipt(d: GrnReceiptData) {
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Payment Receipt ${d.receiptNo}</title>
   <style>
-    *{box-sizing:border-box}
+    *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;padding:18mm 14mm;font-size:12px}
     header{display:flex;align-items:center;gap:12px;border-bottom:2px solid #000;padding-bottom:10px}
     header img{height:56px}
