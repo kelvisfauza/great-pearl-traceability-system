@@ -310,6 +310,8 @@ export default function GRNScanPay() {
 
       toast.success(`Payment of ${money(lot.total_amount_ugx)} recorded`);
       setPayOpen(false);
+      markQueuePaid(rawRef);
+      if (batch !== rawRef) markQueuePaid(batch);
       await qc.invalidateQueries({ queryKey: ['grn-scan-lot', batch] });
       qc.invalidateQueries({ queryKey: ['finance-pending-payments'] });
       setTimeout(receipt, 300);
@@ -334,6 +336,46 @@ export default function GRNScanPay() {
           <QrCode className="h-4 w-4 mr-1" /> Scan other
         </Button>
       </div>
+
+      {queue.length > 1 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-sm">
+                Pay queue · {queue.filter((q) => !q.paid).length} pending of {queue.length}
+              </CardTitle>
+              <Button variant="ghost" size="sm" onClick={() => clearQueue()}>Clear</Button>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex flex-wrap gap-1.5">
+              {queue.map((q) => {
+                const current = q.ref.toUpperCase() === rawRef.toUpperCase();
+                return (
+                  <div
+                    key={q.ref}
+                    className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs ${
+                      current ? 'border-primary bg-primary/10' : q.paid ? 'opacity-60' : ''
+                    }`}
+                  >
+                    <button className="hover:underline" onClick={() => openRef(q.ref)}>
+                      {q.ref}
+                    </button>
+                    {q.paid && <CheckCircle2 className="h-3 w-3 text-green-600" />}
+                    <button
+                      className="text-muted-foreground hover:text-destructive"
+                      onClick={() => removeFromQueue(q.ref)}
+                      aria-label={`Remove ${q.ref} from queue`}
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="pb-3">
@@ -417,6 +459,11 @@ export default function GRNScanPay() {
                   <Button onClick={receipt} className="w-full">
                     <Printer className="h-4 w-4 mr-2" /> Print payment receipt
                   </Button>
+                  {nextPending(rawRef) && (
+                    <Button onClick={goNext} className="w-full">
+                      Next GRN in queue ({queue.filter((q) => !q.paid).length} left)
+                    </Button>
+                  )}
                   <Button variant="outline" onClick={() => setScanOpen(true)} className="w-full">
                     <QrCode className="h-4 w-4 mr-2" /> Scan other
                   </Button>
