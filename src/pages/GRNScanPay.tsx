@@ -115,6 +115,71 @@ export default function GRNScanPay() {
   const quality: any = data?.quality;
   const store: any = data?.store;
 
+  // Explains why a scanned GRN has no finance record yet
+  const notReady = useMemo(() => {
+    const record: any = data?.record;
+    const timestamps: { label: string; at?: string | null }[] = [];
+    if (record?.date || record?.created_at) timestamps.push({ label: 'Received at store', at: record?.date || record?.created_at });
+    if (quality?.created_at) timestamps.push({ label: 'Assessment submitted', at: quality.created_at });
+    if (quality?.qm_reviewed_at) timestamps.push({ label: 'Quality manager review', at: quality.qm_reviewed_at });
+    if (quality?.grn_printed_at) timestamps.push({ label: 'GRN printed', at: quality.grn_printed_at });
+
+    const status = String(quality?.status || '').toLowerCase();
+    const price = Number(quality?.final_price || quality?.suggested_price || 0);
+
+    if (!record && !quality && !store) {
+      return {
+        stage: 'Unknown GRN',
+        reason: `Nothing in the system matches ${batch}. The QR code may belong to a document from another batch, or the delivery was never recorded in Store.`,
+        nextAction: 'Ask Store to confirm the batch number, then re-scan the correct GRN.',
+        timestamps,
+      };
+    }
+
+    if (!quality) {
+      return {
+        stage: 'Awaiting quality assessment',
+        reason: 'The delivery is recorded in Store but Quality has not assessed this batch yet, so no payable amount exists.',
+        nextAction: 'Quality personnel must assess and submit this batch.',
+        timestamps,
+      };
+    }
+
+    if (status === 'rejected' || quality?.qm_action === 'rejected') {
+      return {
+        stage: 'Rejected by Quality',
+        reason: `This batch was rejected${quality?.qm_notes ? ` — ${quality.qm_notes}` : ''}. Rejected lots only reach Finance if the Administrator approves a discretion buy.`,
+        nextAction: 'Administrator to review under Rejected Lots (discretion buy) or return the coffee to the supplier.',
+        timestamps,
+      };
+    }
+
+    if (status === 'pending_quality_manager' || (status === 'assessed' && !quality?.qm_reviewed_at)) {
+      return {
+        stage: 'Pending Quality Manager approval',
+        reason: `Submitted by ${quality?.assessed_by || quality?.physical_assessment_by || 'quality personnel'} and waiting for the Quality Manager to approve. Finance only receives approved lots.`,
+        nextAction: 'Quality Manager to approve this assessment in Quality → Approvals.',
+        timestamps,
+      };
+    }
+
+    if (price <= 0) {
+      return {
+        stage: 'No price set',
+        reason: 'The assessment has no final or suggested price, so a payable amount cannot be created.',
+        nextAction: 'Quality Manager to set the final price on this assessment.',
+        timestamps,
+      };
+    }
+
+    return {
+      stage: 'Approved but not yet released',
+      reason: 'Quality approved this batch, but the finance lot has not been created yet. This is usually a short delay in the release step.',
+      nextAction: 'Refresh in a moment; if it persists, ask the Quality Manager to re-save the approval so it migrates to Finance.',
+      timestamps,
+    };
+  }, [data, quality, store, batch]);
+
   const trail = useMemo(() => {
     const items: { at?: string | null; title: string; detail?: string }[] = [];
     if (data?.record?.created_at) items.push({ at: data.record.created_at, title: 'Coffee received (Store)', detail: `${Number(data.record.kilograms || 0).toLocaleString()} kg ${data.record.coffee_type || ''} from ${data.supplierName}` });
@@ -129,6 +194,7 @@ export default function GRNScanPay() {
   }, [data]);
 
   const receipt = () => {
+
     if (!lot) return;
     printGrnPaymentReceipt({
       grnNumber: `GRN-${lot.batch_number || batch}`,
@@ -235,9 +301,23 @@ export default function GRNScanPay() {
         </CardHeader>
         <CardContent className="space-y-3">
           {!lot ? (
-            <p className="text-sm text-muted-foreground">
-              No finance record found for this GRN ({batch}). It may not have been released to Finance yet.
-            </p>
+            <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/20 p-3 space-y-2">
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                Not ready for Finance — {notReady.stage}
+              </p>
+              <p className="text-sm text-muted-foreground">{notReady.reason}</p>
+              <p className="text-sm">
+                <span className="text-muted-foreground">Next action: </span>
+                <span className="font-medium">{notReady.nextAction}</span>
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t">
+                <div><span className="text-muted-foreground block">GRN / Batch</span>{batch}</div>
+                <div><span className="text-muted-foreground block">Supplier</span>{data?.supplierName || '—'}</div>
+                {notReady.timestamps.map((t) => (
+                  <div key={t.label}><span className="text-muted-foreground block">{t.label}</span>{dt(t.at)}</div>
+                ))}
+              </div>
+            </div>
           ) : (
             <>
               <div className="grid grid-cols-2 gap-3 text-sm">
