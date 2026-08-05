@@ -10,8 +10,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Search, CreditCard, CheckCircle2, DollarSign, Coffee, Trash2 } from "lucide-react";
+import { Loader2, Search, CreditCard, CheckCircle2, DollarSign, Coffee, Trash2, QrCode } from "lucide-react";
 import { toast } from "sonner";
+import GRNScannerDialog from "@/components/finance/GRNScannerDialog";
 
 interface FinanceLot {
   id: string;
@@ -36,6 +37,7 @@ const PendingPaymentsTab = () => {
   const [payNotes, setPayNotes] = useState("");
   const [processing, setProcessing] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [scanOpen, setScanOpen] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const queryClient = useQueryClient();
@@ -285,6 +287,8 @@ const PendingPaymentsTab = () => {
           </CardContent>
         </Card>
       </div>
+
+      <GRNScannerDialog open={scanOpen} onOpenChange={setScanOpen} />
 
       <Card>
         <CardHeader className="pb-3">
