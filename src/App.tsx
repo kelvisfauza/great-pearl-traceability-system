@@ -30,6 +30,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import EmployeeProfile from "./pages/EmployeeProfile";
 import GRNScanPay from "./pages/GRNScanPay";
+import MobileGrnScanner from "./pages/MobileGrnScanner";
 import Unsubscribe from "./pages/Unsubscribe";
 import OAuthConsent from "./pages/OAuthConsent";
 import Procurement from "./pages/Procurement";
@@ -253,6 +254,7 @@ const App: React.ComponentType = () => {
                 <Route path="/v2" element={<ProtectedRoute><V2DepartmentRouter /></ProtectedRoute>} />
                 {/* GRN QR scan destination — opens the GRN for Finance to pay against */}
                 <Route path="/grn/:reference" element={<ProtectedRoute><GRNScanPay /></ProtectedRoute>} />
+                <Route path="/scan/:sessionId" element={<MobileGrnScanner />} />
                 <Route path="/v2/admin" element={<ProtectedRoute requiredRoles={["Administrator", "Super Admin"]}><V2AdminDashboard /></ProtectedRoute>} />
                 <Route path="/v2/store" element={<ProtectedRoute requiredPermissions={["Store Management"]}><V2CoffeeReceipts /></ProtectedRoute>} />
                 <Route path="/v2/quality" element={<ProtectedRoute requiredPermissions={["Quality Control"]}><V2QualityDepartment /></ProtectedRoute>} />
