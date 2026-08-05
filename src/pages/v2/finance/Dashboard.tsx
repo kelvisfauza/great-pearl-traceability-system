@@ -3,7 +3,7 @@ import V2Navigation from "@/components/v2/V2Navigation";
 import PriceTicker from "@/components/PriceTicker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Wallet, GitCompare, ArrowDownUp, Search, FileText, CreditCard, QrCode } from "lucide-react";
+import { Wallet, GitCompare, ArrowDownUp, Search, FileText, CreditCard, QrCode, Receipt } from "lucide-react";
 import GRNScannerDialog from "@/components/finance/GRNScannerDialog";
 import FinanceOverviewTab from "@/components/v2/finance/tabs/FinanceOverviewTab";
 import PendingPaymentsTab from "@/components/v2/finance/tabs/PendingPaymentsTab";
@@ -11,10 +11,12 @@ import TransactionReconciliationTab from "@/components/v2/finance/tabs/Transacti
 import AdvancesRecoveriesTab from "@/components/v2/finance/tabs/AdvancesRecoveriesTab";
 import DuplicateDetectionTab from "@/components/v2/finance/tabs/DuplicateDetectionTab";
 import FinanceReportsTab from "@/components/v2/finance/tabs/FinanceReportsTab";
+import { PaymentHistory } from "@/components/finance/PaymentHistory";
 
 const tabs = [
   { id: "overview", label: "Overview", icon: Wallet },
   { id: "payments", label: "Pending Payments", icon: CreditCard },
+  { id: "history", label: "Payment History", icon: Receipt },
   { id: "reconciliation", label: "Reconciliation", icon: GitCompare },
   { id: "advances", label: "Advances", icon: ArrowDownUp },
   { id: "duplicates", label: "Duplicates", icon: Search },
@@ -54,6 +56,7 @@ const FinanceDashboard = () => {
               </TabsList>
               <TabsContent value="overview"><FinanceOverviewTab /></TabsContent>
               <TabsContent value="payments"><PendingPaymentsTab /></TabsContent>
+              <TabsContent value="history"><PaymentHistory /></TabsContent>
               <TabsContent value="reconciliation"><TransactionReconciliationTab /></TabsContent>
               <TabsContent value="advances"><AdvancesRecoveriesTab /></TabsContent>
               <TabsContent value="duplicates"><DuplicateDetectionTab /></TabsContent>
