@@ -20,10 +20,12 @@ export interface PaymentRecord {
 export const usePaymentHistory = () => {
   const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchPaymentHistory = async () => {
     try {
       setLoading(true);
+      setError(null);
 
       // Page through all posted supplier payments (Supabase caps at 1000/query)
       const payments: any[] = [];
@@ -36,7 +38,7 @@ export const usePaymentHistory = () => {
           .range(page * pageSize, page * pageSize + pageSize - 1);
         if (error) {
           console.error('Error fetching payments:', error);
-          break;
+          throw error;
         }
         payments.push(...(data || []));
         if (!data || data.length < pageSize) break;
@@ -119,6 +121,7 @@ export const usePaymentHistory = () => {
     } catch (error) {
       console.error('Error fetching payment history:', error);
       setPaymentRecords([]);
+      setError(error instanceof Error ? error.message : 'Payment history could not be loaded');
     } finally {
       setLoading(false);
     }
@@ -131,6 +134,7 @@ export const usePaymentHistory = () => {
   return {
     paymentRecords,
     loading,
+    error,
     refetch: fetchPaymentHistory
   };
 };

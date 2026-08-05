@@ -4,11 +4,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Receipt, Search, DollarSign, Calendar, User } from 'lucide-react';
+import { Receipt, Search, DollarSign, Calendar, User, AlertCircle, RefreshCw } from 'lucide-react';
 import { usePaymentHistory } from '@/hooks/usePaymentHistory';
+import { Button } from '@/components/ui/button';
 
 export const PaymentHistory = () => {
-  const { paymentRecords, loading } = usePaymentHistory();
+  const { paymentRecords, loading, error, refetch } = usePaymentHistory();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'Paid' | 'Partially Paid'>('all');
 
@@ -34,6 +35,23 @@ export const PaymentHistory = () => {
       <Card>
         <CardContent className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="flex min-h-64 flex-col items-center justify-center gap-4 text-center">
+          <AlertCircle className="h-10 w-10 text-destructive" />
+          <div>
+            <p className="font-semibold">Payment history could not be loaded</p>
+            <p className="mt-1 text-sm text-muted-foreground">{error}</p>
+          </div>
+          <Button variant="outline" onClick={refetch}>
+            <RefreshCw className="mr-2 h-4 w-4" /> Retry
+          </Button>
         </CardContent>
       </Card>
     );

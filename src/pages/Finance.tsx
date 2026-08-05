@@ -105,7 +105,7 @@ const Finance = () => {
             <CardContent>
               <ResponsiveTabs
                 defaultValue="pending-approvals"
-                visibleTabsCount={4}
+                visibleTabsCount={10}
                 tabs={[
                   {
                     value: "pending-approvals",
