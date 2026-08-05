@@ -23,6 +23,9 @@ export interface GrnReceiptData {
 const money = (n: number) => `UGX ${Number(n || 0).toLocaleString()}`;
 
 export function printGrnPaymentReceipt(d: GrnReceiptData) {
+  const lotValue = Number(d.lotValue ?? d.amount ?? 0);
+  const previouslyPaid = Number(d.previouslyPaid ?? 0);
+  const balance = Number(d.balance ?? Math.max(lotValue - previouslyPaid - Number(d.amount || 0), 0));
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Payment Receipt ${d.receiptNo}</title>
   <style>
     *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -72,6 +75,13 @@ export function printGrnPaymentReceipt(d: GrnReceiptData) {
       <tr><th>Paid by</th><td>${d.paidBy || '—'}${d.paidByPosition ? ` (${d.paidByPosition})` : ''}</td></tr>
       <tr><th>Printed by</th><td>${d.printedBy || d.paidBy || '—'} · ${new Date().toLocaleString('en-GB')}</td></tr>
       ${d.notes ? `<tr><th>Notes</th><td>${d.notes}</td></tr>` : ''}
+    </table>
+
+    <table class="sums">
+      <tr><td class="k">Total GRN value</td><td class="v">${money(lotValue)}</td></tr>
+      ${previouslyPaid > 0 ? `<tr><td class="k">Previously paid</td><td class="v">${money(previouslyPaid)}</td></tr>` : ''}
+      <tr><td class="k">Paid on this receipt</td><td class="v">${money(d.amount)}</td></tr>
+      <tr class="bal"><td class="k">BALANCE OUTSTANDING</td><td class="v">${money(balance)}</td></tr>
     </table>
 
     <div class="total"><span>TOTAL PAID</span><span>${money(d.amount)}</span></div>
