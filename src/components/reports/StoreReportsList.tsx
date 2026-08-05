@@ -783,35 +783,38 @@ const StoreReportsList = () => {
                   <FileText className="h-4 w-4" />
                   Document Attachment
                 </h3>
-                
-                {editFormData.attachment_name && (
-                  <div className="flex items-center gap-2 mb-2 p-2 bg-green-50 border border-green-200 rounded">
-                    <FileText className="h-4 w-4 text-green-600" />
-                    <span className="text-sm text-green-800">Current: {editFormData.attachment_name}</span>
-                  </div>
-                )}
-                
-                <div className="space-y-2">
-                  <Label>Upload New Document (Optional)</Label>
-                  <div className="flex gap-2">
-                    <input
-                      id="edit-file-upload"
-                      type="file"
-                      accept=".jpg,.jpeg,.png,.pdf"
-                      onChange={handleEditFileUpload}
-                      className="hidden"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => document.getElementById('edit-file-upload')?.click()}
-                      disabled={uploadingEditFile}
-                      className="flex-1"
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      {uploadingEditFile ? 'Uploading...' : 'Upload Document'}
-                    </Button>
-                  </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {(['attachment', 'delivery_note'] as const).map((slot, i) => (
+                    <div key={slot} className="space-y-2">
+                      <Label>Document {i + 1} (PDF, JPG, PNG)</Label>
+                      {editFormData[`${slot}_name`] ? (
+                        <div className="flex items-center gap-2 p-2 bg-primary/10 border border-primary/20 rounded">
+                          <FileText className="h-4 w-4 text-primary" />
+                          <span className="text-sm font-medium truncate">{editFormData[`${slot}_name`]}</span>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No document attached</p>
+                      )}
+                      <input
+                        id={`edit-file-upload-${slot}`}
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.pdf"
+                        onChange={(e) => handleEditFileUpload(e, slot)}
+                        className="hidden"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => document.getElementById(`edit-file-upload-${slot}`)?.click()}
+                        disabled={uploadingEditFile}
+                        className="w-full"
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        {uploadingEditFile ? 'Uploading...' : editFormData[`${slot}_name`] ? 'Replace Document' : 'Upload Document'}
+                      </Button>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -838,7 +841,7 @@ const StoreReportsList = () => {
             </Button>
             <Button
               onClick={handleConfirmEdit}
-              disabled={submitting}
+              disabled={submitting || uploadingEditFile}
             >
               {submitting ? 'Updating...' : 'Update Report'}
             </Button>
