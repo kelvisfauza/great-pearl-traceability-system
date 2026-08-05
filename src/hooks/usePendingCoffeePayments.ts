@@ -75,12 +75,22 @@ export const usePendingCoffeePayments = () => {
       // these have a READY_FOR_FINANCE finance lot and must be payable here.
       let coffeeRecords: any[] = baseRecords ? [...baseRecords] : [];
       try {
-        const { data: discretionLots } = await supabase
-          .from('finance_coffee_lots')
-          .select('coffee_record_id')
-          .eq('finance_status', 'READY_FOR_FINANCE')
-          .order('created_at', { ascending: false })
-          .limit(200);
+        // Pull ALL unpaid READY_FOR_FINANCE lots (paged) so older/backfilled
+        // batches are never silently dropped by a small limit.
+        const discretionLots: any[] = [];
+        const PAGE = 1000;
+        for (let page = 0; page < 4; page++) {
+          const { data: chunk } = await supabase
+            .from('finance_coffee_lots')
+            .select('coffee_record_id')
+            .eq('finance_status', 'READY_FOR_FINANCE')
+            .eq('payment_status', 'UNPAID')
+            .order('batch_number', { ascending: false })
+            .range(page * PAGE, page * PAGE + PAGE - 1);
+          if (!chunk || chunk.length === 0) break;
+          discretionLots.push(...chunk);
+          if (chunk.length < PAGE) break;
+        }
 
         const existingIds = new Set(coffeeRecords.map((r: any) => r.id));
         const extraIds = Array.from(
@@ -88,11 +98,14 @@ export const usePendingCoffeePayments = () => {
         ).filter((id: any) => !existingIds.has(id)) as string[];
 
         if (extraIds.length > 0) {
-          const { data: extraRecords } = await supabase
-            .from('coffee_records')
-            .select('id, batch_number, supplier_name, supplier_id, kilograms, bags, coffee_type, date, created_at, created_by')
-            .in('id', extraIds);
-          coffeeRecords = coffeeRecords.concat(extraRecords || []);
+          for (let i = 0; i < extraIds.length; i += 200) {
+            const slice = extraIds.slice(i, i + 200);
+            const { data: extraRecords } = await supabase
+              .from('coffee_records')
+              .select('id, batch_number, supplier_name, supplier_id, kilograms, bags, coffee_type, date, created_at, created_by')
+              .in('id', slice);
+            coffeeRecords = coffeeRecords.concat(extraRecords || []);
+          }
         }
       } catch (e) {
         console.warn('Could not merge discretion-bought lots', e);
@@ -138,10 +151,14 @@ export const usePendingCoffeePayments = () => {
 
       // Fetch quality assessments for these records only
       const recordIds = coffeeRecords.map(r => r.id);
-      const { data: qualityAssessments } = await supabase
-        .from('quality_assessments')
-        .select('id, store_record_id, suggested_price, final_price, admin_discretion_price, assessed_by, moisture, group1_defects, group2_defects')
-        .in('store_record_id', recordIds);
+      const qualityAssessments: any[] = [];
+      for (let i = 0; i < recordIds.length; i += 200) {
+        const { data: qaChunk } = await supabase
+          .from('quality_assessments')
+          .select('id, store_record_id, suggested_price, final_price, admin_discretion_price, assessed_by, moisture, group1_defects, group2_defects')
+          .in('store_record_id', recordIds.slice(i, i + 200));
+        if (qaChunk) qualityAssessments.push(...qaChunk);
+      }
       
       const qualityMap = new Map();
       qualityAssessments?.forEach(assessment => {
