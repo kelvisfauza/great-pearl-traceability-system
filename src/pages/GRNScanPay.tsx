@@ -43,6 +43,7 @@ export default function GRNScanPay() {
   const batch = resolvedRef || rawRef;
 
   const [payOpen, setPayOpen] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
   const [method, setMethod] = useState('CASH');
   const [notes, setNotes] = useState('');
   const [processing, setProcessing] = useState(false);
