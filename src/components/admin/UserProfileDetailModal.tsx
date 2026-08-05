@@ -1,6 +1,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { SignedAvatarImage } from '@/components/ui/signed-avatar-image';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { 
@@ -93,7 +94,7 @@ const UserProfileDetailModal: React.FC<Props> = ({ open, onClose, employee }) =>
         {/* Header */}
         <div className="flex flex-col items-center text-center gap-3 pb-2">
           <Avatar className="h-20 w-20">
-            <AvatarImage src={employee.avatar_url} alt={employee.name} />
+            <SignedAvatarImage src={employee.avatar_url} alt={employee.name} />
             <AvatarFallback className="text-xl bg-primary/10">{initials}</AvatarFallback>
           </Avatar>
           <div>

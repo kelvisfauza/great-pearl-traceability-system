@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { SignedAvatarImage } from '@/components/ui/signed-avatar-image';
 import { Badge } from '@/components/ui/badge';
 import { Trophy, Star, Crown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -89,7 +90,7 @@ const EmployeeOfTheMonthWidget = () => {
               <div className={`flex ${idx === 0 ? 'flex-row items-center gap-5' : 'flex-col items-center text-center gap-3'}`}>
                 <div className="relative">
                   <Avatar className={`${idx === 0 ? 'h-20 w-20' : 'h-14 w-14'} border-3 ${idx === 0 ? 'border-amber-400' : 'border-border'} shadow-lg`}>
-                    <AvatarImage src={winner.employee_avatar_url} alt={winner.employee_name} />
+                    <SignedAvatarImage src={winner.employee_avatar_url} alt={winner.employee_name} />
                     <AvatarFallback className="bg-primary/10 text-primary font-bold text-lg">
                       {winner.employee_name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
                     </AvatarFallback>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { SignedAvatarImage } from '@/components/ui/signed-avatar-image';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Cake, PartyPopper } from 'lucide-react';
@@ -78,7 +79,7 @@ const BirthdayNotification = () => {
           {birthdayPeople.map((person, idx) => (
             <div key={idx} className="flex items-center gap-4 p-4 rounded-lg bg-gradient-to-r from-primary/5 to-primary/10 border">
               <Avatar className="h-16 w-16 border-2 border-primary/30">
-                <AvatarImage src={person.avatar_url || undefined} />
+                <SignedAvatarImage src={person.avatar_url || undefined} />
                 <AvatarFallback className="text-lg bg-primary/10">
                   {person.name.split(' ').map(n => n[0]).join('')}
                 </AvatarFallback>

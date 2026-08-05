@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sun, Moon, Sunrise, Sunset, Calendar, Bell } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { SignedAvatarImage } from '@/components/ui/signed-avatar-image';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import DigitalClock from '@/components/DigitalClock';
@@ -259,7 +260,7 @@ const DynamicHeader = () => {
               <p className="text-xs text-muted-foreground">{employee?.department || 'Department'}</p>
             </div>
             <Avatar className="h-10 w-10 sm:h-12 sm:w-12 border-2 border-border shadow-md">
-              <AvatarImage 
+              <SignedAvatarImage 
                 src={employee?.avatar_url} 
                 alt={employee?.name}
                 key={employee?.avatar_url}

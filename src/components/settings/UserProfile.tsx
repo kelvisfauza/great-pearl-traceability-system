@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { SignedAvatarImage } from '@/components/ui/signed-avatar-image';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -260,7 +261,7 @@ const UserProfile = ({ employee }: UserProfileProps) => {
           <div className="flex items-start gap-6">
             <div className="relative">
               <Avatar className="h-24 w-24">
-                <AvatarImage src={formData.avatar_url || employee.avatar_url} alt={employee.name} />
+                <SignedAvatarImage src={formData.avatar_url || employee.avatar_url} alt={employee.name} />
                 <AvatarFallback className="text-lg">
                   {employee.name.split(' ').map(n => n[0]).join('')}
                 </AvatarFallback>
