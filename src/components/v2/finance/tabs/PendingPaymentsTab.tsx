@@ -7,12 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Search, CreditCard, CheckCircle2, DollarSign, Coffee, Trash2, QrCode } from "lucide-react";
+import { Loader2, Search, CreditCard, CheckCircle2, DollarSign, Coffee, Trash2, QrCode, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import GRNScannerDialog from "@/components/finance/GRNScannerDialog";
+import { useNavigate } from "react-router-dom";
+import { getGrnPayCode } from "@/utils/grnPayCode";
 
 interface FinanceLot {
   id: string;
@@ -32,15 +32,13 @@ interface FinanceLot {
 
 const PendingPaymentsTab = () => {
   const [search, setSearch] = useState("");
-  const [payDialog, setPayDialog] = useState<FinanceLot | null>(null);
-  const [payMethod, setPayMethod] = useState<string>("CASH");
-  const [payNotes, setPayNotes] = useState("");
-  const [processing, setProcessing] = useState(false);
+  const [openingId, setOpeningId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [scanOpen, setScanOpen] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: lots, isLoading } = useQuery({
     queryKey: ["finance-pending-payments"],
@@ -109,90 +107,20 @@ const PendingPaymentsTab = () => {
     },
   });
 
-  const handlePay = async () => {
-    if (!payDialog) return;
-    setProcessing(true);
-
+  // Payment is always made against the physical GRN document: open the same
+  // secure GRN pay screen used by the scanner (issues the payment receipt).
+  const handleProcessPayment = async (lot: FinanceLot) => {
+    const ref = lot.batch_number || lot.coffee_record_id;
+    if (!ref) {
+      toast.error("This lot has no GRN reference");
+      return;
+    }
+    setOpeningId(lot.id);
     try {
-      // 1. Update finance_coffee_lots status to PAID
-      const { error: updateError } = await supabase
-        .from("finance_coffee_lots")
-        .update({
-          finance_status: "PAID" as any,
-          finance_notes: payNotes || `Paid via ${payMethod}`,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", payDialog.id);
-
-      if (updateError) throw updateError;
-
-      // 2. Create supplier_payments record
-      const { error: paymentError } = await supabase
-        .from("supplier_payments")
-        .insert({
-          supplier_id: payDialog.supplier_id,
-          lot_id: payDialog.id,
-          amount_paid_ugx: payDialog.total_amount_ugx,
-          gross_payable_ugx: payDialog.total_amount_ugx,
-          method: payMethod as any,
-          notes: payNotes || undefined,
-          requested_by: "Finance Department",
-        });
-
-      if (paymentError) throw paymentError;
-
-      // 3. Deduct from finance cash balance
-      const { data: currentBalance } = await supabase
-        .from("finance_cash_balance")
-        .select("current_balance")
-        .single();
-
-      if (currentBalance) {
-        await (supabase as any)
-          .from("finance_cash_balance")
-          .update({
-            current_balance: (currentBalance.current_balance || 0) - payDialog.total_amount_ugx,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", (currentBalance as any).id);
-      }
-
-      // 4. Log the transaction
-      await (supabase as any).from("finance_cash_transactions").insert({
-        transaction_type: "outbound",
-        amount: payDialog.total_amount_ugx,
-        description: `Supplier payment: ${payDialog.supplier_name} - ${payDialog.batch_number}`,
-        reference_number: payDialog.batch_number,
-        performed_by: "Finance Department",
-        balance_before: currentBalance?.current_balance || 0,
-        balance_after: (currentBalance?.current_balance || 0) - payDialog.total_amount_ugx,
-      });
-
-      // 5. Insert audit log
-      await supabase.from("audit_logs").insert({
-        action: "SUPPLIER_PAYMENT",
-        table_name: "finance_coffee_lots",
-        record_id: payDialog.id,
-        performed_by: "finance",
-        department: "Finance",
-        reason: `Paid ${payDialog.supplier_name} UGX ${payDialog.total_amount_ugx.toLocaleString()} via ${payMethod}`,
-        record_data: {
-          batch: payDialog.batch_number,
-          amount: payDialog.total_amount_ugx,
-          method: payMethod,
-        },
-      });
-
-      toast.success(`Payment of UGX ${payDialog.total_amount_ugx.toLocaleString()} processed for ${payDialog.supplier_name}`);
-      setPayDialog(null);
-      setPayNotes("");
-      queryClient.invalidateQueries({ queryKey: ["finance-pending-payments"] });
-      queryClient.invalidateQueries({ queryKey: ["finance-overview-stats"] });
-    } catch (err: any) {
-      console.error("Payment error:", err);
-      toast.error("Payment failed: " + (err.message || "Unknown error"));
+      const payCode = await getGrnPayCode(ref).catch(() => null);
+      navigate(`/grn/${encodeURIComponent(payCode || ref)}`);
     } finally {
-      setProcessing(false);
+      setOpeningId(null);
     }
   };
 
@@ -401,11 +329,17 @@ const PendingPaymentsTab = () => {
                     <TableCell>
                       <Button
                         size="sm"
-                        onClick={() => setPayDialog(lot)}
+                        variant="outline"
+                        onClick={() => handleProcessPayment(lot)}
+                        disabled={openingId === lot.id}
                         className="gap-1"
                       >
-                        <CreditCard className="h-3 w-3" />
-                        Pay
+                        {openingId === lot.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Receipt className="h-3 w-3" />
+                        )}
+                        Process Payment
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -422,123 +356,6 @@ const PendingPaymentsTab = () => {
           </div>
         </CardContent>
       </Card>
-
-      {/* Payment Dialog */}
-      <Dialog open={!!payDialog} onOpenChange={(open) => !open && setPayDialog(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Process Payment</DialogTitle>
-          </DialogHeader>
-          {payDialog && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Supplier</p>
-                  <p className="font-medium">{payDialog.supplier_name}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Batch</p>
-                  <p className="font-mono">{payDialog.batch_number || payDialog.coffee_record_id}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Quantity</p>
-                  <p className="font-medium">{(payDialog.quantity_kg || 0).toLocaleString()} kg</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Amount</p>
-                  <p className="font-bold text-lg">UGX {(payDialog.total_amount_ugx || 0).toLocaleString()}</p>
-                </div>
-              </div>
-
-              {/* Quality Analysis Section */}
-              {payDialog.quality_json && (
-                <div className="border rounded-lg p-3 bg-muted/30 space-y-2">
-                  <p className="text-sm font-semibold">Quality Analysis</p>
-                  <div className="grid grid-cols-3 gap-2 text-xs">
-                    {payDialog.quality_json.moisture_content != null && (
-                      <div>
-                        <p className="text-muted-foreground">Moisture</p>
-                        <p className="font-medium">{payDialog.quality_json.moisture_content}%</p>
-                      </div>
-                    )}
-                    {payDialog.quality_json.outturn_percentage != null && (
-                      <div>
-                        <p className="text-muted-foreground">Outturn</p>
-                        <p className="font-medium">{payDialog.quality_json.outturn_percentage}%</p>
-                      </div>
-                    )}
-                    {payDialog.quality_json.group1_percentage != null && (
-                      <div>
-                        <p className="text-muted-foreground">Group 1 Defects</p>
-                        <p className="font-medium">{payDialog.quality_json.group1_percentage}%</p>
-                      </div>
-                    )}
-                    {payDialog.quality_json.group2_percentage != null && (
-                      <div>
-                        <p className="text-muted-foreground">Group 2 Defects</p>
-                        <p className="font-medium">{payDialog.quality_json.group2_percentage}%</p>
-                      </div>
-                    )}
-                    {payDialog.quality_json.pods_percentage != null && (
-                      <div>
-                        <p className="text-muted-foreground">Pods</p>
-                        <p className="font-medium">{payDialog.quality_json.pods_percentage}%</p>
-                      </div>
-                    )}
-                    {payDialog.quality_json.husks_percentage != null && (
-                      <div>
-                        <p className="text-muted-foreground">Husks</p>
-                        <p className="font-medium">{payDialog.quality_json.husks_percentage}%</p>
-                      </div>
-                    )}
-                    {payDialog.quality_json.fm_percentage != null && (
-                      <div>
-                        <p className="text-muted-foreground">Foreign Matter</p>
-                        <p className="font-medium">{payDialog.quality_json.fm_percentage}%</p>
-                      </div>
-                    )}
-                  </div>
-                  {payDialog.quality_json.comments && (
-                    <p className="text-xs text-muted-foreground mt-1 italic">{payDialog.quality_json.comments}</p>
-                  )}
-                </div>
-              )}
-
-              <div>
-                <label className="text-sm font-medium">Payment Method</label>
-                <Select value={payMethod} onValueChange={setPayMethod}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="CASH">💵 Cash</SelectItem>
-                    <SelectItem value="MOBILE_MONEY">📱 Mobile Money</SelectItem>
-                    <SelectItem value="BANK_TRANSFER">🏦 Bank Transfer</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium">Notes (optional)</label>
-                <Textarea
-                  value={payNotes}
-                  onChange={(e) => setPayNotes(e.target.value)}
-                  placeholder="Payment notes..."
-                />
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPayDialog(null)}>
-              Cancel
-            </Button>
-            <Button onClick={handlePay} disabled={processing}>
-              {processing && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Confirm Payment
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialog} onOpenChange={setDeleteDialog}>
