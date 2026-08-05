@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Paperclip, AlertTriangle, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { uploadReportDocument, hasAttachments, getReportDocumentUrl } from '@/utils/reportDocuments';
+import { uploadReportDocument, hasAttachments } from '@/utils/reportDocuments';
 
 type Row = {
   id: string;
@@ -55,11 +55,6 @@ const MissingAttachmentsPanel = () => {
     } finally {
       setBusyId(null);
     }
-  };
-
-  const preview = async (row: Row) => {
-    const url = await getReportDocumentUrl(row.attachment_url);
-    if (url) window.open(url, '_blank');
   };
 
   return (
