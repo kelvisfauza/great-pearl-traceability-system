@@ -29,6 +29,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import EmployeeProfile from "./pages/EmployeeProfile";
+import GRNScanPay from "./pages/GRNScanPay";
 import Unsubscribe from "./pages/Unsubscribe";
 import OAuthConsent from "./pages/OAuthConsent";
 import Procurement from "./pages/Procurement";
