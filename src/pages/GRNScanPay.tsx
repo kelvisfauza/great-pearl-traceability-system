@@ -268,7 +268,7 @@ export default function GRNScanPay() {
       amount: lot.total_amount_ugx,
       method: data?.payment?.method || method,
       paidAt: data?.payment?.created_at || lot.updated_at || new Date().toISOString(),
-      paidBy: data?.payment?.requested_by || 'Finance Department',
+      paidBy: data?.paidByName || data?.payment?.requested_by || 'Finance Department',
       notes: data?.payment?.notes || lot.finance_notes,
       receiptNo: `RCP-${String(lot.batch_number || batch).replace(/[^A-Z0-9]/gi, '').slice(-8)}`,
     });
@@ -452,7 +452,7 @@ export default function GRNScanPay() {
                     <div><span className="text-muted-foreground block">Amount paid</span>{money(data?.payment?.amount_paid_ugx ?? lot.total_amount_ugx)}</div>
                     <div><span className="text-muted-foreground block">Method</span>{data?.payment?.method || '—'}</div>
                     <div><span className="text-muted-foreground block">Paid on</span>{dt(data?.payment?.created_at)}</div>
-                    <div><span className="text-muted-foreground block">Paid by</span>{data?.payment?.requested_by || '—'}</div>
+                    <div><span className="text-muted-foreground block">Paid by</span>{data?.paidByName || data?.payment?.requested_by || '—'}<span className="block text-[10px] text-muted-foreground">on behalf of Finance</span></div>
                   </div>
                 </div>
               )}
