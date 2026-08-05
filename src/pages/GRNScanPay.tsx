@@ -24,7 +24,22 @@ export default function GRNScanPay() {
   const navigate = useNavigate();
   const { user, employee } = useAuth();
   const qc = useQueryClient();
-  const batch = useMemo(() => normalizeRef(reference), [reference]);
+  const rawRef = useMemo(() => normalizeRef(reference), [reference]);
+
+  // Older GRNs encoded a document verification code (GPCF-DOC-YYYY-XXXXXX) in the QR.
+  // Resolve it back to the real batch number before looking up finance records.
+  const { data: resolvedRef, isLoading: resolving } = useQuery({
+    queryKey: ['grn-resolve-ref', rawRef],
+    enabled: !!rawRef,
+    queryFn: async () => {
+      if (!/^GPCF-[A-Z]{2,3}-\d{4}-[A-Z0-9]{4,10}$/i.test(rawRef)) return rawRef;
+      const { data, error } = await supabase.rpc('resolve_grn_reference' as any, { p_code: rawRef });
+      if (error) return rawRef;
+      return (data as string) || rawRef;
+    },
+  });
+
+  const batch = resolvedRef || rawRef;
 
   const [payOpen, setPayOpen] = useState(false);
   const [method, setMethod] = useState('CASH');
@@ -33,7 +48,7 @@ export default function GRNScanPay() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['grn-scan-lot', batch],
-    enabled: !!batch,
+    enabled: !!batch && !resolving,
     queryFn: async () => {
       const { data: lots } = await supabase
         .from('finance_coffee_lots')
