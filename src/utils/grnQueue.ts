@@ -9,6 +9,55 @@ export type GrnQueueItem = {
 const QUEUE_KEY = "grn_pay_queue";
 const SESSION_KEY = "grn_scan_session";
 const EVENT = "grn-queue-changed";
+const PAIR_KEY = "grn_paired_device";
+const PAIR_EVENT = "grn-pairing-changed";
+
+export type PairedDevice = {
+  name: string;
+  pairedAt: string;
+  lastSeenAt: string;
+};
+
+export function getPairedDevice(): PairedDevice | null {
+  try {
+    const raw = localStorage.getItem(PAIR_KEY);
+    return raw ? (JSON.parse(raw) as PairedDevice) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setPairedDevice(name: string) {
+  const existing = getPairedDevice();
+  const device: PairedDevice = {
+    name: name || existing?.name || "Phone",
+    pairedAt: existing?.pairedAt || new Date().toISOString(),
+    lastSeenAt: new Date().toISOString(),
+  };
+  localStorage.setItem(PAIR_KEY, JSON.stringify(device));
+  window.dispatchEvent(new CustomEvent(PAIR_EVENT));
+}
+
+export function clearPairedDevice() {
+  localStorage.removeItem(PAIR_KEY);
+  window.dispatchEvent(new CustomEvent(PAIR_EVENT));
+}
+
+/** Forget the phone AND rotate the pairing session so the old phone is disconnected. */
+export function unpairDevice() {
+  clearPairedDevice();
+  localStorage.removeItem(SESSION_KEY);
+}
+
+export function subscribePairing(cb: () => void): () => void {
+  const handler = () => cb();
+  window.addEventListener(PAIR_EVENT, handler);
+  window.addEventListener("storage", handler);
+  return () => {
+    window.removeEventListener(PAIR_EVENT, handler);
+    window.removeEventListener("storage", handler);
+  };
+}
 
 /** Stable pairing session id so the phone stays connected across pages. */
 export function getScanSessionId(): string {
