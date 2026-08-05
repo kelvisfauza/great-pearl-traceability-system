@@ -20,6 +20,7 @@ import {
   unpairDevice,
   subscribePairing,
 } from "@/utils/grnQueue";
+import { looksLikePayCode, normalizePayCode, isValidPayCode } from "@/utils/grnPayCode";
 
 interface Props {
   open: boolean;
@@ -47,6 +48,9 @@ export function parseGrnReference(text: string): string | null {
   // Query-string based: ?grn=... | ?batch=... | ?ref=... | ?code=...
   const query = value.match(/[?&](?:grn|batch|batch_number|ref|reference|code)=([^&#\s]+)/i);
   if (query) return normalizeRef(decodeURIComponent(query[1]));
+
+  // Secure pay code (GAC-K7Q-M4X-T9 or K7QM4XT9B)
+  if (looksLikePayCode(value)) return `GAC-${normalizePayCode(value)}`;
 
   // Raw reference or bare batch number
   if (/^GRN[-_]?[\w-]+$/i.test(value)) return normalizeRef(value);
