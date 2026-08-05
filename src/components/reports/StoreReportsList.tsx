@@ -7,12 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useStoreReports } from '@/hooks/useStoreReports';
-import { Eye, FileText, Printer, Search, Calendar, Trash2, Edit, Database, Upload, FileDown, CalendarCheck, TrendingUp, TrendingDown } from 'lucide-react';
+import { Eye, FileText, Printer, Search, Calendar, Trash2, Edit, Database, Upload, FileDown, CalendarCheck, TrendingUp, TrendingDown, Paperclip, AlertTriangle } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import StoreReportViewer from './StoreReportViewer';
 import { supabase } from '@/integrations/supabase/client';
+import { uploadReportDocument, validateReportFile, hasAttachments } from '@/utils/reportDocuments';
 import { toast } from 'sonner';
 import { generateStoreReportPDF } from '@/utils/pdfGenerator';
 
@@ -33,6 +34,7 @@ const StoreReportsList = () => {
   const [submitting, setSubmitting] = useState(false);
   const [editFormData, setEditFormData] = useState<any>({});
   const [uploadingEditFile, setUploadingEditFile] = useState(false);
+  const [onlyMissingAttachments, setOnlyMissingAttachments] = useState(false);
 
   // Handle quick filters
   const handleQuickFilter = (filter: string) => {
@@ -73,7 +75,9 @@ const StoreReportsList = () => {
       (!selectedDateRange.start || report.date >= selectedDateRange.start) &&
       (!selectedDateRange.end || report.date <= selectedDateRange.end);
     
-    return matchesSearch && matchesDateRange;
+    const matchesAttachment = !onlyMissingAttachments || !hasAttachments(report);
+
+    return matchesSearch && matchesDateRange && matchesAttachment;
   });
 
   // Calculate customer debt analysis for filtered reports
@@ -135,6 +139,8 @@ const StoreReportsList = () => {
       input_by: report.input_by,
       attachment_url: report.attachment_url,
       attachment_name: report.attachment_name,
+      delivery_note_url: report.delivery_note_url,
+      delivery_note_name: report.delivery_note_name,
       scanner_used: report.scanner_used
     });
     setEditDialogOpen(true);
@@ -184,53 +190,36 @@ const StoreReportsList = () => {
     }
   };
 
-  const handleEditFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEditFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+    fieldPrefix: 'attachment' | 'delivery_note' = 'attachment'
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
-    if (!allowedTypes.includes(file.type)) {
-      toast.error("Please upload a valid image (JPEG, PNG) or PDF file");
-      return;
-    }
-
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("File size must be less than 10MB");
+    const invalid = validateReportFile(file);
+    if (invalid) {
+      toast.error(invalid);
+      event.target.value = '';
       return;
     }
 
     setUploadingEditFile(true);
     
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `reports/${fileName}`;
+      const filePath = await uploadReportDocument(file);
 
-      const { error: uploadError } = await supabase.storage
-        .from('report-documents')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('report-documents')
-        .getPublicUrl(filePath);
-
-      // Store the file path instead of public URL for private bucket
       setEditFormData(prev => ({
         ...prev,
-        attachment_url: filePath, // Store the file path, not public URL
-        attachment_name: file.name
+        [`${fieldPrefix}_url`]: filePath,
+        [`${fieldPrefix}_name`]: file.name
       }));
 
-      toast.success("Document uploaded successfully");
+      toast.success('Document attached successfully');
     } catch (error) {
       console.error('Error uploading file:', error);
-      toast.error("Failed to upload document");
+      event.target.value = '';
+      toast.error(`Failed to attach document: ${(error as Error).message}`);
     } finally {
       setUploadingEditFile(false);
     }
