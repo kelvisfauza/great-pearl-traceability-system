@@ -264,6 +264,13 @@ export default function GRNScanPay() {
   const receipt = () => {
 
     if (!lot) return;
+    const lotValue = Number(lot.total_amount_ugx || 0);
+    const thisPayment = Number(data?.payment?.amount_paid_ugx ?? lot.total_amount_ugx ?? 0);
+    const previouslyPaid = (data?.payments || [])
+      .filter((p: any) =>
+        p.id !== data?.payment?.id &&
+        !['failed', 'cancelled', 'rejected'].includes(String(p.status || '').toLowerCase()))
+      .reduce((s: number, p: any) => s + Number(p.amount_paid_ugx || 0), 0);
     trackActivity('report_generation', `printing supplier payment receipt for ${lot.batch_number || batch}`, {
       form_name: 'GRN Payment Receipt',
       batch: lot.batch_number || batch,
@@ -274,7 +281,10 @@ export default function GRNScanPay() {
       coffeeType: data?.record?.coffee_type,
       quantityKg: lot.quantity_kg,
       unitPrice: lot.unit_price_ugx,
-      amount: lot.total_amount_ugx,
+      amount: thisPayment,
+      lotValue,
+      previouslyPaid,
+      balance: Math.max(lotValue - previouslyPaid - thisPayment, 0),
       method: data?.payment?.method || method,
       paidAt: data?.payment?.created_at || lot.updated_at || new Date().toISOString(),
       paidBy: data?.paidByName || data?.payment?.requested_by || 'Finance Department',
