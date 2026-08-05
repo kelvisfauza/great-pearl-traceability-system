@@ -14890,6 +14890,10 @@ export type Database = {
         Args: { _call_id: string; _interacted?: boolean }
         Returns: Json
       }
+      backfill_missing_finance_lots: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: Json
+      }
       backfill_missing_inventory_batch_sources: { Args: never; Returns: Json }
       backfill_treasury_from_ledger: { Args: never; Returns: Json }
       bulk_deduct_unprocessed_sales: {
