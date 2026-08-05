@@ -342,13 +342,14 @@ const StoreReportsList = () => {
                   <TableHead>Sold (kg)</TableHead>
                   <TableHead>Sold To</TableHead>
                   <TableHead>Input By</TableHead>
+                  <TableHead>Attachment</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredReports.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={8} className="text-center py-8">
                       No store reports found
                     </TableCell>
                   </TableRow>
@@ -369,6 +370,17 @@ const StoreReportsList = () => {
                       <TableCell>{report.sold_to || 'N/A'}</TableCell>
                       <TableCell>{report.input_by}</TableCell>
                       <TableCell>
+                        {hasAttachments(report) ? (
+                          <Badge variant="outline" className="gap-1">
+                            <Paperclip className="h-3 w-3" /> Attached
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive" className="gap-1">
+                            <AlertTriangle className="h-3 w-3" /> Missing
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         <div className="flex gap-2">
                           <Button
                             variant="outline"
@@ -377,6 +389,16 @@ const StoreReportsList = () => {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
+                          {!hasAttachments(report) && (
+                            <Button
+                              size="sm"
+                              onClick={() => handleEditRequest(report)}
+                              title="Attach missing document"
+                            >
+                              <Upload className="h-4 w-4 mr-1" />
+                              Attach
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"
