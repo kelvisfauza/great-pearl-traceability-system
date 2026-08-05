@@ -103,6 +103,20 @@ const GRNScannerDialog = ({ open, onOpenChange }: Props) => {
     navigate(`/grn/${encodeURIComponent(reference)}`);
   };
 
+  const submitManual = () => {
+    const value = manual.trim();
+    if (!value) return toast.error("Enter a pay code or the GRN digits");
+    if (looksLikePayCode(value)) {
+      if (!isValidPayCode(value)) {
+        return toast.error("That pay code is not valid — check the code printed under the QR");
+      }
+      return go(`GAC-${normalizePayCode(value)}`);
+    }
+    const digits = value.replace(/\D/g, "");
+    if (!digits) return toast.error("Enter a pay code or the GRN digits");
+    go(digits);
+  };
+
   // Listen for scans pushed from the paired phone
   useEffect(() => {
     if (!open) return;
