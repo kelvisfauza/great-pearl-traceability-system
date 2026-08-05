@@ -235,9 +235,23 @@ export default function GRNScanPay() {
         </CardHeader>
         <CardContent className="space-y-3">
           {!lot ? (
-            <p className="text-sm text-muted-foreground">
-              No finance record found for this GRN ({batch}). It may not have been released to Finance yet.
-            </p>
+            <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/20 p-3 space-y-2">
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                Not ready for Finance — {notReady.stage}
+              </p>
+              <p className="text-sm text-muted-foreground">{notReady.reason}</p>
+              <p className="text-sm">
+                <span className="text-muted-foreground">Next action: </span>
+                <span className="font-medium">{notReady.nextAction}</span>
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t">
+                <div><span className="text-muted-foreground block">GRN / Batch</span>{batch}</div>
+                <div><span className="text-muted-foreground block">Supplier</span>{data?.supplierName || '—'}</div>
+                {notReady.timestamps.map((t) => (
+                  <div key={t.label}><span className="text-muted-foreground block">{t.label}</span>{dt(t.at)}</div>
+                ))}
+              </div>
+            </div>
           ) : (
             <>
               <div className="grid grid-cols-2 gap-3 text-sm">
