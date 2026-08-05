@@ -9,9 +9,10 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Loader2, CheckCircle2, CreditCard, Printer, ArrowLeft, History, FlaskConical } from 'lucide-react';
+import { Loader2, CheckCircle2, CreditCard, Printer, ArrowLeft, History, FlaskConical, QrCode } from 'lucide-react';
 import { toast } from 'sonner';
 import { printGrnPaymentReceipt } from '@/utils/grnPaymentReceipt';
+import GRNScannerDialog from '@/components/finance/GRNScannerDialog';
 
 const normalizeRef = (raw: string) =>
   (raw || '').trim().replace(/^GAC-/i, '').replace(/^GRN-DISC-/i, '').replace(/^GRN-/i, '');
@@ -42,6 +43,7 @@ export default function GRNScanPay() {
   const batch = resolvedRef || rawRef;
 
   const [payOpen, setPayOpen] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
   const [method, setMethod] = useState('CASH');
   const [notes, setNotes] = useState('');
   const [processing, setProcessing] = useState(false);
@@ -284,9 +286,14 @@ export default function GRNScanPay() {
 
   return (
     <div className="max-w-2xl mx-auto p-4 space-y-4">
-      <Button variant="ghost" size="sm" onClick={() => navigate('/v2/finance')}>
-        <ArrowLeft className="h-4 w-4 mr-1" /> Finance
-      </Button>
+      <div className="flex items-center justify-between gap-2">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/v2/finance')}>
+          <ArrowLeft className="h-4 w-4 mr-1" /> Finance
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => setScanOpen(true)}>
+          <QrCode className="h-4 w-4 mr-1" /> Scan other
+        </Button>
+      </div>
 
       <Card>
         <CardHeader className="pb-3">
@@ -317,6 +324,9 @@ export default function GRNScanPay() {
                   <div key={t.label}><span className="text-muted-foreground block">{t.label}</span>{dt(t.at)}</div>
                 ))}
               </div>
+              <Button variant="outline" size="sm" className="w-full" onClick={() => setScanOpen(true)}>
+                <QrCode className="h-4 w-4 mr-2" /> Scan other GRN
+              </Button>
             </div>
           ) : (
             <>
@@ -366,6 +376,9 @@ export default function GRNScanPay() {
                   </div>
                   <Button onClick={receipt} className="w-full">
                     <Printer className="h-4 w-4 mr-2" /> Print payment receipt
+                  </Button>
+                  <Button variant="outline" onClick={() => setScanOpen(true)} className="w-full">
+                    <QrCode className="h-4 w-4 mr-2" /> Scan other
                   </Button>
                 </div>
               ) : (
@@ -429,6 +442,8 @@ export default function GRNScanPay() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <GRNScannerDialog open={scanOpen} onOpenChange={setScanOpen} />
     </div>
   );
 }
