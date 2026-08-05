@@ -269,6 +269,9 @@ export default function GRNScanPay() {
       method: data?.payment?.method || method,
       paidAt: data?.payment?.created_at || lot.updated_at || new Date().toISOString(),
       paidBy: data?.paidByName || data?.payment?.requested_by || 'Finance Department',
+      printedBy: employee?.name
+        ? `${employee.name}${(employee as any)?.position ? ` · ${(employee as any).position}` : ''}`
+        : (user?.email || 'Finance Department'),
       notes: data?.payment?.notes || lot.finance_notes,
       receiptNo: `RCP-${String(lot.batch_number || batch).replace(/[^A-Z0-9]/gi, '').slice(-8)}`,
     });
