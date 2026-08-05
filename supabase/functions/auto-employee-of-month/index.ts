@@ -6,6 +6,35 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+/**
+ * Profile photos live in a PRIVATE bucket, so emails can't use the raw
+ * stored URL. Mint a long-lived signed URL (90 days) that stays valid for
+ * the life of the award announcement email.
+ */
+async function signAvatarForEmail(
+  client: any,
+  storedValue: string | null | undefined,
+): Promise<string> {
+  const raw = (storedValue || "").trim();
+  if (!raw) return "";
+  let path = raw;
+  if (/^https?:\/\//i.test(raw)) {
+    const m = raw.match(/\/storage\/v1\/object\/(?:public|sign)\/profile_pictures\/([^?#]+)/i);
+    if (!m) return "";
+    path = decodeURIComponent(m[1]);
+  } else {
+    path = raw.replace(/^profile_pictures\//, "");
+  }
+  try {
+    const { data } = await client.storage
+      .from("profile_pictures")
+      .createSignedUrl(path, 60 * 60 * 24 * 90);
+    return data?.signedUrl || "";
+  } catch (_e) {
+    return "";
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -282,6 +311,8 @@ Deno.serve(async (req) => {
       });
 
       // Send recognition email
+      const emailAvatarUrl = await signAvatarForEmail(supabase, empInfo.avatar_url);
+
       await supabase.functions.invoke("send-transactional-email", {
         body: {
           templateName: "employee-of-the-month",
@@ -295,7 +326,7 @@ Deno.serve(async (req) => {
             reason,
             bonusAmount: Number(bonusAmount).toLocaleString(),
             department: empInfo.department || "General",
-            avatarUrl: empInfo.avatar_url || "",
+            avatarUrl: emailAvatarUrl,
           },
         },
       });
@@ -329,7 +360,7 @@ Deno.serve(async (req) => {
             reason,
             bonusAmount: Number(bonusAmount).toLocaleString(),
             department: empInfo.department || "General",
-            avatarUrl: empInfo.avatar_url || "",
+            avatarUrl: emailAvatarUrl,
           },
         },
       });
