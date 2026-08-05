@@ -15670,6 +15670,7 @@ export type Database = {
         Args: { p_admin_reason: string; p_ledger_entry_id: string }
         Returns: Json
       }
+      sg_is_automation: { Args: never; Returns: boolean }
       sync_overdraft_outstanding_from_wallet: {
         Args: { p_user_id: string }
         Returns: undefined
