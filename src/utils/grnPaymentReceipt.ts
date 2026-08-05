@@ -22,21 +22,21 @@ export function printGrnPaymentReceipt(d: GrnReceiptData) {
   <style>
     *{box-sizing:border-box}
     body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;padding:18mm 14mm;font-size:12px}
-    header{display:flex;align-items:center;gap:12px;border-bottom:2px solid #14532d;padding-bottom:10px}
+    header{display:flex;align-items:center;gap:12px;border-bottom:2px solid #000;padding-bottom:10px}
     header img{height:56px}
-    h1{margin:0;font-size:17px;color:#14532d}
-    .sub{font-size:10px;color:#555;margin:2px 0}
+    h1{margin:0;font-size:17px;color:#000}
+    .sub{font-size:10px;color:#333;margin:2px 0}
     .badge{margin-left:auto;text-align:right}
-    .badge strong{display:block;color:#14532d;font-size:13px}
+    .badge strong{display:block;color:#000;font-size:13px}
     table{width:100%;border-collapse:collapse;margin-top:14px}
-    th,td{border:1px solid #d7ddd6;padding:6px 8px;text-align:left}
-    th{background:#f1f5f0;width:26%;font-size:11px}
-    .total{margin-top:14px;background:#14532d;color:#fff;padding:10px 12px;font-size:15px;font-weight:bold;display:flex;justify-content:space-between}
+    th,td{border:1px solid #000;padding:6px 8px;text-align:left}
+    th{background:#e6e6e6;width:26%;font-size:11px}
+    .total{margin-top:14px;background:#000;color:#fff;padding:10px 12px;font-size:15px;font-weight:bold;display:flex;justify-content:space-between}
     .signs{display:flex;gap:16px;margin-top:34px}
     .signs div{flex:1;text-align:center}
-    .signs span{display:block;border-bottom:1px solid #333;height:34px}
+    .signs span{display:block;border-bottom:1px solid #000;height:34px}
     .signs p{margin:4px 0 0;font-size:10px;font-weight:bold}
-    footer{margin-top:26px;display:flex;align-items:center;gap:14px;border-top:1px dashed #999;padding-top:10px;font-size:9.5px;color:#555}
+    footer{margin-top:26px;display:flex;align-items:center;gap:14px;border-top:1px dashed #000;padding-top:10px;font-size:9.5px;color:#333}
     @page{size:A4;margin:0}
   </style></head><body>
     <header>
