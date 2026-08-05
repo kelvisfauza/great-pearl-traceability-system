@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Loader2, CheckCircle2, CreditCard, Printer, ArrowLeft, History, FlaskConical, QrCode } from 'lucide-react';
 import { toast } from 'sonner';
 import { printGrnPaymentReceipt } from '@/utils/grnPaymentReceipt';
+import { useActivityTracker } from '@/hooks/useActivityTracker';
 import GRNScannerDialog from '@/components/finance/GRNScannerDialog';
 import {
   addToQueue,
@@ -35,6 +36,7 @@ export default function GRNScanPay() {
   const navigate = useNavigate();
   const { user, employee } = useAuth();
   const qc = useQueryClient();
+  const { trackActivity } = useActivityTracker();
   const rawRef = useMemo(() => normalizeRef(reference), [reference]);
 
   // Older GRNs encoded a document verification code (GPCF-DOC-YYYY-XXXXXX) in the QR.
@@ -238,6 +240,10 @@ export default function GRNScanPay() {
   const receipt = () => {
 
     if (!lot) return;
+    trackActivity('report_generation', `printing supplier payment receipt for ${lot.batch_number || batch}`, {
+      form_name: 'GRN Payment Receipt',
+      batch: lot.batch_number || batch,
+    });
     printGrnPaymentReceipt({
       grnNumber: `GRN-${lot.batch_number || batch}`,
       supplierName: data?.supplierName || 'Unknown Supplier',
@@ -309,6 +315,12 @@ export default function GRNScanPay() {
       });
 
       toast.success(`Payment of ${money(lot.total_amount_ugx)} recorded`);
+      trackActivity('transaction', `paying supplier for GRN ${lot.batch_number || batch}`, {
+        form_name: 'GRN Scan Payment',
+        batch: lot.batch_number || batch,
+        amount: lot.total_amount_ugx,
+        method,
+      });
       setPayOpen(false);
       markQueuePaid(rawRef);
       if (batch !== rawRef) markQueuePaid(batch);
