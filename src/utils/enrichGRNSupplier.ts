@@ -139,10 +139,12 @@ export async function enrichGRNWithSupplier(
   const supplier = await lookupSupplier(grn.supplierId, grn.supplierName);
   const recoveries = supplier?.id ? await fetchRecoveries(supplier.id) : grn.recoveries || [];
   const payCode = grn.payCode || (await getGrnPayCode(grn.grnNumber)) || undefined;
+  const qrDataUrl = grn.qrDataUrl || (await getGrnScanQrDataUrl(grn.grnNumber, 220, payCode));
 
   return {
     ...grn,
     payCode,
+    qrDataUrl,
     supplierAddress: grn.supplierAddress || supplier?.origin || undefined,
     supplierPhone: grn.supplierPhone || supplier?.phone || undefined,
     supplierEmail: grn.supplierEmail || supplier?.email || undefined,
