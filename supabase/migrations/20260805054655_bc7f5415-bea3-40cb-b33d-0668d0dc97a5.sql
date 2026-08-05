@@ -1,0 +1,3 @@
+ALTER TABLE public.quality_form_numbers DROP CONSTRAINT IF EXISTS quality_form_numbers_form_number_key;
+ALTER TABLE public.quality_form_numbers DROP CONSTRAINT IF EXISTS quality_form_numbers_period_form_unique;
+ALTER TABLE public.quality_form_numbers ADD CONSTRAINT quality_form_numbers_period_form_unique UNIQUE (period_key, form_number);
