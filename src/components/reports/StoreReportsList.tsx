@@ -299,6 +299,15 @@ const StoreReportsList = () => {
                 <FileText className="h-4 w-4" />
                 All Reports
               </Button>
+              <Button
+                variant={onlyMissingAttachments ? 'destructive' : 'outline'}
+                size="sm"
+                onClick={() => setOnlyMissingAttachments(v => !v)}
+                className="flex items-center gap-2"
+              >
+                <AlertTriangle className="h-4 w-4" />
+                Missing Attachments ({reports.filter(r => !hasAttachments(r)).length})
+              </Button>
             </div>
 
             {/* Search and Date Range */}
