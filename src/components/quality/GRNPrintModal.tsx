@@ -6,6 +6,7 @@ import { Printer } from 'lucide-react';
 import { GRNDocumentData, getGRNPreviewHTML, getGRNPrintDocumentHTML } from '@/utils/grnPrintTemplate';
 import { supabase } from '@/integrations/supabase/client';
 import { stripLegacySupplierSuffix } from '@/utils/supplierDisplay';
+import { useActivityTracker } from '@/hooks/useActivityTracker';
 
 interface GRNPrintModalProps {
   open: boolean;
@@ -31,6 +32,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
   const [recoveries, setRecoveries] = useState<
     Array<{ type: "advance" | "expense"; description: string; date?: string; amount: number }>
   >([]);
+  const { trackActivity } = useActivityTracker();
 
   useEffect(() => {
     const generateVerification = async () => {
@@ -203,6 +205,11 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
 
   const handlePrint = () => {
     if (!previewData) return;
+
+    trackActivity('report_generation', `printing GRN ${previewData.grnNumber}`, {
+      form_name: 'Goods Received Note',
+      grn_number: previewData.grnNumber,
+    });
 
     const printWindow = window.open('', '', 'width=1000,height=1200');
     if (!printWindow) return;
