@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 
 export interface DayBookData {
   date: string;
@@ -172,30 +170,31 @@ export const useDayBookData = (selectedDate: Date = new Date()) => {
         });
       }
 
-      // Fetch supplier advances given on this day from Firebase
-      const advancesQuery = query(
-        collection(db, 'supplier_advances'),
-        where('issued_at', '>=', startOfDay.toISOString()),
-        where('issued_at', '<=', endOfDay.toISOString())
-      );
+      // Fetch supplier advances from the current Supabase source of truth.
+      const { data: advances, error: advancesError } = await supabase
+        .from('supplier_advances')
+        .select('id, supplier_id, issued_by, issued_at, amount_ugx, description, suppliers(name, code)')
+        .gte('issued_at', startOfDay.toISOString())
+        .lte('issued_at', endOfDay.toISOString());
 
-      const advancesSnapshot = await getDocs(advancesQuery);
-      advancesSnapshot.forEach(doc => {
-        const advance = doc.data();
+      if (advancesError) console.error('Error fetching day book advances:', advancesError);
+      (advances || []).forEach((advance: any) => {
         const advanceAmount = Number(advance.amount_ugx) || 0;
+        const supplierName = advance.suppliers?.name || 'Unknown';
+        const reference = advance.suppliers?.code || advance.id;
         
         report.totalCashOut += advanceAmount;
         report.advancesGiven.push({
-          supplier: advance.supplier_name || 'Unknown',
+          supplier: supplierName,
           amount: advanceAmount,
-          reference: advance.supplier_code || doc.id
+          reference
         });
 
         report.cashOutTransactions.push({
           type: 'Advance Given',
-          description: `Advance to ${advance.supplier_name || 'Unknown'}`,
+          description: `Advance to ${supplierName}`,
           amount: advanceAmount,
-          reference: advance.supplier_code || doc.id,
+          reference,
           inputBy: advance.issued_by || 'Unknown'
         });
       });
@@ -231,23 +230,27 @@ export const useDayBookData = (selectedDate: Date = new Date()) => {
         });
       }
 
-      // Fetch purchases (coffee deliveries) from Firebase for the day
-      const purchasesQuery = query(
-        collection(db, 'coffee_records'),
-        where('date', '>=', startOfDay.toISOString()),
-        where('date', '<=', endOfDay.toISOString())
-      );
+      // Fetch purchases from Supabase; values come from their linked finance lots.
+      const { data: purchases, error: purchasesError } = await supabase
+        .from('coffee_records')
+        .select('id, supplier_name, batch_number, kilograms, coffee_type, created_by, finance_coffee_lots(total_amount_ugx)')
+        .eq('date', dateStr);
 
-      const purchasesSnapshot = await getDocs(purchasesQuery);
-      purchasesSnapshot.forEach(doc => {
-        const purchase = doc.data();
-        const purchaseAmount = Number(purchase.total_payable) || 0;
-        const kilograms = Number(purchase.net_weight) || 0;
+      if (purchasesError) console.error('Error fetching day book purchases:', purchasesError);
+      (purchases || []).forEach((purchase: any) => {
+        const linkedLots = Array.isArray(purchase.finance_coffee_lots)
+          ? purchase.finance_coffee_lots
+          : purchase.finance_coffee_lots ? [purchase.finance_coffee_lots] : [];
+        const purchaseAmount = linkedLots.reduce(
+          (sum: number, lot: any) => sum + (Number(lot.total_amount_ugx) || 0),
+          0
+        );
+        const kilograms = Number(purchase.kilograms) || 0;
         
         report.totalPurchases += purchaseAmount;
         report.purchases.push({
           supplier: purchase.supplier_name || 'Unknown',
-          batchNumber: purchase.batch_number || doc.id,
+          batchNumber: purchase.batch_number || purchase.id,
           kilograms: kilograms,
           amount: purchaseAmount,
           coffeeType: purchase.coffee_type || 'Unknown',
