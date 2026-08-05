@@ -61,6 +61,7 @@ import { Autocomplete } from "@/components/ui/autocomplete";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
 import ManualStoreReportForm from "@/components/reports/ManualStoreReportForm";
 import StorePreviewModal from "@/components/store/StorePreviewModal";
+import MissingAttachmentsPanel from "@/components/v2/store/MissingAttachmentsPanel";
 
 /* -------------------------------------------------------------------------- */
 /*                               Helper Types                                 */
