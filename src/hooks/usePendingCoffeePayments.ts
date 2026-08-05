@@ -138,16 +138,18 @@ export const usePendingCoffeePayments = () => {
       // Get batch numbers to check for payments
       const batchNumbers = coffeeRecords.map(r => r.batch_number).filter(Boolean);
       
-      // Fetch paid batch numbers in one query
-      const { data: paidPayments } = await (supabase
-        .from('supplier_payments') as any)
-        .select('batch_number')
-        .in('batch_number', batchNumbers)
-        .eq('status', 'POSTED');
-      
-      const paidBatchNumbers = new Set(
-        (paidPayments as any[])?.map(p => p.batch_number).filter(Boolean) || []
-      );
+      // Paid batches are tracked on the finance lot (supplier_payments links by lot_id)
+      const paidBatchNumbers = new Set<string>();
+      for (let i = 0; i < batchNumbers.length; i += 200) {
+        const { data: paidLots } = await supabase
+          .from('finance_coffee_lots')
+          .select('batch_number, payment_status')
+          .in('batch_number', batchNumbers.slice(i, i + 200))
+          .in('payment_status', ['PAID', 'PARTIALLY_PAID']);
+        (paidLots || []).forEach((l: any) => {
+          if (l.payment_status === 'PAID' && l.batch_number) paidBatchNumbers.add(l.batch_number);
+        });
+      }
 
       // Fetch quality assessments for these records only
       const recordIds = coffeeRecords.map(r => r.id);
