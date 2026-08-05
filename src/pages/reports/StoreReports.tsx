@@ -3,6 +3,7 @@ import StoreReportForm from "@/components/reports/StoreReportForm";
 import StorePrintReportGenerator from "@/components/reports/StorePrintReportGenerator";
 import StoreReportsList from "@/components/reports/StoreReportsList";
 import ComprehensiveStoreAuditReport from "@/components/reports/ComprehensiveStoreAuditReport";
+import MissingAttachmentsPanel from "@/components/v2/store/MissingAttachmentsPanel";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -26,6 +27,7 @@ const StoreReports = () => {
         </Button>
         <div className="grid gap-6">
           <ComprehensiveStoreAuditReport />
+          <MissingAttachmentsPanel />
           <StoreReportForm />
           <StorePrintReportGenerator />
           <StoreReportsList />
