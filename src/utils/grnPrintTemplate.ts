@@ -6,6 +6,8 @@ export interface GRNDocumentData {
   grnNumber: string;
   /** Secure random pay code (GAC-XXX-XXX-XX) used by the QR + manual entry */
   payCode?: string;
+  /** Locally generated QR image (data URL) so printing never depends on the network */
+  qrDataUrl?: string;
   supplierName: string;
   coffeeType: string;
   qualityAssessment?: string;
@@ -662,7 +664,7 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
     ? Number(data.pods) + Number(data.husks) + Number(data.stones)
     : undefined;
   const verificationUrl = getGrnScanUrl(data.grnNumber, data.payCode);
-  const qrCodeUrl = getGrnScanQrUrl(data.grnNumber, 110, data.payCode);
+  const qrCodeUrl = data.qrDataUrl || getGrnScanQrUrl(data.grnNumber, 110, data.payCode);
   const qualityFactor = data.qualityFactor || (data.outturn != null ? `${data.outturn}%` : undefined);
   const qualityRows = [
     ["Moisture Content", data.moisture != null ? `${data.moisture}%` : "—", "≤ 14%"],
@@ -944,7 +946,7 @@ export function getPaymentOrderMarkup(data: GRNDocumentData): string {
   const grnReference = data.grnNumber.startsWith("GAC-") ? data.grnNumber : `GAC-${data.grnNumber}`;
   const poNumber = `PO-${data.grnNumber.replace(/[^A-Z0-9]/gi, "").slice(-8) || "00000001"}`;
   const verificationUrl = getGrnScanUrl(data.grnNumber, data.payCode);
-  const qrCodeUrl = getGrnScanQrUrl(data.grnNumber, 110, data.payCode);
+  const qrCodeUrl = data.qrDataUrl || getGrnScanQrUrl(data.grnNumber, 110, data.payCode);
 
   return `
     <div class="gac-grn-page">
