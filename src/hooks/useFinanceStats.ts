@@ -1,6 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { supabase } from '@/integrations/supabase/client';
 
 interface FinanceStats {
@@ -16,22 +14,28 @@ interface FinanceStats {
 }
 
 const fetchStats = async (): Promise<FinanceStats> => {
-  // Fetch pending coffee payments from quality assessments
-  const qualityQuery = query(
-    collection(db, 'quality_assessments'),
-    where('status', 'in', ['assessed', 'submitted_to_finance'])
-  );
-  const qualitySnapshot = await getDocs(qualityQuery);
-  const pendingCoffeePayments = qualitySnapshot.size;
-  
-  // Calculate pending coffee amount
+  // Pending coffee payments: lots released to finance and not yet fully paid (Supabase)
+  let pendingCoffeePayments = 0;
   let pendingCoffeeAmount = 0;
-  qualitySnapshot.docs.forEach(doc => {
-    const data = doc.data();
-    const kilograms = data.kilograms || 0;
-    const pricePerKg = data.final_price || data.suggested_price || 0;
-    pendingCoffeeAmount += kilograms * pricePerKg;
-  });
+  {
+    const CHUNK = 1000;
+    for (let from = 0; from < 20000; from += CHUNK) {
+      const { data, error } = await supabase
+        .from('finance_coffee_lots')
+        .select('total_amount_ugx, quantity_kg, unit_price_ugx, payment_status')
+        .eq('finance_status', 'READY_FOR_FINANCE')
+        .range(from, from + CHUNK - 1);
+      if (error || !data || data.length === 0) break;
+      data.forEach((lot: any) => {
+        if (String(lot.payment_status || '').toUpperCase() === 'PAID') return;
+        pendingCoffeePayments += 1;
+        pendingCoffeeAmount +=
+          Number(lot.total_amount_ugx) ||
+          Number(lot.quantity_kg || 0) * Number(lot.unit_price_ugx || 0);
+      });
+      if (data.length < CHUNK) break;
+    }
+  }
 
   // Calculate available cash from all confirmed transactions: Cash In - Cash Out
   const { data: allTransactions } = await supabase
@@ -46,15 +50,11 @@ const fetchStats = async (): Promise<FinanceStats> => {
   
   allTransactions?.forEach(transaction => {
     const amount = Math.abs(Number(transaction.amount));
-    console.log('📊 Transaction:', {
-      type: transaction.transaction_type,
-      rawAmount: transaction.amount,
-      absAmount: amount
-    });
-    
-    if (transaction.transaction_type === 'DEPOSIT' || transaction.transaction_type === 'ADVANCE_RECOVERY') {
+    const type = String(transaction.transaction_type || '').toUpperCase();
+
+    if (type === 'DEPOSIT' || type === 'CASH_IN' || type === 'ADVANCE_RECOVERY') {
       totalCashIn += amount;
-    } else if (transaction.transaction_type === 'PAYMENT' || transaction.transaction_type === 'EXPENSE') {
+    } else if (type === 'PAYMENT' || type === 'PAYMENT_OUT' || type === 'EXPENSE' || type === 'CASH_OUT') {
       totalCashOut += amount;
     }
   });
@@ -80,13 +80,13 @@ const fetchStats = async (): Promise<FinanceStats> => {
   // Fetch pending expense requests from Supabase
   const { data: expenseRequests } = await supabase
     .from('approval_requests')
-    .select('*')
-    .eq('type', 'Expense Request')
-    .eq('status', 'Pending');
+    .select('amount, status, type')
+    .ilike('type', '%expense%')
+    .ilike('status', 'pending%');
 
   const pendingExpenseRequests = expenseRequests?.length || 0;
   const pendingExpenseAmount = expenseRequests?.reduce((sum, req) => 
-    sum + (req.amount || 0), 0) || 0;
+    sum + Number(req.amount || 0), 0) || 0;
 
   // Get today's completed payments and confirmed cash deposits
   const today = new Date().toISOString().split('T')[0];
@@ -103,7 +103,7 @@ const fetchStats = async (): Promise<FinanceStats> => {
   const { data: todayDeposits } = await supabase
     .from('finance_cash_transactions')
     .select('amount, confirmed_at')
-    .eq('transaction_type', 'DEPOSIT')
+    .ilike('transaction_type', 'deposit')
     .eq('status', 'confirmed')
     .gte('confirmed_at', `${today}T00:00:00`)
     .lte('confirmed_at', `${today}T23:59:59`);
