@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useFirebaseEmployees } from "@/hooks/useFirebaseEmployees";
+import { useUnifiedEmployees } from "@/hooks/useUnifiedEmployees";
 import { useToast } from "@/hooks/use-toast";
 import { Printer, Download } from "lucide-react";
 
@@ -15,7 +15,7 @@ interface PaymentSlipGeneratorProps {
 }
 
 const PaymentSlipGenerator = ({ isOpen, onClose }: PaymentSlipGeneratorProps) => {
-  const { employees } = useFirebaseEmployees();
+  const { employees } = useUnifiedEmployees();
   const { toast } = useToast();
   
   const [formData, setFormData] = useState({
