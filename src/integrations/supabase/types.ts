@@ -15655,6 +15655,7 @@ export type Database = {
           request_type: string
         }[]
       }
+      resolve_grn_reference: { Args: { p_code: string }; Returns: string }
       reverse_treasury_profit: {
         Args: {
           p_amount: number
