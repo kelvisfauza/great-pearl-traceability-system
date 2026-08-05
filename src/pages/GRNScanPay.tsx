@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,6 +13,16 @@ import { Loader2, CheckCircle2, CreditCard, Printer, ArrowLeft, History, FlaskCo
 import { toast } from 'sonner';
 import { printGrnPaymentReceipt } from '@/utils/grnPaymentReceipt';
 import GRNScannerDialog from '@/components/finance/GRNScannerDialog';
+import {
+  addToQueue,
+  getQueue,
+  getScanSessionId,
+  markQueuePaid,
+  nextPending,
+  removeFromQueue,
+  subscribeQueue,
+  clearQueue,
+} from '@/utils/grnQueue';
 
 const normalizeRef = (raw: string) =>
   (raw || '').trim().replace(/^GAC-/i, '').replace(/^GRN-DISC-/i, '').replace(/^GRN-/i, '');
@@ -47,6 +57,36 @@ export default function GRNScanPay() {
   const [method, setMethod] = useState('CASH');
   const [notes, setNotes] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [queue, setQueue] = useState(() => getQueue());
+
+  useEffect(() => subscribeQueue(() => setQueue(getQueue())), []);
+
+  // Keep the current GRN in the queue so the list always reflects what Finance is working through
+  useEffect(() => {
+    if (rawRef) addToQueue(rawRef);
+  }, [rawRef]);
+
+  // Stay connected to the paired phone so extra scans keep queueing while paying
+  useEffect(() => {
+    const sessionId = getScanSessionId();
+    const channel = supabase
+      .channel(`grn-scan-${sessionId}`, { config: { broadcast: { self: false } } })
+      .on('broadcast', { event: 'grn' }, ({ payload }: any) => {
+        const ref = payload?.reference;
+        if (ref && addToQueue(ref)) toast.success(`${ref} added to the pay queue`);
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const openRef = (ref: string) => navigate(`/grn/${encodeURIComponent(ref)}`);
+  const goNext = () => {
+    const next = nextPending(rawRef);
+    if (!next) return toast.info('No more GRNs in the queue');
+    openRef(next);
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ['grn-scan-lot', batch],
@@ -270,6 +310,8 @@ export default function GRNScanPay() {
 
       toast.success(`Payment of ${money(lot.total_amount_ugx)} recorded`);
       setPayOpen(false);
+      markQueuePaid(rawRef);
+      if (batch !== rawRef) markQueuePaid(batch);
       await qc.invalidateQueries({ queryKey: ['grn-scan-lot', batch] });
       qc.invalidateQueries({ queryKey: ['finance-pending-payments'] });
       setTimeout(receipt, 300);
@@ -294,6 +336,46 @@ export default function GRNScanPay() {
           <QrCode className="h-4 w-4 mr-1" /> Scan other
         </Button>
       </div>
+
+      {queue.length > 1 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-sm">
+                Pay queue · {queue.filter((q) => !q.paid).length} pending of {queue.length}
+              </CardTitle>
+              <Button variant="ghost" size="sm" onClick={() => clearQueue()}>Clear</Button>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex flex-wrap gap-1.5">
+              {queue.map((q) => {
+                const current = q.ref.toUpperCase() === rawRef.toUpperCase();
+                return (
+                  <div
+                    key={q.ref}
+                    className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs ${
+                      current ? 'border-primary bg-primary/10' : q.paid ? 'opacity-60' : ''
+                    }`}
+                  >
+                    <button className="hover:underline" onClick={() => openRef(q.ref)}>
+                      {q.ref}
+                    </button>
+                    {q.paid && <CheckCircle2 className="h-3 w-3 text-green-600" />}
+                    <button
+                      className="text-muted-foreground hover:text-destructive"
+                      onClick={() => removeFromQueue(q.ref)}
+                      aria-label={`Remove ${q.ref} from queue`}
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="pb-3">
@@ -377,6 +459,11 @@ export default function GRNScanPay() {
                   <Button onClick={receipt} className="w-full">
                     <Printer className="h-4 w-4 mr-2" /> Print payment receipt
                   </Button>
+                  {nextPending(rawRef) && (
+                    <Button onClick={goNext} className="w-full">
+                      Next GRN in queue ({queue.filter((q) => !q.paid).length} left)
+                    </Button>
+                  )}
                   <Button variant="outline" onClick={() => setScanOpen(true)} className="w-full">
                     <QrCode className="h-4 w-4 mr-2" /> Scan other
                   </Button>

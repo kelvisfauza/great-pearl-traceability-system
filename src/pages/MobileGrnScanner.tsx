@@ -18,6 +18,7 @@ export default function MobileGrnScanner() {
   const [error, setError] = useState<string | null>(null);
   const [manual, setManual] = useState("");
   const [sent, setSent] = useState<string | null>(null);
+  const [sentList, setSentList] = useState<string[]>([]);
   const [lastRaw, setLastRaw] = useState<string | null>(null);
   const lastSentRef = useRef<string>("");
 
@@ -38,6 +39,7 @@ export default function MobileGrnScanner() {
     }, 3000);
     await channelRef.current?.send({ type: "broadcast", event: "grn", payload: { reference } });
     setSent(reference);
+    setSentList((prev) => (prev.includes(reference) ? prev : [...prev, reference]));
     toast.success(`Sent ${reference} to the system`);
   };
 
@@ -99,7 +101,8 @@ export default function MobileGrnScanner() {
             <QrCode className="h-5 w-5" /> Scan GRN
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Point the camera at the QR code on a printed GRN. It opens instantly on the paired computer.
+            Point the camera at the QR code on a printed GRN. The first one opens on the paired computer and
+            every extra scan is added to the pay queue — keep scanning all the GRNs you want to pay.
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -119,6 +122,16 @@ export default function MobileGrnScanner() {
             <p className="text-sm text-green-700 flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4" /> Sent {sent} — check the computer screen.
             </p>
+          )}
+          {sentList.length > 0 && (
+            <div className="text-xs text-muted-foreground">
+              <p className="font-medium mb-1">Sent this session ({sentList.length})</p>
+              <div className="flex flex-wrap gap-1">
+                {sentList.map((r) => (
+                  <span key={r} className="rounded-full border px-2 py-0.5">{r}</span>
+                ))}
+              </div>
+            </div>
           )}
           <div className="pt-2 border-t space-y-2">
             <p className="text-xs text-muted-foreground">Or type the GRN number</p>
