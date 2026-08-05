@@ -11,6 +11,8 @@ export interface GrnReceiptData {
   method: string;
   paidAt: string;
   paidBy: string;
+  paidByPosition?: string | null;
+  printedBy?: string | null;
   notes?: string | null;
   receiptNo: string;
 }
@@ -59,7 +61,8 @@ export function printGrnPaymentReceipt(d: GrnReceiptData) {
       <tr><th>Quantity</th><td>${Number(d.quantityKg || 0).toLocaleString()} kg @ ${money(d.unitPrice)}/kg</td></tr>
       <tr><th>Payment method</th><td>${d.method}</td></tr>
       <tr><th>Paid on</th><td>${new Date(d.paidAt).toLocaleString('en-GB')}</td></tr>
-      <tr><th>Paid by</th><td>${d.paidBy}</td></tr>
+      <tr><th>Paid by</th><td>${d.paidBy || '—'}${d.paidByPosition ? ` (${d.paidByPosition})` : ''}</td></tr>
+      <tr><th>Printed by</th><td>${d.printedBy || d.paidBy || '—'} · ${new Date().toLocaleString('en-GB')}</td></tr>
       ${d.notes ? `<tr><th>Notes</th><td>${d.notes}</td></tr>` : ''}
     </table>
 
