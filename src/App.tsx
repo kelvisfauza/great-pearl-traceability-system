@@ -251,6 +251,8 @@ const App: React.ComponentType = () => {
                 
                 {/* V2 System Routes - Department-based access */}
                 <Route path="/v2" element={<ProtectedRoute><V2DepartmentRouter /></ProtectedRoute>} />
+                {/* GRN QR scan destination — opens the GRN for Finance to pay against */}
+                <Route path="/grn/:reference" element={<ProtectedRoute><GRNScanPay /></ProtectedRoute>} />
                 <Route path="/v2/admin" element={<ProtectedRoute requiredRoles={["Administrator", "Super Admin"]}><V2AdminDashboard /></ProtectedRoute>} />
                 <Route path="/v2/store" element={<ProtectedRoute requiredPermissions={["Store Management"]}><V2CoffeeReceipts /></ProtectedRoute>} />
                 <Route path="/v2/quality" element={<ProtectedRoute requiredPermissions={["Quality Control"]}><V2QualityDepartment /></ProtectedRoute>} />
