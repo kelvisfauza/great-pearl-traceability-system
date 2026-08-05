@@ -97,17 +97,32 @@ const GRNScannerDialog = ({ open, onOpenChange }: Props) => {
       setStarting(true);
       setError(null);
       try {
-        const { Html5Qrcode } = await import("html5-qrcode");
+        const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import("html5-qrcode");
         if (cancelled) return;
-        const scanner = new Html5Qrcode(REGION_ID);
+        const scanner = new Html5Qrcode(REGION_ID, {
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+          ],
+          useBarCodeDetectorIfSupported: true,
+          verbose: false,
+        } as any);
         scannerRef.current = scanner;
         await scanner.start(
           { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 240, height: 240 } },
+          {
+            fps: 15,
+            qrbox: (vw: number, vh: number) => {
+              const size = Math.floor(Math.min(vw, vh) * 0.8);
+              return { width: size, height: size };
+            },
+            experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+          } as any,
           (decoded: string) => {
             const ref = parseGrnReference(decoded);
             if (!ref) {
-              toast.error("Not a GRN QR code");
+              toast.error(`Unrecognised code: ${decoded.slice(0, 40)}`);
               return;
             }
             scanner.stop().catch(() => {});
