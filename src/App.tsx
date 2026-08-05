@@ -68,6 +68,7 @@ import SupportTickets from "./pages/admin/SupportTickets";
 
 // V2 System Pages
 import V2DepartmentRouter from "./components/v2/V2DepartmentRouter";
+import V2WalletDock from "./components/v2/V2WalletDock";
 import V2CoffeeReceipts from "./pages/v2/store/CoffeeReceipts";
 import V2PendingLots from "./pages/v2/quality/PendingLots";
 import V2AssessLot from "./pages/v2/quality/AssessLot";
@@ -225,6 +226,7 @@ const App: React.ComponentType = () => {
               <MarqueeBanner />
               <div className="px-4 pt-2"><ITReadOnlyBanner /></div>
               <GlobalHighlightBridge />
+              <V2WalletDock />
               <Routes>
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
