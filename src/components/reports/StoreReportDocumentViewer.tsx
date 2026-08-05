@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from '@/components/ui/button';
 import { FileText, Download, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { toStoragePath, getReportDocumentUrl } from '@/utils/reportDocuments';
 import { toast } from 'sonner';
 
 interface DocumentViewerProps {
@@ -34,9 +35,11 @@ const StoreReportDocumentViewer: React.FC<DocumentViewerProps> = ({
 
   const handleDownload = async () => {
     try {
+      const path = toStoragePath(documentUrl);
+      if (!path) throw new Error('No document attached');
       const { data, error } = await supabase.storage
         .from('report-documents')
-        .download(documentUrl);
+        .download(path);
 
       if (error) {
         throw error;
@@ -55,34 +58,18 @@ const StoreReportDocumentViewer: React.FC<DocumentViewerProps> = ({
       toast.success('Document downloaded successfully');
     } catch (error) {
       console.error('Error downloading document:', error);
-      toast.error('Failed to download document');
+      toast.error(`Failed to download document: ${(error as Error).message}`);
     }
   };
 
   const handleView = async () => {
     try {
-      const { data, error } = await supabase.storage
-        .from('report-documents')
-        .download(documentUrl);
-
-      if (error) {
-        throw error;
-      }
-
-      // Create download link for viewing
-      const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = documentName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast.success('Document downloaded for viewing');
+      const signedUrl = await getReportDocumentUrl(documentUrl);
+      if (!signedUrl) throw new Error('Document not found in storage');
+      window.open(signedUrl, '_blank', 'noopener,noreferrer');
     } catch (error) {
       console.error('Error viewing document:', error);
-      toast.error('Failed to view document');
+      toast.error(`Failed to open document: ${(error as Error).message}`);
     }
   };
 
