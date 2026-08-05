@@ -18,6 +18,7 @@ const EmployeeProfile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>('menu');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchEmployee = async () => {
@@ -48,6 +49,19 @@ const EmployeeProfile = () => {
             status: row.emp_status,
             avatar_url: row.emp_avatar_url,
           });
+
+          // Photos live in a private bucket; fetch a short-lived signed URL
+          // so this anonymous QR page can still display the portrait.
+          if (row.emp_avatar_url) {
+            supabase.functions
+              .invoke('public-employee-avatar', { body: { lookup: id } })
+              .then(({ data: res }) => {
+                if (res?.ok && res.url) setAvatarUrl(res.url);
+              })
+              .catch(() => {
+                /* portrait is optional — fall back to the placeholder icon */
+              });
+          }
         }
       } catch (e: any) {
         setError(e.message || 'Failed to load employee');
