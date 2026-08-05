@@ -127,6 +127,21 @@ export default function GRNScanPay() {
         payment = payments[0] || null;
       }
 
+      // Resolve who actually processed the payment on behalf of Finance
+      let paidByName: string | null = null;
+      const payerRef = payment?.approved_by || payment?.requested_by || null;
+      if (payerRef) {
+        const { data: emp } = await supabase
+          .from('employees')
+          .select('name, email, position, department')
+          .or(`email.eq.${payerRef},name.eq.${payerRef}`)
+          .limit(1)
+          .maybeSingle();
+        paidByName = (emp as any)?.name
+          ? `${(emp as any).name}${(emp as any).position ? ` · ${(emp as any).position}` : ''}`
+          : String(payerRef);
+      }
+
       const { data: qas } = await supabase
         .from('quality_assessments')
         .select('*')
@@ -150,7 +165,7 @@ export default function GRNScanPay() {
         .order('created_at', { ascending: false })
         .limit(50);
 
-      return { lot, record, supplierName: supplierName || 'Unknown Supplier', payment, payments, quality, store, logs: logs || [] };
+      return { lot, record, supplierName: supplierName || 'Unknown Supplier', payment, payments, paidByName, quality, store, logs: logs || [] };
     },
   });
 
