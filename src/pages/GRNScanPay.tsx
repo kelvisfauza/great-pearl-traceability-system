@@ -442,6 +442,8 @@ export default function GRNScanPay() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <GRNScannerDialog open={scanOpen} onOpenChange={setScanOpen} />
     </div>
   );
 }
