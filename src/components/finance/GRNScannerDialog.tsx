@@ -9,6 +9,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { buildPublicUrl } from "@/utils/publicUrl";
+import { addToQueue, getQueue, getScanSessionId, removeFromQueue, subscribeQueue } from "@/utils/grnQueue";
 
 interface Props {
   open: boolean;
@@ -61,11 +62,20 @@ const GRNScannerDialog = ({ open, onOpenChange }: Props) => {
   const [manual, setManual] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<"phone" | "camera">("phone");
-  const [sessionId] = useState(() => Math.random().toString(36).slice(2, 10));
+  const [sessionId] = useState(() => getScanSessionId());
   const [paired, setPaired] = useState(false);
+  const [queue, setQueue] = useState(() => getQueue());
   const pairUrl = buildPublicUrl(`/scan/${sessionId}`);
 
+  useEffect(() => subscribeQueue(() => setQueue(getQueue())), []);
+
+  const queueOnly = (reference: string) => {
+    const added = addToQueue(reference);
+    toast[added ? "success" : "info"](added ? `${reference} added to the pay queue` : `${reference} is already queued`);
+  };
+
   const go = (reference: string) => {
+    addToQueue(reference);
     onOpenChange(false);
     navigate(`/grn/${encodeURIComponent(reference)}`);
   };
@@ -79,8 +89,13 @@ const GRNScannerDialog = ({ open, onOpenChange }: Props) => {
         const ref = payload?.reference;
         if (ref) {
           setPaired(true);
-          toast.success(`Received ${ref} from your phone`);
-          go(ref);
+          const first = getQueue().filter((i) => !i.paid).length === 0;
+          if (first) {
+            toast.success(`Received ${ref} from your phone`);
+            go(ref);
+          } else {
+            queueOnly(ref);
+          }
         }
       })
       .subscribe();
@@ -125,8 +140,12 @@ const GRNScannerDialog = ({ open, onOpenChange }: Props) => {
               toast.error(`Unrecognised code: ${decoded.slice(0, 40)}`);
               return;
             }
-            scanner.stop().catch(() => {});
-            go(ref);
+            if (getQueue().filter((i) => !i.paid).length === 0) {
+              scanner.stop().catch(() => {});
+              go(ref);
+            } else {
+              queueOnly(ref);
+            }
           },
           () => {}
         );
@@ -171,7 +190,7 @@ const GRNScannerDialog = ({ open, onOpenChange }: Props) => {
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Scan this with your phone camera to turn it into a GRN scanner. Every GRN you scan on the
-                  phone opens right here automatically.
+                  phone opens right here automatically — keep scanning and the rest queue up for payment.
                 </p>
                 <p className="text-[11px] text-muted-foreground break-all">{pairUrl}</p>
                 <p className="text-xs flex items-center gap-1.5 text-muted-foreground">
@@ -217,6 +236,26 @@ const GRNScannerDialog = ({ open, onOpenChange }: Props) => {
               </Button>
             </div>
           </div>
+
+          {queue.length > 0 && (
+            <div className="pt-2 border-t space-y-1.5">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">Pay queue ({queue.filter((q) => !q.paid).length} pending)</p>
+              </div>
+              <div className="max-h-32 overflow-auto space-y-1">
+                {queue.map((q) => (
+                  <div key={q.ref} className="flex items-center justify-between gap-2 text-xs rounded border px-2 py-1">
+                    <button className="truncate text-left hover:underline" onClick={() => go(q.ref)}>
+                      {q.ref}{q.paid ? " · paid" : ""}
+                    </button>
+                    <button className="text-muted-foreground hover:text-destructive" onClick={() => removeFromQueue(q.ref)}>
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
