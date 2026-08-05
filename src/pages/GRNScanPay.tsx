@@ -373,7 +373,11 @@ export default function GRNScanPay() {
                     <button className="hover:underline" onClick={() => openRef(q.ref)}>
                       {q.ref}
                     </button>
-                    {q.paid && <CheckCircle2 className="h-3 w-3 text-green-600" />}
+                    {q.paid && (
+                      <span className="flex items-center gap-1 text-[10px] font-semibold text-green-700">
+                        <CheckCircle2 className="h-3 w-3" /> PAID
+                      </span>
+                    )}
                     <button
                       className="text-muted-foreground hover:text-destructive"
                       onClick={() => removeFromQueue(q.ref)}
@@ -424,6 +428,19 @@ export default function GRNScanPay() {
             </div>
           ) : (
             <>
+              {paid && (
+                <div className="rounded-md border-2 border-green-500 bg-green-50 dark:bg-green-950/20 p-3 space-y-1">
+                  <p className="text-sm font-bold text-green-800 dark:text-green-300 flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4" /> ALREADY PAID — no further payment needed
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div><span className="text-muted-foreground block">Amount paid</span>{money(data?.payment?.amount_paid_ugx ?? lot.total_amount_ugx)}</div>
+                    <div><span className="text-muted-foreground block">Method</span>{data?.payment?.method || '—'}</div>
+                    <div><span className="text-muted-foreground block">Paid on</span>{dt(data?.payment?.created_at)}</div>
+                    <div><span className="text-muted-foreground block">Paid by</span>{data?.payment?.requested_by || '—'}</div>
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div><span className="text-muted-foreground block">Supplier</span>{data?.supplierName}</div>
                 <div><span className="text-muted-foreground block">Coffee type</span>{data?.record?.coffee_type || '—'}</div>
