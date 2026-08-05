@@ -28,6 +28,8 @@ project_id = "pudfybkyfedeggmokhco"
 
 [functions]
   [functions.ai-loan-limit]
+  [functions.public-employee-avatar]
+    verify_jwt = false
   [functions.submit-support-ticket]
     verify_jwt = false
   [functions.reply-support-ticket]
