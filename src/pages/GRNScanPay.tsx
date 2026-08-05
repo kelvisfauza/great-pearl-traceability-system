@@ -377,6 +377,9 @@ export default function GRNScanPay() {
                   <Button onClick={receipt} className="w-full">
                     <Printer className="h-4 w-4 mr-2" /> Print payment receipt
                   </Button>
+                  <Button variant="outline" onClick={() => setScanOpen(true)} className="w-full">
+                    <QrCode className="h-4 w-4 mr-2" /> Scan other
+                  </Button>
                 </div>
               ) : (
                 <Button onClick={() => setPayOpen(true)} className="w-full">
