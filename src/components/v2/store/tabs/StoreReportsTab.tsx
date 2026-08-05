@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, FileText, Package, AlertTriangle } from "lucide-react";
 import { format, startOfDay, endOfDay } from "date-fns";
 import DailyPurchaseTemplate from "../DailyPurchaseTemplate";
+import MissingAttachmentsPanel from "../MissingAttachmentsPanel";
 
 const StoreReportsTab = () => {
   const today = new Date();
@@ -50,6 +51,8 @@ const StoreReportsTab = () => {
   return (
     <div className="space-y-4 mt-4">
       <h3 className="text-lg font-semibold flex items-center gap-2"><FileText className="h-5 w-5" />Daily Store Report — {format(today, 'PPP')}</h3>
+
+      <MissingAttachmentsPanel />
 
       <Card>
         <CardHeader>
