@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Save, Upload, FileText } from 'lucide-react';
 import { toast } from 'sonner';
+import { uploadReportDocument } from '@/utils/reportDocuments';
 
 const StoreReportForm = () => {
   const { addStoreReport } = useStoreReports();
@@ -106,17 +107,7 @@ const StoreReportForm = () => {
           throw new Error(`File ${index + 1}: File size must be less than 10MB`);
         }
 
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const filePath = `reports/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('report-documents')
-          .upload(filePath, file);
-
-        if (uploadError) {
-          throw uploadError;
-        }
+        const filePath = await uploadReportDocument(file);
 
         return {
           filePath,
@@ -173,17 +164,7 @@ const StoreReportForm = () => {
     setUploadingFile(true);
     
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `reports/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('report-documents')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        throw uploadError;
-      }
+      const filePath = await uploadReportDocument(file);
 
       // Update the appropriate fields based on file type
       const updateFields: any = {};

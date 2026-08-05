@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useStoreReports } from '@/hooks/useStoreReports';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { uploadReportDocument, validateReportFile } from '@/utils/reportDocuments';
 import { Save, Scan, Upload, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -39,7 +40,12 @@ const ManualStoreReportForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    if (uploadingFile) {
+      toast.error('Please wait for the document upload to finish before saving');
+      return;
+    }
+
     setLoading(true);
     
     try {
@@ -96,37 +102,17 @@ const ManualStoreReportForm = () => {
 
     console.log(`📤 Uploading ${fieldPrefix}:`, file.name);
 
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
-    if (!allowedTypes.includes(file.type)) {
-      toast.error("Please upload a valid image (JPEG, PNG) or PDF file");
-      return;
-    }
-
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("File size must be less than 10MB");
+    const invalid = validateReportFile(file);
+    if (invalid) {
+      toast.error(invalid);
+      event.target.value = '';
       return;
     }
 
     setUploadingFile(true);
     
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `reports/${fileName}`;
-
-      console.log(`📁 Uploading to storage path: ${filePath}`);
-
-      const { error: uploadError } = await supabase.storage
-        .from('report-documents')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        console.error(`❌ Upload error for ${fieldPrefix}:`, uploadError);
-        throw uploadError;
-      }
-
+      const filePath = await uploadReportDocument(file);
       console.log(`✅ ${fieldPrefix} uploaded successfully:`, filePath);
 
       // Update form data with both URL and name
@@ -149,7 +135,8 @@ const ManualStoreReportForm = () => {
       toast.success(`Document ${fieldPrefix === 'attachment' ? '1' : '2'} uploaded successfully`);
     } catch (error) {
       console.error(`❌ Error uploading ${fieldPrefix}:`, error);
-      toast.error(`Failed to upload document ${fieldPrefix === 'attachment' ? '1' : '2'}: ${(error as Error).message}`);
+      event.target.value = '';
+      toast.error(`Failed to attach document ${fieldPrefix === 'attachment' ? '1' : '2'}: ${(error as Error).message}`);
     } finally {
       setUploadingFile(false);
     }
@@ -328,7 +315,7 @@ const ManualStoreReportForm = () => {
 
           <Button 
             type="submit" 
-            disabled={loading} 
+            disabled={loading || uploadingFile} 
             className="w-full"
           >
             {loading ? 'Saving...' : 'Save Report'}

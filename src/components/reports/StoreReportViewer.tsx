@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 
 import { generateStoreReportPDF } from '@/utils/pdfGenerator';
 import { toast } from 'sonner';
+import { toStoragePath } from '@/utils/reportDocuments';
 import StoreReportDocumentViewer from './StoreReportDocumentViewer';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -28,7 +29,7 @@ const StoreReportViewer = ({ report, open, onOpenChange }: StoreReportViewerProp
       try {
         const { data, error } = await supabase.storage
           .from('report-documents')
-          .download(report.attachment_url);
+          .download(toStoragePath(report.attachment_url) as string);
         
         if (!error) {
           const url = URL.createObjectURL(data);
@@ -50,7 +51,7 @@ const StoreReportViewer = ({ report, open, onOpenChange }: StoreReportViewerProp
       try {
         const { data, error } = await supabase.storage
           .from('report-documents')
-          .download(report.delivery_note_url);
+          .download(toStoragePath(report.delivery_note_url) as string);
         
         if (!error) {
           const url = URL.createObjectURL(data);
