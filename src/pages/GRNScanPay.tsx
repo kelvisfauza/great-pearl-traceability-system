@@ -127,6 +127,21 @@ export default function GRNScanPay() {
         payment = payments[0] || null;
       }
 
+      // Resolve who actually processed the payment on behalf of Finance
+      let paidByName: string | null = null;
+      const payerRef = payment?.approved_by || payment?.requested_by || null;
+      if (payerRef) {
+        const { data: emp } = await supabase
+          .from('employees')
+          .select('name, email, position, department')
+          .or(`email.eq.${payerRef},name.eq.${payerRef}`)
+          .limit(1)
+          .maybeSingle();
+        paidByName = (emp as any)?.name
+          ? `${(emp as any).name}${(emp as any).position ? ` · ${(emp as any).position}` : ''}`
+          : String(payerRef);
+      }
+
       const { data: qas } = await supabase
         .from('quality_assessments')
         .select('*')
@@ -150,7 +165,7 @@ export default function GRNScanPay() {
         .order('created_at', { ascending: false })
         .limit(50);
 
-      return { lot, record, supplierName: supplierName || 'Unknown Supplier', payment, payments, quality, store, logs: logs || [] };
+      return { lot, record, supplierName: supplierName || 'Unknown Supplier', payment, payments, paidByName, quality, store, logs: logs || [] };
     },
   });
 
@@ -253,7 +268,7 @@ export default function GRNScanPay() {
       amount: lot.total_amount_ugx,
       method: data?.payment?.method || method,
       paidAt: data?.payment?.created_at || lot.updated_at || new Date().toISOString(),
-      paidBy: data?.payment?.requested_by || 'Finance Department',
+      paidBy: data?.paidByName || data?.payment?.requested_by || 'Finance Department',
       notes: data?.payment?.notes || lot.finance_notes,
       receiptNo: `RCP-${String(lot.batch_number || batch).replace(/[^A-Z0-9]/gi, '').slice(-8)}`,
     });
@@ -437,7 +452,7 @@ export default function GRNScanPay() {
                     <div><span className="text-muted-foreground block">Amount paid</span>{money(data?.payment?.amount_paid_ugx ?? lot.total_amount_ugx)}</div>
                     <div><span className="text-muted-foreground block">Method</span>{data?.payment?.method || '—'}</div>
                     <div><span className="text-muted-foreground block">Paid on</span>{dt(data?.payment?.created_at)}</div>
-                    <div><span className="text-muted-foreground block">Paid by</span>{data?.payment?.requested_by || '—'}</div>
+                    <div><span className="text-muted-foreground block">Paid by</span>{data?.paidByName || data?.payment?.requested_by || '—'}<span className="block text-[10px] text-muted-foreground">on behalf of Finance</span></div>
                   </div>
                 </div>
               )}
