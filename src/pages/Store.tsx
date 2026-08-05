@@ -1337,6 +1337,7 @@ const Store = () => {
           {/*                              Reports                               */}
           {/* ------------------------------------------------------------------ */}
           <TabsContent value="reports" className="space-y-6">
+            <MissingAttachmentsPanel />
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
