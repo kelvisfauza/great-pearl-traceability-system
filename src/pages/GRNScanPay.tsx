@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Loader2, CheckCircle2, CreditCard, Printer, ArrowLeft } from 'lucide-react';
+import { Loader2, CheckCircle2, CreditCard, Printer, ArrowLeft, History, FlaskConical } from 'lucide-react';
 import { toast } from 'sonner';
 import { printGrnPaymentReceipt } from '@/utils/grnPaymentReceipt';
 
@@ -17,6 +17,7 @@ const normalizeRef = (raw: string) =>
   (raw || '').trim().replace(/^GAC-/i, '').replace(/^GRN-DISC-/i, '').replace(/^GRN-/i, '');
 
 const money = (n?: number | null) => `UGX ${Number(n || 0).toLocaleString()}`;
+const dt = (v?: string | null) => (v ? new Date(v).toLocaleString('en-GB') : '—');
 
 export default function GRNScanPay() {
   const { reference = '' } = useParams();
@@ -44,7 +45,7 @@ export default function GRNScanPay() {
 
       const { data: recs } = await supabase
         .from('coffee_records')
-        .select('id, supplier_name, coffee_type, batch_number, kilograms, created_at')
+        .select('*')
         .eq('batch_number', batch)
         .limit(1);
       const record: any = recs?.[0] || null;
@@ -56,22 +57,61 @@ export default function GRNScanPay() {
       }
 
       let payment: any = null;
+      let payments: any[] = [];
       if (lot?.id) {
         const { data: pays } = await supabase
           .from('supplier_payments')
           .select('*')
           .eq('lot_id', lot.id)
-          .order('created_at', { ascending: false })
-          .limit(1);
-        payment = pays?.[0] || null;
+          .order('created_at', { ascending: false });
+        payments = pays || [];
+        payment = payments[0] || null;
       }
 
-      return { lot, record, supplierName: supplierName || 'Unknown Supplier', payment };
+      const { data: qas } = await supabase
+        .from('quality_assessments')
+        .select('*')
+        .eq('batch_number', batch)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      const quality: any = qas?.[0] || null;
+
+      const { data: stores } = await supabase
+        .from('store_records')
+        .select('*')
+        .eq('batch_number', batch)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      const store: any = stores?.[0] || null;
+
+      const { data: logs } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .or([lot?.id, quality?.id, record?.id, store?.id].filter(Boolean).map((id) => `record_id.eq.${id}`).join(',') || 'record_id.eq.00000000-0000-0000-0000-000000000000')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      return { lot, record, supplierName: supplierName || 'Unknown Supplier', payment, payments, quality, store, logs: logs || [] };
     },
   });
 
   const lot: any = data?.lot;
   const paid = lot?.finance_status === 'PAID';
+  const quality: any = data?.quality;
+  const store: any = data?.store;
+
+  const trail = useMemo(() => {
+    const items: { at?: string | null; title: string; detail?: string }[] = [];
+    if (data?.record?.created_at) items.push({ at: data.record.created_at, title: 'Coffee received (Store)', detail: `${Number(data.record.kilograms || 0).toLocaleString()} kg ${data.record.coffee_type || ''} from ${data.supplierName}` });
+    if (store?.created_at) items.push({ at: store.created_at, title: `Store record ${store.transaction_type || ''}`.trim(), detail: `${Number(store.quantity_kg || 0).toLocaleString()} kg · ${store.status || ''}` });
+    if (quality?.created_at) items.push({ at: quality.created_at, title: 'Quality assessment submitted', detail: `By ${quality.assessed_by || quality.physical_assessment_by || '—'} · Ref ${quality.assessment_ref || '—'}` });
+    if (quality?.qm_reviewed_at) items.push({ at: quality.qm_reviewed_at, title: `Quality manager ${quality.qm_action || 'review'}`, detail: `${quality.qm_reviewed_by || '—'}${quality.qm_notes ? ` · ${quality.qm_notes}` : ''}` });
+    if (quality?.grn_printed_at) items.push({ at: quality.grn_printed_at, title: `GRN printed (${quality.form_number || '—'})`, detail: quality.grn_printed_by || '' });
+    if (lot?.created_at) items.push({ at: lot.created_at, title: 'Released to Finance', detail: `${money(lot.total_amount_ugx)} payable` });
+    (data?.payments || []).forEach((p: any) => items.push({ at: p.created_at, title: `Payment ${p.status || 'recorded'} · ${p.method || ''}`, detail: `${money(p.amount_paid_ugx)} by ${p.requested_by || '—'}` }));
+    (data?.logs || []).forEach((l: any) => items.push({ at: l.created_at, title: l.action, detail: `${l.performed_by || '—'}${l.reason ? ` · ${l.reason}` : ''}` }));
+    return items.sort((a, b) => new Date(b.at || 0).getTime() - new Date(a.at || 0).getTime());
+  }, [data]);
 
   const receipt = () => {
     if (!lot) return;
@@ -190,11 +230,38 @@ export default function GRNScanPay() {
                 <div><span className="text-muted-foreground block">Coffee type</span>{data?.record?.coffee_type || '—'}</div>
                 <div><span className="text-muted-foreground block">Quantity</span>{Number(lot.quantity_kg || 0).toLocaleString()} kg</div>
                 <div><span className="text-muted-foreground block">Unit price</span>{money(lot.unit_price_ugx)}</div>
+                <div><span className="text-muted-foreground block">Bags</span>{data?.record?.bags ?? store?.quantity_bags ?? '—'}</div>
+                <div><span className="text-muted-foreground block">Received on</span>{dt(data?.record?.date || data?.record?.created_at)}</div>
+                <div><span className="text-muted-foreground block">GRN / Form no.</span>{lot.grn_number || quality?.form_number || `GRN-${lot.batch_number || batch}`}</div>
+                <div><span className="text-muted-foreground block">Store location</span>{store?.to_location || store?.from_location || '—'}</div>
                 <div className="col-span-2 text-base font-semibold">
                   <span className="text-muted-foreground block text-xs font-normal">Total payable</span>
                   {money(lot.total_amount_ugx)}
                 </div>
+                <div><span className="text-muted-foreground block">Advance recovered</span>{money(lot.advance_recovered_ugx)}</div>
+                <div><span className="text-muted-foreground block">Balance</span>{money(lot.balance_ugx ?? lot.total_amount_ugx)}</div>
               </div>
+
+              {quality && (
+                <div className="rounded-md border p-3 space-y-2">
+                  <p className="text-sm font-medium flex items-center gap-2"><FlaskConical className="h-4 w-4" /> Quality analysis</p>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div><span className="text-muted-foreground block">Moisture</span>{quality.moisture ?? '—'}%</div>
+                    <div><span className="text-muted-foreground block">Outturn</span>{quality.outturn ?? '—'}</div>
+                    <div><span className="text-muted-foreground block">FM</span>{quality.fm ?? '—'}</div>
+                    <div><span className="text-muted-foreground block">Group 1</span>{quality.group1_defects ?? '—'}</div>
+                    <div><span className="text-muted-foreground block">Group 2</span>{quality.group2_defects ?? '—'}</div>
+                    <div><span className="text-muted-foreground block">Below 12</span>{quality.below12 ?? '—'}</div>
+                    <div><span className="text-muted-foreground block">Husks</span>{quality.husks ?? '—'}</div>
+                    <div><span className="text-muted-foreground block">Stones</span>{quality.stones ?? '—'}</div>
+                    <div><span className="text-muted-foreground block">Pods</span>{quality.pods ?? '—'}</div>
+                    <div><span className="text-muted-foreground block">Suggested</span>{money(quality.suggested_price)}</div>
+                    <div><span className="text-muted-foreground block">Final price</span>{money(quality.final_price)}</div>
+                    <div><span className="text-muted-foreground block">Status</span>{quality.status || '—'}</div>
+                  </div>
+                  {quality.comments && <p className="text-xs text-muted-foreground">Note: {quality.comments}</p>}
+                </div>
+              )}
 
               {paid ? (
                 <div className="space-y-3">
@@ -215,6 +282,30 @@ export default function GRNScanPay() {
           )}
         </CardContent>
       </Card>
+
+      {lot && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2"><History className="h-4 w-4" /> Audit trail</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {trail.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No trail entries recorded for this GRN.</p>
+            ) : (
+              <ol className="space-y-3">
+                {trail.map((t, i) => (
+                  <li key={i} className="relative pl-5 text-sm">
+                    <span className="absolute left-0 top-1.5 h-2 w-2 rounded-full bg-primary" />
+                    <div className="font-medium">{t.title}</div>
+                    {t.detail && <div className="text-xs text-muted-foreground">{t.detail}</div>}
+                    <div className="text-[11px] text-muted-foreground">{dt(t.at)}</div>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Dialog open={payOpen} onOpenChange={setPayOpen}>
         <DialogContent>

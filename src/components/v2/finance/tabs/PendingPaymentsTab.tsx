@@ -10,8 +10,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Search, CreditCard, CheckCircle2, DollarSign, Coffee, Trash2 } from "lucide-react";
+import { Loader2, Search, CreditCard, CheckCircle2, DollarSign, Coffee, Trash2, QrCode } from "lucide-react";
 import { toast } from "sonner";
+import GRNScannerDialog from "@/components/finance/GRNScannerDialog";
 
 interface FinanceLot {
   id: string;
@@ -36,6 +37,7 @@ const PendingPaymentsTab = () => {
   const [payNotes, setPayNotes] = useState("");
   const [processing, setProcessing] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [scanOpen, setScanOpen] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const queryClient = useQueryClient();
@@ -286,6 +288,8 @@ const PendingPaymentsTab = () => {
         </Card>
       </div>
 
+      <GRNScannerDialog open={scanOpen} onOpenChange={setScanOpen} />
+
       <Card>
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -294,6 +298,9 @@ const PendingPaymentsTab = () => {
               Ready for Payment ({filtered.length})
             </CardTitle>
             <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" className="gap-1" onClick={() => setScanOpen(true)}>
+                <QrCode className="h-3.5 w-3.5" /> Scan GRN
+              </Button>
               {selectedIds.size > 0 && (
                 <Button
                   size="sm"
