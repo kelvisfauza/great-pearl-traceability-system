@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { SignedAvatarImage } from '@/components/ui/signed-avatar-image';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -348,7 +349,7 @@ const ProfileCompletionModal = () => {
               <div className="flex flex-col items-center gap-4 py-4">
                 <div className="relative">
                   <Avatar className="h-32 w-32 border-4 border-primary/20">
-                    <AvatarImage src={formData.avatar_url} />
+                    <SignedAvatarImage src={formData.avatar_url} />
                     <AvatarFallback className="text-2xl bg-muted">
                       {employee?.name?.split(' ').map((n: string) => n[0]).join('') || '?'}
                     </AvatarFallback>

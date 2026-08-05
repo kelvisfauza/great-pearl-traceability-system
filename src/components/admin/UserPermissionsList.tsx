@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { SignedAvatarImage } from '@/components/ui/signed-avatar-image';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -208,7 +209,7 @@ const UserPermissionsList: React.FC = () => {
                   >
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={employee.avatar_url} alt={employee.name} />
+                        <SignedAvatarImage src={employee.avatar_url} alt={employee.name} />
                         <AvatarFallback className="bg-primary/10">
                           {employee.name.split(' ').map(n => n[0]).join('')}
                         </AvatarFallback>

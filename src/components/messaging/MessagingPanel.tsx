@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { SignedAvatarImage } from '@/components/ui/signed-avatar-image';
 import { Send, X, MessageSquarePlus, ArrowLeft, Paperclip, Check, CheckCheck, Reply, Phone, Video, Mic, Lock, Trash2, ChevronUp, Users, UsersRound, PhoneCall } from 'lucide-react';
 import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
@@ -392,7 +393,7 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                   className={`flex items-center gap-3 flex-1 min-w-0 text-left ${(currentConversation as any)?.type === 'group' ? 'hover:opacity-90' : ''}`}
                 >
                 <Avatar className="h-9 w-9">
-                  <AvatarImage src={getConversationAvatar(currentConversation)} alt={getConversationName(currentConversation)} />
+                  <SignedAvatarImage src={getConversationAvatar(currentConversation)} alt={getConversationName(currentConversation)} />
                   <AvatarFallback className="bg-primary-foreground/20 text-primary-foreground text-sm">
                     {getConversationName(currentConversation)?.charAt(0).toUpperCase()}
                   </AvatarFallback>
@@ -899,7 +900,7 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                     >
                       <div className="relative flex-shrink-0">
                         <Avatar className="h-12 w-12">
-                          <AvatarImage src={getConversationAvatar(conversation)} alt={conversationName} />
+                          <SignedAvatarImage src={getConversationAvatar(conversation)} alt={conversationName} />
                           <AvatarFallback className={`font-semibold ${isGroup ? 'bg-accent text-accent-foreground' : 'bg-primary/10 text-primary'}`}>
                             {isGroup ? <UsersRound className="h-6 w-6" /> : conversationName?.charAt(0).toUpperCase()}
                           </AvatarFallback>

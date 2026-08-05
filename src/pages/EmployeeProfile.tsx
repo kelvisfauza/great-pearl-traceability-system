@@ -18,6 +18,7 @@ const EmployeeProfile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>('menu');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchEmployee = async () => {
@@ -48,6 +49,19 @@ const EmployeeProfile = () => {
             status: row.emp_status,
             avatar_url: row.emp_avatar_url,
           });
+
+          // Photos live in a private bucket; fetch a short-lived signed URL
+          // so this anonymous QR page can still display the portrait.
+          if (row.emp_avatar_url) {
+            supabase.functions
+              .invoke('public-employee-avatar', { body: { lookup: id } })
+              .then(({ data: res }) => {
+                if (res?.ok && res.url) setAvatarUrl(res.url);
+              })
+              .catch(() => {
+                /* portrait is optional — fall back to the placeholder icon */
+              });
+          }
         }
       } catch (e: any) {
         setError(e.message || 'Failed to load employee');
@@ -90,8 +104,8 @@ const EmployeeProfile = () => {
         <Card className="max-w-md w-full shadow-2xl border-0 overflow-hidden">
           <div className="bg-gradient-to-r from-green-700 to-emerald-600 p-6 text-white text-center">
             <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg overflow-hidden">
-              {employee.avatar_url ? (
-                <img src={employee.avatar_url} alt={employee.name} className="w-full h-full object-cover" />
+              {avatarUrl ? (
+                <img src={avatarUrl} alt={employee.name} className="w-full h-full object-cover" />
               ) : (
                 <User className="w-10 h-10 text-green-600" />
               )}
@@ -146,8 +160,8 @@ const EmployeeProfile = () => {
             <ShieldCheck className="w-6 h-6 text-green-200" />
           </div>
           <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg overflow-hidden">
-            {employee.avatar_url ? (
-              <img src={employee.avatar_url} alt={employee.name} className="w-full h-full object-cover" />
+            {avatarUrl ? (
+              <img src={avatarUrl} alt={employee.name} className="w-full h-full object-cover" />
             ) : (
               <User className="w-12 h-12 text-green-600" />
             )}

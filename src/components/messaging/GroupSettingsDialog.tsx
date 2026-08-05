@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { SignedAvatarImage } from '@/components/ui/signed-avatar-image';
 import { Camera, Loader2, UsersRound } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -96,7 +97,7 @@ const GroupSettingsDialog = ({ open, onClose, conversationId, initialName, initi
             aria-label="Change group photo"
           >
             <Avatar className="h-24 w-24">
-              <AvatarImage src={avatarUrl} alt={name} />
+              <SignedAvatarImage src={avatarUrl} alt={name} />
               <AvatarFallback className="bg-accent text-accent-foreground">
                 <UsersRound className="h-10 w-10" />
               </AvatarFallback>

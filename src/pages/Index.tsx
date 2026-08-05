@@ -22,6 +22,7 @@ import DepartmentActivityChart from '@/components/dashboard/DepartmentActivityCh
 import EmployeeOfTheMonthWidget from '@/components/dashboard/EmployeeOfTheMonthWidget';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { SignedAvatarImage } from '@/components/ui/signed-avatar-image';
 import { Badge } from '@/components/ui/badge';
 import { 
   Coffee, Settings, Activity, Calendar, Package, Sparkles, Clock
@@ -69,7 +70,7 @@ const Index = () => {
             <div className="flex items-center gap-3">
               <div className="relative">
                 <Avatar className="h-11 w-11 border-2 border-primary-foreground/20">
-                  <AvatarImage src={employee?.avatar_url} alt={employee?.name} />
+                  <SignedAvatarImage src={employee?.avatar_url} alt={employee?.name} />
                   <AvatarFallback className="bg-primary-foreground/15 text-primary-foreground font-bold text-sm">
                     {employee?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                   </AvatarFallback>
