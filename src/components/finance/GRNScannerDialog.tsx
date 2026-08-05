@@ -20,6 +20,7 @@ import {
   unpairDevice,
   subscribePairing,
 } from "@/utils/grnQueue";
+import { looksLikePayCode, normalizePayCode, isValidPayCode } from "@/utils/grnPayCode";
 
 interface Props {
   open: boolean;
@@ -47,6 +48,9 @@ export function parseGrnReference(text: string): string | null {
   // Query-string based: ?grn=... | ?batch=... | ?ref=... | ?code=...
   const query = value.match(/[?&](?:grn|batch|batch_number|ref|reference|code)=([^&#\s]+)/i);
   if (query) return normalizeRef(decodeURIComponent(query[1]));
+
+  // Secure pay code (GAC-K7Q-M4X-T9 or K7QM4XT9B)
+  if (looksLikePayCode(value)) return `GAC-${normalizePayCode(value)}`;
 
   // Raw reference or bare batch number
   if (/^GRN[-_]?[\w-]+$/i.test(value)) return normalizeRef(value);
@@ -97,6 +101,20 @@ const GRNScannerDialog = ({ open, onOpenChange }: Props) => {
     addToQueue(reference);
     onOpenChange(false);
     navigate(`/grn/${encodeURIComponent(reference)}`);
+  };
+
+  const submitManual = () => {
+    const value = manual.trim();
+    if (!value) return toast.error("Enter a pay code or the GRN digits");
+    if (looksLikePayCode(value)) {
+      if (!isValidPayCode(value)) {
+        return toast.error("That pay code is not valid — check the code printed under the QR");
+      }
+      return go(`GAC-${normalizePayCode(value)}`);
+    }
+    const digits = value.replace(/\D/g, "");
+    if (!digits) return toast.error("Enter a pay code or the GRN digits");
+    go(digits);
   };
 
   // Listen for scans pushed from the paired phone
@@ -268,33 +286,21 @@ const GRNScannerDialog = ({ open, onOpenChange }: Props) => {
           </Tabs>
 
           <div className="pt-2 border-t space-y-2">
-            <p className="text-xs text-muted-foreground">Or enter the GRN number manually — digits only</p>
+            <p className="text-xs text-muted-foreground">
+              Or type the pay code printed under the QR (GAC-K7Q-M4X-T9) — safest, a typo is rejected instead of
+              opening another GRN. The old GRN digits still work.
+            </p>
             <div className="flex gap-2">
-              <div className="flex flex-1 items-center rounded-md border border-input bg-background focus-within:ring-1 focus-within:ring-ring">
-                <span className="pl-3 pr-1 text-sm text-muted-foreground select-none">GRN-</span>
-                <Input
-                  value={manual}
-                  inputMode="numeric"
-                  onChange={(e) => setManual(e.target.value.replace(/\D/g, ""))}
-                  placeholder="20260802001"
-                  className="border-0 shadow-none focus-visible:ring-0 px-1"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      const ref = manual.trim();
-                      if (ref) go(ref);
-                    }
-                  }}
-                />
-              </div>
-              <Button
-                onClick={() => {
-                  const ref = manual.trim();
-                  if (!ref) return toast.error("Enter the GRN digits");
-                  go(ref);
+              <Input
+                value={manual}
+                onChange={(e) => setManual(e.target.value.toUpperCase())}
+                placeholder="GAC-K7Q-M4X-T9  or  20260802001"
+                className="flex-1"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") submitManual();
                 }}
-              >
-                Open
-              </Button>
+              />
+              <Button onClick={submitManual}>Open</Button>
             </div>
           </div>
 

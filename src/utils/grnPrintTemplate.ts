@@ -1,8 +1,11 @@
 import { getVerificationQRUrl, getVerificationUrl } from "./verificationCode";
 import { getGrnScanQrUrl, getGrnScanUrl } from "./grnScanUrl";
+import { formatPayCode } from "./grnPayCode";
 
 export interface GRNDocumentData {
   grnNumber: string;
+  /** Secure random pay code (GAC-XXX-XXX-XX) used by the QR + manual entry */
+  payCode?: string;
   supplierName: string;
   coffeeType: string;
   qualityAssessment?: string;
@@ -658,8 +661,8 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
   const totalForeignMatter = [data.pods, data.husks, data.stones].every((value) => value != null)
     ? Number(data.pods) + Number(data.husks) + Number(data.stones)
     : undefined;
-  const verificationUrl = getGrnScanUrl(data.grnNumber);
-  const qrCodeUrl = getGrnScanQrUrl(data.grnNumber, 110);
+  const verificationUrl = getGrnScanUrl(data.grnNumber, data.payCode);
+  const qrCodeUrl = getGrnScanQrUrl(data.grnNumber, 110, data.payCode);
   const qualityFactor = data.qualityFactor || (data.outturn != null ? `${data.outturn}%` : undefined);
   const qualityRows = [
     ["Moisture Content", data.moisture != null ? `${data.moisture}%` : "—", "≤ 14%"],
@@ -850,6 +853,7 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
           <td class="gac-grn-footer-right">
             <img src="${qrCodeUrl}" alt="Open GRN in system" class="gac-grn-qr" />
             <div class="gac-grn-qr-label">Scan to open in system &amp; pay</div>
+            ${data.payCode ? `<div class="gac-grn-qr-label"><strong>Pay code: ${escapeHtml(formatPayCode(data.payCode))}</strong></div>` : ""}
             <div class="gac-grn-qr-label">${escapeHtml(verificationUrl)}</div>
           </td>
         </tr>
@@ -939,8 +943,8 @@ export function getPaymentOrderMarkup(data: GRNDocumentData): string {
   const totalAmount = data.totalAmount ?? data.totalKgs * data.unitPrice;
   const grnReference = data.grnNumber.startsWith("GAC-") ? data.grnNumber : `GAC-${data.grnNumber}`;
   const poNumber = `PO-${data.grnNumber.replace(/[^A-Z0-9]/gi, "").slice(-8) || "00000001"}`;
-  const verificationUrl = getGrnScanUrl(data.grnNumber);
-  const qrCodeUrl = getGrnScanQrUrl(data.grnNumber, 110);
+  const verificationUrl = getGrnScanUrl(data.grnNumber, data.payCode);
+  const qrCodeUrl = getGrnScanQrUrl(data.grnNumber, 110, data.payCode);
 
   return `
     <div class="gac-grn-page">
@@ -1181,6 +1185,7 @@ export function getPaymentOrderMarkup(data: GRNDocumentData): string {
           <td class="gac-grn-footer-right">
             <img src="${qrCodeUrl}" alt="Open GRN in system" class="gac-grn-qr" />
             <div class="gac-grn-qr-label">Scan to open in system &amp; pay</div>
+            ${data.payCode ? `<div class="gac-grn-qr-label"><strong>Pay code: ${escapeHtml(formatPayCode(data.payCode))}</strong></div>` : ""}
             <div class="gac-grn-qr-label">${escapeHtml(verificationUrl)}</div>
           </td>
         </tr>

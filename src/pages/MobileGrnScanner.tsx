@@ -150,9 +150,13 @@ export default function MobileGrnScanner() {
             </div>
           )}
           <div className="pt-2 border-t space-y-2">
-            <p className="text-xs text-muted-foreground">Or type the GRN number</p>
+            <p className="text-xs text-muted-foreground">Or type the pay code printed under the QR</p>
             <div className="flex gap-2">
-              <Input value={manual} onChange={(e) => setManual(e.target.value)} placeholder="GRN-20260802001" />
+              <Input
+                value={manual}
+                onChange={(e) => setManual(e.target.value.toUpperCase())}
+                placeholder="GAC-K7Q-M4X-T9"
+              />
               <Button
                 onClick={() => {
                   const ref = parseGrnReference(manual) || manual.trim();

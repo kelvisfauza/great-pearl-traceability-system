@@ -4703,6 +4703,30 @@ export type Database = {
         }
         Relationships: []
       }
+      grn_pay_codes: {
+        Row: {
+          batch_number: string
+          created_at: string
+          id: string
+          pay_code: string
+          updated_at: string
+        }
+        Insert: {
+          batch_number: string
+          created_at?: string
+          id?: string
+          pay_code: string
+          updated_at?: string
+        }
+        Update: {
+          batch_number?: string
+          created_at?: string
+          id?: string
+          pay_code?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       group_call_participants: {
         Row: {
           call_id: string
@@ -14751,6 +14775,8 @@ export type Database = {
       }
     }
     Functions: {
+      _grn_code_alphabet: { Args: never; Returns: string }
+      _grn_code_check_char: { Args: { p_body: string }; Returns: string }
       _qr_hash: { Args: { _value: string }; Returns: string }
       _qr_lookup_employee: {
         Args: { _lookup: string }
@@ -15236,6 +15262,10 @@ export type Database = {
           status: string
         }[]
       }
+      get_or_create_grn_pay_code: {
+        Args: { p_batch_number: string }
+        Returns: string
+      }
       get_or_create_inventory_batch_for_day: {
         Args: { p_batch_date: string; p_coffee_type: string }
         Returns: string
@@ -15445,6 +15475,7 @@ export type Database = {
       is_supervisor_or_above: { Args: never; Returns: boolean }
       is_user_role: { Args: never; Returns: boolean }
       is_v3_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_valid_grn_pay_code: { Args: { p_code: string }; Returns: boolean }
       issue_quality_form_numbers: {
         Args: { p_count?: number; p_issued_by_name?: string }
         Returns: string[]
@@ -15532,6 +15563,7 @@ export type Database = {
       migrate_approved_assessments_to_finance: { Args: never; Returns: number }
       migrate_batch_numbers_to_new_format: { Args: never; Returns: Json }
       milling_unremitted_total: { Args: never; Returns: number }
+      normalize_grn_pay_code: { Args: { p_code: string }; Returns: string }
       overdraft_activate: { Args: { p_email: string }; Returns: Json }
       overdraft_daily_maintenance: { Args: never; Returns: Json }
       overdraft_deactivate: { Args: { p_email: string }; Returns: Json }
