@@ -8,6 +8,9 @@ export interface GrnReceiptData {
   quantityKg: number;
   unitPrice: number;
   amount: number;
+  lotValue?: number;
+  previouslyPaid?: number;
+  balance?: number;
   method: string;
   paidAt: string;
   paidBy: string;
