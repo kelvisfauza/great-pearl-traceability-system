@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,6 +13,16 @@ import { Loader2, CheckCircle2, CreditCard, Printer, ArrowLeft, History, FlaskCo
 import { toast } from 'sonner';
 import { printGrnPaymentReceipt } from '@/utils/grnPaymentReceipt';
 import GRNScannerDialog from '@/components/finance/GRNScannerDialog';
+import {
+  addToQueue,
+  getQueue,
+  getScanSessionId,
+  markQueuePaid,
+  nextPending,
+  removeFromQueue,
+  subscribeQueue,
+  clearQueue,
+} from '@/utils/grnQueue';
 
 const normalizeRef = (raw: string) =>
   (raw || '').trim().replace(/^GAC-/i, '').replace(/^GRN-DISC-/i, '').replace(/^GRN-/i, '');
@@ -47,6 +57,36 @@ export default function GRNScanPay() {
   const [method, setMethod] = useState('CASH');
   const [notes, setNotes] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [queue, setQueue] = useState(() => getQueue());
+
+  useEffect(() => subscribeQueue(() => setQueue(getQueue())), []);
+
+  // Keep the current GRN in the queue so the list always reflects what Finance is working through
+  useEffect(() => {
+    if (rawRef) addToQueue(rawRef);
+  }, [rawRef]);
+
+  // Stay connected to the paired phone so extra scans keep queueing while paying
+  useEffect(() => {
+    const sessionId = getScanSessionId();
+    const channel = supabase
+      .channel(`grn-scan-${sessionId}`, { config: { broadcast: { self: false } } })
+      .on('broadcast', { event: 'grn' }, ({ payload }: any) => {
+        const ref = payload?.reference;
+        if (ref && addToQueue(ref)) toast.success(`${ref} added to the pay queue`);
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const openRef = (ref: string) => navigate(`/grn/${encodeURIComponent(ref)}`);
+  const goNext = () => {
+    const next = nextPending(rawRef);
+    if (!next) return toast.info('No more GRNs in the queue');
+    openRef(next);
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ['grn-scan-lot', batch],
