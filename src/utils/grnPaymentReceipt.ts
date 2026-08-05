@@ -8,6 +8,9 @@ export interface GrnReceiptData {
   quantityKg: number;
   unitPrice: number;
   amount: number;
+  lotValue?: number;
+  previouslyPaid?: number;
+  balance?: number;
   method: string;
   paidAt: string;
   paidBy: string;
@@ -20,6 +23,9 @@ export interface GrnReceiptData {
 const money = (n: number) => `UGX ${Number(n || 0).toLocaleString()}`;
 
 export function printGrnPaymentReceipt(d: GrnReceiptData) {
+  const lotValue = Number(d.lotValue ?? d.amount ?? 0);
+  const previouslyPaid = Number(d.previouslyPaid ?? 0);
+  const balance = Number(d.balance ?? Math.max(lotValue - previouslyPaid - Number(d.amount || 0), 0));
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Payment Receipt ${d.receiptNo}</title>
   <style>
     *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -34,6 +40,11 @@ export function printGrnPaymentReceipt(d: GrnReceiptData) {
     th,td{border:1px solid #000;padding:6px 8px;text-align:left}
     th{background:#e6e6e6;width:26%;font-size:11px}
     .total{margin-top:14px;background:#000;color:#fff;padding:10px 12px;font-size:15px;font-weight:bold;display:flex;justify-content:space-between}
+    .sums{width:100%;border-collapse:collapse;margin-top:14px}
+    .sums td{border:1px solid #000;padding:6px 8px}
+    .sums td.k{width:74%;font-weight:bold}
+    .sums td.v{text-align:right;white-space:nowrap}
+    .sums tr.bal td{background:#e6e6e6;font-weight:bold}
     .signs{display:flex;gap:16px;margin-top:34px}
     .signs div{flex:1;text-align:center}
     .signs span{display:block;border-bottom:1px solid #000;height:34px}
@@ -64,6 +75,13 @@ export function printGrnPaymentReceipt(d: GrnReceiptData) {
       <tr><th>Paid by</th><td>${d.paidBy || '—'}${d.paidByPosition ? ` (${d.paidByPosition})` : ''}</td></tr>
       <tr><th>Printed by</th><td>${d.printedBy || d.paidBy || '—'} · ${new Date().toLocaleString('en-GB')}</td></tr>
       ${d.notes ? `<tr><th>Notes</th><td>${d.notes}</td></tr>` : ''}
+    </table>
+
+    <table class="sums">
+      <tr><td class="k">Total GRN value</td><td class="v">${money(lotValue)}</td></tr>
+      ${previouslyPaid > 0 ? `<tr><td class="k">Previously paid</td><td class="v">${money(previouslyPaid)}</td></tr>` : ''}
+      <tr><td class="k">Paid on this receipt</td><td class="v">${money(d.amount)}</td></tr>
+      <tr class="bal"><td class="k">BALANCE OUTSTANDING</td><td class="v">${money(balance)}</td></tr>
     </table>
 
     <div class="total"><span>TOTAL PAID</span><span>${money(d.amount)}</span></div>
