@@ -129,6 +129,7 @@ export default function GRNScanPay() {
   }, [data]);
 
   const receipt = () => {
+
     if (!lot) return;
     printGrnPaymentReceipt({
       grnNumber: `GRN-${lot.batch_number || batch}`,
