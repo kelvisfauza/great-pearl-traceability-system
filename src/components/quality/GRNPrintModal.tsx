@@ -32,6 +32,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
   const [recoveries, setRecoveries] = useState<
     Array<{ type: "advance" | "expense"; description: string; date?: string; amount: number }>
   >([]);
+  const { trackActivity } = useActivityTracker();
 
   useEffect(() => {
     const generateVerification = async () => {

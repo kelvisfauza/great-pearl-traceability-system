@@ -15,6 +15,7 @@ import { usePendingCoffeePayments } from '@/hooks/usePendingCoffeePayments';
 import { useToast } from '@/hooks/use-toast';
 import { useSupplierAdvances } from '@/hooks/useSupplierAdvances';
 import { useDeletionRequest } from '@/hooks/useDeletionRequest';
+import { useActivityTracker } from '@/hooks/useActivityTracker';
 import { FixPendingPaymentsButton } from './FixPendingPaymentsButton';
 
 export const PendingCoffeePayments = () => {
@@ -119,6 +120,13 @@ export const PendingCoffeePayments = () => {
 
       const netPayment = actualAmount - advanceRecovered;
       
+      trackActivity('transaction', `processing supplier payment for batch ${selectedPayment.batchNumber}`, {
+        form_name: 'Coffee Supplier Payment',
+        batch: selectedPayment.batchNumber,
+        amount: netPayment,
+        method: paymentMethod,
+      });
+
       if (paymentMethod === 'Cash') {
         toast({
           title: "Cash Payment Processed",
