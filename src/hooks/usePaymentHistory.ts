@@ -24,148 +24,101 @@ export const usePaymentHistory = () => {
   const fetchPaymentHistory = async () => {
     try {
       setLoading(true);
-      console.log('📊 Fetching payment history from Supabase...');
 
-      // Fetch only PAID payment records from Supabase
-      const { data: paymentsData, error: paymentsError } = await supabase
-        .from('supplier_payments')
-        .select('*')
-        .eq('status', 'POSTED')
-        .order('created_at', { ascending: false });
+      // Page through all posted supplier payments (Supabase caps at 1000/query)
+      const payments: any[] = [];
+      const pageSize = 1000;
+      for (let page = 0; page < 20; page++) {
+        const { data, error } = await supabase
+          .from('supplier_payments')
+          .select('id, lot_id, supplier_id, method, status, amount_paid_ugx, gross_payable_ugx, reference, notes, payment_date, approved_at, created_at, approved_by')
+          .order('created_at', { ascending: false })
+          .range(page * pageSize, page * pageSize + pageSize - 1);
+        if (error) {
+          console.error('Error fetching payments:', error);
+          break;
+        }
+        payments.push(...(data || []));
+        if (!data || data.length < pageSize) break;
+      }
 
-      if (paymentsError) {
-        console.error('Error fetching payments:', paymentsError);
+      if (payments.length === 0) {
         setPaymentRecords([]);
         return;
       }
 
-      const batchNumbers = Array.from(
-        new Set((paymentsData || []).map((p: any) => p.batch_number).filter(Boolean))
-      ) as string[];
-
-      // Fetch matching coffee_records from Supabase (preferred source)
-      const coffeeSupabaseMap = new Map<string, any>();
-      if (batchNumbers.length > 0) {
-        const { data: coffeeRows } = await supabase
-          .from('coffee_records')
-          .select('batch_number, kilograms, supplier_id, supplier_name')
-          .in('batch_number', batchNumbers);
-        (coffeeRows || []).forEach(r => {
-          if (r.batch_number) coffeeSupabaseMap.set(r.batch_number, r);
-        });
+      // Resolve lots (batch number + total value)
+      const lotIds = Array.from(new Set(payments.map(p => p.lot_id).filter(Boolean))) as string[];
+      const lotsById = new Map<string, any>();
+      for (let i = 0; i < lotIds.length; i += 300) {
+        const { data } = await supabase
+          .from('finance_coffee_lots')
+          .select('id, batch_number, supplier_id, total_amount_ugx, quantity_kg, unit_price_ugx')
+          .in('id', lotIds.slice(i, i + 300));
+        (data || []).forEach((l: any) => lotsById.set(l.id, l));
       }
 
-      // Resolve supplier info from suppliers table for display
-      const supplierIds = Array.from(
-        new Set(Array.from(coffeeSupabaseMap.values()).map((r: any) => r.supplier_id).filter(Boolean))
-      ) as string[];
+      // Resolve suppliers for display
+      const supplierIds = Array.from(new Set([
+        ...payments.map(p => p.supplier_id),
+        ...Array.from(lotsById.values()).map((l: any) => l.supplier_id),
+      ].filter(Boolean))) as string[];
       const suppliersById = new Map<string, SupplierRef>();
-      if (supplierIds.length > 0) {
-        const { data: suppliersData } = await supabase
+      for (let i = 0; i < supplierIds.length; i += 300) {
+        const { data } = await supabase
           .from('suppliers')
           .select('id, name, code')
-          .in('id', supplierIds);
-        (suppliersData || []).forEach((s: any) => {
-          suppliersById.set(s.id, { id: s.id, name: s.name, code: s.code });
-        });
+          .in('id', supplierIds.slice(i, i + 300));
+        (data || []).forEach((s: any) => suppliersById.set(s.id, { id: s.id, name: s.name, code: s.code }));
       }
 
-      // Fetch coffee records from Firebase as a fallback (legacy)
-      const coffeeSnapshot = await getDocs(collection(db, 'coffee_records'));
-      const coffeeMap = new Map();
-      
-      coffeeSnapshot.docs.forEach(doc => {
-        const data = doc.data();
-        coffeeMap.set(data.batch_number, {
-          kilograms: data.kilograms || 0,
-          pricePerKg: data.price_per_kg || 0,
-          supplier: data.supplier_name
-        });
-      });
-
-      // Fetch quality assessments for pricing
-      const { data: qualityData } = await supabase
-        .from('quality_assessments')
-        .select('*');
-      
-      const qualityMap = new Map();
-      if (qualityData) {
-        qualityData.forEach(qa => {
-          qualityMap.set(qa.batch_number, qa.suggested_price || 0);
-        });
-      }
-
-      // Group payments by batch number
-      const batchPayments = new Map<string, any[]>();
-      (paymentsData as any[] || []).forEach((payment: any) => {
-        const batchNumber = payment.batch_number;
-        if (!batchNumber) return;
-        
-        if (!batchPayments.has(batchNumber)) {
-          batchPayments.set(batchNumber, []);
-        }
-        batchPayments.get(batchNumber)?.push(payment);
+      // Group payments by lot (fall back to the payment id for legacy unlinked rows)
+      const groups = new Map<string, any[]>();
+      payments.forEach(p => {
+        const key = p.lot_id || `payment:${p.id}`;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key)!.push(p);
       });
 
       const records: PaymentRecord[] = [];
+      groups.forEach((group, key) => {
+        const lot = key.startsWith('payment:') ? null : lotsById.get(key);
+        const latest = group[0];
+        const paidAmount = group.reduce((sum, p) => sum + (Number(p.amount_paid_ugx) || 0), 0);
+        const totalAmount = Number(
+          lot?.total_amount_ugx ??
+          (lot ? Number(lot.quantity_kg || 0) * Number(lot.unit_price_ugx || 0) : 0)
+        ) || Number(latest.gross_payable_ugx) || paidAmount;
+        const balance = totalAmount - paidAmount;
 
-      // Process each batch
-      batchPayments.forEach((payments, batchNumber) => {
-        const coffeeData = coffeeSupabaseMap.get(batchNumber) || coffeeMap.get(batchNumber);
-        const qualityPrice = qualityMap.get(batchNumber);
-        
-        if (coffeeData) {
-          const pricePerKg = qualityPrice || coffeeData.pricePerKg || 0;
-          const totalAmount = coffeeData.kilograms * pricePerKg;
-          
-          // Calculate total paid for this batch
-          const paidAmount = payments.reduce((sum, p) => {
-            return sum + (Number(p.amount) || 0);
-          }, 0);
-          
-          const balance = totalAmount - paidAmount;
-          const status = balance <= 0 ? 'Paid' : 'Partially Paid';
+        const supplierId = latest.supplier_id || lot?.supplier_id;
+        const supplierDisplay = formatSupplierDisplay({
+          supplier: supplierId ? suppliersById.get(supplierId) : null,
+          fallbackName: 'Unknown supplier',
+          includeCode: true,
+        });
 
-          // Use the most recent payment for display
-          const latestPayment = payments[0];
-
-          const supplierRef = coffeeData.supplier_id ? suppliersById.get(coffeeData.supplier_id) : null;
-          const supplierDisplay = formatSupplierDisplay({
-            supplier: supplierRef,
-            fallbackName:
-              latestPayment.supplier ||
-              (coffeeData as any).supplier_name ||
-              (coffeeData as any).supplier,
-            includeCode: true,
-          });
-          
-          records.push({
-            id: latestPayment.id,
-            supplier: supplierDisplay.displayName,
-            batchNumber,
-            totalAmount,
-            paidAmount,
-            balance: Math.max(0, balance),
-            status,
-            method: latestPayment.method || 'Bank Transfer',
-            date: latestPayment.date || new Date().toLocaleDateString(),
-            processedBy: 'Finance',
-            notes: `${payments.length} payment(s)`,
-            created_at: latestPayment.created_at || new Date().toISOString()
-          });
-        }
+        records.push({
+          id: latest.id,
+          supplier: supplierDisplay.displayName,
+          batchNumber: lot?.batch_number || latest.reference || '—',
+          totalAmount,
+          paidAmount,
+          balance: Math.max(0, balance),
+          status: balance <= 0 ? 'Paid' : 'Partially Paid',
+          method: String(latest.method || 'Bank Transfer'),
+          date: latest.payment_date || latest.approved_at || latest.created_at || '',
+          processedBy: latest.approved_by || 'Finance',
+          notes: `${group.length} payment(s)`,
+          created_at: latest.created_at || new Date().toISOString(),
+        });
       });
 
-      // Sort by date (newest first)
-      records.sort((a, b) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-
-      console.log('📊 Payment history loaded:', records.length, 'batches');
-      console.log('📊 Sample record:', records[0]);
+      records.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setPaymentRecords(records);
     } catch (error) {
       console.error('Error fetching payment history:', error);
+      setPaymentRecords([]);
     } finally {
       setLoading(false);
     }
