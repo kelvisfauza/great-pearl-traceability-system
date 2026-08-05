@@ -23,6 +23,7 @@ export const PendingCoffeePayments = () => {
   const { toast } = useToast();
   const { getTotalOutstanding } = useSupplierAdvances();
   const { submitDeletionRequest, isSubmitting: isDeletionSubmitting } = useDeletionRequest();
+  const { trackActivity } = useActivityTracker();
   const [searchTerm, setSearchTerm] = useState('');
   
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
