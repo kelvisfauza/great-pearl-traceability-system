@@ -3,13 +3,23 @@ import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, QrCode, Smartphone, Camera } from "lucide-react";
+import { Loader2, QrCode, Smartphone, Camera, CheckCircle2, Unplug } from "lucide-react";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { buildPublicUrl } from "@/utils/publicUrl";
-import { addToQueue, getQueue, getScanSessionId, removeFromQueue, subscribeQueue } from "@/utils/grnQueue";
+import {
+  addToQueue,
+  getQueue,
+  getScanSessionId,
+  removeFromQueue,
+  subscribeQueue,
+  getPairedDevice,
+  setPairedDevice,
+  unpairDevice,
+  subscribePairing,
+} from "@/utils/grnQueue";
 
 interface Props {
   open: boolean;
@@ -62,12 +72,21 @@ const GRNScannerDialog = ({ open, onOpenChange }: Props) => {
   const [manual, setManual] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<"phone" | "camera">("phone");
-  const [sessionId] = useState(() => getScanSessionId());
+  const [sessionId, setSessionId] = useState(() => getScanSessionId());
   const [paired, setPaired] = useState(false);
+  const [device, setDevice] = useState(() => getPairedDevice());
+  const [showQr, setShowQr] = useState(false);
   const [queue, setQueue] = useState(() => getQueue());
   const pairUrl = buildPublicUrl(`/scan/${sessionId}`);
 
   useEffect(() => subscribeQueue(() => setQueue(getQueue())), []);
+  useEffect(() => subscribePairing(() => setDevice(getPairedDevice())), []);
+  useEffect(() => {
+    if (open) {
+      setDevice(getPairedDevice());
+      setShowQr(false);
+    }
+  }, [open]);
 
   const queueOnly = (reference: string) => {
     const added = addToQueue(reference);
@@ -89,6 +108,7 @@ const GRNScannerDialog = ({ open, onOpenChange }: Props) => {
         const ref = payload?.reference;
         if (ref) {
           setPaired(true);
+          setPairedDevice(payload?.device || "Phone");
           const first = getQueue().filter((i) => !i.paid).length === 0;
           if (first) {
             toast.success(`Received ${ref} from your phone`);
@@ -97,6 +117,10 @@ const GRNScannerDialog = ({ open, onOpenChange }: Props) => {
             queueOnly(ref);
           }
         }
+      })
+      .on("broadcast", { event: "hello" }, ({ payload }: any) => {
+        setPaired(true);
+        setPairedDevice(payload?.device || "Phone");
       })
       .subscribe();
     return () => {
@@ -184,6 +208,37 @@ const GRNScannerDialog = ({ open, onOpenChange }: Props) => {
             </TabsList>
 
             <TabsContent value="phone" className="pt-3">
+              {device && !showQr ? (
+                <div className="flex flex-col items-center gap-3 text-center">
+                  <div className="w-full rounded-lg border border-green-600/30 bg-green-600/5 p-4 flex flex-col items-center gap-2">
+                    <CheckCircle2 className="h-7 w-7 text-green-600" />
+                    <p className="text-sm font-medium">Connected to {device.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Paired {new Date(device.pairedAt).toLocaleString()} · no need to scan this code again.
+                      Just scan GRNs on the phone and they open here.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setShowQr(true)}>
+                      <QrCode className="h-3.5 w-3.5 mr-1.5" /> Show pairing code
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        unpairDevice();
+                        setSessionId(getScanSessionId());
+                        setDevice(null);
+                        setPaired(false);
+                        setShowQr(true);
+                        toast.info("Phone disconnected — scan the new code to pair again");
+                      }}
+                    >
+                      <Unplug className="h-3.5 w-3.5 mr-1.5" /> Disconnect
+                    </Button>
+                  </div>
+                </div>
+              ) : (
               <div className="flex flex-col items-center gap-3 text-center">
                 <div className="bg-white p-3 rounded-md border">
                   <QRCodeSVG value={pairUrl} size={168} />
@@ -198,6 +253,7 @@ const GRNScannerDialog = ({ open, onOpenChange }: Props) => {
                   {paired ? "Phone connected" : "Waiting for your phone…"}
                 </p>
               </div>
+              )}
             </TabsContent>
 
             <TabsContent value="camera" className="pt-3 space-y-2">

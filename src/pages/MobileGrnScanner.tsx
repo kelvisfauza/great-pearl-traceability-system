@@ -22,9 +22,25 @@ export default function MobileGrnScanner() {
   const [lastRaw, setLastRaw] = useState<string | null>(null);
   const lastSentRef = useRef<string>("");
 
+  const deviceName = (() => {
+    const ua = navigator.userAgent;
+    const model = ua.match(/\(([^)]+)\)/)?.[1]?.split(";").map((s) => s.trim()).filter(Boolean) || [];
+    const os = /Android/i.test(ua) ? "Android" : /iPhone|iPad/i.test(ua) ? "iPhone" : "Phone";
+    const label = model.find((m) => !/Linux|U;|wv|CPU|Mozilla|rv:/i.test(m) && m.length < 30);
+    return label ? `${label} (${os})` : os;
+  })();
+
   useEffect(() => {
     const channel = supabase.channel(`grn-scan-${sessionId}`, { config: { broadcast: { self: false } } });
-    channel.subscribe();
+    channel
+      .on("broadcast", { event: "ping" }, () => {
+        channel.send({ type: "broadcast", event: "hello", payload: { device: deviceName } });
+      })
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          channel.send({ type: "broadcast", event: "hello", payload: { device: deviceName } });
+        }
+      });
     channelRef.current = channel;
     return () => {
       supabase.removeChannel(channel);
@@ -37,7 +53,7 @@ export default function MobileGrnScanner() {
     setTimeout(() => {
       if (lastSentRef.current === reference) lastSentRef.current = "";
     }, 3000);
-    await channelRef.current?.send({ type: "broadcast", event: "grn", payload: { reference } });
+    await channelRef.current?.send({ type: "broadcast", event: "grn", payload: { reference, device: deviceName } });
     setSent(reference);
     setSentList((prev) => (prev.includes(reference) ? prev : [...prev, reference]));
     toast.success(`Sent ${reference} to the system`);
