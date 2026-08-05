@@ -324,6 +324,9 @@ export default function GRNScanPay() {
                   <div key={t.label}><span className="text-muted-foreground block">{t.label}</span>{dt(t.at)}</div>
                 ))}
               </div>
+              <Button variant="outline" size="sm" className="w-full" onClick={() => setScanOpen(true)}>
+                <QrCode className="h-4 w-4 mr-2" /> Scan other GRN
+              </Button>
             </div>
           ) : (
             <>
