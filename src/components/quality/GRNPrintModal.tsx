@@ -7,6 +7,8 @@ import { GRNDocumentData, getGRNPreviewHTML, getGRNPrintDocumentHTML } from '@/u
 import { supabase } from '@/integrations/supabase/client';
 import { stripLegacySupplierSuffix } from '@/utils/supplierDisplay';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
+import { getGrnPayCode } from '@/utils/grnPayCode';
+import { getGrnScanQrDataUrl } from '@/utils/grnScanUrl';
 
 interface GRNPrintModalProps {
   open: boolean;
@@ -33,6 +35,23 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
     Array<{ type: "advance" | "expense"; description: string; date?: string; amount: number }>
   >([]);
   const { trackActivity } = useActivityTracker();
+  const [payCode, setPayCode] = useState<string | undefined>(undefined);
+  const [qrDataUrl, setQrDataUrl] = useState<string | undefined>(undefined);
+
+  // Guarantee every printed GRN carries a scannable QR (generated locally, no network needed)
+  useEffect(() => {
+    let cancelled = false;
+    const buildQr = async () => {
+      if (!open || !grnData?.grnNumber) return;
+      const code = grnData.payCode || (await getGrnPayCode(grnData.grnNumber)) || undefined;
+      const url = await getGrnScanQrDataUrl(grnData.grnNumber, 220, code);
+      if (cancelled) return;
+      setPayCode(code);
+      setQrDataUrl(url);
+    };
+    buildQr();
+    return () => { cancelled = true; };
+  }, [open, grnData?.grnNumber, grnData?.payCode]);
 
   useEffect(() => {
     const generateVerification = async () => {
@@ -61,6 +80,8 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
       setVerificationCode(null);
       setSupplierInfo(null);
       setRecoveries([]);
+      setPayCode(undefined);
+      setQrDataUrl(undefined);
     }
   }, [open]);
 
@@ -186,6 +207,8 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
     if (!grnData) return null;
     return {
       ...grnData,
+      payCode: grnData.payCode || payCode,
+      qrDataUrl: grnData.qrDataUrl || qrDataUrl,
       verificationCode: verificationCode ?? grnData.verificationCode,
       supplierAddress: grnData.supplierAddress || supplierInfo?.origin || undefined,
       supplierPhone: grnData.supplierPhone || supplierInfo?.phone || undefined,
@@ -196,7 +219,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
       supplierAccountNumber: supplierInfo?.account_number || undefined,
       recoveries,
     };
-  }, [grnData, verificationCode, supplierInfo, recoveries]);
+  }, [grnData, verificationCode, supplierInfo, recoveries, payCode, qrDataUrl]);
 
   const previewHtml = useMemo(() => {
     if (!previewData) return '';
