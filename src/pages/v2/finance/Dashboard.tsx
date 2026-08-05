@@ -2,7 +2,9 @@ import { useState } from "react";
 import V2Navigation from "@/components/v2/V2Navigation";
 import PriceTicker from "@/components/PriceTicker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Wallet, GitCompare, ArrowDownUp, Search, FileText, CreditCard } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Wallet, GitCompare, ArrowDownUp, Search, FileText, CreditCard, QrCode } from "lucide-react";
+import GRNScannerDialog from "@/components/finance/GRNScannerDialog";
 import FinanceOverviewTab from "@/components/v2/finance/tabs/FinanceOverviewTab";
 import PendingPaymentsTab from "@/components/v2/finance/tabs/PendingPaymentsTab";
 import TransactionReconciliationTab from "@/components/v2/finance/tabs/TransactionReconciliationTab";
@@ -21,6 +23,7 @@ const tabs = [
 
 const FinanceDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
@@ -30,8 +33,14 @@ const FinanceDashboard = () => {
             <h1 className="text-3xl font-bold text-foreground">Finance Department</h1>
             <p className="text-muted-foreground mt-1">Payments, reconciliation & financial reporting</p>
           </div>
-          <PriceTicker />
+          <div className="flex items-center gap-3">
+            <Button onClick={() => setScannerOpen(true)} className="gap-2">
+              <QrCode className="h-4 w-4" /> Scan GRN to Pay
+            </Button>
+            <PriceTicker />
+          </div>
         </div>
+        <GRNScannerDialog open={scannerOpen} onOpenChange={setScannerOpen} />
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           <div className="lg:col-span-1"><V2Navigation /></div>
           <div className="lg:col-span-4">
