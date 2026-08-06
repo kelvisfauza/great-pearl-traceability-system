@@ -501,7 +501,14 @@ const UserStatement = () => {
                     selectedUserId === (e.auth_user_id || e.email) ? "bg-muted font-medium" : ""
                   }`}
                 >
-                  <div className="truncate">{e.name}</div>
+                  <div className="truncate flex items-center gap-1">
+                    <span className="truncate">{e.name}</span>
+                    {e.status && e.status !== "Active" && (
+                      <span className="shrink-0 rounded px-1 text-[10px] uppercase bg-destructive/10 text-destructive">
+                        {e.status}
+                      </span>
+                    )}
+                  </div>
                   <div className="text-xs text-muted-foreground truncate">{e.email}</div>
                 </button>
               ))}
