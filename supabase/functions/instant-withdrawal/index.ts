@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { loadProviderSettings, feeFromTiers } from "../_shared/provider-settings.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -372,7 +373,10 @@ serve(async (req) => {
     // wallet in the same transaction path.
     // Service fee applies ONLY to GosentePay payouts (amounts < UGX 50,000).
     // Yo Payments withdrawals are fee-free.
-    const feeForOdCheck = numAmount < 50000 ? computeWithdrawFee(numAmount) : 0;
+    // Admin-configured provider settings (Admin > System Settings > Providers)
+    const providerCfg = await loadProviderSettings(supabase);
+    const routeGosente = providerCfg.gosente.enabled && numAmount < providerCfg.gosente.routing_threshold;
+    const feeForOdCheck = routeGosente ? feeFromTiers(numAmount, providerCfg.gosente.fee_tiers) : (Number(providerCfg.yo.service_fee) || 0);
     const overdraftPortion = Math.max(0, (numAmount + feeForOdCheck) - walletBalance);
     const walletPortion = numAmount - overdraftPortion;
     const isOverdraftDraw = overdraftPortion > 0;
@@ -446,15 +450,33 @@ serve(async (req) => {
     const ref = `INSTANT-WD-${Date.now()}`;
     const remainingAfter = walletBalance - numAmount;
 
-    // ── Provider routing ───────────────────────────────────────────────
-    // Amounts < UGX 50,000 route via GosentePay AND require admin approval
-    // before the money is actually sent. Amounts ≥ 50,000 continue to use
-    // the Yo Payments direct payout flow below.
-    const useGosente = numAmount < 50000;
+    // ── Provider routing (admin-configurable) ─────────────────────────
+    // Amounts below the GosentePay routing threshold go via GosentePay and
+    // require admin approval; amounts at/above it use Yo Payments.
+    const useGosente = routeGosente;
 
-    // Tiered withdrawal service fee — applied ONLY to GosentePay withdrawals.
-    // Yo Payments payouts (>= UGX 50,000) carry no service fee.
-    const WITHDRAW_FEE = useGosente ? computeWithdrawFee(numAmount) : 0;
+    if (useGosente) {
+      if (numAmount < providerCfg.gosente.min_amount) {
+        return respond(false, { error: `Minimum GosentePay withdrawal is UGX ${providerCfg.gosente.min_amount.toLocaleString()}.` });
+      }
+      if (numAmount > providerCfg.gosente.max_amount) {
+        return respond(false, { error: `Maximum GosentePay withdrawal is UGX ${providerCfg.gosente.max_amount.toLocaleString()}.` });
+      }
+    } else {
+      if (!providerCfg.yo.enabled) {
+        return respond(false, { error: 'Yo Payments withdrawals are currently disabled by the administrator.' });
+      }
+      if (numAmount < providerCfg.yo.min_amount) {
+        return respond(false, { error: `Minimum Yo Payments withdrawal is UGX ${providerCfg.yo.min_amount.toLocaleString()}.` });
+      }
+      if (numAmount > providerCfg.yo.max_amount) {
+        return respond(false, { error: `Maximum Yo Payments withdrawal is UGX ${providerCfg.yo.max_amount.toLocaleString()}.` });
+      }
+    }
+
+    // Tiered withdrawal service fee (admin-configured tiers for GosentePay,
+    // flat configurable fee for Yo Payments).
+    const WITHDRAW_FEE = feeForOdCheck;
     if (spendable < numAmount + WITHDRAW_FEE) {
       return respond(false, {
         error: `Insufficient funds to cover the withdrawal plus the UGX ${WITHDRAW_FEE.toLocaleString()} service fee. Available: UGX ${spendable.toLocaleString()}.`,

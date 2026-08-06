@@ -7,7 +7,8 @@ import WalletFreezeManager from "@/components/admin/WalletFreezeManager";
 import OverdraftUsageRules from "@/components/admin/OverdraftUsageRules";
 import UnifiedPermissionManager from "@/components/admin/UnifiedPermissionManager";
 import AdminWalletOperations from "@/components/admin/AdminWalletOperations";
-import { Database, Settings, Shield, MessageSquare, Snowflake, ShieldAlert, KeyRound, Wallet } from "lucide-react";
+import ProviderSettings from "@/components/admin/ProviderSettings";
+import { Database, Settings, Shield, MessageSquare, Snowflake, ShieldAlert, KeyRound, Wallet, Smartphone } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MigrateSupplierCodesButton } from "@/components/suppliers/MigrateSupplierCodesButton";
 import { MigrateBatchNumbersButton } from "@/components/admin/MigrateBatchNumbersButton";
@@ -19,7 +20,7 @@ const SystemSettings = () => {
       subtitle="Configure system-wide settings and perform administrative tasks"
     >
       <Tabs defaultValue="permissions" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-8">
+        <TabsList className="grid w-full grid-cols-9">
           <TabsTrigger value="permissions" className="gap-2">
             <KeyRound className="h-4 w-4" />
             Permissions
@@ -27,6 +28,10 @@ const SystemSettings = () => {
           <TabsTrigger value="messaging" className="gap-2">
             <MessageSquare className="h-4 w-4" />
             Messaging
+          </TabsTrigger>
+          <TabsTrigger value="providers" className="gap-2">
+            <Smartphone className="h-4 w-4" />
+            Providers
           </TabsTrigger>
           <TabsTrigger value="wallet-ops" className="gap-2">
             <Wallet className="h-4 w-4" />
@@ -60,6 +65,10 @@ const SystemSettings = () => {
 
         <TabsContent value="messaging" className="space-y-4">
           <MessagingSettings />
+        </TabsContent>
+
+        <TabsContent value="providers" className="space-y-4">
+          <ProviderSettings />
         </TabsContent>
 
         <TabsContent value="wallet-ops" className="space-y-4">

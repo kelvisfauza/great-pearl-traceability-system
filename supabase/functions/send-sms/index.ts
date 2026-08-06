@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { loadProviderSettings } from "../_shared/provider-settings.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -507,12 +508,17 @@ serve(async (req) => {
       )
     }
 
+    // Admin-configured SMS provider settings
+    const smsCfg = (await loadProviderSettings(supabase)).sms
+
     // 🛡️ DEDUP GUARD: prevent double-sends when a caller invokes both
     // send-transactional-email (which auto-fires SMS in SMS-PRIMARY mode)
     // AND send-sms directly. If the same phone+message was already sent
     // in the last 90 seconds, skip this one.
     try {
-      const sinceIso = new Date(Date.now() - 90 * 1000).toISOString()
+      const dedupWindow = Math.max(0, Number(smsCfg.dedup_window_seconds) || 0)
+      const sinceIso = new Date(Date.now() - dedupWindow * 1000).toISOString()
+      if (dedupWindow === 0) throw new Error('dedup disabled by admin settings')
       const { data: recentDup } = await supabase
         .from('sms_logs')
         .select('id, status, created_at')
@@ -546,7 +552,7 @@ serve(async (req) => {
           JSON.stringify({
             success: true,
             deduplicated: true,
-            reason: 'Identical SMS was already sent within the last 90 seconds.',
+            reason: `Identical SMS was already sent within the last ${dedupWindow} seconds.`,
             matchedLogId: recentDup.id,
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -560,9 +566,10 @@ serve(async (req) => {
     const isPremium =
       callerPriority === 'premium' ||
       PREMIUM_SMS_TYPES.has((messageType || '').toLowerCase());
+    const usePremiumRoute = isPremium && smsCfg.bulksms_premium !== false;
 
     // PREMIUM ROUTE: try BulkSMS Premium first, fall back to YoolaSMS/Infobip below if it fails
-    if (isPremium) {
+    if (usePremiumRoute) {
       console.log(`💎 Premium routing for type=${messageType}`);
       const bulkResult = await sendBulkSmsPremium(formattedPhone, message, supabase, {
         userName, recipientEmail, messageType, department, triggeredBy: triggeredBy || userId, requestId,
@@ -580,6 +587,23 @@ serve(async (req) => {
         );
       }
       console.warn('⚠️ BulkSMS Premium failed, falling back to YoolaSMS');
+    }
+
+    // Admin can disable YoolaSMS entirely — route straight to Infobip
+    if (smsCfg.yoola_enabled === false) {
+      const infobipOnly = await sendInfobipSmsFallback(formattedPhone, message, supabase, {
+        userName, recipientEmail, messageType, department, triggeredBy: triggeredBy || userId, requestId
+      });
+      return new Response(
+        JSON.stringify({
+          success: infobipOnly.success,
+          message: infobipOnly.success ? 'SMS sent via Infobip (YoolaSMS disabled)' : 'SMS failed (YoolaSMS disabled, Infobip failed)',
+          phone: formattedPhone,
+          provider: 'Infobip-SMS',
+          details: infobipOnly.details,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const apiKey = Deno.env.get('YOOLA_SMS_API_KEY')
@@ -723,12 +747,15 @@ serve(async (req) => {
         } else {
           const errorText = await smsResponse.text();
           console.error('YoolaSMS API error:', errorText);
-          console.log('Attempting Infobip SMS fallback...');
-          
-          // Fallback to Infobip SMS
-          const infobipResult = await sendInfobipSmsFallback(formattedPhone, message, supabase, {
-            userName, recipientEmail, messageType, department, triggeredBy: triggeredBy || userId, requestId
-          });
+          // Fallback to Infobip SMS (admin-toggleable)
+          const infobipResult = smsCfg.infobip_fallback === false
+            ? { success: false, details: 'Infobip fallback disabled by admin settings' }
+            : await (async () => {
+                console.log('Attempting Infobip SMS fallback...');
+                return await sendInfobipSmsFallback(formattedPhone, message, supabase, {
+                  userName, recipientEmail, messageType, department, triggeredBy: triggeredBy || userId, requestId
+                });
+              })();
           
           if (infobipResult.success) {
             return new Response(
