@@ -69,6 +69,9 @@ export default function GRNScanPay() {
   const [notes, setNotes] = useState('');
   const [processing, setProcessing] = useState(false);
   const [queue, setQueue] = useState(() => getQueue());
+  // A batch number can legitimately carry more than one finance lot (historical
+  // duplicate batch numbers). Finance must see which lot is already paid and pay the rest.
+  const [selectedLotId, setSelectedLotId] = useState<string | null>(null);
 
   useEffect(() => subscribeQueue(() => setQueue(getQueue())), []);
 
@@ -107,49 +110,62 @@ export default function GRNScanPay() {
         .from('finance_coffee_lots')
         .select('*')
         .or(`batch_number.eq.${batch},coffee_record_id.eq.${batch}`)
-        .order('created_at', { ascending: false })
-        .limit(1);
-      const lot: any = lots?.[0] || null;
+        .order('created_at', { ascending: true });
+      const allLots: any[] = lots || [];
 
       const { data: recs } = await supabase
         .from('coffee_records')
         .select('*')
-        .eq('batch_number', batch)
-        .limit(1);
-      const record: any = recs?.[0] || null;
+        .eq('batch_number', batch);
+      const allRecords: any[] = recs || [];
 
-      let supplierName = record?.supplier_name || null;
-      if (!supplierName && lot?.supplier_id) {
-        const { data: sup } = await supabase.from('suppliers').select('name').eq('id', lot.supplier_id).maybeSingle();
-        supplierName = (sup as any)?.name || null;
-      }
+      // Build one payable entry per finance lot so duplicate batch numbers stay separable
+      const entries = await Promise.all(
+        allLots.map(async (l: any) => {
+          const record: any =
+            allRecords.find((r) => r.id === l.coffee_record_id) ||
+            allRecords.find((r) => r.supplier_name && l.supplier_id && r.supplier_id === l.supplier_id) ||
+            (allLots.length === 1 ? allRecords[0] : null);
 
-      let payment: any = null;
-      let payments: any[] = [];
-      if (lot?.id) {
-        const { data: pays } = await supabase
-          .from('supplier_payments')
-          .select('*')
-          .eq('lot_id', lot.id)
-          .order('created_at', { ascending: false });
-        payments = pays || [];
-        payment = payments[0] || null;
-      }
+          let supplierName = record?.supplier_name || null;
+          if (!supplierName && l?.supplier_id) {
+            const { data: sup } = await supabase.from('suppliers').select('name').eq('id', l.supplier_id).maybeSingle();
+            supplierName = (sup as any)?.name || null;
+          }
 
-      // Resolve who actually processed the payment on behalf of Finance
-      let paidByName: string | null = null;
-      const payerRef = payment?.approved_by || payment?.requested_by || null;
-      if (payerRef) {
-        const { data: emp } = await supabase
-          .from('employees')
-          .select('name, email, position, department')
-          .or(`email.eq.${payerRef},name.eq.${payerRef}`)
-          .limit(1)
-          .maybeSingle();
-        paidByName = (emp as any)?.name
-          ? `${(emp as any).name}${(emp as any).position ? ` · ${(emp as any).position}` : ''}`
-          : String(payerRef);
-      }
+          const { data: pays } = await supabase
+            .from('supplier_payments')
+            .select('*')
+            .eq('lot_id', l.id)
+            .order('created_at', { ascending: false });
+          const payments: any[] = pays || [];
+          const payment: any = payments[0] || null;
+
+          let paidByName: string | null = null;
+          const payerRef = payment?.approved_by || payment?.requested_by || null;
+          if (payerRef) {
+            const { data: emp } = await supabase
+              .from('employees')
+              .select('name, email, position, department')
+              .or(`email.eq.${payerRef},name.eq.${payerRef}`)
+              .limit(1)
+              .maybeSingle();
+            paidByName = (emp as any)?.name
+              ? `${(emp as any).name}${(emp as any).position ? ` · ${(emp as any).position}` : ''}`
+              : String(payerRef);
+          }
+
+          return {
+            lot: l,
+            record,
+            supplierName: supplierName || 'Unknown Supplier',
+            payments,
+            payment,
+            paidByName,
+            paid: String(l.finance_status || '').toUpperCase() === 'PAID',
+          };
+        })
+      );
 
       const { data: qas } = await supabase
         .from('quality_assessments')
@@ -170,22 +186,35 @@ export default function GRNScanPay() {
       const { data: logs } = await supabase
         .from('audit_logs')
         .select('*')
-        .or([lot?.id, quality?.id, record?.id, store?.id].filter(Boolean).map((id) => `record_id.eq.${id}`).join(',') || 'record_id.eq.00000000-0000-0000-0000-000000000000')
+        .or(
+          [...allLots.map((l: any) => l.id), quality?.id, ...allRecords.map((r: any) => r.id), store?.id]
+            .filter(Boolean)
+            .map((id) => `record_id.eq.${id}`)
+            .join(',') || 'record_id.eq.00000000-0000-0000-0000-000000000000'
+        )
         .order('created_at', { ascending: false })
         .limit(50);
 
-      return { lot, record, supplierName: supplierName || 'Unknown Supplier', payment, payments, paidByName, quality, store, logs: logs || [] };
+      return { entries, record: allRecords[0] || null, quality, store, logs: logs || [] };
     },
   });
 
-  const lot: any = data?.lot;
-  const paid = lot?.finance_status === 'PAID';
+  const entries: any[] = data?.entries || [];
+  const entry: any =
+    entries.find((e) => e.lot?.id === selectedLotId) ||
+    entries.find((e) => !e.paid) ||
+    entries[0] ||
+    null;
+  const lot: any = entry?.lot;
+  const paid = !!entry?.paid;
+  const unpaidCount = entries.filter((e) => !e.paid).length;
+  const entryRecord: any = entry?.record || data?.record || null;
   const quality: any = data?.quality;
   const store: any = data?.store;
 
   // Explains why a scanned GRN has no finance record yet
   const notReady = useMemo(() => {
-    const record: any = data?.record;
+    const record: any = entryRecord;
     const timestamps: { label: string; at?: string | null }[] = [];
     if (record?.date || record?.created_at) timestamps.push({ label: 'Received at store', at: record?.date || record?.created_at });
     if (quality?.created_at) timestamps.push({ label: 'Assessment submitted', at: quality.created_at });
@@ -250,25 +279,25 @@ export default function GRNScanPay() {
 
   const trail = useMemo(() => {
     const items: { at?: string | null; title: string; detail?: string }[] = [];
-    if (data?.record?.created_at) items.push({ at: data.record.created_at, title: 'Coffee received (Store)', detail: `${Number(data.record.kilograms || 0).toLocaleString()} kg ${data.record.coffee_type || ''} from ${data.supplierName}` });
+    if (entryRecord?.created_at) items.push({ at: entryRecord.created_at, title: 'Coffee received (Store)', detail: `${Number(entryRecord.kilograms || 0).toLocaleString()} kg ${entryRecord.coffee_type || ''} from ${entry?.supplierName || '—'}` });
     if (store?.created_at) items.push({ at: store.created_at, title: `Store record ${store.transaction_type || ''}`.trim(), detail: `${Number(store.quantity_kg || 0).toLocaleString()} kg · ${store.status || ''}` });
     if (quality?.created_at) items.push({ at: quality.created_at, title: 'Quality assessment submitted', detail: `By ${quality.assessed_by || quality.physical_assessment_by || '—'} · Ref ${quality.assessment_ref || '—'}` });
     if (quality?.qm_reviewed_at) items.push({ at: quality.qm_reviewed_at, title: `Quality manager ${quality.qm_action || 'review'}`, detail: `${quality.qm_reviewed_by || '—'}${quality.qm_notes ? ` · ${quality.qm_notes}` : ''}` });
     if (quality?.grn_printed_at) items.push({ at: quality.grn_printed_at, title: `GRN printed (${quality.form_number || '—'})`, detail: quality.grn_printed_by || '' });
     if (lot?.created_at) items.push({ at: lot.created_at, title: 'Released to Finance', detail: `${money(lot.total_amount_ugx)} payable` });
-    (data?.payments || []).forEach((p: any) => items.push({ at: p.created_at, title: `Payment ${p.status || 'recorded'} · ${p.method || ''}`, detail: `${money(p.amount_paid_ugx)} by ${p.requested_by || '—'}` }));
+    (entry?.payments || []).forEach((p: any) => items.push({ at: p.created_at, title: `Payment ${p.status || 'recorded'} · ${p.method || ''}`, detail: `${money(p.amount_paid_ugx)} by ${p.requested_by || '—'}` }));
     (data?.logs || []).forEach((l: any) => items.push({ at: l.created_at, title: l.action, detail: `${l.performed_by || '—'}${l.reason ? ` · ${l.reason}` : ''}` }));
     return items.sort((a, b) => new Date(b.at || 0).getTime() - new Date(a.at || 0).getTime());
-  }, [data]);
+  }, [data, entry, entryRecord, lot, quality, store]);
 
   const receipt = () => {
 
     if (!lot) return;
     const lotValue = Number(lot.total_amount_ugx || 0);
-    const thisPayment = Number(data?.payment?.amount_paid_ugx ?? lot.total_amount_ugx ?? 0);
-    const previouslyPaid = (data?.payments || [])
+    const thisPayment = Number(entry?.payment?.amount_paid_ugx ?? lot.total_amount_ugx ?? 0);
+    const previouslyPaid = (entry?.payments || [])
       .filter((p: any) =>
-        p.id !== data?.payment?.id &&
+        p.id !== entry?.payment?.id &&
         !['failed', 'cancelled', 'rejected'].includes(String(p.status || '').toLowerCase()))
       .reduce((s: number, p: any) => s + Number(p.amount_paid_ugx || 0), 0);
     trackActivity('report_generation', `printing supplier payment receipt for ${lot.batch_number || batch}`, {
@@ -277,21 +306,21 @@ export default function GRNScanPay() {
     });
     printGrnPaymentReceipt({
       grnNumber: `GRN-${lot.batch_number || batch}`,
-      supplierName: data?.supplierName || 'Unknown Supplier',
-      coffeeType: data?.record?.coffee_type,
+      supplierName: entry?.supplierName || 'Unknown Supplier',
+      coffeeType: entryRecord?.coffee_type,
       quantityKg: lot.quantity_kg,
       unitPrice: lot.unit_price_ugx,
       amount: thisPayment,
       lotValue,
       previouslyPaid,
       balance: Math.max(lotValue - previouslyPaid - thisPayment, 0),
-      method: data?.payment?.method || method,
-      paidAt: data?.payment?.created_at || lot.updated_at || new Date().toISOString(),
-      paidBy: data?.paidByName || data?.payment?.requested_by || 'Finance Department',
+      method: entry?.payment?.method || method,
+      paidAt: entry?.payment?.created_at || lot.updated_at || new Date().toISOString(),
+      paidBy: entry?.paidByName || entry?.payment?.requested_by || 'Finance Department',
       printedBy: employee?.name
         ? `${employee.name}${(employee as any)?.position ? ` · ${(employee as any).position}` : ''}`
         : (user?.email || 'Finance Department'),
-      notes: data?.payment?.notes || lot.finance_notes,
+      notes: entry?.payment?.notes || lot.finance_notes,
       receiptNo: `RCP-${String(lot.batch_number || batch).replace(/[^A-Z0-9]/gi, '').slice(-8)}`,
     });
   };
@@ -333,7 +362,7 @@ export default function GRNScanPay() {
         await (supabase as any).from('finance_cash_transactions').insert({
           transaction_type: 'outbound',
           amount: lot.total_amount_ugx,
-          description: `Supplier payment (QR): ${data?.supplierName} - ${lot.batch_number || batch}`,
+          description: `Supplier payment (QR): ${entry?.supplierName} - ${lot.batch_number || batch}`,
           reference_number: lot.batch_number || batch,
           performed_by: payer,
           balance_before: before,
@@ -347,7 +376,7 @@ export default function GRNScanPay() {
         record_id: lot.id,
         performed_by: payer,
         department: 'Finance',
-        reason: `Paid ${data?.supplierName} ${money(lot.total_amount_ugx)} via ${method} (GRN QR scan)`,
+        reason: `Paid ${entry?.supplierName} ${money(lot.total_amount_ugx)} via ${method} (GRN QR scan)`,
         record_data: { batch: lot.batch_number || batch, amount: lot.total_amount_ugx, method },
       });
 
@@ -359,8 +388,14 @@ export default function GRNScanPay() {
         method,
       });
       setPayOpen(false);
-      markQueuePaid(rawRef);
-      if (batch !== rawRef) markQueuePaid(batch);
+      const remaining = entries.filter((e) => !e.paid && e.lot?.id !== lot.id);
+      if (remaining.length === 0) {
+        markQueuePaid(rawRef);
+        if (batch !== rawRef) markQueuePaid(batch);
+      } else {
+        setSelectedLotId(remaining[0].lot.id);
+        toast.info(`${remaining.length} more unpaid lot(s) share batch ${batch} — pay them next`);
+      }
       await qc.invalidateQueries({ queryKey: ['grn-scan-lot', batch] });
       qc.invalidateQueries({ queryKey: ['finance-pending-payments'] });
       setTimeout(receipt, 300);
@@ -456,6 +491,48 @@ export default function GRNScanPay() {
         </Card>
       )}
 
+      {entries.length > 1 && (
+        <Card className="border-amber-300">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">
+              Batch {batch} has {entries.length} lots · {unpaidCount} still unpaid
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0 space-y-2">
+            <p className="text-xs text-muted-foreground">
+              This batch number is shared by more than one delivery. Paying one lot does not pay the others — select
+              each unpaid lot below and pay it separately.
+            </p>
+            {entries.map((e: any) => {
+              const active = e.lot?.id === lot?.id;
+              return (
+                <button
+                  key={e.lot.id}
+                  onClick={() => setSelectedLotId(e.lot.id)}
+                  className={`w-full text-left rounded-md border p-2 text-xs transition ${
+                    active ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'
+                  } ${e.paid ? 'opacity-70' : ''}`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium">
+                      {e.supplierName}
+                      {e.record?.coffee_type ? ` · ${e.record.coffee_type}` : ''}
+                    </span>
+                    <Badge variant={e.paid ? 'default' : 'secondary'} className={e.paid ? 'bg-green-600' : ''}>
+                      {e.paid ? 'PAID' : 'UNPAID'}
+                    </Badge>
+                  </div>
+                  <div className="text-muted-foreground mt-0.5">
+                    {Number(e.lot.quantity_kg || 0).toLocaleString()} kg · {money(e.lot.total_amount_ugx)}
+                    {e.paid && e.payment?.created_at ? ` · paid ${dt(e.payment.created_at)}` : ''}
+                  </div>
+                </button>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2">
@@ -485,7 +562,7 @@ export default function GRNScanPay() {
               </p>
               <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t">
                 <div><span className="text-muted-foreground block">GRN / Batch</span>{batch}</div>
-                <div><span className="text-muted-foreground block">Supplier</span>{data?.supplierName || '—'}</div>
+                <div><span className="text-muted-foreground block">Supplier</span>{entry?.supplierName || '—'}</div>
                 {notReady.timestamps.map((t) => (
                   <div key={t.label}><span className="text-muted-foreground block">{t.label}</span>{dt(t.at)}</div>
                 ))}
@@ -502,20 +579,20 @@ export default function GRNScanPay() {
                     <CheckCircle2 className="h-4 w-4" /> ALREADY PAID — no further payment needed
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div><span className="text-muted-foreground block">Amount paid</span>{money(data?.payment?.amount_paid_ugx ?? lot.total_amount_ugx)}</div>
-                    <div><span className="text-muted-foreground block">Method</span>{data?.payment?.method || '—'}</div>
-                    <div><span className="text-muted-foreground block">Paid on</span>{dt(data?.payment?.created_at)}</div>
-                    <div><span className="text-muted-foreground block">Paid by</span>{data?.paidByName || data?.payment?.requested_by || '—'}<span className="block text-[10px] text-muted-foreground">on behalf of Finance</span></div>
+                    <div><span className="text-muted-foreground block">Amount paid</span>{money(entry?.payment?.amount_paid_ugx ?? lot.total_amount_ugx)}</div>
+                    <div><span className="text-muted-foreground block">Method</span>{entry?.payment?.method || '—'}</div>
+                    <div><span className="text-muted-foreground block">Paid on</span>{dt(entry?.payment?.created_at)}</div>
+                    <div><span className="text-muted-foreground block">Paid by</span>{entry?.paidByName || entry?.payment?.requested_by || '—'}<span className="block text-[10px] text-muted-foreground">on behalf of Finance</span></div>
                   </div>
                 </div>
               )}
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><span className="text-muted-foreground block">Supplier</span>{data?.supplierName}</div>
-                <div><span className="text-muted-foreground block">Coffee type</span>{data?.record?.coffee_type || '—'}</div>
+                <div><span className="text-muted-foreground block">Supplier</span>{entry?.supplierName}</div>
+                <div><span className="text-muted-foreground block">Coffee type</span>{entryRecord?.coffee_type || '—'}</div>
                 <div><span className="text-muted-foreground block">Quantity</span>{Number(lot.quantity_kg || 0).toLocaleString()} kg</div>
                 <div><span className="text-muted-foreground block">Unit price</span>{money(lot.unit_price_ugx)}</div>
-                <div><span className="text-muted-foreground block">Bags</span>{data?.record?.bags ?? store?.quantity_bags ?? '—'}</div>
-                <div><span className="text-muted-foreground block">Received on</span>{dt(data?.record?.date || data?.record?.created_at)}</div>
+                <div><span className="text-muted-foreground block">Bags</span>{entryRecord?.bags ?? store?.quantity_bags ?? '—'}</div>
+                <div><span className="text-muted-foreground block">Received on</span>{dt(entryRecord?.date || entryRecord?.created_at)}</div>
                 <div><span className="text-muted-foreground block">GRN / Form no.</span>{lot.grn_number || quality?.form_number || `GRN-${lot.batch_number || batch}`}</div>
                 <div><span className="text-muted-foreground block">Store location</span>{store?.to_location || store?.from_location || '—'}</div>
                 <div className="col-span-2 text-base font-semibold">
@@ -551,7 +628,7 @@ export default function GRNScanPay() {
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-sm text-green-700">
                     <CheckCircle2 className="h-4 w-4" /> Paid
-                    {data?.payment?.created_at ? ` on ${new Date(data.payment.created_at).toLocaleString('en-GB')}` : ''}
+                    {entry?.payment?.created_at ? ` on ${new Date(entry.payment.created_at).toLocaleString('en-GB')}` : ''}
                   </div>
                   <Button onClick={receipt} className="w-full">
                     <Printer className="h-4 w-4 mr-2" /> Print payment receipt
@@ -604,7 +681,7 @@ export default function GRNScanPay() {
           <DialogHeader>
             <DialogTitle>Confirm payment</DialogTitle>
             <DialogDescription>
-              {data?.supplierName} — {money(lot?.total_amount_ugx)} for GRN-{lot?.batch_number || batch}
+              {entry?.supplierName} — {money(lot?.total_amount_ugx)} for GRN-{lot?.batch_number || batch}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
