@@ -48,6 +48,7 @@ export default function SecuritySettings() {
   const [newIpDesc, setNewIpDesc] = useState("");
 
   const loadAll = async () => {
+    setLoading(true);
     const [p, d, b, w, r] = await Promise.all([
       supabase.from("system_settings").select("setting_value").eq("setting_key", "security_settings").maybeSingle(),
       supabase.from("device_sessions").select("*").order("last_seen_at", { ascending: false }).limit(25),
@@ -60,6 +61,19 @@ export default function SecuritySettings() {
     setBiometrics(b.data || []);
     setWhitelist(w.data || []);
     setRoleAudit(r.data || []);
+    const failed = [
+      d.error && "devices",
+      b.error && "biometrics",
+      w.error && "network whitelist",
+      r.error && "role changes",
+    ].filter(Boolean);
+    if (failed.length) {
+      toast({
+        title: "Some security data could not load",
+        description: `${failed.join(", ")} — ${d.error?.message || b.error?.message || w.error?.message || r.error?.message}`,
+        variant: "destructive",
+      });
+    }
     setLoading(false);
   };
 
