@@ -508,6 +508,9 @@ serve(async (req) => {
       )
     }
 
+    // Admin-configured SMS provider settings
+    const smsCfg = (await loadProviderSettings(supabase)).sms
+
     // 🛡️ DEDUP GUARD: prevent double-sends when a caller invokes both
     // send-transactional-email (which auto-fires SMS in SMS-PRIMARY mode)
     // AND send-sms directly. If the same phone+message was already sent
