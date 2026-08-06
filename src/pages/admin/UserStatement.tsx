@@ -724,7 +724,7 @@ const UserStatement = () => {
 
                   <Card className="mt-2">
                     <CardContent className="p-0">
-                      <div className="overflow-x-auto max-h-[45vh]">
+                      <div className="scroll-x-visible max-h-[45vh]">
                         <Table className="min-w-[900px]">
                           <TableHeader className="sticky top-0 bg-background z-10">
                             <TableRow>
@@ -774,8 +774,8 @@ const UserStatement = () => {
                 {/* Breakdown card (always shown below) */}
                 <Card>
                   <CardHeader><CardTitle className="text-base">Breakdown by type</CardTitle></CardHeader>
-                  <CardContent>
-                    <Table>
+                  <CardContent className="scroll-x-visible">
+                    <Table className="min-w-[720px]">
                       <TableHeader>
                         <TableRow>
                           <TableHead>Type</TableHead>
