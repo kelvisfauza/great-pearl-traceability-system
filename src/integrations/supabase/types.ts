@@ -4822,6 +4822,80 @@ export type Database = {
         }
         Relationships: []
       }
+      guarantor_recovery_appeals: {
+        Row: {
+          borrower_charged: number
+          borrower_email: string | null
+          borrower_name: string | null
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_notes: string | null
+          guarantor_email: string | null
+          guarantor_name: string | null
+          guarantor_user_id: string
+          id: string
+          loan_id: string
+          penalty_amount: number
+          reason: string
+          recovered_amount: number
+          recovery_reference: string | null
+          refund_amount: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          borrower_charged?: number
+          borrower_email?: string | null
+          borrower_name?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_notes?: string | null
+          guarantor_email?: string | null
+          guarantor_name?: string | null
+          guarantor_user_id: string
+          id?: string
+          loan_id: string
+          penalty_amount?: number
+          reason: string
+          recovered_amount: number
+          recovery_reference?: string | null
+          refund_amount?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          borrower_charged?: number
+          borrower_email?: string | null
+          borrower_name?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_notes?: string | null
+          guarantor_email?: string | null
+          guarantor_name?: string | null
+          guarantor_user_id?: string
+          id?: string
+          loan_id?: string
+          penalty_amount?: number
+          reason?: string
+          recovered_amount?: number
+          recovery_reference?: string | null
+          refund_amount?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guarantor_recovery_appeals_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       instant_withdrawals: {
         Row: {
           amount: number
@@ -15713,6 +15787,15 @@ export type Database = {
         }[]
       }
       resolve_grn_reference: { Args: { p_code: string }; Returns: string }
+      resolve_guarantor_recovery_appeal: {
+        Args: {
+          p_appeal_id: string
+          p_notes?: string
+          p_penalty_rate?: number
+          p_uphold: boolean
+        }
+        Returns: Json
+      }
       reverse_treasury_profit: {
         Args: {
           p_amount: number

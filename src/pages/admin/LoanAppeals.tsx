@@ -12,6 +12,7 @@ import { Loader2, Scale, ThumbsUp, ThumbsDown, Repeat, FileText } from 'lucide-r
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { sendLoanAgreement } from '@/utils/sendLoanAgreement';
+import GuarantorRecoveryAppeals from '@/components/loans/GuarantorRecoveryAppeals';
 
 type Vote = { id: string; admin_id: string; admin_email: string | null; vote_type: 'uphold' | 'approve_full' | 'counter'; counter_amount: number | null; counter_term_months: number | null; reason: string; created_at: string };
 type Appeal = {
@@ -303,12 +304,16 @@ export default function LoanAppeals() {
           <TabsList>
             <TabsTrigger value="pending">Pending ({pending.length})</TabsTrigger>
             <TabsTrigger value="decided">Decided ({decided.length})</TabsTrigger>
+            <TabsTrigger value="guarantor">Guarantor recoveries</TabsTrigger>
           </TabsList>
           <TabsContent value="pending" className="space-y-3 mt-3">
             {pending.length === 0 ? <div className="text-sm text-muted-foreground">No pending appeals.</div> : pending.map(renderCard)}
           </TabsContent>
           <TabsContent value="decided" className="space-y-3 mt-3">
             {decided.length === 0 ? <div className="text-sm text-muted-foreground">No decided appeals yet.</div> : decided.map(renderCard)}
+          </TabsContent>
+          <TabsContent value="guarantor" className="mt-3">
+            <GuarantorRecoveryAppeals />
           </TabsContent>
         </Tabs>
       )}
