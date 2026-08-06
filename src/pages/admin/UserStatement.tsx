@@ -611,26 +611,26 @@ const UserStatement = () => {
                         <div className={`flex items-center gap-2 text-xs ${(currentBalance ?? 0) >= 0 ? "text-emerald-700" : "text-red-700"}`}>
                           <Wallet className="h-3 w-3" /> Current Wallet Balance
                         </div>
-                        <div className={`text-lg font-bold ${(currentBalance ?? 0) >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                        <div className={`text-base lg:text-lg font-bold whitespace-nowrap ${(currentBalance ?? 0) >= 0 ? "text-emerald-700" : "text-red-700"}`}>
                           {currentBalance == null ? "…" : fmt(currentBalance)}
                         </div>
                         <div className="text-[10px] text-muted-foreground mt-0.5">Live · matches employee view</div>
                       </div>
                       <div className="p-3 rounded bg-emerald-50 border border-emerald-200">
                         <div className="flex items-center gap-2 text-emerald-700 text-xs"><ArrowDownCircle className="h-3 w-3" /> Credits</div>
-                        <div className="text-lg font-bold text-emerald-700">{fmt(totals.credits)}</div>
+                        <div className="text-base lg:text-lg font-bold whitespace-nowrap text-emerald-700">{fmt(totals.credits)}</div>
                       </div>
                       <div className="p-3 rounded bg-red-50 border border-red-200">
                         <div className="flex items-center gap-2 text-red-700 text-xs"><ArrowUpCircle className="h-3 w-3" /> Debits</div>
-                        <div className="text-lg font-bold text-red-700">{fmt(totals.debits)}</div>
+                        <div className="text-base lg:text-lg font-bold whitespace-nowrap text-red-700">{fmt(totals.debits)}</div>
                       </div>
                       <div className={`p-3 rounded border ${totals.net >= 0 ? "bg-blue-50 border-blue-200" : "bg-orange-50 border-orange-200"}`}>
                         <div className={`flex items-center gap-2 text-xs ${totals.net >= 0 ? "text-blue-700" : "text-orange-700"}`}><Wallet className="h-3 w-3" /> Net (filtered)</div>
-                        <div className={`text-lg font-bold ${totals.net >= 0 ? "text-blue-700" : "text-orange-700"}`}>{fmt(totals.net)}</div>
+                        <div className={`text-base lg:text-lg font-bold whitespace-nowrap ${totals.net >= 0 ? "text-blue-700" : "text-orange-700"}`}>{fmt(totals.net)}</div>
                       </div>
                       <div className="p-3 rounded bg-muted">
                         <div className="text-xs text-muted-foreground">Entries</div>
-                        <div className="text-lg font-bold">{entries.length.toLocaleString()}</div>
+                        <div className="text-base lg:text-lg font-bold whitespace-nowrap">{entries.length.toLocaleString()}</div>
                       </div>
                     </div>
 
