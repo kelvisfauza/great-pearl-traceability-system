@@ -11,6 +11,16 @@ export const generateBatchNumber = async (dateStr?: string): Promise<string> => 
     // Use provided date or today
     const targetDate = dateStr || new Date().toISOString().split('T')[0];
     const datePrefix = targetDate.replace(/-/g, ''); // YYYYMMDD
+
+    // Atomic allocation in the database — prevents two users getting the same
+    // batch number when saving at the same time.
+    const { data: allocated, error: rpcError } = await (supabase as any).rpc('next_batch_number', {
+      p_date: targetDate,
+    });
+    if (!rpcError && typeof allocated === 'string' && allocated.length >= 11) {
+      return allocated;
+    }
+    if (rpcError) console.warn('next_batch_number RPC failed, falling back:', rpcError);
     
     // Get batch numbers from both tables that start with today's date prefix
     const { data: coffeeRecords } = await supabase

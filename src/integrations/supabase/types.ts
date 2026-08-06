@@ -869,6 +869,27 @@ export type Database = {
         }
         Relationships: []
       }
+      batch_number_counters: {
+        Row: {
+          created_at: string
+          date_prefix: string
+          last_seq: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date_prefix: string
+          last_seq?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date_prefix?: string
+          last_seq?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       biometric_credentials: {
         Row: {
           created_at: string | null
@@ -15561,6 +15582,7 @@ export type Database = {
       migrate_approved_assessments_to_finance: { Args: never; Returns: number }
       migrate_batch_numbers_to_new_format: { Args: never; Returns: Json }
       milling_unremitted_total: { Args: never; Returns: number }
+      next_batch_number: { Args: { p_date?: string }; Returns: string }
       normalize_grn_pay_code: { Args: { p_code: string }; Returns: string }
       overdraft_activate: { Args: { p_email: string }; Returns: Json }
       overdraft_daily_maintenance: { Args: never; Returns: Json }
