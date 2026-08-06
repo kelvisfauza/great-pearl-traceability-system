@@ -9,7 +9,19 @@ import UnifiedPermissionManager from "@/components/admin/UnifiedPermissionManage
 import AdminWalletOperations from "@/components/admin/AdminWalletOperations";
 import ProviderSettings from "@/components/admin/ProviderSettings";
 import SecuritySettings from "@/components/admin/SecuritySettings";
-import { Database, Settings, Shield, MessageSquare, Snowflake, ShieldAlert, KeyRound, Wallet, Smartphone } from "lucide-react";
+import UserPermissionsList from "@/components/admin/UserPermissionsList";
+import RoleAssignmentManager from "@/components/admin/RoleAssignmentManager";
+import QuickPermissionAssignment from "@/components/admin/QuickPermissionAssignment";
+import PermissionOverview from "@/components/admin/PermissionOverview";
+import { PermissionChangeApprovals } from "@/components/admin/PermissionChangeApprovals";
+import AccountStatusManager from "@/components/admin/AccountStatusManager";
+import DeletionRequestsManager from "@/components/admin/DeletionRequestsManager";
+import { DatabaseCleanupTool } from "@/components/admin/DatabaseCleanupTool";
+import { DataArchiveManager } from "@/components/admin/DataArchiveManager";
+import MaintenanceToggle from "@/components/it/MaintenanceToggle";
+import ScheduledDowntimeSettings from "@/components/it/ScheduledDowntimeSettings";
+import BackupManagement from "@/components/it/BackupManagement";
+import { Database, Settings, Shield, MessageSquare, Snowflake, ShieldAlert, KeyRound, Wallet, Smartphone, Users, UserX, Wrench, HardDrive } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MigrateSupplierCodesButton } from "@/components/suppliers/MigrateSupplierCodesButton";
 import { MigrateBatchNumbersButton } from "@/components/admin/MigrateBatchNumbersButton";
@@ -21,10 +33,27 @@ const SystemSettings = () => {
       subtitle="Configure system-wide settings and perform administrative tasks"
     >
       <Tabs defaultValue="permissions" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-9">
+        <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+        <TabsList className="inline-flex w-auto min-w-full flex-nowrap">
           <TabsTrigger value="permissions" className="gap-2">
             <KeyRound className="h-4 w-4" />
             Permissions
+          </TabsTrigger>
+          <TabsTrigger value="user-access" className="gap-2">
+            <Users className="h-4 w-4" />
+            User Access
+          </TabsTrigger>
+          <TabsTrigger value="user-accounts" className="gap-2">
+            <UserX className="h-4 w-4" />
+            Users &amp; Deletions
+          </TabsTrigger>
+          <TabsTrigger value="maintenance" className="gap-2">
+            <Wrench className="h-4 w-4" />
+            Maintenance
+          </TabsTrigger>
+          <TabsTrigger value="backup" className="gap-2">
+            <HardDrive className="h-4 w-4" />
+            Backup
           </TabsTrigger>
           <TabsTrigger value="messaging" className="gap-2">
             <MessageSquare className="h-4 w-4" />
@@ -59,9 +88,40 @@ const SystemSettings = () => {
             Security
           </TabsTrigger>
         </TabsList>
+        </div>
 
         <TabsContent value="permissions" className="space-y-4">
           <UnifiedPermissionManager />
+        </TabsContent>
+
+        <TabsContent value="user-access" className="space-y-6">
+          <PermissionChangeApprovals />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              <UserPermissionsList />
+              <PermissionOverview />
+            </div>
+            <div className="space-y-6">
+              <QuickPermissionAssignment />
+              <RoleAssignmentManager />
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="user-accounts" className="space-y-6">
+          <AccountStatusManager />
+          <DeletionRequestsManager />
+        </TabsContent>
+
+        <TabsContent value="maintenance" className="space-y-6">
+          <MaintenanceToggle />
+          <ScheduledDowntimeSettings />
+          <DatabaseCleanupTool />
+        </TabsContent>
+
+        <TabsContent value="backup" className="space-y-6">
+          <BackupManagement />
+          <DataArchiveManager />
         </TabsContent>
 
         <TabsContent value="messaging" className="space-y-4">
