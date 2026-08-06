@@ -16,7 +16,7 @@ interface AttachSaleDialogProps {
   batch: {
     id: string;
     batch_identifier: string;
-    available_kilograms: number;
+    available_kilograms: number | string;
   };
 }
 
@@ -26,6 +26,8 @@ const AttachSaleDialog = ({ open, onOpenChange, onAttached, batch }: AttachSaleD
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const availableKg = Number(batch.available_kilograms) || 0;
 
   const { data: sales, isLoading } = useQuery({
     queryKey: ["completed-sales-for-eudr"],
@@ -42,34 +44,56 @@ const AttachSaleDialog = ({ open, onOpenChange, onAttached, batch }: AttachSaleD
   });
 
   const handleAttach = async () => {
-    if (!saleId || !kg || Number(kg) <= 0) {
+    const amount = Number(kg);
+    if (!saleId || !kg || !Number.isFinite(amount) || amount <= 0) {
       toast({ title: "Error", description: "Select a sale and enter valid kg", variant: "destructive" });
-      return;
-    }
-    if (Number(kg) > batch.available_kilograms) {
-      toast({ title: "Error", description: `Only ${batch.available_kilograms}kg available`, variant: "destructive" });
       return;
     }
 
     setSubmitting(true);
     try {
+      // Re-check live availability (another user may have allocated in the meantime)
+      const { data: liveBatch, error: batchErr } = await supabase
+        .from("eudr_batches")
+        .select("available_kilograms, status")
+        .eq("id", batch.id)
+        .maybeSingle();
+      if (batchErr) throw batchErr;
+      const liveAvailable = Number(liveBatch?.available_kilograms ?? availableKg) || 0;
+      if (amount > liveAvailable) {
+        throw new Error(`Only ${liveAvailable.toLocaleString()}kg available on this batch`);
+      }
+
+      const { data: userData } = await supabase.auth.getUser();
+      const actor = userData?.user?.email || userData?.user?.id;
+      if (!actor) throw new Error("Your session expired. Please sign in again.");
+
       const { error } = await supabase.from("eudr_batch_sales").insert({
         batch_id: batch.id,
         sale_transaction_id: saleId,
-        kilograms_allocated: Number(kg),
-        attached_by: "system",
+        kilograms_allocated: amount,
+        attached_by: actor,
       });
       if (error) throw error;
 
       toast({ title: "Sale Attached", description: `${kg}kg linked to sale` });
       queryClient.invalidateQueries({ queryKey: ["eudr-batch-trace"] });
       queryClient.invalidateQueries({ queryKey: ["eudr"] });
+      queryClient.invalidateQueries({ queryKey: ["eudr-v2-stats"] });
       onAttached?.();
       onOpenChange(false);
       setSaleId("");
       setKg("");
     } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      console.error("Attach sale failed:", err);
+      const detail = [err?.message, err?.details, err?.hint, err?.code && `(${err.code})`]
+        .filter(Boolean)
+        .join(" — ");
+      toast({
+        title: "Attach failed",
+        description: detail || "Could not attach this sale. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -83,7 +107,7 @@ const AttachSaleDialog = ({ open, onOpenChange, onAttached, batch }: AttachSaleD
         <DialogHeader>
           <DialogTitle>Attach Sale to {batch.batch_identifier}</DialogTitle>
         </DialogHeader>
-        <p className="text-sm text-muted-foreground">Available: <strong>{batch.available_kilograms.toLocaleString()}kg</strong></p>
+        <p className="text-sm text-muted-foreground">Available: <strong>{availableKg.toLocaleString()}kg</strong></p>
 
         <div className="space-y-4">
           <div>
@@ -94,6 +118,9 @@ const AttachSaleDialog = ({ open, onOpenChange, onAttached, batch }: AttachSaleD
               <Select value={saleId} onValueChange={setSaleId}>
                 <SelectTrigger><SelectValue placeholder="Choose a sale..." /></SelectTrigger>
                 <SelectContent>
+                  {(!sales || sales.length === 0) && (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">No sales found</div>
+                  )}
                   {sales?.map((s: any) => (
                     <SelectItem key={s.id} value={s.id}>
                       {s.date} — {s.customer} — {s.coffee_type} ({Number(s.weight).toLocaleString()}kg)
@@ -119,8 +146,8 @@ const AttachSaleDialog = ({ open, onOpenChange, onAttached, batch }: AttachSaleD
               type="number"
               value={kg}
               onChange={(e) => setKg(e.target.value)}
-              max={batch.available_kilograms}
-              placeholder={`Max ${batch.available_kilograms}kg`}
+              max={availableKg}
+              placeholder={`Max ${availableKg}kg`}
             />
           </div>
 
