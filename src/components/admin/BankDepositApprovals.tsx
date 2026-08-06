@@ -74,7 +74,12 @@ const BankDepositApprovals: React.FC = () => {
     [requests],
   );
 
-  const notify = async (req: BankDepositRequest, message: string, title = 'Bank Deposit Update') => {
+  const notify = async (
+    req: BankDepositRequest,
+    message: string,
+    title = 'Bank Deposit Update',
+    messageType: string = 'bank_deposit',
+  ) => {
     try {
       const { data: emp } = await supabase
         .from('employees')
@@ -83,7 +88,15 @@ const BankDepositApprovals: React.FC = () => {
         .maybeSingle();
       if (emp?.phone) {
         await supabase.functions.invoke('send-sms', {
-          body: { phone: emp.phone, message, userName: emp.name || req.employee_name || 'Staff' },
+          body: {
+            phone: emp.phone,
+            message,
+            userName: emp.name || req.employee_name || 'Staff',
+            messageType,
+            recipientEmail: req.employee_email,
+            department: emp.department || null,
+            requestId: req.reference,
+          },
         });
       }
       if (emp?.id) {
@@ -114,6 +127,7 @@ const BankDepositApprovals: React.FC = () => {
         req,
         `Great Agro Coffee: Your bank deposit request ${req.reference} of UGX ${Number(req.amount).toLocaleString()} has been APPROVED. The funds will be credited to your ${req.bank_name} account ${req.account_number} within 24 hours.`,
         'Bank Deposit Approved',
+        'bank_deposit_approved',
       );
       queryClient.invalidateQueries({ queryKey: ['bank-deposit-requests'] });
     } catch (e: any) {
@@ -134,7 +148,7 @@ const BankDepositApprovals: React.FC = () => {
         .eq('id', req.id);
       if (error) throw error;
       toast({ title: 'Rejected', description: 'The request has been rejected.' });
-      await notify(req, `Great Agro Coffee: Your bank deposit request ${req.reference} was rejected. Reason: ${reason}`, 'Bank Deposit Rejected');
+      await notify(req, `Great Agro Coffee: Your bank deposit request ${req.reference} was rejected. Reason: ${reason}`, 'Bank Deposit Rejected', 'bank_deposit_rejected');
       queryClient.invalidateQueries({ queryKey: ['bank-deposit-requests'] });
     } catch (e: any) {
       toast({ title: 'Error', description: e?.message || 'Rejection failed', variant: 'destructive' });
@@ -165,6 +179,7 @@ const BankDepositApprovals: React.FC = () => {
         req,
         `Great Agro Coffee: Your bank deposit ${req.reference} of UGX ${Number(req.amount).toLocaleString()} has been PAID to ${req.bank_name} A/C ${req.account_number}. Fee: UGX ${Number(req.fee).toLocaleString()}. Allow up to 24 hours for the funds to reflect on your bank account.`,
         'Bank Deposit Paid',
+        'bank_deposit_paid',
       );
       queryClient.invalidateQueries({ queryKey: ['bank-deposit-requests'] });
     } catch (e: any) {
