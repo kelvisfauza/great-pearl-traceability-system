@@ -34,7 +34,7 @@ const SystemSettings = () => {
     >
       <Tabs defaultValue="permissions" className="space-y-6">
         <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
-        <TabsList className="inline-flex w-auto min-w-full lg:grid lg:w-full lg:grid-cols-13">
+        <TabsList className="inline-flex w-auto min-w-full flex-nowrap">
           <TabsTrigger value="permissions" className="gap-2">
             <KeyRound className="h-4 w-4" />
             Permissions
