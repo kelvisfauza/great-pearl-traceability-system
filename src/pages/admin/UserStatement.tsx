@@ -625,16 +625,19 @@ const UserStatement = () => {
                         <div className="text-[10px] text-muted-foreground mt-0.5">Live · matches employee view</div>
                       </div>
                       <div className="p-3 rounded bg-emerald-50 border border-emerald-200">
-                        <div className="flex items-center gap-2 text-emerald-700 text-xs"><ArrowDownCircle className="h-3 w-3" /> Credits</div>
+                        <div className="flex items-center gap-2 text-emerald-700 text-xs"><ArrowDownCircle className="h-3 w-3" /> Credits (filtered)</div>
                         <div className="text-base lg:text-lg font-bold whitespace-nowrap text-emerald-700">{fmt(totals.credits)}</div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5">Money in over the period — not a balance</div>
                       </div>
                       <div className="p-3 rounded bg-red-50 border border-red-200">
-                        <div className="flex items-center gap-2 text-red-700 text-xs"><ArrowUpCircle className="h-3 w-3" /> Debits</div>
+                        <div className="flex items-center gap-2 text-red-700 text-xs"><ArrowUpCircle className="h-3 w-3" /> Debits (filtered)</div>
                         <div className="text-base lg:text-lg font-bold whitespace-nowrap text-red-700">{fmt(totals.debits)}</div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5">Money out over the period</div>
                       </div>
                       <div className={`p-3 rounded border ${totals.net >= 0 ? "bg-blue-50 border-blue-200" : "bg-orange-50 border-orange-200"}`}>
                         <div className={`flex items-center gap-2 text-xs ${totals.net >= 0 ? "text-blue-700" : "text-orange-700"}`}><Wallet className="h-3 w-3" /> Net (filtered)</div>
                         <div className={`text-base lg:text-lg font-bold whitespace-nowrap ${totals.net >= 0 ? "text-blue-700" : "text-orange-700"}`}>{fmt(totals.net)}</div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5">Credits minus debits in view</div>
                       </div>
                       <div className="p-3 rounded bg-muted">
                         <div className="text-xs text-muted-foreground">Entries</div>
@@ -663,8 +666,10 @@ const UserStatement = () => {
                             <SelectItem value="DEPOSIT">Deposit</SelectItem>
                             <SelectItem value="MONTHLY_SALARY">Salary</SelectItem>
                             <SelectItem value="WITHDRAWAL">Withdrawal</SelectItem>
-                            <SelectItem value="PAYOUT">Payout</SelectItem>
                             <SelectItem value="ADJUSTMENT">Adjustment</SelectItem>
+                            <SelectItem value="LOAN_REPAYMENT">Loan repayment</SelectItem>
+                            <SelectItem value="LOAN_DISBURSEMENT">Loan disbursement</SelectItem>
+                            <SelectItem value="REVERSAL">Reversal</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
