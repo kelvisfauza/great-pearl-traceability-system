@@ -388,8 +388,14 @@ export default function GRNScanPay() {
         method,
       });
       setPayOpen(false);
-      markQueuePaid(rawRef);
-      if (batch !== rawRef) markQueuePaid(batch);
+      const remaining = entries.filter((e) => !e.paid && e.lot?.id !== lot.id);
+      if (remaining.length === 0) {
+        markQueuePaid(rawRef);
+        if (batch !== rawRef) markQueuePaid(batch);
+      } else {
+        setSelectedLotId(remaining[0].lot.id);
+        toast.info(`${remaining.length} more unpaid lot(s) share batch ${batch} — pay them next`);
+      }
       await qc.invalidateQueries({ queryKey: ['grn-scan-lot', batch] });
       qc.invalidateQueries({ queryKey: ['finance-pending-payments'] });
       setTimeout(receipt, 300);
