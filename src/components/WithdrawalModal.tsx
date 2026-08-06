@@ -803,7 +803,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                   <Input
                     id="amount"
                     type="number"
-                    placeholder={instantUnavailable ? 'Instant withdrawal unavailable' : 'Enter withdrawal amount'}
+                    placeholder={payoutMode !== 'BANK' && instantUnavailable ? 'Instant withdrawal unavailable' : 'Enter withdrawal amount'}
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     required
