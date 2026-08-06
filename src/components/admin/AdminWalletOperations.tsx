@@ -370,7 +370,7 @@ export default function AdminWalletOperations() {
           <CardTitle>Recent history</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          {history.slice(0, 20).map(op => (
+          {history.slice(0, 3).map(op => (
             <div key={op.id} className="flex items-center gap-3 text-sm border-b py-2">
               {OP_ICONS[op.operation_type]}
               <span className="capitalize font-medium min-w-[80px]">{op.operation_type}</span>
