@@ -119,38 +119,53 @@ export default function GRNScanPay() {
         .eq('batch_number', batch);
       const allRecords: any[] = recs || [];
 
-      let supplierName = record?.supplier_name || null;
-      if (!supplierName && lot?.supplier_id) {
-        const { data: sup } = await supabase.from('suppliers').select('name').eq('id', lot.supplier_id).maybeSingle();
-        supplierName = (sup as any)?.name || null;
-      }
+      // Build one payable entry per finance lot so duplicate batch numbers stay separable
+      const entries = await Promise.all(
+        allLots.map(async (l: any) => {
+          const record: any =
+            allRecords.find((r) => r.id === l.coffee_record_id) ||
+            allRecords.find((r) => r.supplier_name && l.supplier_id && r.supplier_id === l.supplier_id) ||
+            (allLots.length === 1 ? allRecords[0] : null);
 
-      let payment: any = null;
-      let payments: any[] = [];
-      if (lot?.id) {
-        const { data: pays } = await supabase
-          .from('supplier_payments')
-          .select('*')
-          .eq('lot_id', lot.id)
-          .order('created_at', { ascending: false });
-        payments = pays || [];
-        payment = payments[0] || null;
-      }
+          let supplierName = record?.supplier_name || null;
+          if (!supplierName && l?.supplier_id) {
+            const { data: sup } = await supabase.from('suppliers').select('name').eq('id', l.supplier_id).maybeSingle();
+            supplierName = (sup as any)?.name || null;
+          }
 
-      // Resolve who actually processed the payment on behalf of Finance
-      let paidByName: string | null = null;
-      const payerRef = payment?.approved_by || payment?.requested_by || null;
-      if (payerRef) {
-        const { data: emp } = await supabase
-          .from('employees')
-          .select('name, email, position, department')
-          .or(`email.eq.${payerRef},name.eq.${payerRef}`)
-          .limit(1)
-          .maybeSingle();
-        paidByName = (emp as any)?.name
-          ? `${(emp as any).name}${(emp as any).position ? ` · ${(emp as any).position}` : ''}`
-          : String(payerRef);
-      }
+          const { data: pays } = await supabase
+            .from('supplier_payments')
+            .select('*')
+            .eq('lot_id', l.id)
+            .order('created_at', { ascending: false });
+          const payments: any[] = pays || [];
+          const payment: any = payments[0] || null;
+
+          let paidByName: string | null = null;
+          const payerRef = payment?.approved_by || payment?.requested_by || null;
+          if (payerRef) {
+            const { data: emp } = await supabase
+              .from('employees')
+              .select('name, email, position, department')
+              .or(`email.eq.${payerRef},name.eq.${payerRef}`)
+              .limit(1)
+              .maybeSingle();
+            paidByName = (emp as any)?.name
+              ? `${(emp as any).name}${(emp as any).position ? ` · ${(emp as any).position}` : ''}`
+              : String(payerRef);
+          }
+
+          return {
+            lot: l,
+            record,
+            supplierName: supplierName || 'Unknown Supplier',
+            payments,
+            payment,
+            paidByName,
+            paid: String(l.finance_status || '').toUpperCase() === 'PAID',
+          };
+        })
+      );
 
       const { data: qas } = await supabase
         .from('quality_assessments')
@@ -171,16 +186,28 @@ export default function GRNScanPay() {
       const { data: logs } = await supabase
         .from('audit_logs')
         .select('*')
-        .or([lot?.id, quality?.id, record?.id, store?.id].filter(Boolean).map((id) => `record_id.eq.${id}`).join(',') || 'record_id.eq.00000000-0000-0000-0000-000000000000')
+        .or(
+          [...allLots.map((l: any) => l.id), quality?.id, ...allRecords.map((r: any) => r.id), store?.id]
+            .filter(Boolean)
+            .map((id) => `record_id.eq.${id}`)
+            .join(',') || 'record_id.eq.00000000-0000-0000-0000-000000000000'
+        )
         .order('created_at', { ascending: false })
         .limit(50);
 
-      return { lot, record, supplierName: supplierName || 'Unknown Supplier', payment, payments, paidByName, quality, store, logs: logs || [] };
+      return { entries, record: allRecords[0] || null, quality, store, logs: logs || [] };
     },
   });
 
-  const lot: any = data?.lot;
-  const paid = lot?.finance_status === 'PAID';
+  const entries: any[] = data?.entries || [];
+  const entry: any =
+    entries.find((e) => e.lot?.id === selectedLotId) ||
+    entries.find((e) => !e.paid) ||
+    entries[0] ||
+    null;
+  const lot: any = entry?.lot;
+  const paid = !!entry?.paid;
+  const unpaidCount = entries.filter((e) => !e.paid).length;
   const quality: any = data?.quality;
   const store: any = data?.store;
 
