@@ -491,6 +491,48 @@ export default function GRNScanPay() {
         </Card>
       )}
 
+      {entries.length > 1 && (
+        <Card className="border-amber-300">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">
+              Batch {batch} has {entries.length} lots · {unpaidCount} still unpaid
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0 space-y-2">
+            <p className="text-xs text-muted-foreground">
+              This batch number is shared by more than one delivery. Paying one lot does not pay the others — select
+              each unpaid lot below and pay it separately.
+            </p>
+            {entries.map((e: any) => {
+              const active = e.lot?.id === lot?.id;
+              return (
+                <button
+                  key={e.lot.id}
+                  onClick={() => setSelectedLotId(e.lot.id)}
+                  className={`w-full text-left rounded-md border p-2 text-xs transition ${
+                    active ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'
+                  } ${e.paid ? 'opacity-70' : ''}`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium">
+                      {e.supplierName}
+                      {e.record?.coffee_type ? ` · ${e.record.coffee_type}` : ''}
+                    </span>
+                    <Badge variant={e.paid ? 'default' : 'secondary'} className={e.paid ? 'bg-green-600' : ''}>
+                      {e.paid ? 'PAID' : 'UNPAID'}
+                    </Badge>
+                  </div>
+                  <div className="text-muted-foreground mt-0.5">
+                    {Number(e.lot.quantity_kg || 0).toLocaleString()} kg · {money(e.lot.total_amount_ugx)}
+                    {e.paid && e.payment?.created_at ? ` · paid ${dt(e.payment.created_at)}` : ''}
+                  </div>
+                </button>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2">
