@@ -730,12 +730,15 @@ serve(async (req) => {
         } else {
           const errorText = await smsResponse.text();
           console.error('YoolaSMS API error:', errorText);
-          console.log('Attempting Infobip SMS fallback...');
-          
-          // Fallback to Infobip SMS
-          const infobipResult = await sendInfobipSmsFallback(formattedPhone, message, supabase, {
-            userName, recipientEmail, messageType, department, triggeredBy: triggeredBy || userId, requestId
-          });
+          // Fallback to Infobip SMS (admin-toggleable)
+          const infobipResult = smsCfg.infobip_fallback === false
+            ? { success: false, details: 'Infobip fallback disabled by admin settings' }
+            : await (async () => {
+                console.log('Attempting Infobip SMS fallback...');
+                return await sendInfobipSmsFallback(formattedPhone, message, supabase, {
+                  userName, recipientEmail, messageType, department, triggeredBy: triggeredBy || userId, requestId
+                });
+              })();
           
           if (infobipResult.success) {
             return new Response(
