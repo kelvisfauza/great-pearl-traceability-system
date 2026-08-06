@@ -123,29 +123,17 @@ const BonusClaimPopup = () => {
     const ref = generateBonusRef();
 
     try {
-      const { error: updateError } = await supabase
-        .from("bonuses")
-        .update({ status: "claimed", claimed_at: new Date().toISOString() })
-        .eq("id", bonus.id);
+      // Claim + wallet credit happen atomically server-side. Employees cannot
+      // insert into ledger_entries directly (RLS), which is why the old
+      // client-side claim always failed after marking the bonus as claimed.
+      const { data: claimResult, error: claimError } = await supabase.rpc("claim_bonus" as any, {
+        p_bonus_id: bonus.id,
+        p_reference: ref,
+      });
 
-      if (updateError) throw updateError;
-
-      const { error: ledgerError } = await supabase
-        .from("ledger_entries")
-        .insert({
-          user_id: user.id,
-          entry_type: "BONUS",
-          amount: bonus.amount,
-          reference: ref,
-          metadata: {
-            bonus_id: bonus.id,
-            reason: bonus.reason,
-            allocated_by: bonus.allocated_by,
-            voucher_ref: ref,
-          },
-        });
-
-      if (ledgerError) throw ledgerError;
+      if (claimError) throw claimError;
+      const res = claimResult as any;
+      if (res && res.ok === false) throw new Error(res.error || "Could not claim this bonus.");
 
       // Get updated wallet balance for the email
       let balanceAfter = '0';
