@@ -29,7 +29,7 @@ const AttachSaleDialog = ({ open, onOpenChange, onAttached, batch }: AttachSaleD
 
   const availableKg = Number(batch.available_kilograms) || 0;
 
-  const { data: sales, isLoading } = useQuery({
+  const { data: sales, isLoading, error: salesError } = useQuery({
     queryKey: ["completed-sales-for-eudr"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -114,6 +114,8 @@ const AttachSaleDialog = ({ open, onOpenChange, onAttached, batch }: AttachSaleD
             <Label>Select Sale</Label>
             {isLoading ? (
               <div className="flex items-center gap-2 py-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading sales...</div>
+            ) : salesError ? (
+              <p className="text-sm text-destructive py-2">Could not load sales: {(salesError as any)?.message}</p>
             ) : (
               <Select value={saleId} onValueChange={setSaleId}>
                 <SelectTrigger><SelectValue placeholder="Choose a sale..." /></SelectTrigger>
