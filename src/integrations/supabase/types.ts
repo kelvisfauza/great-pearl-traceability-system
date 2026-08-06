@@ -14935,6 +14935,7 @@ export type Database = {
         Args: { _call_id: string; _interacted?: boolean }
         Returns: Json
       }
+      backfill_discretion_finance_lots: { Args: never; Returns: Json }
       backfill_missing_finance_lots: {
         Args: { p_from?: string; p_to?: string }
         Returns: Json
