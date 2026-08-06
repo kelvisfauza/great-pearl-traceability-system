@@ -1600,7 +1600,13 @@ const QualityControl = () => {
                                 <Edit className="h-4 w-4 mr-1" />
                                 Edit
                               </Button>
-                              {!canPrintGRN ? null : !(assessment as any).grn_printed ? (
+                              {!canPrintGRN || !isGrnPrintable(assessment) ? (
+                                !canPrintGRN ? null : (
+                                  <Badge variant="outline" className="text-xs self-center">
+                                    Awaiting QM approval
+                                  </Badge>
+                                )
+                              ) : !(assessment as any).grn_printed ? (
                                 <Button 
                                   size="sm" 
                                   variant="outline"
