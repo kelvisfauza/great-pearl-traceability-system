@@ -803,20 +803,25 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                   <Input
                     id="amount"
                     type="number"
-                    placeholder={instantUnavailable ? 'Instant withdrawal unavailable' : 'Enter withdrawal amount'}
+                    placeholder={payoutMode !== 'BANK' && instantUnavailable ? 'Instant withdrawal unavailable' : 'Enter withdrawal amount'}
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     required
                     min="2000"
-                    max={instantEligibility?.eligible ? instantMaxAmount : undefined}
+                    max={payoutMode === 'MOBILE' && instantEligibility?.eligible ? instantMaxAmount : undefined}
                     step="1"
-                    disabled={eligibilityLoading || instantUnavailable}
+                    disabled={eligibilityLoading || (payoutMode !== 'BANK' && instantUnavailable)}
                   />
                   {amount && parsedAmount < 2000 && (
                     <p className="text-sm text-destructive">Minimum withdrawal is UGX 2,000</p>
                   )}
-                  {instantEligibility?.eligible && amount && parsedAmount > instantMaxAmount && (
+                  {payoutMode === 'MOBILE' && instantEligibility?.eligible && amount && parsedAmount > instantMaxAmount && (
                     <p className="text-sm text-destructive">Amount exceeds instant withdrawal limit (UGX {instantMaxAmount.toLocaleString()})</p>
+                  )}
+                  {payoutMode === 'BANK' && (
+                    <p className="text-xs text-muted-foreground">
+                      Bank deposits have no maximum limit — you can request any amount up to your available balance.
+                    </p>
                   )}
                 </div>
 

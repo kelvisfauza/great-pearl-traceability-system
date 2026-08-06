@@ -15071,6 +15071,10 @@ export type Database = {
       }
       check_auth_user_exists: { Args: { user_uuid: string }; Returns: Json }
       check_unread_messages_for_sms: { Args: never; Returns: undefined }
+      claim_bonus: {
+        Args: { p_bonus_id: string; p_reference?: string }
+        Returns: Json
+      }
       cleanup_expired_email_verification_codes: {
         Args: never
         Returns: undefined
