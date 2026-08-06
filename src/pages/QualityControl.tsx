@@ -937,7 +937,21 @@ const QualityControl = () => {
   };
 
 
+  // GRN may only be printed once the Head of Quality has approved the assessment.
+  const isGrnPrintable = (assessment: any) =>
+    !['pending_quality_manager', 'rejected', 'PERMANENTLY_REJECTED'].includes(
+      String(assessment?.status || '')
+    );
+
   const handlePrintGRN = async (assessment: any) => {
+    if (!isGrnPrintable(assessment)) {
+      toast({
+        title: 'Awaiting Quality Manager Approval',
+        description: 'This GRN can only be printed after the Head of Quality approves the assessment.',
+        variant: 'destructive',
+      });
+      return;
+    }
     // First try to find in local storeRecords
     let storeRecord = storeRecords.find(record => record.id === assessment.store_record_id);
     
@@ -1466,10 +1480,15 @@ const QualityControl = () => {
                       <TableRow>
                         <TableHead className="w-10">
                           <Checkbox
-                            checked={filteredAssessments.length > 0 && selectedForBulkPrint.length === filteredAssessments.length}
+                            checked={
+                              filteredAssessments.filter((a: any) => isGrnPrintable(a)).length > 0 &&
+                              selectedForBulkPrint.length === filteredAssessments.filter((a: any) => isGrnPrintable(a)).length
+                            }
                             onCheckedChange={(checked) => {
                               if (checked) {
-                                setSelectedForBulkPrint(filteredAssessments.map((a: any) => a.id));
+                                setSelectedForBulkPrint(
+                                  filteredAssessments.filter((a: any) => isGrnPrintable(a)).map((a: any) => a.id)
+                                );
                               } else {
                                 setSelectedForBulkPrint([]);
                               }
@@ -1499,6 +1518,7 @@ const QualityControl = () => {
                         >
                           <TableCell>
                             <Checkbox
+                              disabled={!isGrnPrintable(assessment)}
                               checked={selectedForBulkPrint.includes(assessment.id)}
                               onCheckedChange={(checked) => {
                                 if (checked) {
@@ -1580,7 +1600,13 @@ const QualityControl = () => {
                                 <Edit className="h-4 w-4 mr-1" />
                                 Edit
                               </Button>
-                              {!canPrintGRN ? null : !(assessment as any).grn_printed ? (
+                              {!canPrintGRN || !isGrnPrintable(assessment) ? (
+                                !canPrintGRN ? null : (
+                                  <Badge variant="outline" className="text-xs self-center">
+                                    Awaiting QM approval
+                                  </Badge>
+                                )
+                              ) : !(assessment as any).grn_printed ? (
                                 <Button 
                                   size="sm" 
                                   variant="outline"
