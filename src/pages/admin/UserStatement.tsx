@@ -724,12 +724,12 @@ const UserStatement = () => {
 
                   <Card className="mt-2">
                     <CardContent className="p-0">
-                      <div className="scroll-x-visible max-h-[45vh]">
-                        <Table className="min-w-[900px]">
+                      <div className="scroll-x-visible max-h-[45vh] overflow-y-auto [&>div]:overflow-visible">
+                        <Table className="min-w-[880px] w-full">
                           <TableHeader className="sticky top-0 bg-background z-10">
                             <TableRow>
-                              <TableHead className="w-[170px]">Date</TableHead>
-                              <TableHead className="w-[140px]">Type</TableHead>
+                              <TableHead className="w-[150px] whitespace-nowrap">Date</TableHead>
+                              <TableHead className="w-[130px]">Type</TableHead>
                               <TableHead>Description / Ref</TableHead>
                               <TableHead className="text-right w-[130px] whitespace-nowrap">Amount</TableHead>
                               <TableHead className="text-right w-[150px] whitespace-nowrap">Running Balance</TableHead>
@@ -747,7 +747,7 @@ const UserStatement = () => {
                                     {e.entry_type}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="text-xs max-w-[420px] min-w-[220px]">
+                                <TableCell className="text-xs max-w-[320px] min-w-[180px]">
                                   <div className="truncate" title={e.metadata?.description || e.reference}>
                                     {e.metadata?.description || "—"}
                                   </div>
@@ -774,8 +774,8 @@ const UserStatement = () => {
                 {/* Breakdown card (always shown below) */}
                 <Card>
                   <CardHeader><CardTitle className="text-base">Breakdown by type</CardTitle></CardHeader>
-                  <CardContent className="scroll-x-visible">
-                    <Table className="min-w-[720px]">
+                  <CardContent className="scroll-x-visible [&>div]:overflow-visible">
+                    <Table className="min-w-[720px] w-full">
                       <TableHeader>
                         <TableRow>
                           <TableHead>Type</TableHead>
