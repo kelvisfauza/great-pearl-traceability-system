@@ -72,7 +72,7 @@ const AdminDashboard = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
         <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
-          <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 sm:grid sm:grid-cols-5 bg-muted/50 p-1 rounded-xl gap-1">
+          <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 sm:grid sm:grid-cols-3 bg-muted/50 p-1 rounded-xl gap-1">
             <TabsTrigger value="overview" className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-md text-xs sm:text-sm">
               <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Overview
@@ -84,14 +84,6 @@ const AdminDashboard = () => {
             <TabsTrigger value="analytics" className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-md text-xs sm:text-sm">
               <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Analytics
-            </TabsTrigger>
-            <TabsTrigger value="permissions" className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-md text-xs sm:text-sm">
-              <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              Permissions
-            </TabsTrigger>
-            <TabsTrigger value="archive" className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-md text-xs sm:text-sm">
-              <Archive className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              Archive
             </TabsTrigger>
           </TabsList>
         </div>
@@ -237,10 +229,6 @@ const AdminDashboard = () => {
           {/* Attendance Overview */}
           <AttendanceOverviewCard />
 
-          {/* System Overview */}
-          <div className="grid grid-cols-1 gap-6">
-            <PermissionOverview />
-          </div>
         </TabsContent>
 
         <TabsContent value="prices" className="space-y-6">
@@ -251,37 +239,6 @@ const AdminDashboard = () => {
           <div className="grid grid-cols-1 gap-6">
             <TopSuppliersChart />
           </div>
-        </TabsContent>
-
-        <TabsContent value="permissions" className="space-y-6">
-          {/* IT Permission Change Requests */}
-          <PermissionChangeApprovals />
-          
-          <Card className="border-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5 text-primary" />
-                Permission Management
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Control user access and role assignments
-              </p>
-            </CardHeader>
-          </Card>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <UserPermissionsList />
-            </div>
-            <div className="space-y-6">
-              <QuickPermissionAssignment />
-              <RoleAssignmentManager />
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="archive" className="space-y-6">
-          <DataArchiveManager />
         </TabsContent>
 
       </Tabs>
