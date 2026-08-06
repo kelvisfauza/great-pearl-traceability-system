@@ -513,7 +513,9 @@ serve(async (req) => {
     // AND send-sms directly. If the same phone+message was already sent
     // in the last 90 seconds, skip this one.
     try {
-      const sinceIso = new Date(Date.now() - 90 * 1000).toISOString()
+      const dedupWindow = Math.max(0, Number(smsCfg.dedup_window_seconds) || 0)
+      const sinceIso = new Date(Date.now() - dedupWindow * 1000).toISOString()
+      if (dedupWindow === 0) throw new Error('dedup disabled by admin settings')
       const { data: recentDup } = await supabase
         .from('sms_logs')
         .select('id, status, created_at')
@@ -547,7 +549,7 @@ serve(async (req) => {
           JSON.stringify({
             success: true,
             deduplicated: true,
-            reason: 'Identical SMS was already sent within the last 90 seconds.',
+            reason: `Identical SMS was already sent within the last ${dedupWindow} seconds.`,
             matchedLogId: recentDup.id,
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
