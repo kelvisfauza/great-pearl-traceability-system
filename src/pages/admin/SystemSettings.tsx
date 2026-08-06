@@ -8,6 +8,7 @@ import OverdraftUsageRules from "@/components/admin/OverdraftUsageRules";
 import UnifiedPermissionManager from "@/components/admin/UnifiedPermissionManager";
 import AdminWalletOperations from "@/components/admin/AdminWalletOperations";
 import ProviderSettings from "@/components/admin/ProviderSettings";
+import SecuritySettings from "@/components/admin/SecuritySettings";
 import { Database, Settings, Shield, MessageSquare, Snowflake, ShieldAlert, KeyRound, Wallet, Smartphone } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MigrateSupplierCodesButton } from "@/components/suppliers/MigrateSupplierCodesButton";
@@ -115,9 +116,7 @@ const SystemSettings = () => {
         </TabsContent>
 
         <TabsContent value="security" className="space-y-4">
-          <div className="text-center text-muted-foreground py-8">
-            Security settings coming soon...
-          </div>
+          <SecuritySettings />
         </TabsContent>
       </Tabs>
     </Layout>
