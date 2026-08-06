@@ -1080,24 +1080,7 @@ serve(async (req) => {
 
       for (const admin of adminRecipients) {
         try {
-          // Yo Payments authorization email
-          await supabase.functions.invoke('send-transactional-email', {
-            body: {
-              templateName: 'withdrawal-auth-request',
-              recipientEmail: admin.email,
-              idempotencyKey: `wd-auth-${instantRecord.id}-${admin.email}`,
-              templateData: {
-                adminName: admin.name.split(' ')[0],
-                employeeName,
-                amount: numAmount,
-                phone: cleanPhone,
-                ref: txRef,
-                walletBalance: remainingBalance ?? remainingAfter,
-              },
-            },
-          });
-
-          // System approval notification email
+          // Single approval notification per admin (avoids duplicate SMS/email)
           await supabase.functions.invoke('send-transactional-email', {
             body: {
               templateName: 'instant-withdrawal-approval-request',
@@ -1115,7 +1098,7 @@ serve(async (req) => {
             },
           });
 
-          console.log(`[instant-withdrawal] Auth + system approval emails sent to ${admin.email}`);
+          console.log(`[instant-withdrawal] Approval notification sent to ${admin.email}`);
         } catch (adminEmailErr) {
           console.error(`[instant-withdrawal] Admin email error for ${admin.email}:`, adminEmailErr);
         }
