@@ -589,6 +589,23 @@ serve(async (req) => {
       console.warn('⚠️ BulkSMS Premium failed, falling back to YoolaSMS');
     }
 
+    // Admin can disable YoolaSMS entirely — route straight to Infobip
+    if (smsCfg.yoola_enabled === false) {
+      const infobipOnly = await sendInfobipSmsFallback(formattedPhone, message, supabase, {
+        userName, recipientEmail, messageType, department, triggeredBy: triggeredBy || userId, requestId
+      });
+      return new Response(
+        JSON.stringify({
+          success: infobipOnly.success,
+          message: infobipOnly.success ? 'SMS sent via Infobip (YoolaSMS disabled)' : 'SMS failed (YoolaSMS disabled, Infobip failed)',
+          phone: formattedPhone,
+          provider: 'Infobip-SMS',
+          details: infobipOnly.details,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const apiKey = Deno.env.get('YOOLA_SMS_API_KEY')
     if (!apiKey) {
       console.error('YOOLA_SMS_API_KEY not configured')
