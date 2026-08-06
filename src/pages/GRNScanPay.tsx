@@ -208,6 +208,7 @@ export default function GRNScanPay() {
   const lot: any = entry?.lot;
   const paid = !!entry?.paid;
   const unpaidCount = entries.filter((e) => !e.paid).length;
+  const entryRecord: any = entry?.record || data?.record || null;
   const quality: any = data?.quality;
   const store: any = data?.store;
 
