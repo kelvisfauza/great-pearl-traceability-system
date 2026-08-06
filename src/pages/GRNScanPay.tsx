@@ -213,7 +213,7 @@ export default function GRNScanPay() {
 
   // Explains why a scanned GRN has no finance record yet
   const notReady = useMemo(() => {
-    const record: any = data?.record;
+    const record: any = entryRecord;
     const timestamps: { label: string; at?: string | null }[] = [];
     if (record?.date || record?.created_at) timestamps.push({ label: 'Received at store', at: record?.date || record?.created_at });
     if (quality?.created_at) timestamps.push({ label: 'Assessment submitted', at: quality.created_at });
@@ -278,13 +278,13 @@ export default function GRNScanPay() {
 
   const trail = useMemo(() => {
     const items: { at?: string | null; title: string; detail?: string }[] = [];
-    if (data?.record?.created_at) items.push({ at: data.record.created_at, title: 'Coffee received (Store)', detail: `${Number(data.record.kilograms || 0).toLocaleString()} kg ${data.record.coffee_type || ''} from ${data.supplierName}` });
+    if (entryRecord?.created_at) items.push({ at: entryRecord.created_at, title: 'Coffee received (Store)', detail: `${Number(entryRecord.kilograms || 0).toLocaleString()} kg ${entryRecord.coffee_type || ''} from ${entry.supplierName}` });
     if (store?.created_at) items.push({ at: store.created_at, title: `Store record ${store.transaction_type || ''}`.trim(), detail: `${Number(store.quantity_kg || 0).toLocaleString()} kg · ${store.status || ''}` });
     if (quality?.created_at) items.push({ at: quality.created_at, title: 'Quality assessment submitted', detail: `By ${quality.assessed_by || quality.physical_assessment_by || '—'} · Ref ${quality.assessment_ref || '—'}` });
     if (quality?.qm_reviewed_at) items.push({ at: quality.qm_reviewed_at, title: `Quality manager ${quality.qm_action || 'review'}`, detail: `${quality.qm_reviewed_by || '—'}${quality.qm_notes ? ` · ${quality.qm_notes}` : ''}` });
     if (quality?.grn_printed_at) items.push({ at: quality.grn_printed_at, title: `GRN printed (${quality.form_number || '—'})`, detail: quality.grn_printed_by || '' });
     if (lot?.created_at) items.push({ at: lot.created_at, title: 'Released to Finance', detail: `${money(lot.total_amount_ugx)} payable` });
-    (data?.payments || []).forEach((p: any) => items.push({ at: p.created_at, title: `Payment ${p.status || 'recorded'} · ${p.method || ''}`, detail: `${money(p.amount_paid_ugx)} by ${p.requested_by || '—'}` }));
+    (entry?.payments || []).forEach((p: any) => items.push({ at: p.created_at, title: `Payment ${p.status || 'recorded'} · ${p.method || ''}`, detail: `${money(p.amount_paid_ugx)} by ${p.requested_by || '—'}` }));
     (data?.logs || []).forEach((l: any) => items.push({ at: l.created_at, title: l.action, detail: `${l.performed_by || '—'}${l.reason ? ` · ${l.reason}` : ''}` }));
     return items.sort((a, b) => new Date(b.at || 0).getTime() - new Date(a.at || 0).getTime());
   }, [data]);
@@ -293,10 +293,10 @@ export default function GRNScanPay() {
 
     if (!lot) return;
     const lotValue = Number(lot.total_amount_ugx || 0);
-    const thisPayment = Number(data?.payment?.amount_paid_ugx ?? lot.total_amount_ugx ?? 0);
-    const previouslyPaid = (data?.payments || [])
+    const thisPayment = Number(entry?.payment?.amount_paid_ugx ?? lot.total_amount_ugx ?? 0);
+    const previouslyPaid = (entry?.payments || [])
       .filter((p: any) =>
-        p.id !== data?.payment?.id &&
+        p.id !== entry?.payment?.id &&
         !['failed', 'cancelled', 'rejected'].includes(String(p.status || '').toLowerCase()))
       .reduce((s: number, p: any) => s + Number(p.amount_paid_ugx || 0), 0);
     trackActivity('report_generation', `printing supplier payment receipt for ${lot.batch_number || batch}`, {
@@ -305,21 +305,21 @@ export default function GRNScanPay() {
     });
     printGrnPaymentReceipt({
       grnNumber: `GRN-${lot.batch_number || batch}`,
-      supplierName: data?.supplierName || 'Unknown Supplier',
-      coffeeType: data?.record?.coffee_type,
+      supplierName: entry?.supplierName || 'Unknown Supplier',
+      coffeeType: entryRecord?.coffee_type,
       quantityKg: lot.quantity_kg,
       unitPrice: lot.unit_price_ugx,
       amount: thisPayment,
       lotValue,
       previouslyPaid,
       balance: Math.max(lotValue - previouslyPaid - thisPayment, 0),
-      method: data?.payment?.method || method,
-      paidAt: data?.payment?.created_at || lot.updated_at || new Date().toISOString(),
-      paidBy: data?.paidByName || data?.payment?.requested_by || 'Finance Department',
+      method: entry?.payment?.method || method,
+      paidAt: entry?.payment?.created_at || lot.updated_at || new Date().toISOString(),
+      paidBy: entry?.paidByName || entry?.payment?.requested_by || 'Finance Department',
       printedBy: employee?.name
         ? `${employee.name}${(employee as any)?.position ? ` · ${(employee as any).position}` : ''}`
         : (user?.email || 'Finance Department'),
-      notes: data?.payment?.notes || lot.finance_notes,
+      notes: entry?.payment?.notes || lot.finance_notes,
       receiptNo: `RCP-${String(lot.batch_number || batch).replace(/[^A-Z0-9]/gi, '').slice(-8)}`,
     });
   };
@@ -361,7 +361,7 @@ export default function GRNScanPay() {
         await (supabase as any).from('finance_cash_transactions').insert({
           transaction_type: 'outbound',
           amount: lot.total_amount_ugx,
-          description: `Supplier payment (QR): ${data?.supplierName} - ${lot.batch_number || batch}`,
+          description: `Supplier payment (QR): ${entry?.supplierName} - ${lot.batch_number || batch}`,
           reference_number: lot.batch_number || batch,
           performed_by: payer,
           balance_before: before,
@@ -375,7 +375,7 @@ export default function GRNScanPay() {
         record_id: lot.id,
         performed_by: payer,
         department: 'Finance',
-        reason: `Paid ${data?.supplierName} ${money(lot.total_amount_ugx)} via ${method} (GRN QR scan)`,
+        reason: `Paid ${entry?.supplierName} ${money(lot.total_amount_ugx)} via ${method} (GRN QR scan)`,
         record_data: { batch: lot.batch_number || batch, amount: lot.total_amount_ugx, method },
       });
 
@@ -513,7 +513,7 @@ export default function GRNScanPay() {
               </p>
               <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t">
                 <div><span className="text-muted-foreground block">GRN / Batch</span>{batch}</div>
-                <div><span className="text-muted-foreground block">Supplier</span>{data?.supplierName || '—'}</div>
+                <div><span className="text-muted-foreground block">Supplier</span>{entry?.supplierName || '—'}</div>
                 {notReady.timestamps.map((t) => (
                   <div key={t.label}><span className="text-muted-foreground block">{t.label}</span>{dt(t.at)}</div>
                 ))}
@@ -530,20 +530,20 @@ export default function GRNScanPay() {
                     <CheckCircle2 className="h-4 w-4" /> ALREADY PAID — no further payment needed
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div><span className="text-muted-foreground block">Amount paid</span>{money(data?.payment?.amount_paid_ugx ?? lot.total_amount_ugx)}</div>
-                    <div><span className="text-muted-foreground block">Method</span>{data?.payment?.method || '—'}</div>
-                    <div><span className="text-muted-foreground block">Paid on</span>{dt(data?.payment?.created_at)}</div>
-                    <div><span className="text-muted-foreground block">Paid by</span>{data?.paidByName || data?.payment?.requested_by || '—'}<span className="block text-[10px] text-muted-foreground">on behalf of Finance</span></div>
+                    <div><span className="text-muted-foreground block">Amount paid</span>{money(entry?.payment?.amount_paid_ugx ?? lot.total_amount_ugx)}</div>
+                    <div><span className="text-muted-foreground block">Method</span>{entry?.payment?.method || '—'}</div>
+                    <div><span className="text-muted-foreground block">Paid on</span>{dt(entry?.payment?.created_at)}</div>
+                    <div><span className="text-muted-foreground block">Paid by</span>{entry?.paidByName || entry?.payment?.requested_by || '—'}<span className="block text-[10px] text-muted-foreground">on behalf of Finance</span></div>
                   </div>
                 </div>
               )}
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><span className="text-muted-foreground block">Supplier</span>{data?.supplierName}</div>
-                <div><span className="text-muted-foreground block">Coffee type</span>{data?.record?.coffee_type || '—'}</div>
+                <div><span className="text-muted-foreground block">Supplier</span>{entry?.supplierName}</div>
+                <div><span className="text-muted-foreground block">Coffee type</span>{entryRecord?.coffee_type || '—'}</div>
                 <div><span className="text-muted-foreground block">Quantity</span>{Number(lot.quantity_kg || 0).toLocaleString()} kg</div>
                 <div><span className="text-muted-foreground block">Unit price</span>{money(lot.unit_price_ugx)}</div>
-                <div><span className="text-muted-foreground block">Bags</span>{data?.record?.bags ?? store?.quantity_bags ?? '—'}</div>
-                <div><span className="text-muted-foreground block">Received on</span>{dt(data?.record?.date || data?.record?.created_at)}</div>
+                <div><span className="text-muted-foreground block">Bags</span>{entryRecord?.bags ?? store?.quantity_bags ?? '—'}</div>
+                <div><span className="text-muted-foreground block">Received on</span>{dt(entryRecord?.date || entryRecord?.created_at)}</div>
                 <div><span className="text-muted-foreground block">GRN / Form no.</span>{lot.grn_number || quality?.form_number || `GRN-${lot.batch_number || batch}`}</div>
                 <div><span className="text-muted-foreground block">Store location</span>{store?.to_location || store?.from_location || '—'}</div>
                 <div className="col-span-2 text-base font-semibold">
@@ -579,7 +579,7 @@ export default function GRNScanPay() {
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-sm text-green-700">
                     <CheckCircle2 className="h-4 w-4" /> Paid
-                    {data?.payment?.created_at ? ` on ${new Date(data.payment.created_at).toLocaleString('en-GB')}` : ''}
+                    {entry?.payment?.created_at ? ` on ${new Date(entry.payment.created_at).toLocaleString('en-GB')}` : ''}
                   </div>
                   <Button onClick={receipt} className="w-full">
                     <Printer className="h-4 w-4 mr-2" /> Print payment receipt
@@ -632,7 +632,7 @@ export default function GRNScanPay() {
           <DialogHeader>
             <DialogTitle>Confirm payment</DialogTitle>
             <DialogDescription>
-              {data?.supplierName} — {money(lot?.total_amount_ugx)} for GRN-{lot?.batch_number || batch}
+              {entry?.supplierName} — {money(lot?.total_amount_ugx)} for GRN-{lot?.batch_number || batch}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
