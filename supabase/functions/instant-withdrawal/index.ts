@@ -450,15 +450,33 @@ serve(async (req) => {
     const ref = `INSTANT-WD-${Date.now()}`;
     const remainingAfter = walletBalance - numAmount;
 
-    // ── Provider routing ───────────────────────────────────────────────
-    // Amounts < UGX 50,000 route via GosentePay AND require admin approval
-    // before the money is actually sent. Amounts ≥ 50,000 continue to use
-    // the Yo Payments direct payout flow below.
-    const useGosente = numAmount < 50000;
+    // ── Provider routing (admin-configurable) ─────────────────────────
+    // Amounts below the GosentePay routing threshold go via GosentePay and
+    // require admin approval; amounts at/above it use Yo Payments.
+    const useGosente = routeGosente;
 
-    // Tiered withdrawal service fee — applied ONLY to GosentePay withdrawals.
-    // Yo Payments payouts (>= UGX 50,000) carry no service fee.
-    const WITHDRAW_FEE = useGosente ? computeWithdrawFee(numAmount) : 0;
+    if (useGosente) {
+      if (numAmount < providerCfg.gosente.min_amount) {
+        return respond(false, { error: `Minimum GosentePay withdrawal is UGX ${providerCfg.gosente.min_amount.toLocaleString()}.` });
+      }
+      if (numAmount > providerCfg.gosente.max_amount) {
+        return respond(false, { error: `Maximum GosentePay withdrawal is UGX ${providerCfg.gosente.max_amount.toLocaleString()}.` });
+      }
+    } else {
+      if (!providerCfg.yo.enabled) {
+        return respond(false, { error: 'Yo Payments withdrawals are currently disabled by the administrator.' });
+      }
+      if (numAmount < providerCfg.yo.min_amount) {
+        return respond(false, { error: `Minimum Yo Payments withdrawal is UGX ${providerCfg.yo.min_amount.toLocaleString()}.` });
+      }
+      if (numAmount > providerCfg.yo.max_amount) {
+        return respond(false, { error: `Maximum Yo Payments withdrawal is UGX ${providerCfg.yo.max_amount.toLocaleString()}.` });
+      }
+    }
+
+    // Tiered withdrawal service fee (admin-configured tiers for GosentePay,
+    // flat configurable fee for Yo Payments).
+    const WITHDRAW_FEE = feeForOdCheck;
     if (spendable < numAmount + WITHDRAW_FEE) {
       return respond(false, {
         error: `Insufficient funds to cover the withdrawal plus the UGX ${WITHDRAW_FEE.toLocaleString()} service fee. Available: UGX ${spendable.toLocaleString()}.`,
