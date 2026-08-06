@@ -724,7 +724,8 @@ const UserStatement = () => {
                         <p className="text-xs text-muted-foreground">
                           <strong>Why:</strong> approved transfers, withdrawals, loan/advance recoveries or
                           adjustments can post before matching credits (salary, bonus, reversals) land. The
-                          <strong> Net</strong> figure above reflects the current effective balance.
+                          <strong> Current Wallet Balance</strong> card above is the only live figure — the
+                          Credits / Debits / Net cards are period totals for the rows in view.
                         </p>
                       </div>
                     </details>
