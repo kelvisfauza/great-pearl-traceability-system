@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { loadProviderSettings, feeFromTiers } from "../_shared/provider-settings.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -372,7 +373,10 @@ serve(async (req) => {
     // wallet in the same transaction path.
     // Service fee applies ONLY to GosentePay payouts (amounts < UGX 50,000).
     // Yo Payments withdrawals are fee-free.
-    const feeForOdCheck = numAmount < 50000 ? computeWithdrawFee(numAmount) : 0;
+    // Admin-configured provider settings (Admin > System Settings > Providers)
+    const providerCfg = await loadProviderSettings(supabase);
+    const routeGosente = providerCfg.gosente.enabled && numAmount < providerCfg.gosente.routing_threshold;
+    const feeForOdCheck = routeGosente ? feeFromTiers(numAmount, providerCfg.gosente.fee_tiers) : (Number(providerCfg.yo.service_fee) || 0);
     const overdraftPortion = Math.max(0, (numAmount + feeForOdCheck) - walletBalance);
     const walletPortion = numAmount - overdraftPortion;
     const isOverdraftDraw = overdraftPortion > 0;
