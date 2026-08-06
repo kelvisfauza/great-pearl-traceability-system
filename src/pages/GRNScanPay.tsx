@@ -69,6 +69,9 @@ export default function GRNScanPay() {
   const [notes, setNotes] = useState('');
   const [processing, setProcessing] = useState(false);
   const [queue, setQueue] = useState(() => getQueue());
+  // A batch number can legitimately carry more than one finance lot (historical
+  // duplicate batch numbers). Finance must see which lot is already paid and pay the rest.
+  const [selectedLotId, setSelectedLotId] = useState<string | null>(null);
 
   useEffect(() => subscribeQueue(() => setQueue(getQueue())), []);
 
@@ -107,16 +110,14 @@ export default function GRNScanPay() {
         .from('finance_coffee_lots')
         .select('*')
         .or(`batch_number.eq.${batch},coffee_record_id.eq.${batch}`)
-        .order('created_at', { ascending: false })
-        .limit(1);
-      const lot: any = lots?.[0] || null;
+        .order('created_at', { ascending: true });
+      const allLots: any[] = lots || [];
 
       const { data: recs } = await supabase
         .from('coffee_records')
         .select('*')
-        .eq('batch_number', batch)
-        .limit(1);
-      const record: any = recs?.[0] || null;
+        .eq('batch_number', batch);
+      const allRecords: any[] = recs || [];
 
       let supplierName = record?.supplier_name || null;
       if (!supplierName && lot?.supplier_id) {
