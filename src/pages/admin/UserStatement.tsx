@@ -81,11 +81,12 @@ const UserStatement = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("employees")
-        .select("id, name, email, department, auth_user_id")
-        .eq("status", "Active")
+        .select("id, name, email, department, auth_user_id, status")
         .order("name");
       // Don't drop employees missing auth_user_id — we resolve via email
       // through get_unified_user_id so they still get a statement.
+      // Suspended / inactive staff stay listed: admins must still be able to
+      // audit their ledger while the account is frozen.
       return (data || []) as any[];
     },
   });
