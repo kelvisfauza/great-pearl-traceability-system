@@ -937,7 +937,21 @@ const QualityControl = () => {
   };
 
 
+  // GRN may only be printed once the Head of Quality has approved the assessment.
+  const isGrnPrintable = (assessment: any) =>
+    !['pending_quality_manager', 'rejected', 'PERMANENTLY_REJECTED'].includes(
+      String(assessment?.status || '')
+    );
+
   const handlePrintGRN = async (assessment: any) => {
+    if (!isGrnPrintable(assessment)) {
+      toast({
+        title: 'Awaiting Quality Manager Approval',
+        description: 'This GRN can only be printed after the Head of Quality approves the assessment.',
+        variant: 'destructive',
+      });
+      return;
+    }
     // First try to find in local storeRecords
     let storeRecord = storeRecords.find(record => record.id === assessment.store_record_id);
     
