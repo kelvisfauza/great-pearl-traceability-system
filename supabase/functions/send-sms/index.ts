@@ -322,6 +322,11 @@ serve(async (req) => {
       'wallet_debit',
       'money_received',
       'money_sent',
+      // Bank deposit withdrawals
+      'bank_deposit',
+      'bank_deposit_approved',
+      'bank_deposit_paid',
+      'bank_deposit_rejected',
       // HR / recruitment notifications — applicants typically have no email on file
       'job_application',
       'job_application_received',
