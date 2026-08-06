@@ -279,7 +279,7 @@ export default function GRNScanPay() {
 
   const trail = useMemo(() => {
     const items: { at?: string | null; title: string; detail?: string }[] = [];
-    if (entryRecord?.created_at) items.push({ at: entryRecord.created_at, title: 'Coffee received (Store)', detail: `${Number(entryRecord.kilograms || 0).toLocaleString()} kg ${entryRecord.coffee_type || ''} from ${entry.supplierName}` });
+    if (entryRecord?.created_at) items.push({ at: entryRecord.created_at, title: 'Coffee received (Store)', detail: `${Number(entryRecord.kilograms || 0).toLocaleString()} kg ${entryRecord.coffee_type || ''} from ${entry?.supplierName || '—'}` });
     if (store?.created_at) items.push({ at: store.created_at, title: `Store record ${store.transaction_type || ''}`.trim(), detail: `${Number(store.quantity_kg || 0).toLocaleString()} kg · ${store.status || ''}` });
     if (quality?.created_at) items.push({ at: quality.created_at, title: 'Quality assessment submitted', detail: `By ${quality.assessed_by || quality.physical_assessment_by || '—'} · Ref ${quality.assessment_ref || '—'}` });
     if (quality?.qm_reviewed_at) items.push({ at: quality.qm_reviewed_at, title: `Quality manager ${quality.qm_action || 'review'}`, detail: `${quality.qm_reviewed_by || '—'}${quality.qm_notes ? ` · ${quality.qm_notes}` : ''}` });
@@ -288,7 +288,7 @@ export default function GRNScanPay() {
     (entry?.payments || []).forEach((p: any) => items.push({ at: p.created_at, title: `Payment ${p.status || 'recorded'} · ${p.method || ''}`, detail: `${money(p.amount_paid_ugx)} by ${p.requested_by || '—'}` }));
     (data?.logs || []).forEach((l: any) => items.push({ at: l.created_at, title: l.action, detail: `${l.performed_by || '—'}${l.reason ? ` · ${l.reason}` : ''}` }));
     return items.sort((a, b) => new Date(b.at || 0).getTime() - new Date(a.at || 0).getTime());
-  }, [data]);
+  }, [data, entry, entryRecord, lot, quality, store]);
 
   const receipt = () => {
 
