@@ -74,16 +74,26 @@ const BankDepositApprovals: React.FC = () => {
     [requests],
   );
 
-  const notify = async (req: BankDepositRequest, message: string) => {
+  const notify = async (req: BankDepositRequest, message: string, title = 'Bank Deposit Update') => {
     try {
       const { data: emp } = await supabase
         .from('employees')
-        .select('phone, name')
+        .select('id, phone, name, department')
         .eq('email', req.employee_email)
         .maybeSingle();
       if (emp?.phone) {
         await supabase.functions.invoke('send-sms', {
           body: { phone: emp.phone, message, userName: emp.name || req.employee_name || 'Staff' },
+        });
+      }
+      if (emp?.id) {
+        await (supabase as any).from('notifications').insert({
+          title,
+          message,
+          type: 'finance',
+          target_user_id: emp.id,
+          target_department: emp.department || null,
+          metadata: { reference: req.reference, amount: req.amount, bank: req.bank_name },
         });
       }
     } catch (e) {
@@ -100,7 +110,11 @@ const BankDepositApprovals: React.FC = () => {
         .eq('id', req.id);
       if (error) throw error;
       toast({ title: 'Approved', description: 'Sent to the Managing Director for final approval and payment.' });
-      await notify(req, `Great Agro Coffee: Your bank deposit request ${req.reference} of UGX ${Number(req.amount).toLocaleString()} has been approved by admin and is awaiting final payment.`);
+      await notify(
+        req,
+        `Great Agro Coffee: Your bank deposit request ${req.reference} of UGX ${Number(req.amount).toLocaleString()} has been APPROVED. The funds will be credited to your ${req.bank_name} account ${req.account_number} within 24 hours.`,
+        'Bank Deposit Approved',
+      );
       queryClient.invalidateQueries({ queryKey: ['bank-deposit-requests'] });
     } catch (e: any) {
       toast({ title: 'Error', description: e?.message || 'Approval failed', variant: 'destructive' });
@@ -120,7 +134,7 @@ const BankDepositApprovals: React.FC = () => {
         .eq('id', req.id);
       if (error) throw error;
       toast({ title: 'Rejected', description: 'The request has been rejected.' });
-      await notify(req, `Great Agro Coffee: Your bank deposit request ${req.reference} was rejected. Reason: ${reason}`);
+      await notify(req, `Great Agro Coffee: Your bank deposit request ${req.reference} was rejected. Reason: ${reason}`, 'Bank Deposit Rejected');
       queryClient.invalidateQueries({ queryKey: ['bank-deposit-requests'] });
     } catch (e: any) {
       toast({ title: 'Error', description: e?.message || 'Rejection failed', variant: 'destructive' });
@@ -147,7 +161,11 @@ const BankDepositApprovals: React.FC = () => {
         title: 'Marked as Paid',
         description: `UGX ${Number(res?.total_deducted || 0).toLocaleString()} deducted from the employee wallet.`,
       });
-      await notify(req, `Great Agro Coffee: Your bank deposit ${req.reference} of UGX ${Number(req.amount).toLocaleString()} has been PAID to ${req.bank_name} A/C ${req.account_number}. Fee: UGX ${Number(req.fee).toLocaleString()}.`);
+      await notify(
+        req,
+        `Great Agro Coffee: Your bank deposit ${req.reference} of UGX ${Number(req.amount).toLocaleString()} has been PAID to ${req.bank_name} A/C ${req.account_number}. Fee: UGX ${Number(req.fee).toLocaleString()}. Allow up to 24 hours for the funds to reflect on your bank account.`,
+        'Bank Deposit Paid',
+      );
       queryClient.invalidateQueries({ queryKey: ['bank-deposit-requests'] });
     } catch (e: any) {
       toast({ title: 'Error', description: e?.message || 'Could not mark as paid', variant: 'destructive' });
