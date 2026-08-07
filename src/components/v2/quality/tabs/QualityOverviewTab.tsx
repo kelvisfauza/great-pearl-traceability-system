@@ -8,7 +8,7 @@ import { useQualityRole } from "@/hooks/useQualityRole";
 import {
   FlaskConical, ShieldCheck, RefreshCw, Paperclip, FileSignature, Warehouse,
   CheckSquare, BarChart3, History, FileText, Loader2, ArrowRight, Star,
-  Edit3, Zap, GraduationCap, Lightbulb, BookOpen, Settings2, Trophy
+  Edit3, Zap, GraduationCap, Lightbulb, BookOpen, Settings2, Trophy, Calculator
 } from "lucide-react";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
