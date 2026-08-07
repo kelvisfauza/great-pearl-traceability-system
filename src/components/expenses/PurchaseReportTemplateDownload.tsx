@@ -171,10 +171,10 @@ const generatePurchaseReport = async (reportDate: string, warehouse: string) => 
   doc.setLineWidth(0.5);
   doc.line(margin, pageH - 14, pageW - margin, pageH - 14);
   doc.setFont('helvetica', 'italic');
-  doc.setFontSize(7.5);
+  doc.setFontSize(6.4);
   doc.setTextColor(80, 80, 80);
   doc.text(
-    'Great Agro Coffee  |  a member of YEDA Coffee Company Limited  |  P.O Box 431420, Kasese, Uganda  |  www.greatpearlcoffee.com',
+    'Great Agro Coffee  |  a member of YEDA Coffee Company Limited  |  P.O Box 431420, Kasese, Uganda',
     pageW / 2,
     pageH - 9,
     { align: 'center' },
@@ -196,13 +196,12 @@ const PurchaseReportTemplateDownload = () => {
   const [open, setOpen] = useState(false);
   const [reportDate, setReportDate] = useState('');
   const [warehouse, setWarehouse] = useState('');
-  const [rows, setRows] = useState(12);
   const [busy, setBusy] = useState(false);
 
   const handleGenerate = async () => {
     try {
       setBusy(true);
-      await generatePurchaseReport(reportDate.trim(), warehouse.trim(), Math.max(1, Math.min(25, Number(rows) || 12)));
+      await generatePurchaseReport(reportDate.trim(), warehouse.trim());
       setOpen(false);
       toast({ title: 'Purchase report template ready', description: 'PDF downloaded and print preview opened.' });
     } catch (e: any) {
@@ -222,9 +221,8 @@ const PurchaseReportTemplateDownload = () => {
             Purchase Report Template (Blank)
           </CardTitle>
           <CardDescription className="text-xs">
-            Printable daily purchase / stock report — report date, warehouse, opening stock, coffee bought,
-            coffee sold, bags, closing stock, rejected coffee, and coffee in store unbought / pending, with
-            store manager and administrator signature lines.
+            Portrait A4 single-day stock report — Arabica and Robusta totals only, with opening stock, coffee
+            bought, sold, bags, closing stock, rejected coffee, unbought / pending, and signature lines.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -260,17 +258,6 @@ const PurchaseReportTemplateDownload = () => {
                 placeholder="e.g. Main Store - Kasese"
                 value={warehouse}
                 onChange={(e) => setWarehouse(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="pr-rows">Blank rows (1 - 25)</Label>
-              <Input
-                id="pr-rows"
-                type="number"
-                min={1}
-                max={25}
-                value={rows}
-                onChange={(e) => setRows(Number(e.target.value))}
               />
             </div>
           </div>
