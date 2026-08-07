@@ -3,7 +3,7 @@ import V2Navigation from "@/components/v2/V2Navigation";
 import PriceTicker from "@/components/PriceTicker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  FlaskConical, RefreshCw, Settings2, BookOpen, BarChart3, 
+  FlaskConical, RefreshCw, Settings2, BookOpen, BarChart3, LayoutGrid, FileSignature,
   Warehouse, FileText, Lightbulb, GraduationCap, CheckSquare, Trophy, History, ShieldCheck, Paperclip
 } from "lucide-react";
 import { useQualityRole } from "@/hooks/useQualityRole";
@@ -21,11 +21,15 @@ import TrainingTab from "@/components/v2/quality/tabs/TrainingTab";
 import DailyChecklistTab from "@/components/v2/quality/tabs/DailyChecklistTab";
 import PerformanceTab from "@/components/v2/quality/tabs/PerformanceTab";
 import QualityAnalysisFilesTab from "@/components/v2/quality/tabs/QualityAnalysisFilesTab";
+import QualityOverviewTab from "@/components/v2/quality/tabs/QualityOverviewTab";
+import QualityAnalysisFormDownload from "@/components/expenses/QualityAnalysisFormDownload";
 
 const allTabs = [
+  { id: "overview", label: "Overview", icon: LayoutGrid },
   { id: "assessments", label: "Assessments", icon: FlaskConical },
   { id: "approvals", label: "Approvals", icon: ShieldCheck, headOnly: true },
   { id: "reevaluation", label: "Re-evaluation", icon: RefreshCw },
+  { id: "analysis-form", label: "Analysis Form", icon: FileSignature },
   { id: "files", label: "Analysis Files", icon: Paperclip },
   { id: "history", label: "History", icon: History, headOnly: true },
   { id: "calibration", label: "Calibration", icon: Settings2 },
@@ -40,7 +44,7 @@ const allTabs = [
 ];
 
 const QualityDepartment = () => {
-  const [activeTab, setActiveTab] = useState("assessments");
+  const [activeTab, setActiveTab] = useState("overview");
   const { isQualityHead } = useQualityRole();
   const tabs = allTabs.filter((t) => !t.headOnly || isQualityHead);
 
@@ -77,9 +81,11 @@ const QualityDepartment = () => {
                 ))}
               </TabsList>
 
+              <TabsContent value="overview"><QualityOverviewTab onNavigate={setActiveTab} /></TabsContent>
               <TabsContent value="assessments"><BatchAssessmentsTab /></TabsContent>
               {isQualityHead && <TabsContent value="approvals"><QualityApprovalsTab /></TabsContent>}
               <TabsContent value="reevaluation"><ReEvaluationTab /></TabsContent>
+              <TabsContent value="analysis-form"><QualityAnalysisFormDownload /></TabsContent>
       <TabsContent value="files"><QualityAnalysisFilesTab /></TabsContent>
               {isQualityHead && <TabsContent value="history"><AssessmentHistoryTab /></TabsContent>}
               <TabsContent value="calibration"><CalibrationTab /></TabsContent>
