@@ -1704,6 +1704,10 @@ const QualityControl = () => {
             <QualityAnalysisFilesTab />
           </TabsContent>
 
+          <TabsContent value="analysis-form">
+            <QualityAnalysisFormDownload />
+          </TabsContent>
+
           {canAccessAdminPriceCalculator && (
             <TabsContent value="admin-pricing">
               <AdminQualityPricingReview />
