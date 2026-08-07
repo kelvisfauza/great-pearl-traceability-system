@@ -7,7 +7,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQualityRole } from "@/hooks/useQualityRole";
 import {
   FlaskConical, ShieldCheck, RefreshCw, Paperclip, FileSignature, Warehouse,
-  CheckSquare, BarChart3, History, FileText, Loader2, ArrowRight, Star
+  CheckSquare, BarChart3, History, FileText, Loader2, ArrowRight, Star,
+  Edit3, Zap, GraduationCap, Lightbulb, BookOpen, Settings2, Trophy
 } from "lucide-react";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
@@ -18,7 +19,8 @@ interface Props {
   onNavigate: (tabId: string) => void;
   /** Map the generic section keys to the host page's tab ids (V1 uses different ids) */
   tabIds?: Partial<Record<
-    "assessments" | "approvals" | "reevaluation" | "files" | "analysisForm" | "warehouse" | "checklist" | "history" | "analytics" | "performance",
+    | "assessments" | "approvals" | "reevaluation" | "files" | "analysisForm" | "warehouse" | "checklist" | "history" | "analytics" | "performance"
+    | "modifications" | "priceCalculator" | "quickAnalyses" | "training" | "recommendations" | "defects" | "reports" | "adminPricing",
     string
   >>;
 }
