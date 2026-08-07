@@ -71,7 +71,7 @@ serve(async (req) => {
         payment_method: provider === "cash" ? "cash" : "mobile_money",
       })
       .eq("id", requestId)
-      .not("payout_status", "in", '("processing","sent","cash_disbursed")')
+      .or("payout_status.is.null,payout_status.in.(pending,failed)")
       .select("id");
     if (!locked || locked.length === 0) return respond(false, { error: "Payout already in progress" });
 
