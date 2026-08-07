@@ -43,8 +43,10 @@ export const DisbursePaymentModal: React.FC<Props> = ({ target, onClose, onDone 
     }
     setSending(true);
     try {
+      const { data: sessionRes } = await supabase.auth.getSession();
+      const actorEmail = sessionRes?.session?.user?.email || localStorage.getItem('userEmail') || '';
       const { data, error } = await supabase.functions.invoke('disburse-approval-request', {
-        body: { request_id: target.requestId, provider, phone: phone.trim() },
+        body: { request_id: target.requestId, provider, phone: phone.trim(), actor_email: actorEmail },
       });
       if (error || !data?.ok) {
         toast({
