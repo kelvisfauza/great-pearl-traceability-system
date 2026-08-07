@@ -1751,6 +1751,16 @@ const QualityControl = () => {
             <QualityAnalysisFormDownload />
           </TabsContent>
 
+          <TabsContent value="reevaluation"><ReEvaluationTab /></TabsContent>
+          <TabsContent value="calibration"><CalibrationTab /></TabsContent>
+          <TabsContent value="defects"><DefectLibraryTab /></TabsContent>
+          {isQualityHead && <TabsContent value="analytics"><SupplierAnalyticsTab /></TabsContent>}
+          <TabsContent value="warehouse"><WarehouseMonitoringTab /></TabsContent>
+          {isQualityHead && <TabsContent value="recommendations"><RecommendationsTab /></TabsContent>}
+          <TabsContent value="training"><TrainingTab /></TabsContent>
+          <TabsContent value="checklist"><DailyChecklistTab /></TabsContent>
+          {isQualityHead && <TabsContent value="performance"><PerformanceTab /></TabsContent>}
+
           {canAccessAdminPriceCalculator && (
             <TabsContent value="admin-pricing">
               <AdminQualityPricingReview />
