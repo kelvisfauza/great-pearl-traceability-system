@@ -7,7 +7,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQualityRole } from "@/hooks/useQualityRole";
 import {
   FlaskConical, ShieldCheck, RefreshCw, Paperclip, FileSignature, Warehouse,
-  CheckSquare, BarChart3, History, FileText, Loader2, ArrowRight, Star
+  CheckSquare, BarChart3, History, FileText, Loader2, ArrowRight, Star,
+  Edit3, Zap, GraduationCap, Lightbulb, BookOpen, Settings2, Trophy, Calculator
 } from "lucide-react";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
@@ -18,7 +19,8 @@ interface Props {
   onNavigate: (tabId: string) => void;
   /** Map the generic section keys to the host page's tab ids (V1 uses different ids) */
   tabIds?: Partial<Record<
-    "assessments" | "approvals" | "reevaluation" | "files" | "analysisForm" | "warehouse" | "checklist" | "history" | "analytics" | "performance",
+    | "assessments" | "approvals" | "reevaluation" | "files" | "analysisForm" | "warehouse" | "checklist" | "history" | "analytics" | "performance"
+    | "modifications" | "priceCalculator" | "quickAnalyses" | "training" | "recommendations" | "defects" | "reports" | "adminPricing",
     string
   >>;
 }
@@ -63,6 +65,14 @@ const QualityOverviewTab = ({ onNavigate, tabIds }: Props) => {
     history: "history",
     analytics: "analytics",
     performance: "performance",
+    modifications: "modifications",
+    priceCalculator: "price-calculator",
+    quickAnalyses: "quick-analyses",
+    training: "training",
+    recommendations: "recommendations",
+    defects: "defects",
+    reports: "reports",
+    adminPricing: "admin-pricing",
     ...(tabIds || {}),
   };
 
@@ -238,6 +248,14 @@ const QualityOverviewTab = ({ onNavigate, tabIds }: Props) => {
       headOnly: true,
     },
     {
+      id: T.modifications,
+      title: "Modifications",
+      value: "—",
+      hint: "Rejected payments sent for quality rework",
+      icon: Edit3,
+      chart: 11,
+    },
+    {
       id: T.reevaluation,
       title: "Re-evaluations",
       value: stats?.pendingReevals ?? 0,
@@ -268,6 +286,22 @@ const QualityOverviewTab = ({ onNavigate, tabIds }: Props) => {
       hint: "Fill & print an analysis sheet",
       icon: FileSignature,
       chart: 6,
+    },
+    {
+      id: T.priceCalculator,
+      title: "Price Calculator",
+      value: "—",
+      hint: "Run quality price calculations",
+      icon: Calculator,
+      chart: 12,
+    },
+    {
+      id: T.quickAnalyses,
+      title: "Quick Analyses",
+      value: "—",
+      hint: "Rapid assessment lookup",
+      icon: Zap,
+      chart: 13,
     },
     {
       id: T.warehouse,
@@ -301,6 +335,49 @@ const QualityOverviewTab = ({ onNavigate, tabIds }: Props) => {
       hint: "Supplier quality trends",
       icon: BarChart3,
       chart: 10,
+      headOnly: true,
+    },
+    {
+      id: T.reports,
+      title: "Reports",
+      value: "—",
+      hint: "Quality reports & exports",
+      icon: FileText,
+      chart: 14,
+      headOnly: true,
+    },
+    {
+      id: T.recommendations,
+      title: "Recommendations",
+      value: "—",
+      hint: "Quality improvement suggestions",
+      icon: Lightbulb,
+      chart: 15,
+      headOnly: true,
+    },
+    {
+      id: T.training,
+      title: "Training",
+      value: "—",
+      hint: "Quality training materials",
+      icon: GraduationCap,
+      chart: 16,
+    },
+    {
+      id: T.defects,
+      title: "Defect Library",
+      value: "—",
+      hint: "Reference defect standards",
+      icon: BookOpen,
+      chart: 17,
+    },
+    {
+      id: T.adminPricing,
+      title: "Admin Pricing Review",
+      value: "—",
+      hint: "Review & adjust final prices",
+      icon: Settings2,
+      chart: 18,
       headOnly: true,
     },
     {

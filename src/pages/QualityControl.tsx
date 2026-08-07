@@ -1207,6 +1207,14 @@ const QualityControl = () => {
                 analytics: "analytics",
                 performance: "performance",
                 history: "history",
+                modifications: "modifications",
+                priceCalculator: "price-calculator",
+                quickAnalyses: "quick-analyses",
+                training: "training",
+                recommendations: "recommendations",
+                defects: "defects",
+                reports: "reports",
+                adminPricing: "admin-pricing",
               }}
             />
           </TabsContent>
