@@ -49,6 +49,7 @@ import { openBulkGRNPrintWindow, GRNData } from "@/utils/bulkGRNPrint";
 import ArabicaPriceCalculator from "@/components/milling/ArabicaPriceCalculator";
 import QualityPriceCalculator from "@/components/quality/QualityPriceCalculator";
 import QuickAnalysesList from "@/components/quality/QuickAnalysesList";
+import QualityAnalysisFilesTab from "@/components/v2/quality/tabs/QualityAnalysisFilesTab";
 import QualityAssessmentReports from "@/components/quality/QualityAssessmentReports";
 import AdminQualityPricingReview from "@/components/admin/AdminQualityPricingReview";
 import { cn } from "@/lib/utils";
@@ -1189,6 +1190,9 @@ const QualityControl = () => {
               <TabsTrigger value="quick-analyses" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                 Quick Analyses
               </TabsTrigger>
+              <TabsTrigger value="analysis-files" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                Analysis Files
+              </TabsTrigger>
               {canAccessAdminPriceCalculator && (
                 <TabsTrigger value="admin-pricing" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                   Admin Final Pricing
@@ -1660,6 +1664,10 @@ const QualityControl = () => {
 
           <TabsContent value="quick-analyses">
             <QuickAnalysesList />
+          </TabsContent>
+
+          <TabsContent value="analysis-files">
+            <QualityAnalysisFilesTab />
           </TabsContent>
 
           {canAccessAdminPriceCalculator && (
