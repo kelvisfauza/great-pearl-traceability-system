@@ -51,8 +51,9 @@ const Stars = ({ score }: { score: number }) => {
 };
 
 const QualityOverviewTab = ({ onNavigate, tabIds }: Props) => {
-  const { employee } = useAuth();
+  const { employee, isAdmin } = useAuth();
   const { isQualityHead } = useQualityRole();
+  const isAdminUser = typeof isAdmin === "function" ? isAdmin() : !!isAdmin;
 
   const T = {
     assessments: "assessments",
@@ -378,7 +379,7 @@ const QualityOverviewTab = ({ onNavigate, tabIds }: Props) => {
       hint: "Review & adjust final prices",
       icon: Settings2,
       chart: 18,
-      headOnly: true,
+      adminOnly: true,
     },
     {
       id: T.assessments,
@@ -388,7 +389,12 @@ const QualityOverviewTab = ({ onNavigate, tabIds }: Props) => {
       icon: FileText,
       chart: 0,
     },
-  ].filter((c) => !!c.id && (!c.headOnly || isQualityHead));
+  ].filter(
+    (c: any) =>
+      !!c.id &&
+      (!c.headOnly || isQualityHead) &&
+      (!c.adminOnly || isAdminUser)
+  );
 
   const toneVar = (n: number) => (n === 0 ? "var(--destructive)" : `var(--chart-${(n - 1) % 5 + 1})`);
 
