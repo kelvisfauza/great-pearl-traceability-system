@@ -328,6 +328,9 @@ serve(async (req) => {
       'bank_deposit_approved',
       'bank_deposit_paid',
       'bank_deposit_rejected',
+      // Approved request disbursements (Yo / GosentePay / Cash release)
+      'disbursement',
+      'disbursement_failed',
       // HR / recruitment notifications — applicants typically have no email on file
       'job_application',
       'job_application_received',
