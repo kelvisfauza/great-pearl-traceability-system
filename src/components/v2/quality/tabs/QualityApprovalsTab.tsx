@@ -33,7 +33,8 @@ const QualityApprovalsTab = () => {
       const { data, error } = await supabase
         .from("quality_assessments")
         .select("*")
-        .eq("status", "pending_quality_manager")
+        .in("status", ["pending_quality_manager", "assessed"])
+        .is("qm_action", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
