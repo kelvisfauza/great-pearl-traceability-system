@@ -12,13 +12,31 @@ import {
 
 interface Props {
   onNavigate: (tabId: string) => void;
+  /** Map the generic section keys to the host page's tab ids (V1 uses different ids) */
+  tabIds?: Partial<Record<
+    "assessments" | "approvals" | "reevaluation" | "files" | "analysisForm" | "warehouse" | "checklist" | "history" | "analytics",
+    string
+  >>;
 }
 
 const today = new Date().toISOString().split("T")[0];
 
-const QualityOverviewTab = ({ onNavigate }: Props) => {
+const QualityOverviewTab = ({ onNavigate, tabIds }: Props) => {
   const { employee } = useAuth();
   const { isQualityHead } = useQualityRole();
+
+  const T = {
+    assessments: "assessments",
+    approvals: "approvals",
+    reevaluation: "reevaluation",
+    files: "files",
+    analysisForm: "analysis-form",
+    warehouse: "warehouse",
+    checklist: "checklist",
+    history: "history",
+    analytics: "analytics",
+    ...(tabIds || {}),
+  };
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ["quality-overview-stats", today],
@@ -77,7 +95,7 @@ const QualityOverviewTab = ({ onNavigate }: Props) => {
 
   const cards = [
     {
-      id: "assessments",
+      id: T.assessments,
       title: "Pending Assessments",
       value: stats?.pendingLots ?? 0,
       hint: "Lots waiting for quality assessment",
@@ -85,7 +103,7 @@ const QualityOverviewTab = ({ onNavigate }: Props) => {
       tone: "text-amber-600",
     },
     {
-      id: "approvals",
+      id: T.approvals,
       title: "Awaiting Approval",
       value: stats?.pendingApprovals ?? 0,
       hint: "Assessments for the Quality Manager",
@@ -94,7 +112,7 @@ const QualityOverviewTab = ({ onNavigate }: Props) => {
       headOnly: true,
     },
     {
-      id: "reevaluation",
+      id: T.reevaluation,
       title: "Re-evaluations",
       value: stats?.pendingReevals ?? 0,
       hint: "Open re-evaluation requests",
@@ -102,7 +120,7 @@ const QualityOverviewTab = ({ onNavigate }: Props) => {
       tone: "text-blue-600",
     },
     {
-      id: "assessments",
+      id: T.assessments,
       title: "Assessed Today",
       value: stats?.assessedToday ?? 0,
       hint: "Assessments captured today",
@@ -110,7 +128,7 @@ const QualityOverviewTab = ({ onNavigate }: Props) => {
       tone: "text-emerald-600",
     },
     {
-      id: "files",
+      id: T.files,
       title: "Analysis Files",
       value: stats?.analysisFiles ?? 0,
       hint: "Stamped analysis sheets on file",
@@ -118,23 +136,23 @@ const QualityOverviewTab = ({ onNavigate }: Props) => {
       tone: "text-violet-600",
     },
     {
-      id: "assessments",
+      id: T.assessments,
       title: "Rejected Lots",
       value: stats?.rejectedLots ?? 0,
       hint: "Lots rejected on quality",
       icon: FileText,
       tone: "text-destructive",
     },
-  ].filter((c) => !c.headOnly || isQualityHead);
+  ].filter((c) => !!c.id && (!c.headOnly || isQualityHead));
 
   const shortcuts = [
-    { id: "analysis-form", label: "Quality Analysis Form", icon: FileSignature, hint: "Fill & print an analysis sheet" },
-    { id: "files", label: "Analysis Files", icon: Paperclip, hint: "Upload stamped forms" },
-    { id: "warehouse", label: "Warehouse", icon: Warehouse, hint: "Storage monitoring" },
-    { id: "checklist", label: "Daily Checklist", icon: CheckSquare, hint: "Today's routine" },
-    { id: "history", label: "History", icon: History, hint: "Past assessments", headOnly: true },
-    { id: "analytics", label: "Analytics", icon: BarChart3, hint: "Supplier quality trends", headOnly: true },
-  ].filter((s) => !s.headOnly || isQualityHead);
+    { id: T.analysisForm, label: "Quality Analysis Form", icon: FileSignature, hint: "Fill & print an analysis sheet" },
+    { id: T.files, label: "Analysis Files", icon: Paperclip, hint: "Upload stamped forms" },
+    { id: T.warehouse, label: "Warehouse", icon: Warehouse, hint: "Storage monitoring" },
+    { id: T.checklist, label: "Daily Checklist", icon: CheckSquare, hint: "Today's routine" },
+    { id: T.history, label: "History", icon: History, hint: "Past assessments", headOnly: true },
+    { id: T.analytics, label: "Analytics", icon: BarChart3, hint: "Supplier quality trends", headOnly: true },
+  ].filter((s) => !!s.id && (!s.headOnly || isQualityHead));
 
   return (
     <div className="space-y-6">
@@ -202,13 +220,13 @@ const QualityOverviewTab = ({ onNavigate }: Props) => {
                 </li>
               ))}
             </ul>
-            <button
+            {T.checklist && <button
               type="button"
-              onClick={() => onNavigate("checklist")}
+              onClick={() => onNavigate(T.checklist!)}
               className="text-xs text-primary hover:underline"
             >
               Open daily checklist →
-            </button>
+            </button>}
           </CardContent>
         </Card>
       </div>

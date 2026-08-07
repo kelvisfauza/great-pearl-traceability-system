@@ -50,6 +50,8 @@ import ArabicaPriceCalculator from "@/components/milling/ArabicaPriceCalculator"
 import QualityPriceCalculator from "@/components/quality/QualityPriceCalculator";
 import QuickAnalysesList from "@/components/quality/QuickAnalysesList";
 import QualityAnalysisFilesTab from "@/components/v2/quality/tabs/QualityAnalysisFilesTab";
+import QualityOverviewTab from "@/components/v2/quality/tabs/QualityOverviewTab";
+import QualityAnalysisFormDownload from "@/components/expenses/QualityAnalysisFormDownload";
 import QualityAssessmentReports from "@/components/quality/QualityAssessmentReports";
 import AdminQualityPricingReview from "@/components/admin/AdminQualityPricingReview";
 import { cn } from "@/lib/utils";
@@ -89,7 +91,7 @@ const QualityControl = () => {
   const readOnly = !access.canManageQuality;
   const canAccessAdminPriceCalculator = isAdmin();
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState("pending");
+  const [activeTab, setActiveTab] = useState("overview");
   const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Switch to correct tab when searching for a record
@@ -1173,6 +1175,9 @@ const QualityControl = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
             <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 bg-muted/50 p-1 rounded-xl gap-1">
+              <TabsTrigger value="overview" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                Overview
+              </TabsTrigger>
               <TabsTrigger value="pending" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                 Pending ({pendingRecords.length})
               </TabsTrigger>
@@ -1202,6 +1207,9 @@ const QualityControl = () => {
               <TabsTrigger value="analysis-files" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                 Analysis Files
               </TabsTrigger>
+              <TabsTrigger value="analysis-form" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                Analysis Form
+              </TabsTrigger>
               {canAccessAdminPriceCalculator && (
                 <TabsTrigger value="admin-pricing" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                   Admin Final Pricing
@@ -1217,6 +1225,23 @@ const QualityControl = () => {
               )}
             </TabsList>
           </div>
+
+          <TabsContent value="overview">
+            <QualityOverviewTab
+              onNavigate={setActiveTab}
+              tabIds={{
+                assessments: "pending",
+                approvals: "approvals",
+                reevaluation: "",
+                files: "analysis-files",
+                analysisForm: "analysis-form",
+                warehouse: "",
+                checklist: "",
+                analytics: "",
+                history: "history",
+              }}
+            />
+          </TabsContent>
 
           <TabsContent value="pending">
             <Card>
@@ -1677,6 +1702,10 @@ const QualityControl = () => {
 
           <TabsContent value="analysis-files">
             <QualityAnalysisFilesTab />
+          </TabsContent>
+
+          <TabsContent value="analysis-form">
+            <QualityAnalysisFormDownload />
           </TabsContent>
 
           {canAccessAdminPriceCalculator && (
