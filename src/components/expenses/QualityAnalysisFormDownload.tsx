@@ -80,8 +80,8 @@ const generateBlankQualityForm = async (formNumbers: string[]) => {
   doc.setFontSize(10);
   doc.text('QUALITY ANALYSIS FORM', pageW - margin, 14, { align: 'right' });
 
-  // Verification QR (top-right, below the title)
-  drawQrBlock(doc, qr, pageW - margin - 20, 28, 20, 'Scan to verify this form');
+  // Verification QR (bottom-right, above the footer)
+  drawQrBlock(doc, qr, pageW - margin - 20, pageH - 44, 20, 'Scan to verify this form');
 
   // Thin separator line under header
   doc.setDrawColor(0, 0, 0);
