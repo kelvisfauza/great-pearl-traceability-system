@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -1182,91 +1182,16 @@ const QualityControl = () => {
         </Card>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
-            <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 bg-muted/50 p-1 rounded-xl gap-1">
-              <TabsTrigger value="overview" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                Overview
-              </TabsTrigger>
-              <TabsTrigger value="pending" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                Pending ({pendingRecords.length})
-              </TabsTrigger>
-              <TabsTrigger value="modifications" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                Modifications ({pendingModificationRequests.length})
-              </TabsTrigger>
-              <TabsTrigger value="assessments" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                Assessments ({qualityAssessments.length})
-              </TabsTrigger>
-              {isQualityHead && (
-                <TabsTrigger value="approvals" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                  Approvals
-                </TabsTrigger>
-              )}
-              {isQualityHead && (
-                <TabsTrigger value="reports" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                  Reports
-                </TabsTrigger>
-              )}
-              <TabsTrigger value="calculator" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                <Calculator className="h-4 w-4 mr-1" />
-                Calculator
-              </TabsTrigger>
-              <TabsTrigger value="quick-analyses" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                Quick Analyses
-              </TabsTrigger>
-              <TabsTrigger value="analysis-files" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                Analysis Files
-              </TabsTrigger>
-              <TabsTrigger value="analysis-form" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                Analysis Form
-              </TabsTrigger>
-              <TabsTrigger value="reevaluation" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                Re-evaluation
-              </TabsTrigger>
-              <TabsTrigger value="calibration" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                Calibration
-              </TabsTrigger>
-              <TabsTrigger value="defects" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                Defect Library
-              </TabsTrigger>
-              {isQualityHead && (
-                <TabsTrigger value="analytics" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                  Analytics
-                </TabsTrigger>
-              )}
-              <TabsTrigger value="warehouse" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                Warehouse
-              </TabsTrigger>
-              {isQualityHead && (
-                <TabsTrigger value="recommendations" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                  Recommendations
-                </TabsTrigger>
-              )}
-              <TabsTrigger value="training" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                Training
-              </TabsTrigger>
-              <TabsTrigger value="checklist" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                Checklist
-              </TabsTrigger>
-              {isQualityHead && (
-                <TabsTrigger value="performance" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                  Performance
-                </TabsTrigger>
-              )}
-              {canAccessAdminPriceCalculator && (
-                <TabsTrigger value="admin-pricing" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                  Admin Final Pricing
-                </TabsTrigger>
-              )}
-              <TabsTrigger value="price-calculator" disabled={!selectedRecord} className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                {selectedRecord ? 'Price Assess' : 'Select First'}
-              </TabsTrigger>
-              {isQualityHead && (
-                <TabsTrigger value="history" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
-                  History
-                </TabsTrigger>
-              )}
-            </TabsList>
-          </div>
+          {activeTab !== "overview" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setActiveTab("overview")}
+              className="gap-1"
+            >
+              ← Back to Overview
+            </Button>
+          )}
 
           <TabsContent value="overview">
             <QualityOverviewTab
