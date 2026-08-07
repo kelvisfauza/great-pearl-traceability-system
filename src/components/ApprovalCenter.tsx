@@ -13,6 +13,7 @@ import { DynamicDetailedView } from './workflow/DynamicDetailedView';
 import { AuditPrintModal } from './workflow/AuditPrintModal';
 import { DelegateApprovalModal } from './approval/DelegateApprovalModal';
 import { DisbursePaymentModal, DisburseTarget } from './approval/DisbursePaymentModal';
+import { AwaitingDisbursementPanel } from './approval/AwaitingDisbursementPanel';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const POLLING_INTERVAL = 10000; // 10 seconds
@@ -348,6 +349,8 @@ const ApprovalCenter = () => {
       </Card>
 
       {/* All Approval Requests Section */}
+      <AwaitingDisbursementPanel />
+
       <Card>
         <CardHeader>
           <CardTitle>All Pending Requests ({requests.length})</CardTitle>
