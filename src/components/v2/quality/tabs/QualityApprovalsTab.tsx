@@ -11,10 +11,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQualityRole } from "@/hooks/useQualityRole";
-import { Loader2, CheckCircle2, XCircle, ShieldCheck, Inbox } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, ShieldCheck, Inbox, FileText, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 
 const money = (v: any) => `UGX ${Number(v || 0).toLocaleString()}`;
+const BUCKET = "quality-analysis-files";
+
+const Field = ({ label, value }: { label: string; value: any }) => (
+  <div className="rounded-md border bg-muted/30 px-2 py-1.5">
+    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+    <p className="text-sm font-medium break-words">{value === null || value === undefined || value === "" ? "—" : String(value)}</p>
+  </div>
+);
 
 const QualityApprovalsTab = () => {
   const { toast } = useToast();
@@ -24,6 +32,43 @@ const QualityApprovalsTab = () => {
   const [selected, setSelected] = useState<any>(null);
   const [price, setPrice] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+
+  const { data: reviewDetail, isLoading: detailLoading } = useQuery({
+    queryKey: ["qm-review-detail", selected?.id],
+    enabled: !!selected?.id,
+    queryFn: async () => {
+      const row = selected;
+      const [recordRes, fileRes, formRes] = await Promise.all([
+        row.store_record_id
+          ? supabase.from("coffee_records").select("*").eq("id", row.store_record_id).maybeSingle()
+          : Promise.resolve({ data: null } as any),
+        row.analysis_file_id
+          ? (supabase as any).from("quality_analysis_files").select("*").eq("id", row.analysis_file_id).maybeSingle()
+          : Promise.resolve({ data: null } as any),
+        row.form_number
+          ? (supabase as any)
+              .from("quality_analysis_forms")
+              .select("*")
+              .eq("form_number", row.form_number)
+              .maybeSingle()
+          : Promise.resolve({ data: null } as any),
+      ]);
+      return {
+        record: (recordRes as any)?.data || null,
+        file: (fileRes as any)?.data || null,
+        form: (formRes as any)?.data || null,
+      };
+    },
+  });
+
+  const openFile = async (path: string) => {
+    const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600);
+    if (error || !data?.signedUrl) {
+      toast({ title: "Cannot open file", description: error?.message || "No signed URL", variant: "destructive" });
+      return;
+    }
+    window.open(data.signedUrl, "_blank");
+  };
 
   const { data: pending = [], isLoading } = useQuery({
     queryKey: ["quality-manager-pending"],
@@ -272,23 +317,103 @@ const QualityApprovalsTab = () => {
       </Card>
 
       <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Review Assessment — {selected?.batch_number}</DialogTitle>
           </DialogHeader>
           {selected && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>Assessed by: <span className="font-medium">{selected.system_assessment_by || selected.assessed_by}</span></div>
-                <div>Physical: <span className="font-medium">{selected.physical_assessment_by || "—"}</span></div>
-                <div>Form No: <span className="font-medium">{selected.form_number || "—"}</span></div>
-                <div>Moisture: <span className="font-medium">{selected.moisture}%</span></div>
-                <div>G1/G2: <span className="font-medium">{selected.group1_defects}% / {selected.group2_defects}%</span></div>
-                <div>Outturn: <span className="font-medium">{selected.outturn}%</span></div>
-              </div>
-              {selected.comments && (
-                <p className="text-sm text-muted-foreground">Officer comments: {selected.comments}</p>
+              {detailLoading && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading full report…
+                </div>
               )}
+
+              <div>
+                <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">Lot & delivery</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <Field label="Batch" value={selected.batch_number} />
+                  <Field label="Supplier" value={reviewDetail?.record?.supplier_name || selected.supplier_name} />
+                  <Field label="Coffee type" value={reviewDetail?.record?.coffee_type || selected.coffee_type} />
+                  <Field label="Kilograms" value={reviewDetail?.record?.kilograms ?? selected.kilograms} />
+                  <Field label="Bags" value={reviewDetail?.record?.bags} />
+                  <Field label="Date assessed" value={selected.date_assessed} />
+                  <Field label="Store status" value={reviewDetail?.record?.status} />
+                  <Field label="Form No" value={selected.form_number} />
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">Quality parameters</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <Field label="Moisture" value={`${selected.moisture ?? "—"}%`} />
+                  <Field label="Group 1 defects" value={`${selected.group1_defects ?? "—"}%`} />
+                  <Field label="Group 2 defects" value={`${selected.group2_defects ?? "—"}%`} />
+                  <Field label="Outturn" value={`${selected.outturn ?? "—"}%`} />
+                  <Field label="Pods" value={selected.pods} />
+                  <Field label="Husks" value={selected.husks} />
+                  <Field label="Foreign matter" value={selected.fm} />
+                  <Field label="Below screen 12" value={selected.below12 ?? selected.below_screen_12} />
+                  <Field label="Stones" value={selected.stones} />
+                  <Field label="Discretion" value={selected.discretion} />
+                  <Field label="Cup taste" value={selected.cup_taste ?? selected.cupping_score} />
+                  <Field label="Clean %" value={selected.clean_percentage} />
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">Pricing & personnel</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <Field label="Reference price" value={money(selected.reference_price)} />
+                  <Field label="Suggested price" value={money(selected.suggested_price)} />
+                  <Field label="Assessed by (system)" value={selected.system_assessment_by || selected.assessed_by} />
+                  <Field label="Physical assessment by" value={selected.physical_assessment_by} />
+                </div>
+              </div>
+
+              {(selected.comments || selected.quality_note) && (
+                <div className="rounded-md border p-3 text-sm space-y-1">
+                  {selected.comments && <p><span className="text-muted-foreground">Officer comments: </span>{selected.comments}</p>}
+                  {selected.quality_note && <p><span className="text-muted-foreground">Quality note: </span>{selected.quality_note}</p>}
+                </div>
+              )}
+
+              <div>
+                <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">Attached analysis file</p>
+                {reviewDetail?.file ? (
+                  <div className="flex items-center justify-between gap-3 rounded-md border p-3">
+                    <div className="min-w-0 text-sm">
+                      <p className="font-medium truncate flex items-center gap-2">
+                        <FileText className="h-4 w-4 shrink-0" /> {reviewDetail.file.file_name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {reviewDetail.file.supplier_name} • {reviewDetail.file.analysis_date}
+                        {reviewDetail.file.verification_code ? ` • Code ${reviewDetail.file.verification_code}` : ""}
+                      </p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => openFile(reviewDetail.file.file_path)}>
+                      <ExternalLink className="h-4 w-4 mr-1" /> View
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No stamped analysis file attached to this lot.</p>
+                )}
+              </div>
+
+              {reviewDetail?.form && (
+                <div>
+                  <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">
+                    Saved analysis form {reviewDetail.form.form_number}
+                  </p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <Field label="Moisture" value={reviewDetail.form.moisture} />
+                    <Field label="Group 1" value={reviewDetail.form.group1_defects} />
+                    <Field label="Group 2" value={reviewDetail.form.group2_defects} />
+                    <Field label="Outturn" value={reviewDetail.form.outturn} />
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label>Approved Unit Price (UGX/kg)</Label>
                 <Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} />
