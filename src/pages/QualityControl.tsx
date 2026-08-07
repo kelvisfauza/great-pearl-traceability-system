@@ -51,6 +51,15 @@ import QualityPriceCalculator from "@/components/quality/QualityPriceCalculator"
 import QuickAnalysesList from "@/components/quality/QuickAnalysesList";
 import QualityAnalysisFilesTab from "@/components/v2/quality/tabs/QualityAnalysisFilesTab";
 import QualityOverviewTab from "@/components/v2/quality/tabs/QualityOverviewTab";
+import ReEvaluationTab from "@/components/v2/quality/tabs/ReEvaluationTab";
+import CalibrationTab from "@/components/v2/quality/tabs/CalibrationTab";
+import DefectLibraryTab from "@/components/v2/quality/tabs/DefectLibraryTab";
+import SupplierAnalyticsTab from "@/components/v2/quality/tabs/SupplierAnalyticsTab";
+import WarehouseMonitoringTab from "@/components/v2/quality/tabs/WarehouseMonitoringTab";
+import RecommendationsTab from "@/components/v2/quality/tabs/RecommendationsTab";
+import TrainingTab from "@/components/v2/quality/tabs/TrainingTab";
+import DailyChecklistTab from "@/components/v2/quality/tabs/DailyChecklistTab";
+import PerformanceTab from "@/components/v2/quality/tabs/PerformanceTab";
 import QualityAnalysisFormDownload from "@/components/expenses/QualityAnalysisFormDownload";
 import QualityAssessmentReports from "@/components/quality/QualityAssessmentReports";
 import AdminQualityPricingReview from "@/components/admin/AdminQualityPricingReview";
