@@ -8559,6 +8559,7 @@ export type Database = {
       quality_analysis_files: {
         Row: {
           analysis_date: string
+          analysis_form_id: string | null
           coffee_type: string | null
           created_at: string
           file_name: string
@@ -8577,6 +8578,7 @@ export type Database = {
         }
         Insert: {
           analysis_date?: string
+          analysis_form_id?: string | null
           coffee_type?: string | null
           created_at?: string
           file_name: string
@@ -8595,6 +8597,7 @@ export type Database = {
         }
         Update: {
           analysis_date?: string
+          analysis_form_id?: string | null
           coffee_type?: string | null
           created_at?: string
           file_name?: string
@@ -8611,6 +8614,71 @@ export type Database = {
           uploaded_by_email?: string | null
           verification_code?: string | null
         }
+        Relationships: [
+          {
+            foreignKeyName: "quality_analysis_files_analysis_form_id_fkey"
+            columns: ["analysis_form_id"]
+            isOneToOne: false
+            referencedRelation: "quality_analysis_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quality_analysis_forms: {
+        Row: {
+          analysed_by: string | null
+          analysis_date: string
+          coffee_type: string | null
+          comments: string | null
+          created_at: string
+          created_by: string | null
+          created_by_email: string | null
+          form_number: string
+          id: string
+          params: Json
+          source_type: string
+          status: string
+          supplier_id: string | null
+          supplier_name: string
+          updated_at: string
+          verification_code: string
+        }
+        Insert: {
+          analysed_by?: string | null
+          analysis_date?: string
+          coffee_type?: string | null
+          comments?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_email?: string | null
+          form_number: string
+          id?: string
+          params?: Json
+          source_type?: string
+          status?: string
+          supplier_id?: string | null
+          supplier_name: string
+          updated_at?: string
+          verification_code: string
+        }
+        Update: {
+          analysed_by?: string | null
+          analysis_date?: string
+          coffee_type?: string | null
+          comments?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_email?: string | null
+          form_number?: string
+          id?: string
+          params?: Json
+          source_type?: string
+          status?: string
+          supplier_id?: string | null
+          supplier_name?: string
+          updated_at?: string
+          verification_code?: string
+        }
         Relationships: []
       }
       quality_assessments: {
@@ -8620,6 +8688,7 @@ export type Database = {
           admin_discretion_by: string | null
           admin_discretion_notes: string | null
           admin_discretion_price: number | null
+          analysis_file_id: string | null
           assessed_by: string
           assessment_ref: string | null
           batch_number: string
@@ -8669,6 +8738,7 @@ export type Database = {
           admin_discretion_by?: string | null
           admin_discretion_notes?: string | null
           admin_discretion_price?: number | null
+          analysis_file_id?: string | null
           assessed_by: string
           assessment_ref?: string | null
           batch_number: string
@@ -8718,6 +8788,7 @@ export type Database = {
           admin_discretion_by?: string | null
           admin_discretion_notes?: string | null
           admin_discretion_price?: number | null
+          analysis_file_id?: string | null
           assessed_by?: string
           assessment_ref?: string | null
           batch_number?: string
@@ -8761,7 +8832,15 @@ export type Database = {
           system_assessment_by?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "quality_assessments_analysis_file_id_fkey"
+            columns: ["analysis_file_id"]
+            isOneToOne: false
+            referencedRelation: "quality_analysis_files"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       quality_daily_checklists: {
         Row: {

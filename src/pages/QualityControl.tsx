@@ -54,6 +54,7 @@ import QualityAssessmentReports from "@/components/quality/QualityAssessmentRepo
 import AdminQualityPricingReview from "@/components/admin/AdminQualityPricingReview";
 import { cn } from "@/lib/utils";
 import EmployeeCombobox from "@/components/quality/EmployeeCombobox";
+import SavedAnalysisPicker from "@/components/quality/SavedAnalysisPicker";
 import AssessmentChainDialog from "@/components/quality/AssessmentChainDialog";
 
 const QualityControl = () => {
@@ -175,7 +176,8 @@ const QualityControl = () => {
     comments: '',
     use_manual_price: false,  // Toggle between calculator and manual price
     physical_assessment_by: '',
-    form_number: ''
+    form_number: '',
+    analysis_file_id: ''
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -357,7 +359,8 @@ const QualityControl = () => {
       comments: '',
       use_manual_price: false,
       physical_assessment_by: '',
-      form_number: ''
+      form_number: '',
+      analysis_file_id: ''
     });
     setActiveTab("price-calculator");
   };
@@ -439,7 +442,8 @@ const QualityControl = () => {
       comments: assessment.comments || '',
       use_manual_price: false,
       physical_assessment_by: (assessment as any).physical_assessment_by || '',
-      form_number: (assessment as any).form_number || ''
+      form_number: (assessment as any).form_number || '',
+      analysis_file_id: (assessment as any).analysis_file_id || ''
     });
     
     setActiveTab("price-calculator");
@@ -550,7 +554,8 @@ const QualityControl = () => {
       comments: `Modification requested due to: ${modificationRequest.reason}${modificationRequest.comments ? '. Additional notes: ' + modificationRequest.comments : ''}`,
       use_manual_price: false,
       physical_assessment_by: '',
-      form_number: ''
+      form_number: '',
+      analysis_file_id: ''
     });
     
     setActiveTab("price-calculator");
@@ -705,6 +710,7 @@ const QualityControl = () => {
         assessed_by: employee?.name || employee?.email || 'Quality Controller',
         physical_assessment_by: assessmentForm.physical_assessment_by?.trim() || null,
         form_number: assessmentForm.form_number?.trim() || null,
+        analysis_file_id: assessmentForm.analysis_file_id || null,
         system_assessment_by: employee?.name || employee?.email || 'Quality Controller',
       } as any;
 
@@ -795,7 +801,8 @@ const QualityControl = () => {
         comments: '',
         use_manual_price: false,
         physical_assessment_by: '',
-        form_number: ''
+        form_number: '',
+        analysis_file_id: ''
       });
       setActiveTab("assessments");
       
@@ -871,6 +878,7 @@ const QualityControl = () => {
         reject_final: false,
         physical_assessment_by: assessmentForm.physical_assessment_by?.trim() || null,
         form_number: assessmentForm.form_number?.trim() || null,
+        analysis_file_id: assessmentForm.analysis_file_id || null,
         system_assessment_by: employee?.name || employee?.email || 'Quality Controller',
       } as any;
 
@@ -905,7 +913,8 @@ const QualityControl = () => {
         final_price: 0, quality_note: '', reject_outturn_price: false,
         reject_final: false, manual_price: '', comments: '', use_manual_price: false,
         physical_assessment_by: '',
-        form_number: ''
+        form_number: '',
+        analysis_file_id: ''
       });
       setActiveTab("pending");
       await refreshData();
@@ -1725,6 +1734,25 @@ const QualityControl = () => {
                           Number printed on the physical quality analysis form
                         </p>
                       </div>
+                    </div>
+                    <div className="mt-4">
+                      <Label className="text-base font-semibold">Stamped Analysis Form</Label>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Attach the signed &amp; stamped analysis already uploaded in Analysis Files.
+                      </p>
+                      <SavedAnalysisPicker
+                        value={assessmentForm.analysis_file_id}
+                        formNumber={assessmentForm.form_number}
+                        supplierHint={(selectedRecord as any)?.supplier_name || ''}
+                        disabled={readOnly}
+                        onChange={(f) =>
+                          setAssessmentForm((prev: any) => ({
+                            ...prev,
+                            analysis_file_id: f?.id || '',
+                            form_number: f?.form_number || prev.form_number,
+                          }))
+                        }
+                      />
                     </div>
                     <p className="text-xs text-muted-foreground mt-2">
                       System assessment by: <span className="font-medium text-foreground">{employee?.name || employee?.email || 'Quality Controller'}</span>
