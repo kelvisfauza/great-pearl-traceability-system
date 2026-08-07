@@ -327,6 +327,7 @@ const PendingApprovalRequests = () => {
       />
       {/* Delegation Modal */}
       <DelegateApprovalModal
+*** REPLACE-ANCHOR ***
         open={delegateModal.open}
         onClose={() => setDelegateModal({ open: false, reason: '', requestId: '', amount: 0 })}
         violationReason={delegateModal.reason}
