@@ -3,11 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Paperclip, ExternalLink, Loader2, Search, X } from 'lucide-react';
+import { Paperclip, ExternalLink, Loader2, Search, X, Upload } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 const BUCKET = 'quality-analysis-files';
+const ALLOWED = ['application/pdf', 'image/jpeg', 'image/png'];
+const MAX_SIZE = 10 * 1024 * 1024;
 
 interface FileRow {
   id: string;
@@ -18,6 +20,17 @@ interface FileRow {
   coffee_type: string | null;
   file_path: string;
   file_name: string;
+}
+
+interface PendingForm {
+  id: string;
+  supplier_id: string | null;
+  supplier_name: string;
+  source_type: string;
+  analysis_date: string;
+  form_number: string | null;
+  verification_code: string | null;
+  params: any;
 }
 
 interface Props {
@@ -32,18 +45,33 @@ interface Props {
 const SavedAnalysisPicker = ({ value, formNumber, supplierHint, disabled, onChange }: Props) => {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<FileRow[]>([]);
+  const [pending, setPending] = useState<PendingForm[]>([]);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<FileRow | null>(null);
 
   const load = async () => {
     setLoading(true);
-    const { data } = await (supabase as any)
-      .from('quality_analysis_files')
-      .select('id, supplier_name, source_type, analysis_date, form_number, coffee_type, file_path, file_name')
-      .order('created_at', { ascending: false })
-      .limit(200);
-    setRows((data as FileRow[]) || []);
+    const [{ data: files }, { data: forms }] = await Promise.all([
+      (supabase as any)
+        .from('quality_analysis_files')
+        .select('id, supplier_name, source_type, analysis_date, form_number, coffee_type, file_path, file_name, analysis_form_id')
+        .order('created_at', { ascending: false })
+        .limit(200),
+      (supabase as any)
+        .from('quality_analysis_forms')
+        .select('id, supplier_id, supplier_name, source_type, analysis_date, form_number, verification_code, params')
+        .order('created_at', { ascending: false })
+        .limit(200),
+    ]);
+    const fileRows = (files as any[]) || [];
+    setRows(fileRows as FileRow[]);
+    const linked = new Set(fileRows.map((f) => f.analysis_form_id).filter(Boolean));
+    const linkedNumbers = new Set(fileRows.map((f) => (f.form_number || '').trim()).filter(Boolean));
+    setPending((((forms as PendingForm[]) || []).filter(
+      (f) => !linked.has(f.id) && !linkedNumbers.has((f.form_number || '').trim())
+    )));
     setLoading(false);
   };
 
@@ -71,6 +99,67 @@ const SavedAnalysisPicker = ({ value, formNumber, supplierHint, disabled, onChan
       [r.supplier_name, r.form_number, r.coffee_type, r.file_name]
         .some((v) => (v || '').toLowerCase().includes(q)));
   }, [rows, search]);
+
+  const filteredPending = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return pending;
+    return pending.filter((r) =>
+      [r.supplier_name, r.form_number].some((v) => (v || '').toLowerCase().includes(q)));
+  }, [pending, search]);
+
+  /** Upload the stamped scan for a saved form, then attach it straight away. */
+  const uploadForForm = async (form: PendingForm, file: File) => {
+    if (!ALLOWED.includes(file.type)) {
+      toast({ title: 'Unsupported file', description: 'Upload a PDF, JPEG or PNG.', variant: 'destructive' });
+      return;
+    }
+    if (file.size > MAX_SIZE) {
+      toast({ title: 'File too large', description: 'Maximum size is 10MB.', variant: 'destructive' });
+      return;
+    }
+    try {
+      setUploadingId(form.id);
+      const { data: authData } = await supabase.auth.getUser();
+      const uid = authData?.user?.id;
+      if (!uid) throw new Error('You must be signed in to upload.');
+      const ext = (file.name.split('.').pop() || 'bin').toLowerCase();
+      const path = `${uid}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, {
+        contentType: file.type, upsert: false, cacheControl: '3600',
+      });
+      if (upErr) throw upErr;
+
+      const robusta = (form.params?.robusta || '').toString().toLowerCase();
+      const { data: inserted, error: insErr } = await (supabase as any)
+        .from('quality_analysis_files')
+        .insert({
+          supplier_id: form.supplier_id,
+          supplier_name: form.supplier_name,
+          source_type: form.source_type || 'supplier',
+          analysis_date: form.analysis_date,
+          form_number: form.form_number,
+          coffee_type: robusta === 'yes' ? 'ROBUSTA' : robusta === 'no' ? 'ARABICA' : null,
+          file_path: path,
+          file_name: file.name,
+          file_type: file.type,
+          analysis_form_id: form.id,
+          verification_code: form.verification_code,
+          uploaded_by: uid,
+          uploaded_by_email: authData?.user?.email ?? null,
+        })
+        .select('id, supplier_name, source_type, analysis_date, form_number, coffee_type, file_path, file_name')
+        .single();
+      if (insErr) throw insErr;
+
+      await (supabase as any).from('quality_analysis_forms').update({ status: 'attached' }).eq('id', form.id);
+      pick(inserted as FileRow);
+      toast({ title: 'Analysis attached', description: `${form.supplier_name} — ${file.name}` });
+    } catch (e: any) {
+      toast({ title: 'Upload failed', description: e?.message || 'Could not attach the analysis.', variant: 'destructive' });
+    } finally {
+      setUploadingId(null);
+    }
+  };
 
   const openFile = async (row: FileRow) => {
     const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(row.file_path, 3600);
@@ -128,7 +217,7 @@ const SavedAnalysisPicker = ({ value, formNumber, supplierHint, disabled, onChan
             <div className="flex items-center justify-center py-8 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading…
             </div>
-          ) : filtered.length === 0 ? (
+          ) : filtered.length === 0 && filteredPending.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">No saved analysis files match.</p>
           ) : (
             <div className="space-y-2">
@@ -152,6 +241,43 @@ const SavedAnalysisPicker = ({ value, formNumber, supplierHint, disabled, onChan
                   </div>
                 </div>
               ))}
+              {filteredPending.length > 0 && (
+                <>
+                  <p className="pt-2 text-xs font-medium text-muted-foreground">
+                    Saved forms without a stamped scan — upload it to attach
+                  </p>
+                  {filteredPending.map((f) => (
+                    <div key={f.id} className="flex items-center justify-between gap-2 rounded-md border border-dashed p-2">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-medium">{f.supplier_name}</span>
+                          {f.form_number && <Badge variant="outline">{f.form_number}</Badge>}
+                          <Badge variant="secondary">Not uploaded</Badge>
+                        </div>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {new Date(f.analysis_date).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <label className="shrink-0">
+                        <input
+                          type="file"
+                          accept="application/pdf,image/jpeg,image/png"
+                          className="hidden"
+                          onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadForForm(f, file); e.currentTarget.value = ''; }}
+                        />
+                        <Button type="button" size="sm" variant="outline" asChild disabled={uploadingId === f.id}>
+                          <span className="cursor-pointer gap-1">
+                            {uploadingId === f.id
+                              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              : <Upload className="h-3.5 w-3.5" />}
+                            Upload scan
+                          </span>
+                        </Button>
+                      </label>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           )}
         </DialogContent>
