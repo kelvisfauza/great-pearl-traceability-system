@@ -392,6 +392,13 @@ const QualityAnalysisFilesTab = () => {
           </div>
         )}
       </CardContent>
+
+      <QualityFormScanDialog
+        open={scanOpen}
+        onOpenChange={setScanOpen}
+        onCode={loadScannedForm}
+        busy={scanBusy}
+      />
     </Card>
   );
 };
