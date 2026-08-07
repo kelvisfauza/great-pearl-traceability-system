@@ -3,7 +3,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { QrCode, Camera, Loader2 } from 'lucide-react';
+import { QrCode, Camera, Loader2, Smartphone, CheckCircle2 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import { supabase } from '@/integrations/supabase/client';
+import { buildPublicUrl } from '@/utils/publicUrl';
+import { toast } from 'sonner';
 
 const REGION_ID = 'quality-form-qr-reader';
 
@@ -31,10 +35,30 @@ const QualityFormScanDialog = ({ open, onOpenChange, onCode, busy }: Props) => {
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cameraOn, setCameraOn] = useState(false);
+  const [sessionId] = useState(() => Math.random().toString(36).slice(2, 10));
+  const [pairedDevice, setPairedDevice] = useState<string | null>(null);
+  const pairUrl = buildPublicUrl(`/scan-qa/${sessionId}`);
 
   useEffect(() => {
     if (!open) { setCameraOn(false); setManual(''); setError(null); }
   }, [open]);
+
+  // Receive codes pushed from the paired phone
+  useEffect(() => {
+    if (!open) return;
+    const channel = supabase
+      .channel(`qa-scan-${sessionId}`, { config: { broadcast: { self: false } } })
+      .on('broadcast', { event: 'hello' }, ({ payload }: any) => setPairedDevice(payload?.device || 'Phone'))
+      .on('broadcast', { event: 'qa-form' }, ({ payload }: any) => {
+        const code = payload?.code;
+        if (!code) return;
+        setPairedDevice(payload?.device || 'Phone');
+        toast.success(`Received ${code} from your phone`);
+        onCode(code);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [open, sessionId]);
 
   useEffect(() => {
     if (!open || !cameraOn) return;
@@ -95,6 +119,25 @@ const QualityFormScanDialog = ({ open, onOpenChange, onCode, busy }: Props) => {
         </DialogHeader>
 
         <div className="space-y-3">
+          <div className="rounded-md border p-3 text-center space-y-2">
+            <p className="flex items-center justify-center gap-2 text-sm font-medium">
+              <Smartphone className="h-4 w-4" /> Scan with your phone
+            </p>
+            <div className="flex justify-center">
+              <div className="rounded bg-white p-2">
+                <QRCodeSVG value={pairUrl} size={132} />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Scan this with your phone camera to open the scanner there, then scan the form QR — it loads here automatically.
+            </p>
+            {pairedDevice && (
+              <p className="flex items-center justify-center gap-1 text-xs text-green-700">
+                <CheckCircle2 className="h-3 w-3" /> {pairedDevice} connected
+              </p>
+            )}
+          </div>
+
           {cameraOn ? (
             <div className="space-y-2">
               <div id={REGION_ID} className="w-full overflow-hidden rounded-md border bg-muted" />
