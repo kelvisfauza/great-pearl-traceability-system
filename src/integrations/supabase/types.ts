@@ -384,6 +384,13 @@ export type Database = {
           finance_reviewed: boolean | null
           id: string
           payment_method: string | null
+          payout_attempted_at: string | null
+          payout_completed_at: string | null
+          payout_error: string | null
+          payout_phone: string | null
+          payout_provider: string | null
+          payout_ref: string | null
+          payout_status: string | null
           priority: string
           rejection_comments: string | null
           rejection_reason: string | null
@@ -431,6 +438,13 @@ export type Database = {
           finance_reviewed?: boolean | null
           id?: string
           payment_method?: string | null
+          payout_attempted_at?: string | null
+          payout_completed_at?: string | null
+          payout_error?: string | null
+          payout_phone?: string | null
+          payout_provider?: string | null
+          payout_ref?: string | null
+          payout_status?: string | null
           priority?: string
           rejection_comments?: string | null
           rejection_reason?: string | null
@@ -478,6 +492,13 @@ export type Database = {
           finance_reviewed?: boolean | null
           id?: string
           payment_method?: string | null
+          payout_attempted_at?: string | null
+          payout_completed_at?: string | null
+          payout_error?: string | null
+          payout_phone?: string | null
+          payout_provider?: string | null
+          payout_ref?: string | null
+          payout_status?: string | null
           priority?: string
           rejection_comments?: string | null
           rejection_reason?: string | null
