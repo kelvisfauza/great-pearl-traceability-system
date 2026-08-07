@@ -51,6 +51,15 @@ import QualityPriceCalculator from "@/components/quality/QualityPriceCalculator"
 import QuickAnalysesList from "@/components/quality/QuickAnalysesList";
 import QualityAnalysisFilesTab from "@/components/v2/quality/tabs/QualityAnalysisFilesTab";
 import QualityOverviewTab from "@/components/v2/quality/tabs/QualityOverviewTab";
+import ReEvaluationTab from "@/components/v2/quality/tabs/ReEvaluationTab";
+import CalibrationTab from "@/components/v2/quality/tabs/CalibrationTab";
+import DefectLibraryTab from "@/components/v2/quality/tabs/DefectLibraryTab";
+import SupplierAnalyticsTab from "@/components/v2/quality/tabs/SupplierAnalyticsTab";
+import WarehouseMonitoringTab from "@/components/v2/quality/tabs/WarehouseMonitoringTab";
+import RecommendationsTab from "@/components/v2/quality/tabs/RecommendationsTab";
+import TrainingTab from "@/components/v2/quality/tabs/TrainingTab";
+import DailyChecklistTab from "@/components/v2/quality/tabs/DailyChecklistTab";
+import PerformanceTab from "@/components/v2/quality/tabs/PerformanceTab";
 import QualityAnalysisFormDownload from "@/components/expenses/QualityAnalysisFormDownload";
 import QualityAssessmentReports from "@/components/quality/QualityAssessmentReports";
 import AdminQualityPricingReview from "@/components/admin/AdminQualityPricingReview";
@@ -1210,6 +1219,39 @@ const QualityControl = () => {
               <TabsTrigger value="analysis-form" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                 Analysis Form
               </TabsTrigger>
+              <TabsTrigger value="reevaluation" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                Re-evaluation
+              </TabsTrigger>
+              <TabsTrigger value="calibration" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                Calibration
+              </TabsTrigger>
+              <TabsTrigger value="defects" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                Defect Library
+              </TabsTrigger>
+              {isQualityHead && (
+                <TabsTrigger value="analytics" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                  Analytics
+                </TabsTrigger>
+              )}
+              <TabsTrigger value="warehouse" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                Warehouse
+              </TabsTrigger>
+              {isQualityHead && (
+                <TabsTrigger value="recommendations" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                  Recommendations
+                </TabsTrigger>
+              )}
+              <TabsTrigger value="training" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                Training
+              </TabsTrigger>
+              <TabsTrigger value="checklist" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                Checklist
+              </TabsTrigger>
+              {isQualityHead && (
+                <TabsTrigger value="performance" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                  Performance
+                </TabsTrigger>
+              )}
               {canAccessAdminPriceCalculator && (
                 <TabsTrigger value="admin-pricing" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                   Admin Final Pricing
@@ -1232,12 +1274,13 @@ const QualityControl = () => {
               tabIds={{
                 assessments: "pending",
                 approvals: "approvals",
-                reevaluation: "",
+                reevaluation: "reevaluation",
                 files: "analysis-files",
                 analysisForm: "analysis-form",
-                warehouse: "",
-                checklist: "",
-                analytics: "",
+                warehouse: "warehouse",
+                checklist: "checklist",
+                analytics: "analytics",
+                performance: "performance",
                 history: "history",
               }}
             />
@@ -1707,6 +1750,16 @@ const QualityControl = () => {
           <TabsContent value="analysis-form">
             <QualityAnalysisFormDownload />
           </TabsContent>
+
+          <TabsContent value="reevaluation"><ReEvaluationTab /></TabsContent>
+          <TabsContent value="calibration"><CalibrationTab /></TabsContent>
+          <TabsContent value="defects"><DefectLibraryTab /></TabsContent>
+          {isQualityHead && <TabsContent value="analytics"><SupplierAnalyticsTab /></TabsContent>}
+          <TabsContent value="warehouse"><WarehouseMonitoringTab /></TabsContent>
+          {isQualityHead && <TabsContent value="recommendations"><RecommendationsTab /></TabsContent>}
+          <TabsContent value="training"><TrainingTab /></TabsContent>
+          <TabsContent value="checklist"><DailyChecklistTab /></TabsContent>
+          {isQualityHead && <TabsContent value="performance"><PerformanceTab /></TabsContent>}
 
           {canAccessAdminPriceCalculator && (
             <TabsContent value="admin-pricing">
