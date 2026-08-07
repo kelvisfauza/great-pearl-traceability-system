@@ -20,7 +20,7 @@ interface Props {
   /** Map the generic section keys to the host page's tab ids (V1 uses different ids) */
   tabIds?: Partial<Record<
     | "assessments" | "approvals" | "reevaluation" | "files" | "analysisForm" | "warehouse" | "checklist" | "history" | "analytics" | "performance"
-    | "modifications" | "priceCalculator" | "quickAnalyses" | "training" | "recommendations" | "defects" | "reports" | "adminPricing",
+    | "modifications" | "priceCalculator" | "quickAnalyses" | "training" | "recommendations" | "defects" | "reports" | "adminPricing" | "discretion",
     string
   >>;
 }
@@ -74,6 +74,7 @@ const QualityOverviewTab = ({ onNavigate, tabIds }: Props) => {
     defects: "defects",
     reports: "reports",
     adminPricing: "admin-pricing",
+    discretion: "discretion",
     ...(tabIds || {}),
   };
 
@@ -382,12 +383,13 @@ const QualityOverviewTab = ({ onNavigate, tabIds }: Props) => {
       adminOnly: true,
     },
     {
-      id: T.assessments,
-      title: "Rejected Lots",
+      id: T.discretion,
+      title: "Rejected Lots — Discretion",
       value: stats?.rejectedLots ?? 0,
-      hint: "Lots rejected on quality",
+      hint: "Buy rejected lots at discretion",
       icon: FileText,
       chart: 0,
+      headOnly: true,
     },
   ].filter(
     (c: any) =>
