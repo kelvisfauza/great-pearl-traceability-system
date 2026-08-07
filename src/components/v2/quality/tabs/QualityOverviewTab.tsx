@@ -65,6 +65,14 @@ const QualityOverviewTab = ({ onNavigate, tabIds }: Props) => {
     history: "history",
     analytics: "analytics",
     performance: "performance",
+    modifications: "modifications",
+    priceCalculator: "price-calculator",
+    quickAnalyses: "quick-analyses",
+    training: "training",
+    recommendations: "recommendations",
+    defects: "defects",
+    reports: "reports",
+    adminPricing: "admin-pricing",
     ...(tabIds || {}),
   };
 
