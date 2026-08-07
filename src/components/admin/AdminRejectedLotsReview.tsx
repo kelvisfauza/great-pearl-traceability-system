@@ -231,7 +231,15 @@ const AdminRejectedLotsReview = () => {
     );
   }
 
-  if (rejectedLots.length === 0) return null;
+  if (rejectedLots.length === 0) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="py-8 text-center text-sm text-muted-foreground">
+          No rejected lots awaiting a discretionary decision.
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <>
@@ -242,9 +250,9 @@ const AdminRejectedLotsReview = () => {
               <AlertTriangle className="w-5 h-5 text-destructive" />
             </div>
             <div>
-              <CardTitle className="text-lg">Rejected Lots — Admin Discretion</CardTitle>
+              <CardTitle className="text-lg">Rejected Lots — Discretion Purchase</CardTitle>
               <CardDescription>
-                {rejectedLots.length} rejected lot{rejectedLots.length !== 1 ? 's' : ''} available for discretionary purchase
+                {rejectedLots.length} rejected lot{rejectedLots.length !== 1 ? 's' : ''} available for discretionary purchase by an administrator or the Quality Manager
               </CardDescription>
             </div>
           </div>
