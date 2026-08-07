@@ -9,6 +9,7 @@ import {
 import { Download, Warehouse, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
+import { buildDocumentQr, drawQrBlock } from '@/utils/pdfQrCode';
 
 const LOGO_URL = '/lovable-uploads/great-agro-coffee-logo.png';
 
@@ -166,6 +167,10 @@ const generatePurchaseReport = async (reportDate: string, warehouse: string) => 
   doc.line(pageW - margin - sigW, y, pageW - margin, y);
   doc.text('Store Manager (Name, Signature & Date)', margin, y + 5);
   doc.text('Administrator (Name, Signature & Date)', pageW - margin - sigW, y + 5);
+
+  // Verification QR
+  const qr = await buildDocumentQr();
+  drawQrBlock(doc, qr, pageW - margin - 20, y + 10, 20, 'Scan to verify this report');
 
   doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.5);

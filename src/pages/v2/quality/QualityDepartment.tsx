@@ -4,7 +4,7 @@ import PriceTicker from "@/components/PriceTicker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   FlaskConical, RefreshCw, Settings2, BookOpen, BarChart3, 
-  Warehouse, FileText, Lightbulb, GraduationCap, CheckSquare, Trophy, History, ShieldCheck
+  Warehouse, FileText, Lightbulb, GraduationCap, CheckSquare, Trophy, History, ShieldCheck, Paperclip
 } from "lucide-react";
 import { useQualityRole } from "@/hooks/useQualityRole";
 import QualityApprovalsTab from "@/components/v2/quality/tabs/QualityApprovalsTab";
@@ -20,11 +20,13 @@ import RecommendationsTab from "@/components/v2/quality/tabs/RecommendationsTab"
 import TrainingTab from "@/components/v2/quality/tabs/TrainingTab";
 import DailyChecklistTab from "@/components/v2/quality/tabs/DailyChecklistTab";
 import PerformanceTab from "@/components/v2/quality/tabs/PerformanceTab";
+import QualityAnalysisFilesTab from "@/components/v2/quality/tabs/QualityAnalysisFilesTab";
 
 const allTabs = [
   { id: "assessments", label: "Assessments", icon: FlaskConical },
   { id: "approvals", label: "Approvals", icon: ShieldCheck, headOnly: true },
   { id: "reevaluation", label: "Re-evaluation", icon: RefreshCw },
+  { id: "files", label: "Analysis Files", icon: Paperclip },
   { id: "history", label: "History", icon: History, headOnly: true },
   { id: "calibration", label: "Calibration", icon: Settings2 },
   { id: "defects", label: "Defect Library", icon: BookOpen },
@@ -78,6 +80,7 @@ const QualityDepartment = () => {
               <TabsContent value="assessments"><BatchAssessmentsTab /></TabsContent>
               {isQualityHead && <TabsContent value="approvals"><QualityApprovalsTab /></TabsContent>}
               <TabsContent value="reevaluation"><ReEvaluationTab /></TabsContent>
+      <TabsContent value="files"><QualityAnalysisFilesTab /></TabsContent>
               {isQualityHead && <TabsContent value="history"><AssessmentHistoryTab /></TabsContent>}
               <TabsContent value="calibration"><CalibrationTab /></TabsContent>
               <TabsContent value="defects"><DefectLibraryTab /></TabsContent>

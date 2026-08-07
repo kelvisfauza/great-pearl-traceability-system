@@ -8556,6 +8556,63 @@ export type Database = {
           },
         ]
       }
+      quality_analysis_files: {
+        Row: {
+          analysis_date: string
+          coffee_type: string | null
+          created_at: string
+          file_name: string
+          file_path: string
+          file_type: string | null
+          form_number: string | null
+          id: string
+          notes: string | null
+          source_type: string
+          supplier_id: string | null
+          supplier_name: string
+          updated_at: string
+          uploaded_by: string
+          uploaded_by_email: string | null
+          verification_code: string | null
+        }
+        Insert: {
+          analysis_date?: string
+          coffee_type?: string | null
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_type?: string | null
+          form_number?: string | null
+          id?: string
+          notes?: string | null
+          source_type?: string
+          supplier_id?: string | null
+          supplier_name: string
+          updated_at?: string
+          uploaded_by?: string
+          uploaded_by_email?: string | null
+          verification_code?: string | null
+        }
+        Update: {
+          analysis_date?: string
+          coffee_type?: string | null
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_type?: string | null
+          form_number?: string | null
+          id?: string
+          notes?: string | null
+          source_type?: string
+          supplier_id?: string | null
+          supplier_name?: string
+          updated_at?: string
+          uploaded_by?: string
+          uploaded_by_email?: string | null
+          verification_code?: string | null
+        }
+        Relationships: []
+      }
       quality_assessments: {
         Row: {
           admin_discretion_at: string | null
