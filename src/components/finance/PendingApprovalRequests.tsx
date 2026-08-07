@@ -19,6 +19,7 @@ import { DelegateApprovalModal } from '@/components/approval/DelegateApprovalMod
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DisbursePaymentModal, DisburseTarget } from '@/components/approval/DisbursePaymentModal';
 
 const PendingApprovalRequests = () => {
   const { requests, loading, handleFinanceApproval } = useFinanceApprovals();
@@ -30,6 +31,7 @@ const PendingApprovalRequests = () => {
   const [processing, setProcessing] = useState<string | null>(null);
   const [delegateModal, setDelegateModal] = useState<{ open: boolean; reason: string; requestId: string; amount: number; title?: string }>({ open: false, reason: '', requestId: '', amount: 0 });
   const [refModal, setRefModal] = useState<{ open: boolean; requestId: string; type: string; title: string; ref: string }>({ open: false, requestId: '', type: '', title: '', ref: '' });
+  const [disburseTarget, setDisburseTarget] = useState<DisburseTarget | null>(null);
 
   const MY_EXPENSE_TYPES = ['Cash Requisition', 'Personal Expense', 'Salary Request'];
 
@@ -52,6 +54,17 @@ const PendingApprovalRequests = () => {
     }
     setRefModal({ open: false, requestId: '', type: '', title: '', ref: '' });
     setProcessing(null);
+
+    if (result === true && req) {
+      const details = typeof req.details === 'string' ? (() => { try { return JSON.parse(req.details); } catch { return {}; } })() : (req.details || {});
+      setDisburseTarget({
+        requestId: req.id,
+        title: req.title,
+        amount: Number(req.amount) || 0,
+        phone: (req as any).disbursement_phone || details?.recipient_phone || details?.phone || '',
+        recipientName: details?.recipient_name || details?.employee_name || req.requestedby_name || req.requestedby,
+      });
+    }
   };
 
   const handleRejectClick = (requestId: string) => {
@@ -312,6 +325,12 @@ const PendingApprovalRequests = () => {
         title="Reject Finance Approval"
         description="Please provide a reason for rejecting this request."
       />
+      {/* Disbursement Modal — choose Yo / GosentePay / Cash after final approval */}
+      <DisbursePaymentModal
+        target={disburseTarget}
+        onClose={() => setDisburseTarget(null)}
+      />
+
       {/* Delegation Modal */}
       <DelegateApprovalModal
         open={delegateModal.open}

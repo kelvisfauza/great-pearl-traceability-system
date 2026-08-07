@@ -12,6 +12,7 @@ import { WorkflowTracker } from './workflow/WorkflowTracker';
 import { DynamicDetailedView } from './workflow/DynamicDetailedView';
 import { AuditPrintModal } from './workflow/AuditPrintModal';
 import { DelegateApprovalModal } from './approval/DelegateApprovalModal';
+import { DisbursePaymentModal, DisburseTarget } from './approval/DisbursePaymentModal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const POLLING_INTERVAL = 10000; // 10 seconds
@@ -29,6 +30,7 @@ const ApprovalCenter = () => {
   const [workflowDataForPrint, setWorkflowDataForPrint] = useState<any>(null);
   const { toast } = useToast();
   const [delegateModal, setDelegateModal] = useState<{ open: boolean; reason: string; requestId: string; amount: number; title?: string }>({ open: false, reason: '', requestId: '', amount: 0 });
+  const [disburseTarget, setDisburseTarget] = useState<DisburseTarget | null>(null);
 
   // Auto-refresh pending requests in background to prevent double approvals
   useEffect(() => {
@@ -60,6 +62,26 @@ const ApprovalCenter = () => {
           title: "✅ Approved Successfully",
           description: `${request.title} has been approved.`,
         });
+        // If this approval fully cleared the request, prompt for payment release
+        if (request.source === 'supabase') {
+          const { data: fresh } = await (supabase as any)
+            .from('approval_requests')
+            .select('id, status, amount, title, disbursement_phone, requestedby_name, requestedby, details, payout_status')
+            .eq('id', request.id)
+            .maybeSingle();
+          const done = String(fresh?.status || '').toLowerCase() === 'approved';
+          const notPaid = !['sent', 'processing', 'cash_disbursed'].includes(String(fresh?.payout_status || ''));
+          if (fresh && done && notPaid) {
+            const d = fresh.details || {};
+            setDisburseTarget({
+              requestId: fresh.id,
+              title: fresh.title,
+              amount: Number(fresh.amount) || 0,
+              phone: fresh.disbursement_phone || d?.recipient_phone || d?.phone || '',
+              recipientName: d?.recipient_name || d?.employee_name || fresh.requestedby_name || fresh.requestedby,
+            });
+          }
+        }
       } else if (result === false) {
         toast({
           title: "Approval Failed",
@@ -577,6 +599,11 @@ const ApprovalCenter = () => {
         requestType="expense_request"
         requestAmount={delegateModal.amount}
         requestTitle={delegateModal.title}
+      />
+      <DisbursePaymentModal
+        target={disburseTarget}
+        onClose={() => setDisburseTarget(null)}
+        onDone={() => fetchRequests(true)}
       />
     </div>
   );
