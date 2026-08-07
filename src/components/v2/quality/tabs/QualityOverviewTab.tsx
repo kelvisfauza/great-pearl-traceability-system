@@ -304,36 +304,8 @@ const QualityOverviewTab = ({ onNavigate, tabIds }: Props) => {
 
   return (
     <div className="space-y-6">
-      {isLoading ? (
+      {isLoading && (
         <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin" /></div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {cards.map((c) => (
-            <button key={`${c.id}-${c.title}`} type="button" onClick={() => onNavigate(c.id)} className="text-left">
-              <Card
-                className="h-full overflow-hidden border-0 transition-transform hover:-translate-y-0.5 hover:shadow-lg"
-                style={{
-                  background: `linear-gradient(135deg, hsl(${toneVar(c.chart)} / 0.22), hsl(${toneVar(c.chart)} / 0.05))`,
-                  boxShadow: `inset 0 0 0 1px hsl(${toneVar(c.chart)} / 0.35)`,
-                }}
-              >
-                <CardContent className="p-4 flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium text-foreground/70">{c.title}</p>
-                    <p className="text-3xl font-bold mt-1" style={{ color: `hsl(${toneVar(c.chart)})` }}>{c.value}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{c.hint}</p>
-                  </div>
-                  <span
-                    className="rounded-xl p-2"
-                    style={{ background: `hsl(${toneVar(c.chart)} / 0.18)` }}
-                  >
-                    <c.icon className="h-6 w-6" style={{ color: `hsl(${toneVar(c.chart)})` }} />
-                  </span>
-                </CardContent>
-              </Card>
-            </button>
-          ))}
-        </div>
       )}
 
       {/* Score strip */}
