@@ -345,6 +345,7 @@ const QualityAnalysisFilesTab = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </CardHeader>
 
       <CardContent className="space-y-4">
