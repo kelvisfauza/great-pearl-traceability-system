@@ -257,6 +257,9 @@ const QualityApprovalsTab = () => {
       queryClient.invalidateQueries({ queryKey: ["quality-manager-pending"] });
       queryClient.invalidateQueries({ queryKey: ["quality-manager-approval-log"] });
       queryClient.invalidateQueries({ queryKey: ["assessment-history"] });
+      if (vars.action !== "rejected" && vars.row?.batch_number) {
+        printGRN(vars.row.batch_number, vars.row.id);
+      }
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
