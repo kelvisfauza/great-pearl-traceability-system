@@ -61,7 +61,7 @@ const PendingApprovalRequests = () => {
         requestId: req.id,
         title: req.title,
         amount: Number(req.amount) || 0,
-        phone: req.disbursement_phone || details?.recipient_phone || details?.phone || '',
+        phone: (req as any).disbursement_phone || details?.recipient_phone || details?.phone || '',
         recipientName: details?.recipient_name || details?.employee_name || req.requestedby_name || req.requestedby,
       });
     }
