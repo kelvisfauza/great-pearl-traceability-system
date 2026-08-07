@@ -262,6 +262,48 @@ const QualityOverviewTab = ({ onNavigate, tabIds }: Props) => {
       chart: 5,
     },
     {
+      id: T.analysisForm,
+      title: "Quality Analysis Form",
+      value: "—",
+      hint: "Fill & print an analysis sheet",
+      icon: FileSignature,
+      chart: 6,
+    },
+    {
+      id: T.warehouse,
+      title: "Warehouse",
+      value: "—",
+      hint: "Storage monitoring",
+      icon: Warehouse,
+      chart: 7,
+    },
+    {
+      id: T.checklist,
+      title: "Daily Checklist",
+      value: `${doneCount}/${checklistItems.length}`,
+      hint: "Today's routine",
+      icon: CheckSquare,
+      chart: 8,
+    },
+    {
+      id: T.history,
+      title: "History",
+      value: "—",
+      hint: "Past assessments",
+      icon: History,
+      chart: 9,
+      headOnly: true,
+    },
+    {
+      id: T.analytics,
+      title: "Analytics",
+      value: "—",
+      hint: "Supplier quality trends",
+      icon: BarChart3,
+      chart: 10,
+      headOnly: true,
+    },
+    {
       id: T.assessments,
       title: "Rejected Lots",
       value: stats?.rejectedLots ?? 0,
@@ -271,16 +313,7 @@ const QualityOverviewTab = ({ onNavigate, tabIds }: Props) => {
     },
   ].filter((c) => !!c.id && (!c.headOnly || isQualityHead));
 
-  const toneVar = (n: number) => (n === 0 ? "var(--destructive)" : `var(--chart-${n})`);
-
-  const shortcuts = [
-    { id: T.analysisForm, label: "Quality Analysis Form", icon: FileSignature, hint: "Fill & print an analysis sheet" },
-    { id: T.files, label: "Analysis Files", icon: Paperclip, hint: "Upload stamped forms" },
-    { id: T.warehouse, label: "Warehouse", icon: Warehouse, hint: "Storage monitoring" },
-    { id: T.checklist, label: "Daily Checklist", icon: CheckSquare, hint: "Today's routine" },
-    { id: T.history, label: "History", icon: History, hint: "Past assessments", headOnly: true },
-    { id: T.analytics, label: "Analytics", icon: BarChart3, hint: "Supplier quality trends", headOnly: true },
-  ].filter((s) => !!s.id && (!s.headOnly || isQualityHead));
+  const toneVar = (n: number) => (n === 0 ? "var(--destructive)" : `var(--chart-${(n - 1) % 10 + 1})`);
 
   const tooltipStyle = {
     background: "hsl(var(--popover))",
