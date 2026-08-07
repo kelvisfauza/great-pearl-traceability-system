@@ -33,21 +33,23 @@ const loadImageAsBase64 = (url: string): Promise<string | null> =>
 
 const COLUMNS: { label: string; w: number }[] = [
   { label: '#', w: 0.04 },
-  { label: 'Coffee Type', w: 0.14 },
+  { label: 'Coffee Type', w: 0.16 },
   { label: 'Opening\nStock (Kg)', w: 0.12 },
   { label: 'Coffee Bought\nToday (Kg)', w: 0.13 },
   { label: 'Coffee Sold\n(Kg)', w: 0.11 },
-  { label: 'Bags', w: 0.08 },
+  { label: 'Bags', w: 0.07 },
   { label: 'Closing\nStock (Kg)', w: 0.12 },
-  { label: 'Rejected\nCoffee (Kg)', w: 0.12 },
-  { label: 'In Store Unbought /\nPending (Kg)', w: 0.14 },
+  { label: 'Rejected\nCoffee (Kg)', w: 0.11 },
+  { label: 'Unbought /\nPending (Kg)', w: 0.14 },
 ];
 
-const generatePurchaseReport = async (reportDate: string, warehouse: string, rows: number) => {
-  const doc = new jsPDF('l', 'mm', 'a4');
-  const pageW = 297;
-  const pageH = 210;
-  const margin = 12;
+const COFFEE_TYPES = ['ARABICA', 'ROBUSTA'];
+
+const generatePurchaseReport = async (reportDate: string, warehouse: string) => {
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const pageW = 210;
+  const pageH = 297;
+  const margin = 10;
   const contentW = pageW - margin * 2;
 
   const logoData = await loadImageAsBase64(LOGO_URL);
@@ -58,38 +60,36 @@ const generatePurchaseReport = async (reportDate: string, warehouse: string, row
 
   doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
+  doc.setFontSize(13);
   doc.text('GREAT AGRO COFFEE', margin + 20, 10);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
+  doc.setFontSize(7.2);
   doc.text('a member of YEDA COFFEE COMPANY LIMITED', margin + 20, 14.5);
-  doc.text('P.O Box 431420, Kasese, Uganda  |  +256 393 001 626 / +256 393 101 103  |  info@greatpearlcoffee.com', margin + 20, 18.5);
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.text('DAILY PURCHASE REPORT', pageW - margin, 12, { align: 'right' });
+  doc.text('P.O Box 431420, Kasese, Uganda  |  +256 393 001 626 / +256 393 101 103', margin + 20, 18);
+  doc.text('info@greatpearlcoffee.com', margin + 20, 21);
 
   doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.5);
-  doc.line(margin, 22, pageW - margin, 22);
+  doc.line(margin, 24, pageW - margin, 24);
 
-  doc.setFontSize(12);
-  doc.text('DAILY PURCHASE / STOCK REPORT', pageW / 2, 29, { align: 'center' });
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11.5);
+  doc.text('DAILY PURCHASE / STOCK REPORT', pageW / 2, 31, { align: 'center' });
 
   // Meta boxes
-  let y = 33;
+  let y = 35;
   const metaH = 9;
   const halfW = contentW / 2;
   doc.setLineWidth(0.35);
   doc.rect(margin, y, halfW, metaH);
   doc.rect(margin + halfW, y, halfW, metaH);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9.5);
+  doc.setFontSize(8.5);
   doc.text('Report Date:', margin + 3, y + metaH / 2 + 1);
-  doc.text('Warehouse / Store:', margin + halfW + 3, y + metaH / 2 + 1);
+  doc.text('Warehouse:', margin + halfW + 3, y + metaH / 2 + 1);
   doc.setFont('helvetica', 'normal');
-  doc.text(reportDate || '________________________', margin + 30, y + metaH / 2 + 1);
-  doc.text(warehouse || '________________________', margin + halfW + 40, y + metaH / 2 + 1);
+  doc.text(reportDate || '____________________', margin + 24, y + metaH / 2 + 1);
+  doc.text(warehouse || '____________________', margin + halfW + 24, y + metaH / 2 + 1);
 
   // Table
   y += metaH + 4;
@@ -98,7 +98,7 @@ const generatePurchaseReport = async (reportDate: string, warehouse: string, row
   doc.setFillColor(235, 235, 235);
   doc.rect(margin, y, contentW, headH, 'F');
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
+  doc.setFontSize(6.6);
   COLUMNS.forEach((c) => {
     const cw = contentW * c.w;
     doc.rect(x, y, cw, headH);
@@ -110,12 +110,11 @@ const generatePurchaseReport = async (reportDate: string, warehouse: string, row
   });
 
   y += headH;
-  const bottomReserve = 42;
-  const rowH = Math.max(6, Math.min(10, (pageH - y - bottomReserve) / (rows + 1)));
+  const rowH = 14;
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
-  for (let r = 0; r < rows; r++) {
+  for (let r = 0; r < COFFEE_TYPES.length; r++) {
     x = margin;
     COLUMNS.forEach((c, ci) => {
       const cw = contentW * c.w;
@@ -124,6 +123,11 @@ const generatePurchaseReport = async (reportDate: string, warehouse: string, row
         doc.setTextColor(90, 90, 90);
         doc.text(String(r + 1), x + cw / 2, y + rowH / 2 + 1.2, { align: 'center' });
         doc.setTextColor(0, 0, 0);
+      }
+      if (ci === 1) {
+        doc.setFont('helvetica', 'bold');
+        doc.text(COFFEE_TYPES[r], x + 2.5, y + rowH / 2 + 1.2);
+        doc.setFont('helvetica', 'normal');
       }
       x += cw;
     });
@@ -144,7 +148,15 @@ const generatePurchaseReport = async (reportDate: string, warehouse: string, row
     }
     x += cw;
   });
-  y += rowH + 10;
+  y += rowH + 14;
+
+  // Remarks box
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text('Remarks / Notes:', margin, y - 4);
+  doc.setLineWidth(0.35);
+  doc.rect(margin, y - 1, contentW, 22);
+  y += 32;
 
   // Signatures
   const sigW = contentW / 2 - 10;
@@ -159,10 +171,10 @@ const generatePurchaseReport = async (reportDate: string, warehouse: string, row
   doc.setLineWidth(0.5);
   doc.line(margin, pageH - 14, pageW - margin, pageH - 14);
   doc.setFont('helvetica', 'italic');
-  doc.setFontSize(7.5);
+  doc.setFontSize(6.4);
   doc.setTextColor(80, 80, 80);
   doc.text(
-    'Great Agro Coffee  |  a member of YEDA Coffee Company Limited  |  P.O Box 431420, Kasese, Uganda  |  www.greatpearlcoffee.com',
+    'Great Agro Coffee  |  a member of YEDA Coffee Company Limited  |  P.O Box 431420, Kasese, Uganda',
     pageW / 2,
     pageH - 9,
     { align: 'center' },
@@ -184,13 +196,12 @@ const PurchaseReportTemplateDownload = () => {
   const [open, setOpen] = useState(false);
   const [reportDate, setReportDate] = useState('');
   const [warehouse, setWarehouse] = useState('');
-  const [rows, setRows] = useState(12);
   const [busy, setBusy] = useState(false);
 
   const handleGenerate = async () => {
     try {
       setBusy(true);
-      await generatePurchaseReport(reportDate.trim(), warehouse.trim(), Math.max(1, Math.min(25, Number(rows) || 12)));
+      await generatePurchaseReport(reportDate.trim(), warehouse.trim());
       setOpen(false);
       toast({ title: 'Purchase report template ready', description: 'PDF downloaded and print preview opened.' });
     } catch (e: any) {
@@ -210,9 +221,8 @@ const PurchaseReportTemplateDownload = () => {
             Purchase Report Template (Blank)
           </CardTitle>
           <CardDescription className="text-xs">
-            Printable daily purchase / stock report — report date, warehouse, opening stock, coffee bought,
-            coffee sold, bags, closing stock, rejected coffee, and coffee in store unbought / pending, with
-            store manager and administrator signature lines.
+            Portrait A4 single-day stock report — Arabica and Robusta totals only, with opening stock, coffee
+            bought, sold, bags, closing stock, rejected coffee, unbought / pending, and signature lines.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -248,17 +258,6 @@ const PurchaseReportTemplateDownload = () => {
                 placeholder="e.g. Main Store - Kasese"
                 value={warehouse}
                 onChange={(e) => setWarehouse(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="pr-rows">Blank rows (1 - 25)</Label>
-              <Input
-                id="pr-rows"
-                type="number"
-                min={1}
-                max={25}
-                value={rows}
-                onChange={(e) => setRows(Number(e.target.value))}
               />
             </div>
           </div>
