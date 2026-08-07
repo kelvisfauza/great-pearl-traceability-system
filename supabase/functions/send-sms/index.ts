@@ -750,6 +750,23 @@ serve(async (req) => {
         } else {
           const errorText = await smsResponse.text();
           console.error('YoolaSMS API error:', errorText);
+
+          // Provider rate limit (429): back off and retry within this invocation
+          let rateLimited = smsResponse.status === 429;
+          let retryAfter = 0;
+          try {
+            const parsed = JSON.parse(errorText);
+            if (parsed?.status === 'rate_limit' || parsed?.code === 429) rateLimited = true;
+            retryAfter = Number(parsed?.retry_after_seconds) || 0;
+          } catch (_) { /* not JSON */ }
+
+          if (rateLimited && attempt < maxRetries) {
+            const waitMs = Math.min((retryAfter || attempt * 3) * 1000, 8000);
+            console.log(`Rate limited by YoolaSMS, waiting ${waitMs}ms before retry ${attempt + 1}/${maxRetries}`);
+            await new Promise((r) => setTimeout(r, waitMs));
+            continue;
+          }
+
           // Fallback to Infobip SMS (admin-toggleable)
           const infobipResult = smsCfg.infobip_fallback === false
             ? { success: false, details: 'Infobip fallback disabled by admin settings' }
@@ -793,16 +810,21 @@ serve(async (req) => {
             console.error('Failed to log failed SMS:', dbError);
           }
           
+          // Business failure — return 200 so callers don't crash; the
+          // retry-failed-sms cron picks up the 'failed' sms_logs row.
           return new Response(
-            JSON.stringify({ 
-              error: 'Failed to send SMS via both providers', 
+            JSON.stringify({
+              ok: false,
+              success: false,
+              queued_for_retry: true,
+              rate_limited: rateLimited,
+              error: rateLimited
+                ? 'SMS provider rate limit reached — message queued for automatic retry'
+                : 'Failed to send SMS via both providers',
               details: errorText,
               phone: formattedPhone
             }),
-            { 
-              status: 500,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            }
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -863,14 +885,14 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ 
+        ok: false,
+        success: false,
+        queued_for_retry: true,
         error: 'SMS failed via all providers (YoolaSMS, Infobip, BulkSMS)',
         details: lastError?.message || 'All providers failed',
         phone: formattedPhone
       }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
