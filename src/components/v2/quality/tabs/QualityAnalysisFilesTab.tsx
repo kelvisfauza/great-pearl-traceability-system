@@ -9,10 +9,11 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { FileUp, Loader2, Paperclip, ExternalLink, Trash2, Search } from 'lucide-react';
+import { FileUp, Loader2, Paperclip, ExternalLink, Trash2, Search, QrCode } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { generateVerificationCode } from '@/utils/verificationCode';
+import QualityFormScanDialog from '@/components/quality/QualityFormScanDialog';
 
 const BUCKET = 'quality-analysis-files';
 const ALLOWED = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
@@ -35,6 +36,19 @@ interface FileRow {
   created_at: string;
 }
 
+interface ScannedForm {
+  id: string;
+  form_number: string;
+  verification_code: string;
+  supplier_id: string | null;
+  supplier_name: string;
+  source_type: string;
+  analysis_date: string;
+  params: Record<string, any> | null;
+  analysed_by: string | null;
+  comments: string | null;
+}
+
 const QualityAnalysisFilesTab = () => {
   const [rows, setRows] = useState<FileRow[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierRow[]>([]);
@@ -53,6 +67,9 @@ const QualityAnalysisFilesTab = () => {
   const [coffeeType, setCoffeeType] = useState('');
   const [notes, setNotes] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [scanOpen, setScanOpen] = useState(false);
+  const [scanBusy, setScanBusy] = useState(false);
+  const [scannedForm, setScannedForm] = useState<ScannedForm | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -73,6 +90,44 @@ const QualityAnalysisFilesTab = () => {
     setSourceType('supplier'); setSupplierId(''); setManualName('');
     setAnalysisDate(new Date().toISOString().slice(0, 10));
     setFormNumber(''); setCoffeeType(''); setNotes(''); setFile(null);
+    setScannedForm(null);
+  };
+
+  const loadScannedForm = async (code: string) => {
+    setScanBusy(true);
+    try {
+      const normalized = code.trim().toUpperCase();
+      const spaced = normalized.replace(/-/g, ' ');
+      const { data, error } = await (supabase as any)
+        .from('quality_analysis_forms')
+        .select('*')
+        .or(`verification_code.eq.${normalized},form_number.eq.${spaced},form_number.eq.${normalized}`)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) {
+        toast({ title: 'Form not found', description: `No saved analysis matches ${normalized}.`, variant: 'destructive' });
+        return;
+      }
+      const form = data as ScannedForm;
+      setScannedForm(form);
+      setSourceType(form.source_type === 'offer_sample' ? 'offer_sample' : 'supplier');
+      setSupplierId(form.supplier_id || '');
+      setManualName(form.source_type === 'offer_sample' ? form.supplier_name : '');
+      setAnalysisDate(form.analysis_date);
+      setFormNumber(form.form_number);
+      const robusta = (form.params?.robusta || '').toString().toLowerCase();
+      if (robusta === 'yes') setCoffeeType('ROBUSTA');
+      else if (robusta === 'no') setCoffeeType('ARABICA');
+      setScanOpen(false);
+      setOpen(true);
+      toast({ title: `${form.form_number} loaded`, description: `${form.supplier_name} — attach the stamped copy.` });
+    } catch (e: any) {
+      toast({ title: 'Lookup failed', description: e?.message || 'Could not load the form.', variant: 'destructive' });
+    } finally {
+      setScanBusy(false);
+    }
   };
 
   const handleUpload = async () => {
@@ -121,11 +176,19 @@ const QualityAnalysisFilesTab = () => {
         file_path: path,
         file_name: file.name,
         file_type: file.type,
-        verification_code: generateVerificationCode('assessment'),
+        analysis_form_id: scannedForm?.id ?? null,
+        verification_code: scannedForm?.verification_code || generateVerificationCode('assessment'),
         uploaded_by: uid,
         uploaded_by_email: authData?.user?.email ?? null,
       });
       if (insErr) throw insErr;
+
+      if (scannedForm?.id) {
+        await (supabase as any)
+          .from('quality_analysis_forms')
+          .update({ status: 'attached' })
+          .eq('id', scannedForm.id);
+      }
 
       toast({ title: 'Analysis attached', description: `${supplierName} — ${file.name}` });
       setOpen(false);
