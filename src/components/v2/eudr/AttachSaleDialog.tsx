@@ -38,7 +38,29 @@ const AttachSaleDialog = ({ open, onOpenChange, onAttached, batch }: AttachSaleD
         .order("date", { ascending: false })
         .limit(100);
       if (error) throw error;
-      return data;
+
+      const ids = (data || []).map((s: any) => s.id);
+      let allocatedBySale: Record<string, number> = {};
+      if (ids.length) {
+        const { data: allocs, error: allocErr } = await supabase
+          .from("eudr_batch_sales")
+          .select("sale_transaction_id, kilograms_allocated")
+          .in("sale_transaction_id", ids);
+        if (allocErr) throw allocErr;
+        allocatedBySale = (allocs || []).reduce((acc: Record<string, number>, a: any) => {
+          acc[a.sale_transaction_id] = (acc[a.sale_transaction_id] || 0) + (Number(a.kilograms_allocated) || 0);
+          return acc;
+        }, {});
+      }
+
+      return (data || [])
+        .map((s: any) => {
+          const allocated = allocatedBySale[s.id] || 0;
+          const remaining = Math.max(0, (Number(s.weight) || 0) - allocated);
+          return { ...s, allocated, remaining };
+        })
+        // Fully allocated sales disappear from the list
+        .filter((s: any) => s.remaining > 0.0001);
     },
     enabled: open,
   });
@@ -52,6 +74,30 @@ const AttachSaleDialog = ({ open, onOpenChange, onAttached, batch }: AttachSaleD
 
     setSubmitting(true);
     try {
+      // Re-check the sale's remaining unallocated weight — never exceed the sold weight
+      const { data: saleRow, error: saleErr } = await supabase
+        .from("sales_transactions")
+        .select("weight")
+        .eq("id", saleId)
+        .maybeSingle();
+      if (saleErr) throw saleErr;
+      const { data: existingAllocs, error: allocErr } = await supabase
+        .from("eudr_batch_sales")
+        .select("kilograms_allocated")
+        .eq("sale_transaction_id", saleId);
+      if (allocErr) throw allocErr;
+      const soldWeight = Number(saleRow?.weight) || 0;
+      const alreadyAllocated = (existingAllocs || []).reduce(
+        (sum: number, a: any) => sum + (Number(a.kilograms_allocated) || 0),
+        0
+      );
+      const remainingOnSale = Math.max(0, soldWeight - alreadyAllocated);
+      if (amount > remainingOnSale) {
+        throw new Error(
+          `This sale only has ${remainingOnSale.toLocaleString()}kg left to allocate (sold ${soldWeight.toLocaleString()}kg, already traced ${alreadyAllocated.toLocaleString()}kg)`
+        );
+      }
+
       // Re-check live availability (another user may have allocated in the meantime)
       const { data: liveBatch, error: batchErr } = await supabase
         .from("eudr_batches")
@@ -100,6 +146,9 @@ const AttachSaleDialog = ({ open, onOpenChange, onAttached, batch }: AttachSaleD
   };
 
   const selectedSale = sales?.find((s: any) => s.id === saleId);
+  const maxAllocatable = selectedSale
+    ? Math.min(availableKg, Number((selectedSale as any).remaining) || 0)
+    : availableKg;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -125,7 +174,7 @@ const AttachSaleDialog = ({ open, onOpenChange, onAttached, batch }: AttachSaleD
                   )}
                   {sales?.map((s: any) => (
                     <SelectItem key={s.id} value={s.id}>
-                      {s.date} — {s.customer} — {s.coffee_type} ({Number(s.weight).toLocaleString()}kg)
+                      {s.date} — {s.customer} — {s.coffee_type} ({Number(s.remaining).toLocaleString()}kg left of {Number(s.weight).toLocaleString()}kg)
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -138,6 +187,8 @@ const AttachSaleDialog = ({ open, onOpenChange, onAttached, batch }: AttachSaleD
               <p><strong>Customer:</strong> {selectedSale.customer}</p>
               <p><strong>Type:</strong> {selectedSale.coffee_type}</p>
               <p><strong>Weight:</strong> {Number(selectedSale.weight).toLocaleString()}kg</p>
+              <p><strong>Already traced:</strong> {Number((selectedSale as any).allocated).toLocaleString()}kg</p>
+              <p><strong>Remaining to allocate:</strong> {Number((selectedSale as any).remaining).toLocaleString()}kg</p>
               <p><strong>Status:</strong> {selectedSale.status}</p>
             </div>
           )}
@@ -148,12 +199,21 @@ const AttachSaleDialog = ({ open, onOpenChange, onAttached, batch }: AttachSaleD
               type="number"
               value={kg}
               onChange={(e) => setKg(e.target.value)}
-              max={availableKg}
-              placeholder={`Max ${availableKg}kg`}
+              max={maxAllocatable}
+              placeholder={`Max ${maxAllocatable.toLocaleString()}kg`}
             />
+            {selectedSale && Number(kg) > maxAllocatable && (
+              <p className="text-xs text-destructive mt-1">
+                Cannot exceed {maxAllocatable.toLocaleString()}kg (batch availability / remaining sold weight)
+              </p>
+            )}
           </div>
 
-          <Button onClick={handleAttach} disabled={submitting} className="w-full">
+          <Button
+            onClick={handleAttach}
+            disabled={submitting || !saleId || !kg || Number(kg) <= 0 || Number(kg) > maxAllocatable}
+            className="w-full"
+          >
             {submitting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Attaching...</> : "Attach Sale"}
           </Button>
         </div>
