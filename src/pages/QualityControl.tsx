@@ -1219,6 +1219,39 @@ const QualityControl = () => {
               <TabsTrigger value="analysis-form" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                 Analysis Form
               </TabsTrigger>
+              <TabsTrigger value="reevaluation" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                Re-evaluation
+              </TabsTrigger>
+              <TabsTrigger value="calibration" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                Calibration
+              </TabsTrigger>
+              <TabsTrigger value="defects" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                Defect Library
+              </TabsTrigger>
+              {isQualityHead && (
+                <TabsTrigger value="analytics" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                  Analytics
+                </TabsTrigger>
+              )}
+              <TabsTrigger value="warehouse" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                Warehouse
+              </TabsTrigger>
+              {isQualityHead && (
+                <TabsTrigger value="recommendations" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                  Recommendations
+                </TabsTrigger>
+              )}
+              <TabsTrigger value="training" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                Training
+              </TabsTrigger>
+              <TabsTrigger value="checklist" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                Checklist
+              </TabsTrigger>
+              {isQualityHead && (
+                <TabsTrigger value="performance" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                  Performance
+                </TabsTrigger>
+              )}
               {canAccessAdminPriceCalculator && (
                 <TabsTrigger value="admin-pricing" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                   Admin Final Pricing
@@ -1241,12 +1274,13 @@ const QualityControl = () => {
               tabIds={{
                 assessments: "pending",
                 approvals: "approvals",
-                reevaluation: "",
+                reevaluation: "reevaluation",
                 files: "analysis-files",
                 analysisForm: "analysis-form",
-                warehouse: "",
-                checklist: "",
-                analytics: "",
+                warehouse: "warehouse",
+                checklist: "checklist",
+                analytics: "analytics",
+                performance: "performance",
                 history: "history",
               }}
             />
