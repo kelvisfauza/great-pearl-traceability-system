@@ -10,6 +10,7 @@ import { Download, ClipboardCheck, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
 import { supabase } from '@/integrations/supabase/client';
+import { buildDocumentQr, drawQrBlock } from '@/utils/pdfQrCode';
 
 const LOGO_URL = '/lovable-uploads/great-agro-coffee-logo.png';
 
@@ -60,7 +61,7 @@ const generateBlankQualityForm = async (formNumbers: string[]) => {
 
   const logoData = await loadImageAsBase64(LOGO_URL);
 
-  const drawPage = (formNumber: string) => {
+  const drawPage = (formNumber: string, qr: Awaited<ReturnType<typeof buildDocumentQr>>) => {
   // ---- Clean B&W Header (no coloured bands) ----
   if (logoData) {
     try { doc.addImage(logoData, 'PNG', margin, 4, 18, 18); } catch {}
@@ -78,6 +79,9 @@ const generateBlankQualityForm = async (formNumbers: string[]) => {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.text('QUALITY ANALYSIS FORM', pageW - margin, 14, { align: 'right' });
+
+  // Verification QR (top-right, below the title)
+  drawQrBlock(doc, qr, pageW - margin - 20, 28, 20, 'Scan to verify this form');
 
   // Thin separator line under header
   doc.setDrawColor(0, 0, 0);
@@ -140,10 +144,11 @@ const generateBlankQualityForm = async (formNumbers: string[]) => {
   );
   };
 
-  formNumbers.forEach((fn, idx) => {
+  for (let idx = 0; idx < formNumbers.length; idx++) {
     if (idx > 0) doc.addPage();
-    drawPage(fn);
-  });
+    const qr = await buildDocumentQr(formNumbers[idx].replace(/\s+/g, '-'));
+    drawPage(formNumbers[idx], qr);
+  }
 
   // Download as PDF (primary action) + open print preview
   doc.save(
