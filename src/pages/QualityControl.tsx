@@ -1992,6 +1992,12 @@ const QualityControl = () => {
           )}
 
           {isQualityHead && (
+            <TabsContent value="discretion">
+              <AdminRejectedLotsReview />
+            </TabsContent>
+          )}
+
+          {isQualityHead && (
             <TabsContent value="reports">
               <QualityAssessmentReports assessments={qualityAssessments} />
             </TabsContent>
