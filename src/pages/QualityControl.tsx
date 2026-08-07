@@ -63,6 +63,7 @@ import PerformanceTab from "@/components/v2/quality/tabs/PerformanceTab";
 import QualityAnalysisFormDownload from "@/components/expenses/QualityAnalysisFormDownload";
 import QualityAssessmentReports from "@/components/quality/QualityAssessmentReports";
 import AdminQualityPricingReview from "@/components/admin/AdminQualityPricingReview";
+import AdminRejectedLotsReview from "@/components/admin/AdminRejectedLotsReview";
 import { cn } from "@/lib/utils";
 import EmployeeCombobox from "@/components/quality/EmployeeCombobox";
 import SavedAnalysisPicker from "@/components/quality/SavedAnalysisPicker";
@@ -1215,6 +1216,7 @@ const QualityControl = () => {
                 defects: "defects",
                 reports: "reports",
                 adminPricing: "admin-pricing",
+                discretion: "discretion",
               }}
             />
           </TabsContent>
@@ -1986,6 +1988,12 @@ const QualityControl = () => {
           {isQualityHead && (
             <TabsContent value="approvals">
               <QualityApprovalsTab />
+            </TabsContent>
+          )}
+
+          {isQualityHead && (
+            <TabsContent value="discretion">
+              <AdminRejectedLotsReview />
             </TabsContent>
           )}
 

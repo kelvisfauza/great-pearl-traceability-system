@@ -23,11 +23,13 @@ import PerformanceTab from "@/components/v2/quality/tabs/PerformanceTab";
 import QualityAnalysisFilesTab from "@/components/v2/quality/tabs/QualityAnalysisFilesTab";
 import QualityOverviewTab from "@/components/v2/quality/tabs/QualityOverviewTab";
 import QualityAnalysisFormDownload from "@/components/expenses/QualityAnalysisFormDownload";
+import AdminRejectedLotsReview from "@/components/admin/AdminRejectedLotsReview";
 
 const allTabs = [
   { id: "overview", label: "Overview", icon: LayoutGrid },
   { id: "assessments", label: "Assessments", icon: FlaskConical },
   { id: "approvals", label: "Approvals", icon: ShieldCheck, headOnly: true },
+  { id: "discretion", label: "Rejected Lots", icon: FileText, headOnly: true },
   { id: "reevaluation", label: "Re-evaluation", icon: RefreshCw },
   { id: "analysis-form", label: "Analysis Form", icon: FileSignature },
   { id: "files", label: "Analysis Files", icon: Paperclip },
@@ -84,6 +86,7 @@ const QualityDepartment = () => {
               <TabsContent value="overview"><QualityOverviewTab onNavigate={setActiveTab} /></TabsContent>
               <TabsContent value="assessments"><BatchAssessmentsTab /></TabsContent>
               {isQualityHead && <TabsContent value="approvals"><QualityApprovalsTab /></TabsContent>}
+              {isQualityHead && <TabsContent value="discretion"><AdminRejectedLotsReview /></TabsContent>}
               <TabsContent value="reevaluation"><ReEvaluationTab /></TabsContent>
               <TabsContent value="analysis-form"><QualityAnalysisFormDownload /></TabsContent>
       <TabsContent value="files"><QualityAnalysisFilesTab /></TabsContent>

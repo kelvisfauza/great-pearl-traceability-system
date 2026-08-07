@@ -11,8 +11,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQualityRole } from "@/hooks/useQualityRole";
-import { Loader2, CheckCircle2, XCircle, ShieldCheck, Inbox, FileText, ExternalLink } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, ShieldCheck, Inbox, FileText, ExternalLink, Printer } from "lucide-react";
 import { format } from "date-fns";
+import GRNPrintModal from "@/components/quality/GRNPrintModal";
 
 const money = (v: any) => `UGX ${Number(v || 0).toLocaleString()}`;
 const BUCKET = "quality-analysis-files";
@@ -32,6 +33,66 @@ const QualityApprovalsTab = () => {
   const [selected, setSelected] = useState<any>(null);
   const [price, setPrice] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+  const [grnData, setGrnData] = useState<any>(null);
+  const [grnLoadingId, setGrnLoadingId] = useState<string | null>(null);
+
+  /** Build & open the GRN for an approved assessment (QM or admin). */
+  const printGRN = async (batchNumber: string, logId: string) => {
+    setGrnLoadingId(logId);
+    try {
+      const { data: assessment } = await supabase
+        .from("quality_assessments")
+        .select("*")
+        .eq("batch_number", batchNumber)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!assessment) throw new Error("Assessment not found for this batch");
+      if (["pending_quality_manager", "rejected", "PERMANENTLY_REJECTED"].includes(String((assessment as any).status || ""))) {
+        throw new Error("GRN is only printable after approval");
+      }
+
+      const { data: record } = (assessment as any).store_record_id
+        ? await supabase
+            .from("coffee_records")
+            .select("*")
+            .eq("id", (assessment as any).store_record_id)
+            .maybeSingle()
+        : ({ data: null } as any);
+
+      const a: any = assessment;
+      const cr: any = record || {};
+      setGrnData({
+        grnNumber: `GRN-${a.batch_number}`,
+        batchNumber: a.batch_number,
+        inventoryBatchId: a.batch_number,
+        supplierName: cr.supplier_name || "—",
+        coffeeType: cr.coffee_type || "—",
+        qualityAssessment: "APPROVED",
+        numberOfBags: cr.bags || 0,
+        totalKgs: cr.kilograms || 0,
+        unitPrice: a.final_price ?? a.suggested_price ?? 0,
+        assessedBy: a.assessed_by,
+        physicalAssessmentBy: a.physical_assessment_by || undefined,
+        inputBy: cr.created_by || undefined,
+        deliveryDate: cr.date || cr.created_at || undefined,
+        assessmentDate: a.date_assessed || a.created_at || undefined,
+        createdAt: new Date().toISOString(),
+        moisture: a.moisture,
+        group1_defects: a.group1_defects,
+        group2_defects: a.group2_defects,
+        pods: a.pods,
+        husks: a.husks,
+        outturn: a.outturn,
+        calculatorComments: a.qm_notes || a.comments || undefined,
+      });
+    } catch (e: any) {
+      toast({ title: "Cannot print GRN", description: e.message, variant: "destructive" });
+    } finally {
+      setGrnLoadingId(null);
+    }
+  };
 
   const { data: reviewDetail, isLoading: detailLoading } = useQuery({
     queryKey: ["qm-review-detail", selected?.id],
@@ -196,6 +257,9 @@ const QualityApprovalsTab = () => {
       queryClient.invalidateQueries({ queryKey: ["quality-manager-pending"] });
       queryClient.invalidateQueries({ queryKey: ["quality-manager-approval-log"] });
       queryClient.invalidateQueries({ queryKey: ["assessment-history"] });
+      if (vars.action !== "rejected" && vars.row?.batch_number) {
+        printGRN(vars.row.batch_number, vars.row.id);
+      }
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -293,6 +357,7 @@ const QualityApprovalsTab = () => {
                     <TableHead>Original</TableHead>
                     <TableHead>Approved</TableHead>
                     <TableHead>Notes</TableHead>
+                    <TableHead className="text-right">GRN</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -307,6 +372,24 @@ const QualityApprovalsTab = () => {
                       <TableCell>{money(r.original_price)}</TableCell>
                       <TableCell>{r.approved_price != null ? money(r.approved_price) : "—"}</TableCell>
                       <TableCell className="max-w-[220px] truncate">{r.notes || "—"}</TableCell>
+                      <TableCell className="text-right">
+                        {r.action === "rejected" ? (
+                          "—"
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={grnLoadingId === r.id}
+                            onClick={() => printGRN(r.batch_number, r.id)}
+                          >
+                            {grnLoadingId === r.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <><Printer className="h-4 w-4 mr-1" /> Print GRN</>
+                            )}
+                          </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -455,6 +538,8 @@ const QualityApprovalsTab = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      <GRNPrintModal open={!!grnData} onClose={() => setGrnData(null)} grnData={grnData} />
     </div>
   );
 };
