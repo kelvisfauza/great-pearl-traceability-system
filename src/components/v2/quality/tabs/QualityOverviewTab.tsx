@@ -337,6 +337,42 @@ const QualityOverviewTab = ({ onNavigate, tabIds }: Props) => {
         </CardContent>
       </Card>
 
+      {/* Coloured stat cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {cards.map((c, idx) => {
+          const Icon = c.icon;
+          return (
+            <button
+              key={`${c.id}-${idx}`}
+              onClick={() => onNavigate(c.id!)}
+              className="text-left rounded-xl border p-4 transition-transform hover:-translate-y-0.5 hover:shadow-md"
+              style={{
+                background: `linear-gradient(135deg, hsl(${toneVar(c.chart)} / 0.18), hsl(${toneVar(c.chart)} / 0.04))`,
+                borderColor: `hsl(${toneVar(c.chart)} / 0.35)`,
+              }}
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">{c.title}</p>
+                  <p className="text-3xl font-bold mt-1" style={{ color: `hsl(${toneVar(c.chart)})` }}>
+                    {c.value}
+                  </p>
+                </div>
+                <span
+                  className="rounded-lg p-2"
+                  style={{ background: `hsl(${toneVar(c.chart)} / 0.18)`, color: `hsl(${toneVar(c.chart)})` }}
+                >
+                  <Icon className="h-5 w-5" />
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-2 flex items-center gap-1">
+                {c.hint} <ArrowRight className="h-3 w-3" />
+              </p>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
