@@ -1189,6 +1189,9 @@ const QualityControl = () => {
               <TabsTrigger value="quick-analyses" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                 Quick Analyses
               </TabsTrigger>
+              <TabsTrigger value="analysis-files" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                Analysis Files
+              </TabsTrigger>
               {canAccessAdminPriceCalculator && (
                 <TabsTrigger value="admin-pricing" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                   Admin Final Pricing
