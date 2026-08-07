@@ -242,6 +242,10 @@ const QualityAnalysisFilesTab = () => {
             Attach the scanned store analysis sheets. Pick a registered supplier, or choose Offer Sample and type the name.
           </CardDescription>
         </div>
+        <div className="flex flex-wrap gap-2">
+        <Button variant="outline" className="gap-2" onClick={() => setScanOpen(true)}>
+          <QrCode className="h-4 w-4" /> Scan Form QR
+        </Button>
         <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
           <DialogTrigger asChild>
             <Button className="gap-2"><FileUp className="h-4 w-4" /> Attach Analysis</Button>
@@ -249,6 +253,28 @@ const QualityAnalysisFilesTab = () => {
           <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
             <DialogHeader><DialogTitle>Attach Scanned Quality Analysis</DialogTitle></DialogHeader>
             <div className="space-y-4">
+              {scannedForm ? (
+                <div className="rounded-lg border bg-muted/40 p-3 text-xs space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-sm">{scannedForm.form_number}</span>
+                    <Badge variant="outline">{scannedForm.supplier_name}</Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 pt-1">
+                    {Object.entries(scannedForm.params || {})
+                      .filter(([k, v]) => !['supplier_name', 'analysis_date'].includes(k) && `${v ?? ''}`.trim() !== '')
+                      .map(([k, v]) => (
+                        <div key={k} className="flex justify-between gap-2">
+                          <span className="text-muted-foreground capitalize">{k.replace(/_/g, ' ')}</span>
+                          <span className="font-medium">{String(v)}</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              ) : (
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => { setOpen(false); setScanOpen(true); }}>
+                  <QrCode className="h-4 w-4" /> Scan the form QR to load its parameters
+                </Button>
+              )}
               <div className="space-y-2">
                 <Label>Sample source</Label>
                 <Select value={sourceType} onValueChange={(v) => setSourceType(v as any)}>
