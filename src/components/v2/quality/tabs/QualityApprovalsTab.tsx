@@ -535,6 +535,8 @@ const QualityApprovalsTab = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      <GRNPrintModal open={!!grnData} onClose={() => setGrnData(null)} grnData={grnData} />
     </div>
   );
 };
