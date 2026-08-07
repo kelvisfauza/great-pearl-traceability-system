@@ -1734,6 +1734,25 @@ const QualityControl = () => {
                         </p>
                       </div>
                     </div>
+                    <div className="mt-4">
+                      <Label className="text-base font-semibold">Stamped Analysis Form</Label>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Attach the signed &amp; stamped analysis already uploaded in Analysis Files.
+                      </p>
+                      <SavedAnalysisPicker
+                        value={assessmentForm.analysis_file_id}
+                        formNumber={assessmentForm.form_number}
+                        supplierHint={(selectedRecord as any)?.supplier_name || ''}
+                        disabled={readOnly}
+                        onChange={(f) =>
+                          setAssessmentForm((prev: any) => ({
+                            ...prev,
+                            analysis_file_id: f?.id || '',
+                            form_number: f?.form_number || prev.form_number,
+                          }))
+                        }
+                      />
+                    </div>
                     <p className="text-xs text-muted-foreground mt-2">
                       System assessment by: <span className="font-medium text-foreground">{employee?.name || employee?.email || 'Quality Controller'}</span>
                     </p>
