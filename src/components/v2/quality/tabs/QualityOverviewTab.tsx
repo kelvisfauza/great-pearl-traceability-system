@@ -313,7 +313,7 @@ const QualityOverviewTab = ({ onNavigate, tabIds }: Props) => {
     },
   ].filter((c) => !!c.id && (!c.headOnly || isQualityHead));
 
-  const toneVar = (n: number) => (n === 0 ? "var(--destructive)" : `var(--chart-${(n - 1) % 10 + 1})`);
+  const toneVar = (n: number) => (n === 0 ? "var(--destructive)" : `var(--chart-${(n - 1) % 5 + 1})`);
 
   const tooltipStyle = {
     background: "hsl(var(--popover))",
@@ -512,64 +512,35 @@ const QualityOverviewTab = ({ onNavigate, tabIds }: Props) => {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="lg:col-span-2">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Quick access</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {shortcuts.map((s, i) => (
-              <button
-                key={s.label}
-                type="button"
-                onClick={() => onNavigate(s.id)}
-                className="flex items-center justify-between gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-muted/50"
-              >
-                <span className="flex items-center gap-3">
-                  <span className="rounded-lg p-1.5" style={{ background: `hsl(var(--chart-${(i % 5) + 1}) / 0.15)` }}>
-                    <s.icon className="h-5 w-5" style={{ color: `hsl(var(--chart-${(i % 5) + 1}))` }} />
-                  </span>
-                  <span>
-                    <span className="block text-sm font-medium">{s.label}</span>
-                    <span className="block text-xs text-muted-foreground">{s.hint}</span>
-                  </span>
-                </span>
-                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              </button>
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center justify-between">
+            Today's tasks
+            <Badge variant="secondary">{doneCount}/{checklistItems.length}</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Progress value={checklistPct} />
+          <ul className="space-y-2 text-sm">
+            {checklistItems.map((i) => (
+              <li key={i.key} className="flex items-center gap-2">
+                <CheckSquare
+                  className="h-4 w-4"
+                  style={{ color: checklist?.[i.key] ? "hsl(var(--chart-1))" : "hsl(var(--muted-foreground))" }}
+                />
+                <span className={checklist?.[i.key] ? "line-through text-muted-foreground" : ""}>{i.label}</span>
+              </li>
             ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center justify-between">
-              Today's tasks
-              <Badge variant="secondary">{doneCount}/{checklistItems.length}</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Progress value={checklistPct} />
-            <ul className="space-y-2 text-sm">
-              {checklistItems.map((i) => (
-                <li key={i.key} className="flex items-center gap-2">
-                  <CheckSquare
-                    className="h-4 w-4"
-                    style={{ color: checklist?.[i.key] ? "hsl(var(--chart-1))" : "hsl(var(--muted-foreground))" }}
-                  />
-                  <span className={checklist?.[i.key] ? "line-through text-muted-foreground" : ""}>{i.label}</span>
-                </li>
-              ))}
-            </ul>
-            {T.checklist && <button
-              type="button"
-              onClick={() => onNavigate(T.checklist!)}
-              className="text-xs text-primary hover:underline"
-            >
-              Open daily checklist →
-            </button>}
-          </CardContent>
-        </Card>
-      </div>
+          </ul>
+          {T.checklist && <button
+            type="button"
+            onClick={() => onNavigate(T.checklist!)}
+            className="text-xs text-primary hover:underline"
+          >
+            Open daily checklist →
+          </button>}
+        </CardContent>
+      </Card>
     </div>
   );
 };
