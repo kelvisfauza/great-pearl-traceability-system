@@ -11,10 +11,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQualityRole } from "@/hooks/useQualityRole";
-import { Loader2, CheckCircle2, XCircle, ShieldCheck, Inbox } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, ShieldCheck, Inbox, FileText, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 
 const money = (v: any) => `UGX ${Number(v || 0).toLocaleString()}`;
+const BUCKET = "quality-analysis-files";
+
+const Field = ({ label, value }: { label: string; value: any }) => (
+  <div className="rounded-md border bg-muted/30 px-2 py-1.5">
+    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+    <p className="text-sm font-medium break-words">{value === null || value === undefined || value === "" ? "—" : String(value)}</p>
+  </div>
+);
 
 const QualityApprovalsTab = () => {
   const { toast } = useToast();
@@ -24,6 +32,43 @@ const QualityApprovalsTab = () => {
   const [selected, setSelected] = useState<any>(null);
   const [price, setPrice] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+
+  const { data: reviewDetail, isLoading: detailLoading } = useQuery({
+    queryKey: ["qm-review-detail", selected?.id],
+    enabled: !!selected?.id,
+    queryFn: async () => {
+      const row = selected;
+      const [recordRes, fileRes, formRes] = await Promise.all([
+        row.store_record_id
+          ? supabase.from("coffee_records").select("*").eq("id", row.store_record_id).maybeSingle()
+          : Promise.resolve({ data: null } as any),
+        row.analysis_file_id
+          ? (supabase as any).from("quality_analysis_files").select("*").eq("id", row.analysis_file_id).maybeSingle()
+          : Promise.resolve({ data: null } as any),
+        row.form_number
+          ? (supabase as any)
+              .from("quality_analysis_forms")
+              .select("*")
+              .eq("form_number", row.form_number)
+              .maybeSingle()
+          : Promise.resolve({ data: null } as any),
+      ]);
+      return {
+        record: (recordRes as any)?.data || null,
+        file: (fileRes as any)?.data || null,
+        form: (formRes as any)?.data || null,
+      };
+    },
+  });
+
+  const openFile = async (path: string) => {
+    const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600);
+    if (error || !data?.signedUrl) {
+      toast({ title: "Cannot open file", description: error?.message || "No signed URL", variant: "destructive" });
+      return;
+    }
+    window.open(data.signedUrl, "_blank");
+  };
 
   const { data: pending = [], isLoading } = useQuery({
     queryKey: ["quality-manager-pending"],
