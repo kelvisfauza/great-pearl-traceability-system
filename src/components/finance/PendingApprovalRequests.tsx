@@ -325,9 +325,14 @@ const PendingApprovalRequests = () => {
         title="Reject Finance Approval"
         description="Please provide a reason for rejecting this request."
       />
+      {/* Disbursement Modal — choose Yo / GosentePay / Cash after final approval */}
+      <DisbursePaymentModal
+        target={disburseTarget}
+        onClose={() => setDisburseTarget(null)}
+      />
+
       {/* Delegation Modal */}
       <DelegateApprovalModal
-*** REPLACE-ANCHOR ***
         open={delegateModal.open}
         onClose={() => setDelegateModal({ open: false, reason: '', requestId: '', amount: 0 })}
         violationReason={delegateModal.reason}
