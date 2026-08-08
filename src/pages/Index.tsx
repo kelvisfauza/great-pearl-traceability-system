@@ -10,6 +10,7 @@ import AdminDashboard from '@/components/admin/AdminDashboard';
 import EUDRSummaryCard from '@/components/store/EUDRSummaryCard';
 import AssignedRoleNotification from '@/components/AssignedRoleNotification';
 import BonusClaimPopup from '@/components/BonusClaimPopup';
+import FeatureTour from '@/components/tour/FeatureTour';
 import NotificationPanel from '@/components/notifications/NotificationPanel';
 import BuyingRecommendationsCard from '@/components/admin/BuyingRecommendationsCard';
 import UpcomingBookingsWidget from '@/components/admin/UpcomingBookingsWidget';
@@ -195,6 +196,7 @@ const Index = () => {
 
         <NotificationPanel isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
         <BonusClaimPopup />
+        <FeatureTour />
       </div>
     </DashboardLayout>
   );
