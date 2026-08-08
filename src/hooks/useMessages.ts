@@ -625,23 +625,13 @@ export const useMessages = () => {
         .in('user_id', [user.id, participantId]);
 
       if (existingParticipants && existingParticipants.length > 0) {
-        const bothIds = Array.from(
-          new Set(
-            (existingParticipants as any[])
-              .reduce((acc: Record<string, Set<string>>, p: any) => {
-                (acc[p.conversation_id] ||= new Set()).add(p.user_id);
-                return acc;
-              }, {} as Record<string, Set<string>>) &&
-              Object.entries(
-                (existingParticipants as any[]).reduce((acc: Record<string, Set<string>>, p: any) => {
-                  (acc[p.conversation_id] ||= new Set()).add(p.user_id);
-                  return acc;
-                }, {} as Record<string, Set<string>>)
-              )
-                .filter(([, users]) => (users as Set<string>).size === 2)
-                .map(([id]) => id)
-          )
-        );
+        const byConversation: Record<string, Set<string>> = {};
+        (existingParticipants as any[]).forEach((p: any) => {
+          (byConversation[p.conversation_id] ||= new Set<string>()).add(p.user_id);
+        });
+        const bothIds = Object.entries(byConversation)
+          .filter(([, users]) => users.size === 2)
+          .map(([id]) => id);
 
         if (bothIds.length > 0) {
           // Only keep conversations that are direct AND have exactly 2 members total
