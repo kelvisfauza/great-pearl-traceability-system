@@ -263,7 +263,7 @@ const GroupCallDialog = () => {
   const stripTiles = spotlightActive ? tilesAll.filter(t => t.userId !== screenSharerId) : [];
 
   const showSidePanel = !!panel && !fullView;
-  const showStrip = spotlightActive && !fullView && stripTiles.length > 0;
+  const showStrip = spotlightActive && stripTiles.length > 0;
 
   if (minimized) {
     return (
