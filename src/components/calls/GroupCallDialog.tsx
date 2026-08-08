@@ -15,6 +15,8 @@ import { cn } from '@/lib/utils';
 import AddParticipantsDialog from './AddParticipantsDialog';
 import { useCallRecorder } from '@/hooks/useCallRecorder';
 
+const REACTIONS = ['👍', '❤️', '😂', '👏', '🎉', '🙌'];
+
 // Persistent audio sink that survives tile re-layouts (e.g. when someone
 // starts screen-sharing and remote tiles move from grid -> spotlight strip).
 // Without this, freshly-mounted <video> elements lose the user-gesture chain
