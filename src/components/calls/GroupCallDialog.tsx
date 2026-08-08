@@ -208,6 +208,9 @@ const GroupCallDialog = () => {
   const [addOpen, setAddOpen] = useState(false);
   const [fullView, setFullView] = useState(false);
   const [minimized, setMinimized] = useState(false);
+  const [quickComment, setQuickComment] = useState('');
+  const [floatingReactions, setFloatingReactions] = useState<{ id: string; emoji: string; from: string; left: number }[]>([]);
+  const seenReactionIds = useRef<Set<string>>(new Set());
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const recorder = useCallRecorder();
 
@@ -219,6 +222,20 @@ const GroupCallDialog = () => {
       });
     }
   }, [panel, chatMessages, markChatRead]);
+
+  // Float short emoji-only chat messages as live reactions over the stage
+  useEffect(() => {
+    const emojiOnly = /^(\p{Extended_Pictographic}|\p{Emoji_Presentation}|\uFE0F|\u200D){1,3}$/u;
+    const fresh = chatMessages.filter(m => !seenReactionIds.current.has(m.id) && emojiOnly.test((m.text || '').trim()));
+    if (fresh.length === 0) return;
+    fresh.forEach(m => seenReactionIds.current.add(m.id));
+    const added = fresh.map(m => ({ id: m.id, emoji: m.text.trim(), from: m.fromName, left: 10 + Math.random() * 70 }));
+    setFloatingReactions(prev => [...prev, ...added]);
+    const t = setTimeout(() => {
+      setFloatingReactions(prev => prev.filter(r => !added.some(a => a.id === r.id)));
+    }, 3500);
+    return () => clearTimeout(t);
+  }, [chatMessages]);
 
   if (!active) return null;
 
