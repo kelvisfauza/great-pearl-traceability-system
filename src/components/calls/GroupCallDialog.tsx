@@ -388,7 +388,17 @@ const GroupCallDialog = () => {
         <div className="flex-1 flex min-h-0">
           <div className="flex-1 min-w-0 flex flex-col min-h-0">
             {spotlightActive && spotlightTile ? (
-              <div className="relative flex-1 min-h-0 p-2 bg-black flex items-center justify-center">
+              <div ref={stageRef} className="relative flex-1 min-h-0 p-2 bg-black flex items-center justify-center">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={toggleStageFullscreen}
+                  className="absolute top-3 right-3 z-20 h-8 gap-1 bg-black/60 text-white hover:bg-black/80 border border-white/20"
+                  title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen presentation'}
+                >
+                  {isFullscreen ? <Shrink className="h-4 w-4" /> : <Expand className="h-4 w-4" />}
+                  <span className="text-xs hidden sm:inline">{isFullscreen ? 'Exit' : 'Fullscreen'}</span>
+                </Button>
                 <Tile
                   stream={spotlightTile.stream}
                   name={spotlightTile.name}
