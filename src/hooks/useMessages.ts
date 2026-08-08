@@ -616,25 +616,40 @@ export const useMessages = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      // Check if conversation already exists
+      // Check if a DIRECT (1-to-1) conversation already exists between the two users.
+      // IMPORTANT: group conversations may also contain both users — they must never
+      // be re-used for a private chat, otherwise the message goes to the whole group.
       const { data: existingParticipants } = await supabase
         .from('conversation_participants')
-        .select('conversation_id')
+        .select('conversation_id, user_id')
         .in('user_id', [user.id, participantId]);
 
       if (existingParticipants && existingParticipants.length > 0) {
-        // Find conversation where both users are participants
-        const conversationCounts: Record<string, number> = {};
-        existingParticipants.forEach(p => {
-          conversationCounts[p.conversation_id] = (conversationCounts[p.conversation_id] || 0) + 1;
+        const byConversation: Record<string, Set<string>> = {};
+        (existingParticipants as any[]).forEach((p: any) => {
+          (byConversation[p.conversation_id] ||= new Set<string>()).add(p.user_id);
         });
+        const bothIds = Object.entries(byConversation)
+          .filter(([, users]) => users.size === 2)
+          .map(([id]) => id);
 
-        const existingConvId = Object.keys(conversationCounts).find(
-          id => conversationCounts[id] === 2
-        );
+        if (bothIds.length > 0) {
+          // Only keep conversations that are direct AND have exactly 2 members total
+          const { data: directConvs } = await supabase
+            .from('conversations')
+            .select('id')
+            .in('id', bothIds)
+            .eq('type', 'direct');
 
-        if (existingConvId) {
-          return { id: existingConvId };
+          for (const conv of directConvs || []) {
+            const { count } = await supabase
+              .from('conversation_participants')
+              .select('user_id', { count: 'exact', head: true })
+              .eq('conversation_id', conv.id);
+            if ((count || 0) === 2) {
+              return { id: conv.id };
+            }
+          }
         }
       }
 

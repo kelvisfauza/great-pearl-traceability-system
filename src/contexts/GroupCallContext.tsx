@@ -1113,12 +1113,16 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!myId) return;
     let cancelled = false;
     (async () => {
+      // Only consider calls that started within the last 6 hours — stale rows stuck
+      // in "ringing" were surfacing missed-call banners days later.
+      const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
       const { data: rows } = await (supabase as any)
         .from('group_call_participants')
         .select('call_id, status, group_calls!inner(id, host_id, call_type, status, title, started_at)')
         .eq('user_id', myId)
         .in('status', ['ringing', 'missed', 'declined'])
-        .in('group_calls.status', ['ringing', 'active']);
+        .in('group_calls.status', ['ringing', 'active'])
+        .gt('group_calls.started_at', sixHoursAgo);
       if (cancelled || !rows) return;
       const hostIds = Array.from(new Set(rows.map((r: any) => r.group_calls?.host_id).filter(Boolean))) as string[];
       const nameMap = new Map<string, string>();

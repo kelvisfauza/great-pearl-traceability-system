@@ -25,6 +25,8 @@ Deno.serve(async (req) => {
 
     // Calculate timestamp for 5 minutes ago
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    // Never chase messages older than 24 hours (avoids re-notifying about historic chats)
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     // Find messages that are:
     // 1. Not read (read_at is null)
@@ -43,7 +45,8 @@ Deno.serve(async (req) => {
       `)
       .is('read_at', null)
       .is('sms_notification_sent', false)
-      .lt('created_at', fiveMinutesAgo);
+      .lt('created_at', fiveMinutesAgo)
+      .gt('created_at', twentyFourHoursAgo);
 
     if (messagesError) {
       console.error('Error fetching unread messages:', messagesError);
@@ -70,6 +73,30 @@ Deno.serve(async (req) => {
     // Process each unread message
     for (const message of unreadMessages) {
       try {
+        // Skip call-log entries (missed/answered call markers). These are records,
+        // not messages that need chasing, and they caused bogus "missed call" emails.
+        const isCallLog =
+          message.sender_name === 'Call' ||
+          (typeof message.content === 'string' && message.content.trim().startsWith('📞'));
+        if (isCallLog) {
+          await supabase
+            .from('messages')
+            .update({ sms_notification_sent: true, sms_notification_sent_at: new Date().toISOString() })
+            .eq('id', message.id);
+          continue;
+        }
+
+        // Re-check read state right before sending — the recipient may have read it
+        // between the query and now.
+        const { data: fresh } = await supabase
+          .from('messages')
+          .select('read_at')
+          .eq('id', message.id)
+          .single();
+        if (fresh?.read_at) {
+          continue;
+        }
+
         // Get recipients for this conversation (excluding the sender)
         const { data: participants } = await supabase
           .from('conversation_participants')
