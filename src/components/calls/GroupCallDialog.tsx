@@ -8,6 +8,7 @@ import {
   Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff, Users,
   Hand, MessageSquare, MonitorUp, MonitorOff, UserPlus, X, Send,
   Maximize2, Minimize2, Crown, Volume2, UserX, ChevronUp, Circle, Square, Loader2,
+  Expand, Shrink,
 } from 'lucide-react';
 import { useGroupCall, GroupParticipant } from '@/contexts/GroupCallContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -209,6 +210,21 @@ const GroupCallDialog = () => {
   const [chatInput, setChatInput] = useState('');
   const [addOpen, setAddOpen] = useState(false);
   const [fullView, setFullView] = useState(false);
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  const toggleStageFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else if (stageRef.current) await stageRef.current.requestFullscreen();
+    } catch {}
+  };
   const [minimized, setMinimized] = useState(false);
   const [quickComment, setQuickComment] = useState('');
   const [floatingReactions, setFloatingReactions] = useState<{ id: string; emoji: string; from: string; left: number }[]>([]);
