@@ -368,23 +368,91 @@ const GroupCallDialog = () => {
         </div>
 
         <div className="flex-1 flex min-h-0">
-          <div className={cn('flex-1 min-w-0 flex', spotlightActive ? 'flex-row' : 'flex-col')}>
+          <div className="flex-1 min-w-0 flex flex-col min-h-0">
             {spotlightActive && spotlightTile ? (
-              <div className={cn('flex-1 min-w-0 p-2 bg-black flex items-center justify-center')}>
-                <div className="w-full h-full max-h-full">
-                  <Tile
-                    stream={spotlightTile.stream}
-                    name={spotlightTile.name}
-                    isLocal={spotlightTile.isLocal}
-                    muted={spotlightTile.isLocal}
-                    isVideo
-                    handRaised={handsRaised.has(spotlightTile.userId)}
-                    sharing
-                    micMuted={spotlightTile.isLocal ? muted : mutedPeers.has(spotlightTile.userId)}
-                    isHost={spotlightTile.userId === active.hostId}
-                    onForceMute={isHost && !spotlightTile.isLocal ? () => forceMuteParticipant(spotlightTile.userId) : undefined}
-                    onKick={isHost && !spotlightTile.isLocal ? () => removeParticipantFromCall(spotlightTile.userId) : undefined}
-                  />
+              <div className="relative flex-1 min-h-0 p-2 bg-black flex items-center justify-center">
+                <Tile
+                  stream={spotlightTile.stream}
+                  name={spotlightTile.name}
+                  isLocal={spotlightTile.isLocal}
+                  muted={spotlightTile.isLocal}
+                  isVideo
+                  spotlight
+                  handRaised={handsRaised.has(spotlightTile.userId)}
+                  sharing
+                  micMuted={spotlightTile.isLocal ? muted : mutedPeers.has(spotlightTile.userId)}
+                  isHost={spotlightTile.userId === active.hostId}
+                  onForceMute={isHost && !spotlightTile.isLocal ? () => forceMuteParticipant(spotlightTile.userId) : undefined}
+                  onKick={isHost && !spotlightTile.isLocal ? () => removeParticipantFromCall(spotlightTile.userId) : undefined}
+                />
+
+                {/* Floating reactions */}
+                <div className="pointer-events-none absolute inset-0 overflow-hidden">
+                  {floatingReactions.map(r => (
+                    <div
+                      key={r.id}
+                      className="absolute bottom-24 animate-in fade-in slide-in-from-bottom-10 duration-1000"
+                      style={{ left: `${r.left}%` }}
+                    >
+                      <span className="text-3xl drop-shadow">{r.emoji}</span>
+                      <p className="text-[10px] text-white/80 text-center">{r.from}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Reactions + comments bar over the shared screen */}
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full bg-black/60 backdrop-blur px-3 py-2 shadow-lg">
+                  {REACTIONS.map(e => (
+                    <button
+                      key={e}
+                      type="button"
+                      onClick={() => sendChat(e)}
+                      className="text-xl leading-none hover:scale-125 transition-transform"
+                      title={`React ${e}`}
+                    >
+                      {e}
+                    </button>
+                  ))}
+                  <span className="w-px h-6 bg-white/25" />
+                  <form
+                    onSubmit={(e) => { e.preventDefault(); if (quickComment.trim()) { sendChat(quickComment); setQuickComment(''); } }}
+                    className="flex items-center gap-1"
+                  >
+                    <Input
+                      value={quickComment}
+                      onChange={e => setQuickComment(e.target.value)}
+                      placeholder="Comment…"
+                      className="h-8 w-40 sm:w-56 bg-white/10 border-white/20 text-white placeholder:text-white/60"
+                    />
+                    <Button type="submit" size="icon" className="h-8 w-8 rounded-full" disabled={!quickComment.trim()}>
+                      <Send className="h-3.5 w-3.5" />
+                    </Button>
+                  </form>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="secondary"
+                    className="h-8 w-8 rounded-full relative"
+                    onClick={() => { setFullView(false); setPanel(p => p === 'chat' ? null : 'chat'); }}
+                    title="Open comments"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    {unreadChat > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[9px] rounded-full h-4 min-w-4 px-1 flex items-center justify-center">
+                        {unreadChat > 9 ? '9+' : unreadChat}
+                      </span>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="secondary"
+                    className="h-8 w-8 rounded-full"
+                    onClick={() => setFullView(v => !v)}
+                    title={fullView ? 'Exit full screen' : 'Full screen'}
+                  >
+                    {fullView ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                  </Button>
                 </div>
               </div>
             ) : (
@@ -419,15 +487,16 @@ const GroupCallDialog = () => {
             )}
 
             {showStrip && (
-              <div className="w-40 shrink-0 border-l bg-background/60 overflow-y-auto p-2 space-y-2">
+              <div className="shrink-0 border-t bg-black/70 overflow-x-auto flex gap-2 p-2">
                 {stripTiles.map(t => (
-                  <div key={t.userId} className="w-full">
+                  <div key={t.userId} className="w-32 sm:w-40 shrink-0">
                     <Tile
                       stream={t.stream}
                       name={t.name}
                       isLocal={t.isLocal}
                       muted={t.isLocal}
                       isVideo={isVideo}
+                      compact
                       handRaised={handsRaised.has(t.userId)}
                       micMuted={t.isLocal ? muted : mutedPeers.has(t.userId)}
                       isHost={t.userId === active.hostId}
