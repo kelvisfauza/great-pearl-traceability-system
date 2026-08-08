@@ -249,8 +249,8 @@ const GroupCallDialog = () => {
       if (seenReactionIds.current.has(m.id)) return false;
       if (!emojiOnly.test((m.text || '').trim())) return false;
       // ignore backlog / older messages so old emojis don't pop up on join
-      const ts = (m as any).at ? new Date((m as any).at).getTime() : now;
-      return !ts || now - ts < 10000;
+      const ts = typeof m.at === 'number' ? m.at : now;
+      return now - ts < 10000;
     });
     if (fresh.length === 0) return;
     fresh.forEach(m => seenReactionIds.current.add(m.id));
