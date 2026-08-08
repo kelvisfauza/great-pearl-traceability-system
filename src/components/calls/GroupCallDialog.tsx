@@ -73,7 +73,7 @@ const useIsSpeaking = (stream: MediaStream | null, enabled: boolean) => {
   return speaking;
 };
 
-const Tile = ({ stream, name, muted, isLocal, isVideo, handRaised, sharing, micMuted, isHost, onForceMute, onKick }: { stream: MediaStream | null; name: string; muted?: boolean; isLocal?: boolean; isVideo: boolean; handRaised?: boolean; sharing?: boolean; micMuted?: boolean; isHost?: boolean; onForceMute?: () => void; onKick?: () => void; }) => {
+const Tile = ({ stream, name, muted, isLocal, isVideo, handRaised, sharing, micMuted, isHost, onForceMute, onKick, spotlight, compact }: { stream: MediaStream | null; name: string; muted?: boolean; isLocal?: boolean; isVideo: boolean; handRaised?: boolean; sharing?: boolean; micMuted?: boolean; isHost?: boolean; onForceMute?: () => void; onKick?: () => void; spotlight?: boolean; compact?: boolean; }) => {
   const ref = useRef<HTMLVideoElement | null>(null);
   useEffect(() => {
     if (ref.current && stream && ref.current.srcObject !== stream) {
@@ -86,7 +86,8 @@ const Tile = ({ stream, name, muted, isLocal, isVideo, handRaised, sharing, micM
   const initials = name.split(' ').map(s => s[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || 'U';
   return (
     <div className={cn(
-      'group/tile relative bg-black/80 rounded-lg overflow-hidden aspect-video flex items-center justify-center transition-shadow',
+      'group/tile relative bg-black/80 rounded-lg overflow-hidden flex items-center justify-center transition-shadow',
+      spotlight ? 'w-full h-full rounded-xl' : 'aspect-video',
       speaking && 'ring-4 ring-emerald-400 shadow-[0_0_24px_rgba(16,185,129,0.55)]'
     )}>
       {stream && isVideo ? (
@@ -100,15 +101,16 @@ const Tile = ({ stream, name, muted, isLocal, isVideo, handRaised, sharing, micM
       ) : (
         <div className="flex flex-col items-center gap-2 text-primary-foreground">
           <div className={cn(
-            'h-16 w-16 rounded-full bg-primary/40 flex items-center justify-center text-2xl font-semibold transition-shadow',
+            'rounded-full bg-primary/40 flex items-center justify-center font-semibold transition-shadow',
+            compact ? 'h-9 w-9 text-sm' : 'h-16 w-16 text-2xl',
             speaking && 'ring-4 ring-emerald-400 shadow-[0_0_24px_rgba(16,185,129,0.55)]'
           )}>
             {initials}
           </div>
-          {!stream && <span className="text-xs opacity-80">Connecting…</span>}
+          {!stream && !compact && <span className="text-xs opacity-80">Connecting…</span>}
         </div>
       )}
-      <div className="absolute bottom-2 left-2 text-xs text-white bg-black/60 px-2 py-0.5 rounded">
+      <div className={cn('absolute bottom-2 left-2 text-white bg-black/60 px-2 py-0.5 rounded', compact ? 'text-[10px] max-w-[90%] truncate' : 'text-xs')}>
         <span className="inline-flex items-center gap-1">
           {micMuted && <MicOff className="h-3 w-3 text-red-400" />}
           {speaking && !micMuted && <Volume2 className="h-3 w-3 text-emerald-300 animate-pulse" />}
