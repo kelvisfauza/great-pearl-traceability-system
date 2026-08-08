@@ -59,6 +59,7 @@ const UserPresencePanel = () => {
             <div className="text-sm text-muted-foreground">No matching users.</div>
           )}
           {!loading && filtered.map((u) => {
+            const isBusy = u.status === 'busy';
             const isOnline = u.status === 'online';
             const isAway = u.status === 'away';
             const isCurrentUser = u.id === user?.id;
@@ -72,9 +73,12 @@ const UserPresencePanel = () => {
                         {(u.name || 'U').split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <span className={`absolute bottom-0 right-0 h-2 w-2 rounded-full border-2 border-background ${
-                      isOnline ? 'bg-green-500 animate-pulse' : isAway ? 'bg-yellow-500' : 'bg-muted-foreground/30'
-                    }`} />
+                    <span
+                      title={isBusy ? 'On another call' : undefined}
+                      className={`absolute bottom-0 right-0 h-2 w-2 rounded-full border-2 border-background ${
+                        isBusy ? 'bg-red-500 animate-pulse' : isOnline ? 'bg-green-500 animate-pulse' : isAway ? 'bg-yellow-500' : 'bg-muted-foreground/30'
+                      }`}
+                    />
                   </div>
                   <div className="min-w-0">
                     <p className="font-medium text-sm truncate">
@@ -84,16 +88,20 @@ const UserPresencePanel = () => {
                     <p className="text-xs text-muted-foreground truncate">{u.department || '—'} • {u.role || '—'}</p>
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
                       <Clock className="h-3 w-3" />
-                      {isOnline ? 'Active now' : `Last seen: ${formatLastSeen(u.online_at || u.last_login)}`}
+                      {isBusy ? 'On another call' : isOnline ? 'Active now' : `Last seen: ${formatLastSeen(u.online_at || u.last_login)}`}
                     </p>
                   </div>
                 </div>
-                <Badge className={
-                  isOnline ? 'bg-green-100 text-green-800' :
-                  isAway ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-muted text-muted-foreground'
-                }>
-                  {isOnline ? <><Wifi className="h-3 w-3 mr-1" />Online</> : isAway ? 'Away' : <><WifiOff className="h-3 w-3 mr-1" />Offline</>}
+                <Badge
+                  title={isBusy ? 'On another call' : undefined}
+                  className={
+                    isBusy ? 'bg-red-100 text-red-800' :
+                    isOnline ? 'bg-green-100 text-green-800' :
+                    isAway ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-muted text-muted-foreground'
+                  }
+                >
+                  {isBusy ? <><Wifi className="h-3 w-3 mr-1" />On call</> : isOnline ? <><Wifi className="h-3 w-3 mr-1" />Online</> : isAway ? 'Away' : <><WifiOff className="h-3 w-3 mr-1" />Offline</>}
                 </Badge>
               </div>
             );

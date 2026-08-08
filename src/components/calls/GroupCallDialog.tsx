@@ -8,6 +8,7 @@ import {
   Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff, Users,
   Hand, MessageSquare, MonitorUp, MonitorOff, UserPlus, X, Send,
   Maximize2, Minimize2, Crown, Volume2, UserX, ChevronUp, Circle, Square, Loader2,
+  Expand, Shrink,
 } from 'lucide-react';
 import { useGroupCall, GroupParticipant } from '@/contexts/GroupCallContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -209,6 +210,21 @@ const GroupCallDialog = () => {
   const [chatInput, setChatInput] = useState('');
   const [addOpen, setAddOpen] = useState(false);
   const [fullView, setFullView] = useState(false);
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  const toggleStageFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else if (stageRef.current) await stageRef.current.requestFullscreen();
+    } catch {}
+  };
   const [minimized, setMinimized] = useState(false);
   const [quickComment, setQuickComment] = useState('');
   const [floatingReactions, setFloatingReactions] = useState<{ id: string; emoji: string; from: string; left: number }[]>([]);
@@ -372,7 +388,17 @@ const GroupCallDialog = () => {
         <div className="flex-1 flex min-h-0">
           <div className="flex-1 min-w-0 flex flex-col min-h-0">
             {spotlightActive && spotlightTile ? (
-              <div className="relative flex-1 min-h-0 p-2 bg-black flex items-center justify-center">
+              <div ref={stageRef} className="relative flex-1 min-h-0 p-2 bg-black flex items-center justify-center">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={toggleStageFullscreen}
+                  className="absolute top-3 right-3 z-20 h-8 gap-1 bg-black/60 text-white hover:bg-black/80 border border-white/20"
+                  title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen presentation'}
+                >
+                  {isFullscreen ? <Shrink className="h-4 w-4" /> : <Expand className="h-4 w-4" />}
+                  <span className="text-xs hidden sm:inline">{isFullscreen ? 'Exit' : 'Fullscreen'}</span>
+                </Button>
                 <Tile
                   stream={spotlightTile.stream}
                   name={spotlightTile.name}
