@@ -616,25 +616,50 @@ export const useMessages = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      // Check if conversation already exists
+      // Check if a DIRECT (1-to-1) conversation already exists between the two users.
+      // IMPORTANT: group conversations may also contain both users — they must never
+      // be re-used for a private chat, otherwise the message goes to the whole group.
       const { data: existingParticipants } = await supabase
         .from('conversation_participants')
-        .select('conversation_id')
+        .select('conversation_id, user_id')
         .in('user_id', [user.id, participantId]);
 
       if (existingParticipants && existingParticipants.length > 0) {
-        // Find conversation where both users are participants
-        const conversationCounts: Record<string, number> = {};
-        existingParticipants.forEach(p => {
-          conversationCounts[p.conversation_id] = (conversationCounts[p.conversation_id] || 0) + 1;
-        });
-
-        const existingConvId = Object.keys(conversationCounts).find(
-          id => conversationCounts[id] === 2
+        const bothIds = Array.from(
+          new Set(
+            (existingParticipants as any[])
+              .reduce((acc: Record<string, Set<string>>, p: any) => {
+                (acc[p.conversation_id] ||= new Set()).add(p.user_id);
+                return acc;
+              }, {} as Record<string, Set<string>>) &&
+              Object.entries(
+                (existingParticipants as any[]).reduce((acc: Record<string, Set<string>>, p: any) => {
+                  (acc[p.conversation_id] ||= new Set()).add(p.user_id);
+                  return acc;
+                }, {} as Record<string, Set<string>>)
+              )
+                .filter(([, users]) => (users as Set<string>).size === 2)
+                .map(([id]) => id)
+          )
         );
 
-        if (existingConvId) {
-          return { id: existingConvId };
+        if (bothIds.length > 0) {
+          // Only keep conversations that are direct AND have exactly 2 members total
+          const { data: directConvs } = await supabase
+            .from('conversations')
+            .select('id')
+            .in('id', bothIds)
+            .eq('type', 'direct');
+
+          for (const conv of directConvs || []) {
+            const { count } = await supabase
+              .from('conversation_participants')
+              .select('user_id', { count: 'exact', head: true })
+              .eq('conversation_id', conv.id);
+            if ((count || 0) === 2) {
+              return { id: conv.id };
+            }
+          }
         }
       }
 
