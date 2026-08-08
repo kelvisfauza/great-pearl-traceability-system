@@ -312,7 +312,9 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
   ) => {
     if (!myId) return;
     try {
-      // Find existing direct conversation between the two users
+      // Find existing DIRECT conversation between the two users. Group
+      // conversations containing both users must never be used, otherwise the
+      // call log lands in the group chat.
       const { data: mine } = await supabase
         .from('conversation_participants')
         .select('conversation_id')
@@ -322,7 +324,25 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
         .select('conversation_id')
         .eq('user_id', peerAuthId);
       const mineIds = new Set((mine || []).map((r: any) => r.conversation_id));
-      let convId = (theirs || []).find((r: any) => mineIds.has(r.conversation_id))?.conversation_id;
+      const shared = (theirs || [])
+        .map((r: any) => r.conversation_id)
+        .filter((id: string) => mineIds.has(id));
+
+      let convId: string | undefined;
+      if (shared.length > 0) {
+        const { data: directConvs } = await supabase
+          .from('conversations')
+          .select('id')
+          .in('id', shared)
+          .eq('type', 'direct');
+        for (const c of directConvs || []) {
+          const { count } = await supabase
+            .from('conversation_participants')
+            .select('user_id', { count: 'exact', head: true })
+            .eq('conversation_id', c.id);
+          if ((count || 0) === 2) { convId = c.id; break; }
+        }
+      }
 
       if (!convId) {
         const { data: conv, error: convErr } = await supabase
