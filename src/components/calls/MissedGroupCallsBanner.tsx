@@ -18,12 +18,14 @@ const MissedGroupCallsBanner = () => {
   return (
     <div className="fixed bottom-4 right-4 z-[100] w-80 space-y-2">
       {missedGroupCalls.slice(-3).map(m => (
-        <div key={m.callId} className="rounded-lg border bg-card shadow-lg p-3 flex items-start gap-3 animate-in slide-in-from-right">
-          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+        <div key={m.callId} className={`rounded-lg border bg-card shadow-lg p-3 flex items-start gap-3 animate-in slide-in-from-right ${m.ongoing ? 'border-emerald-500/50' : ''}`}>
+          <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${m.ongoing ? 'bg-emerald-500/10' : 'bg-primary/10'}`}>
             {m.type === 'video' ? <VideoIcon className="h-5 w-5 text-primary" /> : <Phone className="h-5 w-5 text-primary" />}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium truncate">Missed {m.type} call</p>
+            <p className="text-sm font-medium truncate">
+              {m.ongoing ? 'Ongoing meeting — you got disconnected' : `Missed ${m.type} call`}
+            </p>
             <p className="text-xs text-muted-foreground truncate">
               {m.title || `From ${m.hostName}`} · {timeAgo(m.at)}
             </p>
