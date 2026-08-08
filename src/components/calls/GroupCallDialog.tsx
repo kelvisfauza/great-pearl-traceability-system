@@ -244,15 +244,24 @@ const GroupCallDialog = () => {
   // Float short emoji-only chat messages as live reactions over the stage
   useEffect(() => {
     const emojiOnly = /^(\p{Extended_Pictographic}|\p{Emoji_Presentation}|\uFE0F|\u200D){1,3}$/u;
-    const fresh = chatMessages.filter(m => !seenReactionIds.current.has(m.id) && emojiOnly.test((m.text || '').trim()));
+    const now = Date.now();
+    const fresh = chatMessages.filter(m => {
+      if (seenReactionIds.current.has(m.id)) return false;
+      if (!emojiOnly.test((m.text || '').trim())) return false;
+      // ignore backlog / older messages so old emojis don't pop up on join
+      const ts = (m as any).at ? new Date((m as any).at).getTime() : now;
+      return !ts || now - ts < 10000;
+    });
     if (fresh.length === 0) return;
     fresh.forEach(m => seenReactionIds.current.add(m.id));
     const added = fresh.map(m => ({ id: m.id, emoji: m.text.trim(), from: m.fromName, left: 10 + Math.random() * 70 }));
     setFloatingReactions(prev => [...prev, ...added]);
-    const t = setTimeout(() => {
-      setFloatingReactions(prev => prev.filter(r => !added.some(a => a.id === r.id)));
+    // NOTE: no cleanup here — cancelling this timer on every chatMessages change
+    // is what made reactions stick on screen forever.
+    const ids = new Set(added.map(a => a.id));
+    setTimeout(() => {
+      setFloatingReactions(prev => prev.filter(r => !ids.has(r.id)));
     }, 3500);
-    return () => clearTimeout(t);
   }, [chatMessages]);
 
   if (!active) return null;
