@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-export type PresenceStatus = 'online' | 'away' | 'offline';
+export type PresenceStatus = 'online' | 'away' | 'offline' | 'busy';
 
 export interface PresenceRecord {
   id: string;
@@ -156,7 +156,7 @@ export const usePresenceList = () => {
   }, []);
 
   const sorted = useMemo(() => {
-    const priority: Record<PresenceStatus, number> = { online: 0, away: 1, offline: 2 };
+    const priority: Record<PresenceStatus, number> = { online: 0, busy: 1, away: 2, offline: 3 };
     return [...users].sort((a, b) => {
       const pa = priority[a.status] ?? 3;
       const pb = priority[b.status] ?? 3;
@@ -167,7 +167,7 @@ export const usePresenceList = () => {
     });
   }, [users]);
 
-  const onlineCount = useMemo(() => users.filter(u => u.status === 'online' || u.status === 'away').length, [users]);
+  const onlineCount = useMemo(() => users.filter(u => u.status === 'online' || u.status === 'away' || u.status === 'busy').length, [users]);
 
   return { users: sorted, loading, onlineCount, refetch: fetchUsers };
 };

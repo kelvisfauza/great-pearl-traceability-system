@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { ensureNotificationPermission, showCallNotification } from '@/lib/callNotifications';
+import { setInCall } from '@/lib/callPresence';
 
 export type GroupCallType = 'audio' | 'video';
 
@@ -94,6 +95,8 @@ export interface MissedGroupCall {
   type: GroupCallType;
   title: string | null;
   at: number;
+  /** True when the user was already in this meeting and got disconnected. */
+  ongoing?: boolean;
 }
 
 export interface GroupChatMessage {
@@ -173,6 +176,7 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [screenSharerId, setScreenSharerId] = useState<string | null>(null);
   const [missedGroupCalls, setMissedGroupCalls] = useState<MissedGroupCall[]>([]);
+  const dismissedCallsRef = useRef<Set<string>>(new Set());
 
   const peersRef = useRef<Map<string, PeerEntry>>(new Map());
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -734,6 +738,7 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [incoming, myId]);
 
   const dismissMissed = useCallback((callId: string) => {
+    dismissedCallsRef.current.add(callId);
     setMissedGroupCalls(prev => prev.filter(m => m.callId !== callId));
   }, []);
 
@@ -779,7 +784,9 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const { data: nm } = await supabase.rpc('get_employee_display_name' as any, { _auth_user_id: call.host_id });
       if (typeof nm === 'string' && nm.trim()) hostName = nm;
     } catch {}
-    dismissMissed(callId);
+    // Clear the banner but don't blacklist it — if the connection drops again
+    // the rejoin prompt must come back.
+    setMissedGroupCalls(prev => prev.filter(m => m.callId !== callId));
     await joinExistingCall(call.id, call.host_id, call.call_type, call.title, hostName);
   }, [active, dismissMissed, incoming, joinExistingCall, myId, toast]);
 
@@ -827,6 +834,12 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [cleanupAll, myId, sendSignal, toast]);
 
   useEffect(() => { leaveCallRef.current = leaveCall; }, [leaveCall]);
+
+  // Publish "on a call" presence so other users see a red indicator.
+  useEffect(() => {
+    setInCall(!!active);
+    return () => { setInCall(false); };
+  }, [active]);
 
   const endForAll = useCallback(async () => {
     const cur = activeRef.current;
@@ -955,9 +968,94 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
   }, []);
 
+  // ---- Presenter picture-in-picture composite -------------------------------
+  // While screen sharing we composite the presenter's camera into a small box
+  // at the bottom-right of the shared screen, so everyone keeps seeing them.
+  const compositeRafRef = useRef<number>(0);
+  const compositeStreamRef = useRef<MediaStream | null>(null);
+  const compositeElsRef = useRef<HTMLVideoElement[]>([]);
+
+  const stopPresenterComposite = useCallback(() => {
+    if (compositeRafRef.current) cancelAnimationFrame(compositeRafRef.current);
+    compositeRafRef.current = 0;
+    compositeStreamRef.current?.getTracks().forEach(t => t.stop());
+    compositeStreamRef.current = null;
+    compositeElsRef.current.forEach(v => { try { v.pause(); (v as any).srcObject = null; } catch {} });
+    compositeElsRef.current = [];
+  }, []);
+
+  const startPresenterComposite = useCallback((screenTrack: MediaStreamTrack, camTrack: MediaStreamTrack): MediaStreamTrack | null => {
+    try {
+      const settings = screenTrack.getSettings();
+      const width = Math.min(Math.round(settings.width || 1280), 1920);
+      const height = Math.min(Math.round(settings.height || 720), 1080);
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+
+      const mkVideo = (track: MediaStreamTrack) => {
+        const v = document.createElement('video');
+        v.muted = true;
+        v.playsInline = true;
+        v.autoplay = true;
+        v.srcObject = new MediaStream([track]);
+        const p = v.play();
+        if (p && typeof (p as any).catch === 'function') (p as any).catch(() => {});
+        return v;
+      };
+      const screenVideo = mkVideo(screenTrack);
+      const camVideo = mkVideo(camTrack);
+      compositeElsRef.current = [screenVideo, camVideo];
+
+      const draw = () => {
+        try {
+          ctx.fillStyle = '#000';
+          ctx.fillRect(0, 0, width, height);
+          if (screenVideo.videoWidth) {
+            const sr = screenVideo.videoWidth / screenVideo.videoHeight;
+            const cr = width / height;
+            let dw = width, dh = height, dx = 0, dy = 0;
+            if (sr > cr) { dh = width / sr; dy = (height - dh) / 2; }
+            else { dw = height * sr; dx = (width - dw) / 2; }
+            ctx.drawImage(screenVideo, dx, dy, dw, dh);
+          }
+          if (camVideo.videoWidth && camTrack.enabled && camTrack.readyState === 'live') {
+            const pipW = Math.round(width * 0.2);
+            const pipH = Math.round(pipW * (camVideo.videoHeight / camVideo.videoWidth || 0.5625));
+            const margin = Math.round(width * 0.015);
+            const px = width - pipW - margin;
+            const py = height - pipH - margin;
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.6)';
+            ctx.shadowBlur = 16;
+            ctx.fillStyle = '#000';
+            ctx.fillRect(px - 3, py - 3, pipW + 6, pipH + 6);
+            ctx.restore();
+            ctx.drawImage(camVideo, px, py, pipW, pipH);
+            ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+            ctx.lineWidth = Math.max(2, Math.round(width * 0.002));
+            ctx.strokeRect(px, py, pipW, pipH);
+          }
+        } catch {}
+        compositeRafRef.current = requestAnimationFrame(draw);
+      };
+      draw();
+
+      const stream = (canvas as any).captureStream(24) as MediaStream;
+      compositeStreamRef.current = stream;
+      return stream.getVideoTracks()[0] || null;
+    } catch {
+      stopPresenterComposite();
+      return null;
+    }
+  }, [stopPresenterComposite]);
+
   const stopScreenShare = useCallback(() => {
     const s = localStreamRef.current;
     const cam = cameraTrackRef.current;
+    stopPresenterComposite();
     screenStreamRef.current?.getTracks().forEach(t => t.stop());
     screenStreamRef.current = null;
     if (s && cam) {
@@ -973,7 +1071,7 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setIsScreenSharing(false);
     if (myId) sendSignal('screen', { from: myId, on: false });
     setScreenSharerId(prev => (prev === myId ? null : prev));
-  }, [myId, replaceVideoTrackOnPeers, sendSignal]);
+  }, [myId, replaceVideoTrackOnPeers, sendSignal, stopPresenterComposite]);
 
   const toggleScreenShare = useCallback(async () => {
     if (!activeRef.current || !myId) return;
@@ -987,14 +1085,21 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const screenTrack: MediaStreamTrack = display.getVideoTracks()[0];
       screenStreamRef.current = display;
       const s = localStreamRef.current;
+      const currentVideo = s?.getVideoTracks()[0] || null;
+      cameraTrackRef.current = currentVideo;
+      // Composite the presenter's camera into a small box over the shared
+      // screen so viewers still see the person while they present.
+      let outboundTrack: MediaStreamTrack = screenTrack;
+      if (currentVideo && currentVideo.readyState === 'live') {
+        const composed = startPresenterComposite(screenTrack, currentVideo);
+        if (composed) outboundTrack = composed;
+      }
       if (s) {
-        const currentVideo = s.getVideoTracks()[0] || null;
-        cameraTrackRef.current = currentVideo;
         if (currentVideo) { try { s.removeTrack(currentVideo); } catch {} }
-        s.addTrack(screenTrack);
+        s.addTrack(outboundTrack);
         setLocalStream(new MediaStream(s.getTracks()));
       }
-      replaceVideoTrackOnPeers(screenTrack);
+      replaceVideoTrackOnPeers(outboundTrack);
       screenTrack.onended = () => stopScreenShare();
       setIsScreenSharing(true);
       setScreenSharerId(myId);
@@ -1002,7 +1107,7 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     } catch (e: any) {
       toast({ title: 'Screen share failed', description: e?.message, variant: 'destructive' });
     }
-  }, [isScreenSharing, myId, replaceVideoTrackOnPeers, screenSharerId, sendSignal, stopScreenShare, toast]);
+  }, [isScreenSharing, myId, replaceVideoTrackOnPeers, screenSharerId, sendSignal, startPresenterComposite, stopScreenShare, toast]);
 
   const addParticipants = useCallback<GroupCallContextValue['addParticipants']>(async (invitees) => {
     const cur = activeRef.current;
@@ -1108,19 +1213,24 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return () => { supabase.removeChannel(ch); };
   }, [incoming, myId]);
 
-  // Seed missed calls on mount + when login changes: find ongoing calls where I never joined
+  // Seed missed / reconnectable calls on mount, then keep polling so a user who
+  // lost connection mid-meeting always sees a way back in while it's ongoing.
   useEffect(() => {
     if (!myId) return;
     let cancelled = false;
-    (async () => {
+    const load = async () => {
+      if (cancelled || activeRef.current) return;
       // Only consider calls that started within the last 6 hours — stale rows stuck
       // in "ringing" were surfacing missed-call banners days later.
       const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
       const { data: rows } = await (supabase as any)
         .from('group_call_participants')
+        // Include 'joined' / 'left' so a participant who dropped out (network
+        // loss, tab reload, browser crash) still gets a way back into the
+        // meeting while it is ongoing.
         .select('call_id, status, group_calls!inner(id, host_id, call_type, status, title, started_at)')
         .eq('user_id', myId)
-        .in('status', ['ringing', 'missed', 'declined'])
+        .in('status', ['ringing', 'missed', 'declined', 'joined', 'left'])
         .in('group_calls.status', ['ringing', 'active'])
         .gt('group_calls.started_at', sixHoursAgo);
       if (cancelled || !rows) return;
@@ -1139,10 +1249,14 @@ export const GroupCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         type: r.group_calls.call_type,
         title: r.group_calls.title,
         at: r.group_calls.started_at ? new Date(r.group_calls.started_at).getTime() : Date.now(),
+        ongoing: r.status === 'joined' || r.status === 'left',
       }));
-      setMissedGroupCalls(missed);
-    })();
-    return () => { cancelled = true; };
+      if (cancelled || activeRef.current) return;
+      setMissedGroupCalls(missed.filter(m => !dismissedCallsRef.current.has(m.callId)));
+    };
+    load();
+    const interval = setInterval(load, 30000);
+    return () => { cancelled = true; clearInterval(interval); };
   }, [myId]);
 
   // Drop missed entries when their call ends

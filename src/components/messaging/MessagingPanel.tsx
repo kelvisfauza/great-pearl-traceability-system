@@ -314,7 +314,7 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
       u.email?.toLowerCase() === otherParticipant.employee_email?.toLowerCase()
     );
     return {
-      status: (presenceUser?.status || 'offline') as 'online' | 'away' | 'offline',
+      status: (presenceUser?.status || 'offline') as 'online' | 'away' | 'offline' | 'busy',
       lastSeen: presenceUser?.online_at || presenceUser?.last_login || null,
     };
   };
@@ -405,14 +405,17 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                   {(() => {
                     const { status, lastSeen } = getOtherParticipantPresence(currentConversation);
                     const label =
-                      status === 'online' ? 'online'
+                      status === 'busy' ? 'on another call'
+                      : status === 'online' ? 'online'
                       : status === 'away' ? (lastSeen ? `away — ${formatLastSeen(lastSeen)}` : 'away')
                       : formatLastSeen(lastSeen);
                     return (
                       <p className="text-xs opacity-80 flex items-center gap-1.5">
                         <span
+                          title={status === 'busy' ? 'On another call' : undefined}
                           className={`inline-block h-2 w-2 rounded-full ${
-                            status === 'online' ? 'bg-green-400'
+                            status === 'busy' ? 'bg-red-500 animate-pulse'
+                            : status === 'online' ? 'bg-green-400'
                             : status === 'away' ? 'bg-yellow-400'
                             : 'bg-muted-foreground/60'
                           }`}
@@ -914,9 +917,11 @@ const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) 
                           </span>
                         ) : (
                           <span
-                            aria-label={presenceStatus}
+                            aria-label={presenceStatus === 'busy' ? 'On another call' : presenceStatus}
+                            title={presenceStatus === 'busy' ? 'On another call' : undefined}
                             className={`absolute bottom-0 right-0 h-3 w-3 rounded-full ring-2 ring-background ${
-                              presenceStatus === 'online' ? 'bg-green-500'
+                              presenceStatus === 'busy' ? 'bg-red-500 animate-pulse'
+                              : presenceStatus === 'online' ? 'bg-green-500'
                               : presenceStatus === 'away' ? 'bg-yellow-400'
                               : 'bg-muted-foreground/50'
                             }`}

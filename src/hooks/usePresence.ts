@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { getInCall, onInCallChange } from '@/lib/callPresence';
 
 interface LocationInfo {
   ip: string;
@@ -204,7 +205,7 @@ export const usePresence = (userId?: string) => {
   const gpsRef = useRef<{ latitude: number; longitude: number; address: string } | null>(null);
   const sessionLogIdRef = useRef<string | null>(null);
 
-  const updatePresenceDB = useCallback(async (status: 'online' | 'away' | 'offline') => {
+  const updatePresenceDB = useCallback(async (status: 'online' | 'away' | 'offline' | 'busy') => {
     const authUserId = employee?.authUserId || (employee as any)?.auth_user_id;
     const id = userId || authUserId || user?.id;
     if (!id) return;
@@ -300,8 +301,14 @@ export const usePresence = (userId?: string) => {
 
     // Heartbeat every 60 seconds for presence status
     heartbeatRef.current = setInterval(() => {
-      updatePresenceDB(document.hidden ? 'away' : 'online');
+      updatePresenceDB(getInCall() ? 'busy' : document.hidden ? 'away' : 'online');
     }, 60000);
+
+    // Publish immediately when the user joins/leaves a call so others see
+    // the red "on another call" indicator without waiting for the heartbeat.
+    const offInCall = onInCallChange((busy) => {
+      updatePresenceDB(busy ? 'busy' : document.hidden ? 'away' : 'online');
+    });
 
     // Location tracking every 5 minutes — refresh GPS, update session & log history
     const trackLocation = async () => {
@@ -343,7 +350,7 @@ export const usePresence = (userId?: string) => {
     locationTrackingRef.current = setInterval(trackLocation, 300000);
 
     const handleVisibilityChange = () => {
-      updatePresenceDB(document.hidden ? 'away' : 'online');
+      updatePresenceDB(getInCall() ? 'busy' : document.hidden ? 'away' : 'online');
     };
 
     const handleBeforeUnload = () => {
@@ -366,6 +373,7 @@ export const usePresence = (userId?: string) => {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      offInCall();
       if (heartbeatRef.current) {
         clearInterval(heartbeatRef.current);
         heartbeatRef.current = null;
