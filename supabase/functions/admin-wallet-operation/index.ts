@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { gosenteWithdraw, isGosenteSuccess } from "../_shared/gosentepay.ts";
+import { yoPayout, normalizePhone } from "../_shared/yo-payments.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -522,8 +523,15 @@ serve(async (req) => {
               throw new Error(`GosentePay payout failed: ${JSON.stringify(res.body).slice(0, 300)}`);
             }
           } else if (op.payout_provider === "yo") {
-            // Yo payout is handled by admin manually — mark reference, rely on ops.
-            gatewayRef = `YO-MANUAL-${Date.now()}`;
+            const yoRes = await yoPayout({
+              phone: normalizePhone(op.destination_phone),
+              amount,
+              narrative: `Wallet withdrawal - ${ref}`.slice(0, 120),
+            });
+            gatewayRef = yoRes.transactionRef || `YO-${Date.now()}`;
+            if (!yoRes.success) {
+              throw new Error(`Yo payout failed: ${yoRes.errorMessage || "unknown error"}`);
+            }
           } else {
             gatewayRef = `CASH-${Date.now()}`;
           }
