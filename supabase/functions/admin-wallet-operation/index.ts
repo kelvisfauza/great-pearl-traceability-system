@@ -529,7 +529,12 @@ serve(async (req) => {
               narrative: `Wallet withdrawal - ${ref}`.slice(0, 120),
             });
             gatewayRef = yoRes.transactionRef || `YO-${Date.now()}`;
-            if (!yoRes.success) {
+            // StatusCode -22 = accepted by Yo, awaiting extra authorization.
+            // Treat as queued (not a failure) so we never double-submit.
+            const yoPending = (yoRes.statusMessage || "").includes("StatusCode:-22");
+            if (yoPending) {
+              gatewayRef = yoRes.transactionRef || `YO-PENDING-AUTH-${Date.now()}`;
+            } else if (!yoRes.success) {
               throw new Error(`Yo payout failed: ${yoRes.errorMessage || "unknown error"}`);
             }
           } else {
