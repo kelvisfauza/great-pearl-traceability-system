@@ -82,28 +82,26 @@ const QualityOverviewTab = ({ onNavigate, tabIds }: Props) => {
     queryKey: ["quality-overview-stats", today],
     refetchInterval: 60_000,
     queryFn: async () => {
-      const [lots, approvals, reevals, files, todayAssessments] = await Promise.all([
-        supabase.from("coffee_records").select("id,status").limit(1000),
+      const [pendingLotsRes, rejectedLotsRes, approvals, reevals, files, todayAssessments] = await Promise.all([
+        supabase.from("coffee_records").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        supabase.from("coffee_records").select("id", { count: "exact", head: true }).eq("status", "QUALITY_REJECTED"),
         supabase
           .from("quality_assessments")
-          .select("id")
+          .select("id", { count: "exact", head: true })
           .in("status", ["pending_quality_manager", "assessed"])
           .is("qm_action", null),
-        (supabase as any).from("quality_reevaluations").select("id,status"),
-        (supabase as any).from("quality_analysis_files").select("id"),
-        supabase.from("quality_assessments").select("id").eq("date_assessed", today),
+        (supabase as any).from("quality_reevaluations").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        (supabase as any).from("quality_analysis_files").select("id", { count: "exact", head: true }),
+        supabase.from("quality_assessments").select("id", { count: "exact", head: true }).eq("date_assessed", today),
       ]);
 
-      const lotRows = (lots.data as any[]) || [];
-      const reevalRows = (reevals as any)?.data || [];
-
       return {
-        pendingLots: lotRows.filter((l) => l.status === "pending").length,
-        rejectedLots: lotRows.filter((l) => l.status === "QUALITY_REJECTED").length,
-        pendingApprovals: ((approvals.data as any[]) || []).length,
-        pendingReevals: reevalRows.filter((r: any) => (r.status || "pending") === "pending").length,
-        analysisFiles: ((files as any)?.data || []).length,
-        assessedToday: ((todayAssessments.data as any[]) || []).length,
+        pendingLots: pendingLotsRes.count || 0,
+        rejectedLots: rejectedLotsRes.count || 0,
+        pendingApprovals: approvals.count || 0,
+        pendingReevals: (reevals as any)?.count || 0,
+        analysisFiles: (files as any)?.count || 0,
+        assessedToday: todayAssessments.count || 0,
       };
     },
   });
