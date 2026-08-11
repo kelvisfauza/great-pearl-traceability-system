@@ -66,6 +66,14 @@
     --shadow-md: 0 6px 14px -2px hsl(215 30% 12% / 0.1), 0 2px 4px -2px hsl(215 30% 12% / 0.06);
     --shadow-lg: 0 18px 40px -10px hsl(215 30% 12% / 0.15), 0 6px 12px -6px hsl(215 30% 12% / 0.08);
     --shadow-glow: 0 0 32px -4px hsl(152 70% 38% / 0.3);
+
+    /* Maintenance page — PDAX-style announcement card */
+    --maintenance-bg: 215 35% 10%;
+    --maintenance-card: 215 35% 13%;
+    --maintenance-card-border: 215 25% 28%;
+    --maintenance-accent: 160 75% 45%;
+    --maintenance-text: 210 30% 96%;
+    --maintenance-muted: 215 16% 70%;
   }
 
   .dark {
