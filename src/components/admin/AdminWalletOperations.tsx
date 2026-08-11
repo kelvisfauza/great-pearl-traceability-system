@@ -213,9 +213,10 @@ export default function AdminWalletOperations() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Wallet className="h-5 w-5" /> Wallet Operations</CardTitle>
           <CardDescription>
-            Credit, debit, transfer, or withdraw from any user's wallet. Every action requires a
-            second administrator to co-sign. Users are notified via SMS on completion. Overdraft
-            usage automatically applies the 2.75% access fee.
+            Credit, debit, transfer, or withdraw from any user's wallet. Actions need a second
+            administrator or an SMS code from the wallet owner — super administrators can execute
+            instantly. Users are notified via SMS on completion. Overdraft usage automatically
+            applies the 2.75% access fee.
           </CardDescription>
         </CardHeader>
         <CardContent>
