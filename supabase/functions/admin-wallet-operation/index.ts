@@ -145,6 +145,15 @@ serve(async (req) => {
     const isAdmin = actorRole === "Administrator" || actorRole === "Super Admin";
     if (!isAdmin) return respond(false, { error: "Forbidden: administrators only" });
 
+    // Super administrators may execute wallet operations instantly (no co-signer).
+    const SUPER_ADMIN_EMAILS = [
+      "fauzakusa@greatpearlcoffee.com",
+      "kelvifauza@gmail.com",
+      "nickscott@greatpearlcoffee.com",
+    ];
+    const isSuperAdmin =
+      actorRole === "Super Admin" || SUPER_ADMIN_EMAILS.includes((actorEmail || "").toLowerCase());
+
     const body = await req.json();
     const action = body.action as string;
 
@@ -164,7 +173,13 @@ serve(async (req) => {
       if (!target_email) return respond(false, { error: "target_email required" });
       if (!reason || String(reason).trim().length < 3) return respond(false, { error: "Reason required (min 3 chars)" });
 
-      const confMethod = confirmation_method === "user_otp" ? "user_otp" : "second_admin";
+      let confMethod: string =
+        confirmation_method === "user_otp" ? "user_otp"
+        : confirmation_method === "instant" ? "instant"
+        : "second_admin";
+      if (confMethod === "instant" && !isSuperAdmin) {
+        return respond(false, { error: "Only a super administrator can execute instantly" });
+      }
 
       const { data: target } = await supabase
         .from("employees")
@@ -265,8 +280,10 @@ serve(async (req) => {
 
       return respond(true, {
         operation: inserted,
-        message: "Request created, awaiting second admin approval",
-        confirmation_method: "second_admin",
+        message: confMethod === "instant"
+          ? "Request created — executing instantly"
+          : "Request created, awaiting second admin approval",
+        confirmation_method: confMethod,
       });
     }
 
@@ -300,8 +317,10 @@ serve(async (req) => {
       let opErr: any = null;
 
       if (action === "approve") {
-        // Atomic claim: pending -> approved, by a *different* admin, only for second_admin flows.
-        const res = await supabase
+        // Atomic claim: pending -> approved.
+        // Normal flow requires a *different* admin (second_admin). Super admins can
+        // self-execute operations they created with confirmation_method = 'instant'.
+        let q = supabase
           .from("admin_wallet_operations")
           .update({
             status: "approved",
@@ -311,11 +330,13 @@ serve(async (req) => {
             approved_at: new Date().toISOString(),
           })
           .eq("id", operation_id)
-          .eq("status", "pending")
-          .eq("confirmation_method", "second_admin")
-          .neq("initiated_by", actorId)
-          .select("*")
-          .maybeSingle();
+          .eq("status", "pending");
+        if (isSuperAdmin) {
+          q = q.in("confirmation_method", ["second_admin", "instant"]);
+        } else {
+          q = q.eq("confirmation_method", "second_admin").neq("initiated_by", actorId);
+        }
+        const res = await q.select("*").maybeSingle();
         op = res.data; opErr = res.error;
         if (opErr) return respond(false, { error: opErr.message });
         if (!op) {
