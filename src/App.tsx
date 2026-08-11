@@ -15,7 +15,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import GlobalHighlightBridge from "@/components/GlobalHighlightBridge";
 import { PriceProvider } from "@/contexts/PriceContext";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LeaveEnforcementProvider } from "@/contexts/LeaveEnforcementContext";
 import { CallProvider } from "@/contexts/CallContext";
 import { GroupCallProvider } from "@/contexts/GroupCallContext";
