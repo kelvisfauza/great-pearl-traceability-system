@@ -106,7 +106,7 @@ const BatchAssessmentsTab = () => {
         permanently_rejected_notes: permRejectNotes.trim(),
         reject_final: true,
         admin_discretion_buy: false,
-        status: 'PERMANENTLY_REJECTED',
+        status: 'rejected',
       };
 
       if (assessment?.id) {

@@ -109,7 +109,7 @@ const AdminRejectedLotsReview = () => {
           permanently_rejected_by: employee?.email || employee?.name || 'Admin',
           permanently_rejected_at: new Date().toISOString(),
           permanently_rejected_notes: permRejectNotes.trim(),
-          status: 'PERMANENTLY_REJECTED',
+          status: 'rejected',
         } as any)
         .eq('id', lot.id);
       if (error) throw error;
