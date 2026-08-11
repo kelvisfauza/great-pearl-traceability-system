@@ -140,7 +140,8 @@ Deno.serve(async (req) => {
       .map((emp) => {
         const expected = emp.qualifying_days * STANDARD_DAY_MINUTES;
         const grossOT = emp.total_worked - expected;
-        const netOT = Math.max(0, grossOT - emp.total_late);
+        const rawNet = grossOT - emp.total_late;
+        const netOT = Math.max(0, rawNet);
         const hours = Math.floor(netOT / 60);
         const rawPay = hours * RATE_PER_HOUR;
         const cappedPay = Math.min(rawPay, MAX_MONTHLY_PAY);
@@ -155,11 +156,13 @@ Deno.serve(async (req) => {
           net_overtime_minutes: netOT,
           overtime_rate_per_hour: RATE_PER_HOUR,
           calculated_pay: cappedPay,
-          admin_notes: `Worked ${(emp.total_worked/60).toFixed(1)}h across ${emp.qualifying_days} days (expected ${(expected/60).toFixed(0)}h), late ${emp.total_late}min → net OT ${(netOT/60).toFixed(1)}h${rawPay > MAX_MONTHLY_PAY ? ` (auto-capped from UGX ${rawPay.toLocaleString()})` : ""}`,
+          admin_notes: rawNet <= 0
+            ? `Worked ${(emp.total_worked/60).toFixed(1)}h across ${emp.qualifying_days} days (expected ${(expected/60).toFixed(0)}h), late ${emp.total_late}min → NO net overtime (undertime ${Math.abs(Math.round(rawNet))}min). No payout.`
+            : `Worked ${(emp.total_worked/60).toFixed(1)}h across ${emp.qualifying_days} days (expected ${(expected/60).toFixed(0)}h), late ${emp.total_late}min → net OT ${(netOT/60).toFixed(1)}h${rawPay > MAX_MONTHLY_PAY ? ` (auto-capped from UGX ${rawPay.toLocaleString()})` : ""}`,
           status: "pending",
         };
       })
-      .filter((r) => r.net_overtime_minutes > 0);
+      ;
 
     if (records.length === 0) {
       return new Response(
