@@ -67,7 +67,10 @@ export const useUnifiedApprovalRequests = () => {
           .order('created_at', { ascending: false });
         
         if (!error && supabaseRequests) {
-          const transformedSupabase = supabaseRequests.map(req => ({
+          const transformedSupabase = supabaseRequests
+            // Leave requests are handled in HR → Leave Management, not the money approval centre
+            .filter(req => String(req.type || '').toLowerCase() !== 'leave')
+            .map(req => ({
             id: req.id,
             type: 'general' as const,
             source: 'supabase' as const,
