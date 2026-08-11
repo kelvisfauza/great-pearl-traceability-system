@@ -343,7 +343,8 @@ Deno.serve(async (req) => {
             reason,
             bonus_amount: bonusAmount,
             bonus_awarded: true,
-            is_active: true,
+            is_active: setActive,
+            email_sent: true,
             created_by: "system-auto",
           },
           { onConflict: "employee_id,month,year" }
@@ -468,8 +469,11 @@ Deno.serve(async (req) => {
         rank,
         score: emp.totalScore,
         reason,
+        department: empInfo.department || "General",
       });
     }
+
+    await pinWinners(supabase, winners as any, `${monthNames[targetMonth]} ${targetYear}`);
 
     return new Response(
       JSON.stringify({
