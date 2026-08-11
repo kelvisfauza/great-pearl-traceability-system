@@ -14,7 +14,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ArrowRightLeft, PlusCircle, MinusCircle, Send, Wallet, Loader2, Check, X } from "lucide-react";
 
 type OpType = "credit" | "debit" | "transfer" | "withdraw";
-type ConfirmMethod = "second_admin" | "user_otp";
+type ConfirmMethod = "second_admin" | "user_otp" | "instant";
+
+const SUPER_ADMIN_EMAILS = [
+  "fauzakusa@greatpearlcoffee.com",
+  "kelvifauza@gmail.com",
+  "nickscott@greatpearlcoffee.com",
+];
 
 interface Employee { id: string; name: string; email: string; phone: string | null; role?: string }
 
@@ -79,6 +85,13 @@ export default function AdminWalletOperations() {
 
   const targetEmp = useMemo(() => employees.find(e => e.email === targetEmail), [employees, targetEmail]);
 
+  const isSuperAdmin = useMemo(() => {
+    const email = (user?.email || "").toLowerCase();
+    if (SUPER_ADMIN_EMAILS.includes(email)) return true;
+    const me = employees.find(e => e.email?.toLowerCase() === email);
+    return me?.role === "Super Admin";
+  }, [user?.email, employees]);
+
   const handleSubmit = async () => {
     if (!targetEmail || !amount || !reason.trim()) {
       toast({ title: "Missing fields", description: "Target, amount, and reason are required.", variant: "destructive" });
@@ -108,6 +121,17 @@ export default function AdminWalletOperations() {
       });
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.error || "Failed");
+      if (confirmMethod === "instant" && data?.operation?.id) {
+        const { data: execData, error: execErr } = await supabase.functions.invoke("admin-wallet-operation", {
+          body: { action: "approve", operation_id: data.operation.id },
+        });
+        if (execErr) throw execErr;
+        if (!execData?.ok) throw new Error(execData?.error || "Execution failed");
+        toast({ title: "Executed instantly", description: `Reference: ${execData.reference || "-"}` });
+        setAmount(""); setReason(""); setDestinationPhone(""); setDestinationEmail("");
+        loadData();
+        return;
+      }
       toast({
         title: "Request created",
         description: confirmMethod === "user_otp"
@@ -189,9 +213,10 @@ export default function AdminWalletOperations() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Wallet className="h-5 w-5" /> Wallet Operations</CardTitle>
           <CardDescription>
-            Credit, debit, transfer, or withdraw from any user's wallet. Every action requires a
-            second administrator to co-sign. Users are notified via SMS on completion. Overdraft
-            usage automatically applies the 2.75% access fee.
+            Credit, debit, transfer, or withdraw from any user's wallet. Actions need a second
+            administrator or an SMS code from the wallet owner — super administrators can execute
+            instantly. Users are notified via SMS on completion. Overdraft usage automatically
+            applies the 2.75% access fee.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -279,12 +304,17 @@ export default function AdminWalletOperations() {
                   <Select value={confirmMethod} onValueChange={(v) => setConfirmMethod(v as ConfirmMethod)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
+                      {isSuperAdmin && (
+                        <SelectItem value="instant">Execute now (super admin — no approval)</SelectItem>
+                      )}
                       <SelectItem value="second_admin">Second administrator approval</SelectItem>
                       <SelectItem value="user_otp">SMS code to wallet owner (no 2nd admin)</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {confirmMethod === "user_otp"
+                    {confirmMethod === "instant"
+                      ? "Executes immediately with your super-admin authority. Fully logged in the audit trail."
+                      : confirmMethod === "user_otp"
                       ? "A 6-digit code will be SMS-sent to the wallet owner. Enter it here to execute (valid 15 min)."
                       : "A different administrator must approve the request before it executes."}
                   </p>
@@ -294,7 +324,11 @@ export default function AdminWalletOperations() {
               <div className="flex justify-end">
                 <Button onClick={handleSubmit} disabled={submitting}>
                   {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  {confirmMethod === "user_otp" ? "Send SMS code to wallet owner" : "Submit for second admin approval"}
+                  {confirmMethod === "instant"
+                    ? "Execute now"
+                    : confirmMethod === "user_otp"
+                      ? "Send SMS code to wallet owner"
+                      : "Submit for second admin approval"}
                 </Button>
               </div>
             </TabsContent>
