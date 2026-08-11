@@ -35,6 +35,36 @@ async function signAvatarForEmail(
   }
 }
 
+async function pinWinners(
+  supabase: any,
+  winners: { employee_name: string; rank: number; department?: string }[],
+  monthLabel: string,
+) {
+  if (!winners.length) return;
+  const top = winners.sort((a, b) => a.rank - b.rank);
+  const text =
+    `EMPLOYEE OF THE MONTH — ${monthLabel}: ` +
+    top
+      .map((w) => `#${w.rank} ${w.employee_name}${w.department ? ` (${w.department})` : ""}`)
+      .join("  •  ") +
+    "  •  Congratulations from YEDA Coffee Company Limited!";
+  // Un-pin previous EOTM banners so only the current one shows
+  await supabase
+    .from("marquee_announcements")
+    .update({ is_active: false })
+    .ilike("message", "EMPLOYEE OF THE MONTH%");
+  const expires = new Date();
+  expires.setMonth(expires.getMonth() + 1);
+  await supabase.from("marquee_announcements").insert({
+    message: text,
+    priority: "high",
+    is_active: true,
+    expires_at: expires.toISOString(),
+    created_by_name: "System",
+    created_by_email: "operations@greatpearlcoffee.com",
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -45,11 +75,18 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
+    let body: any = {};
+    try { body = await req.json(); } catch (_e) { body = {}; }
+    const overrideMonth = Number(body?.month) || null;
+    const overrideYear = Number(body?.year) || null;
+    const announceOnly = body?.announceOnly === true;
+    const setActive = body?.setActive !== false;
+
     const now = new Date();
     // We rank the PREVIOUS month's performance
     const targetDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const targetMonth = targetDate.getMonth() + 1; // 1-indexed
-    const targetYear = targetDate.getFullYear();
+    const targetMonth = overrideMonth || targetDate.getMonth() + 1; // 1-indexed
+    const targetYear = overrideYear || targetDate.getFullYear();
     const monthStart = `${targetYear}-${String(targetMonth).padStart(2, "0")}-01`;
     const nextMonthDate = new Date(targetYear, targetMonth, 1);
     const monthEnd = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, "0")}-01`;
@@ -62,10 +99,55 @@ Deno.serve(async (req) => {
     // Check if already processed this month
     const { data: existing } = await supabase
       .from("employee_of_the_month")
-      .select("id")
+      .select("*")
       .eq("month", targetMonth)
-      .eq("year", targetYear)
-      .limit(1);
+      .eq("year", targetYear);
+
+    // Announce-only mode: (re)send emails + pin banner for records that already exist
+    if (announceOnly) {
+      if (!existing || existing.length === 0) {
+        return new Response(
+          JSON.stringify({ error: `No records for ${monthNames[targetMonth]} ${targetYear}` }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      for (const rec of existing) {
+        const emailAvatarUrl = await signAvatarForEmail(supabase, rec.employee_avatar_url);
+        for (const to of [rec.employee_email, "operations@greatpearlcoffee.com"]) {
+          if (!to) continue;
+          await supabase.functions.invoke("send-transactional-email", {
+            body: {
+              templateName: "employee-of-the-month",
+              recipientEmail: to,
+              idempotencyKey: `eotm-announce-${rec.id}-${to}`,
+              templateData: {
+                employeeName: rec.employee_name,
+                rank: String(rec.rank),
+                month: monthNames[targetMonth],
+                year: String(targetYear),
+                reason: rec.reason || "Outstanding performance",
+                bonusAmount: Number(rec.bonus_amount || 0).toLocaleString(),
+                department: rec.department || "General",
+                avatarUrl: emailAvatarUrl,
+              },
+            },
+          });
+        }
+        await supabase
+          .from("employee_of_the_month")
+          .update({ email_sent: true })
+          .eq("id", rec.id);
+      }
+      await pinWinners(
+        supabase,
+        existing.map((r: any) => ({ employee_name: r.employee_name, rank: r.rank, department: r.department })),
+        `${monthNames[targetMonth]} ${targetYear}`,
+      );
+      return new Response(
+        JSON.stringify({ message: `Announced & pinned ${existing.length} winner(s) for ${monthNames[targetMonth]} ${targetYear}` }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (existing && existing.length > 0) {
       return new Response(
@@ -75,10 +157,12 @@ Deno.serve(async (req) => {
     }
 
     // Deactivate previous winners
-    await supabase
-      .from("employee_of_the_month")
-      .update({ is_active: false })
-      .eq("is_active", true);
+    if (setActive) {
+      await supabase
+        .from("employee_of_the_month")
+        .update({ is_active: false })
+        .eq("is_active", true);
+    }
 
     // 1. Get attendance scores: present days count (legacy table, may be empty)
     const { data: attendanceData } = await supabase
