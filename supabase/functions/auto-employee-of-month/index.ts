@@ -55,14 +55,15 @@ async function pinWinners(
     .ilike("message", "EMPLOYEE OF THE MONTH%");
   const expires = new Date();
   expires.setMonth(expires.getMonth() + 1);
-  await supabase.from("marquee_announcements").insert({
+  const { error: pinErr } = await supabase.from("marquee_announcements").insert({
     message: text,
-    priority: "high",
+    priority: "info",
     is_active: true,
     expires_at: expires.toISOString(),
     created_by_name: "System",
     created_by_email: "operations@greatpearlcoffee.com",
   });
+  if (pinErr) console.error("Pin banner error:", pinErr);
 }
 
 Deno.serve(async (req) => {
