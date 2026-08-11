@@ -15,7 +15,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import GlobalHighlightBridge from "@/components/GlobalHighlightBridge";
 import { PriceProvider } from "@/contexts/PriceContext";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LeaveEnforcementProvider } from "@/contexts/LeaveEnforcementContext";
 import { CallProvider } from "@/contexts/CallContext";
 import { GroupCallProvider } from "@/contexts/GroupCallContext";
@@ -27,6 +27,7 @@ import { useGlobalErrorHandler } from "./hooks/useGlobalErrorHandler";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
 import EmployeeProfile from "./pages/EmployeeProfile";
 import GRNScanPay from "./pages/GRNScanPay";
@@ -186,6 +187,18 @@ const InactivityTimerInitializer = () => {
   return null;
 };
 
+// Public marketing landing page for visitors; workspace dashboard for staff.
+const HomeRoute = () => {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (!user) return <Landing />;
+  return (
+    <ProtectedRoute>
+      <Index />
+    </ProtectedRoute>
+  );
+};
+
 const App: React.ComponentType = () => {
   const queryClient = new QueryClient();
 
@@ -302,11 +315,8 @@ const App: React.ComponentType = () => {
                 <Route path="/v3/admin" element={<ProtectedRoute><V3Admin /></ProtectedRoute>} />
                 
                 {/* V1 System Routes */}
-                <Route path="/" element={
-                  <ProtectedRoute>
-                    <Index />
-                  </ProtectedRoute>
-                } />
+                <Route path="/" element={<HomeRoute />} />
+                <Route path="/dashboard" element={<ProtectedRoute><Index /></ProtectedRoute>} />
                 <Route path="/approvals" element={
                   <ProtectedRoute>
                     <Approvals />
