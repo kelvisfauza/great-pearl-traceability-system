@@ -79,7 +79,7 @@ const LeaveManagement = () => {
         daterequested: new Date().toISOString(),
         amount: days,
         priority: "medium",
-        status: "Pending Finance",
+        status: "pending",
         details: {
           leave_type: leaveType,
           start_date: startDate,
@@ -260,7 +260,7 @@ const LeaveManagement = () => {
                             {details?.reason && <p className="text-xs text-muted-foreground mt-1">{details.reason}</p>}
                             <p className="text-xs text-muted-foreground">{req.department} • {format(new Date(req.created_at), "dd MMM yyyy HH:mm")}</p>
                           </div>
-                          {req.status === "pending" && (
+                          {String(req.status || "").toLowerCase().startsWith("pending") && (
                             <div className="flex gap-2">
                               <Button
                                 size="sm"
