@@ -41,14 +41,23 @@ serve(async (req) => {
 
     // Only these request types involve wallet deductions and need refunds
     const WALLET_FUNDED_TYPES = ["Withdrawal Request", "Salary Advance"];
+    // Non-financial requests (leave, HR workflows) must never be auto-expired
+    // or emailed as "refunded" — they carry days, not money.
+    const NON_FINANCIAL_TYPES = ["leave", "annual leave", "sick leave", "leave request"];
 
     let processed = 0;
 
     for (const req of expiredRequests) {
+      if (NON_FINANCIAL_TYPES.includes(String(req.type || "").toLowerCase())) {
+        console.log(`[expire-requests] Skipping non-financial request ${req.id} (${req.type})`);
+        continue;
+      }
+
       const email = req.requestedby;
       const amount = req.amount;
       const name = req.requestedby_name || email;
       const isWalletFunded = WALLET_FUNDED_TYPES.includes(req.type);
+      let refunded = false;
 
       // Update request status to expired
       const { error: updateErr } = await supabase
@@ -107,6 +116,7 @@ serve(async (req) => {
               source_category: "system",
             });
             console.log(`[expire-requests] Refunded UGX ${amount} to ${email} (${ledgerRef})`);
+            refunded = true;
           }
         } else {
           console.warn(`[expire-requests] No auth_user_id found for ${email}, skipping refund for ${req.id}`);
@@ -121,6 +131,12 @@ serve(async (req) => {
         day: "numeric",
         year: "numeric",
       });
+
+      if (!refunded) {
+        console.log(`[expire-requests] No refund issued for ${req.id} — skipping refund email`);
+        processed++;
+        continue;
+      }
 
       try {
         await supabase.functions.invoke("send-transactional-email", {
