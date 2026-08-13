@@ -375,6 +375,8 @@ const ProviderSubmissionApprovals: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <FingerprintApprovalDialog target={fpTarget} onClose={() => setFpTarget(null)} />
     </Card>
   );
 };
