@@ -154,24 +154,12 @@ const SalesForm = () => {
       console.error('Error checking duplicates:', err);
     }
     
-    // Check if trying to sell more than available inventory
+    // Inventory shortfall is allowed — warn only, do not block saving
     if (formData.weight > availableInventory) {
       toast({
-        title: "Insufficient Inventory",
-        description: `Cannot sell ${formData.weight} kg. Only ${availableInventory.toFixed(2)} kg available in store for ${formData.coffeeType}.`,
-        variant: "destructive"
+        title: "Inventory shortfall",
+        description: `Selling ${formData.weight} kg with only ${availableInventory.toFixed(2)} kg available for ${formData.coffeeType}. Sale will be recorded anyway.`,
       });
-      return;
-    }
-
-    // Check if no inventory available
-    if (availableInventory === 0) {
-      toast({
-        title: "No Inventory Available",
-        description: `No ${formData.coffeeType} available in store. Please check procurement records.`,
-        variant: "destructive"
-      });
-      return;
     }
     
     setLoading(true);
@@ -326,11 +314,10 @@ const SalesForm = () => {
                 value={formData.weight || ''}
                 onChange={(e) => handleInputChange('weight', parseFloat(e.target.value) || 0)}
                 placeholder="Enter weight in kg"
-                max={availableInventory}
               />
               {formData.weight > availableInventory && formData.coffeeType && (
-                <p className="text-sm text-red-600">
-                  Cannot sell more than available inventory ({availableInventory.toFixed(2)} kg)
+                <p className="text-sm text-amber-600">
+                  Exceeds available inventory ({availableInventory.toFixed(2)} kg) — sale can still be saved
                 </p>
               )}
             </div>
@@ -420,7 +407,7 @@ const SalesForm = () => {
             
             <Button 
               onClick={handleSave}
-              disabled={loading || formData.weight > availableInventory || availableInventory === 0}
+              disabled={loading}
               className="flex items-center gap-2"
             >
               <Save className="h-4 w-4" />
