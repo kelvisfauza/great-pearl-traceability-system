@@ -321,6 +321,9 @@ serve(async (req) => {
       'wallet_transfer',
       'wallet_credit',
       'wallet_debit',
+      // Admin wallet operations (OTP + confirmations) must always go by SMS
+      'admin_wallet_otp',
+      'admin_wallet_operation',
       'money_received',
       'money_sent',
       // Bank deposit withdrawals
