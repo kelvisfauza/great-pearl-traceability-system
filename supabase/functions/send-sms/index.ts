@@ -600,7 +600,8 @@ serve(async (req) => {
     const callerPriority = (parsedBody.priority || '').toString().toLowerCase();
     const isPremium =
       callerPriority === 'premium' ||
-      PREMIUM_SMS_TYPES.has((messageType || '').toLowerCase());
+      PREMIUM_SMS_TYPES.has((messageType || '').toLowerCase()) ||
+      PREMIUM_SMS_TYPES.has(normalizeSmsType(messageType));
     const usePremiumRoute = isPremium && smsCfg.bulksms_premium !== false;
 
     // PREMIUM ROUTE: try BulkSMS Premium first, fall back to YoolaSMS/Infobip below if it fails
