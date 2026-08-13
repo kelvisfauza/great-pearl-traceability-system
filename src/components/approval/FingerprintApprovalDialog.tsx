@@ -3,7 +3,7 @@ import QRCode from 'qrcode';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Fingerprint, Loader2, ShieldCheck, Smartphone, CheckCircle2 } from 'lucide-react';
+import { Fingerprint, Loader2, ShieldCheck, Smartphone, CheckCircle2, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -42,6 +42,15 @@ const FingerprintApprovalDialog: React.FC<Props> = ({ target, onClose }) => {
   const [busy, setBusy] = useState(false);
   const targetRef = useRef(target);
   targetRef.current = target;
+  const [inIframe, setInIframe] = useState(false);
+
+  useEffect(() => {
+    try {
+      setInIframe(window.self !== window.top);
+    } catch {
+      setInIframe(true);
+    }
+  }, []);
 
   const scanUrl = email ? buildApprovalScanUrl(sessionId, email) : '';
 
@@ -111,6 +120,10 @@ const FingerprintApprovalDialog: React.FC<Props> = ({ target, onClose }) => {
 
   const approveOnThisDevice = async () => {
     if (!email) return;
+    if (inIframe) {
+      toast.error('Fingerprint is blocked inside the preview frame. Open the app in its own tab, then try again.');
+      return;
+    }
     setBusy(true);
     try {
       const { data } = await supabase.functions.invoke('fingerprint-approve', {
