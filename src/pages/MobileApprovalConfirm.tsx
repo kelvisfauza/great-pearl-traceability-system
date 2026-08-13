@@ -10,6 +10,7 @@ import {
   approvalChannelName,
   describeDevice,
   runFingerprintCheck,
+  runFingerprintEnroll,
 } from '@/utils/fingerprintApproval';
 
 /**
@@ -25,6 +26,7 @@ const MobileApprovalConfirm: React.FC = () => {
   const [request, setRequest] = useState<{ title?: string; amount?: number } | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [needsEnroll, setNeedsEnroll] = useState(false);
   const device = describeDevice();
 
   useEffect(() => {
@@ -54,7 +56,14 @@ const MobileApprovalConfirm: React.FC = () => {
       const { data } = await supabase.functions.invoke('fingerprint-approve', {
         body: { action: 'begin', email },
       });
-      if (!data?.ok) throw new Error(data?.error || 'Could not start fingerprint approval.');
+      if (!data?.ok) {
+        if (data?.needs_enrollment) {
+          setNeedsEnroll(true);
+          toast.info('Register this phone first — it only takes a second.');
+          return;
+        }
+        throw new Error(data?.error || 'Could not start fingerprint approval.');
+      }
 
       const rawId = await runFingerprintCheck(data.credential_id);
 
@@ -81,6 +90,38 @@ const MobileApprovalConfirm: React.FC = () => {
         name === 'NotAllowedError'
           ? 'The fingerprint prompt was cancelled or timed out.'
           : err?.message || 'Fingerprint approval failed.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const enroll = async () => {
+    if (!email) {
+      toast.error('This link is incomplete. Re-scan the code on your laptop.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const { data: start } = await supabase.functions.invoke('fingerprint-approve', {
+        body: { action: 'enroll_begin', email },
+      });
+      if (!start?.ok) throw new Error(start?.error || 'Could not start registration.');
+
+      const rawId = await runFingerprintEnroll(email);
+
+      const { data: fin } = await supabase.functions.invoke('fingerprint-approve', {
+        body: { action: 'enroll_finish', email, credential_id: rawId, context: { device, via: 'phone' } },
+      });
+      if (!fin?.ok) throw new Error(fin?.error || 'Could not register this device.');
+
+      setNeedsEnroll(false);
+      toast.success('Device registered — now touch to approve.');
+    } catch (err: any) {
+      toast.error(
+        err?.name === 'NotAllowedError'
+          ? 'The fingerprint prompt was cancelled or timed out.'
+          : err?.message || 'Registration failed.',
       );
     } finally {
       setBusy(false);
@@ -116,6 +157,19 @@ const MobileApprovalConfirm: React.FC = () => {
             <div className="flex flex-col items-center gap-2 py-6 text-emerald-600">
               <CheckCircle2 className="h-10 w-10" />
               <p className="text-sm font-medium">Approved on your laptop</p>
+            </div>
+          ) : needsEnroll ? (
+            <div className="space-y-3">
+              <Alert>
+                <AlertDescription className="text-xs">
+                  No fingerprint is registered for this account yet. Register this phone once, then
+                  approve.
+                </AlertDescription>
+              </Alert>
+              <Button className="w-full" size="lg" onClick={enroll} disabled={busy}>
+                {busy ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Fingerprint className="mr-2 h-5 w-5" />}
+                Register this phone
+              </Button>
             </div>
           ) : (
             <Button className="w-full" size="lg" onClick={approve} disabled={busy}>
