@@ -43,13 +43,6 @@ Deno.serve(async (req) => {
       .ilike('email', normalizedEmail)
       .maybeSingle();
 
-    if (!cred?.credential_id) {
-      return json({
-        ok: false,
-        error: 'No fingerprint is enrolled for this account. Enrol it under Settings → Profile → Fingerprint Sign-in.',
-      });
-    }
-
     const { data: employee } = await admin
       .from('employees')
       .select('name, email, disabled')
@@ -60,11 +53,52 @@ Deno.serve(async (req) => {
       return json({ ok: false, error: 'This account has been disabled. Contact IT support.' });
     }
 
+    const displayName = employee?.name ?? normalizedEmail.split('@')[0];
+
+    // ---- First-time enrolment straight from the scanned phone link ----
+    if (action === 'enroll_begin') {
+      if (cred?.credential_id) {
+        return json({ ok: false, error: 'A fingerprint is already enrolled for this account.' });
+      }
+      return json({ ok: true, name: displayName });
+    }
+
+    if (action === 'enroll_finish') {
+      if (cred?.credential_id) {
+        return json({ ok: false, error: 'A fingerprint is already enrolled for this account.' });
+      }
+      if (typeof credential_id !== 'string' || credential_id.length < 16) {
+        return json({ ok: false, error: 'Could not register this device.' });
+      }
+      const { error: insErr } = await admin
+        .from('biometric_credentials')
+        .insert({ email: normalizedEmail, credential_id });
+      if (insErr) {
+        console.error('enrol insert failed:', insErr);
+        return json({ ok: false, error: 'Could not save this device. Please try again.' });
+      }
+      await admin.from('audit_logs').insert({
+        action: 'FINGERPRINT_ENROLLED_VIA_APPROVAL_LINK',
+        table_name: 'biometric_credentials',
+        user_email: normalizedEmail,
+        new_values: context ?? {},
+      });
+      return json({ ok: true, name: displayName });
+    }
+
+    if (!cred?.credential_id) {
+      return json({
+        ok: false,
+        needs_enrollment: true,
+        error: 'No fingerprint is enrolled for this account yet.',
+      });
+    }
+
     if (action === 'begin') {
       return json({
         ok: true,
         credential_id: cred.credential_id,
-        name: employee?.name ?? normalizedEmail.split('@')[0],
+        name: displayName,
       });
     }
 
@@ -85,7 +119,7 @@ Deno.serve(async (req) => {
 
     console.log('✅ Fingerprint approval confirmed for', normalizedEmail);
 
-    return json({ ok: true, name: employee?.name ?? normalizedEmail.split('@')[0] });
+    return json({ ok: true, name: displayName });
   } catch (err) {
     console.error('fingerprint-approve error:', err);
     return json({ ok: false, error: 'Server error. Please try again.' });
