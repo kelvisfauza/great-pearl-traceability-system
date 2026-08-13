@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { UnifiedApprovalRequest } from '@/hooks/useUnifiedApprovalRequests';
 import { supabase } from '@/integrations/supabase/client';
+import { requiresFingerprintApproval } from '@/utils/fingerprintApproval';
 
 interface DynamicDetailedViewProps {
   request: UnifiedApprovalRequest;
@@ -53,6 +54,9 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
   className
 }) => {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  // Money approvals are already confirmed by the fingerprint scan step,
+  // so skip the extra "are you sure" dialog for those.
+  const skipConfirmStep = requiresFingerprintApproval(request.amount as any, request.type as any);
   const [walletData, setWalletData] = useState<{
     balance: number;
     frozenPending: number;
@@ -801,7 +805,7 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
           <XCircle className="h-4 w-4 mr-2" />
           Reject Request
         </Button>
-        <Button onClick={() => setConfirmOpen(true)} className="bg-green-600 hover:bg-green-700">
+        <Button onClick={() => (skipConfirmStep ? onApprove() : setConfirmOpen(true))} className="bg-green-600 hover:bg-green-700">
           <CheckCircle className="h-4 w-4 mr-2" />
           Approve Request
         </Button>
