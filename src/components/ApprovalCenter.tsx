@@ -13,6 +13,8 @@ import { DynamicDetailedView } from './workflow/DynamicDetailedView';
 import { AuditPrintModal } from './workflow/AuditPrintModal';
 import { DelegateApprovalModal } from './approval/DelegateApprovalModal';
 import { DisbursePaymentModal, DisburseTarget } from './approval/DisbursePaymentModal';
+import FingerprintApprovalDialog, { FingerprintApprovalTarget } from './approval/FingerprintApprovalDialog';
+import { requiresFingerprintApproval } from '@/utils/fingerprintApproval';
 import { AwaitingDisbursementPanel } from './approval/AwaitingDisbursementPanel';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -32,6 +34,7 @@ const ApprovalCenter = () => {
   const { toast } = useToast();
   const [delegateModal, setDelegateModal] = useState<{ open: boolean; reason: string; requestId: string; amount: number; title?: string }>({ open: false, reason: '', requestId: '', amount: 0 });
   const [disburseTarget, setDisburseTarget] = useState<DisburseTarget | null>(null);
+  const [fingerprintTarget, setFingerprintTarget] = useState<FingerprintApprovalTarget | null>(null);
 
   // Auto-refresh pending requests in background to prevent double approvals
   useEffect(() => {
@@ -46,7 +49,21 @@ const ApprovalCenter = () => {
     return () => clearInterval(interval);
   }, [processingId, fetchRequests]);
 
-  const handleApproval = async (request: UnifiedApprovalRequest) => {
+  /**
+   * Money-related approvals must be confirmed with the admin's fingerprint
+   * (scanned on their phone) before the status is changed.
+   */
+  const handleApproval = async (request: UnifiedApprovalRequest, fingerprintVerified = false) => {
+    if (!fingerprintVerified && requiresFingerprintApproval(request.amount, request.type)) {
+      const amt = typeof request.amount === 'number' ? request.amount : parseFloat(String(request.amount)) || 0;
+      setFingerprintTarget({
+        title: request.title,
+        amount: amt,
+        requestId: request.id,
+        onConfirmed: () => handleApproval(request, true),
+      });
+      return;
+    }
     // Prevent double-click: if already processing any request, block
     if (processingId) {
       console.warn('⛔ Already processing a request, ignoring duplicate click');
@@ -607,6 +624,10 @@ const ApprovalCenter = () => {
         target={disburseTarget}
         onClose={() => setDisburseTarget(null)}
         onDone={() => fetchRequests(true)}
+      />
+      <FingerprintApprovalDialog
+        target={fingerprintTarget}
+        onClose={() => setFingerprintTarget(null)}
       />
     </div>
   );
