@@ -197,14 +197,35 @@ const FingerprintApprovalDialog: React.FC<Props> = ({ target, onClose }) => {
             </AlertDescription>
           </Alert>
 
+          {inIframe && (
+            <Alert>
+              <ExternalLink className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                Fingerprint on this computer is blocked inside the preview frame. Scanning with your
+                phone still works, or open the app in its own tab to use this device.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="flex flex-col sm:flex-row gap-2">
             <Button variant="outline" className="flex-1" onClick={onClose} disabled={busy || confirmed}>
               Cancel
             </Button>
+            {inIframe ? (
+              <Button
+                className="flex-1"
+                onClick={() => window.open(window.location.href, '_blank', 'noopener')}
+                disabled={confirmed}
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Open in new tab
+              </Button>
+            ) : (
             <Button className="flex-1" onClick={approveOnThisDevice} disabled={busy || confirmed}>
               {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Fingerprint className="mr-2 h-4 w-4" />}
               Use this device instead
             </Button>
+            )}
           </div>
         </div>
       </DialogContent>
