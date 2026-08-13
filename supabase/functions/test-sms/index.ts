@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { phone, provider, message } = await req.json()
+    const { phone, provider, message, sender } = await req.json()
     
     const testPhone = phone || '+256700729340'
     const testMessage = message || 'TEST SMS: This is a test message from Great Agro Coffee system. If you receive this, SMS service is working.'
@@ -28,15 +28,16 @@ serve(async (req) => {
         )
       }
       const auth = btoa(`${tokenId}:${tokenSecret}`)
+      const from = sender || 'Great Agro'
       const bulkRes = await fetch('https://api.bulksms.com/v1/messages', {
         method: 'POST',
         headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: testPhone, body: testMessage, encoding: 'TEXT' }),
+        body: JSON.stringify({ to: testPhone, from, body: testMessage, encoding: 'TEXT' }),
       })
       const bulkText = await bulkRes.text()
       console.log('BulkSMS response:', bulkRes.status, bulkText)
       return new Response(
-        JSON.stringify({ success: bulkRes.ok, provider: 'BulkSMS.com', status: bulkRes.status, phone: testPhone, response: bulkText }),
+        JSON.stringify({ success: bulkRes.ok, provider: 'BulkSMS.com', sender: from, status: bulkRes.status, phone: testPhone, response: bulkText }),
         { status: bulkRes.ok ? 200 : 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
