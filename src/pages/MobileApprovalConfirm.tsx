@@ -86,9 +86,10 @@ const MobileApprovalConfirm: React.FC = () => {
       toast.success('Approved — you can go back to your laptop.');
     } catch (err: any) {
       const name = err?.name;
+      if (name === 'NotAllowedError' || name === 'InvalidStateError') setNeedsEnroll(true);
       toast.error(
         name === 'NotAllowedError'
-          ? 'The fingerprint prompt was cancelled or timed out.'
+          ? 'No fingerprint is registered on this phone yet — tap "Register this phone".'
           : err?.message || 'Fingerprint approval failed.',
       );
     } finally {
@@ -172,10 +173,18 @@ const MobileApprovalConfirm: React.FC = () => {
               </Button>
             </div>
           ) : (
-            <Button className="w-full" size="lg" onClick={approve} disabled={busy}>
-              {busy ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Fingerprint className="mr-2 h-5 w-5" />}
-              Touch to approve
-            </Button>
+            <div className="space-y-2">
+              <Button className="w-full" size="lg" onClick={approve} disabled={busy}>
+                {busy ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Fingerprint className="mr-2 h-5 w-5" />}
+                Touch to approve
+              </Button>
+              <Button variant="outline" className="w-full" onClick={enroll} disabled={busy}>
+                Register this phone
+              </Button>
+              <p className="text-[11px] text-muted-foreground text-center">
+                First time on this phone? Register it once, then touch to approve.
+              </p>
+            </div>
           )}
         </CardContent>
       </Card>
