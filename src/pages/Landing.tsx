@@ -7,6 +7,7 @@ import {
   LOGO_URL, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS,
   COMPANY_PHONE, COMPANY_PHONE_OPS, COMPANY_EMAIL, COMPANY_WEBSITE, COMPANY_REG,
 } from "@/utils/companyBrand";
+import InquiryForm from "@/components/landing/InquiryForm";
 
 const WEBSITE_URL = "https://www.greatpearlcoffee.com";
 
@@ -35,6 +36,7 @@ export default function Landing() {
           <nav className="hidden items-center gap-6 text-sm md:flex">
             <a href="#about" className="text-muted-foreground hover:text-foreground">About</a>
             <a href="#services" className="text-muted-foreground hover:text-foreground">What we do</a>
+            <a href="#inquiry" className="text-muted-foreground hover:text-foreground">Place an order</a>
             <a href="#contact" className="text-muted-foreground hover:text-foreground">Contact us</a>
             <a href={WEBSITE_URL} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
               Website <ExternalLink className="h-3 w-3" />
@@ -61,7 +63,10 @@ export default function Landing() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg" variant="secondary">
-                <a href="#contact">Contact us <ArrowRight className="ml-2 h-4 w-4" /></a>
+                <a href="#inquiry">Place an order now <ArrowRight className="ml-2 h-4 w-4" /></a>
+              </Button>
+              <Button asChild size="lg" variant="secondary">
+                <a href="#contact">Contact us</a>
               </Button>
               <Button asChild size="lg" variant="outline" className="bg-transparent border-primary-foreground/40 text-primary-foreground hover:bg-primary-foreground/10">
                 <a href={WEBSITE_URL} target="_blank" rel="noopener noreferrer">Visit {COMPANY_WEBSITE}</a>
@@ -111,6 +116,26 @@ export default function Landing() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Inquiry */}
+      <section id="inquiry" className="mx-auto max-w-6xl px-4 py-16">
+        <div className="grid gap-8 md:grid-cols-2 md:items-start">
+          <div>
+            <h2 className="text-3xl font-semibold">Inquiries &amp; orders</h2>
+            <p className="mt-3 text-muted-foreground leading-relaxed">
+              Tell us what you need — green coffee contracts, a sample, supplying us with cherry or kiboko,
+              or simply staying updated on our harvests and prices. Every submission is emailed straight to
+              our operations desk and given a reference number you can quote.
+            </p>
+            <ul className="mt-6 space-y-2 text-sm text-muted-foreground">
+              <li>· Arabica &amp; Robusta green coffee, FOB and EXW</li>
+              <li>· Samples and quality analysis certificates on request</li>
+              <li>· EUDR due-diligence documentation with every lot</li>
+            </ul>
+          </div>
+          <InquiryForm />
         </div>
       </section>
 
