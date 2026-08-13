@@ -625,6 +625,10 @@ const ApprovalCenter = () => {
         onClose={() => setDisburseTarget(null)}
         onDone={() => fetchRequests(true)}
       />
+      <FingerprintApprovalDialog
+        target={fingerprintTarget}
+        onClose={() => setFingerprintTarget(null)}
+      />
     </div>
   );
 };
