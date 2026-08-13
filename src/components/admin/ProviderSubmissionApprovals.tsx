@@ -13,6 +13,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Inbox, Loader2, Check, X, Copy, ExternalLink, Banknote, Smartphone, Wallet } from 'lucide-react';
 import { printProviderAcknowledgement } from '@/utils/printProviderAcknowledgement';
+import FingerprintApprovalDialog, { FingerprintApprovalTarget } from '@/components/approval/FingerprintApprovalDialog';
+import { requiresFingerprintApproval } from '@/utils/fingerprintApproval';
 
 const ProviderSubmissionApprovals: React.FC = () => {
   const { toast } = useToast();
@@ -25,6 +27,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
   const [overrideAmount, setOverrideAmount] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
   const [payMethod, setPayMethod] = useState<'momo' | 'gosente' | 'cash'>('momo');
+  const [fpTarget, setFpTarget] = useState<FingerprintApprovalTarget | null>(null);
 
   const { data: submissions = [], isLoading } = useQuery({
     queryKey: ['provider-submissions-pending'],
@@ -42,13 +45,26 @@ const ProviderSubmissionApprovals: React.FC = () => {
 
   const publicLink = `${window.location.origin}/submit-request`;
 
-  const handleAction = async (action: 'approve' | 'reject', paymentMode: 'momo' | 'cash' | 'gosente' = 'momo') => {
+  const handleAction = async (
+    action: 'approve' | 'reject',
+    paymentMode: 'momo' | 'cash' | 'gosente' = 'momo',
+    fingerprintVerified = false,
+  ) => {
     if (!selected) return;
     const finalAmount = action === 'approve'
       ? Number(overrideAmount || selected.amount)
       : Number(selected.amount);
     if (action === 'approve' && (!finalAmount || finalAmount < 500)) {
       toast({ title: 'Invalid amount', description: 'Amount must be at least 500 UGX', variant: 'destructive' });
+      return;
+    }
+    if (action === 'approve' && !fingerprintVerified && requiresFingerprintApproval(finalAmount, 'provider_submission')) {
+      setFpTarget({
+        title: `Provider payout — ${selected.provider_name}`,
+        amount: finalAmount + Number(withdrawCharge || 0),
+        requestId: selected.id,
+        onConfirmed: () => handleAction('approve', paymentMode, true),
+      });
       return;
     }
     setProcessing(selected.id);
