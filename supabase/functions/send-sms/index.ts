@@ -83,6 +83,7 @@ async function sendBulkSmsPremium(phone: string, message: string, supabase: any,
       },
       body: JSON.stringify({
         to: phone,
+        from: Deno.env.get('BULKSMS_SENDER_ID') || 'Great Agro',
         body: message,
         encoding: 'TEXT',
       }),
@@ -131,6 +132,10 @@ const PREMIUM_SMS_TYPES = new Set([
   'loan_default',
   'loan_disbursed',
   'loan_paid_off',
+  'loan_approved',
+  'loan_approval_details',
+  'loan_guarantor_code',
+  'loan_guarantor_response',
   'loan',
   'guarantor_recovery',
   'job_application',
@@ -140,11 +145,35 @@ const PREMIUM_SMS_TYPES = new Set([
   'job_application_offer',
   'job_application_rejected',
   'job_application_status',
+  'application_status',
+  'interview_invite',
+  'hr_notification',
+  'overtime_reward',
+  'overtime_award',
+  'per_diem_award',
+  'per_diem',
+  'perdiem',
+  'salary_credited',
+  'wallet_deposit_credited',
+  'payment_receipt',
+  'investment_confirmation',
+  'termination_notice',
+  'bank_deposit_approved',
   'otp',
   'verification',
   'login_code',
   'twofa',
 ]);
+
+// Normalizes "tx:overtime-reward" / "source:tx:salary-credited" → "overtime_reward"
+function normalizeSmsType(t?: string): string {
+  return (t || '')
+    .toLowerCase()
+    .replace(/^source:/, '')
+    .replace(/^tx:/, '')
+    .replace(/-/g, '_')
+    .trim();
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -348,7 +377,11 @@ serve(async (req) => {
     // Transactional-email parallel SMS dispatch always uses a "tx:" source prefix.
     // Allow it through so the user gets BOTH email AND SMS, non-blocking.
     const isTxSource = lowerType.startsWith('tx:') || lowerType.startsWith('source:tx:')
-    const isAllowedType = isTxSource || ALLOWED_SMS_TYPES.includes(lowerType)
+    const isAllowedType =
+      isTxSource ||
+      ALLOWED_SMS_TYPES.includes(lowerType) ||
+      PREMIUM_SMS_TYPES.has(lowerType) ||
+      PREMIUM_SMS_TYPES.has(normalizeSmsType(messageType))
     const isOtpMessage = message && (
       /\bcode\b.*\d{4,6}/i.test(message) || 
       /\d{4,6}.*\bcode\b/i.test(message) ||
@@ -571,7 +604,8 @@ serve(async (req) => {
     const callerPriority = (parsedBody.priority || '').toString().toLowerCase();
     const isPremium =
       callerPriority === 'premium' ||
-      PREMIUM_SMS_TYPES.has((messageType || '').toLowerCase());
+      PREMIUM_SMS_TYPES.has((messageType || '').toLowerCase()) ||
+      PREMIUM_SMS_TYPES.has(normalizeSmsType(messageType));
     const usePremiumRoute = isPremium && smsCfg.bulksms_premium !== false;
 
     // PREMIUM ROUTE: try BulkSMS Premium first, fall back to YoolaSMS/Infobip below if it fails
