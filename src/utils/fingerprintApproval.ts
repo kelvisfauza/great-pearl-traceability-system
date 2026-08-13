@@ -47,7 +47,7 @@ export const runFingerprintCheck = async (credentialId: string) => {
   const assertion = (await navigator.credentials.get({
     publicKey: {
       challenge,
-      allowCredentials: [{ id: base64ToBytes(credentialId), type: 'public-key' }],
+      allowCredentials: [{ id: base64ToBytes(credentialId).buffer as ArrayBuffer, type: 'public-key' }],
       userVerification: 'required',
       timeout: 60000,
     },
