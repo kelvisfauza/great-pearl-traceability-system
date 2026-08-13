@@ -12,10 +12,34 @@ serve(async (req) => {
   }
 
   try {
-    const { phone } = await req.json()
+    const { phone, provider, message } = await req.json()
     
     const testPhone = phone || '+256700729340'
-    const testMessage = 'TEST SMS: This is a test message from Great Agro Coffee system. If you receive this, SMS service is working.'
+    const testMessage = message || 'TEST SMS: This is a test message from Great Agro Coffee system. If you receive this, SMS service is working.'
+
+    // Optional: force delivery via BulkSMS.com
+    if (provider === 'bulksms') {
+      const tokenId = Deno.env.get('BULKSMS_TOKEN_ID')
+      const tokenSecret = Deno.env.get('BULKSMS_TOKEN_SECRET')
+      if (!tokenId || !tokenSecret) {
+        return new Response(
+          JSON.stringify({ error: 'BulkSMS credentials not configured' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      const auth = btoa(`${tokenId}:${tokenSecret}`)
+      const bulkRes = await fetch('https://api.bulksms.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: testPhone, body: testMessage, encoding: 'TEXT' }),
+      })
+      const bulkText = await bulkRes.text()
+      console.log('BulkSMS response:', bulkRes.status, bulkText)
+      return new Response(
+        JSON.stringify({ success: bulkRes.ok, provider: 'BulkSMS.com', status: bulkRes.status, phone: testPhone, response: bulkText }),
+        { status: bulkRes.ok ? 200 : 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
     
     console.log('Testing SMS to:', testPhone)
     
