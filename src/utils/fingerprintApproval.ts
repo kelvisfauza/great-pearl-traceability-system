@@ -58,6 +58,42 @@ export const runFingerprintCheck = async (credentialId: string) => {
 };
 
 /** True when an approval item involves money and must be fingerprint-confirmed. */
+export const runFingerprintEnroll = async (email: string) => {
+  if (!window.isSecureContext) {
+    throw new Error('Registering a fingerprint needs a secure (https) connection.');
+  }
+  if (!window.PublicKeyCredential) {
+    throw new Error('This device or browser does not support fingerprint approval.');
+  }
+  const challenge = new Uint8Array(32);
+  crypto.getRandomValues(challenge);
+
+  const credential = (await navigator.credentials.create({
+    publicKey: {
+      challenge,
+      rp: { name: 'Great Agro Coffee', id: window.location.hostname },
+      user: {
+        id: new TextEncoder().encode(email.substring(0, 32).padEnd(16, '0')),
+        name: email,
+        displayName: email,
+      },
+      pubKeyCredParams: [
+        { alg: -7, type: 'public-key' },
+        { alg: -257, type: 'public-key' },
+      ],
+      authenticatorSelection: {
+        authenticatorAttachment: 'platform',
+        userVerification: 'required',
+        requireResidentKey: false,
+      },
+      timeout: 60000,
+    },
+  })) as PublicKeyCredential | null;
+
+  if (!credential) throw new Error('No fingerprint captured.');
+  return bytesToBase64(credential.rawId);
+};
+
 export const requiresFingerprintApproval = (amount: unknown, type?: string) => {
   const value = typeof amount === 'number' ? amount : parseFloat(String(amount ?? '')) || 0;
   const t = String(type || '').toLowerCase();
