@@ -111,6 +111,83 @@ async function postLedger(supabase: any, args: {
   if (error) throw new Error(`ledger insert failed: ${error.message}`);
 }
 
+// Records an admin-initiated overdraft draw (and its access fee) on the
+// overdraft account + transactions so it appears on the Overdraft page.
+async function recordOverdraftUsage(supabase: any, args: {
+  user_id: string;
+  email?: string | null;
+  name?: string | null;
+  draw: number;
+  fee: number;
+  reference: string;
+  reason?: string | null;
+}) {
+  try {
+    if (!(args.draw > 0)) return;
+    let { data: account } = await supabase
+      .from("overdraft_accounts")
+      .select("*")
+      .eq("user_id", args.user_id)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (!account) {
+      const { data: created } = await supabase
+        .from("overdraft_accounts")
+        .insert({
+          user_id: args.user_id,
+          employee_email: args.email || null,
+          employee_name: args.name || null,
+          status: "active",
+          approved_limit: Math.max(100000, Math.ceil((args.draw + args.fee) / 1000) * 1000),
+          outstanding_balance: 0,
+          total_drawn: 0,
+          approved_by: "SYSTEM_ADMIN_WALLET_OP",
+          approved_at: new Date().toISOString(),
+          auto_managed: true,
+        })
+        .select("*")
+        .maybeSingle();
+      account = created;
+    }
+    if (!account) return;
+
+    const total = args.draw + args.fee;
+    const newOutstanding = Number(account.outstanding_balance || 0) + total;
+
+    await supabase.from("overdraft_accounts").update({
+      outstanding_balance: newOutstanding,
+      total_drawn: Number(account.total_drawn || 0) + args.draw,
+      last_used_at: new Date().toISOString(),
+      first_negative_at: account.first_negative_at || new Date().toISOString(),
+    }).eq("id", account.id);
+
+    const rows: any[] = [{
+      account_id: account.id,
+      user_id: args.user_id,
+      transaction_type: "draw",
+      amount: args.draw,
+      balance_after: newOutstanding,
+      reference: `${args.reference}-ODDRAW`,
+      metadata: { source: "admin_wallet_operation", reason: args.reason || null },
+    }];
+    if (args.fee > 0) {
+      rows.push({
+        account_id: account.id,
+        user_id: args.user_id,
+        transaction_type: "fee",
+        amount: args.fee,
+        balance_after: newOutstanding,
+        reference: `${args.reference}-ODFEE`,
+        metadata: { source: "admin_wallet_operation", fee_rate: 0.0275, draw_amount: args.draw },
+      });
+    }
+    await supabase.from("overdraft_transactions").insert(rows);
+  } catch (e) {
+    console.error("[admin-wallet-op] overdraft record failed:", (e as Error).message);
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
