@@ -518,6 +518,10 @@ serve(async (req) => {
             });
           }
           const smsMsg = `Dear ${op.target_name || "User"}, UGX ${amount.toLocaleString()} has been debited from your wallet by admin. Reason: ${op.reason}${overdraftAccessFee > 0 ? `. Overdraft fee: UGX ${overdraftAccessFee.toLocaleString()}` : ""}.`;
+          await recordOverdraftUsage(supabase, {
+            user_id: op.target_user_id, email: op.target_email, name: op.target_name,
+            draw: odPortion, fee: overdraftAccessFee, reference: ref, reason: op.reason,
+          });
           await sendSms(supabase, op.target_phone, smsMsg, op.target_name, authHeader);
         }
 
@@ -547,6 +551,10 @@ serve(async (req) => {
               metadata: { description: "2.75% overdraft access fee", admin_wallet_operation_id: op.id },
             });
           }
+          await recordOverdraftUsage(supabase, {
+            user_id: op.target_user_id, email: op.target_email, name: op.target_name,
+            draw: odPortion, fee: overdraftAccessFee, reference: ref, reason: op.reason,
+          });
           await postLedger(supabase, {
             user_id: op.destination_user_id!, entry_type: "DEPOSIT", amount, reference: `${ref}-IN`,
             source_category: "TRANSFER_IN",
@@ -601,6 +609,10 @@ serve(async (req) => {
               metadata: { description: "2.75% overdraft access fee", admin_wallet_operation_id: op.id },
             });
           }
+          await recordOverdraftUsage(supabase, {
+            user_id: op.target_user_id, email: op.target_email, name: op.target_name,
+            draw: odPortion, fee: overdraftAccessFee, reference: ref, reason: op.reason,
+          });
 
           // Trigger payout
           let gatewayRef: string | null = null;
