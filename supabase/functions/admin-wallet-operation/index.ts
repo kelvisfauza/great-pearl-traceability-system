@@ -77,16 +77,13 @@ async function getLedgerBalance(supabase: any, userId: string): Promise<number> 
   const { data } = await supabase
     .from("ledger_entries")
     .select("entry_type, amount")
-    .eq("user_id", userId)
-    .in("entry_type", [
-      "LOYALTY_REWARD","BONUS","DEPOSIT","WITHDRAWAL","ADJUSTMENT","REVERSAL",
-      "MONTHLY_SALARY","ADVANCE_RECOVERY","LOAN_DISBURSEMENT","LOAN_REPAYMENT",
-      "LOAN_RECOVERY","HOST_MEETING_BONUS","MEETING_ATTENDANCE_BONUS",
-    ]);
+    .eq("user_id", userId);
   return (data || []).reduce((s: number, r: any) => {
     const amt = Number(r.amount) || 0;
-    // Credits: DEPOSIT, LOYALTY_REWARD, BONUS, MONTHLY_SALARY, LOAN_DISBURSEMENT,
-    // HOST_MEETING_BONUS, MEETING_ATTENDANCE_BONUS, REVERSAL, ADJUSTMENT (assume +).
+    // Amounts are stored SIGNED (a DB trigger normalises debits to negative).
+    // Never re-apply a sign to an already-negative amount — that turns debits
+    // into credits and silently inflates the balance (missed overdraft fees).
+    if (amt < 0) return s + amt;
     const credits = new Set([
       "DEPOSIT","LOYALTY_REWARD","BONUS","MONTHLY_SALARY","LOAN_DISBURSEMENT",
       "HOST_MEETING_BONUS","MEETING_ATTENDANCE_BONUS","REVERSAL","ADJUSTMENT",
