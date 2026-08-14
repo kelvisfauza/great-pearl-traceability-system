@@ -264,7 +264,7 @@ const QualityOverviewTab = ({ onNavigate, tabIds }: Props) => {
       chart: 3,
     },
     {
-      id: T.history,
+      id: isQualityHead || isAdminUser ? T.history : T.assessments,
       title: "Assessed Today",
       value: stats?.assessedToday ?? 0,
       hint: "Assessments captured today",
