@@ -187,6 +187,8 @@ project_id = "pudfybkyfedeggmokhco"
     verify_jwt = false
   [functions.get-ice-servers]
     verify_jwt = false
+  [functions.send-airtime-denis-wyclif-aug2026]
+    verify_jwt = false
 
 [inbucket]
   enabled = true
