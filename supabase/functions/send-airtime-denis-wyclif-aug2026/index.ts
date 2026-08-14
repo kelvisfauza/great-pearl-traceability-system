@@ -11,7 +11,7 @@ const TARGETS = [
   { name: 'bwambale denis', email: 'bwambaledenis@greatpearlcoffee.com' },
   { name: 'Musema Wyclif', email: 'musemawyclif@greatpearlcoffee.com' },
 ]
-const AMOUNT = 10000
+const AMOUNT = 20000
 const MONTH = '2026-08'
 
 Deno.serve(async (req) => {
