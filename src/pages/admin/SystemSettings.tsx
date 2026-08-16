@@ -5,6 +5,7 @@ import SuperAdminCreator from "@/components/admin/SuperAdminCreator";
 import MessagingSettings from "@/components/admin/MessagingSettings";
 import WalletFreezeManager from "@/components/admin/WalletFreezeManager";
 import OverdraftUsageRules from "@/components/admin/OverdraftUsageRules";
+import LoanPolicySettings from "@/components/admin/LoanPolicySettings";
 import UnifiedPermissionManager from "@/components/admin/UnifiedPermissionManager";
 import AdminWalletOperations from "@/components/admin/AdminWalletOperations";
 import ProviderSettings from "@/components/admin/ProviderSettings";
@@ -21,7 +22,7 @@ import { DataArchiveManager } from "@/components/admin/DataArchiveManager";
 import MaintenanceToggle from "@/components/it/MaintenanceToggle";
 import ScheduledDowntimeSettings from "@/components/it/ScheduledDowntimeSettings";
 import BackupManagement from "@/components/it/BackupManagement";
-import { Database, Settings, Shield, MessageSquare, Snowflake, ShieldAlert, KeyRound, Wallet, Smartphone, Users, UserX, Wrench, HardDrive } from "lucide-react";
+import { Database, Settings, Shield, MessageSquare, Snowflake, ShieldAlert, KeyRound, Wallet, Smartphone, Users, UserX, Wrench, HardDrive, Banknote } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MigrateSupplierCodesButton } from "@/components/suppliers/MigrateSupplierCodesButton";
 import { MigrateBatchNumbersButton } from "@/components/admin/MigrateBatchNumbersButton";
@@ -74,6 +75,10 @@ const SystemSettings = () => {
           <TabsTrigger value="overdraft" className="gap-2">
             <ShieldAlert className="h-4 w-4" />
             Overdraft Rules
+          </TabsTrigger>
+          <TabsTrigger value="loans" className="gap-2">
+            <Banknote className="h-4 w-4" />
+            Loan Policy
           </TabsTrigger>
           <TabsTrigger value="migration" className="gap-2">
             <Database className="h-4 w-4" />
@@ -142,6 +147,10 @@ const SystemSettings = () => {
 
         <TabsContent value="overdraft" className="space-y-4">
           <OverdraftUsageRules />
+        </TabsContent>
+
+        <TabsContent value="loans" className="space-y-4">
+          <LoanPolicySettings />
         </TabsContent>
 
         <TabsContent value="migration" className="space-y-4">
