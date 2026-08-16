@@ -23,6 +23,7 @@ import LoanReviewModal from '@/components/loans/LoanReviewModal';
 import LoanRepaymentSlip from '@/components/loans/LoanRepaymentSlip';
 import { generateLoanAgreementPdf } from '@/utils/loanAgreementPdf';
 import LoanAppealDialog from '@/components/loans/LoanAppealDialog';
+import LoanTermsDialog, { LOAN_TERMS_VERSION, type LoanTermsApplication } from '@/components/loans/LoanTermsDialog';
 
 // Loan types with their monthly interest rates
 type LoanType = 'quick' | 'long_term' | 'pure_salary' | 'business';
@@ -32,7 +33,7 @@ const LOAN_TYPE_CONFIG: Record<LoanType, { label: string; monthlyRate: number; m
   quick: { label: 'Quick Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Short-term, weekly repayments (total interest cap 35%)', frequencies: ['weekly'], maxMonths: 6, requiresGuarantor: true, guarantorsRequired: 1 },
   long_term: { label: 'Long-Term Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Flexible repayment, monthly or bullet (total interest cap 35%)', frequencies: ['monthly', 'bullet'], maxMonths: 6, requiresGuarantor: true, guarantorsRequired: 1 },
   pure_salary: { label: 'Pure Salary Loan', monthlyRate: 15, maxRate: 45, description: '15%/month – Repaid by 50% of monthly salary (no guarantor, max 3 months)', frequencies: ['monthly'], maxMonths: 3, requiresGuarantor: false },
-  business: { label: 'Employee Business Loan', monthlyRate: 3, maxRate: 24, description: '3%/month – Low-rate business capital, flexible monthly repayment up to 8 months, 2 guarantors required', frequencies: ['monthly'], maxMonths: 8, requiresGuarantor: true, guarantorsRequired: 2 },
+  business: { label: 'Employee Business Loan', monthlyRate: 4, maxRate: 30, description: '4%/month – Low-rate business capital, flexible monthly repayment up to 8 months, 2 guarantors required (total interest cap 30%)', frequencies: ['monthly'], maxMonths: 8, requiresGuarantor: true, guarantorsRequired: 2 },
 };
 
 const getGuarantorsRequired = (t: LoanType) =>
@@ -98,6 +99,8 @@ const QuickLoans = () => {
   const [allAiLimitsLoading, setAllAiLimitsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showRequestDialog, setShowRequestDialog] = useState(false);
+  const [showTermsDialog, setShowTermsDialog] = useState(false);
+  const [termsApplication, setTermsApplication] = useState<LoanTermsApplication | null>(null);
   const [showEarlyPayDialog, setShowEarlyPayDialog] = useState(false);
   const [selectedLoanForPayment, setSelectedLoanForPayment] = useState<any>(null);
   const [earlyPayAmount, setEarlyPayAmount] = useState('');
@@ -394,7 +397,7 @@ const QuickLoans = () => {
     return { amount, months, dailyRate, monthlyRate, totalDays, totalWeeks, interest, total, weekly: installment, numInstallments, frequency: freq };
   };
 
-  const handleRequestLoan = async () => {
+  const handleRequestLoan = async (consent?: { version: string; signature: string; acceptedAt: string }) => {
     if (!employee) return;
     if (!evaluation || evaluation.decision === 'deny') {
       toast({ title: 'Evaluation required', description: 'Run the loan evaluation first. Denied applications cannot be submitted.', variant: 'destructive' });
@@ -501,6 +504,36 @@ const QuickLoans = () => {
       }
     }
 
+    // Terms & conditions gate — show the prefilled application form for consent first
+    if (!consent) {
+      setTermsApplication({
+        loanTypeLabel: cfg.label,
+        loanType,
+        requestedAmount: requested,
+        evaluationFee: FEE,
+        principal: amount,
+        monthlyRate,
+        dailyRate,
+        maxRate,
+        durationMonths: months,
+        frequency: freq === 'bullet' ? 'Bullet (one final payment)' : freq === 'weekly' ? 'Weekly' : 'Monthly',
+        numInstallments,
+        installmentAmount: weekly,
+        totalInterest: interest,
+        totalRepayable: total,
+        firstRepaymentDate: getFirstRepaymentDate(new Date(), freq).toLocaleDateString(),
+        borrowerName: employee.name,
+        borrowerEmail: employee.email,
+        borrowerPhone: (employee as any).phone || '',
+        borrowerPosition: (employee as any).position || '',
+        borrowerDepartment: (employee as any).department || '',
+        borrowerSalary: Number((employee as any).salary || 0),
+        guarantors: [guarantor, guarantor2].filter(Boolean).map((g: any) => ({ name: g.name, email: g.email, phone: g.phone })),
+      });
+      setShowTermsDialog(true);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const approvalCode = needsGuarantor ? Math.floor(100000 + Math.random() * 900000).toString() : null;
@@ -535,6 +568,10 @@ const QuickLoans = () => {
         guarantor2_approval_code: approvalCode2,
         guarantor2_approved: false,
         loan_type: loanType,
+        terms_accepted: true,
+        terms_accepted_at: consent.acceptedAt,
+        terms_version: consent.version,
+        terms_signature: consent.signature,
       } as any).select().single();
 
       if (error) throw error;
@@ -618,6 +655,8 @@ const QuickLoans = () => {
         toast({ title: "Loan Requested", description: `Pure Salary Loan submitted for admin approval. UGX ${FEE.toLocaleString()} evaluation fee added to principal.` });
       }
       setShowRequestDialog(false);
+      setShowTermsDialog(false);
+      setTermsApplication(null);
       setEvaluation(null);
 
       // Trigger repayment statement slip
@@ -2298,7 +2337,7 @@ const QuickLoans = () => {
                   )}
 
                   <Button
-                    onClick={handleRequestLoan}
+                    onClick={() => handleRequestLoan()}
                     disabled={submitting || !evaluation || evaluation.decision === 'deny'}
                     className="w-full"
                   >
@@ -2308,11 +2347,19 @@ const QuickLoans = () => {
                         ? 'Run evaluation to enable submit'
                         : evaluation.decision === 'deny'
                           ? 'Loan Denied — cannot submit'
-                          : 'Submit Loan Request (10k fee added to principal)'}
+                          : 'Review Terms & Submit Application'}
                   </Button>
                 </div>
               </DialogContent>
             </Dialog>
+
+            <LoanTermsDialog
+              open={showTermsDialog}
+              onOpenChange={(o) => { setShowTermsDialog(o); if (!o) setTermsApplication(null); }}
+              application={termsApplication}
+              submitting={submitting}
+              onAccept={(meta) => handleRequestLoan(meta)}
+            />
 
             {evaluation && (
               <LoanAppealDialog
