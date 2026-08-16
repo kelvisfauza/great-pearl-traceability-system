@@ -49,7 +49,9 @@ export async function sendLoanAgreement(loanId: string, approverName = 'Administ
 
     const loanTypeLabel = isPureSalary
       ? 'Pure Salary Loan'
-      : loan.loan_type === 'long_term'
+      : loan.loan_type === 'business'
+        ? 'Employee Business Loan'
+        : loan.loan_type === 'long_term'
         ? 'Long-Term Loan'
         : 'Quick Loan';
 

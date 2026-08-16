@@ -1044,7 +1044,7 @@ const QuickLoans = () => {
         
         const pdfBlob = generateLoanAgreementPdf({
           loanId: loanId,
-          loanType: loan.loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan',
+          loanType: loan.loan_type === 'business' ? 'Employee Business Loan' : loan.loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan',
           principal: loan.loan_amount,
           interestRate: loan.interest_rate,
           dailyRate: loan.daily_interest_rate || Number((loan.interest_rate / 30).toFixed(2)),
@@ -1098,7 +1098,7 @@ const QuickLoans = () => {
           numInstallments: String(numInstallments),
           firstDeductionDate: repaymentDateStr,
           guarantorName: loan.guarantor_name || '',
-          loanType: loan.loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan',
+          loanType: loan.loan_type === 'business' ? 'Employee Business Loan' : loan.loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan',
           approvedBy: employee?.name || 'Administration',
           approvalDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
           disbursedAmount: disbursedAmount.toLocaleString(),
@@ -1140,7 +1140,7 @@ const QuickLoans = () => {
           body: { phone: loan.employee_phone, message: `Dear ${loan.employee_name}, your loan request of UGX ${loan.loan_amount.toLocaleString()} has been declined. Reason: ${rejectionReason || 'Not specified'}.`, userName: loan.employee_name, messageType: 'loan_rejected' }
         });
         await supabase.functions.invoke('send-transactional-email', {
-          body: { templateName: 'loan-rejected', recipientEmail: loan.employee_email, idempotencyKey: `loan-rejected-${loanId}`, templateData: { employeeName: loan.employee_name, loanAmount: loan.loan_amount.toLocaleString(), rejectionReason: rejectionReason || 'Not specified', loanType: loan.loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan' } }
+          body: { templateName: 'loan-rejected', recipientEmail: loan.employee_email, idempotencyKey: `loan-rejected-${loanId}`, templateData: { employeeName: loan.employee_name, loanAmount: loan.loan_amount.toLocaleString(), rejectionReason: rejectionReason || 'Not specified', loanType: loan.loan_type === 'business' ? 'Employee Business Loan' : loan.loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan' } }
         });
 
         toast({ title: "Loan Rejected" });
