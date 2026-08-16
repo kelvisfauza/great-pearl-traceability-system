@@ -769,6 +769,17 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
                       <p className="text-muted-foreground text-xs">Full Name</p>
                       <p className="font-medium">{loan.guarantor_name || '-'}</p>
                     </div>
+                    {loan.guarantor2_name && (
+                      <div>
+                        <p className="text-muted-foreground text-xs">Second Guarantor</p>
+                        <p className="font-medium">
+                          {loan.guarantor2_name}{' '}
+                          <span className={loan.guarantor2_approved ? 'text-emerald-600 text-xs' : 'text-amber-600 text-xs'}>
+                            ({loan.guarantor2_approved ? 'approved' : 'pending'})
+                          </span>
+                        </p>
+                      </div>
+                    )}
                     <div>
                       <p className="text-muted-foreground text-xs">Employee ID</p>
                       <p className="font-medium">{guarantorDetails?.employee_id || '-'}</p>
