@@ -5732,6 +5732,14 @@ export type Database = {
           guarantor_id: string | null
           guarantor_name: string | null
           guarantor_phone: string | null
+          guarantor2_approval_code: string | null
+          guarantor2_approved: boolean | null
+          guarantor2_approved_at: string | null
+          guarantor2_declined: boolean | null
+          guarantor2_email: string | null
+          guarantor2_id: string | null
+          guarantor2_name: string | null
+          guarantor2_phone: string | null
           id: string
           interest_rate: number
           is_defaulted: boolean | null
@@ -5783,6 +5791,14 @@ export type Database = {
           guarantor_id?: string | null
           guarantor_name?: string | null
           guarantor_phone?: string | null
+          guarantor2_approval_code?: string | null
+          guarantor2_approved?: boolean | null
+          guarantor2_approved_at?: string | null
+          guarantor2_declined?: boolean | null
+          guarantor2_email?: string | null
+          guarantor2_id?: string | null
+          guarantor2_name?: string | null
+          guarantor2_phone?: string | null
           id?: string
           interest_rate: number
           is_defaulted?: boolean | null
@@ -5834,6 +5850,14 @@ export type Database = {
           guarantor_id?: string | null
           guarantor_name?: string | null
           guarantor_phone?: string | null
+          guarantor2_approval_code?: string | null
+          guarantor2_approved?: boolean | null
+          guarantor2_approved_at?: string | null
+          guarantor2_declined?: boolean | null
+          guarantor2_email?: string | null
+          guarantor2_id?: string | null
+          guarantor2_name?: string | null
+          guarantor2_phone?: string | null
           id?: string
           interest_rate?: number
           is_defaulted?: boolean | null
