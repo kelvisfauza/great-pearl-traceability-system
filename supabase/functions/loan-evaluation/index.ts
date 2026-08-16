@@ -12,7 +12,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { employee_email, requested_amount, requested_loan_type, requested_duration } = await req.json();
+    const { employee_email, requested_amount, requested_loan_type, requested_duration, guarantor_emails } = await req.json();
     if (!employee_email) {
       return new Response(JSON.stringify({ ok: false, error: "employee_email required" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -38,7 +38,10 @@ serve(async (req) => {
     }
 
     const salary = Number(emp.salary || 0);
-    const maxLimit = salary * 3;
+    const isBusinessLoan = requested_loan_type === "business";
+    // Business loans stretch to 4× salary, but the guarantors' combined
+    // capacity becomes the real ceiling (computed below).
+    let maxLimit = salary * (isBusinessLoan ? 4 : 3);
 
     // Unified id
     const { data: unifiedId } = await supabase.rpc("get_unified_user_id", { input_email: employee_email });
@@ -172,9 +175,72 @@ serve(async (req) => {
 
     const requested = Number(requested_amount || 0);
 
+    // ── GUARANTOR CAPACITY ────────────────────────────────────────────
+    // Evaluate every proposed guarantor: can their salary + wallet + clean
+    // record actually carry this amount? Their combined capacity caps the
+    // borrower's limit (business loans especially, where 2 are required).
+    const guarantorAssessments: any[] = [];
+    let guarantorCapacityTotal = 0;
+    let guarantorBlocked = false;
+    for (const gEmail of (Array.isArray(guarantor_emails) ? guarantor_emails : []).filter(Boolean)) {
+      const { data: gEmp } = await supabase
+        .from("employees")
+        .select("name, email, salary, join_date, auth_user_id")
+        .eq("email", gEmail)
+        .maybeSingle();
+      if (!gEmp) continue;
+      const gSalary = Number(gEmp.salary || 0);
+      const { data: gUid } = await supabase.rpc("get_unified_user_id", { input_email: gEmail });
+      const gUserId = gUid || gEmp.auth_user_id;
+      let gWallet = 0;
+      if (gUserId) {
+        const { data: gBal } = await supabase.rpc("get_effective_wallet_balance", { p_user_id: gUserId });
+        gWallet = Number(gBal ?? 0);
+      }
+      const { data: gGuaranteed } = await supabase
+        .from("loans")
+        .select("id, loan_amount, remaining_balance, status, is_defaulted")
+        .eq("guarantor_email", gEmail);
+      const gList = gGuaranteed || [];
+      const gActive = gList.filter((l: any) => ["active", "pending_guarantor", "pending_admin"].includes(l.status));
+      const gExposure = gActive.reduce((s: number, l: any) => s + Number(l.remaining_balance || l.loan_amount || 0), 0);
+      const gBadGuarantees = gList.filter((l: any) => l.is_defaulted === true || l.status === "defaulted").length;
+      const { data: gOwn } = await supabase
+        .from("loans")
+        .select("id, remaining_balance, loan_amount, status, is_defaulted")
+        .eq("employee_email", gEmail);
+      const gOwnList = gOwn || [];
+      const gOwnDefaults = gOwnList.filter((l: any) => l.is_defaulted === true || l.status === "defaulted").length;
+      const gOwnOutstanding = gOwnList
+        .filter((l: any) => l.status === "active")
+        .reduce((s: number, l: any) => s + Number(l.remaining_balance || 0), 0);
+
+      // Capacity = 2× salary + half of positive wallet, minus their own debt
+      // and half of what they already guarantee. Bad record ⇒ zero capacity.
+      let capacity = Math.round(gSalary * 2 + Math.max(0, gWallet) * 0.5 - gOwnOutstanding * 0.5 - gExposure * 0.5);
+      const notes: string[] = [];
+      if (gSalary <= 0) { capacity = 0; notes.push("no salary on record"); }
+      if (gOwnDefaults > 0) { capacity = 0; notes.push(`${gOwnDefaults} own default(s)`); }
+      if (gBadGuarantees > 0) { capacity = 0; notes.push(`${gBadGuarantees} guaranteed loan(s) defaulted`); }
+      if (gExposure > 0) notes.push(`already guaranteeing UGX ${gExposure.toLocaleString()}`);
+      capacity = Math.max(0, capacity);
+      if (capacity <= 0) guarantorBlocked = true;
+      guarantorCapacityTotal += capacity;
+      guarantorAssessments.push({
+        email: gEmail, name: gEmp.name, salary: gSalary, wallet_balance: Math.round(gWallet),
+        active_guarantee_exposure: gExposure, guaranteed_defaults: gBadGuarantees,
+        own_defaults: gOwnDefaults, own_outstanding: gOwnOutstanding, capacity, notes,
+      });
+    }
+
     // Total existing debt obligations (loans + salary advance + overdraft drawn)
     const totalDebtObligations = outstanding + salaryAdvanceOutstanding + overdraftOutstanding;
     const debtToSalaryRatio = salary > 0 ? totalDebtObligations / salary : 999;
+
+    // Guarantor capacity caps the entitlement for guarantor-backed products.
+    if (guarantorAssessments.length > 0) {
+      maxLimit = Math.max(0, Math.min(maxLimit, guarantorCapacityTotal));
+    }
 
     // Heuristic fallback — start from FULL entitlement (3× salary), not requested.
     // The "limit" shown to user must reflect what they're entitled to, not what they typed.
@@ -324,6 +390,27 @@ serve(async (req) => {
     if (completed >= 2) fallbackFactors.push(`Strong repayment history: ${completed} loans completed`);
     if (repayCount >= 4) fallbackFactors.push(`Consistent repayments: ${repayCount} payments in last 6 months`);
 
+    // Guarantor-capacity effects
+    if (guarantorAssessments.length > 0) {
+      for (const g of guarantorAssessments) {
+        fallbackFactors.push(
+          `Guarantor ${g.name}: capacity UGX ${g.capacity.toLocaleString()}${g.notes.length ? ` (${g.notes.join('; ')})` : ''}`
+        );
+      }
+      fallbackAmount = Math.min(fallbackAmount, guarantorCapacityTotal);
+    }
+    if (isBusinessLoan) {
+      if (guarantorAssessments.length < 2) {
+        fallbackDecision = "deny";
+        fallbackAmount = 0;
+        fallbackFactors.push("Employee Business Loan requires 2 qualifying guarantors");
+      } else if (guarantorBlocked) {
+        fallbackDecision = "deny";
+        fallbackAmount = 0;
+        fallbackFactors.push("One of the guarantors cannot carry this loan (no capacity or bad record)");
+      }
+    }
+
     let decision = fallbackDecision;
     let recommendedAmount = fallbackAmount;
     let recommendedType = requested_loan_type || (recommendedAmount > salary ? "long_term" : "quick");
@@ -391,6 +478,13 @@ REQUEST
 - Requested type: ${requested_loan_type || "unspecified"}
 - Requested duration (months): ${requested_duration || "unspecified"}
 
+PROPOSED GUARANTORS (their own capacity to carry this loan)
+${guarantorAssessments.length
+  ? guarantorAssessments.map((g: any) => `- ${g.name} (${g.email}): salary UGX ${g.salary}, wallet UGX ${g.wallet_balance}, already guaranteeing UGX ${g.active_guarantee_exposure}, own outstanding UGX ${g.own_outstanding}, own defaults ${g.own_defaults}, guaranteed defaults ${g.guaranteed_defaults} → assessed capacity UGX ${g.capacity}`).join("\n")
+  : "- none supplied"}
+- Combined guarantor capacity (UGX): ${guarantorCapacityTotal}
+${isBusinessLoan ? `- This is an EMPLOYEE BUSINESS LOAN: 3%/month flat, up to 8 months, requires 2 guarantors whose wallets can be debited. Entitlement ceiling is 4× salary AND never above combined guarantor capacity (UGX ${guarantorCapacityTotal}). Deny if fewer than 2 guarantors qualify or any guarantor capacity is 0.` : ""}
+
 RULES (be fair — approve when reasonable; only deny on clear red flags)
 - IMPORTANT: recommended_amount = the user's ENTITLEMENT/LIMIT, NOT the requested amount.
   Always award the maximum the borrower qualifies for, ignoring what they typed in "Requested".
@@ -417,7 +511,8 @@ RULES (be fair — approve when reasonable; only deny on clear red flags)
 - Active loan + clean repayments → "top_up" (cap minus outstanding).
 - New employee (<2 months) → cap at 1.5× salary.
 - No history but tenure ≥ 2 months → award 2× to 3× salary (lean generous).
-- Choose recommended_loan_type: "quick" (≤1 month, weekly) or "long_term" (>1 month).
+- Choose recommended_loan_type: "quick" (≤1 month, weekly) or "long_term" (>1 month). For a business-loan request keep the amount within combined guarantor capacity.
+- NEVER recommend more than the combined guarantor capacity when guarantors are listed above.
 
 Return only JSON via the tool call.`;
 
@@ -442,7 +537,7 @@ Return only JSON via the tool call.`;
                     decision: { type: "string", enum: ["approve", "top_up", "deny"] },
                     recommended_amount: { type: "number" },
                     recommended_loan_type: { type: "string", enum: ["quick", "long_term"] },
-                    recommended_duration_months: { type: "integer", minimum: 1, maximum: 6 },
+                    recommended_duration_months: { type: "integer", minimum: 1, maximum: 8 },
                     risk_score: { type: "integer", minimum: 0, maximum: 100 },
                     factors: { type: "array", items: { type: "string" }, maxItems: 5 },
                     summary: { type: "string" },
@@ -479,6 +574,15 @@ Return only JSON via the tool call.`;
     // Enforce hard cap
     recommendedAmount = Math.min(recommendedAmount, maxLimit);
     if (decision === "deny") recommendedAmount = 0;
+    if (isBusinessLoan) {
+      recommendedType = "business";
+      recommendedDuration = Math.min(8, Math.max(1, Number(recommendedDuration) || Number(requested_duration) || 3));
+      if (guarantorAssessments.length < 2 || guarantorBlocked) {
+        decision = "deny";
+        recommendedAmount = 0;
+      }
+      recommendedAmount = Math.min(recommendedAmount, guarantorCapacityTotal);
+    }
 
     // Persist report
     const { data: rep, error: repErr } = await supabase
@@ -526,6 +630,8 @@ Return only JSON via the tool call.`;
           guaranteed_overdue: guaranteedOverdue,
           total_loans_taken: totalLoansTaken,
           debt_to_salary_ratio: Number(debtToSalaryRatio.toFixed(2)),
+          guarantor_assessments: guarantorAssessments,
+          guarantor_capacity_total: guarantorCapacityTotal,
         },
         fee_amount: FEE,
       })

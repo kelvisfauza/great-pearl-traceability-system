@@ -337,7 +337,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
       <div class="section">
         <div class="section-title">📋 Loan Request Details</div>
         <div class="grid grid-4">
-          <div><div class="label">Loan Type</div><div class="value">${loan.loan_type === 'long_term' ? 'Long-Term' : 'Quick'} Loan</div></div>
+          <div><div class="label">Loan Type</div><div class="value">${loan.loan_type === 'business' ? 'Business' : loan.loan_type === 'long_term' ? 'Long-Term' : 'Quick'} Loan</div></div>
           <div><div class="label">Principal Amount</div><div class="value">UGX ${loan.loan_amount?.toLocaleString()}</div></div>
           <div><div class="label">Interest Rate</div><div class="value">${isWeekly ? `${(loan.daily_interest_rate || 0).toFixed(3)}%/day` : `${loan.interest_rate}%/month`}</div></div>
           <div><div class="label">Duration</div><div class="value">${loan.duration_months} month(s) / ${numInstallments} ${isWeekly ? 'weeks' : 'months'}</div></div>
@@ -568,7 +568,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                     <div>
                       <p className="text-muted-foreground text-xs">Loan Type</p>
-                      <p className="font-bold">{loan.loan_type === 'long_term' ? 'Long-Term' : 'Quick'} Loan</p>
+                      <p className="font-bold">{loan.loan_type === 'business' ? 'Business' : loan.loan_type === 'long_term' ? 'Long-Term' : 'Quick'} Loan</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs">Principal Amount</p>
@@ -769,6 +769,17 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
                       <p className="text-muted-foreground text-xs">Full Name</p>
                       <p className="font-medium">{loan.guarantor_name || '-'}</p>
                     </div>
+                    {loan.guarantor2_name && (
+                      <div>
+                        <p className="text-muted-foreground text-xs">Second Guarantor</p>
+                        <p className="font-medium">
+                          {loan.guarantor2_name}{' '}
+                          <span className={loan.guarantor2_approved ? 'text-emerald-600 text-xs' : 'text-amber-600 text-xs'}>
+                            ({loan.guarantor2_approved ? 'approved' : 'pending'})
+                          </span>
+                        </p>
+                      </div>
+                    )}
                     <div>
                       <p className="text-muted-foreground text-xs">Employee ID</p>
                       <p className="font-medium">{guarantorDetails?.employee_id || '-'}</p>

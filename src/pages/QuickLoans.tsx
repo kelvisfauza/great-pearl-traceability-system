@@ -25,14 +25,18 @@ import { generateLoanAgreementPdf } from '@/utils/loanAgreementPdf';
 import LoanAppealDialog from '@/components/loans/LoanAppealDialog';
 
 // Loan types with their monthly interest rates
-type LoanType = 'quick' | 'long_term' | 'pure_salary';
+type LoanType = 'quick' | 'long_term' | 'pure_salary' | 'business';
 type RepaymentFrequency = 'weekly' | 'monthly' | 'bullet';
 
-const LOAN_TYPE_CONFIG: Record<LoanType, { label: string; monthlyRate: number; maxRate: number; description: string; frequencies: RepaymentFrequency[]; maxMonths?: number; requiresGuarantor?: boolean }> = {
-  quick: { label: 'Quick Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Short-term, weekly repayments (total interest cap 35%)', frequencies: ['weekly'], requiresGuarantor: true },
-  long_term: { label: 'Long-Term Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Flexible repayment, monthly or bullet (total interest cap 35%)', frequencies: ['monthly', 'bullet'], requiresGuarantor: true },
+const LOAN_TYPE_CONFIG: Record<LoanType, { label: string; monthlyRate: number; maxRate: number; description: string; frequencies: RepaymentFrequency[]; maxMonths?: number; requiresGuarantor?: boolean; guarantorsRequired?: number }> = {
+  quick: { label: 'Quick Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Short-term, weekly repayments (total interest cap 35%)', frequencies: ['weekly'], maxMonths: 6, requiresGuarantor: true, guarantorsRequired: 1 },
+  long_term: { label: 'Long-Term Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Flexible repayment, monthly or bullet (total interest cap 35%)', frequencies: ['monthly', 'bullet'], maxMonths: 6, requiresGuarantor: true, guarantorsRequired: 1 },
   pure_salary: { label: 'Pure Salary Loan', monthlyRate: 15, maxRate: 45, description: '15%/month – Repaid by 50% of monthly salary (no guarantor, max 3 months)', frequencies: ['monthly'], maxMonths: 3, requiresGuarantor: false },
+  business: { label: 'Employee Business Loan', monthlyRate: 3, maxRate: 24, description: '3%/month – Low-rate business capital, flexible monthly repayment up to 8 months, 2 guarantors required', frequencies: ['monthly'], maxMonths: 8, requiresGuarantor: true, guarantorsRequired: 2 },
 };
+
+const getGuarantorsRequired = (t: LoanType) =>
+  LOAN_TYPE_CONFIG[t].requiresGuarantor === false ? 0 : (LOAN_TYPE_CONFIG[t].guarantorsRequired ?? 1);
 
 // Helper: calculate daily interest rate from monthly rate
 const getDailyRate = (loanType: LoanType) => {
@@ -145,6 +149,7 @@ const QuickLoans = () => {
   const [repaymentFrequency, setRepaymentFrequency] = useState<RepaymentFrequency>('weekly');
   const [durationMonths, setDurationMonths] = useState('');
   const [guarantorId, setGuarantorId] = useState('');
+  const [guarantor2Id, setGuarantor2Id] = useState('');
   const [loanPurpose, setLoanPurpose] = useState('');
 
   // Evaluation state (mandatory before submitting a loan request)
@@ -336,13 +341,14 @@ const QuickLoans = () => {
 
   const checkGuarantorRequests = async () => {
     if (!employee) return;
-    const { data } = await supabase.from('loans').select('*')
-      .eq('guarantor_email', employee.email)
+    const { data } = await (supabase as any).from('loans').select('*')
       .eq('status', 'pending_guarantor')
-      .eq('guarantor_approved', false);
-    if (data && data.length > 0) {
-      setPendingGuarantorLoan(data[0]);
-    }
+      .or(`guarantor_email.eq.${employee.email},guarantor2_email.eq.${employee.email}`);
+    const pending = (data || []).find((l: any) =>
+      (l.guarantor_email === employee.email && !l.guarantor_approved) ||
+      (l.guarantor2_email === employee.email && !l.guarantor2_approved)
+    );
+    if (pending) setPendingGuarantorLoan(pending);
   };
 
   const calculateLoanDetails = () => {
@@ -404,7 +410,8 @@ const QuickLoans = () => {
     const months = parseInt(durationMonths) || 0;
     const cfg = LOAN_TYPE_CONFIG[loanType];
     const needsGuarantor = cfg.requiresGuarantor !== false;
-    if (requested <= 0 || months <= 0 || (needsGuarantor && !guarantorId)) {
+    const guarantorsRequired = getGuarantorsRequired(loanType);
+    if (requested <= 0 || months <= 0 || (needsGuarantor && !guarantorId) || (guarantorsRequired >= 2 && !guarantor2Id)) {
       toast({ title: "Error", description: "Please fill all fields", variant: "destructive" });
       return;
     }
@@ -472,6 +479,7 @@ const QuickLoans = () => {
     }
 
     let guarantor: any = null;
+    let guarantor2: any = null;
     if (needsGuarantor) {
       guarantor = employees.find(e => e.id === guarantorId);
       if (!guarantor) return;
@@ -479,11 +487,24 @@ const QuickLoans = () => {
         toast({ title: "Error", description: "You cannot be your own guarantor", variant: "destructive" });
         return;
       }
+      if (guarantorsRequired >= 2) {
+        guarantor2 = employees.find(e => e.id === guarantor2Id);
+        if (!guarantor2) return;
+        if (guarantor2.email === employee.email) {
+          toast({ title: "Error", description: "You cannot be your own guarantor", variant: "destructive" });
+          return;
+        }
+        if (guarantor2.email === guarantor.email) {
+          toast({ title: "Error", description: "The two guarantors must be different people", variant: "destructive" });
+          return;
+        }
+      }
     }
 
     setSubmitting(true);
     try {
       const approvalCode = needsGuarantor ? Math.floor(100000 + Math.random() * 900000).toString() : null;
+      const approvalCode2 = guarantor2 ? Math.floor(100000 + Math.random() * 900000).toString() : null;
 
       const { data: insertedLoan, error } = await supabase.from('loans').insert({
         employee_id: employee.id,
@@ -507,6 +528,12 @@ const QuickLoans = () => {
         guarantor_phone: needsGuarantor ? (guarantor.phone || '') : null,
         guarantor_approval_code: approvalCode,
         guarantor_approved: needsGuarantor ? false : true,
+        guarantor2_id: guarantor2 ? guarantor2.id : null,
+        guarantor2_email: guarantor2 ? guarantor2.email : null,
+        guarantor2_name: guarantor2 ? guarantor2.name : null,
+        guarantor2_phone: guarantor2 ? (guarantor2.phone || '') : null,
+        guarantor2_approval_code: approvalCode2,
+        guarantor2_approved: false,
         loan_type: loanType,
       } as any).select().single();
 
@@ -555,7 +582,38 @@ const QuickLoans = () => {
             },
           }
         });
-        toast({ title: "Loan Requested", description: `Guarantor notified by SMS. UGX ${FEE.toLocaleString()} evaluation fee added to principal.` });
+        // Second guarantor (business loans)
+        if (guarantor2) {
+          if (guarantor2.phone) {
+            try {
+              await supabase.functions.invoke('send-sms', {
+                body: {
+                  phone: guarantor2.phone,
+                  message: `Great Agro Coffee\nHi ${guarantor2.name.split(' ')[0]}, ${employee.name} requested an Employee Business Loan of UGX ${amount.toLocaleString()} for ${months} months and listed you as guarantor. Approval code: ${approvalCode2}. Log into the system to approve or reject.`,
+                  userName: guarantor2.name,
+                  recipientEmail: guarantor2.email,
+                  messageType: 'loan_guarantor_code',
+                  priority: 'premium',
+                },
+              });
+            } catch (e) { console.warn('Guarantor 2 SMS failed:', e); }
+          }
+          await supabase.functions.invoke('send-transactional-email', {
+            body: {
+              templateName: 'loan-guarantor-code',
+              recipientEmail: guarantor2.email,
+              idempotencyKey: `loan-guarantor2-${guarantor2.email}-${Date.now()}`,
+              templateData: {
+                guarantorName: guarantor2.name,
+                borrowerName: employee.name,
+                loanAmount: amount.toLocaleString(),
+                duration: String(months),
+                approvalCode: approvalCode2,
+              },
+            }
+          });
+        }
+        toast({ title: "Loan Requested", description: `${guarantor2 ? 'Both guarantors' : 'Guarantor'} notified by SMS. UGX ${FEE.toLocaleString()} evaluation fee added to principal.` });
       } else {
         toast({ title: "Loan Requested", description: `Pure Salary Loan submitted for admin approval. UGX ${FEE.toLocaleString()} evaluation fee added to principal.` });
       }
@@ -584,6 +642,7 @@ const QuickLoans = () => {
       setLoanAmount('');
       setDurationMonths('');
       setGuarantorId('');
+      setGuarantor2Id('');
       fetchLoans();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -600,14 +659,23 @@ const QuickLoans = () => {
       toast({ title: 'Fill amount & duration first', description: 'Enter the loan amount and duration before evaluation.', variant: 'destructive' });
       return;
     }
+    if (getGuarantorsRequired(loanType) >= 2 && (!guarantorId || !guarantor2Id)) {
+      toast({ title: 'Select both guarantors', description: 'The Employee Business Loan is evaluated against both guarantors — pick them before running the evaluation.', variant: 'destructive' });
+      return;
+    }
     setEvaluating(true);
     try {
+      const gEmails = [
+        employees.find(e => e.id === guarantorId)?.email,
+        employees.find(e => e.id === guarantor2Id)?.email,
+      ].filter(Boolean);
       const { data, error } = await supabase.functions.invoke('loan-evaluation', {
         body: {
           employee_email: employee.email,
           requested_amount: requested,
           requested_loan_type: loanType,
           requested_duration: months,
+          guarantor_emails: gEmails,
         },
       });
       if (error) throw error;
@@ -698,29 +766,48 @@ const QuickLoans = () => {
   const handleGuarantorApproval = async (approve: boolean) => {
     if (!pendingGuarantorLoan) return;
 
-    if (approve && guarantorCode !== pendingGuarantorLoan.guarantor_approval_code) {
+    const isSecondSlot = pendingGuarantorLoan.guarantor2_email === employee?.email;
+    const expectedCode = isSecondSlot
+      ? pendingGuarantorLoan.guarantor2_approval_code
+      : pendingGuarantorLoan.guarantor_approval_code;
+
+    if (approve && guarantorCode !== expectedCode) {
       toast({ title: "Error", description: "Invalid approval code", variant: "destructive" });
       return;
     }
 
     setSubmitting(true);
     try {
-      const updateData: any = approve
-        ? { guarantor_approved: true, guarantor_approved_at: new Date().toISOString(), status: 'pending_admin' }
-        : { guarantor_declined: true, guarantor_approved: false, status: 'guarantor_declined', admin_rejection_reason: 'Guarantor declined' };
+      const needsBoth = !!pendingGuarantorLoan.guarantor2_email;
+      const otherApproved = isSecondSlot
+        ? !!pendingGuarantorLoan.guarantor_approved
+        : !!pendingGuarantorLoan.guarantor2_approved;
+      const allApproved = !needsBoth || otherApproved;
 
-      const { error } = await supabase.from('loans').update(updateData).eq('id', pendingGuarantorLoan.id);
+      let updateData: any;
+      if (approve) {
+        updateData = isSecondSlot
+          ? { guarantor2_approved: true, guarantor2_approved_at: new Date().toISOString() }
+          : { guarantor_approved: true, guarantor_approved_at: new Date().toISOString() };
+        if (allApproved) updateData.status = 'pending_admin';
+      } else {
+        updateData = isSecondSlot
+          ? { guarantor2_declined: true, guarantor2_approved: false, status: 'guarantor_declined', admin_rejection_reason: 'Guarantor declined' }
+          : { guarantor_declined: true, guarantor_approved: false, status: 'guarantor_declined', admin_rejection_reason: 'Guarantor declined' };
+      }
+
+      const { error } = await (supabase as any).from('loans').update(updateData).eq('id', pendingGuarantorLoan.id);
       if (error) throw error;
 
       // Notify borrower via SMS + email
       await supabase.functions.invoke('send-sms', {
-        body: { phone: pendingGuarantorLoan.employee_phone, message: approve ? `Dear ${pendingGuarantorLoan.employee_name}, your guarantor ${employee?.name} has approved your loan request. It is now pending admin approval.` : `Dear ${pendingGuarantorLoan.employee_name}, your guarantor ${employee?.name} has declined your loan request. Log in to select a new guarantor for the same application.`, userName: pendingGuarantorLoan.employee_name, messageType: 'loan_guarantor_response' }
+        body: { phone: pendingGuarantorLoan.employee_phone, message: approve ? `Dear ${pendingGuarantorLoan.employee_name}, your guarantor ${employee?.name} has approved your loan request. ${allApproved ? 'It is now pending admin approval.' : 'Waiting for your other guarantor to approve.'}` : `Dear ${pendingGuarantorLoan.employee_name}, your guarantor ${employee?.name} has declined your loan request. Log in to select a new guarantor for the same application.`, userName: pendingGuarantorLoan.employee_name, messageType: 'loan_guarantor_response' }
       });
       await supabase.functions.invoke('send-transactional-email', {
-        body: { templateName: 'loan-guarantor-response', recipientEmail: pendingGuarantorLoan.employee_email, idempotencyKey: `guarantor-response-${pendingGuarantorLoan.id}-${approve}`, templateData: { borrowerName: pendingGuarantorLoan.employee_name, guarantorName: employee?.name || '', loanAmount: pendingGuarantorLoan.loan_amount.toLocaleString(), durationMonths: String(pendingGuarantorLoan.duration_months), isApproved: approve } }
+        body: { templateName: 'loan-guarantor-response', recipientEmail: pendingGuarantorLoan.employee_email, idempotencyKey: `guarantor-response-${pendingGuarantorLoan.id}-${isSecondSlot ? 'g2' : 'g1'}-${approve}`, templateData: { borrowerName: pendingGuarantorLoan.employee_name, guarantorName: employee?.name || '', loanAmount: pendingGuarantorLoan.loan_amount.toLocaleString(), durationMonths: String(pendingGuarantorLoan.duration_months), isApproved: approve } }
       });
 
-      toast({ title: approve ? "Loan Guaranteed" : "Loan Declined", description: approve ? "The loan is now pending admin approval" : "The borrower will be notified" });
+      toast({ title: approve ? "Loan Guaranteed" : "Loan Declined", description: approve ? (allApproved ? "The loan is now pending admin approval" : "Recorded — waiting for the second guarantor") : "The borrower will be notified" });
       setPendingGuarantorLoan(null);
       setGuarantorCode('');
       fetchLoans();
@@ -957,7 +1044,7 @@ const QuickLoans = () => {
         
         const pdfBlob = generateLoanAgreementPdf({
           loanId: loanId,
-          loanType: loan.loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan',
+          loanType: loan.loan_type === 'business' ? 'Employee Business Loan' : loan.loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan',
           principal: loan.loan_amount,
           interestRate: loan.interest_rate,
           dailyRate: loan.daily_interest_rate || Number((loan.interest_rate / 30).toFixed(2)),
@@ -1011,7 +1098,7 @@ const QuickLoans = () => {
           numInstallments: String(numInstallments),
           firstDeductionDate: repaymentDateStr,
           guarantorName: loan.guarantor_name || '',
-          loanType: loan.loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan',
+          loanType: loan.loan_type === 'business' ? 'Employee Business Loan' : loan.loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan',
           approvedBy: employee?.name || 'Administration',
           approvalDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
           disbursedAmount: disbursedAmount.toLocaleString(),
@@ -1053,7 +1140,7 @@ const QuickLoans = () => {
           body: { phone: loan.employee_phone, message: `Dear ${loan.employee_name}, your loan request of UGX ${loan.loan_amount.toLocaleString()} has been declined. Reason: ${rejectionReason || 'Not specified'}.`, userName: loan.employee_name, messageType: 'loan_rejected' }
         });
         await supabase.functions.invoke('send-transactional-email', {
-          body: { templateName: 'loan-rejected', recipientEmail: loan.employee_email, idempotencyKey: `loan-rejected-${loanId}`, templateData: { employeeName: loan.employee_name, loanAmount: loan.loan_amount.toLocaleString(), rejectionReason: rejectionReason || 'Not specified', loanType: loan.loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan' } }
+          body: { templateName: 'loan-rejected', recipientEmail: loan.employee_email, idempotencyKey: `loan-rejected-${loanId}`, templateData: { employeeName: loan.employee_name, loanAmount: loan.loan_amount.toLocaleString(), rejectionReason: rejectionReason || 'Not specified', loanType: loan.loan_type === 'business' ? 'Employee Business Loan' : loan.loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan' } }
         });
 
         toast({ title: "Loan Rejected" });
@@ -2047,6 +2134,7 @@ const QuickLoans = () => {
                       setRepaymentFrequency(LOAN_TYPE_CONFIG[lt].frequencies[0]);
                       const cap = LOAN_TYPE_CONFIG[lt].maxMonths;
                       if (cap && parseInt(durationMonths) > cap) setDurationMonths('');
+                      if (getGuarantorsRequired(lt) < 2) setGuarantor2Id('');
                     }}>
                       <SelectTrigger><SelectValue placeholder="Select loan type" /></SelectTrigger>
                       <SelectContent>
@@ -2073,7 +2161,7 @@ const QuickLoans = () => {
                     <Select value={durationMonths} onValueChange={setDurationMonths}>
                       <SelectTrigger><SelectValue placeholder="Select duration" /></SelectTrigger>
                       <SelectContent>
-                        {[1, 2, 3, 4, 5, 6].filter(m => !LOAN_TYPE_CONFIG[loanType].maxMonths || m <= LOAN_TYPE_CONFIG[loanType].maxMonths!).map(m => {
+                        {[1, 2, 3, 4, 5, 6, 7, 8].filter(m => !LOAN_TYPE_CONFIG[loanType].maxMonths || m <= LOAN_TYPE_CONFIG[loanType].maxMonths!).map(m => {
                           const monthlyRate = LOAN_TYPE_CONFIG[loanType].monthlyRate;
                           const maxRate = LOAN_TYPE_CONFIG[loanType].maxRate;
                           const effectiveRate = Math.min(monthlyRate * m, maxRate);
@@ -2087,16 +2175,34 @@ const QuickLoans = () => {
                     </Select>
                   </div>
                   {LOAN_TYPE_CONFIG[loanType].requiresGuarantor !== false ? (
-                    <div>
-                      <Label>Select Guarantor</Label>
-                      <Select value={guarantorId} onValueChange={setGuarantorId}>
-                        <SelectTrigger><SelectValue placeholder="Choose a colleague" /></SelectTrigger>
-                        <SelectContent>
-                          {employees.filter(e => e.email !== employee?.email).map(e => (
-                            <SelectItem key={e.id} value={e.id}>{e.name} ({e.email})</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <div className="space-y-3">
+                      <div>
+                        <Label>{getGuarantorsRequired(loanType) >= 2 ? 'Guarantor 1' : 'Select Guarantor'}</Label>
+                        <Select value={guarantorId} onValueChange={setGuarantorId}>
+                          <SelectTrigger><SelectValue placeholder="Choose a colleague" /></SelectTrigger>
+                          <SelectContent>
+                            {employees.filter(e => e.email !== employee?.email && e.id !== guarantor2Id).map(e => (
+                              <SelectItem key={e.id} value={e.id}>{e.name} ({e.email})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {getGuarantorsRequired(loanType) >= 2 && (
+                        <div>
+                          <Label>Guarantor 2</Label>
+                          <Select value={guarantor2Id} onValueChange={setGuarantor2Id}>
+                            <SelectTrigger><SelectValue placeholder="Choose a second colleague" /></SelectTrigger>
+                            <SelectContent>
+                              {employees.filter(e => e.email !== employee?.email && e.id !== guarantorId).map(e => (
+                                <SelectItem key={e.id} value={e.id}>{e.name} ({e.email})</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Both guarantors are assessed by the evaluation engine — their salary, wallet and existing guarantees set your final take-home. Both wallets can be debited if you miss a repayment.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <Card className="border-emerald-300 bg-emerald-50 dark:bg-emerald-950/20">
