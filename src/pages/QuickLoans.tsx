@@ -25,14 +25,18 @@ import { generateLoanAgreementPdf } from '@/utils/loanAgreementPdf';
 import LoanAppealDialog from '@/components/loans/LoanAppealDialog';
 
 // Loan types with their monthly interest rates
-type LoanType = 'quick' | 'long_term' | 'pure_salary';
+type LoanType = 'quick' | 'long_term' | 'pure_salary' | 'business';
 type RepaymentFrequency = 'weekly' | 'monthly' | 'bullet';
 
-const LOAN_TYPE_CONFIG: Record<LoanType, { label: string; monthlyRate: number; maxRate: number; description: string; frequencies: RepaymentFrequency[]; maxMonths?: number; requiresGuarantor?: boolean }> = {
-  quick: { label: 'Quick Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Short-term, weekly repayments (total interest cap 35%)', frequencies: ['weekly'], requiresGuarantor: true },
-  long_term: { label: 'Long-Term Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Flexible repayment, monthly or bullet (total interest cap 35%)', frequencies: ['monthly', 'bullet'], requiresGuarantor: true },
+const LOAN_TYPE_CONFIG: Record<LoanType, { label: string; monthlyRate: number; maxRate: number; description: string; frequencies: RepaymentFrequency[]; maxMonths?: number; requiresGuarantor?: boolean; guarantorsRequired?: number }> = {
+  quick: { label: 'Quick Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Short-term, weekly repayments (total interest cap 35%)', frequencies: ['weekly'], maxMonths: 6, requiresGuarantor: true, guarantorsRequired: 1 },
+  long_term: { label: 'Long-Term Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Flexible repayment, monthly or bullet (total interest cap 35%)', frequencies: ['monthly', 'bullet'], maxMonths: 6, requiresGuarantor: true, guarantorsRequired: 1 },
   pure_salary: { label: 'Pure Salary Loan', monthlyRate: 15, maxRate: 45, description: '15%/month – Repaid by 50% of monthly salary (no guarantor, max 3 months)', frequencies: ['monthly'], maxMonths: 3, requiresGuarantor: false },
+  business: { label: 'Employee Business Loan', monthlyRate: 3, maxRate: 24, description: '3%/month – Low-rate business capital, flexible monthly repayment up to 8 months, 2 guarantors required', frequencies: ['monthly'], maxMonths: 8, requiresGuarantor: true, guarantorsRequired: 2 },
 };
+
+const getGuarantorsRequired = (t: LoanType) =>
+  LOAN_TYPE_CONFIG[t].requiresGuarantor === false ? 0 : (LOAN_TYPE_CONFIG[t].guarantorsRequired ?? 1);
 
 // Helper: calculate daily interest rate from monthly rate
 const getDailyRate = (loanType: LoanType) => {
