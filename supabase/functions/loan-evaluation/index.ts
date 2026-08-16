@@ -43,8 +43,21 @@ serve(async (req) => {
     // generate its own repayment capacity. The ceiling is driven by the
     // combined guarantor capacity (computed below), with a base floor and
     // an absolute product cap.
-    const BUSINESS_FLOOR = 2_000_000;   // minimum entitlement for a qualifying business loan
-    const BUSINESS_ABS_CAP = 15_000_000; // absolute product ceiling
+    // Admin-configurable product policy (Admin Settings → Loan Policy)
+    let policy: any = {};
+    try {
+      const { data: polRow } = await supabase
+        .from("system_settings")
+        .select("setting_value")
+        .eq("setting_key", "loan_product_limits")
+        .maybeSingle();
+      policy = (polRow as any)?.setting_value || {};
+    } catch (_e) { policy = {}; }
+
+    const BUSINESS_FLOOR = Number(policy.business_floor ?? 2_000_000);   // minimum entitlement for a qualifying business loan
+    const BUSINESS_ABS_CAP = Number(policy.business_max ?? 15_000_000);  // absolute product ceiling (admin-set)
+    const HIGH_VALUE_THRESHOLD = Number(policy.high_value_threshold ?? 5_000_000);
+    const HIGH_VALUE_COVERAGE = Number(policy.high_value_coverage ?? 1); // guarantor cover multiple required above threshold
     let maxLimit = isBusinessLoan ? BUSINESS_FLOOR : salary * 3;
 
     // Unified id
