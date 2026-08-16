@@ -410,7 +410,8 @@ const QuickLoans = () => {
     const months = parseInt(durationMonths) || 0;
     const cfg = LOAN_TYPE_CONFIG[loanType];
     const needsGuarantor = cfg.requiresGuarantor !== false;
-    if (requested <= 0 || months <= 0 || (needsGuarantor && !guarantorId)) {
+    const guarantorsRequired = getGuarantorsRequired(loanType);
+    if (requested <= 0 || months <= 0 || (needsGuarantor && !guarantorId) || (guarantorsRequired >= 2 && !guarantor2Id)) {
       toast({ title: "Error", description: "Please fill all fields", variant: "destructive" });
       return;
     }
@@ -478,6 +479,7 @@ const QuickLoans = () => {
     }
 
     let guarantor: any = null;
+    let guarantor2: any = null;
     if (needsGuarantor) {
       guarantor = employees.find(e => e.id === guarantorId);
       if (!guarantor) return;
@@ -485,11 +487,24 @@ const QuickLoans = () => {
         toast({ title: "Error", description: "You cannot be your own guarantor", variant: "destructive" });
         return;
       }
+      if (guarantorsRequired >= 2) {
+        guarantor2 = employees.find(e => e.id === guarantor2Id);
+        if (!guarantor2) return;
+        if (guarantor2.email === employee.email) {
+          toast({ title: "Error", description: "You cannot be your own guarantor", variant: "destructive" });
+          return;
+        }
+        if (guarantor2.email === guarantor.email) {
+          toast({ title: "Error", description: "The two guarantors must be different people", variant: "destructive" });
+          return;
+        }
+      }
     }
 
     setSubmitting(true);
     try {
       const approvalCode = needsGuarantor ? Math.floor(100000 + Math.random() * 900000).toString() : null;
+      const approvalCode2 = guarantor2 ? Math.floor(100000 + Math.random() * 900000).toString() : null;
 
       const { data: insertedLoan, error } = await supabase.from('loans').insert({
         employee_id: employee.id,
@@ -513,6 +528,12 @@ const QuickLoans = () => {
         guarantor_phone: needsGuarantor ? (guarantor.phone || '') : null,
         guarantor_approval_code: approvalCode,
         guarantor_approved: needsGuarantor ? false : true,
+        guarantor2_id: guarantor2 ? guarantor2.id : null,
+        guarantor2_email: guarantor2 ? guarantor2.email : null,
+        guarantor2_name: guarantor2 ? guarantor2.name : null,
+        guarantor2_phone: guarantor2 ? (guarantor2.phone || '') : null,
+        guarantor2_approval_code: approvalCode2,
+        guarantor2_approved: false,
         loan_type: loanType,
       } as any).select().single();
 
@@ -561,7 +582,38 @@ const QuickLoans = () => {
             },
           }
         });
-        toast({ title: "Loan Requested", description: `Guarantor notified by SMS. UGX ${FEE.toLocaleString()} evaluation fee added to principal.` });
+        // Second guarantor (business loans)
+        if (guarantor2) {
+          if (guarantor2.phone) {
+            try {
+              await supabase.functions.invoke('send-sms', {
+                body: {
+                  phone: guarantor2.phone,
+                  message: `Great Agro Coffee\nHi ${guarantor2.name.split(' ')[0]}, ${employee.name} requested an Employee Business Loan of UGX ${amount.toLocaleString()} for ${months} months and listed you as guarantor. Approval code: ${approvalCode2}. Log into the system to approve or reject.`,
+                  userName: guarantor2.name,
+                  recipientEmail: guarantor2.email,
+                  messageType: 'loan_guarantor_code',
+                  priority: 'premium',
+                },
+              });
+            } catch (e) { console.warn('Guarantor 2 SMS failed:', e); }
+          }
+          await supabase.functions.invoke('send-transactional-email', {
+            body: {
+              templateName: 'loan-guarantor-code',
+              recipientEmail: guarantor2.email,
+              idempotencyKey: `loan-guarantor2-${guarantor2.email}-${Date.now()}`,
+              templateData: {
+                guarantorName: guarantor2.name,
+                borrowerName: employee.name,
+                loanAmount: amount.toLocaleString(),
+                duration: String(months),
+                approvalCode: approvalCode2,
+              },
+            }
+          });
+        }
+        toast({ title: "Loan Requested", description: `${guarantor2 ? 'Both guarantors' : 'Guarantor'} notified by SMS. UGX ${FEE.toLocaleString()} evaluation fee added to principal.` });
       } else {
         toast({ title: "Loan Requested", description: `Pure Salary Loan submitted for admin approval. UGX ${FEE.toLocaleString()} evaluation fee added to principal.` });
       }
@@ -590,6 +642,7 @@ const QuickLoans = () => {
       setLoanAmount('');
       setDurationMonths('');
       setGuarantorId('');
+      setGuarantor2Id('');
       fetchLoans();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
