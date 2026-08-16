@@ -175,9 +175,72 @@ serve(async (req) => {
 
     const requested = Number(requested_amount || 0);
 
+    // ── GUARANTOR CAPACITY ────────────────────────────────────────────
+    // Evaluate every proposed guarantor: can their salary + wallet + clean
+    // record actually carry this amount? Their combined capacity caps the
+    // borrower's limit (business loans especially, where 2 are required).
+    const guarantorAssessments: any[] = [];
+    let guarantorCapacityTotal = 0;
+    let guarantorBlocked = false;
+    for (const gEmail of (Array.isArray(guarantor_emails) ? guarantor_emails : []).filter(Boolean)) {
+      const { data: gEmp } = await supabase
+        .from("employees")
+        .select("name, email, salary, join_date, auth_user_id")
+        .eq("email", gEmail)
+        .maybeSingle();
+      if (!gEmp) continue;
+      const gSalary = Number(gEmp.salary || 0);
+      const { data: gUid } = await supabase.rpc("get_unified_user_id", { input_email: gEmail });
+      const gUserId = gUid || gEmp.auth_user_id;
+      let gWallet = 0;
+      if (gUserId) {
+        const { data: gBal } = await supabase.rpc("get_effective_wallet_balance", { p_user_id: gUserId });
+        gWallet = Number(gBal ?? 0);
+      }
+      const { data: gGuaranteed } = await supabase
+        .from("loans")
+        .select("id, loan_amount, remaining_balance, status, is_defaulted")
+        .eq("guarantor_email", gEmail);
+      const gList = gGuaranteed || [];
+      const gActive = gList.filter((l: any) => ["active", "pending_guarantor", "pending_admin"].includes(l.status));
+      const gExposure = gActive.reduce((s: number, l: any) => s + Number(l.remaining_balance || l.loan_amount || 0), 0);
+      const gBadGuarantees = gList.filter((l: any) => l.is_defaulted === true || l.status === "defaulted").length;
+      const { data: gOwn } = await supabase
+        .from("loans")
+        .select("id, remaining_balance, loan_amount, status, is_defaulted")
+        .eq("employee_email", gEmail);
+      const gOwnList = gOwn || [];
+      const gOwnDefaults = gOwnList.filter((l: any) => l.is_defaulted === true || l.status === "defaulted").length;
+      const gOwnOutstanding = gOwnList
+        .filter((l: any) => l.status === "active")
+        .reduce((s: number, l: any) => s + Number(l.remaining_balance || 0), 0);
+
+      // Capacity = 2× salary + half of positive wallet, minus their own debt
+      // and half of what they already guarantee. Bad record ⇒ zero capacity.
+      let capacity = Math.round(gSalary * 2 + Math.max(0, gWallet) * 0.5 - gOwnOutstanding * 0.5 - gExposure * 0.5);
+      const notes: string[] = [];
+      if (gSalary <= 0) { capacity = 0; notes.push("no salary on record"); }
+      if (gOwnDefaults > 0) { capacity = 0; notes.push(`${gOwnDefaults} own default(s)`); }
+      if (gBadGuarantees > 0) { capacity = 0; notes.push(`${gBadGuarantees} guaranteed loan(s) defaulted`); }
+      if (gExposure > 0) notes.push(`already guaranteeing UGX ${gExposure.toLocaleString()}`);
+      capacity = Math.max(0, capacity);
+      if (capacity <= 0) guarantorBlocked = true;
+      guarantorCapacityTotal += capacity;
+      guarantorAssessments.push({
+        email: gEmail, name: gEmp.name, salary: gSalary, wallet_balance: Math.round(gWallet),
+        active_guarantee_exposure: gExposure, guaranteed_defaults: gBadGuarantees,
+        own_defaults: gOwnDefaults, own_outstanding: gOwnOutstanding, capacity, notes,
+      });
+    }
+
     // Total existing debt obligations (loans + salary advance + overdraft drawn)
     const totalDebtObligations = outstanding + salaryAdvanceOutstanding + overdraftOutstanding;
     const debtToSalaryRatio = salary > 0 ? totalDebtObligations / salary : 999;
+
+    // Guarantor capacity caps the entitlement for guarantor-backed products.
+    if (guarantorAssessments.length > 0) {
+      maxLimit = Math.max(0, Math.min(maxLimit, guarantorCapacityTotal));
+    }
 
     // Heuristic fallback — start from FULL entitlement (3× salary), not requested.
     // The "limit" shown to user must reflect what they're entitled to, not what they typed.
