@@ -134,70 +134,72 @@ Deno.serve(async (req) => {
         // ═══════════════════════════════════════════════════
         // STEP 2: Deduct from GUARANTOR's wallet
         // ═══════════════════════════════════════════════════
-        if (remainingAmount > 0 && guarantorEmail) {
-          console.log(`  ⚠️ Borrower insufficient, recovering from guarantor: ${guarantorEmail}`)
+        // Business loans carry TWO guarantors — recover from each in turn
+        const guarantorList = [
+          { email: guarantorEmail, name: loan.guarantor_name, phone: loan.guarantor_phone, slot: 1 },
+          { email: loan.guarantor2_email, name: loan.guarantor2_name, phone: loan.guarantor2_phone, slot: 2 },
+        ].filter((g) => !!g.email)
 
-          const { data: guarantorUserId } = await supabase.rpc('get_unified_user_id', { input_email: guarantorEmail })
+        for (const g of guarantorList) {
+          if (remainingAmount <= 0) break
+          console.log(`  ⚠️ Borrower insufficient, recovering from guarantor ${g.slot}: ${g.email}`)
 
-          if (guarantorUserId) {
-            const { data: gBalRaw } = await supabase
-              .rpc('get_spendable_wallet_balance', { p_user_id: guarantorUserId })
-            const guarantorBalance = Math.max(0, Number(gBalRaw || 0))
-            console.log(`  Guarantor spendable wallet balance: UGX ${guarantorBalance}`)
+          const { data: guarantorUserId } = await supabase.rpc('get_unified_user_id', { input_email: g.email })
+          if (!guarantorUserId) continue
 
-            if (guarantorBalance > 0) {
-              deductedFromGuarantor = Math.min(guarantorBalance, remainingAmount)
-              const { error: gIns } = await supabase.from('ledger_entries').insert({
-                user_id: guarantorUserId,
-                entry_type: 'ADJUSTMENT',
-                amount: -deductedFromGuarantor,
-                reference: `LOAN-GUARANTOR-${loan.id}-${repayment.installment_number}`,
-                metadata: {
-                  loan_id: loan.id,
-                  installment: repayment.installment_number,
-                  borrower: borrowerEmail,
-                  source: 'guarantor',
-                  bypass_treasury_check: true,
-                  description: `Guarantor recovery for ${loan.employee_name}'s loan`
-                }
-              })
-              if (gIns) {
-                console.error(`  ❌ FAILED to write guarantor ledger entry:`, gIns)
-                deductedFromGuarantor = 0
-                throw new Error(`Guarantor deduction insert failed: ${gIns.message}`)
-              }
-              remainingAmount -= deductedFromGuarantor
-              deductionSources.push(`Guarantor: UGX ${deductedFromGuarantor.toLocaleString()}`)
-              console.log(`  ✅ Deducted UGX ${deductedFromGuarantor} from guarantor`)
+          const { data: gBalRaw } = await supabase
+            .rpc('get_spendable_wallet_balance', { p_user_id: guarantorUserId })
+          const guarantorBalance = Math.max(0, Number(gBalRaw || 0))
+          console.log(`  Guarantor ${g.slot} spendable wallet balance: UGX ${guarantorBalance}`)
+          if (guarantorBalance <= 0) continue
 
-              // SMS to guarantor
-              await supabase.functions.invoke('send-sms', {
-                body: {
-                  phone: loan.guarantor_phone,
-                  message: `Dear ${loan.guarantor_name}, UGX ${deductedFromGuarantor.toLocaleString()} has been deducted from your account to cover ${loan.employee_name}'s loan repayment (installment ${repayment.installment_number}). Borrower had insufficient funds. - Great Pearl Coffee`,
-                  userName: loan.guarantor_name,
-                  messageType: 'guarantor_recovery'
-                }
-              })
-
-              // Email to guarantor
-              if (loan.guarantor_email) {
-                await supabase.functions.invoke('send-transactional-email', {
-                  body: {
-                    templateName: 'guarantor-recovery',
-                    recipientEmail: loan.guarantor_email,
-                    idempotencyKey: `guarantor-recovery-${loan.id}-${repayment.installment_number}`,
-                    templateData: {
-                      guarantorName: loan.guarantor_name,
-                      borrowerName: loan.employee_name,
-                      amountDeducted: deductedFromGuarantor.toLocaleString(),
-                      installmentNumber: String(repayment.installment_number),
-                    },
-                  },
-                })
-              }
+          const taken = Math.min(guarantorBalance, remainingAmount)
+          const { error: gIns } = await supabase.from('ledger_entries').insert({
+            user_id: guarantorUserId,
+            entry_type: 'ADJUSTMENT',
+            amount: -taken,
+            reference: `LOAN-GUARANTOR-${loan.id}-${repayment.installment_number}${g.slot === 2 ? '-G2' : ''}`,
+            metadata: {
+              loan_id: loan.id,
+              installment: repayment.installment_number,
+              borrower: borrowerEmail,
+              source: 'guarantor',
+              guarantor_slot: g.slot,
+              bypass_treasury_check: true,
+              description: `Guarantor recovery for ${loan.employee_name}'s loan`
             }
+          })
+          if (gIns) {
+            console.error(`  ❌ FAILED to write guarantor ledger entry:`, gIns)
+            throw new Error(`Guarantor deduction insert failed: ${gIns.message}`)
           }
+          deductedFromGuarantor += taken
+          remainingAmount -= taken
+          deductionSources.push(`Guarantor ${g.slot}: UGX ${taken.toLocaleString()}`)
+          console.log(`  ✅ Deducted UGX ${taken} from guarantor ${g.slot}`)
+
+          await supabase.functions.invoke('send-sms', {
+            body: {
+              phone: g.phone,
+              message: `Dear ${g.name}, UGX ${taken.toLocaleString()} has been deducted from your account to cover ${loan.employee_name}'s loan repayment (installment ${repayment.installment_number}). Borrower had insufficient funds. - Great Pearl Coffee`,
+              userName: g.name,
+              messageType: 'guarantor_recovery'
+            }
+          })
+
+          await supabase.functions.invoke('send-transactional-email', {
+            body: {
+              templateName: 'guarantor-recovery',
+              recipientEmail: g.email,
+              idempotencyKey: `guarantor-recovery-${loan.id}-${repayment.installment_number}-g${g.slot}`,
+              templateData: {
+                guarantorName: g.name,
+                borrowerName: loan.employee_name,
+                amountDeducted: taken.toLocaleString(),
+                installmentNumber: String(repayment.installment_number),
+              },
+            },
+          })
         }
 
         // ═══════════════════════════════════════════════════
