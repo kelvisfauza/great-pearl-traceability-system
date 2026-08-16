@@ -293,6 +293,20 @@ serve(async (req) => {
           BUSINESS_ABS_CAP,
           allClean ? Math.max(BUSINESS_FLOOR, guarantorCapacityTotal) : guarantorCapacityTotal,
         );
+        // Security & recovery policy for high-value facilities: above the
+        // high-value threshold the guarantors must fully cover the facility
+        // (coverage multiple) AND be completely clean. Otherwise the offer is
+        // trimmed back to the threshold / actual covered amount.
+        if (maxLimit > HIGH_VALUE_THRESHOLD) {
+          const covered = HIGH_VALUE_COVERAGE > 0
+            ? Math.floor(guarantorCapacityTotal / HIGH_VALUE_COVERAGE)
+            : guarantorCapacityTotal;
+          if (!allClean) {
+            maxLimit = Math.min(maxLimit, HIGH_VALUE_THRESHOLD);
+          } else {
+            maxLimit = Math.min(maxLimit, Math.max(HIGH_VALUE_THRESHOLD, covered));
+          }
+        }
       }
       if (guarantorBlocked) maxLimit = 0;
     } else if (guarantorAssessments.length > 0) {
