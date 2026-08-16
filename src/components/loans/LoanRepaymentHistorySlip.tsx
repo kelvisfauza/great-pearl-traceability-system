@@ -221,7 +221,7 @@ const LoanRepaymentHistorySlip = ({ open, onClose, loanInfo, repayments }: Props
           <div className="info grid grid-cols-2 gap-x-6 gap-y-1 text-sm mb-4">
             <span className="label text-muted-foreground">Borrower:</span><span className="font-semibold">{loanInfo.employeeName}</span>
             <span className="label text-muted-foreground">Email:</span><span>{loanInfo.employeeEmail}</span>
-            <span className="label text-muted-foreground">Loan Type:</span><span className="font-semibold">{loanInfo.loanType === 'long_term' ? 'Long-Term' : 'Quick'}</span>
+            <span className="label text-muted-foreground">Loan Type:</span><span className="font-semibold">{loanInfo.loanType === 'business' ? 'Business' : loanInfo.loanType === 'long_term' ? 'Long-Term' : 'Quick'}</span>
             <span className="label text-muted-foreground">Frequency:</span><span className="capitalize">{loanInfo.repaymentFrequency || 'weekly'}</span>
             <span className="label text-muted-foreground">Principal:</span><span className="font-semibold">{fmtMoney(loanInfo.loanAmount)}</span>
             <span className="label text-muted-foreground">Total Repayable:</span><span className="font-semibold">{fmtMoney(loanInfo.totalRepayable)}</span>

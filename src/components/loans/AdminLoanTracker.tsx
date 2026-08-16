@@ -212,7 +212,7 @@ const AdminLoanTracker = () => {
                           <div>
                             <p className="font-medium text-sm">{b.employee_name}</p>
                             <div className="flex items-center gap-1 flex-wrap">
-                              <p className="text-xs text-muted-foreground">{b.loan_type === 'long_term' ? 'Long-Term' : 'Quick'}</p>
+                              <p className="text-xs text-muted-foreground">{b.loan_type === 'business' ? 'Business' : b.loan_type === 'long_term' ? 'Long-Term' : 'Quick'}</p>
                               {b.approved_via_appeal && (
                                 <Badge className="bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-300 text-[10px] px-1 py-0">Admin Appeal</Badge>
                               )}
@@ -302,7 +302,7 @@ const AdminLoanTracker = () => {
                               <div key={r.id} className="flex items-center justify-between px-4 py-2.5 bg-background">
                                 <div>
                                   <p className="font-medium text-sm">{r.loans?.employee_name}</p>
-                                  <p className="text-xs text-muted-foreground">{r.loans?.repayment_frequency === 'weekly' ? 'Week' : r.loans?.repayment_frequency === 'bullet' ? 'Payment' : 'Month'} {r.installment_number} • {r.loans?.loan_type === 'long_term' ? 'Long-Term' : 'Quick'}</p>
+                                  <p className="text-xs text-muted-foreground">{r.loans?.repayment_frequency === 'weekly' ? 'Week' : r.loans?.repayment_frequency === 'bullet' ? 'Payment' : 'Month'} {r.installment_number} • {r.loans?.loan_type === 'business' ? 'Business' : r.loans?.loan_type === 'long_term' ? 'Long-Term' : 'Quick'}</p>
                                 </div>
                                 <div className="flex items-center gap-3">
                                   <span className="font-semibold text-sm">UGX {remaining.toLocaleString()}</span>
@@ -565,7 +565,7 @@ const BorrowerDetailDialog = ({ selectedBorrower, onClose, today, getStatusBadge
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                       <div>
                         <p className="text-muted-foreground text-xs">Loan Type</p>
-                        <p className="font-bold">{selectedBorrower.loan_type === 'long_term' ? 'Long-Term' : 'Quick'}</p>
+                        <p className="font-bold">{selectedBorrower.loan_type === 'business' ? 'Business' : selectedBorrower.loan_type === 'long_term' ? 'Long-Term' : 'Quick'}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground text-xs">Principal</p>
@@ -913,7 +913,7 @@ const BorrowerHistoryTab = ({ allRepayments, activeLoans }: { allRepayments: any
                   <div key={loan.id} className="flex items-center justify-between text-sm bg-muted/30 rounded p-2">
                     <div>
                       <p className="font-medium">
-                        {loan.loan_type === 'long_term' ? 'Long-Term' : 'Quick'} — UGX {loan.loan_amount?.toLocaleString()}
+                        {loan.loan_type === 'business' ? 'Business' : loan.loan_type === 'long_term' ? 'Long-Term' : 'Quick'} — UGX {loan.loan_amount?.toLocaleString()}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {new Date(loan.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
