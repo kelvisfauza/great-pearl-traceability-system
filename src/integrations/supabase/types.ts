@@ -5757,6 +5757,10 @@ export type Database = {
           repayment_frequency: string
           start_date: string | null
           status: string
+          terms_accepted: boolean
+          terms_accepted_at: string | null
+          terms_signature: string | null
+          terms_version: string | null
           total_repayable: number
           total_weeks: number | null
           updated_at: string
@@ -5816,6 +5820,10 @@ export type Database = {
           repayment_frequency?: string
           start_date?: string | null
           status?: string
+          terms_accepted?: boolean
+          terms_accepted_at?: string | null
+          terms_signature?: string | null
+          terms_version?: string | null
           total_repayable: number
           total_weeks?: number | null
           updated_at?: string
@@ -5875,6 +5883,10 @@ export type Database = {
           repayment_frequency?: string
           start_date?: string | null
           status?: string
+          terms_accepted?: boolean
+          terms_accepted_at?: string | null
+          terms_signature?: string | null
+          terms_version?: string | null
           total_repayable?: number
           total_weeks?: number | null
           updated_at?: string
