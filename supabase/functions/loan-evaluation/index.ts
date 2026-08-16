@@ -528,10 +528,10 @@ REQUEST
 
 PROPOSED GUARANTORS (their own capacity to carry this loan)
 ${guarantorAssessments.length
-  ? guarantorAssessments.map((g: any) => `- ${g.name} (${g.email}): salary UGX ${g.salary}, wallet UGX ${g.wallet_balance}, already guaranteeing UGX ${g.active_guarantee_exposure}, own outstanding UGX ${g.own_outstanding}, own defaults ${g.own_defaults}, guaranteed defaults ${g.guaranteed_defaults} → assessed capacity UGX ${g.capacity}`).join("\n")
+  ? guarantorAssessments.map((g: any) => `- ${g.name} (${g.email}): salary UGX ${g.salary}, wallet UGX ${g.wallet_balance}, already guaranteeing UGX ${g.active_guarantee_exposure}, own outstanding UGX ${g.own_outstanding}, own defaults ${g.own_defaults}, own overdue loans ${g.own_overdue}, guaranteed defaults ${g.guaranteed_defaults}, times debited as guarantor ${g.guarantor_recovery_hits} → assessed capacity UGX ${g.capacity}${g.notes?.length ? ` [${g.notes.join('; ')}]` : ''}`).join("\n")
   : "- none supplied"}
 - Combined guarantor capacity (UGX): ${guarantorCapacityTotal}
-${isBusinessLoan ? `- This is an EMPLOYEE BUSINESS LOAN: 3%/month flat, up to 8 months, requires 2 guarantors whose wallets can be debited. It is NOT capped by the borrower's salary — the business is expected to generate repayment capacity. The ceiling is the combined guarantor capacity (UGX ${guarantorCapacityTotal}), floored at UGX 2,000,000 and capped at UGX 15,000,000 → effective limit UGX ${maxLimit}. Do not reduce for salary size, debt-to-salary ratio or short tenure alone. Deny if fewer than 2 guarantors qualify or any guarantor capacity is 0.` : ""}
+${isBusinessLoan ? `- This is an EMPLOYEE BUSINESS LOAN: 3%/month flat, up to 8 months, requires 2 guarantors whose wallets can be debited. It is NOT capped by the borrower's salary — the business is expected to generate repayment capacity. The ceiling is the combined guarantor capacity (UGX ${guarantorCapacityTotal}), capped at UGX 15,000,000 → effective limit UGX ${maxLimit}. The UGX 2,000,000 floor applies ONLY when BOTH guarantors are clean (no defaults, no overdue loans, no prior guarantor recoveries, non-negative wallet); with weak or bad-debt guarantors the limit is the raw combined capacity and may be far below the floor. Do not reduce for salary size, debt-to-salary ratio or short tenure alone. Deny if fewer than 2 guarantors qualify or any guarantor capacity is 0.` : ""}
 
 RULES (be fair — approve when reasonable; only deny on clear red flags)
 - IMPORTANT: recommended_amount = the user's ENTITLEMENT/LIMIT, NOT the requested amount.
