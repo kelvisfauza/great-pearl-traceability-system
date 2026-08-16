@@ -215,9 +215,21 @@ serve(async (req) => {
         .eq("employee_email", gEmail);
       const gOwnList = gOwn || [];
       const gOwnDefaults = gOwnList.filter((l: any) => l.is_defaulted === true || l.status === "defaulted").length;
+      const gOwnOverdue = gOwnList.filter((l: any) => l.status === "overdue").length;
       const gOwnOutstanding = gOwnList
         .filter((l: any) => l.status === "active")
         .reduce((s: number, l: any) => s + Number(l.remaining_balance || 0), 0);
+
+      // Has this guarantor ever been debited because someone they backed failed?
+      let gRecoveryHits = 0;
+      if (gUserId) {
+        const { data: gRec } = await supabase
+          .from("ledger_entries")
+          .select("id")
+          .eq("user_id", String(gUserId))
+          .like("reference", "LOAN-GUARANTOR-%");
+        gRecoveryHits = (gRec || []).length;
+      }
 
       // Capacity = N× salary + half of positive wallet, minus their own debt
       // and half of what they already guarantee. Business loans lean harder on
@@ -225,9 +237,19 @@ serve(async (req) => {
       const gMultiple = isBusinessLoan ? 6 : 2;
       let capacity = Math.round(gSalary * gMultiple + Math.max(0, gWallet) * 0.5 - gOwnOutstanding * 0.5 - gExposure * 0.5);
       const notes: string[] = [];
+      // A guarantor sitting in overdraft (negative wallet) carries that debt fully.
+      if (gWallet < 0) {
+        capacity = Math.round(capacity + gWallet); // gWallet is negative
+        notes.push(`wallet in overdraft UGX ${Math.abs(Math.round(gWallet)).toLocaleString()}`);
+      }
       if (gSalary <= 0) { capacity = 0; notes.push("no salary on record"); }
       if (gOwnDefaults > 0) { capacity = 0; notes.push(`${gOwnDefaults} own default(s)`); }
       if (gBadGuarantees > 0) { capacity = 0; notes.push(`${gBadGuarantees} guaranteed loan(s) defaulted`); }
+      if (gOwnOverdue > 0) { capacity = 0; notes.push(`${gOwnOverdue} own loan(s) currently overdue`); }
+      if (gRecoveryHits > 0) {
+        capacity = Math.round(capacity * 0.5);
+        notes.push(`previously debited ${gRecoveryHits}× as guarantor`);
+      }
       if (gExposure > 0) notes.push(`already guaranteeing UGX ${gExposure.toLocaleString()}`);
       capacity = Math.max(0, capacity);
       if (capacity <= 0) guarantorBlocked = true;
@@ -235,7 +257,8 @@ serve(async (req) => {
       guarantorAssessments.push({
         email: gEmail, name: gEmp.name, salary: gSalary, wallet_balance: Math.round(gWallet),
         active_guarantee_exposure: gExposure, guaranteed_defaults: gBadGuarantees,
-        own_defaults: gOwnDefaults, own_outstanding: gOwnOutstanding, capacity, notes,
+        own_defaults: gOwnDefaults, own_overdue: gOwnOverdue, own_outstanding: gOwnOutstanding,
+        guarantor_recovery_hits: gRecoveryHits, capacity, notes,
       });
     }
 
@@ -246,9 +269,16 @@ serve(async (req) => {
     // Guarantor capacity drives the entitlement for guarantor-backed products.
     if (isBusinessLoan) {
       if (guarantorAssessments.length > 0) {
+        // The floor is a courtesy for CLEAN guarantors only — it must never lift
+        // a weak/bad-debt guarantor pair up to 2M. Anything below the floor is
+        // honoured at the true combined capacity.
+        const allClean = guarantorAssessments.every((g: any) =>
+          g.capacity > 0 && g.own_defaults === 0 && g.guaranteed_defaults === 0 &&
+          (g.own_overdue || 0) === 0 && (g.guarantor_recovery_hits || 0) === 0 && g.wallet_balance >= 0
+        );
         maxLimit = Math.min(
           BUSINESS_ABS_CAP,
-          Math.max(BUSINESS_FLOOR, guarantorCapacityTotal),
+          allClean ? Math.max(BUSINESS_FLOOR, guarantorCapacityTotal) : guarantorCapacityTotal,
         );
       }
       if (guarantorBlocked) maxLimit = 0;
@@ -498,10 +528,10 @@ REQUEST
 
 PROPOSED GUARANTORS (their own capacity to carry this loan)
 ${guarantorAssessments.length
-  ? guarantorAssessments.map((g: any) => `- ${g.name} (${g.email}): salary UGX ${g.salary}, wallet UGX ${g.wallet_balance}, already guaranteeing UGX ${g.active_guarantee_exposure}, own outstanding UGX ${g.own_outstanding}, own defaults ${g.own_defaults}, guaranteed defaults ${g.guaranteed_defaults} → assessed capacity UGX ${g.capacity}`).join("\n")
+  ? guarantorAssessments.map((g: any) => `- ${g.name} (${g.email}): salary UGX ${g.salary}, wallet UGX ${g.wallet_balance}, already guaranteeing UGX ${g.active_guarantee_exposure}, own outstanding UGX ${g.own_outstanding}, own defaults ${g.own_defaults}, own overdue loans ${g.own_overdue}, guaranteed defaults ${g.guaranteed_defaults}, times debited as guarantor ${g.guarantor_recovery_hits} → assessed capacity UGX ${g.capacity}${g.notes?.length ? ` [${g.notes.join('; ')}]` : ''}`).join("\n")
   : "- none supplied"}
 - Combined guarantor capacity (UGX): ${guarantorCapacityTotal}
-${isBusinessLoan ? `- This is an EMPLOYEE BUSINESS LOAN: 3%/month flat, up to 8 months, requires 2 guarantors whose wallets can be debited. It is NOT capped by the borrower's salary — the business is expected to generate repayment capacity. The ceiling is the combined guarantor capacity (UGX ${guarantorCapacityTotal}), floored at UGX 2,000,000 and capped at UGX 15,000,000 → effective limit UGX ${maxLimit}. Do not reduce for salary size, debt-to-salary ratio or short tenure alone. Deny if fewer than 2 guarantors qualify or any guarantor capacity is 0.` : ""}
+${isBusinessLoan ? `- This is an EMPLOYEE BUSINESS LOAN: 3%/month flat, up to 8 months, requires 2 guarantors whose wallets can be debited. It is NOT capped by the borrower's salary — the business is expected to generate repayment capacity. The ceiling is the combined guarantor capacity (UGX ${guarantorCapacityTotal}), capped at UGX 15,000,000 → effective limit UGX ${maxLimit}. The UGX 2,000,000 floor applies ONLY when BOTH guarantors are clean (no defaults, no overdue loans, no prior guarantor recoveries, non-negative wallet); with weak or bad-debt guarantors the limit is the raw combined capacity and may be far below the floor. Do not reduce for salary size, debt-to-salary ratio or short tenure alone. Deny if fewer than 2 guarantors qualify or any guarantor capacity is 0.` : ""}
 
 RULES (be fair — approve when reasonable; only deny on clear red flags)
 - IMPORTANT: recommended_amount = the user's ENTITLEMENT/LIMIT, NOT the requested amount.
