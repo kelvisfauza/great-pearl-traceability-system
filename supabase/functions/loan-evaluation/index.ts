@@ -12,7 +12,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { employee_email, requested_amount, requested_loan_type, requested_duration } = await req.json();
+    const { employee_email, requested_amount, requested_loan_type, requested_duration, guarantor_emails } = await req.json();
     if (!employee_email) {
       return new Response(JSON.stringify({ ok: false, error: "employee_email required" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -38,7 +38,10 @@ serve(async (req) => {
     }
 
     const salary = Number(emp.salary || 0);
-    const maxLimit = salary * 3;
+    const isBusinessLoan = requested_loan_type === "business";
+    // Business loans stretch to 4× salary, but the guarantors' combined
+    // capacity becomes the real ceiling (computed below).
+    let maxLimit = salary * (isBusinessLoan ? 4 : 3);
 
     // Unified id
     const { data: unifiedId } = await supabase.rpc("get_unified_user_id", { input_email: employee_email });
