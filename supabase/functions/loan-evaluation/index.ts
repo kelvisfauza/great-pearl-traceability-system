@@ -390,6 +390,27 @@ serve(async (req) => {
     if (completed >= 2) fallbackFactors.push(`Strong repayment history: ${completed} loans completed`);
     if (repayCount >= 4) fallbackFactors.push(`Consistent repayments: ${repayCount} payments in last 6 months`);
 
+    // Guarantor-capacity effects
+    if (guarantorAssessments.length > 0) {
+      for (const g of guarantorAssessments) {
+        fallbackFactors.push(
+          `Guarantor ${g.name}: capacity UGX ${g.capacity.toLocaleString()}${g.notes.length ? ` (${g.notes.join('; ')})` : ''}`
+        );
+      }
+      fallbackAmount = Math.min(fallbackAmount, guarantorCapacityTotal);
+    }
+    if (isBusinessLoan) {
+      if (guarantorAssessments.length < 2) {
+        fallbackDecision = "deny";
+        fallbackAmount = 0;
+        fallbackFactors.push("Employee Business Loan requires 2 qualifying guarantors");
+      } else if (guarantorBlocked) {
+        fallbackDecision = "deny";
+        fallbackAmount = 0;
+        fallbackFactors.push("One of the guarantors cannot carry this loan (no capacity or bad record)");
+      }
+    }
+
     let decision = fallbackDecision;
     let recommendedAmount = fallbackAmount;
     let recommendedType = requested_loan_type || (recommendedAmount > salary ? "long_term" : "quick");
