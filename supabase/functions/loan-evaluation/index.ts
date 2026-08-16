@@ -537,7 +537,7 @@ Return only JSON via the tool call.`;
                     decision: { type: "string", enum: ["approve", "top_up", "deny"] },
                     recommended_amount: { type: "number" },
                     recommended_loan_type: { type: "string", enum: ["quick", "long_term"] },
-                    recommended_duration_months: { type: "integer", minimum: 1, maximum: 6 },
+                    recommended_duration_months: { type: "integer", minimum: 1, maximum: 8 },
                     risk_score: { type: "integer", minimum: 0, maximum: 100 },
                     factors: { type: "array", items: { type: "string" }, maxItems: 5 },
                     summary: { type: "string" },
