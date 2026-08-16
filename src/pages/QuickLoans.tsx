@@ -149,6 +149,7 @@ const QuickLoans = () => {
   const [repaymentFrequency, setRepaymentFrequency] = useState<RepaymentFrequency>('weekly');
   const [durationMonths, setDurationMonths] = useState('');
   const [guarantorId, setGuarantorId] = useState('');
+  const [guarantor2Id, setGuarantor2Id] = useState('');
   const [loanPurpose, setLoanPurpose] = useState('');
 
   // Evaluation state (mandatory before submitting a loan request)
@@ -340,13 +341,14 @@ const QuickLoans = () => {
 
   const checkGuarantorRequests = async () => {
     if (!employee) return;
-    const { data } = await supabase.from('loans').select('*')
-      .eq('guarantor_email', employee.email)
+    const { data } = await (supabase as any).from('loans').select('*')
       .eq('status', 'pending_guarantor')
-      .eq('guarantor_approved', false);
-    if (data && data.length > 0) {
-      setPendingGuarantorLoan(data[0]);
-    }
+      .or(`guarantor_email.eq.${employee.email},guarantor2_email.eq.${employee.email}`);
+    const pending = (data || []).find((l: any) =>
+      (l.guarantor_email === employee.email && !l.guarantor_approved) ||
+      (l.guarantor2_email === employee.email && !l.guarantor2_approved)
+    );
+    if (pending) setPendingGuarantorLoan(pending);
   };
 
   const calculateLoanDetails = () => {
