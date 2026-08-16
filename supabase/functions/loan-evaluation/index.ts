@@ -39,9 +39,13 @@ serve(async (req) => {
 
     const salary = Number(emp.salary || 0);
     const isBusinessLoan = requested_loan_type === "business";
-    // Business loans stretch to 4× salary, but the guarantors' combined
-    // capacity becomes the real ceiling (computed below).
-    let maxLimit = salary * (isBusinessLoan ? 4 : 3);
+    // Business loans are NOT salary-capped: the business is expected to
+    // generate its own repayment capacity. The ceiling is driven by the
+    // combined guarantor capacity (computed below), with a base floor and
+    // an absolute product cap.
+    const BUSINESS_FLOOR = 2_000_000;   // minimum entitlement for a qualifying business loan
+    const BUSINESS_ABS_CAP = 15_000_000; // absolute product ceiling
+    let maxLimit = isBusinessLoan ? BUSINESS_FLOOR : salary * 3;
 
     // Unified id
     const { data: unifiedId } = await supabase.rpc("get_unified_user_id", { input_email: employee_email });
@@ -215,9 +219,11 @@ serve(async (req) => {
         .filter((l: any) => l.status === "active")
         .reduce((s: number, l: any) => s + Number(l.remaining_balance || 0), 0);
 
-      // Capacity = 2× salary + half of positive wallet, minus their own debt
-      // and half of what they already guarantee. Bad record ⇒ zero capacity.
-      let capacity = Math.round(gSalary * 2 + Math.max(0, gWallet) * 0.5 - gOwnOutstanding * 0.5 - gExposure * 0.5);
+      // Capacity = N× salary + half of positive wallet, minus their own debt
+      // and half of what they already guarantee. Business loans lean harder on
+      // guarantors (6× salary) since there is no borrower salary cap.
+      const gMultiple = isBusinessLoan ? 6 : 2;
+      let capacity = Math.round(gSalary * gMultiple + Math.max(0, gWallet) * 0.5 - gOwnOutstanding * 0.5 - gExposure * 0.5);
       const notes: string[] = [];
       if (gSalary <= 0) { capacity = 0; notes.push("no salary on record"); }
       if (gOwnDefaults > 0) { capacity = 0; notes.push(`${gOwnDefaults} own default(s)`); }
@@ -237,8 +243,16 @@ serve(async (req) => {
     const totalDebtObligations = outstanding + salaryAdvanceOutstanding + overdraftOutstanding;
     const debtToSalaryRatio = salary > 0 ? totalDebtObligations / salary : 999;
 
-    // Guarantor capacity caps the entitlement for guarantor-backed products.
-    if (guarantorAssessments.length > 0) {
+    // Guarantor capacity drives the entitlement for guarantor-backed products.
+    if (isBusinessLoan) {
+      if (guarantorAssessments.length > 0) {
+        maxLimit = Math.min(
+          BUSINESS_ABS_CAP,
+          Math.max(BUSINESS_FLOOR, guarantorCapacityTotal),
+        );
+      }
+      if (guarantorBlocked) maxLimit = 0;
+    } else if (guarantorAssessments.length > 0) {
       maxLimit = Math.max(0, Math.min(maxLimit, guarantorCapacityTotal));
     }
 
@@ -253,7 +267,7 @@ serve(async (req) => {
       fallbackDecision = "deny";
       fallbackAmount = 0;
       fallbackFactors.push(`${defaulted} prior default(s)`);
-    } else if (salary <= 0) {
+    } else if (salary <= 0 && !isBusinessLoan) {
       fallbackDecision = "deny";
       fallbackAmount = 0;
       fallbackFactors.push("No salary on record");
