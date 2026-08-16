@@ -2134,6 +2134,7 @@ const QuickLoans = () => {
                       setRepaymentFrequency(LOAN_TYPE_CONFIG[lt].frequencies[0]);
                       const cap = LOAN_TYPE_CONFIG[lt].maxMonths;
                       if (cap && parseInt(durationMonths) > cap) setDurationMonths('');
+                      if (getGuarantorsRequired(lt) < 2) setGuarantor2Id('');
                     }}>
                       <SelectTrigger><SelectValue placeholder="Select loan type" /></SelectTrigger>
                       <SelectContent>
@@ -2160,7 +2161,7 @@ const QuickLoans = () => {
                     <Select value={durationMonths} onValueChange={setDurationMonths}>
                       <SelectTrigger><SelectValue placeholder="Select duration" /></SelectTrigger>
                       <SelectContent>
-                        {[1, 2, 3, 4, 5, 6].filter(m => !LOAN_TYPE_CONFIG[loanType].maxMonths || m <= LOAN_TYPE_CONFIG[loanType].maxMonths!).map(m => {
+                        {[1, 2, 3, 4, 5, 6, 7, 8].filter(m => !LOAN_TYPE_CONFIG[loanType].maxMonths || m <= LOAN_TYPE_CONFIG[loanType].maxMonths!).map(m => {
                           const monthlyRate = LOAN_TYPE_CONFIG[loanType].monthlyRate;
                           const maxRate = LOAN_TYPE_CONFIG[loanType].maxRate;
                           const effectiveRate = Math.min(monthlyRate * m, maxRate);
@@ -2174,16 +2175,34 @@ const QuickLoans = () => {
                     </Select>
                   </div>
                   {LOAN_TYPE_CONFIG[loanType].requiresGuarantor !== false ? (
-                    <div>
-                      <Label>Select Guarantor</Label>
-                      <Select value={guarantorId} onValueChange={setGuarantorId}>
-                        <SelectTrigger><SelectValue placeholder="Choose a colleague" /></SelectTrigger>
-                        <SelectContent>
-                          {employees.filter(e => e.email !== employee?.email).map(e => (
-                            <SelectItem key={e.id} value={e.id}>{e.name} ({e.email})</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <div className="space-y-3">
+                      <div>
+                        <Label>{getGuarantorsRequired(loanType) >= 2 ? 'Guarantor 1' : 'Select Guarantor'}</Label>
+                        <Select value={guarantorId} onValueChange={setGuarantorId}>
+                          <SelectTrigger><SelectValue placeholder="Choose a colleague" /></SelectTrigger>
+                          <SelectContent>
+                            {employees.filter(e => e.email !== employee?.email && e.id !== guarantor2Id).map(e => (
+                              <SelectItem key={e.id} value={e.id}>{e.name} ({e.email})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {getGuarantorsRequired(loanType) >= 2 && (
+                        <div>
+                          <Label>Guarantor 2</Label>
+                          <Select value={guarantor2Id} onValueChange={setGuarantor2Id}>
+                            <SelectTrigger><SelectValue placeholder="Choose a second colleague" /></SelectTrigger>
+                            <SelectContent>
+                              {employees.filter(e => e.email !== employee?.email && e.id !== guarantorId).map(e => (
+                                <SelectItem key={e.id} value={e.id}>{e.name} ({e.email})</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Both guarantors are assessed by the evaluation engine — their salary, wallet and existing guarantees set your final take-home. Both wallets can be debited if you miss a repayment.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <Card className="border-emerald-300 bg-emerald-50 dark:bg-emerald-950/20">
