@@ -659,6 +659,10 @@ const QuickLoans = () => {
       toast({ title: 'Fill amount & duration first', description: 'Enter the loan amount and duration before evaluation.', variant: 'destructive' });
       return;
     }
+    if (getGuarantorsRequired(loanType) >= 2 && (!guarantorId || !guarantor2Id)) {
+      toast({ title: 'Select both guarantors', description: 'The Employee Business Loan is evaluated against both guarantors — pick them before running the evaluation.', variant: 'destructive' });
+      return;
+    }
     setEvaluating(true);
     try {
       const gEmails = [
