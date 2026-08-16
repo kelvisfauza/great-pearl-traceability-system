@@ -304,6 +304,22 @@ const AssessmentHistoryTab = () => {
         </CardContent>
       </Card>
 
+      <GRNPrintModal
+        open={grnModal.open}
+        onClose={() => setGrnModal({ open: false, grnData: null })}
+        grnData={grnModal.grnData}
+        onPrinted={async () => {
+          if (!grnModal.assessmentId) return;
+          await supabase.from("quality_assessments").update({
+            grn_printed: true,
+            grn_printed_by: (employee as any)?.name || employee?.email || "Unknown",
+            grn_printed_at: new Date().toISOString(),
+          } as any).eq("id", grnModal.assessmentId);
+          queryClient.invalidateQueries({ queryKey: ["assessment-history"] });
+          refetch();
+        }}
+      />
+
       {/* View dialog */}
       <Dialog open={!!viewing} onOpenChange={(o) => !o && setViewing(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
