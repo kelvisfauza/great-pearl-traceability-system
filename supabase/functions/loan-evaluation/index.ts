@@ -293,11 +293,11 @@ serve(async (req) => {
       fallbackDecision = "deny";
       fallbackAmount = 0;
       fallbackFactors.push(`${guaranteedDefaulted} guaranteed loans defaulted – guarantor track record too weak`);
-    } else if (debtToSalaryRatio >= 3) {
+    } else if (debtToSalaryRatio >= 3 && !isBusinessLoan) {
       fallbackDecision = "deny";
       fallbackAmount = 0;
       fallbackFactors.push(`Debt load already ${debtToSalaryRatio.toFixed(1)}× salary`);
-    } else if (tenureMonths < 2) {
+    } else if (tenureMonths < 2 && !isBusinessLoan) {
       fallbackAmount = Math.min(fallbackAmount, Math.round(salary * 1.5));
       fallbackFactors.push("New employee (< 2 months) – limit capped at 1.5× salary");
     }
@@ -399,7 +399,11 @@ serve(async (req) => {
     // Reward clean repayment history with full entitlement
     if (completed >= 1 && defaulted === 0 && guarantorDefaultCount === 0 && fallbackDecision === "approve") {
       fallbackAmount = maxLimit;
-      fallbackFactors.push(`Clean history – full 3× salary entitlement (UGX ${maxLimit.toLocaleString()})`);
+      fallbackFactors.push(
+        isBusinessLoan
+          ? `Clean history – full guarantor-backed business entitlement (UGX ${maxLimit.toLocaleString()})`
+          : `Clean history – full 3× salary entitlement (UGX ${maxLimit.toLocaleString()})`,
+      );
     }
     if (completed >= 2) fallbackFactors.push(`Strong repayment history: ${completed} loans completed`);
     if (repayCount >= 4) fallbackFactors.push(`Consistent repayments: ${repayCount} payments in last 6 months`);
