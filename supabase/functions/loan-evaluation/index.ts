@@ -478,6 +478,13 @@ REQUEST
 - Requested type: ${requested_loan_type || "unspecified"}
 - Requested duration (months): ${requested_duration || "unspecified"}
 
+PROPOSED GUARANTORS (their own capacity to carry this loan)
+${guarantorAssessments.length
+  ? guarantorAssessments.map((g: any) => `- ${g.name} (${g.email}): salary UGX ${g.salary}, wallet UGX ${g.wallet_balance}, already guaranteeing UGX ${g.active_guarantee_exposure}, own outstanding UGX ${g.own_outstanding}, own defaults ${g.own_defaults}, guaranteed defaults ${g.guaranteed_defaults} → assessed capacity UGX ${g.capacity}`).join("\n")
+  : "- none supplied"}
+- Combined guarantor capacity (UGX): ${guarantorCapacityTotal}
+${isBusinessLoan ? `- This is an EMPLOYEE BUSINESS LOAN: 3%/month flat, up to 8 months, requires 2 guarantors whose wallets can be debited. Entitlement ceiling is 4× salary AND never above combined guarantor capacity (UGX ${guarantorCapacityTotal}). Deny if fewer than 2 guarantors qualify or any guarantor capacity is 0.` : ""}
+
 RULES (be fair — approve when reasonable; only deny on clear red flags)
 - IMPORTANT: recommended_amount = the user's ENTITLEMENT/LIMIT, NOT the requested amount.
   Always award the maximum the borrower qualifies for, ignoring what they typed in "Requested".
@@ -504,7 +511,8 @@ RULES (be fair — approve when reasonable; only deny on clear red flags)
 - Active loan + clean repayments → "top_up" (cap minus outstanding).
 - New employee (<2 months) → cap at 1.5× salary.
 - No history but tenure ≥ 2 months → award 2× to 3× salary (lean generous).
-- Choose recommended_loan_type: "quick" (≤1 month, weekly) or "long_term" (>1 month).
+- Choose recommended_loan_type: "quick" (≤1 month, weekly) or "long_term" (>1 month). For a business-loan request keep the amount within combined guarantor capacity.
+- NEVER recommend more than the combined guarantor capacity when guarantors are listed above.
 
 Return only JSON via the tool call.`;
 
