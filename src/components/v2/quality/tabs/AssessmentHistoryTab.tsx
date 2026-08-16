@@ -11,8 +11,10 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, History, Search, Eye, Pencil, Save } from "lucide-react";
+import { Loader2, History, Search, Eye, Pencil, Save, Printer, CheckCircle } from "lucide-react";
 import { format, subDays } from "date-fns";
+import GRNPrintModal from "@/components/quality/GRNPrintModal";
+import { useQualityRole } from "@/hooks/useQualityRole";
 
 const PAGE_SIZE = 50;
 
@@ -30,6 +32,8 @@ const AssessmentHistoryTab = () => {
   const { employee } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { canPrintGRN } = useQualityRole();
+  const [grnModal, setGrnModal] = useState<{ open: boolean; grnData: any | null; assessmentId?: string }>({ open: false, grnData: null });
 
   const today = new Date().toISOString().split("T")[0];
   const monthAgo = subDays(new Date(), 60).toISOString().split("T")[0];
@@ -51,6 +55,55 @@ const AssessmentHistoryTab = () => {
   const isAdmin = (employee?.role || "").toLowerCase() === "administrator" ||
     (employee?.role || "").toLowerCase() === "admin" ||
     (employee?.role || "").toLowerCase().includes("quality");
+
+  const isGrnPrintable = (a: any) =>
+    !["pending_quality_manager", "rejected", "PERMANENTLY_REJECTED"].includes(String(a?.status || ""));
+
+  const openGrn = async (a: any) => {
+    if (!isGrnPrintable(a)) {
+      toast({ title: "Awaiting Quality Manager Approval", description: "This GRN can only be printed after the assessment is approved.", variant: "destructive" });
+      return;
+    }
+    const { data: rec } = await supabase
+      .from("coffee_records")
+      .select("*")
+      .eq("id", a.store_record_id)
+      .maybeSingle();
+    if (!rec) {
+      toast({ title: "Error", description: "Could not find the coffee record for this assessment.", variant: "destructive" });
+      return;
+    }
+    setGrnModal({
+      open: true,
+      assessmentId: a.id,
+      grnData: {
+        grnNumber: `GRN-${a.batch_number}`,
+        batchNumber: a.batch_number,
+        supplierName: (rec as any).supplier_name || "Unknown Supplier",
+        supplierId: (rec as any).supplier_id || undefined,
+        coffeeType: (rec as any).coffee_type || "Unknown Coffee Type",
+        qualityAssessment: `Moisture: ${a.moisture}%, Group 1 Defects: ${a.group1_defects}%, Group 2 Defects: ${a.group2_defects}%`,
+        numberOfBags: (rec as any).bags || 0,
+        totalKgs: (rec as any).kilograms || 0,
+        unitPrice: a.final_price || a.suggested_price || 0,
+        assessedBy: a.assessed_by || "Quality Controller",
+        physicalAssessmentBy: a.physical_assessment_by || undefined,
+        inputBy: (rec as any).created_by || undefined,
+        deliveryDate: (rec as any).date || (rec as any).created_at || undefined,
+        assessmentDate: a.date_assessed || a.created_at || undefined,
+        createdAt: a.date_assessed || new Date().toISOString(),
+        moisture: a.moisture,
+        group1_defects: a.group1_defects,
+        group2_defects: a.group2_defects,
+        below12: a.below12,
+        pods: a.pods,
+        husks: a.husks,
+        stones: a.stones,
+        printedBy: (employee as any)?.name || employee?.email || "Unknown",
+        isReprint: !!a.grn_printed,
+      },
+    });
+  };
 
   const { data, isFetching, refetch } = useQuery({
     queryKey: ["assessment-history", filters, page],
@@ -186,6 +239,7 @@ const AssessmentHistoryTab = () => {
                       <TableHead>Final Price</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Assessed By</TableHead>
+                      <TableHead>GRN</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -199,6 +253,21 @@ const AssessmentHistoryTab = () => {
                         <TableCell>{a.final_price ? `UGX ${Number(a.final_price).toLocaleString()}` : "—"}</TableCell>
                         <TableCell><Badge variant="outline">{assessmentStatusLabel(a.status, a.qm_action)}</Badge></TableCell>
                         <TableCell className="text-xs">{a.assessed_by}</TableCell>
+                        <TableCell className="text-xs">
+                          {a.grn_printed ? (
+                            <div className="space-y-0.5">
+                              <Badge variant="secondary" className="gap-1 text-[10px]">
+                                <CheckCircle className="h-3 w-3 text-green-500" /> Printed
+                              </Badge>
+                              <p className="text-[10px] text-muted-foreground">
+                                {a.grn_printed_by || "—"}
+                                {a.grn_printed_at ? ` · ${format(new Date(a.grn_printed_at), "PP")}` : ""}
+                              </p>
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px]">Not printed</Badge>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right space-x-1">
                           <Button size="sm" variant="ghost" onClick={() => setViewing(a)}>
                             <Eye className="h-3.5 w-3.5" />
@@ -208,11 +277,17 @@ const AssessmentHistoryTab = () => {
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
                           )}
+                          {canPrintGRN && isGrnPrintable(a) && (
+                            <Button size="sm" variant="outline" onClick={() => openGrn(a)}>
+                              <Printer className="h-3.5 w-3.5 mr-1" />
+                              {a.grn_printed ? "Reprint" : "Print GRN"}
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
                     {data && data.rows.length === 0 && !isFetching && (
-                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-6">No records in this range</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-6">No records in this range</TableCell></TableRow>
                     )}
                   </TableBody>
                 </Table>
@@ -228,6 +303,22 @@ const AssessmentHistoryTab = () => {
           )}
         </CardContent>
       </Card>
+
+      <GRNPrintModal
+        open={grnModal.open}
+        onClose={() => setGrnModal({ open: false, grnData: null })}
+        grnData={grnModal.grnData}
+        onPrinted={async () => {
+          if (!grnModal.assessmentId) return;
+          await supabase.from("quality_assessments").update({
+            grn_printed: true,
+            grn_printed_by: (employee as any)?.name || employee?.email || "Unknown",
+            grn_printed_at: new Date().toISOString(),
+          } as any).eq("id", grnModal.assessmentId);
+          queryClient.invalidateQueries({ queryKey: ["assessment-history"] });
+          refetch();
+        }}
+      />
 
       {/* View dialog */}
       <Dialog open={!!viewing} onOpenChange={(o) => !o && setViewing(null)}>

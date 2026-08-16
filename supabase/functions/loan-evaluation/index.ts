@@ -43,8 +43,21 @@ serve(async (req) => {
     // generate its own repayment capacity. The ceiling is driven by the
     // combined guarantor capacity (computed below), with a base floor and
     // an absolute product cap.
-    const BUSINESS_FLOOR = 2_000_000;   // minimum entitlement for a qualifying business loan
-    const BUSINESS_ABS_CAP = 15_000_000; // absolute product ceiling
+    // Admin-configurable product policy (Admin Settings → Loan Policy)
+    let policy: any = {};
+    try {
+      const { data: polRow } = await supabase
+        .from("system_settings")
+        .select("setting_value")
+        .eq("setting_key", "loan_product_limits")
+        .maybeSingle();
+      policy = (polRow as any)?.setting_value || {};
+    } catch (_e) { policy = {}; }
+
+    const BUSINESS_FLOOR = Number(policy.business_floor ?? 2_000_000);   // minimum entitlement for a qualifying business loan
+    const BUSINESS_ABS_CAP = Number(policy.business_max ?? 15_000_000);  // absolute product ceiling (admin-set)
+    const HIGH_VALUE_THRESHOLD = Number(policy.high_value_threshold ?? 5_000_000);
+    const HIGH_VALUE_COVERAGE = Number(policy.high_value_coverage ?? 1); // guarantor cover multiple required above threshold
     let maxLimit = isBusinessLoan ? BUSINESS_FLOOR : salary * 3;
 
     // Unified id
@@ -280,6 +293,20 @@ serve(async (req) => {
           BUSINESS_ABS_CAP,
           allClean ? Math.max(BUSINESS_FLOOR, guarantorCapacityTotal) : guarantorCapacityTotal,
         );
+        // Security & recovery policy for high-value facilities: above the
+        // high-value threshold the guarantors must fully cover the facility
+        // (coverage multiple) AND be completely clean. Otherwise the offer is
+        // trimmed back to the threshold / actual covered amount.
+        if (maxLimit > HIGH_VALUE_THRESHOLD) {
+          const covered = HIGH_VALUE_COVERAGE > 0
+            ? Math.floor(guarantorCapacityTotal / HIGH_VALUE_COVERAGE)
+            : guarantorCapacityTotal;
+          if (!allClean) {
+            maxLimit = Math.min(maxLimit, HIGH_VALUE_THRESHOLD);
+          } else {
+            maxLimit = Math.min(maxLimit, Math.max(HIGH_VALUE_THRESHOLD, covered));
+          }
+        }
       }
       if (guarantorBlocked) maxLimit = 0;
     } else if (guarantorAssessments.length > 0) {
