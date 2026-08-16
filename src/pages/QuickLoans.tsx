@@ -99,6 +99,8 @@ const QuickLoans = () => {
   const [allAiLimitsLoading, setAllAiLimitsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showRequestDialog, setShowRequestDialog] = useState(false);
+  const [showTermsDialog, setShowTermsDialog] = useState(false);
+  const [termsApplication, setTermsApplication] = useState<LoanTermsApplication | null>(null);
   const [showEarlyPayDialog, setShowEarlyPayDialog] = useState(false);
   const [selectedLoanForPayment, setSelectedLoanForPayment] = useState<any>(null);
   const [earlyPayAmount, setEarlyPayAmount] = useState('');
@@ -2335,7 +2337,7 @@ const QuickLoans = () => {
                   )}
 
                   <Button
-                    onClick={handleRequestLoan}
+                    onClick={() => handleRequestLoan()}
                     disabled={submitting || !evaluation || evaluation.decision === 'deny'}
                     className="w-full"
                   >
@@ -2345,11 +2347,19 @@ const QuickLoans = () => {
                         ? 'Run evaluation to enable submit'
                         : evaluation.decision === 'deny'
                           ? 'Loan Denied — cannot submit'
-                          : 'Submit Loan Request (10k fee added to principal)'}
+                          : 'Review Terms & Submit Application'}
                   </Button>
                 </div>
               </DialogContent>
             </Dialog>
+
+            <LoanTermsDialog
+              open={showTermsDialog}
+              onOpenChange={(o) => { setShowTermsDialog(o); if (!o) setTermsApplication(null); }}
+              application={termsApplication}
+              submitting={submitting}
+              onAccept={(meta) => handleRequestLoan(meta)}
+            />
 
             {evaluation && (
               <LoanAppealDialog
