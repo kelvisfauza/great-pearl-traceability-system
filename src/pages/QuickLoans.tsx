@@ -23,6 +23,7 @@ import LoanReviewModal from '@/components/loans/LoanReviewModal';
 import LoanRepaymentSlip from '@/components/loans/LoanRepaymentSlip';
 import { generateLoanAgreementPdf } from '@/utils/loanAgreementPdf';
 import LoanAppealDialog from '@/components/loans/LoanAppealDialog';
+import LoanTermsDialog, { LOAN_TERMS_VERSION, type LoanTermsApplication } from '@/components/loans/LoanTermsDialog';
 
 // Loan types with their monthly interest rates
 type LoanType = 'quick' | 'long_term' | 'pure_salary' | 'business';
@@ -32,7 +33,7 @@ const LOAN_TYPE_CONFIG: Record<LoanType, { label: string; monthlyRate: number; m
   quick: { label: 'Quick Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Short-term, weekly repayments (total interest cap 35%)', frequencies: ['weekly'], maxMonths: 6, requiresGuarantor: true, guarantorsRequired: 1 },
   long_term: { label: 'Long-Term Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Flexible repayment, monthly or bullet (total interest cap 35%)', frequencies: ['monthly', 'bullet'], maxMonths: 6, requiresGuarantor: true, guarantorsRequired: 1 },
   pure_salary: { label: 'Pure Salary Loan', monthlyRate: 15, maxRate: 45, description: '15%/month – Repaid by 50% of monthly salary (no guarantor, max 3 months)', frequencies: ['monthly'], maxMonths: 3, requiresGuarantor: false },
-  business: { label: 'Employee Business Loan', monthlyRate: 3, maxRate: 24, description: '3%/month – Low-rate business capital, flexible monthly repayment up to 8 months, 2 guarantors required', frequencies: ['monthly'], maxMonths: 8, requiresGuarantor: true, guarantorsRequired: 2 },
+  business: { label: 'Employee Business Loan', monthlyRate: 4, maxRate: 30, description: '4%/month – Low-rate business capital, flexible monthly repayment up to 8 months, 2 guarantors required (total interest cap 30%)', frequencies: ['monthly'], maxMonths: 8, requiresGuarantor: true, guarantorsRequired: 2 },
 };
 
 const getGuarantorsRequired = (t: LoanType) =>
@@ -394,7 +395,7 @@ const QuickLoans = () => {
     return { amount, months, dailyRate, monthlyRate, totalDays, totalWeeks, interest, total, weekly: installment, numInstallments, frequency: freq };
   };
 
-  const handleRequestLoan = async () => {
+  const handleRequestLoan = async (consent?: { version: string; signature: string; acceptedAt: string }) => {
     if (!employee) return;
     if (!evaluation || evaluation.decision === 'deny') {
       toast({ title: 'Evaluation required', description: 'Run the loan evaluation first. Denied applications cannot be submitted.', variant: 'destructive' });
