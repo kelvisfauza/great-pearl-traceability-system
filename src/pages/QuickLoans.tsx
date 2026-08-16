@@ -502,6 +502,36 @@ const QuickLoans = () => {
       }
     }
 
+    // Terms & conditions gate — show the prefilled application form for consent first
+    if (!consent) {
+      setTermsApplication({
+        loanTypeLabel: cfg.label,
+        loanType,
+        requestedAmount: requested,
+        evaluationFee: FEE,
+        principal: amount,
+        monthlyRate,
+        dailyRate,
+        maxRate,
+        durationMonths: months,
+        frequency: freq === 'bullet' ? 'Bullet (one final payment)' : freq === 'weekly' ? 'Weekly' : 'Monthly',
+        numInstallments,
+        installmentAmount: weekly,
+        totalInterest: interest,
+        totalRepayable: total,
+        firstRepaymentDate: getFirstRepaymentDate(new Date(), freq).toLocaleDateString(),
+        borrowerName: employee.name,
+        borrowerEmail: employee.email,
+        borrowerPhone: (employee as any).phone || '',
+        borrowerPosition: (employee as any).position || '',
+        borrowerDepartment: (employee as any).department || '',
+        borrowerSalary: Number((employee as any).salary || 0),
+        guarantors: [guarantor, guarantor2].filter(Boolean).map((g: any) => ({ name: g.name, email: g.email, phone: g.phone })),
+      });
+      setShowTermsDialog(true);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const approvalCode = needsGuarantor ? Math.floor(100000 + Math.random() * 900000).toString() : null;
@@ -536,6 +566,10 @@ const QuickLoans = () => {
         guarantor2_approval_code: approvalCode2,
         guarantor2_approved: false,
         loan_type: loanType,
+        terms_accepted: true,
+        terms_accepted_at: consent.acceptedAt,
+        terms_version: consent.version,
+        terms_signature: consent.signature,
       } as any).select().single();
 
       if (error) throw error;
@@ -619,6 +653,8 @@ const QuickLoans = () => {
         toast({ title: "Loan Requested", description: `Pure Salary Loan submitted for admin approval. UGX ${FEE.toLocaleString()} evaluation fee added to principal.` });
       }
       setShowRequestDialog(false);
+      setShowTermsDialog(false);
+      setTermsApplication(null);
       setEvaluation(null);
 
       // Trigger repayment statement slip
