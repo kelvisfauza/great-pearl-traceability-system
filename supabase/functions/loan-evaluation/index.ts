@@ -501,15 +501,15 @@ ${guarantorAssessments.length
   ? guarantorAssessments.map((g: any) => `- ${g.name} (${g.email}): salary UGX ${g.salary}, wallet UGX ${g.wallet_balance}, already guaranteeing UGX ${g.active_guarantee_exposure}, own outstanding UGX ${g.own_outstanding}, own defaults ${g.own_defaults}, guaranteed defaults ${g.guaranteed_defaults} → assessed capacity UGX ${g.capacity}`).join("\n")
   : "- none supplied"}
 - Combined guarantor capacity (UGX): ${guarantorCapacityTotal}
-${isBusinessLoan ? `- This is an EMPLOYEE BUSINESS LOAN: 3%/month flat, up to 8 months, requires 2 guarantors whose wallets can be debited. Entitlement ceiling is 4× salary AND never above combined guarantor capacity (UGX ${guarantorCapacityTotal}). Deny if fewer than 2 guarantors qualify or any guarantor capacity is 0.` : ""}
+${isBusinessLoan ? `- This is an EMPLOYEE BUSINESS LOAN: 3%/month flat, up to 8 months, requires 2 guarantors whose wallets can be debited. It is NOT capped by the borrower's salary — the business is expected to generate repayment capacity. The ceiling is the combined guarantor capacity (UGX ${guarantorCapacityTotal}), floored at UGX 2,000,000 and capped at UGX 15,000,000 → effective limit UGX ${maxLimit}. Do not reduce for salary size, debt-to-salary ratio or short tenure alone. Deny if fewer than 2 guarantors qualify or any guarantor capacity is 0.` : ""}
 
 RULES (be fair — approve when reasonable; only deny on clear red flags)
 - IMPORTANT: recommended_amount = the user's ENTITLEMENT/LIMIT, NOT the requested amount.
   Always award the maximum the borrower qualifies for, ignoring what they typed in "Requested".
-- Hard cap: recommended_amount must NEVER exceed 3× salary (UGX ${maxLimit}).
-- Default for clean borrowers = the full ${maxLimit} (3× salary). Do not award less unless a rule below reduces it.
+- Hard cap: recommended_amount must NEVER exceed UGX ${maxLimit} (${isBusinessLoan ? "guarantor-backed business ceiling" : "3× salary"}).
+- Default for clean borrowers = the full ${maxLimit}. Do not award less unless a rule below reduces it.
 - Subtract outstanding from any new approval.
-- "deny" if ANY of: 1+ true defaults; 2+ guarantor recoveries; salary is 0; overdraft frozen; overdraft negative >45 days; 2+ currently-overdue installments; debt-to-salary ratio ≥ 3×; on-time repayment ratio < 30% with ≥3 paid installments.
+- "deny" if ANY of: 1+ true defaults; 2+ guarantor recoveries; overdraft frozen; overdraft negative >45 days; 2+ currently-overdue installments; on-time repayment ratio < 30% with ≥3 paid installments${isBusinessLoan ? "" : "; salary is 0; debt-to-salary ratio ≥ 3×"}.
 - "deny" if 2+ active/pending loans already open (must finish one first).
 - "deny" if 2+ loans they GUARANTEED for others defaulted (poor judgement of who to back).
 - 1 guarantor recovery = reduce limit ~50% but still approve/top_up.
