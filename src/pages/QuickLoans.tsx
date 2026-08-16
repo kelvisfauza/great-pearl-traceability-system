@@ -661,12 +661,17 @@ const QuickLoans = () => {
     }
     setEvaluating(true);
     try {
+      const gEmails = [
+        employees.find(e => e.id === guarantorId)?.email,
+        employees.find(e => e.id === guarantor2Id)?.email,
+      ].filter(Boolean);
       const { data, error } = await supabase.functions.invoke('loan-evaluation', {
         body: {
           employee_email: employee.email,
           requested_amount: requested,
           requested_loan_type: loanType,
           requested_duration: months,
+          guarantor_emails: gEmails,
         },
       });
       if (error) throw error;
