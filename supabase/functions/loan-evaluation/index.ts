@@ -574,6 +574,15 @@ Return only JSON via the tool call.`;
     // Enforce hard cap
     recommendedAmount = Math.min(recommendedAmount, maxLimit);
     if (decision === "deny") recommendedAmount = 0;
+    if (isBusinessLoan) {
+      recommendedType = "business";
+      recommendedDuration = Math.min(8, Math.max(1, Number(recommendedDuration) || Number(requested_duration) || 3));
+      if (guarantorAssessments.length < 2 || guarantorBlocked) {
+        decision = "deny";
+        recommendedAmount = 0;
+      }
+      recommendedAmount = Math.min(recommendedAmount, guarantorCapacityTotal);
+    }
 
     // Persist report
     const { data: rep, error: repErr } = await supabase
@@ -621,6 +630,8 @@ Return only JSON via the tool call.`;
           guaranteed_overdue: guaranteedOverdue,
           total_loans_taken: totalLoansTaken,
           debt_to_salary_ratio: Number(debtToSalaryRatio.toFixed(2)),
+          guarantor_assessments: guarantorAssessments,
+          guarantor_capacity_total: guarantorCapacityTotal,
         },
         fee_amount: FEE,
       })
