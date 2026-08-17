@@ -4,7 +4,7 @@ import PriceTicker from "@/components/PriceTicker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   FlaskConical, RefreshCw, Settings2, BookOpen, BarChart3, LayoutGrid, FileSignature,
-  Warehouse, FileText, Lightbulb, GraduationCap, CheckSquare, Trophy, History, ShieldCheck, Paperclip
+  Warehouse, FileText, Lightbulb, GraduationCap, CheckSquare, Trophy, History, ShieldCheck, Paperclip, Truck
 } from "lucide-react";
 import { useQualityRole } from "@/hooks/useQualityRole";
 import QualityApprovalsTab from "@/components/v2/quality/tabs/QualityApprovalsTab";
@@ -22,6 +22,7 @@ import DailyChecklistTab from "@/components/v2/quality/tabs/DailyChecklistTab";
 import PerformanceTab from "@/components/v2/quality/tabs/PerformanceTab";
 import QualityAnalysisFilesTab from "@/components/v2/quality/tabs/QualityAnalysisFilesTab";
 import QualityOverviewTab from "@/components/v2/quality/tabs/QualityOverviewTab";
+import DispatchMonitoringTab from "@/components/v2/quality/tabs/DispatchMonitoringTab";
 import QualityAnalysisFormDownload from "@/components/expenses/QualityAnalysisFormDownload";
 import AdminRejectedLotsReview from "@/components/admin/AdminRejectedLotsReview";
 
@@ -31,6 +32,7 @@ const allTabs = [
   { id: "approvals", label: "Approvals", icon: ShieldCheck, headOnly: true },
   { id: "discretion", label: "Rejected Lots", icon: FileText, headOnly: true },
   { id: "reevaluation", label: "Re-evaluation", icon: RefreshCw },
+  { id: "dispatch", label: "Dispatch Monitoring", icon: Truck },
   { id: "analysis-form", label: "Analysis Form", icon: FileSignature },
   { id: "files", label: "Analysis Files", icon: Paperclip },
   { id: "history", label: "History", icon: History, headOnly: true },
@@ -88,6 +90,7 @@ const QualityDepartment = () => {
               {isQualityHead && <TabsContent value="approvals"><QualityApprovalsTab /></TabsContent>}
               {isQualityHead && <TabsContent value="discretion"><AdminRejectedLotsReview /></TabsContent>}
               <TabsContent value="reevaluation"><ReEvaluationTab /></TabsContent>
+              <TabsContent value="dispatch"><DispatchMonitoringTab /></TabsContent>
               <TabsContent value="analysis-form"><QualityAnalysisFormDownload /></TabsContent>
       <TabsContent value="files"><QualityAnalysisFilesTab /></TabsContent>
               {isQualityHead && <TabsContent value="history"><AssessmentHistoryTab /></TabsContent>}
