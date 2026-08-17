@@ -29,10 +29,15 @@ const BuyerContractsTab = () => {
     return c.status;
   };
 
+  // Normalize so "GPC-BC 0016", "gpcbc0016" and "0016" all match
+  const norm = (v?: string | null) => (v || '').toLowerCase().replace(/[\s\-_/]/g, '');
+  const q = norm(search);
   const filtered = contracts.filter(c =>
-    c.buyer_name.toLowerCase().includes(search.toLowerCase()) ||
-    c.contract_ref.toLowerCase().includes(search.toLowerCase()) ||
-    c.quality.toLowerCase().includes(search.toLowerCase())
+    !q ||
+    norm(c.buyer_name).includes(q) ||
+    norm(c.contract_ref).includes(q) ||
+    norm(c.buyer_ref).includes(q) ||
+    norm(c.quality).includes(q)
   );
 
   const active = contracts.filter(c => getEffectiveStatus(c) === 'active');
@@ -101,7 +106,7 @@ const BuyerContractsTab = () => {
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Search by buyer, ref, or quality..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
+        <Input placeholder="Search by contract number, buyer ref, buyer, or quality..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
       </div>
 
       <Card>
