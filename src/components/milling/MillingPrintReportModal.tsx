@@ -236,7 +236,7 @@ const MillingPrintReportModal: React.FC<MillingPrintReportModalProps> = ({ open,
         <div ref={printRef}>
           <div className="header">
             <div className="mb-4">
-              <img src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" alt="Great Agro Coffee Logo" className="mx-auto h-16 w-auto mb-2 logo" />
+              <img src="/lovable-uploads/great-agro-coffee-logo.png" alt="Great Agro Coffee Logo" className="mx-auto h-16 w-auto mb-2 logo" />
             </div>
             <h1 className="company-name">GREAT AGRO COFFEE</h1>
             <div className="company-address">

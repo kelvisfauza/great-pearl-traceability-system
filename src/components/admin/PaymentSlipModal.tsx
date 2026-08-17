@@ -42,7 +42,7 @@ export const PaymentSlipModal: React.FC<PaymentSlipModalProps> = ({
       <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; padding: 8px; border: 1px solid #333;">
         <!-- Company Header -->
         <div style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 8px; margin-bottom: 12px;">
-          <img src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" 
+          <img src="/lovable-uploads/great-agro-coffee-logo.png" 
                alt="Great Agro Coffee Logo" 
                style="height: 40px; width: auto; margin-bottom: 4px;" />
           <h1 style="color: #333; margin: 2px 0; font-size: 14px; font-weight: bold; text-transform: uppercase;">

@@ -71,7 +71,7 @@ const GRNGenerator: React.FC<GRNGeneratorProps> = ({ open, onClose }) => {
         <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
           <tr>
             <td style="border:1.5px solid #1a1a1a;padding:8px 10px;width:18%;text-align:center;vertical-align:middle;">
-              <img src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" alt="GAC" style="height:36px;width:auto;display:block;margin:0 auto 2px;"/>
+              <img src="/lovable-uploads/great-agro-coffee-logo.png" alt="GAC" style="height:36px;width:auto;display:block;margin:0 auto 2px;"/>
               <div style="font-weight:bold;font-size:11px;letter-spacing:1px;">GAC</div>
             </td>
             <td style="border:1.5px solid #1a1a1a;padding:10px;width:52%;text-align:center;vertical-align:middle;">
