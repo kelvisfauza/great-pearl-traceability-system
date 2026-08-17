@@ -196,11 +196,6 @@ const EUDRDispatchReportsList = ({ reports, showAll = false, onRefresh }: EUDRDi
    );
  };
 
-const DispatchReportDetail = ({ report }: { report: DispatchReport }) => {
-  const trucksUnused = null;
-  return <DispatchReportDetailInner report={report} />;
-};
-
 const DispatchAnalysisLink = ({ analysisId }: { analysisId?: string | null }) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
