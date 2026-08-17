@@ -197,6 +197,42 @@ const EUDRDispatchReportsList = ({ reports, showAll = false, onRefresh }: EUDRDi
  };
 
 const DispatchReportDetail = ({ report }: { report: DispatchReport }) => {
+  const trucksUnused = null;
+  return <DispatchReportDetailInner report={report} />;
+};
+
+const DispatchAnalysisLink = ({ analysisId }: { analysisId?: string | null }) => {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+
+  if (!analysisId) return <span className="text-xs text-muted-foreground">Not linked</span>;
+
+  const loadAndPrint = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await (supabase as any)
+        .from('quality_dispatch_analyses')
+        .select('*')
+        .eq('id', analysisId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error('Analysis not found');
+      printDispatchAnalysis(data);
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Button variant="outline" size="sm" className="gap-1 h-7 text-xs" onClick={loadAndPrint} disabled={loading}>
+      <Printer className="h-3 w-3" /> Analysis
+    </Button>
+  );
+};
+
+const DispatchReportDetailInner = ({ report }: { report: DispatchReport }) => {
   const trucks = Array.isArray(report.trucks) ? report.trucks : [];
   const verification = Array.isArray(report.buyer_verification) ? report.buyer_verification : [];
   const deductionReasons = Array.isArray(report.deduction_reasons) ? report.deduction_reasons : [];
