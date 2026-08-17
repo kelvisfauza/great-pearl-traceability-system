@@ -6,8 +6,8 @@ import type { TemplateEntry } from './registry.ts'
 import { SITE_NAME, LOGO_URL } from './brand.ts'
 
 const BASE = 'https://great-pearl-traceability-system.lovable.app'
-const HERO_IMG = `${BASE}/lovable-uploads/business-loan-hero.jpg`
-const SHOP_IMG = `${BASE}/lovable-uploads/business-loan-shop.jpg`
+const HERO_IMG = `${BASE}/__l5e/assets-v1/0bd26c6d-a89a-46f2-ada3-76d919d3575e/business-loan-hero.jpg`
+const SHOP_IMG = `${BASE}/__l5e/assets-v1/d51c81bb-071e-47a1-a5f7-91a5813a5e7e/business-loan-shop.jpg`
 
 interface BusinessLoanPromotionProps {
   employeeName?: string
