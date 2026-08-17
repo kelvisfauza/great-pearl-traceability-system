@@ -20,6 +20,13 @@ const AwardPerDiemDialog = () => {
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [refNumber, setRefNumber] = useState("");
+  const [workType, setWorkType] = useState("");
+
+  const WORK_TYPES: { value: string; label: string; rate: number | null }[] = [
+    { value: "sunday_work", label: "Working on Sunday", rate: 10000 },
+    { value: "field_visit", label: "Field visit", rate: 15000 },
+    { value: "other", label: "Other (specify amount)", rate: null },
+  ];
   const { employee } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -89,6 +96,7 @@ const AwardPerDiemDialog = () => {
           metadata: {
             type: "per_diem",
             reason,
+            work_type: workType,
             ref_number: reference,
             awarded_by: employee?.name || "HR",
             employee_name: emp.name,
@@ -149,6 +157,7 @@ const AwardPerDiemDialog = () => {
       setAmount("");
       setReason("");
       setRefNumber("");
+      setWorkType("");
       queryClient.invalidateQueries({ queryKey: ["per-diem-history"] });
     },
     onError: (err: any) => {
@@ -222,12 +231,44 @@ const AwardPerDiemDialog = () => {
               </p>
             </div>
             <div>
+              <Label>Type of Work</Label>
+              <Select
+                value={workType}
+                onValueChange={(v) => {
+                  setWorkType(v);
+                  const t = WORK_TYPES.find((w) => w.value === v);
+                  if (t?.rate) {
+                    setAmount(String(t.rate));
+                    setReason(t.label);
+                  } else {
+                    setAmount("");
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type of work" />
+                </SelectTrigger>
+                <SelectContent>
+                  {WORK_TYPES.map((w) => (
+                    <SelectItem key={w.value} value={w.value}>
+                      {w.label}
+                      {w.rate ? ` — UGX ${w.rate.toLocaleString()}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Sunday work is paid UGX 10,000; field visits UGX 15,000.
+              </p>
+            </div>
+            <div>
               <Label>Amount (UGX)</Label>
               <Input
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="e.g. 30000"
+                readOnly={!!WORK_TYPES.find((w) => w.value === workType)?.rate}
               />
             </div>
             <div>
@@ -240,7 +281,7 @@ const AwardPerDiemDialog = () => {
             </div>
             <Button
               onClick={() => awardMutation.mutate()}
-              disabled={!selectedEmployee || !amount || !reason || awardMutation.isPending}
+              disabled={!selectedEmployee || !workType || !amount || !reason || awardMutation.isPending}
               className="w-full"
             >
               {awardMutation.isPending ? "Awarding..." : "Award Per Diem"}
