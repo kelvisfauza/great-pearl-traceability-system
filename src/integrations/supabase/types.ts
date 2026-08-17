@@ -3240,6 +3240,7 @@ export type Database = {
           created_by_name: string
           deduction_reasons: string[] | null
           destination_buyer: string
+          dispatch_analysis_id: string | null
           dispatch_date: string
           dispatch_location: string
           dispatch_supervisor: string
@@ -3265,6 +3266,7 @@ export type Database = {
           created_by_name: string
           deduction_reasons?: string[] | null
           destination_buyer: string
+          dispatch_analysis_id?: string | null
           dispatch_date: string
           dispatch_location: string
           dispatch_supervisor: string
@@ -3290,6 +3292,7 @@ export type Database = {
           created_by_name?: string
           deduction_reasons?: string[] | null
           destination_buyer?: string
+          dispatch_analysis_id?: string | null
           dispatch_date?: string
           dispatch_location?: string
           dispatch_supervisor?: string
@@ -3303,7 +3306,15 @@ export type Database = {
           vehicle_registrations?: string | null
           weighbridge_tickets?: Json | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "eudr_dispatch_reports_dispatch_analysis_id_fkey"
+            columns: ["dispatch_analysis_id"]
+            isOneToOne: false
+            referencedRelation: "quality_dispatch_analyses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       eudr_documents: {
         Row: {
@@ -8922,6 +8933,131 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      quality_dispatch_analyses: {
+        Row: {
+          analysed_by: string | null
+          analysis_number: string | null
+          approved_by: string | null
+          bags_loaded: number | null
+          batch_references: string | null
+          below_screen_12: number | null
+          coffee_type: string | null
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          cup_profile: string | null
+          cup_score: number | null
+          destination_buyer: string | null
+          dispatch_date: string
+          dispatch_location: string | null
+          driver_name: string | null
+          eudr_dispatch_report_id: string | null
+          foreign_matter: number | null
+          group1_defects: number | null
+          group2_defects: number | null
+          id: string
+          moisture_content: number | null
+          outturn: number | null
+          pods_husks: number | null
+          print_count: number
+          printed_at: string | null
+          remarks: string | null
+          sample_weight_g: number | null
+          sampled_by: string | null
+          screen_15_plus: number | null
+          status: string
+          total_weight_kg: number | null
+          truck_serial_number: string
+          updated_at: string
+          vehicle_registration: string | null
+          verdict: string | null
+        }
+        Insert: {
+          analysed_by?: string | null
+          analysis_number?: string | null
+          approved_by?: string | null
+          bags_loaded?: number | null
+          batch_references?: string | null
+          below_screen_12?: number | null
+          coffee_type?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          cup_profile?: string | null
+          cup_score?: number | null
+          destination_buyer?: string | null
+          dispatch_date?: string
+          dispatch_location?: string | null
+          driver_name?: string | null
+          eudr_dispatch_report_id?: string | null
+          foreign_matter?: number | null
+          group1_defects?: number | null
+          group2_defects?: number | null
+          id?: string
+          moisture_content?: number | null
+          outturn?: number | null
+          pods_husks?: number | null
+          print_count?: number
+          printed_at?: string | null
+          remarks?: string | null
+          sample_weight_g?: number | null
+          sampled_by?: string | null
+          screen_15_plus?: number | null
+          status?: string
+          total_weight_kg?: number | null
+          truck_serial_number: string
+          updated_at?: string
+          vehicle_registration?: string | null
+          verdict?: string | null
+        }
+        Update: {
+          analysed_by?: string | null
+          analysis_number?: string | null
+          approved_by?: string | null
+          bags_loaded?: number | null
+          batch_references?: string | null
+          below_screen_12?: number | null
+          coffee_type?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          cup_profile?: string | null
+          cup_score?: number | null
+          destination_buyer?: string | null
+          dispatch_date?: string
+          dispatch_location?: string | null
+          driver_name?: string | null
+          eudr_dispatch_report_id?: string | null
+          foreign_matter?: number | null
+          group1_defects?: number | null
+          group2_defects?: number | null
+          id?: string
+          moisture_content?: number | null
+          outturn?: number | null
+          pods_husks?: number | null
+          print_count?: number
+          printed_at?: string | null
+          remarks?: string | null
+          sample_weight_g?: number | null
+          sampled_by?: string | null
+          screen_15_plus?: number | null
+          status?: string
+          total_weight_kg?: number | null
+          truck_serial_number?: string
+          updated_at?: string
+          vehicle_registration?: string | null
+          verdict?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quality_dispatch_analyses_eudr_dispatch_report_id_fkey"
+            columns: ["eudr_dispatch_report_id"]
+            isOneToOne: false
+            referencedRelation: "eudr_dispatch_reports"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       quality_form_numbers: {
         Row: {

@@ -8,6 +8,10 @@ import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import EditDispatchReportModal from './EditDispatchReportModal';
+import { supabase } from '@/integrations/supabase/client';
+import { printDispatchAnalysis } from '@/utils/dispatchAnalysisPrint';
+import { Printer } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface TruckData {
   truck_number: string;
@@ -49,6 +53,7 @@ interface DispatchReport {
   attachment_name: string | null;
   weighbridge_tickets: any[] | null;
   status: string;
+  dispatch_analysis_id?: string | null;
 }
 
 interface EUDRDispatchReportsListProps {
@@ -102,6 +107,7 @@ const EUDRDispatchReportsList = ({ reports, showAll = false, onRefresh }: EUDRDi
               <TableHead>Total Weight</TableHead>
               <TableHead>Difference</TableHead>
               <TableHead>Submitted By</TableHead>
+              <TableHead>Quality Analysis</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -131,6 +137,9 @@ const EUDRDispatchReportsList = ({ reports, showAll = false, onRefresh }: EUDRDi
                     {totalDiff > 0 ? '+' : ''}{totalDiff.toFixed(1)} kg
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{report.created_by_name}</TableCell>
+                  <TableCell>
+                    <DispatchAnalysisLink analysisId={report.dispatch_analysis_id} />
+                  </TableCell>
                   <TableCell>
                      <div className="flex items-center gap-2">
                        <Dialog>
@@ -186,6 +195,37 @@ const EUDRDispatchReportsList = ({ reports, showAll = false, onRefresh }: EUDRDi
      </Card>
    );
  };
+
+const DispatchAnalysisLink = ({ analysisId }: { analysisId?: string | null }) => {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+
+  if (!analysisId) return <span className="text-xs text-muted-foreground">Not linked</span>;
+
+  const loadAndPrint = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await (supabase as any)
+        .from('quality_dispatch_analyses')
+        .select('*')
+        .eq('id', analysisId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error('Analysis not found');
+      printDispatchAnalysis(data);
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Button variant="outline" size="sm" className="gap-1 h-7 text-xs" onClick={loadAndPrint} disabled={loading}>
+      <Printer className="h-3 w-3" /> Analysis
+    </Button>
+  );
+};
 
 const DispatchReportDetail = ({ report }: { report: DispatchReport }) => {
   const trucks = Array.isArray(report.trucks) ? report.trucks : [];
