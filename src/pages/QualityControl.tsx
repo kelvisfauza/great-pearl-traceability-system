@@ -1209,7 +1209,7 @@ const QualityControl = () => {
                 performance: "performance",
                 history: "history",
                 modifications: "modifications",
-                priceCalculator: "price-calculator",
+                priceCalculator: "calculator",
                 quickAnalyses: "quick-analyses",
                 training: "training",
                 recommendations: "recommendations",
@@ -1703,6 +1703,22 @@ const QualityControl = () => {
           )}
 
           <TabsContent value="price-calculator">
+            {!selectedRecord && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>No delivery selected</CardTitle>
+                  <CardDescription>
+                    Pick a pending delivery to price it, or use the standalone Quick Price Calculator.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex gap-2">
+                  <Button variant="outline" onClick={() => setActiveTab("pending")}>Go to pending assessments</Button>
+                  <Button onClick={() => setActiveTab("calculator")}>
+                    <Calculator className="h-4 w-4 mr-2" /> Quick Price Calculator
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
             {selectedRecord && (
               <Card>
                 <CardHeader>
