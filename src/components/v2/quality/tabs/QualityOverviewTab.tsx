@@ -19,7 +19,7 @@ interface Props {
   onNavigate: (tabId: string) => void;
   /** Map the generic section keys to the host page's tab ids (V1 uses different ids) */
   tabIds?: Partial<Record<
-    | "assessments" | "approvals" | "reevaluation" | "files" | "analysisForm" | "warehouse" | "checklist" | "history" | "analytics" | "performance"
+    | "assessments" | "approvals" | "reevaluation" | "files" | "analysisForm" | "warehouse" | "checklist" | "history" | "analytics" | "performance" | "dispatch"
     | "modifications" | "priceCalculator" | "quickAnalyses" | "training" | "recommendations" | "defects" | "reports" | "adminPricing" | "discretion",
     string
   >>;
@@ -62,6 +62,7 @@ const QualityOverviewTab = ({ onNavigate, tabIds }: Props) => {
     files: "files",
     analysisForm: "analysis-form",
     warehouse: "warehouse",
+    dispatch: "dispatch",
     checklist: "checklist",
     history: "history",
     analytics: "analytics",
@@ -308,6 +309,14 @@ const QualityOverviewTab = ({ onNavigate, tabIds }: Props) => {
       title: "Warehouse",
       value: "—",
       hint: "Storage monitoring",
+      icon: Warehouse,
+      chart: 7,
+    },
+    {
+      id: T.dispatch,
+      title: "Dispatch Monitoring",
+      value: "—",
+      hint: "Truck dispatch analyses",
       icon: Warehouse,
       chart: 7,
     },
