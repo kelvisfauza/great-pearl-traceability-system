@@ -227,7 +227,7 @@ const DispatchAnalysisLink = ({ analysisId }: { analysisId?: string | null }) =>
   );
 };
 
-const DispatchReportDetailInner = ({ report }: { report: DispatchReport }) => {
+const DispatchReportDetail = ({ report }: { report: DispatchReport }) => {
   const trucks = Array.isArray(report.trucks) ? report.trucks : [];
   const verification = Array.isArray(report.buyer_verification) ? report.buyer_verification : [];
   const deductionReasons = Array.isArray(report.deduction_reasons) ? report.deduction_reasons : [];
