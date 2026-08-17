@@ -350,13 +350,13 @@ const PerDiemTemplateDownload = () => {
     endDate: today,
     days: '1',
     ratePerDay: '15000',
-  const selectedWorkType = WORK_TYPES.find((w) => w.value === form.workType);
-
     transport: '0',
     accommodation: '0',
     other: '0',
     notes: '',
   });
+
+  const selectedWorkType = WORK_TYPES.find((w) => w.value === form.workType);
 
   const days = parseFloat(form.days) || 0;
   const rate = parseFloat(form.ratePerDay) || 0;
