@@ -93,7 +93,7 @@ const PaymentSlipGenerator = ({ isOpen, onClose }: PaymentSlipGeneratorProps) =>
       <body>
         <div class="header">
           <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
-            <img src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" alt="Great Agro Coffee" style="height: 80px; width: 80px; margin-right: 20px;">
+            <img src="/lovable-uploads/great-agro-coffee-logo.png" alt="Great Agro Coffee" style="height: 80px; width: 80px; margin-right: 20px;">
             <div>
               <div class="company-name">Great Agro Coffee</div>
               <div class="company-address">

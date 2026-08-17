@@ -564,7 +564,7 @@ const ComparisonReport = () => {
       </head>
       <body>
         <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 16px; margin-bottom: 24px;">
-          <img src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" alt="Company Logo" class="company-logo" />
+          <img src="/lovable-uploads/great-agro-coffee-logo.png" alt="Company Logo" class="company-logo" />
           <h1 class="company-name">GREAT AGRO COFFEE</h1>
           <div class="company-details">
             <p style="font-weight:bold;color:#1a5632;">A Member of YEDA Coffee Company Limited</p>

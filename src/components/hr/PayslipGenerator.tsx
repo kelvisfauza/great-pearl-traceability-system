@@ -60,7 +60,7 @@ const PayslipGenerator = ({ payslips, onGeneratePayslips, loading }: PayslipGene
       try {
         const logoImg = new Image();
         logoImg.crossOrigin = 'anonymous';
-        logoImg.src = '/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png';
+        logoImg.src = '/lovable-uploads/great-agro-coffee-logo.png';
         
         await new Promise((resolve, reject) => {
           logoImg.onload = () => resolve(logoImg);

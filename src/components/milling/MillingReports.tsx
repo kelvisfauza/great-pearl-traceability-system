@@ -371,7 +371,7 @@ ${reportData.cashTransactions.map((p: any) =>
           <!-- Company Header -->
           <div class="print-header">
             <img 
-              src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" 
+              src="/lovable-uploads/great-agro-coffee-logo.png" 
               alt="Great Agro Coffee Logo" 
               class="company-logo" 
             />
