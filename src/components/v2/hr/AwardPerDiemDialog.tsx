@@ -96,6 +96,7 @@ const AwardPerDiemDialog = () => {
           metadata: {
             type: "per_diem",
             reason,
+            work_type: workType,
             ref_number: reference,
             awarded_by: employee?.name || "HR",
             employee_name: emp.name,
