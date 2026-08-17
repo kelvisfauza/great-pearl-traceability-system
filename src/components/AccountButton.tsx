@@ -662,12 +662,12 @@ export const AccountButton = () => {
                     {stats ? formatCurrency(stats.monthlyEarnings) : formatCurrency(0)}
                   </div>
                   <span className="text-xs text-muted-foreground">
-                    of {formatCurrency(50000)} cap
+                    of {formatCurrency(stats?.monthlyCap ?? 120000)} cap
                   </span>
                 </div>
                 <Progress value={monthlyProgress} className="h-2" />
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Remaining: {stats ? formatCurrency(stats.monthlyRemaining) : formatCurrency(50000)}</span>
+                  <span>Remaining: {stats ? formatCurrency(stats.monthlyRemaining) : formatCurrency(120000)}</span>
                   <span>Today: +{stats ? formatCurrency(stats.todayEarnings) : formatCurrency(0)}</span>
                 </div>
 

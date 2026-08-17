@@ -68,10 +68,13 @@ export const useLoyaltyStats = () => {
           created_at: e.created_at,
         }));
 
+      // From 1 Aug 2026 the monthly loyalty cap is UGX 120,000 (was 50,000)
+      const cap = new Date() >= new Date('2026-08-01T00:00:00') ? 120000 : 50000;
+
       setStats({
         monthlyEarnings,
-        monthlyRemaining: Math.max(0, 50000 - monthlyEarnings),
-        monthlyCap: 50000,
+        monthlyRemaining: Math.max(0, cap - monthlyEarnings),
+        monthlyCap: cap,
         todayEarnings,
         activityBreakdown: breakdown,
         recentRewards: recent,
