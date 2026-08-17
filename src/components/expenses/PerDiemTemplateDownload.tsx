@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Download, Plane } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -38,6 +39,7 @@ const generateRefNumber = () => {
 
 interface PerDiemFormData {
   destination: string;
+  workType: string;
   purpose: string;
   startDate: string;
   endDate: string;
@@ -48,6 +50,12 @@ interface PerDiemFormData {
   other: string;
   notes: string;
 }
+
+const WORK_TYPES: { value: string; label: string; rate: number | null }[] = [
+  { value: 'sunday', label: 'Working on Sunday', rate: 10000 },
+  { value: 'field_visit', label: 'Field visit', rate: 15000 },
+  { value: 'other', label: 'Other', rate: null },
+];
 
 const generatePDF = async (
   employee: { name?: string; email?: string; department?: string; position?: string; phone?: string },
@@ -166,6 +174,7 @@ const generatePDF = async (
   y += 7;
 
   drawRow('Destination:', data.destination, 'Days:', data.days);
+  drawRow('Type of Work:', WORK_TYPES.find((w) => w.value === data.workType)?.label || '—', 'Rate / Day:', data.ratePerDay);
   drawRow('Start Date:', data.startDate, 'End Date:', data.endDate);
 
   // Purpose
@@ -335,11 +344,14 @@ const PerDiemTemplateDownload = () => {
   const today = new Date().toISOString().split('T')[0];
   const [form, setForm] = useState<PerDiemFormData>({
     destination: '',
+    workType: 'field_visit',
     purpose: '',
     startDate: today,
     endDate: today,
     days: '1',
-    ratePerDay: '30000',
+    ratePerDay: '15000',
+  const selectedWorkType = WORK_TYPES.find((w) => w.value === form.workType);
+
     transport: '0',
     accommodation: '0',
     other: '0',
@@ -428,6 +440,25 @@ const PerDiemTemplateDownload = () => {
                 <Input value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} placeholder="e.g. Kampala" />
               </div>
               <div>
+                <Label>Type of Work *</Label>
+                <Select
+                  value={form.workType}
+                  onValueChange={(v) => {
+                    const wt = WORK_TYPES.find((w) => w.value === v);
+                    setForm({ ...form, workType: v, ratePerDay: wt?.rate != null ? String(wt.rate) : form.ratePerDay });
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select work type" /></SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    {WORK_TYPES.map((w) => (
+                      <SelectItem key={w.value} value={w.value}>
+                        {w.label}{w.rate ? ` — UGX ${w.rate.toLocaleString()}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
                 <Label>Days *</Label>
                 <Input type="number" min="0" value={form.days} onChange={(e) => setForm({ ...form, days: e.target.value })} />
               </div>
@@ -441,7 +472,14 @@ const PerDiemTemplateDownload = () => {
               </div>
               <div>
                 <Label>Rate / Day (UGX)</Label>
-                <Input type="number" min="0" value={form.ratePerDay} onChange={(e) => setForm({ ...form, ratePerDay: e.target.value })} />
+                <Input
+                  type="number"
+                  min="0"
+                  readOnly={selectedWorkType?.rate != null}
+                  className={selectedWorkType?.rate != null ? 'bg-muted' : undefined}
+                  value={form.ratePerDay}
+                  onChange={(e) => setForm({ ...form, ratePerDay: e.target.value })}
+                />
               </div>
               <div>
                 <Label>Transport (UGX)</Label>
