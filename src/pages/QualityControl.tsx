@@ -56,6 +56,7 @@ import CalibrationTab from "@/components/v2/quality/tabs/CalibrationTab";
 import DefectLibraryTab from "@/components/v2/quality/tabs/DefectLibraryTab";
 import SupplierAnalyticsTab from "@/components/v2/quality/tabs/SupplierAnalyticsTab";
 import WarehouseMonitoringTab from "@/components/v2/quality/tabs/WarehouseMonitoringTab";
+import DispatchMonitoringTab from "@/components/v2/quality/tabs/DispatchMonitoringTab";
 import RecommendationsTab from "@/components/v2/quality/tabs/RecommendationsTab";
 import TrainingTab from "@/components/v2/quality/tabs/TrainingTab";
 import DailyChecklistTab from "@/components/v2/quality/tabs/DailyChecklistTab";
@@ -1204,6 +1205,7 @@ const QualityControl = () => {
                 files: "analysis-files",
                 analysisForm: "analysis-form",
                 warehouse: "warehouse",
+                dispatch: "dispatch",
                 checklist: "checklist",
                 analytics: "analytics",
                 performance: "performance",
@@ -1691,6 +1693,7 @@ const QualityControl = () => {
           <TabsContent value="defects"><DefectLibraryTab /></TabsContent>
           {isQualityHead && <TabsContent value="analytics"><SupplierAnalyticsTab /></TabsContent>}
           <TabsContent value="warehouse"><WarehouseMonitoringTab /></TabsContent>
+          <TabsContent value="dispatch"><DispatchMonitoringTab /></TabsContent>
           {isQualityHead && <TabsContent value="recommendations"><RecommendationsTab /></TabsContent>}
           <TabsContent value="training"><TrainingTab /></TabsContent>
           <TabsContent value="checklist"><DailyChecklistTab /></TabsContent>
