@@ -12,6 +12,7 @@ import { FileText, Download, Calendar, Filter, Printer } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useDocumentVerification } from '@/hooks/useDocumentVerification';
 import { getVerificationQRUrl, generateVerificationCode } from '@/utils/verificationCode';
+import { LOGO_URL, COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES } from '@/utils/companyBrand';
 
 interface QualityAssessmentReportsProps {
   assessments: any[];
@@ -176,7 +177,10 @@ const QualityAssessmentReports = ({ assessments }: QualityAssessmentReportsProps
       </head>
       <body>
         <div class="header">
-          <img src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" alt="Company Logo" class="logo">
+          <img src="${LOGO_URL}" alt="${COMPANY_NAME} logo" class="logo">
+          <h2 style="margin:0;font-size:18px;letter-spacing:1px;">${COMPANY_NAME}</h2>
+          <p style="margin:2px 0;font-size:11px;font-style:italic;">${COMPANY_TAGLINE}</p>
+          <p style="margin:2px 0 10px;font-size:10px;color:#555;">${COMPANY_ADDRESS} · ${COMPANY_PHONES}</p>
           <h1>${reportTitle}</h1>
           <p><strong>Period:</strong> ${dateRange}</p>
           <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
