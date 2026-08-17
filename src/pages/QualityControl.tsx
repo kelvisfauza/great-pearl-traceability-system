@@ -1207,7 +1207,7 @@ const QualityControl = () => {
                 checklist: "checklist",
                 analytics: "analytics",
                 performance: "performance",
-                history: "history",
+                history: "assessments",
                 modifications: "modifications",
                 priceCalculator: "calculator",
                 quickAnalyses: "quick-analyses",
