@@ -1209,7 +1209,7 @@ const QualityControl = () => {
                 performance: "performance",
                 history: "history",
                 modifications: "modifications",
-                priceCalculator: "price-calculator",
+                priceCalculator: "calculator",
                 quickAnalyses: "quick-analyses",
                 training: "training",
                 recommendations: "recommendations",
