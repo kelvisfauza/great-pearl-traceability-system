@@ -29,10 +29,15 @@ const BuyerContractsTab = () => {
     return c.status;
   };
 
+  // Normalize so "GPC-BC 0016", "gpcbc0016" and "0016" all match
+  const norm = (v?: string | null) => (v || '').toLowerCase().replace(/[\s\-_/]/g, '');
+  const q = norm(search);
   const filtered = contracts.filter(c =>
-    c.buyer_name.toLowerCase().includes(search.toLowerCase()) ||
-    c.contract_ref.toLowerCase().includes(search.toLowerCase()) ||
-    c.quality.toLowerCase().includes(search.toLowerCase())
+    !q ||
+    norm(c.buyer_name).includes(q) ||
+    norm(c.contract_ref).includes(q) ||
+    norm(c.buyer_ref).includes(q) ||
+    norm(c.quality).includes(q)
   );
 
   const active = contracts.filter(c => getEffectiveStatus(c) === 'active');
