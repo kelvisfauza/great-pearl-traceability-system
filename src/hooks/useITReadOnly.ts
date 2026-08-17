@@ -5,6 +5,9 @@ import { useAuth } from '@/contexts/AuthContext';
 // IT can still fully operate their own areas (attendance, SMS, security,
 // backup, maintenance, procurement — handled elsewhere) so those routes
 // are intentionally NOT in this list.
+// NOTE: Company Forms (/my-expenses, /company-forms) are personal employee
+// documents (per diem, expense, analysis forms) — every employee, including
+// IT Officers, may fill, print and download them.
 const READ_ONLY_ROUTES: string[] = [
   '/store',
   '/eudr',
@@ -18,8 +21,6 @@ const READ_ONLY_ROUTES: string[] = [
   '/human-resources',
   '/hr',
   '/expenses',
-  '/my-expenses',
-  '/company-forms',
   '/settings',
   '/logistics',
   '/reports',
