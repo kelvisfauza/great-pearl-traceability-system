@@ -38,67 +38,64 @@ export interface DispatchAnalysisRecord {
 const v = (x: any, suffix = '') =>
   x === null || x === undefined || x === '' ? '-' : `${x}${suffix}`;
 
+const row = (label: string, value: string) =>
+  `<tr><td class="lbl">${label}</td><td class="val">${value}</td></tr>`;
+
 const copyHtml = (r: DispatchAnalysisRecord, copyLabel: string) => `
   <div class="copy">
-    <div class="print-header">
-      <div class="company-name">Great Agro Coffee</div>
-      <div class="company-subtitle">A Member of YEDA Coffee Company Limited</div>
-      <div class="company-details">P.O Box 431420, Kasese, Uganda<br/>+256 393 001 626 / +256 393 101 103</div>
-      <div class="document-title">Dispatch Quality Analysis Report</div>
-      <div class="document-info">
-        No: ${v(r.analysis_number)} &nbsp;|&nbsp; Date: ${format(new Date(r.dispatch_date), 'dd MMM yyyy')}
-        &nbsp;|&nbsp; <strong>${copyLabel}</strong>
-      </div>
-    </div>
-
-    <div class="content-section">
-      <div class="section-title">A. Dispatch / Truck Details</div>
-      <table>
-        <tr><td><strong>Serial No. on Truck</strong></td><td>${v(r.truck_serial_number)}</td><td><strong>Vehicle Reg.</strong></td><td>${v(r.vehicle_registration)}</td></tr>
-        <tr><td><strong>Driver</strong></td><td>${v(r.driver_name)}</td><td><strong>Destination / Buyer</strong></td><td>${v(r.destination_buyer)}</td></tr>
-        <tr><td><strong>Dispatch Location</strong></td><td>${v(r.dispatch_location)}</td><td><strong>Coffee Type</strong></td><td>${v(r.coffee_type)}</td></tr>
-        <tr><td><strong>Bags Loaded</strong></td><td>${v(r.bags_loaded)}</td><td><strong>Total Weight</strong></td><td>${v(r.total_weight_kg, ' kg')}</td></tr>
-        <tr><td><strong>Lot / Batch Refs</strong></td><td colspan="3">${v(r.batch_references)}</td></tr>
-      </table>
-    </div>
-
-    <div class="content-section">
-      <div class="section-title">B. Results of the Sample</div>
-      <table>
-        <thead><tr><th>Parameter</th><th>Result</th><th>Parameter</th><th>Result</th></tr></thead>
-        <tbody>
-          <tr><td>Sample Weight</td><td>${v(r.sample_weight_g, ' g')}</td><td>Moisture Content</td><td>${v(r.moisture_content, ' %')}</td></tr>
-          <tr><td>Group 1 Defects</td><td>${v(r.group1_defects, ' %')}</td><td>Group 2 Defects</td><td>${v(r.group2_defects, ' %')}</td></tr>
-          <tr><td>Below Screen 12</td><td>${v(r.below_screen_12, ' %')}</td><td>Screen 15+</td><td>${v(r.screen_15_plus, ' %')}</td></tr>
-          <tr><td>Foreign Matter</td><td>${v(r.foreign_matter, ' %')}</td><td>Pods / Husks</td><td>${v(r.pods_husks, ' %')}</td></tr>
-          <tr><td>Outturn</td><td>${v(r.outturn, ' %')}</td><td>Cup Score</td><td>${v(r.cup_score)}</td></tr>
-          <tr><td>Cup Profile</td><td colspan="3">${v(r.cup_profile)}</td></tr>
-          <tr class="total-row"><td><strong>Verdict</strong></td><td colspan="3"><strong>${(r.verdict || 'accepted').toUpperCase()}</strong></td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="content-section">
-      <div class="section-title">C. Remarks</div>
-      <p>${r.remarks ? String(r.remarks).replace(/</g, '&lt;') : 'None'}</p>
-    </div>
-
-    <div class="signatures">
+    <div class="form-head">
       <div>
-        <div class="signature-line"></div>
-        <p>Sampled By${r.sampled_by ? `: ${r.sampled_by}` : ''}</p>
+        <div class="company-name">GREAT AGRO COFFEE</div>
+        <div class="company-subtitle">a member of YEDA COFFEE COMPANY LIMITED</div>
+        <div class="company-details">P.O Box 431420, Kasese, Uganda | +256 393 001 626 / +256 393 101 103 | info@greatpearlcoffee.com</div>
       </div>
-      <div>
-        <div class="signature-line"></div>
-        <p>Analysed By${r.analysed_by ? `: ${r.analysed_by}` : ''}</p>
+      <div class="head-right">DISPATCH ANALYSIS FORM</div>
+    </div>
+    <div class="head-rule"></div>
+
+    <div class="form-title">DISPATCH QUALITY ANALYSIS FORM</div>
+    <div class="copy-label">${copyLabel}</div>
+
+    <table class="form-table">
+      ${row('Form No.', `<strong>${v(r.analysis_number)}</strong>`)}
+      ${row('Date', format(new Date(r.dispatch_date), 'dd MMM yyyy'))}
+      ${row('Serial No. on Truck', v(r.truck_serial_number))}
+      ${row('Vehicle Registration', v(r.vehicle_registration))}
+      ${row('Driver', v(r.driver_name))}
+      ${row('Destination / Buyer', v(r.destination_buyer))}
+      ${row('Dispatch Location', v(r.dispatch_location))}
+      ${row('Coffee Type', v(r.coffee_type))}
+      ${row('Lot / Batch References', v(r.batch_references))}
+      ${row('Bags Loaded', v(r.bags_loaded))}
+      ${row('Total Weight (Kg)', v(r.total_weight_kg))}
+      ${row('Grams Used (Sample Weight)', v(r.sample_weight_g))}
+      ${row('Moisture Content (M.C %)', v(r.moisture_content))}
+      ${row('Below Screen 12 (%)', v(r.below_screen_12))}
+      ${row('Screen 15+ (%)', v(r.screen_15_plus))}
+      ${row('Group 1 Defects (%)', v(r.group1_defects))}
+      ${row('Group 2 Defects (%)', v(r.group2_defects))}
+      ${row('Pods / Husks (%)', v(r.pods_husks))}
+      ${row('Foreign Matter (%)', v(r.foreign_matter))}
+      ${row('Outturn (%)', v(r.outturn))}
+      ${row('Cup Score', v(r.cup_score))}
+      ${row('Cup Profile', v(r.cup_profile))}
+      ${row('Verdict', `<strong>${(r.verdict || 'accepted').toUpperCase()}</strong>`)}
+      ${row('Sampled By', v(r.sampled_by))}
+      ${row('Analysed By', v(r.analysed_by))}
+      ${row('Approved By', v(r.approved_by))}
+      ${row('Comments', r.remarks ? String(r.remarks).replace(/</g, '&lt;') : '-')}
+    </table>
+
+    <div class="sign-boxes">
+      <div class="sign-box">
+        <div class="sign-title">QUALITY PERSONNEL — Sign &amp; Stamp</div>
+        <div class="sign-meta">Name: ..............................................</div>
+        <div class="sign-meta">Date: ........................</div>
       </div>
-      <div>
-        <div class="signature-line"></div>
-        <p>Approved By${r.approved_by ? `: ${r.approved_by}` : ''}</p>
-      </div>
-      <div>
-        <div class="signature-line"></div>
-        <p>Driver / Received By</p>
+      <div class="sign-box">
+        <div class="sign-title">DRIVER / RECEIVED BY — Sign</div>
+        <div class="sign-meta">Name: ..............................................</div>
+        <div class="sign-meta">Date: ........................</div>
       </div>
     </div>
 
@@ -115,9 +112,22 @@ export const printDispatchAnalysis = (r: DispatchAnalysisRecord) => {
           ${getStandardPrintStyles()}
           .copy { page-break-after: always; }
           .copy:last-child { page-break-after: auto; }
-          .signatures { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 28px; }
-          .signature-line { border-bottom: 1px solid #000; height: 34px; }
-          .signatures p { font-size: 11px; margin-top: 4px; }
+          .form-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+          .company-name { font-size: 16px; font-weight: bold; }
+          .company-subtitle { font-size: 9px; }
+          .company-details { font-size: 8px; }
+          .head-right { font-size: 10px; font-weight: bold; text-align: right; }
+          .head-rule { border-top: 1.5px solid #000; margin: 6px 0 10px; }
+          .form-title { text-align: center; font-size: 13px; font-weight: bold; margin-bottom: 2px; }
+          .copy-label { text-align: center; font-size: 9px; margin-bottom: 8px; }
+          .form-table { width: 100%; border-collapse: collapse; }
+          .form-table td { border: 0.6px solid #000; padding: 5px 6px; font-size: 10px; height: 18px; }
+          .form-table tr:nth-child(odd) td { background: #f0f0f0; }
+          .form-table .lbl { width: 42%; font-weight: bold; }
+          .sign-boxes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+          .sign-box { border: 0.6px solid #000; padding: 6px; height: 68px; }
+          .sign-title { font-size: 8.5px; font-weight: bold; margin-bottom: 26px; }
+          .sign-meta { font-size: 7.5px; color: #5a5a5a; }
         </style>
       </head>
       <body>
