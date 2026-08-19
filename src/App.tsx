@@ -98,6 +98,7 @@ import V2ProcurementDashboard from "./pages/v2/procurement/Dashboard";
 import V2ITDashboard from "./pages/v2/it/Dashboard";
 import V2HRAbsenceAppeals from "./pages/v2/hr/AbsenceAppeals";
 import MyDeductionsPage from "./pages/v2/MyDeductionsPage";
+import PrintQueuePage from "./pages/PrintQueue";
 import V3Dashboard from "./pages/v3/Dashboard";
 import V3Receiving from "./pages/v3/Receiving";
 import V3Suppliers from "./pages/v3/Suppliers";
@@ -292,6 +293,7 @@ const App: React.ComponentType = () => {
                 <Route path="/v2/hr/payroll" element={<ProtectedRoute requiredPermissions={["Human Resources"]} requiredRoles={["Administrator", "Super Admin"]}><V2HRPayroll /></ProtectedRoute>} />
                 <Route path="/v2/hr/absence-appeals" element={<ProtectedRoute requiredPermissions={["Human Resources"]}><V2HRAbsenceAppeals /></ProtectedRoute>} />
                 <Route path="/my-deductions" element={<ProtectedRoute><MyDeductionsPage /></ProtectedRoute>} />
+                <Route path="/print-queue" element={<ProtectedRoute><PrintQueuePage /></ProtectedRoute>} />
                 <Route path="/v2/field-operations" element={<ProtectedRoute requiredPermissions={["Field Operations"]}><V2FieldOpsDashboard /></ProtectedRoute>} />
                 <Route path="/v2/analytics" element={<ProtectedRoute requiredPermissions={["Data Analysis"]}><V2AnalyticsDashboard /></ProtectedRoute>} />
                 <Route path="/v2/eudr" element={<ProtectedRoute requiredPermissions={["EUDR Documentation", "Store Management"]}><V2EUDRDashboard /></ProtectedRoute>} />
