@@ -18,6 +18,8 @@ export type PrintIntent = {
   queue: () => void;
   /** do nothing */
   cancel: () => void;
+  /** close the temporary print window/iframe (used after queue/cancel) */
+  dismiss: () => void;
 };
 
 /** Set to true around prints that must never be intercepted (the queue itself). */
@@ -67,13 +69,16 @@ function ask(win: Window, originalPrint: () => void) {
     now: () => originalPrint(),
     queue: () => { /* handled by the dialog via printQueue */ },
     cancel: () => { /* no-op */ },
+    dismiss: () => {
+      try { if (win !== window) win.close(); } catch { /* ignore */ }
+    },
   };
 
-  const dispatched = window.dispatchEvent(
+  const notPrevented = window.dispatchEvent(
     new CustomEvent<PrintIntent>(PRINT_INTENT_EVENT, { detail, cancelable: true })
   );
-  // If no listener claimed it, fall back to printing immediately.
-  if (dispatched && !(window as any).__pqDialogMounted) originalPrint();
+  // No dialog mounted -> keep the original behaviour.
+  if (notPrevented) originalPrint();
 }
 
 function patchWindow(win: Window | null) {
