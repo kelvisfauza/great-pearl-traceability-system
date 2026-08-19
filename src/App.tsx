@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
+import PrintIntentDialog from "@/components/print/PrintIntentDialog";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import OfflineIndicator from "@/components/offline/OfflineIndicator";
 import { startQueueAutoSync } from "@/lib/offline/queue";
@@ -215,6 +216,7 @@ const App: React.ComponentType = () => {
           <CallProvider>
             <Toaster />
             <Sonner />
+            <PrintIntentDialog />
             <GroupCallDialog />
             <IncomingGroupCallToast />
             <MissedGroupCallsBanner />

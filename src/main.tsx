@@ -33,10 +33,14 @@ import './index.css';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { useGlobalErrorHandler } from './hooks/useGlobalErrorHandler';
 import { installJsPdfGrayscale } from '@/utils/jsPdfGrayscalePatch';
+import { installPrintInterceptor } from '@/lib/printInterceptor';
 
 // Force every generated PDF (receipts, payslips, loan agreements, reports, …)
 // to render in grayscale so they print cleanly on B&W printers.
 installJsPdfGrayscale();
+
+// Route every print in the system through the "print now or queue it?" prompt.
+installPrintInterceptor();
 
 
 // Error Handler Component
