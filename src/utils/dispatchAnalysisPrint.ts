@@ -1,6 +1,8 @@
 import { format } from 'date-fns';
 import { getStandardPrintStyles } from '@/utils/printStyles';
 import { getStandardPrintFooter } from '@/components/print/PrintFooter';
+import { addToPrintQueue } from '@/lib/printQueue';
+import { toast } from 'sonner';
 
 export interface DispatchAnalysisRecord {
   id: string;
@@ -103,7 +105,7 @@ const copyHtml = (r: DispatchAnalysisRecord, copyLabel: string) => `
   </div>
 `;
 
-export const printDispatchAnalysis = (r: DispatchAnalysisRecord) => {
+export const printDispatchAnalysis = (r: DispatchAnalysisRecord, opts?: { direct?: boolean }) => {
   const html = `
     <html>
       <head>
@@ -137,11 +139,23 @@ export const printDispatchAnalysis = (r: DispatchAnalysisRecord) => {
     </html>
   `;
 
-  const w = window.open('', '_blank');
-  if (w) {
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    setTimeout(() => w.print(), 500);
+  if (opts?.direct) {
+    const w = window.open('', '_blank');
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+      w.focus();
+      setTimeout(() => w.print(), 500);
+    }
+    return;
   }
+
+  void addToPrintQueue({
+    title: `Dispatch Analysis - ${r.analysis_number || r.truck_serial_number}`,
+    docType: 'Dispatch Analysis',
+    html,
+  }).then((job) => {
+    if (job) toast.success('Added to your print queue', { description: 'Open the Print Queue on the dashboard to print it.' });
+    else toast.error('Could not add to print queue');
+  });
 };
