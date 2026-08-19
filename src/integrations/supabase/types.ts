@@ -8222,6 +8222,54 @@ export type Database = {
         }
         Relationships: []
       }
+      print_jobs: {
+        Row: {
+          content: string
+          copies: number
+          created_at: string
+          doc_type: string
+          expires_at: string
+          format: string
+          id: string
+          printed_at: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_email: string | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          copies?: number
+          created_at?: string
+          doc_type?: string
+          expires_at?: string
+          format?: string
+          id?: string
+          printed_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          user_email?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          copies?: number
+          created_at?: string
+          doc_type?: string
+          expires_at?: string
+          format?: string
+          id?: string
+          printed_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_email?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           address: string | null
@@ -15409,6 +15457,7 @@ export type Database = {
         Returns: undefined
       }
       cleanup_expired_login_codes: { Args: never; Returns: undefined }
+      cleanup_expired_print_jobs: { Args: never; Returns: undefined }
       cleanup_expired_verification_codes: { Args: never; Returns: undefined }
       cleanup_inactive_sessions: { Args: never; Returns: undefined }
       cleanup_old_price_calculations: { Args: never; Returns: undefined }

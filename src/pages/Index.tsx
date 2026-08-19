@@ -21,6 +21,7 @@ import DailyComparisonChart from '@/components/dashboard/DailyComparisonChart';
 import RevenueExpenseChart from '@/components/dashboard/RevenueExpenseChart';
 import DepartmentActivityChart from '@/components/dashboard/DepartmentActivityChart';
 import EmployeeOfTheMonthWidget from '@/components/dashboard/EmployeeOfTheMonthWidget';
+import PrintQueueWidget from '@/components/print/PrintQueueWidget';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { SignedAvatarImage } from '@/components/ui/signed-avatar-image';
@@ -99,6 +100,9 @@ const Index = () => {
 
         {/* Employee of the Month - Pinned for all staff */}
         <EmployeeOfTheMonthWidget />
+
+        {/* Print Queue */}
+        <PrintQueueWidget />
 
         {/* KPI Cards with Sparklines */}
         <DashboardStats />

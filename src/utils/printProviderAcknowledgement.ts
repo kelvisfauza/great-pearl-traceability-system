@@ -1,3 +1,5 @@
+import { addToPrintQueue } from '@/lib/printQueue';
+import { toast } from 'sonner';
 import logo from '@/assets/great-agro-coffee-logo.png';
 
 interface AckData {
@@ -15,7 +17,7 @@ interface AckData {
   processedBy: string;
 }
 
-export function printProviderAcknowledgement(d: AckData) {
+export function printProviderAcknowledgement(d: AckData, opts?: { direct?: boolean }) {
   const fmt = (n: number) => `UGX ${Number(n || 0).toLocaleString()}`;
   const date = new Date().toLocaleString('en-UG', { dateStyle: 'long', timeStyle: 'short' });
   const typeLabel = d.requestType === 'meal_plan' ? 'Meal Plan Payment' : 'Service Provider Payment';
@@ -100,9 +102,21 @@ export function printProviderAcknowledgement(d: AckData) {
 </div>
 </body></html>`;
 
-  const w = window.open('', '_blank', 'width=900,height=1000');
-  if (!w) return;
-  w.document.write(html);
-  w.document.close();
-  setTimeout(() => { try { w.focus(); w.print(); } catch {} }, 500);
+  if (opts?.direct) {
+    const w = window.open('', '_blank', 'width=900,height=1000');
+    if (!w) return;
+    w.document.write(html);
+    w.document.close();
+    setTimeout(() => { try { w.focus(); w.print(); } catch {} }, 500);
+    return;
+  }
+
+  void addToPrintQueue({
+    title: `Payment Acknowledgement - ${d.reference}`,
+    docType: 'Provider Acknowledgement',
+    html,
+  }).then((job) => {
+    if (job) toast.success('Added to your print queue', { description: 'Open the Print Queue on the dashboard to print it.' });
+    else toast.error('Could not add to print queue');
+  });
 }
