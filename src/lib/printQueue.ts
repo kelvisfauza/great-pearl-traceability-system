@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { bypassPrint } from '@/lib/printInterceptor';
 
 export type PrintJob = {
   id: string;
@@ -135,17 +136,20 @@ export function printHtmlJobs(jobs: PrintJob[]) {
     </style>
   </head><body>${parts.join('')}</body></html>`;
 
-  const w = window.open('', '_blank', 'width=980,height=800');
-  if (!w) return false;
-  w.document.open();
-  w.document.write(doc);
-  w.document.close();
-  setTimeout(() => { w.focus(); w.print(); }, 400);
-  return true;
+  return bypassPrint(() => {
+    const w = window.open('', '_blank', 'width=980,height=800');
+    if (!w) return false;
+    w.document.open();
+    w.document.write(doc);
+    w.document.close();
+    setTimeout(() => { w.focus(); w.print(); }, 400);
+    return true;
+  });
 }
 
 /** Open a PDF job in a new tab and trigger its print dialog. */
 export function printPdfJob(job: PrintJob) {
+  return bypassPrint(() => {
   const w = window.open('', '_blank', 'width=980,height=800');
   if (!w) return false;
   w.document.open();
@@ -154,4 +158,5 @@ export function printPdfJob(job: PrintJob) {
   );
   w.document.close();
   return true;
+  });
 }

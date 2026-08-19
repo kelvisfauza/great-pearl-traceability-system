@@ -1,0 +1,146 @@
+/**
+ * Global print interception.
+ *
+ * Every print in the system (new-window prints, hidden-iframe prints and
+ * direct window.print() calls) is routed through a small dialog that lets
+ * the user either print immediately or push the document into their
+ * cross-device print queue.
+ */
+
+export const PRINT_INTENT_EVENT = 'print-intent';
+
+export type PrintIntent = {
+  title: string;
+  html: string | null;
+  /** print straight away (original behaviour) */
+  now: () => void;
+  /** store in the print queue instead */
+  queue: () => void;
+  /** do nothing */
+  cancel: () => void;
+  /** close the temporary print window/iframe (used after queue/cancel) */
+  dismiss: () => void;
+};
+
+/** Set to true around prints that must never be intercepted (the queue itself). */
+export function bypassPrint<T>(fn: () => T): T {
+  (window as any).__pqBypass = true;
+  try {
+    return fn();
+  } finally {
+    setTimeout(() => { (window as any).__pqBypass = false; }, 3000);
+  }
+}
+
+const isBypassed = () => Boolean((window as any).__pqBypass);
+
+const grabHtml = (win: Window): string | null => {
+  try {
+    const doc = win.document;
+    if (!doc || !doc.documentElement) return null;
+    const html = doc.documentElement.outerHTML;
+    return html && html.length > 40 ? html : null;
+  } catch {
+    return null;
+  }
+};
+
+const grabTitle = (win: Window): string => {
+  try {
+    return win.document.title || document.title || 'Document';
+  } catch {
+    return 'Document';
+  }
+};
+
+function ask(win: Window, originalPrint: () => void) {
+  const html = grabHtml(win);
+  const title = grabTitle(win);
+
+  // Nothing capturable (PDF viewers, cross-origin) -> just print.
+  if (!html) {
+    originalPrint();
+    return;
+  }
+
+  const detail: PrintIntent = {
+    title,
+    html,
+    now: () => originalPrint(),
+    queue: () => { /* handled by the dialog via printQueue */ },
+    cancel: () => { /* no-op */ },
+    dismiss: () => {
+      try { if (win !== window) win.close(); } catch { /* ignore */ }
+    },
+  };
+
+  const notPrevented = window.dispatchEvent(
+    new CustomEvent<PrintIntent>(PRINT_INTENT_EVENT, { detail, cancelable: true })
+  );
+  // No dialog mounted -> keep the original behaviour.
+  if (notPrevented) originalPrint();
+}
+
+function patchWindow(win: Window | null) {
+  if (!win) return;
+  try {
+    const w = win as any;
+    if (w.__pqPatched) return;
+    const original = win.print?.bind(win);
+    if (!original) return;
+    w.__pqPatched = true;
+    w.print = () => {
+      if (isBypassed()) return original();
+      ask(win, original);
+    };
+  } catch {
+    /* cross-origin */
+  }
+}
+
+let installed = false;
+
+export function installPrintInterceptor() {
+  if (installed || typeof window === 'undefined') return;
+  installed = true;
+
+  // 1. Top-level window.print()
+  patchWindow(window);
+
+  // 2. window.open(...) — patch the child as soon as it exists.
+  const nativeOpen = window.open.bind(window);
+  window.open = ((...args: any[]) => {
+    const child = nativeOpen(...(args as [any, any, any]));
+    if (child) {
+      patchWindow(child);
+      // doc.write happens after open; re-patch shortly after in case the
+      // document swap replaced the print binding.
+      setTimeout(() => patchWindow(child), 50);
+      setTimeout(() => patchWindow(child), 300);
+    }
+    return child;
+  }) as typeof window.open;
+
+  // 3. Hidden iframes used by in-place print helpers.
+  const patchIframe = (el: HTMLIFrameElement) => {
+    const tryPatch = () => patchWindow(el.contentWindow);
+    tryPatch();
+    el.addEventListener('load', tryPatch);
+    setTimeout(tryPatch, 50);
+    setTimeout(tryPatch, 400);
+  };
+
+  document.querySelectorAll('iframe').forEach(f => patchIframe(f as HTMLIFrameElement));
+
+  const observer = new MutationObserver(muts => {
+    muts.forEach(m => {
+      m.addedNodes.forEach(node => {
+        if (node instanceof HTMLIFrameElement) patchIframe(node);
+        else if (node instanceof HTMLElement) {
+          node.querySelectorAll?.('iframe').forEach(f => patchIframe(f as HTMLIFrameElement));
+        }
+      });
+    });
+  });
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+}
