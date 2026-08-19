@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { useDocumentVerification } from '@/hooks/useDocumentVerification';
 import { Printer } from 'lucide-react';
 import { GRNDocumentData, getGRNPreviewHTML, getGRNPrintDocumentHTML } from '@/utils/grnPrintTemplate';
+import { addToPrintQueue } from '@/lib/printQueue';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { stripLegacySupplierSuffix } from '@/utils/supplierDisplay';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
@@ -242,6 +244,21 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
     onPrinted?.();
   };
 
+  const handleQueue = async () => {
+    if (!previewData) return;
+    const job = await addToPrintQueue({
+      title: `GRN - ${previewData.grnNumber}`,
+      docType: 'Goods Received Note',
+      html: getGRNPrintDocumentHTML([previewData], `GRN - ${previewData.grnNumber}`, { includeFinanceCopy: !hideFinanceCopy }),
+    });
+    if (job) {
+      toast.success('Added to your print queue', { description: 'Open the Print Queue on the dashboard to print it.' });
+      onPrinted?.();
+    } else {
+      toast.error('Could not add to print queue');
+    }
+  };
+
   if (!grnData) return null;
 
   return (
@@ -260,6 +277,10 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
 
         <div className="mt-3 flex justify-end gap-2">
           <Button variant="outline" onClick={onClose}>Close</Button>
+          <Button variant="secondary" onClick={handleQueue} className="gap-2">
+            <Printer className="h-4 w-4" />
+            Add to print queue
+          </Button>
           <Button onClick={handlePrint} className="gap-2">
             <Printer className="h-4 w-4" />
             Print GRN
