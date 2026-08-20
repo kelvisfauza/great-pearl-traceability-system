@@ -18,7 +18,9 @@ import { useQualityRole } from "@/hooks/useQualityRole";
 
 const PAGE_SIZE = 50;
 
-const assessmentStatusLabel = (status: string, qmAction?: string | null) => {
+const assessmentStatusLabel = (status: string, qmAction?: string | null, row?: any) => {
+  if (row?.permanently_rejected) return "Permanently Rejected";
+  if (row?.admin_discretion_buy) return "Approved — Admin Discretion";
   if (status === "pending_quality_manager") return "Awaiting Quality Manager";
   if (status === "pending_admin_pricing" && qmAction) return "Awaiting Admin Pricing";
   if (status === "pending_admin_pricing") return "Awaiting Admin Pricing";
@@ -57,7 +59,9 @@ const AssessmentHistoryTab = () => {
     (employee?.role || "").toLowerCase().includes("quality");
 
   const isGrnPrintable = (a: any) =>
-    !["pending_quality_manager", "rejected", "PERMANENTLY_REJECTED"].includes(String(a?.status || ""));
+    !!a?.admin_discretion_buy ||
+    (!a?.permanently_rejected &&
+      !["pending_quality_manager", "rejected", "PERMANENTLY_REJECTED"].includes(String(a?.status || "")));
 
   const openGrn = async (a: any) => {
     if (!isGrnPrintable(a)) {
@@ -251,7 +255,7 @@ const AssessmentHistoryTab = () => {
                         <TableCell>{a.moisture}%</TableCell>
                         <TableCell>{a.outturn}%</TableCell>
                         <TableCell>{a.final_price ? `UGX ${Number(a.final_price).toLocaleString()}` : "—"}</TableCell>
-                        <TableCell><Badge variant="outline">{assessmentStatusLabel(a.status, a.qm_action)}</Badge></TableCell>
+                        <TableCell><Badge variant="outline">{assessmentStatusLabel(a.status, a.qm_action, a)}</Badge></TableCell>
                         <TableCell className="text-xs">{a.assessed_by}</TableCell>
                         <TableCell className="text-xs">
                           {a.grn_printed ? (
