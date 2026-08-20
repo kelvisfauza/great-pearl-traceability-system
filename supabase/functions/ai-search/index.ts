@@ -309,7 +309,7 @@ function buildTools(): any[] {
 // ---------- Messaging: recipient lookup + dispatch ----------
 interface RecipientRow { name: string; email: string; phone: string; role: string; department: string; }
 
-async function runFindRecipients(admin: ReturnType<typeof createClient>, args: any): Promise<any> {
+async function runFindRecipients(admin: any, args: any): Promise<any> {
   let q: any = admin
     .from("employees")
     .select("name, email, phone, role, department, permissions, status, disabled")
@@ -361,7 +361,7 @@ async function runFindRecipients(admin: ReturnType<typeof createClient>, args: a
 }
 
 async function runSendMessage(
-  admin: ReturnType<typeof createClient>,
+  admin: any,
   args: any,
   sender: { email: string; name: string },
 ): Promise<any> {
