@@ -303,6 +303,151 @@ async function runCountTable(
 }
 
 function buildTools(): any[] {
+  return _buildTools();
+}
+
+// ---------- Messaging: recipient lookup + dispatch ----------
+interface RecipientRow { name: string; email: string; phone: string; role: string; department: string; }
+
+async function runFindRecipients(admin: ReturnType<typeof createClient>, args: any): Promise<any> {
+  let q: any = admin
+    .from("employees")
+    .select("name, email, phone, role, department, permissions, status, disabled")
+    .eq("status", "Active")
+    .or("disabled.is.null,disabled.eq.false")
+    .limit(200);
+
+  const role = String(args?.role || "").trim();
+  const department = String(args?.department || "").trim();
+  const name = String(args?.name || "").trim();
+  const email = String(args?.email || "").trim();
+  const permission = String(args?.permission || "").trim();
+  const all = args?.all === true;
+
+  if (role) q = q.ilike("role", `%${role}%`);
+  if (department) q = q.ilike("department", `%${department}%`);
+  if (name) q = q.ilike("name", `%${name}%`);
+  if (email) q = q.ilike("email", `%${email}%`);
+
+  if (!role && !department && !name && !email && !permission && !all) {
+    return { error: "Provide at least one filter (role, department, permission, name, email) or all=true." };
+  }
+
+  const { data, error } = await q;
+  if (error) return { error: error.message };
+
+  let rows = (data || []) as any[];
+  if (permission) {
+    const p = permission.toLowerCase();
+    rows = rows.filter((r) => {
+      const perms = Array.isArray(r.permissions) ? r.permissions.map((x: any) => String(x).toLowerCase()) : [];
+      return perms.some((x: string) => x.includes(p)) ||
+        String(r.department || "").toLowerCase().includes(p) ||
+        String(r.role || "").toLowerCase().includes(p);
+    });
+  }
+
+  const recipients: RecipientRow[] = rows
+    .filter((r) => r.email)
+    .map((r) => ({
+      name: String(r.name || ""),
+      email: String(r.email || "").toLowerCase(),
+      phone: String(r.phone || ""),
+      role: String(r.role || ""),
+      department: String(r.department || ""),
+    }));
+
+  return { count: recipients.length, recipients };
+}
+
+async function runSendMessage(
+  admin: ReturnType<typeof createClient>,
+  args: any,
+  sender: { email: string; name: string },
+): Promise<any> {
+  if (args?.confirmed !== true) {
+    return { error: "Not sent: the user has not confirmed yet. Show a preview and ask them to confirm first." };
+  }
+  const channelRaw = String(args?.channel || "email").toLowerCase();
+  const channel = ["email", "sms", "both"].includes(channelRaw) ? channelRaw : "email";
+  const message = String(args?.message || "").trim();
+  const subject = String(args?.subject || "Message from " + sender.name).trim().slice(0, 150);
+  if (!message) return { error: "message is required" };
+
+  const emails = Array.from(new Set(
+    (Array.isArray(args?.recipients) ? args.recipients : [])
+      .map((e: any) => String(e || "").trim().toLowerCase())
+      .filter((e: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)),
+  )).slice(0, 60);
+  if (!emails.length) return { error: "No valid recipient email addresses supplied." };
+  const { data: empRows } = await admin
+    .from("employees")
+    .select("name, email, phone, status, disabled")
+    .in("email", emails);
+
+  const byEmail = new Map<string, any>();
+  for (const r of (empRows || []) as any[]) byEmail.set(String(r.email || "").toLowerCase(), r);
+
+  const results: any[] = [];
+  for (const to of emails) {
+    const emp = byEmail.get(to);
+    if (emp && emp.disabled === true) {
+      results.push({ to, skipped: "account disabled" });
+      continue;
+    }
+    const recipientName = String(emp?.name || "").trim();
+    const phone = String(emp?.phone || "").trim();
+    const entry: any = { to, name: recipientName || undefined };
+
+    if (channel === "email" || channel === "both") {
+      try {
+        const { data, error } = await admin.functions.invoke("send-transactional-email", {
+          body: {
+            templateName: "general-notification",
+            recipientEmail: to,
+            templateData: {
+              subject,
+              title: subject,
+              recipientName: recipientName || undefined,
+              message: `${message}\n\n— Sent by ${sender.name || sender.email} via the Great Agro Coffee assistant.`,
+            },
+          },
+        });
+        entry.email = error ? `failed: ${error.message}` : (data?.ok === false ? `blocked: ${data?.error}` : "sent");
+      } catch (e) {
+        entry.email = `failed: ${String((e as Error)?.message || e)}`;
+      }
+    }
+
+    if (channel === "sms" || channel === "both") {
+      if (!phone) {
+        entry.sms = "skipped: no phone on file";
+      } else {
+        try {
+          const { data, error } = await admin.functions.invoke("send-sms", {
+            body: {
+              phone,
+              message: `${subject ? subject + ": " : ""}${message}`.slice(0, 480),
+              userName: recipientName,
+              messageType: "tx:ai_assistant_message",
+              triggeredBy: sender.email,
+              recipientEmail: to,
+            },
+          });
+          entry.sms = error ? `failed: ${error.message}` : (data?.success === false ? `failed: ${data?.error || "unknown"}` : "sent");
+        } catch (e) {
+          entry.sms = `failed: ${String((e as Error)?.message || e)}`;
+        }
+      }
+    }
+    results.push(entry);
+  }
+
+  console.log(`📨 AI message by ${sender.email} → ${emails.length} recipient(s) via ${channel}`);
+  return { channel, subject, recipients: emails.length, results };
+}
+
+function _buildTools(): any[] {
   return [
     {
       type: "function",
