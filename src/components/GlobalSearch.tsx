@@ -339,9 +339,21 @@ const GlobalSearch = () => {
                       }
                     }}
                     rows={1}
-                    placeholder="Message AI… (Shift+Enter for a new line)"
+                    placeholder={voice.listening ? "Listening… speak now" : "Message the Company Assistant… (Shift+Enter for a new line)"}
                     className="flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none max-h-40"
                   />
+                  {voice.supported && (
+                    <Button
+                      size="icon"
+                      variant={voice.listening ? "destructive" : "ghost"}
+                      onClick={toggleMic}
+                      disabled={loading}
+                      title={voice.listening ? "Stop listening" : "Speak your question"}
+                      className="h-9 w-9 shrink-0 rounded-xl"
+                    >
+                      {voice.listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                    </Button>
+                  )}
                   <Button
                     size="icon"
                     onClick={submit}
@@ -351,10 +363,24 @@ const GlobalSearch = () => {
                     {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   </Button>
                 </div>
+                {voice.listening && (
+                  <p className="mt-1.5 px-2 text-[11px] text-muted-foreground">
+                    <span className="mr-1 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-destructive align-middle" />
+                    {voice.transcript || "Listening…"}
+                  </p>
+                )}
+                {voice.speaking && (
+                  <button
+                    onClick={voice.stopSpeaking}
+                    className="mt-1.5 px-2 text-[11px] text-primary hover:underline"
+                  >
+                    Speaking… tap to stop
+                  </button>
+                )}
               </div>
 
               <div className="flex items-center justify-between border-t border-border px-3 py-2 text-[10px] text-muted-foreground">
-                <span>Powered by AI · results filtered by your permissions</span>
+                <span>Company Assistant · results filtered by your permissions</span>
                 <span className="inline-flex items-center gap-1"><kbd className="rounded border px-1">Esc</kbd> close</span>
               </div>
             </div>
