@@ -865,6 +865,9 @@ const CAPABILITIES: Capability[] = [
     description: "Post a company announcement.",
     route: "/admin?new=announcement",
     requiredPermission: "Administration", fields: ["title", "message"] },
+  { id: "apply_loan", kind: "create", label: "Apply for a Loan",
+    description: "Apply now for a loan, borrow money, credit, quick loan, salary loan or business loan.",
+    route: "/quick-loans?new=loan", fields: ["amount", "type", "months"] },
 
   // ----- admin actions (open the target page with an intent flag) -----
   { id: "freeze_wallet", kind: "action", label: "Freeze Wallet",
