@@ -17,7 +17,7 @@ interface AckData {
   processedBy: string;
 }
 
-export function printProviderAcknowledgement(d: AckData, opts?: { direct?: boolean }) {
+export function printProviderAcknowledgement(d: AckData, opts?: { direct?: boolean; queue?: boolean }) {
   const fmt = (n: number) => `UGX ${Number(n || 0).toLocaleString()}`;
   const date = new Date().toLocaleString('en-UG', { dateStyle: 'long', timeStyle: 'short' });
   const typeLabel = d.requestType === 'meal_plan' ? 'Meal Plan Payment' : 'Service Provider Payment';
@@ -102,9 +102,13 @@ export function printProviderAcknowledgement(d: AckData, opts?: { direct?: boole
 </div>
 </body></html>`;
 
-  if (opts?.direct) {
+  // Default behaviour: print immediately. Queueing is opt-in via { queue: true }.
+  if (!opts?.queue) {
     const w = window.open('', '_blank', 'width=900,height=1000');
-    if (!w) return;
+    if (!w) {
+      toast.error('Popup blocked', { description: 'Allow popups for this site to print.' });
+      return;
+    }
     w.document.write(html);
     w.document.close();
     setTimeout(() => { try { w.focus(); w.print(); } catch {} }, 500);
