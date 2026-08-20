@@ -16,7 +16,8 @@ export function useVoiceAssistant() {
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [transcript, setTranscript] = useState("");
-  const [voiceReplies, setVoiceReplies] = useState(false);
+  // Spoken replies are on by default — the assistant answers with voice too.
+  const [voiceReplies, setVoiceReplies] = useState(true);
 
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const finalRef = useRef("");
