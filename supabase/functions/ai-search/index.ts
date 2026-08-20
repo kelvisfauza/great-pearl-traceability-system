@@ -1087,6 +1087,13 @@ User: ${userEmail} · dept: ${userDepartment || "n/a"} · privileged: ${isPrivil
               result = await runQueryTable(supabase, args, has, hasFullAccess);
             } else if (name === "count_table") {
               result = await runCountTable(supabase, args, has, hasFullAccess);
+            } else if (name === "find_recipients") {
+              result = await runFindRecipients(adminClient, args);
+            } else if (name === "send_message") {
+              result = await runSendMessage(adminClient, args, {
+                email: userEmail,
+                name: (emp as any)?.name || userEmail,
+              });
             }
           } catch (e) {
             result = { error: String((e as Error)?.message || e) };
