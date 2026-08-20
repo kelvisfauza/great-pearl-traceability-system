@@ -961,10 +961,13 @@ const QualityControl = () => {
 
 
   // GRN may only be printed once the Head of Quality has approved the assessment.
+  // Rejected lots the Administrator bought at discretion count as approved.
   const isGrnPrintable = (assessment: any) =>
-    !['pending_quality_manager', 'rejected', 'PERMANENTLY_REJECTED'].includes(
-      String(assessment?.status || '')
-    );
+    !!assessment?.admin_discretion_buy ||
+    (!assessment?.permanently_rejected &&
+      !['pending_quality_manager', 'rejected', 'PERMANENTLY_REJECTED'].includes(
+        String(assessment?.status || '')
+      ));
 
   const handlePrintGRN = async (assessment: any) => {
     if (!isGrnPrintable(assessment)) {
