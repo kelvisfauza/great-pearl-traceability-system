@@ -1300,6 +1300,12 @@ User: ${userEmail} · dept: ${userDepartment || "n/a"} · privileged: ${isPrivil
                 email: userEmail,
                 name: (emp as any)?.name || userEmail,
               });
+            } else if (name === "evaluate_loan") {
+              result = await runEvaluateLoan(adminClient, args, userEmail, isPrivileged);
+            } else if (name === "list_guarantor_candidates") {
+              result = await runGuarantorCandidates(adminClient, args);
+            } else if (name === "my_loans") {
+              result = await runMyLoans(adminClient, args, userEmail, isPrivileged);
             }
           } catch (e) {
             result = { error: String((e as Error)?.message || e) };
