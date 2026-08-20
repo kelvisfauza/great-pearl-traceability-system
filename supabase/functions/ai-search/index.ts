@@ -307,6 +307,46 @@ function buildTools(): any[] {
     {
       type: "function",
       function: {
+        name: "find_recipients",
+        description: "Find employees to message. Filter by role, department, permission (e.g. 'Quality'), name or email. Returns name, email and phone for active, non-disabled staff. ALWAYS call this before send_message when the user names a team, role or person instead of an email address.",
+        parameters: {
+          type: "object",
+          properties: {
+            role: { type: "string", description: "Role name, e.g. 'Quality Manager', 'Administrator'." },
+            department: { type: "string", description: "Department name, e.g. 'Quality', 'Finance', 'Human Resources'." },
+            permission: { type: "string", description: "Permission token held by the employee, e.g. 'Quality'." },
+            name: { type: "string", description: "Full or partial employee name." },
+            email: { type: "string", description: "Full or partial email address." },
+            all: { type: "boolean", description: "Set true to list every active employee (company-wide broadcast)." },
+          },
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "send_message",
+        description: "Send an email and/or SMS to one or more employees. Only call this AFTER you have shown the user a preview (recipients, channel, subject, body) and the user has explicitly confirmed in a later turn. Set confirmed=true only when the user has confirmed.",
+        parameters: {
+          type: "object",
+          properties: {
+            channel: { type: "string", description: "email | sms | both" },
+            recipients: {
+              type: "array",
+              description: "Email addresses of the recipients (from find_recipients).",
+              items: { type: "string" },
+            },
+            subject: { type: "string", description: "Email subject / SMS heading." },
+            message: { type: "string", description: "Message body. Plain text, newlines allowed." },
+            confirmed: { type: "boolean", description: "Must be true; only set after the user explicitly confirms sending." },
+          },
+          required: ["channel", "recipients", "message", "confirmed"],
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
         name: "list_tables",
         description: "List every database table the current user is allowed to read. Call this first if you're not sure which table holds the answer.",
         parameters: { type: "object", properties: {}, additionalProperties: false },
