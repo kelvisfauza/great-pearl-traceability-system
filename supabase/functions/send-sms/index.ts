@@ -159,10 +159,20 @@ const PREMIUM_SMS_TYPES = new Set([
   'investment_confirmation',
   'termination_notice',
   'bank_deposit_approved',
+]);
+
+// Verification / OTP codes must NEVER use the BulkSMS Premium route —
+// they always go through the standard YoolaSMS → Infobip path.
+const NON_PREMIUM_SMS_TYPES = new Set([
   'otp',
   'verification',
+  'verification_code',
   'login_code',
+  'login_verification',
   'twofa',
+  '2fa',
+  'withdrawal_otp',
+  'email_verification',
 ]);
 
 // Normalizes "tx:overtime-reward" / "source:tx:salary-credited" → "overtime_reward"
