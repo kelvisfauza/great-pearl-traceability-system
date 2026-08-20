@@ -31,8 +31,17 @@ const PrintIntentDialog = () => {
   const close = () => { setIntent(null); setSaving(false); };
 
   const handlePrintNow = () => {
-    intent?.now();
+    const current = intent;
+    // Close the modal FIRST: Radix keeps a focus trap on the opener while it is
+    // open, and a print() fired underneath it never opens the print dialog.
     close();
+    if (!current) return;
+    // Two frames is enough for the overlay to unmount and focus to be released.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setTimeout(() => current.now(), 60);
+      });
+    });
   };
 
   const handleQueue = async () => {

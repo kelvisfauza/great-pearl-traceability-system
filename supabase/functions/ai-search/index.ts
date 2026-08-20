@@ -448,7 +448,52 @@ async function runSendMessage(
 }
 
 function _buildTools(): any[] {
+  // (tool implementations live below in runEvaluateLoan / runGuarantorCandidates / runMyLoans)
   return [
+    {
+      type: "function",
+      function: {
+        name: "evaluate_loan",
+        description: "Run the real loan evaluation engine for an employee and return how much they qualify for, the decision, risk signals and guarantor capacity. Call this WHENEVER the user asks about loans, borrowing, how much they can get, or whether they qualify. Defaults to the signed-in user.",
+        parameters: {
+          type: "object",
+          properties: {
+            employee_email: { type: "string", description: "Employee email. Omit to evaluate the signed-in user." },
+            requested_amount: { type: "number", description: "Amount the user wants, if they named one." },
+            loan_type: { type: "string", description: "quick | long_term | pure_salary | business" },
+            duration_months: { type: "number", description: "Requested duration in months." },
+            guarantor_emails: { type: "array", items: { type: "string" }, description: "Emails of proposed guarantors (required for quick, long_term and business loans)." },
+          },
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "list_guarantor_candidates",
+        description: "List active salaried employees who could stand as guarantors, with an indicative guarantee capacity. Use when the user asks who can guarantee their loan.",
+        parameters: {
+          type: "object",
+          properties: {
+            exclude_email: { type: "string", description: "Employee to exclude (usually the borrower)." },
+            min_capacity: { type: "number", description: "Only return candidates whose indicative capacity is at least this amount." },
+          },
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "my_loans",
+        description: "Return the signed-in user's (or a named employee's) current and past loans, balances, repayment schedule status and salary advances.",
+        parameters: {
+          type: "object",
+          properties: {
+            employee_email: { type: "string", description: "Omit for the signed-in user." },
+          },
+        },
+      },
+    },
     {
       type: "function",
       function: {
@@ -563,6 +608,156 @@ function _buildTools(): any[] {
 }
 
 function compactTerm(input: string): string {
+  return _compactTermImpl(input);
+}
+
+// ---------- Loan tools ----------
+const LOAN_PRODUCTS: Record<string, any> = {
+  quick: { label: "Quick Loan", monthly_rate: 10, interest_cap: 35, max_months: 6, frequency: "weekly", guarantors: 1 },
+  long_term: { label: "Long-Term Loan", monthly_rate: 10, interest_cap: 35, max_months: 6, frequency: "monthly or bullet", guarantors: 1 },
+  pure_salary: { label: "Pure Salary Loan", monthly_rate: 15, interest_cap: 45, max_months: 3, frequency: "monthly (50% of salary)", guarantors: 0 },
+  business: { label: "Employee Business Loan", monthly_rate: 4, interest_cap: 30, max_months: 8, frequency: "monthly", guarantors: 2 },
+};
+const LOAN_EVAL_FEE = 10000;
+
+function loanSchedule(principal: number, type: string, months: number) {
+  const p = LOAN_PRODUCTS[type] || LOAN_PRODUCTS.quick;
+  const m = Math.min(Math.max(1, Math.round(months || p.max_months)), p.max_months);
+  const raw = principal * (p.monthly_rate / 100) * m;
+  const interest = Math.min(raw, principal * (p.interest_cap / 100));
+  const total = principal + interest;
+  const installments = p.frequency === "weekly" ? m * 4 : m;
+  return {
+    product: p.label,
+    principal,
+    evaluation_fee: LOAN_EVAL_FEE,
+    financed_principal: principal + LOAN_EVAL_FEE,
+    monthly_rate_pct: p.monthly_rate,
+    interest_cap_pct: p.interest_cap,
+    months: m,
+    total_interest: Math.round(interest),
+    total_repayable: Math.round(total),
+    installments,
+    installment_amount: Math.round(total / installments),
+    frequency: p.frequency,
+    guarantors_required: p.guarantors,
+  };
+}
+
+async function runEvaluateLoan(admin: any, args: any, selfEmail: string, isPrivileged: boolean) {
+  const email = String(args?.employee_email || "").trim().toLowerCase() || selfEmail;
+  if (email !== selfEmail.toLowerCase() && !isPrivileged) {
+    return { error: "Access denied: you can only evaluate your own loan eligibility." };
+  }
+  const type = ["quick", "long_term", "pure_salary", "business"].includes(String(args?.loan_type))
+    ? String(args.loan_type) : "quick";
+  const months = Number(args?.duration_months) || LOAN_PRODUCTS[type].max_months;
+  const guarantors = Array.isArray(args?.guarantor_emails) ? args.guarantor_emails.filter(Boolean) : [];
+
+  const { data, error } = await admin.functions.invoke("loan-evaluation", {
+    body: {
+      employee_email: email,
+      requested_amount: Number(args?.requested_amount) || undefined,
+      requested_loan_type: type,
+      requested_duration: months,
+      guarantor_emails: guarantors,
+    },
+  });
+  if (error) return { error: `Evaluation failed: ${error.message}` };
+  if (!data?.ok) return { error: data?.error || "Evaluation failed" };
+
+  const rep = data.report || {};
+  const recommended = Number(rep.recommended_amount || 0);
+  return {
+    employee_email: email,
+    decision: rep.decision,
+    recommended_amount: recommended,
+    max_eligible: rep.max_limit ?? rep.entitlement ?? recommended,
+    risk_level: rep.risk_level,
+    reasons: rep.reasons || rep.risk_signals || rep.notes,
+    guarantor_assessment: rep.guarantor_assessment || rep.guarantors,
+    history_summary: rep.history_summary,
+    schedule: recommended > 0 ? loanSchedule(recommended, type, months) : null,
+    product_terms: LOAN_PRODUCTS[type],
+    apply_url: `/quick-loans?new=loan&type=${type}&amount=${recommended || ""}&months=${months}`,
+    note: "The evaluation fee of UGX 10,000 is added to the principal. Guarantors must approve with their own 6-digit codes before the loan reaches admin approval.",
+  };
+}
+
+async function runGuarantorCandidates(admin: any, args: any) {
+  const exclude = String(args?.exclude_email || "").toLowerCase();
+  const { data: emps } = await admin
+    .from("employees")
+    .select("name, email, phone, salary, department, position, status, disabled")
+    .eq("status", "Active")
+    .limit(200);
+  const rows = (emps || []).filter((e: any) =>
+    e.disabled !== true && Number(e.salary || 0) > 0 && String(e.email || "").toLowerCase() !== exclude);
+
+  const emails = rows.map((r: any) => r.email);
+  const { data: activeLoans } = await admin
+    .from("loans")
+    .select("employee_email, remaining_balance, status, is_defaulted")
+    .in("employee_email", emails.slice(0, 200));
+  const burden = new Map<string, { outstanding: number; bad: boolean }>();
+  for (const l of (activeLoans || []) as any[]) {
+    const k = String(l.employee_email || "").toLowerCase();
+    const cur = burden.get(k) || { outstanding: 0, bad: false };
+    if (["active", "overdue", "pending_admin", "pending_guarantor"].includes(l.status)) {
+      cur.outstanding += Number(l.remaining_balance || 0);
+    }
+    if (l.is_defaulted === true || l.status === "defaulted") cur.bad = true;
+    burden.set(k, cur);
+  }
+
+  const minCap = Number(args?.min_capacity || 0);
+  const candidates = rows.map((e: any) => {
+    const b = burden.get(String(e.email).toLowerCase()) || { outstanding: 0, bad: false };
+    const capacity = b.bad ? 0 : Math.max(0, Number(e.salary || 0) * 2 - 0.5 * b.outstanding);
+    return {
+      name: e.name, email: e.email, department: e.department, position: e.position,
+      indicative_capacity: Math.round(capacity),
+      own_outstanding_loans: Math.round(b.outstanding),
+      has_default: b.bad,
+    };
+  }).filter((c: any) => c.indicative_capacity >= minCap)
+    .sort((a: any, b: any) => b.indicative_capacity - a.indicative_capacity)
+    .slice(0, 15);
+
+  return {
+    note: "Indicative only (2x salary less half of own outstanding loans). Business loans use 6x salary and require TWO guarantors; the real figure comes from evaluate_loan with guarantor_emails supplied.",
+    candidates,
+  };
+}
+
+async function runMyLoans(admin: any, args: any, selfEmail: string, isPrivileged: boolean) {
+  const email = String(args?.employee_email || "").trim().toLowerCase() || selfEmail;
+  if (email !== selfEmail.toLowerCase() && !isPrivileged) {
+    return { error: "Access denied: you can only view your own loans." };
+  }
+  const { data: loans } = await admin
+    .from("loans")
+    .select("id, loan_reference, loan_type, loan_amount, remaining_balance, paid_amount, total_repayable, interest_rate, duration_months, status, is_defaulted, due_date, created_at")
+    .eq("employee_email", email)
+    .order("created_at", { ascending: false })
+    .limit(20);
+  const { data: advances } = await admin
+    .from("employee_salary_advances")
+    .select("id, amount, status, requested_at")
+    .eq("employee_email", email)
+    .order("requested_at", { ascending: false })
+    .limit(10);
+  const active = (loans || []).filter((l: any) => ["active", "overdue", "pending_admin", "pending_guarantor"].includes(l.status));
+  return {
+    employee_email: email,
+    loans: loans || [],
+    salary_advances: advances || [],
+    active_count: active.length,
+    total_outstanding: Math.round(active.reduce((s: number, l: any) => s + Number(l.remaining_balance || 0), 0)),
+  };
+}
+
+function _compactTermImpl(input: string): string {
   return input.replace(/[(),;:{}[\]<>]/g, " ").replace(/\s+/g, " ").trim();
 }
 
@@ -670,6 +865,9 @@ const CAPABILITIES: Capability[] = [
     description: "Post a company announcement.",
     route: "/admin?new=announcement",
     requiredPermission: "Administration", fields: ["title", "message"] },
+  { id: "apply_loan", kind: "create", label: "Apply for a Loan",
+    description: "Apply now for a loan, borrow money, credit, quick loan, salary loan or business loan.",
+    route: "/quick-loans?new=loan", fields: ["amount", "type", "months"] },
 
   // ----- admin actions (open the target page with an intent flag) -----
   { id: "freeze_wallet", kind: "action", label: "Freeze Wallet",
@@ -1035,6 +1233,20 @@ You can ALSO send real messages to staff:
 - find_recipients — resolve people by role, department, permission, name or email (e.g. "the quality team" → department/permission "Quality"). Use all=true only for genuine company-wide broadcasts.
 - send_message — actually deliver an email and/or SMS (channel: "email", "sms" or "both").
 
+You are ALSO the loans desk. Loan tools:
+- evaluate_loan — runs the real evaluation engine (decision, amount they qualify for, risk signals, guarantor capacity, repayment schedule).
+- list_guarantor_candidates — who could stand as guarantor and their indicative capacity.
+- my_loans — the user's current loans, balances and salary advances.
+
+LOAN RULES (always follow when loans, borrowing, credit or "how much can I get" come up):
+1. Immediately call evaluate_loan (and my_loans if they have running loans) instead of asking a pile of questions first. If they did not name an amount or product, evaluate the product that fits their words; default to "quick".
+2. Answer with: how much they qualify for, the product, interest, total repayable, number and size of instalments, the UGX 10,000 evaluation fee added to the principal, and how many guarantors are needed.
+3. Products: Quick Loan 10%/month, weekly repayments, up to 6 months, 1 guarantor, interest capped 35%. Long-Term Loan 10%/month, monthly or bullet, up to 6 months, 1 guarantor, cap 35%. Pure Salary Loan 15%/month, up to 3 months, repaid by 50% of salary, NO guarantor. Employee Business Loan 4%/month, monthly, up to 8 months, TWO guarantors, cap 30%.
+4. If guarantors are needed, call list_guarantor_candidates and suggest 2-3 realistic names with their capacity.
+5. Then offer to start the application: "Shall I open the application for you?" On confirmation, point them to the apply_url returned by evaluate_loan (deep link into Quick Loans, prefilled). You never create the loan yourself — the user signs and submits in the app, guarantors then approve with their own 6-digit codes.
+6. If the decision is deny or top_up, explain plainly why (using the reasons/risk signals) and what would fix it.
+7. Never invent limits or rates — use only what the tools return.
+
 MESSAGING RULES (strict):
 1. When asked to message someone, first call find_recipients, then reply with a PREVIEW: the recipient names/emails (and phones for SMS), the channel, the subject, and the full message body you drafted. Ask the user to confirm.
 2. Only call send_message on a LATER turn, after the user explicitly confirms (e.g. "yes", "send it"). Never set confirmed=true otherwise.
@@ -1105,6 +1317,12 @@ User: ${userEmail} · dept: ${userDepartment || "n/a"} · privileged: ${isPrivil
                 email: userEmail,
                 name: (emp as any)?.name || userEmail,
               });
+            } else if (name === "evaluate_loan") {
+              result = await runEvaluateLoan(adminClient, args, userEmail, isPrivileged);
+            } else if (name === "list_guarantor_candidates") {
+              result = await runGuarantorCandidates(adminClient, args);
+            } else if (name === "my_loans") {
+              result = await runMyLoans(adminClient, args, userEmail, isPrivileged);
             }
           } catch (e) {
             result = { error: String((e as Error)?.message || e) };

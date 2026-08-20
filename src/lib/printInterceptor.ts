@@ -12,6 +12,8 @@ export const PRINT_INTENT_EVENT = 'print-intent';
 export type PrintIntent = {
   title: string;
   html: string | null;
+  /** the window that requested the print (top window or a child/iframe window) */
+  win: Window;
   /** print straight away (original behaviour) */
   now: () => void;
   /** store in the print queue instead */
@@ -66,7 +68,17 @@ function ask(win: Window, originalPrint: () => void) {
   const detail: PrintIntent = {
     title,
     html,
-    now: () => originalPrint(),
+    win,
+    now: () => {
+      // Focus the target window first — a print() fired while a modal in the
+      // opener still holds focus is silently dropped by Chrome/Edge.
+      try { win.focus(); } catch { /* ignore */ }
+      try {
+        originalPrint();
+      } catch {
+        try { (win as any).print?.(); } catch { /* ignore */ }
+      }
+    },
     queue: () => { /* handled by the dialog via printQueue */ },
     cancel: () => { /* no-op */ },
     dismiss: () => {
