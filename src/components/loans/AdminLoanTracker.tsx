@@ -53,6 +53,28 @@ const AdminLoanTracker = () => {
 
   const today = new Date().toISOString().split('T')[0];
 
+  // ---- SALARY ADVANCES ----
+  const { data: salaryAdvances } = useQuery({
+    queryKey: ['admin-loan-tracker-salary-advances'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('employee_salary_advances')
+        .select('*')
+        .order('created_at', { ascending: false });
+      return data || [];
+    },
+    refetchInterval: 30000,
+  });
+
+  const filteredAdvances = useMemo(() => {
+    return (salaryAdvances || []).filter((a: any) =>
+      !search || a.employee_name?.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [salaryAdvances, search]);
+
+  const activeAdvances = (salaryAdvances || []).filter((a: any) => (a.remaining_balance || 0) > 0);
+  const advancesOutstanding = activeAdvances.reduce((s: number, a: any) => s + (a.remaining_balance || 0), 0);
+
   // ---- BORROWER SUMMARY ----
   const borrowerSummary = useMemo(() => {
     if (!activeLoans) return [];
@@ -153,9 +175,15 @@ const AdminLoanTracker = () => {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="summary">
-          <TabsList className="grid grid-cols-5 w-full mb-4">
+          <TabsList className="grid grid-cols-6 w-full mb-4">
             <TabsTrigger value="summary" className="text-xs sm:text-sm">
               <Users className="h-3.5 w-3.5 mr-1 hidden sm:inline" /> Borrowers
+            </TabsTrigger>
+            <TabsTrigger value="advances" className="text-xs sm:text-sm">
+              <Banknote className="h-3.5 w-3.5 mr-1 hidden sm:inline" /> Advances
+              {activeAdvances.length > 0 && (
+                <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0">{activeAdvances.length}</Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="calendar" className="text-xs sm:text-sm">
               <CalendarDays className="h-3.5 w-3.5 mr-1 hidden sm:inline" /> Calendar
@@ -256,6 +284,82 @@ const AdminLoanTracker = () => {
           </TabsContent>
 
           {/* ========= PAYMENT CALENDAR ========= */}
+          {/* ========= SALARY ADVANCES ========= */}
+          <TabsContent value="advances">
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search employee..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Active Advances</p>
+                <p className="text-lg font-bold">{activeAdvances.length}</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Outstanding</p>
+                <p className="text-lg font-bold text-amber-600">UGX {advancesOutstanding.toLocaleString()}</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Total Issued</p>
+                <p className="text-lg font-bold">UGX {(salaryAdvances || []).reduce((s: number, a: any) => s + (a.original_amount || 0), 0).toLocaleString()}</p>
+              </div>
+            </div>
+
+            {filteredAdvances.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">No salary advances found</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Advance</TableHead>
+                      <TableHead>Repaid</TableHead>
+                      <TableHead>Remaining</TableHead>
+                      <TableHead>Min. Payment</TableHead>
+                      <TableHead>Issued</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAdvances.map((a: any) => {
+                      const repaid = (a.original_amount || 0) - (a.remaining_balance || 0);
+                      const cleared = (a.remaining_balance || 0) <= 0;
+                      return (
+                        <TableRow key={a.id}>
+                          <TableCell>
+                            <p className="font-medium text-sm">{a.employee_name}</p>
+                            <p className="text-xs text-muted-foreground">{a.employee_email}</p>
+                          </TableCell>
+                          <TableCell className="text-sm">UGX {(a.original_amount || 0).toLocaleString()}</TableCell>
+                          <TableCell className="text-sm text-green-600">UGX {repaid.toLocaleString()}</TableCell>
+                          <TableCell className="text-sm font-semibold">UGX {(a.remaining_balance || 0).toLocaleString()}</TableCell>
+                          <TableCell className="text-sm">UGX {(a.minimum_payment || 0).toLocaleString()}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{a.created_at ? new Date(a.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</TableCell>
+                          <TableCell>
+                            {cleared ? (
+                              <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Cleared</Badge>
+                            ) : (
+                              <Badge variant="secondary">{a.status || 'active'}</Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </TabsContent>
+
           <TabsContent value="calendar">
             {sortedCalendarDays.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">No upcoming installments in the next 2 weeks</p>
