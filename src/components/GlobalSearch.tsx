@@ -228,7 +228,7 @@ const GlobalSearch = () => {
                         <Sparkles className="h-7 w-7 text-primary" />
                       </div>
                       <div>
-                        <p className="font-semibold">How can I help you today?</p>
+                        <p className="font-semibold">Hi {firstName}, how can I help you today?</p>
                         <p className="text-xs text-muted-foreground mt-1">
                           Ask about your data, run reports, find records, or start a new action.
                         </p>
