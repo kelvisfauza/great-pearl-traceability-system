@@ -242,7 +242,7 @@ export default function GRNScanPay() {
       };
     }
 
-    if (status === 'rejected' || quality?.qm_action === 'rejected') {
+    if ((status === 'rejected' || quality?.qm_action === 'rejected') && !quality?.admin_discretion_buy) {
       return {
         stage: 'Rejected by Quality',
         reason: `This batch was rejected${quality?.qm_notes ? ` — ${quality.qm_notes}` : ''}. Rejected lots only reach Finance if the Administrator approves a discretion buy.`,
