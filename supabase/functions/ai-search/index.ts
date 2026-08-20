@@ -303,7 +303,192 @@ async function runCountTable(
 }
 
 function buildTools(): any[] {
+  return _buildTools();
+}
+
+// ---------- Messaging: recipient lookup + dispatch ----------
+interface RecipientRow { name: string; email: string; phone: string; role: string; department: string; }
+
+async function runFindRecipients(admin: any, args: any): Promise<any> {
+  let q: any = admin
+    .from("employees")
+    .select("name, email, phone, role, department, permissions, status, disabled")
+    .eq("status", "Active")
+    .or("disabled.is.null,disabled.eq.false")
+    .limit(200);
+
+  const role = String(args?.role || "").trim();
+  const department = String(args?.department || "").trim();
+  const name = String(args?.name || "").trim();
+  const email = String(args?.email || "").trim();
+  const permission = String(args?.permission || "").trim();
+  const all = args?.all === true;
+
+  if (role) q = q.ilike("role", `%${role}%`);
+  if (department) q = q.ilike("department", `%${department}%`);
+  if (name) q = q.ilike("name", `%${name}%`);
+  if (email) q = q.ilike("email", `%${email}%`);
+
+  if (!role && !department && !name && !email && !permission && !all) {
+    return { error: "Provide at least one filter (role, department, permission, name, email) or all=true." };
+  }
+
+  const { data, error } = await q;
+  if (error) return { error: error.message };
+
+  let rows = (data || []) as any[];
+  if (permission) {
+    const p = permission.toLowerCase();
+    rows = rows.filter((r) => {
+      const perms = Array.isArray(r.permissions) ? r.permissions.map((x: any) => String(x).toLowerCase()) : [];
+      return perms.some((x: string) => x.includes(p)) ||
+        String(r.department || "").toLowerCase().includes(p) ||
+        String(r.role || "").toLowerCase().includes(p);
+    });
+  }
+
+  const recipients: RecipientRow[] = rows
+    .filter((r) => r.email)
+    .map((r) => ({
+      name: String(r.name || ""),
+      email: String(r.email || "").toLowerCase(),
+      phone: String(r.phone || ""),
+      role: String(r.role || ""),
+      department: String(r.department || ""),
+    }));
+
+  return { count: recipients.length, recipients };
+}
+
+async function runSendMessage(
+  admin: any,
+  args: any,
+  sender: { email: string; name: string },
+): Promise<any> {
+  if (args?.confirmed !== true) {
+    return { error: "Not sent: the user has not confirmed yet. Show a preview and ask them to confirm first." };
+  }
+  const channelRaw = String(args?.channel || "email").toLowerCase();
+  const channel = ["email", "sms", "both"].includes(channelRaw) ? channelRaw : "email";
+  const message = String(args?.message || "").trim();
+  const subject = String(args?.subject || "Message from " + sender.name).trim().slice(0, 150);
+  if (!message) return { error: "message is required" };
+
+  const emails = Array.from(new Set(
+    (Array.isArray(args?.recipients) ? args.recipients : [])
+      .map((e: any) => String(e || "").trim().toLowerCase())
+      .filter((e: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)),
+  )).slice(0, 60) as string[];
+  if (!emails.length) return { error: "No valid recipient email addresses supplied." };
+  const { data: empRows } = await admin
+    .from("employees")
+    .select("name, email, phone, status, disabled")
+    .in("email", emails);
+
+  const byEmail = new Map<string, any>();
+  for (const r of (empRows || []) as any[]) byEmail.set(String(r.email || "").toLowerCase(), r);
+
+  const results: any[] = [];
+  for (const to of emails) {
+    const emp = byEmail.get(to);
+    if (emp && emp.disabled === true) {
+      results.push({ to, skipped: "account disabled" });
+      continue;
+    }
+    const recipientName = String(emp?.name || "").trim();
+    const phone = String(emp?.phone || "").trim();
+    const entry: any = { to, name: recipientName || undefined };
+
+    if (channel === "email" || channel === "both") {
+      try {
+        const { data, error } = await admin.functions.invoke("send-transactional-email", {
+          body: {
+            templateName: "general-notification",
+            recipientEmail: to,
+            templateData: {
+              subject,
+              title: subject,
+              recipientName: recipientName || undefined,
+              message: `${message}\n\n— Sent by ${sender.name || sender.email} via the Great Agro Coffee assistant.`,
+            },
+          },
+        });
+        entry.email = error ? `failed: ${error.message}` : (data?.ok === false ? `blocked: ${data?.error}` : "sent");
+      } catch (e) {
+        entry.email = `failed: ${String((e as Error)?.message || e)}`;
+      }
+    }
+
+    if (channel === "sms" || channel === "both") {
+      if (!phone) {
+        entry.sms = "skipped: no phone on file";
+      } else {
+        try {
+          const { data, error } = await admin.functions.invoke("send-sms", {
+            body: {
+              phone,
+              message: `${subject ? subject + ": " : ""}${message}`.slice(0, 480),
+              userName: recipientName,
+              messageType: "tx:ai_assistant_message",
+              triggeredBy: sender.email,
+              recipientEmail: to,
+            },
+          });
+          entry.sms = error ? `failed: ${error.message}` : (data?.success === false ? `failed: ${data?.error || "unknown"}` : "sent");
+        } catch (e) {
+          entry.sms = `failed: ${String((e as Error)?.message || e)}`;
+        }
+      }
+    }
+    results.push(entry);
+  }
+
+  console.log(`📨 AI message by ${sender.email} → ${emails.length} recipient(s) via ${channel}`);
+  return { channel, subject, recipients: emails.length, results };
+}
+
+function _buildTools(): any[] {
   return [
+    {
+      type: "function",
+      function: {
+        name: "find_recipients",
+        description: "Find employees to message. Filter by role, department, permission (e.g. 'Quality'), name or email. Returns name, email and phone for active, non-disabled staff. ALWAYS call this before send_message when the user names a team, role or person instead of an email address.",
+        parameters: {
+          type: "object",
+          properties: {
+            role: { type: "string", description: "Role name, e.g. 'Quality Manager', 'Administrator'." },
+            department: { type: "string", description: "Department name, e.g. 'Quality', 'Finance', 'Human Resources'." },
+            permission: { type: "string", description: "Permission token held by the employee, e.g. 'Quality'." },
+            name: { type: "string", description: "Full or partial employee name." },
+            email: { type: "string", description: "Full or partial email address." },
+            all: { type: "boolean", description: "Set true to list every active employee (company-wide broadcast)." },
+          },
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "send_message",
+        description: "Send an email and/or SMS to one or more employees. Only call this AFTER you have shown the user a preview (recipients, channel, subject, body) and the user has explicitly confirmed in a later turn. Set confirmed=true only when the user has confirmed.",
+        parameters: {
+          type: "object",
+          properties: {
+            channel: { type: "string", description: "email | sms | both" },
+            recipients: {
+              type: "array",
+              description: "Email addresses of the recipients (from find_recipients).",
+              items: { type: "string" },
+            },
+            subject: { type: "string", description: "Email subject / SMS heading." },
+            message: { type: "string", description: "Message body. Plain text, newlines allowed." },
+            confirmed: { type: "boolean", description: "Must be true; only set after the user explicitly confirms sending." },
+          },
+          required: ["channel", "recipients", "message", "confirmed"],
+        },
+      },
+    },
     {
       type: "function",
       function: {
@@ -564,14 +749,14 @@ serve(async (req) => {
     // Resolve real permissions server-side
     let { data: emp } = await adminClient
       .from("employees")
-      .select("email, department, permissions, role, status, disabled")
+      .select("name, email, department, permissions, role, status, disabled")
       .eq("auth_user_id", authData.user.id)
       .maybeSingle();
 
     if (!emp && authData.user.email) {
       const { data: emailEmp } = await adminClient
         .from("employees")
-        .select("email, department, permissions, role, status, disabled")
+        .select("name, email, department, permissions, role, status, disabled")
         .ilike("email", authData.user.email.toLowerCase().trim())
         .maybeSingle();
       emp = emailEmp;
@@ -846,6 +1031,17 @@ You have access to a live snapshot of the user's data (records, transactions, em
 - query_table — read rows from any accessible table with filters, ordering, limit.
 - count_table — return a total count matching filters.
 
+You can ALSO send real messages to staff:
+- find_recipients — resolve people by role, department, permission, name or email (e.g. "the quality team" → department/permission "Quality"). Use all=true only for genuine company-wide broadcasts.
+- send_message — actually deliver an email and/or SMS (channel: "email", "sms" or "both").
+
+MESSAGING RULES (strict):
+1. When asked to message someone, first call find_recipients, then reply with a PREVIEW: the recipient names/emails (and phones for SMS), the channel, the subject, and the full message body you drafted. Ask the user to confirm.
+2. Only call send_message on a LATER turn, after the user explicitly confirms (e.g. "yes", "send it"). Never set confirmed=true otherwise.
+3. If the user edits the draft, show the updated preview and ask again.
+4. After sending, report exactly who received it and any failures/skips returned by the tool.
+5. Write the message professionally on behalf of ${userEmail}; keep SMS bodies short (under ~400 characters).
+
 Use these tools whenever the initial snapshot does not already contain the answer. Do not tell the user to "go check the app" when a tool call could get the answer. If a tool returns { error: "Access denied..." }, tell the user politely that they do not have access to that information — do not retry, do not guess.
 
 Rules:
@@ -902,6 +1098,13 @@ User: ${userEmail} · dept: ${userDepartment || "n/a"} · privileged: ${isPrivil
               result = await runQueryTable(supabase, args, has, hasFullAccess);
             } else if (name === "count_table") {
               result = await runCountTable(supabase, args, has, hasFullAccess);
+            } else if (name === "find_recipients") {
+              result = await runFindRecipients(adminClient, args);
+            } else if (name === "send_message") {
+              result = await runSendMessage(adminClient, args, {
+                email: userEmail,
+                name: (emp as any)?.name || userEmail,
+              });
             }
           } catch (e) {
             result = { error: String((e as Error)?.message || e) };
