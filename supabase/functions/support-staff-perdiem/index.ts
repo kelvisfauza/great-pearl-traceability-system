@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { yoPayout, normalizePhone } from "../_shared/yo-payments.ts";
+import { gosenteWithdraw, isGosenteSuccess } from "../_shared/gosentepay.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,6 +28,7 @@ serve(async (req) => {
       receiverName,
       nationalId,
       paymentMethod,
+      paymentProvider,
       initiatedBy,
       initiatedByName,
       notes,
@@ -40,6 +42,7 @@ serve(async (req) => {
     }
 
     const method = paymentMethod === "cash" ? "cash" : "mobile_money";
+    const provider: "yo" | "gosente" = paymentProvider === "gosente" ? "gosente" : "yo";
     const numAmount = Number(amount);
     const numCharge = Number(withdrawCharge || 0);
     const totalAmount = numAmount + numCharge;
@@ -66,7 +69,7 @@ serve(async (req) => {
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
-      if (!Deno.env.get("YO_API_USERNAME") || !Deno.env.get("YO_API_PASSWORD")) {
+      if (provider === "yo" && (!Deno.env.get("YO_API_USERNAME") || !Deno.env.get("YO_API_PASSWORD"))) {
         return new Response(
           JSON.stringify({ success: false, error: "Yo Payments API credentials not configured" }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -157,27 +160,59 @@ serve(async (req) => {
       );
     }
 
-    // Mobile money path: trigger Yo
+    // Mobile money path: trigger the selected gateway
     const narrative = `Support staff per-diem - ${description} - ${receiverName}`;
-    const result = await yoPayout({ phone: cleanPhone, amount: totalAmount, narrative });
-    const rawResp = result.rawResponse || "";
-    const isPending22 =
-      result.statusMessage?.includes("-22") || rawResp.includes("<StatusCode>-22</StatusCode>");
-
     let yoStatus = "failed";
-    let displayMessage = result.errorMessage || "Payment failed";
-    if (result.success) {
-      yoStatus = "success";
-      displayMessage = "Per-diem sent successfully";
-    } else if (isPending22) {
-      yoStatus = "pending_approval";
-      displayMessage = "Sent, pending authorization in Yo dashboard";
+    let displayMessage = "Payment failed";
+    let rawResp = "";
+    let payoutRef: string | null = null;
+
+    if (provider === "gosente") {
+      const ref = `SPD-GP-${record.id}-${Date.now().toString(36)}`;
+      try {
+        const { status, body } = await gosenteWithdraw({
+          phone: cleanPhone,
+          amount: totalAmount,
+          email: "system@greatagrocoffee.com",
+          reason: narrative.slice(0, 120),
+          ref,
+        });
+        rawResp = JSON.stringify({ status, body });
+        const inner = body?.data || body;
+        payoutRef = body?.gateway_reference || inner?.ref || ref;
+        if (isGosenteSuccess(status, body)) {
+          yoStatus = "success";
+          displayMessage = "Per-diem sent successfully via GosentePay";
+        } else {
+          displayMessage = inner?.message || body?.message || "GosentePay payout failed";
+          if (String(inner?.status ?? "").toLowerCase() === "gatewayerror" || status === 400) {
+            displayMessage = "GosentePay's mobile money gateway rejected this payout (check the recipient number is a valid, active MTN/Airtel wallet, or retry via Yo Payments).";
+          }
+        }
+      } catch (e) {
+        rawResp = String(e instanceof Error ? e.message : e);
+        displayMessage = `GosentePay error: ${rawResp}`;
+      }
+    } else {
+      const result = await yoPayout({ phone: cleanPhone, amount: totalAmount, narrative });
+      rawResp = result.rawResponse || "";
+      payoutRef = result.transactionRef || null;
+      const isPending22 =
+        result.statusMessage?.includes("-22") || rawResp.includes("<StatusCode>-22</StatusCode>");
+      displayMessage = result.errorMessage || "Payment failed";
+      if (result.success) {
+        yoStatus = "success";
+        displayMessage = "Per-diem sent successfully";
+      } else if (isPending22) {
+        yoStatus = "pending_approval";
+        displayMessage = "Sent, pending authorization in Yo dashboard";
+      }
     }
 
     await supabase
       .from("support_staff_per_diem")
       .update({
-        yo_reference: result.transactionRef || null,
+        yo_reference: payoutRef,
         yo_status: yoStatus,
         yo_raw_response: rawResp || null,
         updated_at: new Date().toISOString(),
@@ -186,7 +221,7 @@ serve(async (req) => {
 
     try {
       if (yoStatus === "success" || yoStatus === "pending_approval") {
-        const shortRef = (result.transactionRef || record.id).toString().slice(-8).toUpperCase();
+        const shortRef = (payoutRef || record.id).toString().slice(-8).toUpperCase();
         await supabase.functions.invoke("send-sms", {
           body: {
             phone: cleanPhone,
