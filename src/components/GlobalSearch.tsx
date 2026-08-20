@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useAIChat, AITask, AIRecord } from "@/hooks/useAICommand";
 import { useVoiceAssistant } from "@/hooks/useVoiceAssistant";
+import { useAuth } from "@/contexts/AuthContext";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -46,6 +47,27 @@ const GlobalSearch = () => {
   const { messages, loading, send, reset } = useAIChat();
   const voice = useVoiceAssistant();
   const spokenRef = useRef<number>(0);
+  const { employee, user } = useAuth();
+  const greetedRef = useRef(false);
+
+  const firstName = (employee?.name || user?.email?.split("@")[0] || "there")
+    .toString()
+    .trim()
+    .split(/\s+/)[0];
+
+  // Greet the user by name (spoken) whenever the assistant is opened fresh
+  useEffect(() => {
+    if (!isOpen) {
+      greetedRef.current = false;
+      return;
+    }
+    if (greetedRef.current) return;
+    greetedRef.current = true;
+    if (messages.length === 0 && voice.voiceReplies) {
+      voice.speak(`Hi ${firstName}, how can I help you today?`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   // Speak new assistant replies when voice replies are on
   useEffect(() => {
@@ -206,7 +228,7 @@ const GlobalSearch = () => {
                         <Sparkles className="h-7 w-7 text-primary" />
                       </div>
                       <div>
-                        <p className="font-semibold">How can I help you today?</p>
+                        <p className="font-semibold">Hi {firstName}, how can I help you today?</p>
                         <p className="text-xs text-muted-foreground mt-1">
                           Ask about your data, run reports, find records, or start a new action.
                         </p>
