@@ -30,6 +30,9 @@ export const AwaitingDisbursementPanel: React.FC = () => {
       .select('id, title, type, amount, payout_status, payout_error, disbursement_phone, requestedby_name, details')
       .eq('status', 'Approved')
       .or('payout_status.is.null,payout_status.in.(pending,failed)')
+      // Salary advances are credited directly to the employee wallet by the
+      // auto-disbursement trigger, so they never need a manual payout release.
+      .not('type', 'in', '("Salary Advance","salary_advance")')
       .order('updated_at', { ascending: false })
       .limit(20);
     setRows((data || []) as Row[]);
