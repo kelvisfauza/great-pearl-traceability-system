@@ -3,13 +3,14 @@ import { useNavigate } from "react-router-dom";
 import {
   Sparkles, X, ArrowRight, Plus, Zap, Loader2, Command, Send, RotateCcw,
   FileText, User, Package, DollarSign, ClipboardCheck, TrendingUp,
-  Clock, ShieldAlert, AlertTriangle,
+  Clock, ShieldAlert, AlertTriangle, Mic, MicOff, Volume2, VolumeX,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useAIChat, AITask, AIRecord } from "@/hooks/useAICommand";
+import { useVoiceAssistant } from "@/hooks/useVoiceAssistant";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -43,6 +44,29 @@ const GlobalSearch = () => {
   const scrollBottomRef = useRef<HTMLDivElement>(null);
 
   const { messages, loading, send, reset } = useAIChat();
+  const voice = useVoiceAssistant();
+  const spokenRef = useRef<number>(0);
+
+  // Speak new assistant replies when voice replies are on
+  useEffect(() => {
+    if (!voice.voiceReplies) return;
+    if (messages.length === spokenRef.current) return;
+    spokenRef.current = messages.length;
+    const last = messages[messages.length - 1];
+    if (last?.role === "assistant" && last.content) voice.speak(last.content);
+  }, [messages, voice]);
+
+  const toggleMic = () => {
+    if (voice.listening) {
+      voice.stopListening();
+      return;
+    }
+    voice.stopSpeaking();
+    voice.startListening((text) => {
+      setInput("");
+      send(text);
+    });
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -109,14 +133,14 @@ const GlobalSearch = () => {
                    bg-gradient-to-r from-primary/10 via-fuchsia-500/10 to-primary/10
                    border border-primary/20 hover:border-primary/40 transition-all
                    hover:shadow-[0_0_20px_hsl(var(--primary)/0.35)]"
-        aria-label="Open AI Command"
+        aria-label="Open Company Assistant"
       >
         <span className="relative flex h-6 w-6 items-center justify-center">
           <span className="absolute inset-0 rounded-full bg-primary/30 blur-md animate-pulse" />
           <Sparkles className="relative h-4 w-4 text-primary" />
         </span>
         <span className="hidden sm:inline font-medium bg-gradient-to-r from-primary to-fuchsia-500 bg-clip-text text-transparent">
-          Ask AI
+          Company Assistant
         </span>
         <kbd className="hidden md:inline-flex items-center gap-0.5 text-[10px] text-muted-foreground border border-border rounded px-1.5 py-0.5">
           <Command className="h-2.5 w-2.5" />K
@@ -141,11 +165,27 @@ const GlobalSearch = () => {
                     <Sparkles className="h-4 w-4 text-primary-foreground" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm">Ask AI</p>
+                    <p className="font-semibold text-sm">Company Assistant</p>
                     <p className="text-[11px] text-muted-foreground">
-                      Conversational assistant · aware of your data & permissions
+                      Chat or talk · aware of your data &amp; permissions
                     </p>
                   </div>
+                  {voice.speechSupported && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if (voice.voiceReplies) voice.stopSpeaking();
+                        voice.setVoiceReplies(!voice.voiceReplies);
+                      }}
+                      title={voice.voiceReplies ? "Turn off spoken replies" : "Read replies aloud"}
+                    >
+                      {voice.voiceReplies
+                        ? <Volume2 className="h-3.5 w-3.5 mr-1 text-primary" />
+                        : <VolumeX className="h-3.5 w-3.5 mr-1" />}
+                      Voice
+                    </Button>
+                  )}
                   {messages.length > 0 && (
                     <Button variant="ghost" size="sm" onClick={reset} title="New chat">
                       <RotateCcw className="h-3.5 w-3.5 mr-1" /> New
