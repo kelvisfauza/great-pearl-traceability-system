@@ -238,7 +238,7 @@ serve(async (req) => {
       if (yoStatus === "success" || yoStatus === "pending_approval") {
         const recipientEmail = await lookupEmail(supabase, { nationalId, phone: cleanPhone, name: receiverName });
         if (recipientEmail) {
-          const shortRef = (result.transactionRef || record.id).toString().slice(-8).toUpperCase();
+          const shortRef = (payoutRef || record.id).toString().slice(-8).toUpperCase();
           await supabase.functions.invoke("send-transactional-email", {
             body: {
               templateName: "payment-receipt",
@@ -251,8 +251,8 @@ serve(async (req) => {
                 amount: `UGX ${numAmount.toLocaleString()}`,
                 charges: numCharge > 0 ? `UGX ${numCharge.toLocaleString()}` : undefined,
                 total: `UGX ${totalAmount.toLocaleString()}`,
-                paymentMethod: "Mobile Money (Yo Payments)",
-                transactionId: result.transactionRef || record.id,
+                paymentMethod: provider === "gosente" ? "Mobile Money (GosentePay)" : "Mobile Money (Yo Payments)",
+                transactionId: payoutRef || record.id,
                 processedBy: initiatedByName || "Admin",
               },
             },
@@ -263,11 +263,11 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        success: result.success || isPending22,
+        success: yoStatus === "success" || yoStatus === "pending_approval",
         status: yoStatus,
         message: displayMessage,
         recordId: record.id,
-        ref: result.transactionRef,
+        ref: payoutRef,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
