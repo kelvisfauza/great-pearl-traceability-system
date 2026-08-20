@@ -749,14 +749,14 @@ serve(async (req) => {
     // Resolve real permissions server-side
     let { data: emp } = await adminClient
       .from("employees")
-      .select("email, department, permissions, role, status, disabled")
+      .select("name, email, department, permissions, role, status, disabled")
       .eq("auth_user_id", authData.user.id)
       .maybeSingle();
 
     if (!emp && authData.user.email) {
       const { data: emailEmp } = await adminClient
         .from("employees")
-        .select("email, department, permissions, role, status, disabled")
+        .select("name, email, department, permissions, role, status, disabled")
         .ilike("email", authData.user.email.toLowerCase().trim())
         .maybeSingle();
       emp = emailEmp;
