@@ -448,6 +448,7 @@ async function runSendMessage(
 }
 
 function _buildTools(): any[] {
+  // (tool implementations live below in runEvaluateLoan / runGuarantorCandidates / runMyLoans)
   return [
     {
       type: "function",
