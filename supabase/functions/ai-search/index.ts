@@ -378,7 +378,7 @@ async function runSendMessage(
     (Array.isArray(args?.recipients) ? args.recipients : [])
       .map((e: any) => String(e || "").trim().toLowerCase())
       .filter((e: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)),
-  )).slice(0, 60);
+  )).slice(0, 60) as string[];
   if (!emails.length) return { error: "No valid recipient email addresses supplied." };
   const { data: empRows } = await admin
     .from("employees")
