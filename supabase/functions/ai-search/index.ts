@@ -452,6 +452,50 @@ function _buildTools(): any[] {
     {
       type: "function",
       function: {
+        name: "evaluate_loan",
+        description: "Run the real loan evaluation engine for an employee and return how much they qualify for, the decision, risk signals and guarantor capacity. Call this WHENEVER the user asks about loans, borrowing, how much they can get, or whether they qualify. Defaults to the signed-in user.",
+        parameters: {
+          type: "object",
+          properties: {
+            employee_email: { type: "string", description: "Employee email. Omit to evaluate the signed-in user." },
+            requested_amount: { type: "number", description: "Amount the user wants, if they named one." },
+            loan_type: { type: "string", description: "quick | long_term | pure_salary | business" },
+            duration_months: { type: "number", description: "Requested duration in months." },
+            guarantor_emails: { type: "array", items: { type: "string" }, description: "Emails of proposed guarantors (required for quick, long_term and business loans)." },
+          },
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "list_guarantor_candidates",
+        description: "List active salaried employees who could stand as guarantors, with an indicative guarantee capacity. Use when the user asks who can guarantee their loan.",
+        parameters: {
+          type: "object",
+          properties: {
+            exclude_email: { type: "string", description: "Employee to exclude (usually the borrower)." },
+            min_capacity: { type: "number", description: "Only return candidates whose indicative capacity is at least this amount." },
+          },
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "my_loans",
+        description: "Return the signed-in user's (or a named employee's) current and past loans, balances, repayment schedule status and salary advances.",
+        parameters: {
+          type: "object",
+          properties: {
+            employee_email: { type: "string", description: "Omit for the signed-in user." },
+          },
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
         name: "find_recipients",
         description: "Find employees to message. Filter by role, department, permission (e.g. 'Quality'), name or email. Returns name, email and phone for active, non-disabled staff. ALWAYS call this before send_message when the user names a team, role or person instead of an email address.",
         parameters: {
