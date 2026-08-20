@@ -104,6 +104,10 @@ serve(async (req) => {
           displayMessage = "Payment sent successfully via GosentePay";
         } else {
           displayMessage = inner?.message || body?.message || "GosentePay payout failed";
+          if (String(inner?.status ?? "").toLowerCase() === "gatewayerror" || status === 400) {
+            displayMessage = "GosentePay's mobile money gateway rejected this payout (HTTP 400). Confirm the recipient number is a valid, active MTN/Airtel wallet — or retry using Yo Payments.";
+          }
+          console.error("[service-provider-payout] gosente failure", JSON.stringify({ status, body }));
         }
       } catch (e) {
         rawResponseStr = String(e instanceof Error ? e.message : e);

@@ -32,6 +32,7 @@ const SupportStaffPerDiemSection: React.FC = () => {
     amount: '',
     withdrawCharge: '',
     paymentMethod: 'mobile_money' as 'mobile_money' | 'cash',
+    paymentProvider: 'yo' as 'yo' | 'gosente',
     notes: '',
   });
 
@@ -51,7 +52,7 @@ const SupportStaffPerDiemSection: React.FC = () => {
 
   const resetForm = () => setForm({
     receiverName: '', receiverPhone: '', nationalId: '', description: '',
-    amount: '', withdrawCharge: '', paymentMethod: 'mobile_money', notes: '',
+    amount: '', withdrawCharge: '', paymentMethod: 'mobile_money', paymentProvider: 'yo', notes: '',
   });
 
   const handleSubmit = async () => {
@@ -80,6 +81,7 @@ const SupportStaffPerDiemSection: React.FC = () => {
           amount,
           withdrawCharge: parseFloat(form.withdrawCharge) || 0,
           paymentMethod: form.paymentMethod,
+          paymentProvider: form.paymentProvider,
           notes: form.notes || null,
           initiatedBy: employee?.email || '',
           initiatedByName: employee?.name || '',
@@ -188,6 +190,18 @@ const SupportStaffPerDiemSection: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
+                {form.paymentMethod === 'mobile_money' && (
+                  <div className="space-y-2">
+                    <Label>Payment Gateway *</Label>
+                    <Select value={form.paymentProvider} onValueChange={(v) => setForm(f => ({ ...f, paymentProvider: v as any }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="yo"><span className="inline-flex items-center gap-2"><Smartphone className="w-3 h-3" /> Yo Payments (larger amounts)</span></SelectItem>
+                        <SelectItem value="gosente"><span className="inline-flex items-center gap-2"><Smartphone className="w-3 h-3" /> GosentePay (small / instant)</span></SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label>Recipient Name *</Label>
                   <Input value={form.receiverName} onChange={(e) => setForm(f => ({ ...f, receiverName: e.target.value }))} placeholder="Full name" maxLength={100} />
@@ -231,7 +245,7 @@ const SupportStaffPerDiemSection: React.FC = () => {
                 <Button variant="outline" onClick={() => setOpen(false)} className="w-full sm:w-auto">Cancel</Button>
                 <Button onClick={handleSubmit} disabled={submitting} className="gap-2 w-full sm:w-auto">
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                  {submitting ? 'Processing...' : form.paymentMethod === 'cash' ? 'Record Cash Payout' : 'Send via MoMo'}
+                  {submitting ? 'Processing...' : form.paymentMethod === 'cash' ? 'Record Cash Payout' : `Send via ${form.paymentProvider === 'gosente' ? 'GosentePay' : 'Yo'}`}
                 </Button>
               </DialogFooter>
             </DialogContent>
