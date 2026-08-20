@@ -105,7 +105,7 @@ const copyHtml = (r: DispatchAnalysisRecord, copyLabel: string) => `
   </div>
 `;
 
-export const printDispatchAnalysis = (r: DispatchAnalysisRecord, opts?: { direct?: boolean }) => {
+export const printDispatchAnalysis = (r: DispatchAnalysisRecord, opts?: { direct?: boolean; queue?: boolean }) => {
   const html = `
     <html>
       <head>
@@ -139,13 +139,16 @@ export const printDispatchAnalysis = (r: DispatchAnalysisRecord, opts?: { direct
     </html>
   `;
 
-  if (opts?.direct) {
+  // Default behaviour: print immediately. Queueing is opt-in via { queue: true }.
+  if (!opts?.queue) {
     const w = window.open('', '_blank');
     if (w) {
       w.document.write(html);
       w.document.close();
       w.focus();
       setTimeout(() => w.print(), 500);
+    } else {
+      toast.error('Popup blocked', { description: 'Allow popups for this site to print.' });
     }
     return;
   }
