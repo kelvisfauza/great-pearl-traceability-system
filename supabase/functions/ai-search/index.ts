@@ -315,7 +315,7 @@ async function runFindRecipients(admin: any, args: any): Promise<any> {
     .select("name, email, phone, role, department, permissions, status, disabled")
     .eq("status", "Active")
     .or("disabled.is.null,disabled.eq.false")
-    .limit(200);
+    .limit(1000);
 
   const role = String(args?.role || "").trim();
   const department = String(args?.department || "").trim();
