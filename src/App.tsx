@@ -35,6 +35,7 @@ import GRNScanPay from "./pages/GRNScanPay";
 import MobileGrnScanner from "./pages/MobileGrnScanner";
 import MobileApprovalConfirm from "./pages/MobileApprovalConfirm";
 import MobileQualityFormScanner from "./pages/MobileQualityFormScanner";
+import MobileDispatchFormScanner from "./pages/MobileDispatchFormScanner";
 import Unsubscribe from "./pages/Unsubscribe";
 import OAuthConsent from "./pages/OAuthConsent";
 import Procurement from "./pages/Procurement";
