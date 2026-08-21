@@ -283,6 +283,10 @@ const EUDRDispatchComparisonForm = ({ onSuccess }: { onSuccess?: () => void }) =
 
         attachmentUrl = publicUrl;
         attachmentName = attachmentFile.name;
+      } else if (scannedAttachment) {
+        // Photographed by the paired phone against the scanned dispatch monitoring form
+        attachmentUrl = scannedAttachment.url;
+        attachmentName = scannedAttachment.name;
       }
 
       const coffeeType = formData.coffee_type === 'other' ? formData.other_coffee_type : formData.coffee_type;
