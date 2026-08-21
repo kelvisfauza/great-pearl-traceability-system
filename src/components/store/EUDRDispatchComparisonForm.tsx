@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,12 +8,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Upload, FileText, Truck, QrCode, ImagePlus } from 'lucide-react';
+import { Plus, Trash2, Upload, FileText, Truck, QrCode, ImagePlus, ScanLine, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
 import WeighBridgeScanner, { type WeighBridgeTicket } from './WeighBridgeScanner';
+import DispatchFormScanDialog, { type DispatchMonitoringForm } from './DispatchFormScanDialog';
 
 interface TruckData {
   truck_number: string;
@@ -83,6 +84,9 @@ const EUDRDispatchComparisonForm = ({ onSuccess }: { onSuccess?: () => void }) =
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [weighBridgeTickets, setWeighBridgeTickets] = useState<WeighBridgeTicket[]>([]);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [formScanOpen, setFormScanOpen] = useState(false);
+  const [scannedForm, setScannedForm] = useState<DispatchMonitoringForm | null>(null);
+  const [scannedAttachment, setScannedAttachment] = useState<{ url: string; name: string } | null>(null);
   const [formData, setFormData] = useState<DispatchFormData>({
     dispatch_date: new Date().toISOString().split('T')[0],
     dispatch_location: '',
@@ -101,6 +105,79 @@ const EUDRDispatchComparisonForm = ({ onSuccess }: { onSuccess?: () => void }) =
     total_deducted_weight: 0,
     remarks: ''
   });
+
+  // Prefill the report from a scanned dispatch monitoring form
+  const applyScannedForm = (form: DispatchMonitoringForm) => {
+    setScannedForm(form);
+    if (form.attachment_path) {
+      setScannedAttachment({ url: form.attachment_path, name: form.attachment_name || `${form.form_number}.jpg` });
+    }
+
+    const scannedTrucks = Array.isArray(form.trucks) ? (form.trucks as any[]) : [];
+    const trucks: TruckData[] = scannedTrucks.length
+      ? scannedTrucks.map((t: any) => ({
+          truck_number: t.truck_number || '',
+          total_bags_loaded: Number(t.total_bags_loaded) || 0,
+          total_weight_store: Number(t.total_weight_store) || 0,
+          traceability_confirmed: !!(t.traceability_confirmed ?? form.traceability_confirmed),
+          lot_batch_references: t.lot_batch_references || '',
+          quality_report_attached: !!(t.quality_report_attached ?? form.quality_analysis_attached),
+        }))
+      : [{
+          ...initialTruck,
+          truck_number: form.vehicle_registrations || '',
+          total_weight_store: Number(form.total_weight_store) || 0,
+          traceability_confirmed: !!form.traceability_confirmed,
+          quality_report_attached: !!form.quality_analysis_attached,
+        }];
+
+    const verification: BuyerVerification[] = trucks.map((t, i) => ({
+      truck_number: i + 1,
+      buyer_bags_count: 0,
+      buyer_weight: i === 0 ? Number(form.buyer_weight) || 0 : 0,
+      store_weight: t.total_weight_store,
+      difference: i === 0
+        ? (Number(form.weight_difference) || ((Number(form.buyer_weight) || 0) - t.total_weight_store))
+        : 0,
+    }));
+
+    const knownTypes = ['Robusta', 'Drugar'];
+    const type = form.coffee_type || '';
+
+    setFormData((prev) => ({
+      ...prev,
+      dispatch_date: form.dispatch_date || prev.dispatch_date,
+      dispatch_location: form.warehouse || prev.dispatch_location,
+      coffee_type: knownTypes.includes(type) ? type : (type ? 'other' : prev.coffee_type),
+      other_coffee_type: knownTypes.includes(type) ? '' : type,
+      destination_buyer: form.destination_buyer || prev.destination_buyer,
+      vehicle_registrations: form.vehicle_registrations || prev.vehicle_registrations,
+      trucks,
+      buyer_verification: verification,
+      remarks: [form.remarks, prev.remarks].filter(Boolean).join('\n') || '',
+    }));
+  };
+
+  // The paired phone can photograph the filled form after the code was scanned
+  useEffect(() => {
+    if (!scannedForm?.id) return;
+    const channel = supabase
+      .channel(`dispatch-form-${scannedForm.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'dispatch_monitoring_forms', filter: `id=eq.${scannedForm.id}` },
+        (payload) => {
+          const row = payload.new as any;
+          if (row?.attachment_path) {
+            setScannedAttachment({ url: row.attachment_path, name: row.attachment_name || 'Scanned form' });
+            toast.success('Scanned form received from your phone');
+          }
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [scannedForm?.id]);
+
 
   const addTruck = () => {
     if (formData.trucks.length < 3) {
@@ -206,6 +283,10 @@ const EUDRDispatchComparisonForm = ({ onSuccess }: { onSuccess?: () => void }) =
 
         attachmentUrl = publicUrl;
         attachmentName = attachmentFile.name;
+      } else if (scannedAttachment) {
+        // Photographed by the paired phone against the scanned dispatch monitoring form
+        attachmentUrl = scannedAttachment.url;
+        attachmentName = scannedAttachment.name;
       }
 
       const coffeeType = formData.coffee_type === 'other' ? formData.other_coffee_type : formData.coffee_type;
@@ -261,6 +342,14 @@ const EUDRDispatchComparisonForm = ({ onSuccess }: { onSuccess?: () => void }) =
       });
       setAttachmentFile(null);
       setWeighBridgeTickets([]);
+      if (scannedForm?.id) {
+        await (supabase as any)
+          .from('dispatch_monitoring_forms')
+          .update({ status: 'filed' })
+          .eq('id', scannedForm.id);
+      }
+      setScannedForm(null);
+      setScannedAttachment(null);
       trackFormSubmission('eudr_dispatch_report');
       trackDocumentUpload();
       onSuccess?.();
@@ -274,6 +363,53 @@ const EUDRDispatchComparisonForm = ({ onSuccess }: { onSuccess?: () => void }) =
 
   return (
     <div className="space-y-6">
+      {/* Scan the printed dispatch monitoring form */}
+      <Card className="border-primary/30">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ScanLine className="h-5 w-5" />
+            Scan Dispatch Monitoring Form
+          </CardTitle>
+          <CardDescription>
+            Scan the QR on the filled dispatch monitoring form to load its details here, then scan the paper form
+            with your phone to save it as the attachment.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-16 border-dashed text-lg"
+            onClick={() => setFormScanOpen(true)}
+          >
+            <QrCode className="h-6 w-6 mr-3" />
+            {scannedForm ? `Loaded ${scannedForm.form_number} — Scan another` : 'Tap to Scan Dispatch Form QR'}
+          </Button>
+
+          {scannedForm && (
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <Badge variant="secondary" className="gap-1">
+                <CheckCircle2 className="h-3 w-3" /> {scannedForm.form_number}
+              </Badge>
+              {scannedAttachment ? (
+                <a
+                  href={scannedAttachment.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline underline-offset-2"
+                >
+                  {scannedAttachment.name}
+                </a>
+              ) : (
+                <span className="text-muted-foreground">
+                  Waiting for the scanned paper form from your phone…
+                </span>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Section A: Dispatch Information */}
       <Card>
         <CardHeader>
@@ -709,6 +845,12 @@ const EUDRDispatchComparisonForm = ({ onSuccess }: { onSuccess?: () => void }) =
           </div>
         </CardContent>
       </Card>
+
+      <DispatchFormScanDialog
+        open={formScanOpen}
+        onOpenChange={setFormScanOpen}
+        onForm={applyScannedForm}
+      />
 
       <WeighBridgeScanner
         open={scannerOpen}

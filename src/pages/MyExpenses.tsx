@@ -28,6 +28,7 @@ import YedaHeaderSheetDownload from '@/components/expenses/YedaHeaderSheetDownlo
 import PerDiemTemplateDownload from '@/components/expenses/PerDiemTemplateDownload';
 import QualityAnalysisFormDownload from '@/components/expenses/QualityAnalysisFormDownload';
 import PurchaseReportTemplateDownload from '@/components/expenses/PurchaseReportTemplateDownload';
+import DispatchMonitoringTemplateDownload from '@/components/expenses/DispatchMonitoringTemplateDownload';
 import FuelOrderModal from '@/components/finance/FuelOrderModal';
 
 interface ExpenseRequest {
@@ -614,6 +615,7 @@ const MyExpenses = () => {
             <ExpenseTemplateDownload />
             <QualityAnalysisFormDownload />
             <PurchaseReportTemplateDownload />
+            <DispatchMonitoringTemplateDownload />
           </TabsContent>
 
           {/* Fuel / Service Order Tab */}
