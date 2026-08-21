@@ -1248,6 +1248,8 @@ export type Database = {
           delivery_period_end: string | null
           delivery_period_start: string | null
           delivery_terms: string | null
+          document_name: string | null
+          document_path: string | null
           id: string
           notes: string | null
           packaging: string | null
@@ -1271,6 +1273,8 @@ export type Database = {
           delivery_period_end?: string | null
           delivery_period_start?: string | null
           delivery_terms?: string | null
+          document_name?: string | null
+          document_path?: string | null
           id?: string
           notes?: string | null
           packaging?: string | null
@@ -1294,6 +1298,8 @@ export type Database = {
           delivery_period_end?: string | null
           delivery_period_start?: string | null
           delivery_terms?: string | null
+          document_name?: string | null
+          document_path?: string | null
           id?: string
           notes?: string | null
           packaging?: string | null
