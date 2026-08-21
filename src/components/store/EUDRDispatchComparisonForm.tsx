@@ -342,6 +342,14 @@ const EUDRDispatchComparisonForm = ({ onSuccess }: { onSuccess?: () => void }) =
       });
       setAttachmentFile(null);
       setWeighBridgeTickets([]);
+      if (scannedForm?.id) {
+        await (supabase as any)
+          .from('dispatch_monitoring_forms')
+          .update({ status: 'filed' })
+          .eq('id', scannedForm.id);
+      }
+      setScannedForm(null);
+      setScannedAttachment(null);
       trackFormSubmission('eudr_dispatch_report');
       trackDocumentUpload();
       onSuccess?.();
