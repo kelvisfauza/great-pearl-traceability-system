@@ -846,6 +846,12 @@ const EUDRDispatchComparisonForm = ({ onSuccess }: { onSuccess?: () => void }) =
         </CardContent>
       </Card>
 
+      <DispatchFormScanDialog
+        open={formScanOpen}
+        onOpenChange={setFormScanOpen}
+        onForm={applyScannedForm}
+      />
+
       <WeighBridgeScanner
         open={scannerOpen}
         onOpenChange={setScannerOpen}
