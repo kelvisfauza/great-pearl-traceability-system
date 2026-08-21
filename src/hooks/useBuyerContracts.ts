@@ -21,6 +21,8 @@ export interface BuyerContract {
   status: string;
   allocated_quantity: number;
   notes: string | null;
+  document_path?: string | null;
+  document_name?: string | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;

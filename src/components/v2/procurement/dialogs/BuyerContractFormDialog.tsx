@@ -5,7 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Loader2, FileText, Upload, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import ContractPdfViewer from "@/components/contracts/ContractPdfViewer";
 import type { BuyerContract } from "@/hooks/useBuyerContracts";
 
 interface Props {
@@ -17,6 +20,8 @@ interface Props {
 
 const BuyerContractFormDialog = ({ open, onOpenChange, contract, onSubmit }: Props) => {
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [doc, setDoc] = useState<{ path: string | null; name: string | null }>({ path: null, name: null });
   const [form, setForm] = useState({
     buyer_name: "",
     buyer_ref: "",
@@ -54,6 +59,7 @@ const BuyerContractFormDialog = ({ open, onOpenChange, contract, onSubmit }: Pro
         status: contract.status || "active",
         notes: contract.notes || "",
       });
+      setDoc({ path: contract.document_path || null, name: contract.document_name || null });
     } else {
       setForm({
         buyer_name: "", buyer_ref: "", buyer_address: "", buyer_phone: "",
@@ -61,6 +67,7 @@ const BuyerContractFormDialog = ({ open, onOpenChange, contract, onSubmit }: Pro
         price_per_kg: "", delivery_period_start: "", delivery_period_end: "",
         delivery_terms: "", seller_name: "Great Pearl Coffee Ltd", status: "active", notes: "",
       });
+      setDoc({ path: null, name: null });
     }
   }, [contract, open]);
 
@@ -81,11 +88,41 @@ const BuyerContractFormDialog = ({ open, onOpenChange, contract, onSubmit }: Pro
         delivery_period_end: form.delivery_period_end || null,
         delivery_terms: form.delivery_terms || null,
         notes: form.notes || null,
+        document_path: doc.path,
+        document_name: doc.name,
       });
       onOpenChange(false);
     } catch {
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleFile = async (file?: File | null) => {
+    if (!file) return;
+    if (file.type !== "application/pdf") {
+      toast.error("Please attach a PDF file");
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error("File must be less than 15MB");
+      return;
+    }
+    setUploading(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData?.user?.id || "anon";
+      const path = `${uid}/buyer-contracts/${Date.now()}-${file.name.replace(/[^A-Za-z0-9._-]/g, "_")}`;
+      const { error } = await supabase.storage
+        .from("contracts")
+        .upload(path, file, { contentType: "application/pdf", upsert: false });
+      if (error) throw error;
+      setDoc({ path, name: file.name });
+      toast.success("Contract PDF attached");
+    } catch (e: any) {
+      toast.error(e.message || "Upload failed");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -140,6 +177,27 @@ const BuyerContractFormDialog = ({ open, onOpenChange, contract, onSubmit }: Pro
               </Select>
             </div>
           )}
+
+          <div className="space-y-2">
+            <Label>Contract Document (PDF)</Label>
+            {doc.path ? (
+              <div className="rounded-md border p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm truncate">{doc.name}</span>
+                  <Button type="button" variant="ghost" size="sm" className="ml-auto" onClick={() => setDoc({ path: null, name: null })}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <ContractPdfViewer path={doc.path} name={doc.name} height={320} />
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Input type="file" accept="application/pdf" disabled={uploading} onChange={e => handleFile(e.target.files?.[0])} />
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4 text-muted-foreground" />}
+              </div>
+            )}
+          </div>
 
           <div><Label>Notes</Label><Textarea value={form.notes} onChange={e => update("notes", e.target.value)} /></div>
 
