@@ -446,8 +446,18 @@ async function runSendMessage(
     results.push(entry);
   }
 
-  console.log(`📨 AI message by ${sender.email} → ${emails.length} recipient(s) via ${channel}`);
-  return { channel, subject, recipients: emails.length, results };
+  console.log(`📨 AI message by ${sender.email} → ${emails.length} recipient(s) via ${channel}${truncated ? ` (${truncated} truncated)` : ""}`);
+  return {
+    channel,
+    subject,
+    requested: allEmails.length,
+    recipients: emails.length,
+    truncated,
+    warning: truncated
+      ? `Only the first ${emails.length} of ${allEmails.length} recipients were messaged; ${truncated} were NOT sent. Tell the user this explicitly and offer to send the remainder in another batch.`
+      : undefined,
+    results,
+  };
 }
 
 function _buildTools(): any[] {
