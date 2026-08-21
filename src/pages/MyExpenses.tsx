@@ -615,6 +615,7 @@ const MyExpenses = () => {
             <ExpenseTemplateDownload />
             <QualityAnalysisFormDownload />
             <PurchaseReportTemplateDownload />
+            <DispatchMonitoringTemplateDownload />
           </TabsContent>
 
           {/* Fuel / Service Order Tab */}
