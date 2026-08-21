@@ -315,7 +315,7 @@ async function runFindRecipients(admin: any, args: any): Promise<any> {
     .select("name, email, phone, role, department, permissions, status, disabled")
     .eq("status", "Active")
     .or("disabled.is.null,disabled.eq.false")
-    .limit(200);
+    .limit(1000);
 
   const role = String(args?.role || "").trim();
   const department = String(args?.department || "").trim();
@@ -374,11 +374,14 @@ async function runSendMessage(
   const subject = String(args?.subject || "Message from " + sender.name).trim().slice(0, 150);
   if (!message) return { error: "message is required" };
 
-  const emails = Array.from(new Set(
+  const MAX_RECIPIENTS = 500;
+  const allEmails = Array.from(new Set(
     (Array.isArray(args?.recipients) ? args.recipients : [])
       .map((e: any) => String(e || "").trim().toLowerCase())
       .filter((e: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)),
-  )).slice(0, 60) as string[];
+  )) as string[];
+  const emails = allEmails.slice(0, MAX_RECIPIENTS);
+  const truncated = allEmails.length - emails.length;
   if (!emails.length) return { error: "No valid recipient email addresses supplied." };
   const { data: empRows } = await admin
     .from("employees")
@@ -443,8 +446,18 @@ async function runSendMessage(
     results.push(entry);
   }
 
-  console.log(`📨 AI message by ${sender.email} → ${emails.length} recipient(s) via ${channel}`);
-  return { channel, subject, recipients: emails.length, results };
+  console.log(`📨 AI message by ${sender.email} → ${emails.length} recipient(s) via ${channel}${truncated ? ` (${truncated} truncated)` : ""}`);
+  return {
+    channel,
+    subject,
+    requested: allEmails.length,
+    recipients: emails.length,
+    truncated,
+    warning: truncated
+      ? `Only the first ${emails.length} of ${allEmails.length} recipients were messaged; ${truncated} were NOT sent. Tell the user this explicitly and offer to send the remainder in another batch.`
+      : undefined,
+    results,
+  };
 }
 
 function _buildTools(): any[] {
