@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { Loader2, Trash2, Package, TrendingUp, CalendarDays, DollarSign } from "lucide-react";
 import { format } from "date-fns";
 import type { BuyerContract } from "@/hooks/useBuyerContracts";
+import ContractPdfViewer from "@/components/contracts/ContractPdfViewer";
 
 interface Props {
   open: boolean;
@@ -148,6 +149,12 @@ const ContractDetailDialog = ({ open, onOpenChange, contract, onChanged }: Props
             <span className="font-medium">{fulfillPct.toFixed(1)}%</span>
           </div>
           <Progress value={fulfillPct} className="h-3" />
+        </div>
+
+        {/* Contract document */}
+        <div>
+          <h4 className="font-semibold mb-2">Contract Document</h4>
+          <ContractPdfViewer path={contract.document_path} name={contract.document_name} height={480} />
         </div>
 
         {/* Allocation history */}
