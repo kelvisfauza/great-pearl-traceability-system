@@ -84,6 +84,9 @@ const EUDRDispatchComparisonForm = ({ onSuccess }: { onSuccess?: () => void }) =
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [weighBridgeTickets, setWeighBridgeTickets] = useState<WeighBridgeTicket[]>([]);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [formScanOpen, setFormScanOpen] = useState(false);
+  const [scannedForm, setScannedForm] = useState<DispatchMonitoringForm | null>(null);
+  const [scannedAttachment, setScannedAttachment] = useState<{ url: string; name: string } | null>(null);
   const [formData, setFormData] = useState<DispatchFormData>({
     dispatch_date: new Date().toISOString().split('T')[0],
     dispatch_location: '',
