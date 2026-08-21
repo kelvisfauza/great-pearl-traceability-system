@@ -363,6 +363,53 @@ const EUDRDispatchComparisonForm = ({ onSuccess }: { onSuccess?: () => void }) =
 
   return (
     <div className="space-y-6">
+      {/* Scan the printed dispatch monitoring form */}
+      <Card className="border-primary/30">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ScanLine className="h-5 w-5" />
+            Scan Dispatch Monitoring Form
+          </CardTitle>
+          <CardDescription>
+            Scan the QR on the filled dispatch monitoring form to load its details here, then scan the paper form
+            with your phone to save it as the attachment.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-16 border-dashed text-lg"
+            onClick={() => setFormScanOpen(true)}
+          >
+            <QrCode className="h-6 w-6 mr-3" />
+            {scannedForm ? `Loaded ${scannedForm.form_number} — Scan another` : 'Tap to Scan Dispatch Form QR'}
+          </Button>
+
+          {scannedForm && (
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <Badge variant="secondary" className="gap-1">
+                <CheckCircle2 className="h-3 w-3" /> {scannedForm.form_number}
+              </Badge>
+              {scannedAttachment ? (
+                <a
+                  href={scannedAttachment.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline underline-offset-2"
+                >
+                  {scannedAttachment.name}
+                </a>
+              ) : (
+                <span className="text-muted-foreground">
+                  Waiting for the scanned paper form from your phone…
+                </span>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Section A: Dispatch Information */}
       <Card>
         <CardHeader>
