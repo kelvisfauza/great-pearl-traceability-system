@@ -27,25 +27,39 @@ const splitRow = (line: string) =>
 
 const isDivider = (cells: string[]) => cells.every((c) => /^:?-{2,}:?$/.test(c))
 
-// Turn a plain-text message into blocks. Consecutive lines containing "|"
-// are grouped into a table (first line = header row).
+// Turn a plain-text message into blocks. A table is only recognised when at
+// least TWO consecutive pipe-delimited lines share the same column count —
+// a single line containing "|" (a URL, "Approved | Pending", prose) stays text.
+const MIN_TABLE_ROWS = 2
+
 const parseBlocks = (message: string): Block[] => {
   const lines = (message || '').split('\n')
   const blocks: Block[] = []
   let buffer: string[][] = []
+  let rawBuffer: string[] = []
 
   const flush = () => {
-    if (buffer.length) {
+    if (!buffer.length) return
+    const cols = buffer[0].length
+    const consistent = buffer.every((r) => r.length === cols)
+    if (buffer.length >= MIN_TABLE_ROWS && consistent && cols > 1) {
       blocks.push({ kind: 'table', rows: buffer })
-      buffer = []
+    } else {
+      // Not a real table — keep the original lines as prose.
+      for (const l of rawBuffer) if (l.trim()) blocks.push({ kind: 'text', value: l })
     }
+    buffer = []
+    rawBuffer = []
   }
 
   for (const raw of lines) {
     const line = raw.trimEnd()
     if (line.includes('|') && splitRow(line).length > 1) {
       const cells = splitRow(line)
-      if (!isDivider(cells)) buffer.push(cells)
+      if (!isDivider(cells)) {
+        buffer.push(cells)
+        rawBuffer.push(line)
+      }
       continue
     }
     flush()
