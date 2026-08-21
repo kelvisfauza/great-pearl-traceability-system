@@ -280,6 +280,7 @@ const App: React.ComponentType = () => {
                 <Route path="/scan/:sessionId" element={<MobileGrnScanner />} />
                 <Route path="/approve-fp/:sessionId" element={<MobileApprovalConfirm />} />
                 <Route path="/scan-qa/:sessionId" element={<MobileQualityFormScanner />} />
+                <Route path="/scan-dispatch/:sessionId" element={<MobileDispatchFormScanner />} />
                 <Route path="/v2/admin" element={<ProtectedRoute requiredRoles={["Administrator", "Super Admin"]}><V2AdminDashboard /></ProtectedRoute>} />
                 <Route path="/v2/store" element={<ProtectedRoute requiredPermissions={["Store Management"]}><V2CoffeeReceipts /></ProtectedRoute>} />
                 <Route path="/v2/quality" element={<ProtectedRoute requiredPermissions={["Quality Control"]}><V2QualityDepartment /></ProtectedRoute>} />
