@@ -106,6 +106,79 @@ const EUDRDispatchComparisonForm = ({ onSuccess }: { onSuccess?: () => void }) =
     remarks: ''
   });
 
+  // Prefill the report from a scanned dispatch monitoring form
+  const applyScannedForm = (form: DispatchMonitoringForm) => {
+    setScannedForm(form);
+    if (form.attachment_path) {
+      setScannedAttachment({ url: form.attachment_path, name: form.attachment_name || `${form.form_number}.jpg` });
+    }
+
+    const scannedTrucks = Array.isArray(form.trucks) ? (form.trucks as any[]) : [];
+    const trucks: TruckData[] = scannedTrucks.length
+      ? scannedTrucks.map((t: any) => ({
+          truck_number: t.truck_number || '',
+          total_bags_loaded: Number(t.total_bags_loaded) || 0,
+          total_weight_store: Number(t.total_weight_store) || 0,
+          traceability_confirmed: !!(t.traceability_confirmed ?? form.traceability_confirmed),
+          lot_batch_references: t.lot_batch_references || '',
+          quality_report_attached: !!(t.quality_report_attached ?? form.quality_analysis_attached),
+        }))
+      : [{
+          ...initialTruck,
+          truck_number: form.vehicle_registrations || '',
+          total_weight_store: Number(form.total_weight_store) || 0,
+          traceability_confirmed: !!form.traceability_confirmed,
+          quality_report_attached: !!form.quality_analysis_attached,
+        }];
+
+    const verification: BuyerVerification[] = trucks.map((t, i) => ({
+      truck_number: i + 1,
+      buyer_bags_count: 0,
+      buyer_weight: i === 0 ? Number(form.buyer_weight) || 0 : 0,
+      store_weight: t.total_weight_store,
+      difference: i === 0
+        ? (Number(form.weight_difference) || ((Number(form.buyer_weight) || 0) - t.total_weight_store))
+        : 0,
+    }));
+
+    const knownTypes = ['Robusta', 'Drugar'];
+    const type = form.coffee_type || '';
+
+    setFormData((prev) => ({
+      ...prev,
+      dispatch_date: form.dispatch_date || prev.dispatch_date,
+      dispatch_location: form.warehouse || prev.dispatch_location,
+      coffee_type: knownTypes.includes(type) ? type : (type ? 'other' : prev.coffee_type),
+      other_coffee_type: knownTypes.includes(type) ? '' : type,
+      destination_buyer: form.destination_buyer || prev.destination_buyer,
+      vehicle_registrations: form.vehicle_registrations || prev.vehicle_registrations,
+      trucks,
+      buyer_verification: verification,
+      remarks: [form.remarks, prev.remarks].filter(Boolean).join('\n') || '',
+    }));
+  };
+
+  // The paired phone can photograph the filled form after the code was scanned
+  useEffect(() => {
+    if (!scannedForm?.id) return;
+    const channel = supabase
+      .channel(`dispatch-form-${scannedForm.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'dispatch_monitoring_forms', filter: `id=eq.${scannedForm.id}` },
+        (payload) => {
+          const row = payload.new as any;
+          if (row?.attachment_path) {
+            setScannedAttachment({ url: row.attachment_path, name: row.attachment_name || 'Scanned form' });
+            toast.success('Scanned form received from your phone');
+          }
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [scannedForm?.id]);
+
+
   const addTruck = () => {
     if (formData.trucks.length < 3) {
       setFormData({
