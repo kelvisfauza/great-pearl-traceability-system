@@ -2452,6 +2452,90 @@ export type Database = {
         }
         Relationships: []
       }
+      dispatch_monitoring_forms: {
+        Row: {
+          attachment_name: string | null
+          attachment_path: string | null
+          attachment_uploaded_at: string | null
+          buyer_weight: number | null
+          coffee_type: string | null
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          destination_buyer: string | null
+          dispatch_date: string | null
+          form_number: string
+          id: string
+          inputted_by: string | null
+          manager_name: string | null
+          quality_analysis_attached: boolean
+          receipt_attached: boolean
+          remarks: string | null
+          status: string
+          total_weight_store: number | null
+          traceability_confirmed: boolean
+          trucks: Json
+          updated_at: string
+          vehicle_registrations: string | null
+          warehouse: string | null
+          weight_difference: number | null
+        }
+        Insert: {
+          attachment_name?: string | null
+          attachment_path?: string | null
+          attachment_uploaded_at?: string | null
+          buyer_weight?: number | null
+          coffee_type?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          destination_buyer?: string | null
+          dispatch_date?: string | null
+          form_number: string
+          id?: string
+          inputted_by?: string | null
+          manager_name?: string | null
+          quality_analysis_attached?: boolean
+          receipt_attached?: boolean
+          remarks?: string | null
+          status?: string
+          total_weight_store?: number | null
+          traceability_confirmed?: boolean
+          trucks?: Json
+          updated_at?: string
+          vehicle_registrations?: string | null
+          warehouse?: string | null
+          weight_difference?: number | null
+        }
+        Update: {
+          attachment_name?: string | null
+          attachment_path?: string | null
+          attachment_uploaded_at?: string | null
+          buyer_weight?: number | null
+          coffee_type?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          destination_buyer?: string | null
+          dispatch_date?: string | null
+          form_number?: string
+          id?: string
+          inputted_by?: string | null
+          manager_name?: string | null
+          quality_analysis_attached?: boolean
+          receipt_attached?: boolean
+          remarks?: string | null
+          status?: string
+          total_weight_store?: number | null
+          traceability_confirmed?: boolean
+          trucks?: Json
+          updated_at?: string
+          vehicle_registrations?: string | null
+          warehouse?: string | null
+          weight_difference?: number | null
+        }
+        Relationships: []
+      }
       edit_requests: {
         Row: {
           created_at: string
@@ -16046,6 +16130,7 @@ export type Database = {
       migrate_batch_numbers_to_new_format: { Args: never; Returns: Json }
       milling_unremitted_total: { Args: never; Returns: number }
       next_batch_number: { Args: { p_date?: string }; Returns: string }
+      next_dispatch_monitoring_form_number: { Args: never; Returns: string }
       normalize_grn_pay_code: { Args: { p_code: string }; Returns: string }
       overdraft_activate: { Args: { p_email: string }; Returns: Json }
       overdraft_daily_maintenance: { Args: never; Returns: Json }
