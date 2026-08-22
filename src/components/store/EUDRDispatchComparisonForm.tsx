@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Upload, FileText, Truck, QrCode, ImagePlus, ScanLine, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { openDispatchAttachment } from '@/utils/dispatchAttachments';
 import { toast } from 'sonner';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
 import WeighBridgeScanner, { type WeighBridgeTicket } from './WeighBridgeScanner';
@@ -276,12 +277,8 @@ const EUDRDispatchComparisonForm = ({ onSuccess }: { onSuccess?: () => void }) =
 
         if (uploadError) throw uploadError;
 
-        const { data: signedUrlData } = await supabase.storage
-          .from('dispatch-attachments')
-          .createSignedUrl(filePath, 86400);
-        const publicUrl = signedUrlData?.signedUrl || '';
-
-        attachmentUrl = publicUrl;
+        // Persist the durable storage path; viewers sign a fresh URL when opening it
+        attachmentUrl = filePath;
         attachmentName = attachmentFile.name;
       } else if (scannedAttachment) {
         // Photographed by the paired phone against the scanned dispatch monitoring form
@@ -392,14 +389,16 @@ const EUDRDispatchComparisonForm = ({ onSuccess }: { onSuccess?: () => void }) =
                 <CheckCircle2 className="h-3 w-3" /> {scannedForm.form_number}
               </Badge>
               {scannedAttachment ? (
-                <a
-                  href={scannedAttachment.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const ok = await openDispatchAttachment(scannedAttachment.url);
+                    if (!ok) toast.error('Could not open the scanned form');
+                  }}
                   className="text-primary underline underline-offset-2"
                 >
                   {scannedAttachment.name}
-                </a>
+                </button>
               ) : (
                 <span className="text-muted-foreground">
                   Waiting for the scanned paper form from your phone…

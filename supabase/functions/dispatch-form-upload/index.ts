@@ -38,11 +38,10 @@ Deno.serve(async (req) => {
       .upload(path, bytes, { contentType: mime, upsert: false });
     if (upErr) return json({ ok: false, error: `Upload failed: ${upErr.message}` });
 
-    const { data: signed } = await supabase.storage
-      .from("dispatch-attachments")
-      .createSignedUrl(path, 60 * 60 * 24 * 7);
+    // Store the durable storage path — viewers mint a fresh signed URL on demand.
+    // (A signed URL saved here would expire and break the report link.)
+    const attachmentUrl = path;
 
-    const attachmentUrl = signed?.signedUrl || path;
     const attachmentName = file_name || `${form.form_number}.${ext}`;
 
     const { error: updErr } = await supabase
