@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useAuth } from '@/contexts/AuthContext';
 import EditDispatchReportModal from './EditDispatchReportModal';
 import { supabase } from '@/integrations/supabase/client';
+import { openDispatchAttachment } from '@/utils/dispatchAttachments';
 import { printDispatchAnalysis } from '@/utils/dispatchAnalysisPrint';
 import { Printer } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -163,10 +164,12 @@ const EUDRDispatchReportsList = ({ reports, showAll = false, onRefresh }: EUDRDi
                        )}
 
                        {report.attachment_url && (
-                         <Button variant="ghost" size="sm" asChild>
-                           <a href={report.attachment_url} target="_blank" rel="noopener noreferrer">
-                             <Download className="h-4 w-4" />
-                           </a>
+                         <Button
+                           variant="ghost"
+                           size="sm"
+                           onClick={() => openDispatchAttachment(report.attachment_url)}
+                         >
+                           <Download className="h-4 w-4" />
                          </Button>
                        )}
                        {report.weighbridge_tickets && (report.weighbridge_tickets as any[]).length > 0 && (
@@ -406,11 +409,9 @@ const DispatchReportDetail = ({ report }: { report: DispatchReport }) => {
             <CardTitle className="text-sm">Attachment</CardTitle>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" asChild>
-              <a href={report.attachment_url} target="_blank" rel="noopener noreferrer">
-                <Download className="h-4 w-4 mr-2" />
-                {report.attachment_name || 'Download Attachment'}
-              </a>
+            <Button variant="outline" onClick={() => openDispatchAttachment(report.attachment_url)}>
+              <Download className="h-4 w-4 mr-2" />
+              {report.attachment_name || 'Download Attachment'}
             </Button>
           </CardContent>
         </Card>
