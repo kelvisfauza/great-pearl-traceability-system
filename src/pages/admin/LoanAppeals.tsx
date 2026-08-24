@@ -49,6 +49,9 @@ export default function LoanAppeals() {
   const [submitting, setSubmitting] = useState(false);
   const [me, setMe] = useState<{ id: string; email: string | null } | null>(null);
   const [sendingPdfFor, setSendingPdfFor] = useState<string | null>(null);
+  const [openingReviewFor, setOpeningReviewFor] = useState<string | null>(null);
+  const [reviewLoan, setReviewLoan] = useState<any>(null);
+
 
   const fetchAll = async () => {
     setLoading(true);
