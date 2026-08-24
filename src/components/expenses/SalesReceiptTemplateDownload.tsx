@@ -477,9 +477,14 @@ const SalesReceiptTemplateDownload = () => {
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="sr-no">Receipt No.</Label>
-                <Input id="sr-no" placeholder="e.g. GAC-SR-0001" value={values.receiptNo}
-                  onChange={(e) => set('receiptNo', e.target.value)} />
+                <Label htmlFor="sr-no">Receipt No. (auto)</Label>
+                <div className="flex gap-1">
+                  <Input id="sr-no" readOnly className="bg-muted font-mono" value={values.receiptNo} />
+                  <Button type="button" variant="outline" size="icon" title="Generate new number"
+                    onClick={() => set('receiptNo', nextReceiptNumber())}>
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="sr-date">Date</Label>
