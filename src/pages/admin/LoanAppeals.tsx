@@ -173,6 +173,21 @@ export default function LoanAppeals() {
         toast({ title: 'Failed to send agreement', description: (res as any).error, variant: 'destructive' });
       }
     };
+    const openReview = async () => {
+      if (!resultingLoanId) return;
+      setOpeningReviewFor(a.id);
+      try {
+        const { data, error } = await (supabase as any).from('loans').select('*').eq('id', resultingLoanId).maybeSingle();
+        if (error) throw error;
+        if (!data) throw new Error('Loan record not found');
+        setReviewLoan(data);
+      } catch (e: any) {
+        toast({ title: 'Could not open review', description: e.message, variant: 'destructive' });
+      } finally {
+        setOpeningReviewFor(null);
+      }
+    };
+
     return (
       <Card key={a.id} className="border-l-4 border-l-primary">
         <CardHeader className="pb-2">
