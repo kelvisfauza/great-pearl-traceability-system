@@ -117,30 +117,28 @@ async function notifyWalletOperation(supabase: any, args: {
     email,
   );
 
-  // ---- Email
+  // ---- Email (branded general-notification template)
   if (!email) return;
   try {
-    const rows = args.lines
-      .map(([k, v]) => `<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;color:#555">${k}</td><td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;font-weight:600">${v}</td></tr>`)
-      .join("");
-    const html = `
-      <p>Dear ${name},</p>
-      <p>${args.failed
-        ? "An administrator attempted a wallet operation on your account but it <strong>did not complete</strong>. No further action is required from you; the operation may be retried."
-        : "An administrator has performed the following operation on your wallet."}</p>
-      <table style="border-collapse:collapse;width:100%;max-width:520px;border:1px solid #eee">${rows}</table>
-      ${args.note ? `<p style="color:#555">${args.note}</p>` : ""}
-      <p style="color:#555">If you did not expect this, contact Administration or Finance immediately.</p>
-      <p>— Great Agro Coffee</p>`;
+    const detail = args.lines.map(([k, v]) => `${k}: ${v}`).join("\n");
+    const intro = args.failed
+      ? "An administrator attempted a wallet operation on your account but it did NOT complete. The operation may be retried."
+      : "An administrator has performed the following operation on your wallet.";
+    const message = `${intro}\n\n${detail}${args.note ? `\n\n${args.note}` : ""}\n\nIf you did not expect this, contact Administration or Finance immediately.`;
     await supabase.functions.invoke("send-transactional-email", {
       body: {
-        to: email,
-        cc: "operations@greatpearlcoffee.com",
-        subject: args.title,
-        html,
-        messageType: args.failed ? "admin_wallet_operation_failed" : "admin_wallet_operation",
+        templateName: "general-notification",
+        recipientEmail: email,
+        props: {
+          title: args.title,
+          recipientName: name,
+          message,
+        },
       },
     });
+  } catch (e) {
+    console.warn("[admin-wallet-op] email send failed:", (e as Error).message);
+
   } catch (e) {
     console.warn("[admin-wallet-op] email send failed:", (e as Error).message);
   }
