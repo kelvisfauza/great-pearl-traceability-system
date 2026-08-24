@@ -60,7 +60,10 @@ const ProviderSubmissionApprovals: React.FC = () => {
       toast({ title: 'Invalid amount', description: 'Amount must be at least 500 UGX', variant: 'destructive' });
       return;
     }
-    if (action === 'approve' && !fingerprintVerified && requiresFingerprintApproval(finalAmount, 'provider_submission')) {
+    // Cash payouts are handed over physically and can be authorised with the
+    // SMS approval code instead of the phone-fingerprint round trip.
+    if (action === 'approve' && !fingerprintVerified && paymentMode !== 'cash'
+        && requiresFingerprintApproval(finalAmount, 'provider_submission')) {
       setFpTarget({
         title: `Provider payout — ${selected.provider_name}`,
         amount: finalAmount + Number(withdrawCharge || 0),
