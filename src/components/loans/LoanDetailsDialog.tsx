@@ -210,25 +210,77 @@ const LoanDetailsDialog = ({ loan, open, onClose }: Props) => {
                 </Card>
 
                 <Card>
-                  <CardHeader className="pb-2"><CardTitle className="text-sm">Evaluation report</CardTitle></CardHeader>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Banknote className="h-4 w-4" /> Amounts &amp; approval</CardTitle></CardHeader>
                   <CardContent className="pt-0">
-                    {evaluation ? (
-                      <>
-                        <Row label="Decision" value={<span className="uppercase">{evaluation.decision || '—'}</span>} />
-                        <Row label="Risk score" value={evaluation.risk_score ?? '—'} />
-                        <Row label="Max limit" value={money(evaluation.max_limit)} />
-                        <Row label="Recommended amount" value={money(evaluation.recommended_amount)} />
-                        <Row label="Evaluated on" value={dayTime(evaluation.created_at)} />
-                        {(evaluation.summary || evaluation.notes) && (
-                          <p className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap">{evaluation.summary || evaluation.notes}</p>
-                        )}
-                      </>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">No evaluation report attached.</p>
+                    <Row label="Amount requested" value={money(loan.original_loan_amount || loan.loan_amount)} />
+                    {loan.counter_offer_amount ? (
+                      <Row label="Counter-offer by admin" value={`${money(loan.counter_offer_amount)}${loan.counter_offer_by ? ` • ${loan.counter_offer_by}` : ''}`} />
+                    ) : null}
+                    <Row label="Approved amount" value={approvedAmount != null ? money(approvedAmount) : 'Not yet approved'} />
+                    <Row label="Disbursed amount" value={loan.disbursed_amount ? money(loan.disbursed_amount) : 'Not disbursed'} />
+                    <Row label="Approved by" value={loan.admin_approved_by || loan.approved_by || '—'} />
+                    <Row label="Approved on" value={dayTime(loan.admin_approved_at || loan.approved_at)} />
+                    <Row label="Paid to date" value={money(loan.paid_amount || totalPaid)} />
+                    {loan.penalty_amount ? <Row label="Penalties" value={money(loan.penalty_amount)} /> : null}
+                    {loan.counter_offer_comments && (
+                      <p className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap">Admin note: {loan.counter_offer_comments}</p>
                     )}
                   </CardContent>
                 </Card>
               </div>
+
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm">System evaluation report</CardTitle></CardHeader>
+                <CardContent className="pt-0">
+                  {evaluation ? (
+                    <div className="grid gap-x-8 md:grid-cols-2">
+                      <div>
+                        <Row label="Decision" value={<span className="uppercase">{evaluation.decision || '—'}</span>} />
+                        <Row label="Risk score" value={evaluation.risk_score != null ? `${evaluation.risk_score}/100` : '—'} />
+                        <Row label="Max eligible limit" value={money(evaluation.max_limit)} />
+                        <Row label="Recommended amount" value={money(evaluation.recommended_amount)} />
+                      </div>
+                      <div>
+                        <Row label="Recommended type" value={LOAN_LABELS[evaluation.recommended_loan_type] || evaluation.recommended_loan_type || '—'} />
+                        <Row label="Recommended duration" value={evaluation.recommended_duration_months ? `${evaluation.recommended_duration_months} months` : '—'} />
+                        <Row label="Evaluated on" value={dayTime(evaluation.created_at)} />
+                        <Row label="Valid until" value={dayTime(evaluation.valid_until)} />
+                      </div>
+                      {factorList.length > 0 && (
+                        <div className="md:col-span-2 mt-3">
+                          <p className="text-xs font-semibold mb-1">Assessment factors</p>
+                          <ul className="space-y-1">
+                            {factorList.map((f, i) => (
+                              <li key={i} className="text-xs text-muted-foreground flex justify-between gap-4 border-b border-dashed py-1">
+                                <span>{f.label}</span><span className="font-medium text-right">{f.value}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {historyList.length > 0 && (
+                        <div className="md:col-span-2 mt-3">
+                          <p className="text-xs font-semibold mb-1">Borrowing history summary</p>
+                          <ul className="space-y-1">
+                            {historyList.map((f, i) => (
+                              <li key={i} className="text-xs text-muted-foreground flex justify-between gap-4 border-b border-dashed py-1">
+                                <span>{f.label}</span><span className="font-medium text-right">{f.value}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      <p className="md:col-span-2 text-[10px] text-muted-foreground mt-3">
+                        {evaluation.applied_loan_id === loan.id
+                          ? 'Evaluation issued for this application.'
+                          : 'Latest evaluation on record for this employee (not tied to this application).'}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">No evaluation report was issued for this application.</p>
+                  )}
+                </CardContent>
+              </Card>
 
               <Card>
                 <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Calendar className="h-4 w-4" /> Repayment schedule</CardTitle></CardHeader>
