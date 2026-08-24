@@ -393,6 +393,11 @@ export default function LoanAppeals() {
           )}
         </DialogContent>
       </Dialog>
+
+      {reviewLoan && (
+        <LoanDetailsDialog loan={reviewLoan} open={!!reviewLoan} onClose={() => setReviewLoan(null)} />
+      )}
     </div>
+
   );
 }
