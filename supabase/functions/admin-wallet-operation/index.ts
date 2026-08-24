@@ -28,25 +28,35 @@ function computeWithdrawFee(amount: number): number {
 // Overdraft access fee: 2.75% of the portion drawn from OD.
 const OD_ACCESS_FEE_BPS = 275;
 
-async function sendSms(supabase: any, phone: string | null, message: string, userName?: string, authHeader?: string) {
+async function sendSms(
+  supabase: any,
+  phone: string | null,
+  message: string,
+  userName?: string,
+  authHeader?: string,
+  messageType = "admin_wallet_operation",
+  recipientEmail?: string | null,
+) {
   if (!phone) return;
   try {
     // Call send-sms directly with the caller's JWT — invoking via the
     // service-role client returns 401 (send-sms requires a bearer user token).
     const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-sms`;
     const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "apikey": anon,
-        "Authorization": authHeader || `Bearer ${anon}`,
+        "Authorization": authHeader || `Bearer ${service}`,
       },
       body: JSON.stringify({
         phone,
         message,
         userName: userName || "User",
-        messageType: "admin_wallet_otp",
+        messageType,
+        recipientEmail: recipientEmail || undefined,
       }),
     });
     if (!res.ok) {
@@ -59,6 +69,79 @@ async function sendSms(supabase: any, phone: string | null, message: string, use
     console.warn("[admin-wallet-op] SMS send failed:", (e as Error).message);
   }
 }
+
+function ugx(n: number | null | undefined): string {
+  return `UGX ${(Number(n) || 0).toLocaleString()}`;
+}
+
+/**
+ * Single entry point for ALL user-facing notifications about admin wallet
+ * operations (credit / debit / transfer / withdraw), both on success and on
+ * failure. Sends SMS (BulkSMS premium route) AND a branded email, always
+ * including the resulting wallet balance where known.
+ */
+async function notifyWalletOperation(supabase: any, args: {
+  authHeader?: string;
+  email?: string | null;
+  phone?: string | null;
+  name?: string | null;
+  title: string;
+  smsText: string;
+  lines: Array<[string, string]>;
+  note?: string;
+  failed?: boolean;
+}) {
+  const name = args.name || "User";
+  let phone = args.phone || null;
+  let email = args.email || null;
+  if ((!phone || !email) && (args.email || args.name)) {
+    try {
+      const { data: emp } = await supabase
+        .from("employees")
+        .select("phone, email, name")
+        .eq("email", args.email || "")
+        .maybeSingle();
+      phone = phone || emp?.phone || null;
+      email = email || emp?.email || null;
+    } catch (_) { /* best effort */ }
+  }
+
+  // ---- SMS (BulkSMS premium route for wallet operations)
+  await sendSms(
+    supabase,
+    phone,
+    args.smsText,
+    name,
+    args.authHeader,
+    args.failed ? "admin_wallet_operation_failed" : "admin_wallet_operation",
+    email,
+  );
+
+  // ---- Email (branded general-notification template)
+  if (!email) return;
+  try {
+    const detail = args.lines.map(([k, v]) => `${k}: ${v}`).join("\n");
+    const intro = args.failed
+      ? "An administrator attempted a wallet operation on your account but it did NOT complete. The operation may be retried."
+      : "An administrator has performed the following operation on your wallet.";
+    const message = `${intro}\n\n${detail}${args.note ? `\n\n${args.note}` : ""}\n\nIf you did not expect this, contact Administration or Finance immediately.`;
+    await supabase.functions.invoke("send-transactional-email", {
+      body: {
+        templateName: "general-notification",
+        recipientEmail: email,
+        props: {
+          title: args.title,
+          recipientName: name,
+          message,
+        },
+      },
+    });
+  } catch (e) {
+    console.warn("[admin-wallet-op] email send failed:", (e as Error).message);
+  }
+
+}
+
 
 // ------------------------------------------------------------------ OTP utils
 function generateOtp(): string {
@@ -487,8 +570,24 @@ serve(async (req) => {
               approved_by: actorEmail,
             },
           });
-          const smsMsg = `Dear ${op.target_name || "User"}, UGX ${amount.toLocaleString()} has been credited to your wallet by admin. Reason: ${op.reason}.`;
-          await sendSms(supabase, op.target_phone, smsMsg, op.target_name, authHeader);
+          const newBal = await getLedgerBalance(supabase, op.target_user_id);
+          await notifyWalletOperation(supabase, {
+            authHeader,
+            email: op.target_email,
+            phone: op.target_phone,
+            name: op.target_name,
+            title: `Wallet Credited — ${ugx(amount)}`,
+            smsText: `Dear ${op.target_name || "User"}, ${ugx(amount)} has been CREDITED to your wallet by admin. Reason: ${op.reason}. New balance: ${ugx(newBal)}. Ref ${ref}.`,
+            lines: [
+              ["Operation", "Credit"],
+              ["Amount", ugx(amount)],
+              ["Reason", String(op.reason || "-")],
+              ["New wallet balance", ugx(newBal)],
+              ["Reference", ref],
+              ["Approved by", String(actorEmail || "-")],
+            ],
+          });
+
         }
 
         else if (op.operation_type === "debit") {
@@ -517,12 +616,30 @@ serve(async (req) => {
               metadata: { description: "2.75% overdraft access fee", admin_wallet_operation_id: op.id },
             });
           }
-          const smsMsg = `Dear ${op.target_name || "User"}, UGX ${amount.toLocaleString()} has been debited from your wallet by admin. Reason: ${op.reason}${overdraftAccessFee > 0 ? `. Overdraft fee: UGX ${overdraftAccessFee.toLocaleString()}` : ""}.`;
           await recordOverdraftUsage(supabase, {
             user_id: op.target_user_id, email: op.target_email, name: op.target_name,
             draw: odPortion, fee: overdraftAccessFee, reference: ref, reason: op.reason,
           });
-          await sendSms(supabase, op.target_phone, smsMsg, op.target_name, authHeader);
+          const newBal = await getLedgerBalance(supabase, op.target_user_id);
+          await notifyWalletOperation(supabase, {
+            authHeader,
+            email: op.target_email,
+            phone: op.target_phone,
+            name: op.target_name,
+            title: `Wallet Debited — ${ugx(amount)}`,
+            smsText: `Dear ${op.target_name || "User"}, ${ugx(amount)} has been DEBITED from your wallet by admin. Reason: ${op.reason}.${overdraftAccessFee > 0 ? ` Overdraft fee: ${ugx(overdraftAccessFee)}.` : ""} New balance: ${ugx(newBal)}. Ref ${ref}.`,
+            lines: [
+              ["Operation", "Debit"],
+              ["Amount", ugx(amount)],
+              ...(overdraftAccessFee > 0 ? [["Overdraft drawn", ugx(odPortion)] as [string, string], ["Overdraft access fee (2.75%)", ugx(overdraftAccessFee)] as [string, string]] : []),
+              ["Reason", String(op.reason || "-")],
+              ["New wallet balance", ugx(newBal)],
+              ["Reference", ref],
+              ["Approved by", String(actorEmail || "-")],
+            ],
+            note: newBal < 0 ? "Your wallet is currently in overdraft (negative balance). It will be recovered automatically from future credits." : undefined,
+          });
+
         }
 
         else if (op.operation_type === "transfer") {
@@ -564,12 +681,43 @@ serve(async (req) => {
               source_email: op.target_email,
             },
           });
-          const smsSource = `Dear ${op.target_name || "User"}, UGX ${amount.toLocaleString()} has been transferred from your wallet to ${op.destination_name || op.destination_email} by admin. Reason: ${op.reason}.`;
-          const smsDest = `Dear ${op.destination_name || "User"}, UGX ${amount.toLocaleString()} has been credited to your wallet from ${op.target_name || op.target_email} by admin.`;
-          await sendSms(supabase, op.target_phone, smsSource, op.target_name, authHeader);
-          // Fetch destination phone
-          const { data: destEmp } = await supabase.from("employees").select("phone").eq("email", op.destination_email).maybeSingle();
-          await sendSms(supabase, destEmp?.phone, smsDest, op.destination_name, authHeader);
+          const srcBal = await getLedgerBalance(supabase, op.target_user_id);
+          const dstBal = await getLedgerBalance(supabase, op.destination_user_id!);
+          const { data: destEmp } = await supabase.from("employees").select("phone, email").eq("email", op.destination_email).maybeSingle();
+          await notifyWalletOperation(supabase, {
+            authHeader,
+            email: op.target_email,
+            phone: op.target_phone,
+            name: op.target_name,
+            title: `Wallet Transfer Out — ${ugx(amount)}`,
+            smsText: `Dear ${op.target_name || "User"}, ${ugx(amount)} has been TRANSFERRED from your wallet to ${op.destination_name || op.destination_email} by admin. Reason: ${op.reason}. New balance: ${ugx(srcBal)}. Ref ${ref}.`,
+            lines: [
+              ["Operation", "Transfer out"],
+              ["Amount", ugx(amount)],
+              ["To", String(op.destination_name || op.destination_email || "-")],
+              ...(overdraftAccessFee > 0 ? [["Overdraft access fee (2.75%)", ugx(overdraftAccessFee)] as [string, string]] : []),
+              ["Reason", String(op.reason || "-")],
+              ["New wallet balance", ugx(srcBal)],
+              ["Reference", ref],
+            ],
+          });
+          await notifyWalletOperation(supabase, {
+            authHeader,
+            email: op.destination_email || destEmp?.email,
+            phone: destEmp?.phone,
+            name: op.destination_name,
+            title: `Wallet Credited — ${ugx(amount)}`,
+            smsText: `Dear ${op.destination_name || "User"}, ${ugx(amount)} has been CREDITED to your wallet from ${op.target_name || op.target_email} by admin. New balance: ${ugx(dstBal)}. Ref ${ref}.`,
+            lines: [
+              ["Operation", "Transfer in"],
+              ["Amount", ugx(amount)],
+              ["From", String(op.target_name || op.target_email || "-")],
+              ["Reason", String(op.reason || "-")],
+              ["New wallet balance", ugx(dstBal)],
+              ["Reference", ref],
+            ],
+          });
+
         }
 
         else if (op.operation_type === "withdraw") {
@@ -648,8 +796,27 @@ serve(async (req) => {
             gatewayRef = `CASH-${Date.now()}`;
           }
 
-          const smsMsg = `Dear ${op.target_name || "User"}, UGX ${amount.toLocaleString()} has been withdrawn from your wallet by admin to ${op.destination_phone}. Fee: UGX ${Number(op.service_fee).toLocaleString()}${overdraftAccessFee > 0 ? `, OD fee: UGX ${overdraftAccessFee.toLocaleString()}` : ""}. Reason: ${op.reason}.`;
-          await sendSms(supabase, op.target_phone, smsMsg, op.target_name, authHeader);
+          const newBal = await getLedgerBalance(supabase, op.target_user_id);
+          await notifyWalletOperation(supabase, {
+            authHeader,
+            email: op.target_email,
+            phone: op.target_phone,
+            name: op.target_name,
+            title: `Wallet Withdrawal — ${ugx(amount)}`,
+            smsText: `Dear ${op.target_name || "User"}, ${ugx(amount)} has been WITHDRAWN from your wallet by admin to ${op.destination_phone}. Fee: ${ugx(Number(op.service_fee))}${overdraftAccessFee > 0 ? `, OD fee: ${ugx(overdraftAccessFee)}` : ""}. New balance: ${ugx(newBal)}. Ref ${ref}.`,
+            lines: [
+              ["Operation", "Withdrawal"],
+              ["Amount", ugx(amount)],
+              ["Service fee", ugx(Number(op.service_fee))],
+              ...(overdraftAccessFee > 0 ? [["Overdraft access fee (2.75%)", ugx(overdraftAccessFee)] as [string, string]] : []),
+              ["Sent to", String(op.destination_phone || "-")],
+              ["Provider", String(op.payout_provider || "-")],
+              ["Reason", String(op.reason || "-")],
+              ["New wallet balance", ugx(newBal)],
+              ["Reference", ref],
+            ],
+          });
+
 
           await supabase.from("admin_wallet_operations").update({
             gateway_reference: gatewayRef,
@@ -678,8 +845,31 @@ serve(async (req) => {
           approved_by_name: null,
           approved_at: null,
         }).eq("id", op.id);
+        // Always tell the user, even when the operation failed.
+        try {
+          const failBal = await getLedgerBalance(supabase, op.target_user_id);
+          await notifyWalletOperation(supabase, {
+            authHeader,
+            email: op.target_email,
+            phone: op.target_phone,
+            name: op.target_name,
+            failed: true,
+            title: `Wallet Operation Failed — ${ugx(amount)}`,
+            smsText: `Dear ${op.target_name || "User"}, an admin wallet ${op.operation_type} of ${ugx(amount)} FAILED and was not completed. Current balance: ${ugx(failBal)}. Ref ${ref}.`,
+            lines: [
+              ["Operation", String(op.operation_type || "-")],
+              ["Amount", ugx(amount)],
+              ["Status", "Failed — not completed"],
+              ["Reason given", String(op.reason || "-")],
+              ["Failure detail", errMsg.slice(0, 200)],
+              ["Current wallet balance", ugx(failBal)],
+              ["Reference", ref],
+            ],
+          });
+        } catch (_) { /* notification best-effort */ }
         return respond(false, { error: errMsg, retryable: true });
       }
+
     }
 
     return respond(false, { error: `Unknown action: ${action}` });

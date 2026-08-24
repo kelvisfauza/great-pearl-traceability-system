@@ -159,7 +159,12 @@ const PREMIUM_SMS_TYPES = new Set([
   'investment_confirmation',
   'termination_notice',
   'bank_deposit_approved',
+  // Admin wallet operations (credit / debit / transfer / withdraw) — premium
+  // BulkSMS route so users always receive the confirmation.
+  'admin_wallet_operation',
+  'admin_wallet_operation_failed',
 ]);
+
 
 // Verification / OTP codes must NEVER use the BulkSMS Premium route —
 // they always go through the standard YoolaSMS → Infobip path.
@@ -363,6 +368,8 @@ serve(async (req) => {
       // Admin wallet operations (OTP + confirmations) must always go by SMS
       'admin_wallet_otp',
       'admin_wallet_operation',
+      'admin_wallet_operation_failed',
+
       'money_received',
       'money_sent',
       // Bank deposit withdrawals
