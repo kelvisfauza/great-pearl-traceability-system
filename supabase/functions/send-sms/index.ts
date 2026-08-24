@@ -369,10 +369,21 @@ serve(async (req) => {
   console.log('Authenticated:', isServiceRole ? 'service-role' : userId)
 
   try {
-    const { phone, message, userName, messageType, triggeredBy, requestId, department, recipientEmail } = parsedBody
-    
+    const { phone, userName, messageType, triggeredBy, requestId, department, recipientEmail } = parsedBody
+    // Flatten to GSM-7 so emoji/em-dash bodies don't silently become
+    // 70-char UCS-2 segments (which is what was burning BulkSMS credits).
+    const rawMessage: string = parsedBody.message || ''
+    const message = toGsm7(rawMessage)
+
     console.log('📱 SMS request from user:', userId, '| type:', messageType)
-    console.log('Received SMS request:', { phone, userName, messageLength: message?.length })
+    console.log('Received SMS request:', {
+      phone,
+      userName,
+      rawLength: rawMessage.length,
+      sanitizedLength: message.length,
+      segments: smsSegments(message),
+    })
+
 
     // SMS GATEKEEPER: Only allow OTP/verification and account creation SMS through
     // All other notifications should use email instead to save SMS credits
