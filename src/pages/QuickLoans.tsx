@@ -3427,14 +3427,16 @@ const QuickLoans = () => {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Employee</TableHead>
+                          <TableHead>Loan Type</TableHead>
                           <TableHead>Salary</TableHead>
                           <TableHead>Wallet</TableHead>
                           <TableHead>Amount</TableHead>
                           <TableHead>Duration</TableHead>
                           <TableHead>Total Repayable</TableHead>
                           <TableHead>Available Limit</TableHead>
-                          <TableHead>Guarantor</TableHead>
+                          <TableHead>Guarantor(s)</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead>Awaiting</TableHead>
                           <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -3442,11 +3444,26 @@ const QuickLoans = () => {
                         {loans.map(loan => {
                           const emp = employees.find(e => e.email === loan.employee_email);
                           const limit = getLoanLimit(loan.employee_email, emp?.salary || 0, emp?.auth_user_id);
+                          const cfg = LOAN_TYPE_CONFIG[(loan.loan_type || 'quick') as LoanType];
+                          const needsG2 = !!loan.guarantor2_email;
+                          const gBadge = (approved: boolean, declined: boolean) =>
+                            approved ? <Badge variant="default" className="text-xs">Approved</Badge>
+                              : declined ? <Badge variant="destructive" className="text-xs">Declined</Badge>
+                              : <Badge variant="outline" className="text-xs">Pending</Badge>;
+                          const awaiting = loan.status === 'pending_guarantor'
+                            ? (!loan.guarantor_approved ? `${loan.guarantor_name || 'Guarantor 1'} (G1)` : needsG2 && !loan.guarantor2_approved ? `${loan.guarantor2_name || 'Guarantor 2'} (G2)` : 'Guarantor')
+                            : loan.status === 'pending_admin' ? 'Administrator'
+                            : loan.status === 'counter_offered' ? `${loan.employee_name} (borrower)`
+                            : '—';
                           return (
                           <TableRow key={loan.id}>
                             <TableCell>
                               <div>{loan.employee_name}</div>
                               <div className="text-xs text-muted-foreground">{loan.employee_email}</div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary" className="text-[10px]">{cfg?.label || loan.loan_type || 'Quick Loan'}</Badge>
+                              <div className="text-[10px] text-muted-foreground mt-0.5">{loan.interest_rate}%/mo • {loan.repayment_frequency || 'monthly'}</div>
                             </TableCell>
                             <TableCell className="text-xs">UGX {(emp?.salary || 0).toLocaleString()}</TableCell>
                             <TableCell className="text-xs">UGX {Math.max(0, limit.walletBal).toLocaleString()}</TableCell>
@@ -3458,10 +3475,21 @@ const QuickLoans = () => {
                             <TableCell>UGX {loan.total_repayable?.toLocaleString()}</TableCell>
                             <TableCell className="text-xs font-medium text-green-600">UGX {limit.availableLimit.toLocaleString()}</TableCell>
                             <TableCell>
-                              <div>{loan.guarantor_name}</div>
-                              <div className="text-xs">{loan.guarantor_approved ? <Badge variant="default" className="text-xs">Approved</Badge> : loan.guarantor_declined ? <Badge variant="destructive" className="text-xs">Declined</Badge> : <Badge variant="outline" className="text-xs">Pending</Badge>}</div>
+                              <div className="space-y-1">
+                                <div>
+                                  <div className="text-xs">{loan.guarantor_name || '—'}</div>
+                                  {gBadge(!!loan.guarantor_approved, !!loan.guarantor_declined)}
+                                </div>
+                                {needsG2 && (
+                                  <div>
+                                    <div className="text-xs">{loan.guarantor2_name}</div>
+                                    {gBadge(!!loan.guarantor2_approved, !!loan.guarantor2_declined)}
+                                  </div>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell>{getStatusBadge(loan.status)}</TableCell>
+                            <TableCell className="text-xs">{awaiting}</TableCell>
                             <TableCell>
                               {loan.status === 'pending_admin' && (
                                 <Button size="sm" variant="outline" onClick={() => setReviewLoan(loan)} disabled={submitting}>
@@ -3473,8 +3501,9 @@ const QuickLoans = () => {
                           );
                         })}
                         {loans.length === 0 && (
-                          <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">No loan requests</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-8">No loan requests</TableCell></TableRow>
                         )}
+
                       </TableBody>
                     </Table>
                   </CardContent>
