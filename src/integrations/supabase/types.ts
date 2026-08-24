@@ -77,6 +77,54 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_approval_codes: {
+        Row: {
+          amount: number | null
+          attempts: number
+          code_hash: string
+          created_at: string
+          expires_at: string
+          id: string
+          phone: string | null
+          requested_by: string
+          requested_by_email: string | null
+          target_id: string
+          target_type: string
+          updated_at: string
+          used_at: string | null
+        }
+        Insert: {
+          amount?: number | null
+          attempts?: number
+          code_hash: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          phone?: string | null
+          requested_by: string
+          requested_by_email?: string | null
+          target_id: string
+          target_type: string
+          updated_at?: string
+          used_at?: string | null
+        }
+        Update: {
+          amount?: number | null
+          attempts?: number
+          code_hash?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          phone?: string | null
+          requested_by?: string
+          requested_by_email?: string | null
+          target_id?: string
+          target_type?: string
+          updated_at?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       admin_initiated_withdrawals: {
         Row: {
           amount: number

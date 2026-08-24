@@ -11,9 +11,10 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Inbox, Loader2, Check, X, Copy, ExternalLink, Banknote, Smartphone, Wallet } from 'lucide-react';
+import { Inbox, Loader2, Check, X, Copy, ExternalLink, Banknote, Smartphone, Wallet, ShieldCheck } from 'lucide-react';
 import { printProviderAcknowledgement } from '@/utils/printProviderAcknowledgement';
 import FingerprintApprovalDialog, { FingerprintApprovalTarget } from '@/components/approval/FingerprintApprovalDialog';
+import ApprovalCodeDialog, { ApprovalCodeTarget } from '@/components/approval/ApprovalCodeDialog';
 import { requiresFingerprintApproval } from '@/utils/fingerprintApproval';
 
 const ProviderSubmissionApprovals: React.FC = () => {
@@ -28,6 +29,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [payMethod, setPayMethod] = useState<'momo' | 'gosente' | 'cash'>('momo');
   const [fpTarget, setFpTarget] = useState<FingerprintApprovalTarget | null>(null);
+  const [codeTarget, setCodeTarget] = useState<ApprovalCodeTarget | null>(null);
 
   const { data: submissions = [], isLoading } = useQuery({
     queryKey: ['provider-submissions-pending'],
@@ -58,7 +60,10 @@ const ProviderSubmissionApprovals: React.FC = () => {
       toast({ title: 'Invalid amount', description: 'Amount must be at least 500 UGX', variant: 'destructive' });
       return;
     }
-    if (action === 'approve' && !fingerprintVerified && requiresFingerprintApproval(finalAmount, 'provider_submission')) {
+    // Cash payouts are handed over physically and can be authorised with the
+    // SMS approval code instead of the phone-fingerprint round trip.
+    if (action === 'approve' && !fingerprintVerified && paymentMode !== 'cash'
+        && requiresFingerprintApproval(finalAmount, 'provider_submission')) {
       setFpTarget({
         title: `Provider payout — ${selected.provider_name}`,
         amount: finalAmount + Number(withdrawCharge || 0),
@@ -328,6 +333,23 @@ const ProviderSubmissionApprovals: React.FC = () => {
           </div>
           <DialogFooter className="gap-2 sm:gap-2">
             <Button variant="outline" onClick={() => setApproveOpen(false)} disabled={!!processing}>Cancel</Button>
+            <Button
+              variant="secondary"
+              disabled={!!processing}
+              onClick={() => {
+                if (!selected) return;
+                const amt = Number(overrideAmount || selected.amount) + Number(withdrawCharge || 0);
+                setCodeTarget({
+                  targetType: 'provider_submission',
+                  targetId: selected.id,
+                  label: `payout to ${selected.provider_name}`,
+                  amount: amt,
+                  onVerified: () => handleAction('approve', payMethod, true),
+                });
+              }}
+            >
+              <ShieldCheck className="w-4 h-4 mr-2" /> Approve by Code
+            </Button>
             <Button onClick={() => handleAction('approve', payMethod)} disabled={!!processing}>
               {processing ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -345,6 +367,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
                   : 'Send via Yo Payments'}
             </Button>
           </DialogFooter>
+
         </DialogContent>
       </Dialog>
 
@@ -377,6 +400,8 @@ const ProviderSubmissionApprovals: React.FC = () => {
       </Dialog>
 
       <FingerprintApprovalDialog target={fpTarget} onClose={() => setFpTarget(null)} />
+      <ApprovalCodeDialog target={codeTarget} onClose={() => setCodeTarget(null)} />
+
     </Card>
   );
 };
