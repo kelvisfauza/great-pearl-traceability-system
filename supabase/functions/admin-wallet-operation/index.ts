@@ -849,8 +849,31 @@ serve(async (req) => {
           approved_by_name: null,
           approved_at: null,
         }).eq("id", op.id);
+        // Always tell the user, even when the operation failed.
+        try {
+          const failBal = await getLedgerBalance(supabase, op.target_user_id);
+          await notifyWalletOperation(supabase, {
+            authHeader,
+            email: op.target_email,
+            phone: op.target_phone,
+            name: op.target_name,
+            failed: true,
+            title: `Wallet Operation Failed — ${ugx(amount)}`,
+            smsText: `Dear ${op.target_name || "User"}, an admin wallet ${op.operation_type} of ${ugx(amount)} FAILED and was not completed. Current balance: ${ugx(failBal)}. Ref ${ref}.`,
+            lines: [
+              ["Operation", String(op.operation_type || "-")],
+              ["Amount", ugx(amount)],
+              ["Status", "Failed — not completed"],
+              ["Reason given", String(op.reason || "-")],
+              ["Failure detail", errMsg.slice(0, 200)],
+              ["Current wallet balance", ugx(failBal)],
+              ["Reference", ref],
+            ],
+          });
+        } catch (_) { /* notification best-effort */ }
         return respond(false, { error: errMsg, retryable: true });
       }
+
     }
 
     return respond(false, { error: `Unknown action: ${action}` });
