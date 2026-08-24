@@ -3491,12 +3491,18 @@ const QuickLoans = () => {
                             <TableCell>{getStatusBadge(loan.status)}</TableCell>
                             <TableCell className="text-xs">{awaiting}</TableCell>
                             <TableCell>
-                              {loan.status === 'pending_admin' && (
-                                <Button size="sm" variant="outline" onClick={() => setReviewLoan(loan)} disabled={submitting}>
-                                  <Shield className="mr-1 h-3 w-3" /> Review
+                              <div className="flex flex-col gap-1">
+                                <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setDetailsLoan(loan)}>
+                                  <FileText className="mr-1 h-3 w-3" /> Details
                                 </Button>
-                              )}
+                                {loan.status === 'pending_admin' && (
+                                  <Button size="sm" variant="outline" onClick={() => setReviewLoan(loan)} disabled={submitting}>
+                                    <Shield className="mr-1 h-3 w-3" /> Review
+                                  </Button>
+                                )}
+                              </div>
                             </TableCell>
+
                           </TableRow>
                           );
                         })}
