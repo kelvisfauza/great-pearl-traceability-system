@@ -419,10 +419,15 @@ const QuickLoans = () => {
       toast({ title: "Error", description: "Please fill all fields", variant: "destructive" });
       return;
     }
+    if (cfg.minAmount && requested < cfg.minAmount) {
+      toast({ title: 'Amount too low', description: `${cfg.label} has a minimum of UGX ${cfg.minAmount.toLocaleString()}.`, variant: 'destructive' });
+      return;
+    }
     if (cfg.maxMonths && months > cfg.maxMonths) {
       toast({ title: 'Duration too long', description: `${cfg.label} is limited to ${cfg.maxMonths} months.`, variant: 'destructive' });
       return;
     }
+
     const FEE = 10000;
     const amount = requested + FEE; // fee added to principal
     const dailyRate = getDailyRate(loanType);
