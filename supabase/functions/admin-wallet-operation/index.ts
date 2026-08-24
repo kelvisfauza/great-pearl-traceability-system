@@ -138,10 +138,8 @@ async function notifyWalletOperation(supabase: any, args: {
     });
   } catch (e) {
     console.warn("[admin-wallet-op] email send failed:", (e as Error).message);
-
-  } catch (e) {
-    console.warn("[admin-wallet-op] email send failed:", (e as Error).message);
   }
+
 }
 
 
