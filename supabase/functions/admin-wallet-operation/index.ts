@@ -574,8 +574,24 @@ serve(async (req) => {
               approved_by: actorEmail,
             },
           });
-          const smsMsg = `Dear ${op.target_name || "User"}, UGX ${amount.toLocaleString()} has been credited to your wallet by admin. Reason: ${op.reason}.`;
-          await sendSms(supabase, op.target_phone, smsMsg, op.target_name, authHeader);
+          const newBal = await getLedgerBalance(supabase, op.target_user_id);
+          await notifyWalletOperation(supabase, {
+            authHeader,
+            email: op.target_email,
+            phone: op.target_phone,
+            name: op.target_name,
+            title: `Wallet Credited — ${ugx(amount)}`,
+            smsText: `Dear ${op.target_name || "User"}, ${ugx(amount)} has been CREDITED to your wallet by admin. Reason: ${op.reason}. New balance: ${ugx(newBal)}. Ref ${ref}.`,
+            lines: [
+              ["Operation", "Credit"],
+              ["Amount", ugx(amount)],
+              ["Reason", String(op.reason || "-")],
+              ["New wallet balance", ugx(newBal)],
+              ["Reference", ref],
+              ["Approved by", String(actorEmail || "-")],
+            ],
+          });
+
         }
 
         else if (op.operation_type === "debit") {
