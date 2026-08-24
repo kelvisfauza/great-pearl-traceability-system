@@ -620,12 +620,30 @@ serve(async (req) => {
               metadata: { description: "2.75% overdraft access fee", admin_wallet_operation_id: op.id },
             });
           }
-          const smsMsg = `Dear ${op.target_name || "User"}, UGX ${amount.toLocaleString()} has been debited from your wallet by admin. Reason: ${op.reason}${overdraftAccessFee > 0 ? `. Overdraft fee: UGX ${overdraftAccessFee.toLocaleString()}` : ""}.`;
           await recordOverdraftUsage(supabase, {
             user_id: op.target_user_id, email: op.target_email, name: op.target_name,
             draw: odPortion, fee: overdraftAccessFee, reference: ref, reason: op.reason,
           });
-          await sendSms(supabase, op.target_phone, smsMsg, op.target_name, authHeader);
+          const newBal = await getLedgerBalance(supabase, op.target_user_id);
+          await notifyWalletOperation(supabase, {
+            authHeader,
+            email: op.target_email,
+            phone: op.target_phone,
+            name: op.target_name,
+            title: `Wallet Debited — ${ugx(amount)}`,
+            smsText: `Dear ${op.target_name || "User"}, ${ugx(amount)} has been DEBITED from your wallet by admin. Reason: ${op.reason}.${overdraftAccessFee > 0 ? ` Overdraft fee: ${ugx(overdraftAccessFee)}.` : ""} New balance: ${ugx(newBal)}. Ref ${ref}.`,
+            lines: [
+              ["Operation", "Debit"],
+              ["Amount", ugx(amount)],
+              ...(overdraftAccessFee > 0 ? [["Overdraft drawn", ugx(odPortion)] as [string, string], ["Overdraft access fee (2.75%)", ugx(overdraftAccessFee)] as [string, string]] : []),
+              ["Reason", String(op.reason || "-")],
+              ["New wallet balance", ugx(newBal)],
+              ["Reference", ref],
+              ["Approved by", String(actorEmail || "-")],
+            ],
+            note: newBal < 0 ? "Your wallet is currently in overdraft (negative balance). It will be recovered automatically from future credits." : undefined,
+          });
+
         }
 
         else if (op.operation_type === "transfer") {
