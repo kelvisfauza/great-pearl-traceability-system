@@ -3626,6 +3626,8 @@ const QuickLoans = () => {
       </div>
 
       <LoanDetailsDialog loan={detailsLoan} open={!!detailsLoan} onClose={() => setDetailsLoan(null)} />
+      <LoanApprovalTracker loan={trackLoan} open={!!trackLoan} onOpenChange={(v) => { if (!v) setTrackLoan(null); }} />
+
 
       <LoanReviewModal
         loan={reviewLoan}
