@@ -433,6 +433,7 @@ const SalesReceiptTemplateDownload = () => {
     try {
       setBusy(true);
       await generateSalesReceipt(values);
+      set('receiptNo', '');
       setOpen(false);
       toast({ title: 'Receipt ready', description: 'PDF downloaded and print preview opened (2 copies).' });
     } catch (e: any) {
