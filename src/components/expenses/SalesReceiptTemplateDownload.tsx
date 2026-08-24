@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +7,10 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
-import { Download, Receipt, Loader2, Plus, Trash2 } from 'lucide-react';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import { Download, Receipt, Loader2, Plus, Trash2, RefreshCw } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
 import { buildDocumentQr, drawQrBlock } from '@/utils/pdfQrCode';
@@ -43,6 +46,7 @@ interface LineItem {
 interface ReceiptValues {
   receiptNo: string;
   date: string;
+  cropYear: string;
   buyerName: string;
   buyerContact: string;
   vehicleNo: string;
@@ -53,6 +57,55 @@ interface ReceiptValues {
   issuedBy: string;
   items: LineItem[];
 }
+
+const COFFEE_TYPES = [
+  'Arabica Parchment',
+  'Arabica Bugisu AA',
+  'Drugar',
+  'Wugar',
+  'Mixed Arabica',
+  'Robusta FAQ',
+  'Robusta Screen 18',
+  'Robusta Screen 15',
+  'Robusta Screen 12',
+  'Sorted Robusta',
+  'Unsorted Robusta',
+  'Kiboko',
+  'Husks / Byproduct',
+];
+
+const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'Mobile Money', 'Cheque', 'Credit (On Account)'];
+
+const cropYearOptions = (): string[] => {
+  const now = new Date();
+  // Uganda coffee crop year runs Oct - Sep
+  const startYear = now.getMonth() >= 9 ? now.getFullYear() : now.getFullYear() - 1;
+  const list: string[] = [];
+  for (let i = 1; i >= -3; i--) {
+    const s = startYear + i;
+    list.push(`${s}/${String(s + 1).slice(-2)}`);
+  }
+  return list;
+};
+
+const currentCropYear = () => cropYearOptions()[1];
+
+// Auto receipt number: GAC-SR-YYMM-#### (sequence resets monthly, kept per device)
+const nextReceiptNumber = (): string => {
+  const now = new Date();
+  const period = `${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, '0')}`;
+  let seq = 1;
+  try {
+    const key = 'gac_sales_receipt_seq';
+    const raw = localStorage.getItem(key);
+    const parsed = raw ? JSON.parse(raw) : null;
+    seq = parsed && parsed.period === period ? Number(parsed.seq || 0) + 1 : 1;
+    localStorage.setItem(key, JSON.stringify({ period, seq }));
+  } catch {
+    seq = Math.floor(Math.random() * 9000) + 1000;
+  }
+  return `GAC-SR-${period}-${String(seq).padStart(4, '0')}`;
+};
 
 const num = (v: string) => {
   const n = parseFloat(String(v || '').replace(/,/g, ''));
@@ -170,6 +223,7 @@ const generateSalesReceipt = async (v: ReceiptValues) => {
     metaRow('Receipt No:', v.receiptNo, 'Date:', v.date);
     metaRow('Received From:', v.buyerName, 'Contact:', v.buyerContact);
     metaRow('Vehicle No:', v.vehicleNo, 'Payment Method:', v.paymentMethod);
+    metaRow('Crop Year:', v.cropYear, 'Issued By:', v.issuedBy);
 
     // Table head
     y += 3;
@@ -197,7 +251,7 @@ const generateSalesReceipt = async (v: ReceiptValues) => {
       const amount = num(r.kilograms) * num(r.unitPrice);
       const values = [
         String(ri + 1),
-        r.coffeeType || '',
+        (r.coffeeType || '').trim(),
         r.bags ? num(r.bags).toLocaleString() : '',
         r.kilograms ? num(r.kilograms).toLocaleString() : '',
         r.unitPrice ? num(r.unitPrice).toLocaleString() : '',
@@ -348,6 +402,7 @@ const SalesReceiptTemplateDownload = () => {
   const [values, setValues] = useState<ReceiptValues>({
     receiptNo: '',
     date: new Date().toLocaleDateString('en-GB'),
+    cropYear: currentCropYear(),
     buyerName: '',
     buyerContact: '',
     vehicleNo: '',
@@ -360,6 +415,13 @@ const SalesReceiptTemplateDownload = () => {
   });
 
   const set = (k: keyof ReceiptValues, val: any) => setValues((p) => ({ ...p, [k]: val }));
+
+  // Auto-assign a receipt number each time the form is opened
+  useEffect(() => {
+    if (open && !values.receiptNo) set('receiptNo', nextReceiptNumber());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   const setItem = (idx: number, k: keyof LineItem, val: string) =>
     setValues((p) => ({ ...p, items: p.items.map((it, i) => (i === idx ? { ...it, [k]: val } : it)) }));
 
@@ -371,6 +433,7 @@ const SalesReceiptTemplateDownload = () => {
     try {
       setBusy(true);
       await generateSalesReceipt(values);
+      set('receiptNo', '');
       setOpen(false);
       toast({ title: 'Receipt ready', description: 'PDF downloaded and print preview opened (2 copies).' });
     } catch (e: any) {
@@ -414,9 +477,14 @@ const SalesReceiptTemplateDownload = () => {
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="sr-no">Receipt No.</Label>
-                <Input id="sr-no" placeholder="e.g. GAC-SR-0001" value={values.receiptNo}
-                  onChange={(e) => set('receiptNo', e.target.value)} />
+                <Label htmlFor="sr-no">Receipt No. (auto)</Label>
+                <div className="flex gap-1">
+                  <Input id="sr-no" readOnly className="bg-muted font-mono" value={values.receiptNo} />
+                  <Button type="button" variant="outline" size="icon" title="Generate new number"
+                    onClick={() => set('receiptNo', nextReceiptNumber())}>
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="sr-date">Date</Label>
@@ -439,9 +507,22 @@ const SalesReceiptTemplateDownload = () => {
                   onChange={(e) => set('buyerContact', e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="sr-method">Payment Method</Label>
-                <Input id="sr-method" placeholder="Cash / Bank / Mobile Money" value={values.paymentMethod}
-                  onChange={(e) => set('paymentMethod', e.target.value)} />
+                <Label>Payment Method</Label>
+                <Select value={values.paymentMethod} onValueChange={(val) => set('paymentMethod', val)}>
+                  <SelectTrigger><SelectValue placeholder="Select method" /></SelectTrigger>
+                  <SelectContent className="z-50 bg-popover">
+                    {PAYMENT_METHODS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Crop Year</Label>
+                <Select value={values.cropYear} onValueChange={(val) => set('cropYear', val)}>
+                  <SelectTrigger><SelectValue placeholder="Select crop year" /></SelectTrigger>
+                  <SelectContent className="z-50 bg-popover">
+                    {cropYearOptions().map((cy) => <SelectItem key={cy} value={cy}>{cy}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -457,8 +538,20 @@ const SalesReceiptTemplateDownload = () => {
                 <div key={idx} className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-end border rounded-md p-2">
                   <div className="space-y-1 col-span-2 sm:col-span-2">
                     <Label className="text-xs">Coffee Type</Label>
-                    <Input placeholder="e.g. Robusta FAQ" value={item.coffeeType}
-                      onChange={(e) => setItem(idx, 'coffeeType', e.target.value)} />
+                    <Select
+                      value={COFFEE_TYPES.includes(item.coffeeType) ? item.coffeeType : item.coffeeType ? '__other__' : ''}
+                      onValueChange={(val) => setItem(idx, 'coffeeType', val === '__other__' ? ' ' : val)}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Select coffee type" /></SelectTrigger>
+                      <SelectContent className="z-50 bg-popover">
+                        {COFFEE_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                        <SelectItem value="__other__">Other (type below)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {item.coffeeType !== '' && !COFFEE_TYPES.includes(item.coffeeType) && (
+                      <Input className="mt-1" placeholder="Specify coffee type" value={item.coffeeType.trim()}
+                        onChange={(e) => setItem(idx, 'coffeeType', e.target.value || ' ')} />
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Bags</Label>
