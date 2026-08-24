@@ -49,6 +49,7 @@ export default function LoanAppeals() {
   const [counterTerm, setCounterTerm] = useState('');
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [editingVoteId, setEditingVoteId] = useState<string | null>(null);
   const [me, setMe] = useState<{ id: string; email: string | null } | null>(null);
   const [sendingPdfFor, setSendingPdfFor] = useState<string | null>(null);
   const [openingReviewFor, setOpeningReviewFor] = useState<string | null>(null);
@@ -130,16 +131,20 @@ export default function LoanAppeals() {
         counter_amount: voteType === 'counter' ? Number(counterAmount) : null,
         counter_term_months: voteType === 'counter' ? Number(counterTerm) : null,
       };
-      const { error } = await (supabase as any).from('loan_appeal_votes').insert(payload);
+      const { error } = editingVoteId
+        ? await (supabase as any).from('loan_appeal_votes').update(payload).eq('id', editingVoteId)
+        : await (supabase as any).from('loan_appeal_votes').insert(payload);
       if (error) throw error;
-      toast({ title: 'Vote recorded', description: 'Appeal auto-finalizes when 3 admins agree.' });
+      toast({ title: editingVoteId ? 'Vote updated' : 'Vote recorded', description: 'Appeal auto-finalizes when 3 admins agree.' });
       const appealIdJustVoted = voteFor.id;
       setVoteFor(null);
+      setEditingVoteId(null);
       setReason('');
       setCounterAmount('');
       setCounterTerm('');
       setVoteType('uphold');
       await fetchAll();
+
       // Re-read the appeal to see if it just became decided — then auto-disburse
       const { data: fresh } = await (supabase as any).from('loan_appeals').select('status, resulting_loan_id').eq('id', appealIdJustVoted).maybeSingle();
       if (fresh && !fresh.resulting_loan_id && ['decided_approve', 'decided_counter'].includes(fresh.status)) {
@@ -280,7 +285,23 @@ export default function LoanAppeals() {
             )}
           </div>
           {a.status === 'pending_admin_review' && !myVote && (
-            <Button onClick={() => setVoteFor(a)} className="w-full">Cast my vote</Button>
+            <Button onClick={() => { setEditingVoteId(null); setVoteType('uphold'); setReason(''); setCounterAmount(''); setCounterTerm(''); setVoteFor(a); }} className="w-full">Cast my vote</Button>
+          )}
+          {a.status === 'pending_admin_review' && myVote && (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setEditingVoteId(myVote.id);
+                setVoteType(myVote.vote_type);
+                setReason(myVote.reason || '');
+                setCounterAmount(myVote.counter_amount ? String(myVote.counter_amount) : '');
+                setCounterTerm(myVote.counter_term_months ? String(myVote.counter_term_months) : '');
+                setVoteFor(a);
+              }}
+            >
+              <Repeat className="mr-2 h-4 w-4" /> Change my vote (currently {myVote.vote_type})
+            </Button>
           )}
           {a.final_decision && (
             <div className="rounded bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-300 p-2 text-xs">
@@ -347,10 +368,11 @@ export default function LoanAppeals() {
         </Tabs>
       )}
 
-      <Dialog open={!!voteFor} onOpenChange={(o) => !o && setVoteFor(null)}>
+      <Dialog open={!!voteFor} onOpenChange={(o) => { if (!o) { setVoteFor(null); setEditingVoteId(null); } }}>
+
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Cast your vote</DialogTitle>
+            <DialogTitle>{editingVoteId ? 'Change your vote' : 'Cast your vote'}</DialogTitle>
           </DialogHeader>
           {voteFor && (
             <div className="space-y-3 text-sm">
@@ -389,7 +411,7 @@ export default function LoanAppeals() {
                 <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Document your reasoning so it appears in the audit trail." />
               </div>
               <Button onClick={submitVote} disabled={submitting} className="w-full">
-                {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting…</> : 'Submit vote'}
+                {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting…</> : (editingVoteId ? 'Update vote' : 'Submit vote')}
               </Button>
             </div>
           )}
