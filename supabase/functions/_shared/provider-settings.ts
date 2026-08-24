@@ -55,7 +55,7 @@ export const DEFAULT_PROVIDER_SETTINGS: ProviderSettings = {
     yoola_enabled: true,
     infobip_fallback: true,
     bulksms_premium: true,
-    dedup_window_seconds: 90,
+    dedup_window_seconds: 300,
   },
 };
 
