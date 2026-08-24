@@ -685,12 +685,43 @@ serve(async (req) => {
               source_email: op.target_email,
             },
           });
-          const smsSource = `Dear ${op.target_name || "User"}, UGX ${amount.toLocaleString()} has been transferred from your wallet to ${op.destination_name || op.destination_email} by admin. Reason: ${op.reason}.`;
-          const smsDest = `Dear ${op.destination_name || "User"}, UGX ${amount.toLocaleString()} has been credited to your wallet from ${op.target_name || op.target_email} by admin.`;
-          await sendSms(supabase, op.target_phone, smsSource, op.target_name, authHeader);
-          // Fetch destination phone
-          const { data: destEmp } = await supabase.from("employees").select("phone").eq("email", op.destination_email).maybeSingle();
-          await sendSms(supabase, destEmp?.phone, smsDest, op.destination_name, authHeader);
+          const srcBal = await getLedgerBalance(supabase, op.target_user_id);
+          const dstBal = await getLedgerBalance(supabase, op.destination_user_id!);
+          const { data: destEmp } = await supabase.from("employees").select("phone, email").eq("email", op.destination_email).maybeSingle();
+          await notifyWalletOperation(supabase, {
+            authHeader,
+            email: op.target_email,
+            phone: op.target_phone,
+            name: op.target_name,
+            title: `Wallet Transfer Out — ${ugx(amount)}`,
+            smsText: `Dear ${op.target_name || "User"}, ${ugx(amount)} has been TRANSFERRED from your wallet to ${op.destination_name || op.destination_email} by admin. Reason: ${op.reason}. New balance: ${ugx(srcBal)}. Ref ${ref}.`,
+            lines: [
+              ["Operation", "Transfer out"],
+              ["Amount", ugx(amount)],
+              ["To", String(op.destination_name || op.destination_email || "-")],
+              ...(overdraftAccessFee > 0 ? [["Overdraft access fee (2.75%)", ugx(overdraftAccessFee)] as [string, string]] : []),
+              ["Reason", String(op.reason || "-")],
+              ["New wallet balance", ugx(srcBal)],
+              ["Reference", ref],
+            ],
+          });
+          await notifyWalletOperation(supabase, {
+            authHeader,
+            email: op.destination_email || destEmp?.email,
+            phone: destEmp?.phone,
+            name: op.destination_name,
+            title: `Wallet Credited — ${ugx(amount)}`,
+            smsText: `Dear ${op.destination_name || "User"}, ${ugx(amount)} has been CREDITED to your wallet from ${op.target_name || op.target_email} by admin. New balance: ${ugx(dstBal)}. Ref ${ref}.`,
+            lines: [
+              ["Operation", "Transfer in"],
+              ["Amount", ugx(amount)],
+              ["From", String(op.target_name || op.target_email || "-")],
+              ["Reason", String(op.reason || "-")],
+              ["New wallet balance", ugx(dstBal)],
+              ["Reference", ref],
+            ],
+          });
+
         }
 
         else if (op.operation_type === "withdraw") {
