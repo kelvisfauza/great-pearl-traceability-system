@@ -74,6 +74,8 @@ const LoanDetailsDialog = ({ loan, open, onClose }: Props) => {
   const typeLabel = LOAN_LABELS[loan.loan_type || 'quick'] || loan.loan_type;
   const needsG2 = !!loan.guarantor2_email;
   const totalPaid = schedule.reduce((s, r) => s + (r.amount_paid || 0), 0);
+  const allGuarantorsApproved = !!loan.guarantor_approved && (!needsG2 || !!loan.guarantor2_approved);
+
   const awaiting = loan.status === 'pending_guarantor'
     ? (!loan.guarantor_approved ? `${loan.guarantor_name || 'Guarantor 1'} (Guarantor 1)` : needsG2 && !loan.guarantor2_approved ? `${loan.guarantor2_name || 'Guarantor 2'} (Guarantor 2)` : 'Guarantor')
     : loan.status === 'pending_admin' ? 'Administrator'
