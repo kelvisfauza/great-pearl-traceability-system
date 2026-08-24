@@ -507,9 +507,22 @@ const SalesReceiptTemplateDownload = () => {
                   onChange={(e) => set('buyerContact', e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="sr-method">Payment Method</Label>
-                <Input id="sr-method" placeholder="Cash / Bank / Mobile Money" value={values.paymentMethod}
-                  onChange={(e) => set('paymentMethod', e.target.value)} />
+                <Label>Payment Method</Label>
+                <Select value={values.paymentMethod} onValueChange={(val) => set('paymentMethod', val)}>
+                  <SelectTrigger><SelectValue placeholder="Select method" /></SelectTrigger>
+                  <SelectContent className="z-50 bg-popover">
+                    {PAYMENT_METHODS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Crop Year</Label>
+                <Select value={values.cropYear} onValueChange={(val) => set('cropYear', val)}>
+                  <SelectTrigger><SelectValue placeholder="Select crop year" /></SelectTrigger>
+                  <SelectContent className="z-50 bg-popover">
+                    {cropYearOptions().map((cy) => <SelectItem key={cy} value={cy}>{cy}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
