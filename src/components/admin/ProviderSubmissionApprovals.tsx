@@ -29,6 +29,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [payMethod, setPayMethod] = useState<'momo' | 'gosente' | 'cash'>('momo');
   const [fpTarget, setFpTarget] = useState<FingerprintApprovalTarget | null>(null);
+  const [codeTarget, setCodeTarget] = useState<ApprovalCodeTarget | null>(null);
 
   const { data: submissions = [], isLoading } = useQuery({
     queryKey: ['provider-submissions-pending'],
