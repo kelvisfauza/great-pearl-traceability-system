@@ -287,20 +287,29 @@ export default function LoanAppeals() {
             </div>
           )}
           {resultingLoanId && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSendPdf}
-              disabled={sendingPdfFor === a.id}
-              className="w-full"
-            >
-              {sendingPdfFor === a.id ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating & sending…</>
-              ) : (
-                <><FileText className="mr-2 h-4 w-4" /> Send Agreement PDF to borrower</>
-              )}
-            </Button>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Button variant="secondary" size="sm" onClick={openReview} disabled={openingReviewFor === a.id}>
+                {openingReviewFor === a.id ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Opening…</>
+                ) : (
+                  <><Eye className="mr-2 h-4 w-4" /> Review &amp; print terms</>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSendPdf}
+                disabled={sendingPdfFor === a.id}
+              >
+                {sendingPdfFor === a.id ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating & sending…</>
+                ) : (
+                  <><FileText className="mr-2 h-4 w-4" /> Send Agreement PDF</>
+                )}
+              </Button>
+            </div>
           )}
+
         </CardContent>
       </Card>
     );
