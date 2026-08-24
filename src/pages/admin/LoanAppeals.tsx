@@ -8,11 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Loader2, Scale, ThumbsUp, ThumbsDown, Repeat, FileText } from 'lucide-react';
+import { Loader2, Scale, ThumbsUp, ThumbsDown, Repeat, FileText, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { sendLoanAgreement } from '@/utils/sendLoanAgreement';
 import GuarantorRecoveryAppeals from '@/components/loans/GuarantorRecoveryAppeals';
+import LoanDetailsDialog from '@/components/loans/LoanDetailsDialog';
+
 
 type Vote = { id: string; admin_id: string; admin_email: string | null; vote_type: 'uphold' | 'approve_full' | 'counter'; counter_amount: number | null; counter_term_months: number | null; reason: string; created_at: string };
 type Appeal = {
@@ -49,6 +51,9 @@ export default function LoanAppeals() {
   const [submitting, setSubmitting] = useState(false);
   const [me, setMe] = useState<{ id: string; email: string | null } | null>(null);
   const [sendingPdfFor, setSendingPdfFor] = useState<string | null>(null);
+  const [openingReviewFor, setOpeningReviewFor] = useState<string | null>(null);
+  const [reviewLoan, setReviewLoan] = useState<any>(null);
+
 
   const fetchAll = async () => {
     setLoading(true);
@@ -173,6 +178,21 @@ export default function LoanAppeals() {
         toast({ title: 'Failed to send agreement', description: (res as any).error, variant: 'destructive' });
       }
     };
+    const openReview = async () => {
+      if (!resultingLoanId) return;
+      setOpeningReviewFor(a.id);
+      try {
+        const { data, error } = await (supabase as any).from('loans').select('*').eq('id', resultingLoanId).maybeSingle();
+        if (error) throw error;
+        if (!data) throw new Error('Loan record not found');
+        setReviewLoan(data);
+      } catch (e: any) {
+        toast({ title: 'Could not open review', description: e.message, variant: 'destructive' });
+      } finally {
+        setOpeningReviewFor(null);
+      }
+    };
+
     return (
       <Card key={a.id} className="border-l-4 border-l-primary">
         <CardHeader className="pb-2">
@@ -269,20 +289,29 @@ export default function LoanAppeals() {
             </div>
           )}
           {resultingLoanId && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSendPdf}
-              disabled={sendingPdfFor === a.id}
-              className="w-full"
-            >
-              {sendingPdfFor === a.id ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating & sending…</>
-              ) : (
-                <><FileText className="mr-2 h-4 w-4" /> Send Agreement PDF to borrower</>
-              )}
-            </Button>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Button variant="secondary" size="sm" onClick={openReview} disabled={openingReviewFor === a.id}>
+                {openingReviewFor === a.id ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Opening…</>
+                ) : (
+                  <><Eye className="mr-2 h-4 w-4" /> Review &amp; print terms</>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSendPdf}
+                disabled={sendingPdfFor === a.id}
+              >
+                {sendingPdfFor === a.id ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating & sending…</>
+                ) : (
+                  <><FileText className="mr-2 h-4 w-4" /> Send Agreement PDF</>
+                )}
+              </Button>
+            </div>
           )}
+
         </CardContent>
       </Card>
     );
@@ -366,6 +395,11 @@ export default function LoanAppeals() {
           )}
         </DialogContent>
       </Dialog>
+
+      {reviewLoan && (
+        <LoanDetailsDialog loan={reviewLoan} open={!!reviewLoan} onClose={() => setReviewLoan(null)} />
+      )}
     </div>
+
   );
 }
