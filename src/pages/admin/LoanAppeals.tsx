@@ -368,7 +368,8 @@ export default function LoanAppeals() {
         </Tabs>
       )}
 
-      <Dialog open={!!voteFor} onOpenChange={(o) => !o && setVoteFor(null)}>
+      <Dialog open={!!voteFor} onOpenChange={(o) => { if (!o) { setVoteFor(null); setEditingVoteId(null); } }}>
+
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Cast your vote</DialogTitle>
