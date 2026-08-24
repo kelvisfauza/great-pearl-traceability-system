@@ -415,6 +415,13 @@ const SalesReceiptTemplateDownload = () => {
   });
 
   const set = (k: keyof ReceiptValues, val: any) => setValues((p) => ({ ...p, [k]: val }));
+
+  // Auto-assign a receipt number each time the form is opened
+  useEffect(() => {
+    if (open && !values.receiptNo) set('receiptNo', nextReceiptNumber());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   const setItem = (idx: number, k: keyof LineItem, val: string) =>
     setValues((p) => ({ ...p, items: p.items.map((it, i) => (i === idx ? { ...it, [k]: val } : it)) }));
 
