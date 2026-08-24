@@ -779,7 +779,7 @@ const Auth = () => {
         {/* 3D guide character — walks in, then reacts to the form */}
         <AuthGuideCharacter
           stage={guideStage}
-          className="pointer-events-none absolute bottom-0 right-0 z-[5] h-[72%] w-[62%]"
+          className="pointer-events-none absolute bottom-0 right-0 z-[5] h-[70%] w-[48%]"
         />
 
 
