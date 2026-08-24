@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Loader2, Scale, ThumbsUp, ThumbsDown, Repeat, FileText } from 'lucide-react';
+import { Loader2, Scale, ThumbsUp, ThumbsDown, Repeat, FileText, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { sendLoanAgreement } from '@/utils/sendLoanAgreement';
