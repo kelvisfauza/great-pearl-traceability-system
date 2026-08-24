@@ -284,25 +284,44 @@ export default function LoanAppeals() {
               </ul>
             )}
           </div>
-          {a.status === 'pending_admin_review' && !myVote && (
+          {a.status === 'pending_admin_review' && !resultingLoanId && !myVote && (
             <Button onClick={() => { setEditingVoteId(null); setVoteType('uphold'); setReason(''); setCounterAmount(''); setCounterTerm(''); setVoteFor(a); }} className="w-full">Cast my vote</Button>
           )}
-          {a.status === 'pending_admin_review' && myVote && (
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => {
-                setEditingVoteId(myVote.id);
-                setVoteType(myVote.vote_type);
-                setReason(myVote.reason || '');
-                setCounterAmount(myVote.counter_amount ? String(myVote.counter_amount) : '');
-                setCounterTerm(myVote.counter_term_months ? String(myVote.counter_term_months) : '');
-                setVoteFor(a);
-              }}
-            >
-              <Repeat className="mr-2 h-4 w-4" /> Change my vote (currently {myVote.vote_type})
-            </Button>
-          )}
+          {myVote && (() => {
+            const lockedByDisbursement = !!resultingLoanId || a.status !== 'pending_admin_review';
+            const lockedByFullApproval = myVote.vote_type === 'approve_full';
+            if (lockedByDisbursement) {
+              return (
+                <div className="rounded border border-dashed p-2 text-xs text-muted-foreground">
+                  Your vote (<strong>{myVote.vote_type}</strong>) is locked — this appeal has already been decided{resultingLoanId ? ' and the loan was disbursed' : ''}.
+                </div>
+              );
+            }
+            if (lockedByFullApproval) {
+              return (
+                <div className="rounded border border-amber-300 bg-amber-50 dark:bg-amber-950/20 p-2 text-xs">
+                  You voted <strong>approve full</strong>. Full approvals are final and cannot be changed.
+                </div>
+              );
+            }
+            return (
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setEditingVoteId(myVote.id);
+                  setVoteType(myVote.vote_type);
+                  setReason(myVote.reason || '');
+                  setCounterAmount(myVote.counter_amount ? String(myVote.counter_amount) : '');
+                  setCounterTerm(myVote.counter_term_months ? String(myVote.counter_term_months) : '');
+                  setVoteFor(a);
+                }}
+              >
+                <Repeat className="mr-2 h-4 w-4" /> Change my vote (currently {myVote.vote_type})
+              </Button>
+            );
+          })()}
+
           {a.final_decision && (
             <div className="rounded bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-300 p-2 text-xs">
               <strong>Final:</strong> {a.final_decision} — UGX {Number(a.final_amount || 0).toLocaleString()}
