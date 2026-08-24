@@ -330,6 +330,23 @@ const ProviderSubmissionApprovals: React.FC = () => {
           </div>
           <DialogFooter className="gap-2 sm:gap-2">
             <Button variant="outline" onClick={() => setApproveOpen(false)} disabled={!!processing}>Cancel</Button>
+            <Button
+              variant="secondary"
+              disabled={!!processing}
+              onClick={() => {
+                if (!selected) return;
+                const amt = Number(overrideAmount || selected.amount) + Number(withdrawCharge || 0);
+                setCodeTarget({
+                  targetType: 'provider_submission',
+                  targetId: selected.id,
+                  label: `payout to ${selected.provider_name}`,
+                  amount: amt,
+                  onVerified: () => handleAction('approve', payMethod, true),
+                });
+              }}
+            >
+              <ShieldCheck className="w-4 h-4 mr-2" /> Approve by Code
+            </Button>
             <Button onClick={() => handleAction('approve', payMethod)} disabled={!!processing}>
               {processing ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -347,6 +364,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
                   : 'Send via Yo Payments'}
             </Button>
           </DialogFooter>
+
         </DialogContent>
       </Dialog>
 
