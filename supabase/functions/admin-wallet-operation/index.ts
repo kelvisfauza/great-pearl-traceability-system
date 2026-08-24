@@ -28,25 +28,35 @@ function computeWithdrawFee(amount: number): number {
 // Overdraft access fee: 2.75% of the portion drawn from OD.
 const OD_ACCESS_FEE_BPS = 275;
 
-async function sendSms(supabase: any, phone: string | null, message: string, userName?: string, authHeader?: string) {
+async function sendSms(
+  supabase: any,
+  phone: string | null,
+  message: string,
+  userName?: string,
+  authHeader?: string,
+  messageType = "admin_wallet_operation",
+  recipientEmail?: string | null,
+) {
   if (!phone) return;
   try {
     // Call send-sms directly with the caller's JWT — invoking via the
     // service-role client returns 401 (send-sms requires a bearer user token).
     const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-sms`;
     const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "apikey": anon,
-        "Authorization": authHeader || `Bearer ${anon}`,
+        "Authorization": authHeader || `Bearer ${service}`,
       },
       body: JSON.stringify({
         phone,
         message,
         userName: userName || "User",
-        messageType: "admin_wallet_otp",
+        messageType,
+        recipientEmail: recipientEmail || undefined,
       }),
     });
     if (!res.ok) {
@@ -59,6 +69,83 @@ async function sendSms(supabase: any, phone: string | null, message: string, use
     console.warn("[admin-wallet-op] SMS send failed:", (e as Error).message);
   }
 }
+
+function ugx(n: number | null | undefined): string {
+  return `UGX ${(Number(n) || 0).toLocaleString()}`;
+}
+
+/**
+ * Single entry point for ALL user-facing notifications about admin wallet
+ * operations (credit / debit / transfer / withdraw), both on success and on
+ * failure. Sends SMS (BulkSMS premium route) AND a branded email, always
+ * including the resulting wallet balance where known.
+ */
+async function notifyWalletOperation(supabase: any, args: {
+  authHeader?: string;
+  email?: string | null;
+  phone?: string | null;
+  name?: string | null;
+  title: string;
+  smsText: string;
+  lines: Array<[string, string]>;
+  note?: string;
+  failed?: boolean;
+}) {
+  const name = args.name || "User";
+  let phone = args.phone || null;
+  let email = args.email || null;
+  if ((!phone || !email) && (args.email || args.name)) {
+    try {
+      const { data: emp } = await supabase
+        .from("employees")
+        .select("phone, email, name")
+        .eq("email", args.email || "")
+        .maybeSingle();
+      phone = phone || emp?.phone || null;
+      email = email || emp?.email || null;
+    } catch (_) { /* best effort */ }
+  }
+
+  // ---- SMS (BulkSMS premium route for wallet operations)
+  await sendSms(
+    supabase,
+    phone,
+    args.smsText,
+    name,
+    args.authHeader,
+    args.failed ? "admin_wallet_operation_failed" : "admin_wallet_operation",
+    email,
+  );
+
+  // ---- Email
+  if (!email) return;
+  try {
+    const rows = args.lines
+      .map(([k, v]) => `<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;color:#555">${k}</td><td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;font-weight:600">${v}</td></tr>`)
+      .join("");
+    const html = `
+      <p>Dear ${name},</p>
+      <p>${args.failed
+        ? "An administrator attempted a wallet operation on your account but it <strong>did not complete</strong>. No further action is required from you; the operation may be retried."
+        : "An administrator has performed the following operation on your wallet."}</p>
+      <table style="border-collapse:collapse;width:100%;max-width:520px;border:1px solid #eee">${rows}</table>
+      ${args.note ? `<p style="color:#555">${args.note}</p>` : ""}
+      <p style="color:#555">If you did not expect this, contact Administration or Finance immediately.</p>
+      <p>— Great Agro Coffee</p>`;
+    await supabase.functions.invoke("send-transactional-email", {
+      body: {
+        to: email,
+        cc: "operations@greatpearlcoffee.com",
+        subject: args.title,
+        html,
+        messageType: args.failed ? "admin_wallet_operation_failed" : "admin_wallet_operation",
+      },
+    });
+  } catch (e) {
+    console.warn("[admin-wallet-op] email send failed:", (e as Error).message);
+  }
+}
+
 
 // ------------------------------------------------------------------ OTP utils
 function generateOtp(): string {
