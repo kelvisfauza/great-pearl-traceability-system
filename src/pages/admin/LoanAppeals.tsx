@@ -372,7 +372,7 @@ export default function LoanAppeals() {
 
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Cast your vote</DialogTitle>
+            <DialogTitle>{editingVoteId ? 'Change your vote' : 'Cast your vote'}</DialogTitle>
           </DialogHeader>
           {voteFor && (
             <div className="space-y-3 text-sm">
