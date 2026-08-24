@@ -49,6 +49,7 @@ export default function LoanAppeals() {
   const [counterTerm, setCounterTerm] = useState('');
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [editingVoteId, setEditingVoteId] = useState<string | null>(null);
   const [me, setMe] = useState<{ id: string; email: string | null } | null>(null);
   const [sendingPdfFor, setSendingPdfFor] = useState<string | null>(null);
   const [openingReviewFor, setOpeningReviewFor] = useState<string | null>(null);
