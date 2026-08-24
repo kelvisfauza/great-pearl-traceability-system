@@ -13,6 +13,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { sendLoanAgreement } from '@/utils/sendLoanAgreement';
 import GuarantorRecoveryAppeals from '@/components/loans/GuarantorRecoveryAppeals';
+import LoanDetailsDialog from '@/components/loans/LoanDetailsDialog';
+
 
 type Vote = { id: string; admin_id: string; admin_email: string | null; vote_type: 'uphold' | 'approve_full' | 'counter'; counter_amount: number | null; counter_term_months: number | null; reason: string; created_at: string };
 type Appeal = {
