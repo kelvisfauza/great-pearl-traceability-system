@@ -48,7 +48,7 @@ async function sendInfobipSmsFallback(phone: string, message: string, supabase: 
         status: response.ok ? 'sent' : 'failed',
         provider: 'Infobip-SMS-Fallback',
         provider_response: result,
-        credits_used: 1,
+        credits_used: smsSegments(message),
         department: meta.department,
         triggered_by: meta.triggeredBy,
         request_id: meta.requestId,
@@ -105,7 +105,7 @@ async function sendBulkSmsPremium(phone: string, message: string, supabase: any,
         status: response.ok ? 'sent' : 'failed',
         provider: 'BulkSMS-Premium',
         provider_response: result,
-        credits_used: 1,
+        credits_used: smsSegments(message),
         department: meta.department,
         triggered_by: meta.triggeredBy,
         request_id: meta.requestId,
@@ -191,6 +191,49 @@ function normalizeSmsType(t?: string): string {
     .replace(/-/g, '_')
     .trim();
 }
+
+// ─────────────────────────────────────────────────────────────
+// GSM-7 SANITISER — credit saver.
+// BulkSMS bills per 160-char GSM-7 segment. A single emoji or an
+// em-dash forces the whole body to UCS-2, which drops the segment
+// size to 70 chars (so a 200-char note becomes 3 parts) and renders
+// as "?" on most handsets. We flatten everything to plain GSM-7 so
+// nearly every message fits in ONE segment.
+// ─────────────────────────────────────────────────────────────
+const GSM_REPLACEMENTS: Array<[RegExp, string]> = [
+  [/[\u2018\u2019\u201B\u2032]/g, "'"],
+  [/[\u201C\u201D\u201F\u2033]/g, '"'],
+  [/[\u2013\u2014\u2015\u2212]/g, '-'],
+  [/[\u2026]/g, '...'],
+  [/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, ' '],
+  [/[\u2022\u00B7\u25CF\u25AA]/g, '-'],
+  [/[\u20A6\u20AC\u00A3\u00A5]/g, ''],
+  [/[\u2705\u274C\u26A0\uFE0F]/g, ''],
+];
+
+// Characters that survive in the GSM 03.38 default alphabet.
+const GSM_ALLOWED = /[^\n\r A-Za-z0-9@$_!"#%&'()*+,\-./:;<=>?\[\]^{|}~\u00A7\u00E4\u00F6\u00FC\u00DF\u00C4\u00D6\u00DC]/g;
+
+function toGsm7(input: string): string {
+  let out = (input || '').normalize('NFKD');
+  for (const [re, rep] of GSM_REPLACEMENTS) out = out.replace(re, rep);
+  out = out.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F1E6}-\u{1F1FF}]/gu, '');
+  out = out.replace(/[\u0300-\u036F]/g, '');       // leftover combining accents
+  out = out.replace(GSM_ALLOWED, '');              // anything still non-GSM
+  out = out
+    .replace(/[ \t]{2,}/g, ' ')                    // collapse runs of spaces
+    .replace(/ *\n{3,} */g, '\n\n')                // collapse blank-line runs
+    .replace(/^[ \-]+|[ \-]+$/g, '')               // trim stray leading/trailing dashes
+    .replace(/\n[ \-]+/g, '\n')
+    .replace(/[ \-]+\n/g, '\n')
+    .trim();
+  return out;
+}
+
+function smsSegments(text: string): number {
+  return Math.max(1, Math.ceil((text || '').length / 160));
+}
+
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -326,10 +369,21 @@ serve(async (req) => {
   console.log('Authenticated:', isServiceRole ? 'service-role' : userId)
 
   try {
-    const { phone, message, userName, messageType, triggeredBy, requestId, department, recipientEmail } = parsedBody
-    
+    const { phone, userName, messageType, triggeredBy, requestId, department, recipientEmail } = parsedBody
+    // Flatten to GSM-7 so emoji/em-dash bodies don't silently become
+    // 70-char UCS-2 segments (which is what was burning BulkSMS credits).
+    const rawMessage: string = parsedBody.message || ''
+    const message = toGsm7(rawMessage)
+
     console.log('📱 SMS request from user:', userId, '| type:', messageType)
-    console.log('Received SMS request:', { phone, userName, messageLength: message?.length })
+    console.log('Received SMS request:', {
+      phone,
+      userName,
+      rawLength: rawMessage.length,
+      sanitizedLength: message.length,
+      segments: smsSegments(message),
+    })
+
 
     // SMS GATEKEEPER: Only allow OTP/verification and account creation SMS through
     // All other notifications should use email instead to save SMS credits
@@ -578,7 +632,7 @@ serve(async (req) => {
       const dedupWindow = Math.max(0, Number(smsCfg.dedup_window_seconds) || 0)
       const sinceIso = new Date(Date.now() - dedupWindow * 1000).toISOString()
       if (dedupWindow === 0) throw new Error('dedup disabled by admin settings')
-      const { data: recentDup } = await supabase
+      const { data: exactDup } = await supabase
         .from('sms_logs')
         .select('id, status, created_at')
         .eq('recipient_phone', formattedPhone)
@@ -588,8 +642,34 @@ serve(async (req) => {
         .limit(1)
         .maybeSingle()
 
+      // EVENT-LEVEL DEDUP: the same business event often triggers two sends —
+      // a detailed one (e.g. "loan_approved") from the caller and a short
+      // emoji summary ("tx:loan-approval-details") auto-fired by
+      // send-transactional-email. Both cost credits, so keep the first only.
+      // OTP/verification codes are exempt: repeats there are intentional.
+      const eventKey = normalizeSmsType(messageType)
+      const OTP_EXEMPT = new Set([
+        'verification', 'login_verification', 'withdrawal_verification',
+        'admin_wallet_otp', 'admin_approval_code', 'qr_access_otp',
+      ])
+      let eventDup: any = null
+      if (!exactDup?.id && eventKey && !OTP_EXEMPT.has(eventKey)) {
+        const { data } = await supabase
+          .from('sms_logs')
+          .select('id, status, created_at, message_type')
+          .eq('recipient_phone', formattedPhone)
+          .in('status', ['sent', 'redirected_to_email'])
+          .gte('created_at', sinceIso)
+          .or(`message_type.eq.${eventKey},message_type.eq.tx:${eventKey.replace(/_/g, '-')},message_type.eq.${messageType}`)
+          .limit(1)
+          .maybeSingle()
+        eventDup = data
+      }
+
+      const recentDup = exactDup?.id ? exactDup : eventDup
       if (recentDup?.id) {
         console.log(`🔁 Duplicate SMS suppressed for ${formattedPhone} (matches log ${recentDup.id} sent at ${recentDup.created_at})`)
+
         try {
           await supabase.from('sms_logs').insert({
             recipient_phone: formattedPhone,
