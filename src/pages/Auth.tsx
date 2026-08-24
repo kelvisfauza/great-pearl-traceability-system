@@ -17,7 +17,9 @@ import { Heart } from 'lucide-react';
 import { useHolidayTheme } from '@/hooks/useHolidayTheme';
 import { FaceCapture } from '@/components/auth/FaceCapture';
 import yedaLogoAsset from '@/assets/yeda-logo.png.asset.json';
+import { AuthGuideCharacter, type GuideStage } from '@/components/auth/AuthGuideCharacter';
 const YEDA_LOGO_URL = yedaLogoAsset.url;
+
 
 
 const Auth = () => {
@@ -27,6 +29,8 @@ const Auth = () => {
   const [error, setError] = useState('');
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [focusedField, setFocusedField] = useState<'email' | 'password' | null>(null);
+
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
@@ -695,7 +699,18 @@ const Auth = () => {
     );
   }
 
+  const guideStage: GuideStage = loading
+    ? 'submitting'
+    : error
+      ? 'error'
+      : focusedField === 'password'
+        ? 'password'
+        : focusedField === 'email'
+          ? 'email'
+          : 'idle';
+
   return (
+
     <div
       className="min-h-screen w-full grid lg:grid-cols-2 relative overflow-hidden"
       style={{ background: '#022911', fontFamily: "'Work Sans', sans-serif" }}
@@ -760,6 +775,13 @@ const Auth = () => {
             The internal operations workspace for procurement, quality, finance and field teams — built around precision, accountability and craft.
           </p>
         </div>
+
+        {/* 3D guide character — walks in, then reacts to the form */}
+        <AuthGuideCharacter
+          stage={guideStage}
+          className="pointer-events-none absolute bottom-0 right-0 z-[5] h-[70%] w-[48%]"
+        />
+
 
         <div className="relative z-10 flex items-center justify-between text-xs uppercase tracking-widest" style={{ color: 'rgba(245,240,224,0.5)' }}>
           <span>EUDR Ready</span>
@@ -832,6 +854,9 @@ const Auth = () => {
                   placeholder="you@greatagrocoffee.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  onFocus={() => setFocusedField('email')}
+                  onBlur={() => setFocusedField(null)}
+
                   required
                   disabled={loading}
                   className="w-full h-12 pl-11 pr-4 rounded-xl outline-none transition-all focus:ring-2"
@@ -867,6 +892,9 @@ const Auth = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onFocus={() => setFocusedField('password')}
+                  onBlur={() => setFocusedField(null)}
+
                   required
                   disabled={loading}
                   className="w-full h-12 pl-11 pr-11 rounded-xl outline-none transition-all focus:ring-2"
