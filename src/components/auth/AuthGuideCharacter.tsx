@@ -50,15 +50,17 @@ const Character = ({ stage }: { stage: GuideStage }) => {
     // Arms
     const coverEyes = stage === 'password';
     const cheer = stage === 'success';
-    const targetArm = walking ? -swing : coverEyes ? -2.5 : cheer ? -2.9 : stage === 'submitting' ? -0.9 : -0.15;
+    const targetArm = walking ? -swing : coverEyes ? -2.42 : cheer ? -2.9 : stage === 'submitting' ? -0.9 : -0.15;
+    const armZ = coverEyes ? -0.3 : cheer ? 0.5 : 0.12;
     if (armL.current) {
       armL.current.rotation.x = lerp(armL.current.rotation.x, walking ? -swing : targetArm, d * 6);
-      armL.current.rotation.z = lerp(armL.current.rotation.z, coverEyes || cheer ? 0.5 : 0.12, d * 6);
+      armL.current.rotation.z = lerp(armL.current.rotation.z, armZ, d * 6);
     }
     if (armR.current) {
       armR.current.rotation.x = lerp(armR.current.rotation.x, walking ? swing : targetArm, d * 6);
-      armR.current.rotation.z = lerp(armR.current.rotation.z, coverEyes || cheer ? -0.5 : -0.12, d * 6);
+      armR.current.rotation.z = lerp(armR.current.rotation.z, -armZ, d * 6);
     }
+
 
     if (head.current) {
       const lookY = stage === 'email' ? 0.35 : stage === 'password' ? 0.15 : 0;
