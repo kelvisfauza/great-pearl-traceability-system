@@ -251,7 +251,7 @@ const generateSalesReceipt = async (v: ReceiptValues) => {
       const amount = num(r.kilograms) * num(r.unitPrice);
       const values = [
         String(ri + 1),
-        r.coffeeType || '',
+        (r.coffeeType || '').trim(),
         r.bags ? num(r.bags).toLocaleString() : '',
         r.kilograms ? num(r.kilograms).toLocaleString() : '',
         r.unitPrice ? num(r.unitPrice).toLocaleString() : '',
