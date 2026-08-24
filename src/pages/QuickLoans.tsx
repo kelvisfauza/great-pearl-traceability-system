@@ -2168,7 +2168,11 @@ const QuickLoans = () => {
                         Max: UGX {(Math.floor((employee?.salary || 0) * 0.5) * (parseInt(durationMonths) || 1)).toLocaleString()} (50% of salary × {parseInt(durationMonths) || 1} month{(parseInt(durationMonths) || 1) > 1 ? 's' : ''})
                       </p>
                     ) : (
-                      <p className="text-xs text-muted-foreground mt-1">Max: UGX {(myLimit?.availableLimit || (employee?.salary || 0) * 5).toLocaleString()} (5x salary)</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Max: UGX {(myLimit?.availableLimit || (employee?.salary || 0) * 5).toLocaleString()} (5x salary)
+                        {LOAN_TYPE_CONFIG[loanType].minAmount ? ` • Min: UGX ${LOAN_TYPE_CONFIG[loanType].minAmount!.toLocaleString()}` : ''}
+                      </p>
+
                     )}
                   </div>
                   <div>
