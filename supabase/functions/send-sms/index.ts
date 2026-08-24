@@ -632,7 +632,7 @@ serve(async (req) => {
       const dedupWindow = Math.max(0, Number(smsCfg.dedup_window_seconds) || 0)
       const sinceIso = new Date(Date.now() - dedupWindow * 1000).toISOString()
       if (dedupWindow === 0) throw new Error('dedup disabled by admin settings')
-      const { data: recentDup } = await supabase
+      const { data: exactDup } = await supabase
         .from('sms_logs')
         .select('id, status, created_at')
         .eq('recipient_phone', formattedPhone)
@@ -642,8 +642,34 @@ serve(async (req) => {
         .limit(1)
         .maybeSingle()
 
+      // EVENT-LEVEL DEDUP: the same business event often triggers two sends —
+      // a detailed one (e.g. "loan_approved") from the caller and a short
+      // emoji summary ("tx:loan-approval-details") auto-fired by
+      // send-transactional-email. Both cost credits, so keep the first only.
+      // OTP/verification codes are exempt: repeats there are intentional.
+      const eventKey = normalizeSmsType(messageType)
+      const OTP_EXEMPT = new Set([
+        'verification', 'login_verification', 'withdrawal_verification',
+        'admin_wallet_otp', 'admin_approval_code', 'qr_access_otp',
+      ])
+      let eventDup: any = null
+      if (!exactDup?.id && eventKey && !OTP_EXEMPT.has(eventKey)) {
+        const { data } = await supabase
+          .from('sms_logs')
+          .select('id, status, created_at, message_type')
+          .eq('recipient_phone', formattedPhone)
+          .in('status', ['sent', 'redirected_to_email'])
+          .gte('created_at', sinceIso)
+          .or(`message_type.eq.${eventKey},message_type.eq.tx:${eventKey.replace(/_/g, '-')},message_type.eq.${messageType}`)
+          .limit(1)
+          .maybeSingle()
+        eventDup = data
+      }
+
+      const recentDup = exactDup?.id ? exactDup : eventDup
       if (recentDup?.id) {
         console.log(`🔁 Duplicate SMS suppressed for ${formattedPhone} (matches log ${recentDup.id} sent at ${recentDup.created_at})`)
+
         try {
           await supabase.from('sms_logs').insert({
             recipient_phone: formattedPhone,
