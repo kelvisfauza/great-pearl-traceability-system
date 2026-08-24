@@ -411,7 +411,7 @@ export default function LoanAppeals() {
                 <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Document your reasoning so it appears in the audit trail." />
               </div>
               <Button onClick={submitVote} disabled={submitting} className="w-full">
-                {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting…</> : 'Submit vote'}
+                {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting…</> : (editingVoteId ? 'Update vote' : 'Submit vote')}
               </Button>
             </div>
           )}
