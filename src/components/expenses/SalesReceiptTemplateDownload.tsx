@@ -223,6 +223,7 @@ const generateSalesReceipt = async (v: ReceiptValues) => {
     metaRow('Receipt No:', v.receiptNo, 'Date:', v.date);
     metaRow('Received From:', v.buyerName, 'Contact:', v.buyerContact);
     metaRow('Vehicle No:', v.vehicleNo, 'Payment Method:', v.paymentMethod);
+    metaRow('Crop Year:', v.cropYear, 'Issued By:', v.issuedBy);
 
     // Table head
     y += 3;
