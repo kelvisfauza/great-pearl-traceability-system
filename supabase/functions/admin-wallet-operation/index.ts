@@ -800,8 +800,27 @@ serve(async (req) => {
             gatewayRef = `CASH-${Date.now()}`;
           }
 
-          const smsMsg = `Dear ${op.target_name || "User"}, UGX ${amount.toLocaleString()} has been withdrawn from your wallet by admin to ${op.destination_phone}. Fee: UGX ${Number(op.service_fee).toLocaleString()}${overdraftAccessFee > 0 ? `, OD fee: UGX ${overdraftAccessFee.toLocaleString()}` : ""}. Reason: ${op.reason}.`;
-          await sendSms(supabase, op.target_phone, smsMsg, op.target_name, authHeader);
+          const newBal = await getLedgerBalance(supabase, op.target_user_id);
+          await notifyWalletOperation(supabase, {
+            authHeader,
+            email: op.target_email,
+            phone: op.target_phone,
+            name: op.target_name,
+            title: `Wallet Withdrawal — ${ugx(amount)}`,
+            smsText: `Dear ${op.target_name || "User"}, ${ugx(amount)} has been WITHDRAWN from your wallet by admin to ${op.destination_phone}. Fee: ${ugx(Number(op.service_fee))}${overdraftAccessFee > 0 ? `, OD fee: ${ugx(overdraftAccessFee)}` : ""}. New balance: ${ugx(newBal)}. Ref ${ref}.`,
+            lines: [
+              ["Operation", "Withdrawal"],
+              ["Amount", ugx(amount)],
+              ["Service fee", ugx(Number(op.service_fee))],
+              ...(overdraftAccessFee > 0 ? [["Overdraft access fee (2.75%)", ugx(overdraftAccessFee)] as [string, string]] : []),
+              ["Sent to", String(op.destination_phone || "-")],
+              ["Provider", String(op.payout_provider || "-")],
+              ["Reason", String(op.reason || "-")],
+              ["New wallet balance", ugx(newBal)],
+              ["Reference", ref],
+            ],
+          });
+
 
           await supabase.from("admin_wallet_operations").update({
             gateway_reference: gatewayRef,
