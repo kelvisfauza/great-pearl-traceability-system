@@ -538,8 +538,20 @@ const SalesReceiptTemplateDownload = () => {
                 <div key={idx} className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-end border rounded-md p-2">
                   <div className="space-y-1 col-span-2 sm:col-span-2">
                     <Label className="text-xs">Coffee Type</Label>
-                    <Input placeholder="e.g. Robusta FAQ" value={item.coffeeType}
-                      onChange={(e) => setItem(idx, 'coffeeType', e.target.value)} />
+                    <Select
+                      value={COFFEE_TYPES.includes(item.coffeeType) ? item.coffeeType : item.coffeeType ? '__other__' : ''}
+                      onValueChange={(val) => setItem(idx, 'coffeeType', val === '__other__' ? ' ' : val)}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Select coffee type" /></SelectTrigger>
+                      <SelectContent className="z-50 bg-popover">
+                        {COFFEE_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                        <SelectItem value="__other__">Other (type below)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {item.coffeeType !== '' && !COFFEE_TYPES.includes(item.coffeeType) && (
+                      <Input className="mt-1" placeholder="Specify coffee type" value={item.coffeeType.trim()}
+                        onChange={(e) => setItem(idx, 'coffeeType', e.target.value || ' ')} />
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Bags</Label>
