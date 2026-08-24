@@ -402,6 +402,7 @@ const SalesReceiptTemplateDownload = () => {
   const [values, setValues] = useState<ReceiptValues>({
     receiptNo: '',
     date: new Date().toLocaleDateString('en-GB'),
+    cropYear: currentCropYear(),
     buyerName: '',
     buyerContact: '',
     vehicleNo: '',
