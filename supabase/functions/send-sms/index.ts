@@ -163,6 +163,8 @@ const PREMIUM_SMS_TYPES = new Set([
   // BulkSMS route so users always receive the confirmation.
   'admin_wallet_operation',
   'admin_wallet_operation_failed',
+  // Admin approval codes — user requires delivery via BulkSMS.com
+  'admin_approval_code',
 ]);
 
 
