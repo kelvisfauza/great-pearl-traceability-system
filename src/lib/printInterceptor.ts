@@ -55,6 +55,38 @@ const grabTitle = (win: Window): string => {
   }
 };
 
+/**
+ * Print captured HTML from a brand new window. Used because many callers do
+ * `w.print(); w.close();` — by the time the user picks "Print now" the original
+ * window/iframe is already gone (or focus-trapped), so printing it silently fails.
+ */
+function printHtmlInFreshWindow(html: string, title: string) {
+  (window as any).__pqBypass = true;
+  try {
+    const w = window.open('', '_blank', 'width=900,height=1000');
+    if (!w) {
+      (window as any).__pqBypass = false;
+      return false;
+    }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    try { w.document.title = title; } catch { /* ignore */ }
+    const fire = () => {
+      try { w.focus(); } catch { /* ignore */ }
+      try { w.print(); } catch { /* ignore */ }
+      setTimeout(() => { try { w.close(); } catch { /* ignore */ } }, 800);
+      setTimeout(() => { (window as any).__pqBypass = false; }, 1500);
+    };
+    // give images/styles a moment
+    setTimeout(fire, 350);
+    return true;
+  } catch {
+    (window as any).__pqBypass = false;
+    return false;
+  }
+}
+
 function ask(win: Window, originalPrint: () => void) {
   const html = grabHtml(win);
   const title = grabTitle(win);
@@ -65,11 +97,17 @@ function ask(win: Window, originalPrint: () => void) {
     return;
   }
 
+  const isChild = win !== window;
+
   const detail: PrintIntent = {
     title,
     html,
     win,
     now: () => {
+      if (isChild) {
+        // Original child window is usually closed by the caller already.
+        if (printHtmlInFreshWindow(html, title)) return;
+      }
       // Focus the target window first — a print() fired while a modal in the
       // opener still holds focus is silently dropped by Chrome/Edge.
       try { win.focus(); } catch { /* ignore */ }
@@ -92,6 +130,7 @@ function ask(win: Window, originalPrint: () => void) {
   // No dialog mounted -> keep the original behaviour.
   if (notPrevented) originalPrint();
 }
+
 
 function patchWindow(win: Window | null) {
   if (!win) return;
