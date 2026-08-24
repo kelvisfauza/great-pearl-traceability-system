@@ -46,6 +46,7 @@ interface LineItem {
 interface ReceiptValues {
   receiptNo: string;
   date: string;
+  cropYear: string;
   buyerName: string;
   buyerContact: string;
   vehicleNo: string;
@@ -56,6 +57,55 @@ interface ReceiptValues {
   issuedBy: string;
   items: LineItem[];
 }
+
+const COFFEE_TYPES = [
+  'Arabica Parchment',
+  'Arabica Bugisu AA',
+  'Drugar',
+  'Wugar',
+  'Mixed Arabica',
+  'Robusta FAQ',
+  'Robusta Screen 18',
+  'Robusta Screen 15',
+  'Robusta Screen 12',
+  'Sorted Robusta',
+  'Unsorted Robusta',
+  'Kiboko',
+  'Husks / Byproduct',
+];
+
+const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'Mobile Money', 'Cheque', 'Credit (On Account)'];
+
+const cropYearOptions = (): string[] => {
+  const now = new Date();
+  // Uganda coffee crop year runs Oct - Sep
+  const startYear = now.getMonth() >= 9 ? now.getFullYear() : now.getFullYear() - 1;
+  const list: string[] = [];
+  for (let i = 1; i >= -3; i--) {
+    const s = startYear + i;
+    list.push(`${s}/${String(s + 1).slice(-2)}`);
+  }
+  return list;
+};
+
+const currentCropYear = () => cropYearOptions()[1];
+
+// Auto receipt number: GAC-SR-YYMM-#### (sequence resets monthly, kept per device)
+const nextReceiptNumber = (): string => {
+  const now = new Date();
+  const period = `${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, '0')}`;
+  let seq = 1;
+  try {
+    const key = 'gac_sales_receipt_seq';
+    const raw = localStorage.getItem(key);
+    const parsed = raw ? JSON.parse(raw) : null;
+    seq = parsed && parsed.period === period ? Number(parsed.seq || 0) + 1 : 1;
+    localStorage.setItem(key, JSON.stringify({ period, seq }));
+  } catch {
+    seq = Math.floor(Math.random() * 9000) + 1000;
+  }
+  return `GAC-SR-${period}-${String(seq).padStart(4, '0')}`;
+};
 
 const num = (v: string) => {
   const n = parseFloat(String(v || '').replace(/,/g, ''));
