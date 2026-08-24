@@ -78,6 +78,28 @@ const LoanDetailsDialog = ({ loan, open, onClose }: Props) => {
     : loan.status === 'counter_offered' ? `${loan.employee_name} (borrower response)`
     : 'No action pending';
 
+  const isApproved = !!(loan.admin_approved || loan.admin_approved_at || loan.approved_at || ['approved', 'active', 'disbursed', 'completed', 'overdue'].includes(loan.status));
+  const approvedAmount = isApproved ? (loan.disbursed_amount || loan.loan_amount) : null;
+
+  const prettyLabel = (k: string) => k.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+  const prettyValue = (v: any) => {
+    if (v === null || v === undefined || v === '') return '—';
+    if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+    if (typeof v === 'number') return v > 9999 ? money(v) : String(v);
+    if (typeof v === 'object') return JSON.stringify(v);
+    return String(v);
+  };
+  const toList = (obj: any): { label: string; value: string }[] => {
+    if (!obj) return [];
+    if (Array.isArray(obj)) return obj.map((x, i) => typeof x === 'object' && x
+      ? { label: prettyLabel(String(x.label ?? x.name ?? x.factor ?? `Item ${i + 1}`)), value: prettyValue(x.value ?? x.score ?? x.detail ?? x.status) }
+      : { label: `Item ${i + 1}`, value: prettyValue(x) });
+    if (typeof obj === 'object') return Object.entries(obj).map(([k, v]) => ({ label: prettyLabel(k), value: prettyValue(v) }));
+    return [];
+  };
+  const factorList = toList(evaluation?.factors);
+  const historyList = toList(evaluation?.history_summary);
+
   const gStatus = (approved: boolean, declined: boolean) =>
     approved ? <Badge className="text-[10px]">Approved</Badge>
       : declined ? <Badge variant="destructive" className="text-[10px]">Declined</Badge>
@@ -120,12 +142,26 @@ const LoanDetailsDialog = ({ loan, open, onClose }: Props) => {
         ${needsG2 ? `<div class="r"><span>Guarantor 2</span><b>${loan.guarantor2_name} — ${loan.guarantor2_approved ? 'Approved' : loan.guarantor2_declined ? 'Declined' : 'Pending'}</b></div>
         <div class="r"><span>Contact</span><b>${loan.guarantor2_phone || loan.guarantor2_email || '—'}</b></div>` : ''}
       </div>
-      ${evaluation ? `<h2>Evaluation</h2><div class="grid">
+      <h2>Amounts &amp; approval</h2><div class="grid">
+        <div class="r"><span>Amount requested</span><b>${money(loan.original_loan_amount || loan.loan_amount)}</b></div>
+        ${loan.counter_offer_amount ? `<div class="r"><span>Counter-offer</span><b>${money(loan.counter_offer_amount)}</b></div>` : ''}
+        <div class="r"><span>Approved amount</span><b>${approvedAmount != null ? money(approvedAmount) : 'Not yet approved'}</b></div>
+        <div class="r"><span>Disbursed amount</span><b>${loan.disbursed_amount ? money(loan.disbursed_amount) : 'Not disbursed'}</b></div>
+        <div class="r"><span>Approved by</span><b>${loan.admin_approved_by || loan.approved_by || '—'}</b></div>
+        <div class="r"><span>Approved on</span><b>${dayTime(loan.admin_approved_at || loan.approved_at)}</b></div>
+      </div>
+      ${evaluation ? `<h2>System evaluation report</h2><div class="grid">
         <div class="r"><span>Decision</span><b>${evaluation.decision || '—'}</b></div>
         <div class="r"><span>Risk score</span><b>${evaluation.risk_score ?? '—'}</b></div>
-        <div class="r"><span>Max limit</span><b>${money(evaluation.max_limit)}</b></div>
-        <div class="r"><span>Recommended</span><b>${money(evaluation.recommended_amount)}</b></div>
-      </div><div style="margin-top:6px">${evaluation.summary || evaluation.notes || ''}</div>` : ''}
+        <div class="r"><span>Max eligible limit</span><b>${money(evaluation.max_limit)}</b></div>
+        <div class="r"><span>Recommended amount</span><b>${money(evaluation.recommended_amount)}</b></div>
+        <div class="r"><span>Recommended type</span><b>${LOAN_LABELS[evaluation.recommended_loan_type] || evaluation.recommended_loan_type || '—'}</b></div>
+        <div class="r"><span>Recommended duration</span><b>${evaluation.recommended_duration_months ? `${evaluation.recommended_duration_months} months` : '—'}</b></div>
+        <div class="r"><span>Evaluated on</span><b>${dayTime(evaluation.created_at)}</b></div>
+        <div class="r"><span>Valid until</span><b>${dayTime(evaluation.valid_until)}</b></div>
+      </div>
+      ${factorList.length ? `<table><thead><tr><th>Assessment factor</th><th>Value</th></tr></thead><tbody>${factorList.map(f => `<tr><td>${f.label}</td><td>${f.value}</td></tr>`).join('')}</tbody></table>` : ''}
+      ${historyList.length ? `<table><thead><tr><th>Borrowing history</th><th>Value</th></tr></thead><tbody>${historyList.map(f => `<tr><td>${f.label}</td><td>${f.value}</td></tr>`).join('')}</tbody></table>` : ''}` : '<h2>System evaluation report</h2><div>No evaluation report was issued for this application.</div>'}
       ${rows ? `<h2>Repayment schedule</h2><table><thead><tr><th>#</th><th>Due date</th><th>Due</th><th>Paid</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>` : ''}
       <div class="sign"><div>Reviewed by (Administrator)<br/><br/>__________________<br/>Name / Date</div><div>Borrower acknowledgement<br/><br/>__________________<br/>Name / Date</div></div>
       </body></html>`);
@@ -210,25 +246,77 @@ const LoanDetailsDialog = ({ loan, open, onClose }: Props) => {
                 </Card>
 
                 <Card>
-                  <CardHeader className="pb-2"><CardTitle className="text-sm">Evaluation report</CardTitle></CardHeader>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Banknote className="h-4 w-4" /> Amounts &amp; approval</CardTitle></CardHeader>
                   <CardContent className="pt-0">
-                    {evaluation ? (
-                      <>
-                        <Row label="Decision" value={<span className="uppercase">{evaluation.decision || '—'}</span>} />
-                        <Row label="Risk score" value={evaluation.risk_score ?? '—'} />
-                        <Row label="Max limit" value={money(evaluation.max_limit)} />
-                        <Row label="Recommended amount" value={money(evaluation.recommended_amount)} />
-                        <Row label="Evaluated on" value={dayTime(evaluation.created_at)} />
-                        {(evaluation.summary || evaluation.notes) && (
-                          <p className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap">{evaluation.summary || evaluation.notes}</p>
-                        )}
-                      </>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">No evaluation report attached.</p>
+                    <Row label="Amount requested" value={money(loan.original_loan_amount || loan.loan_amount)} />
+                    {loan.counter_offer_amount ? (
+                      <Row label="Counter-offer by admin" value={`${money(loan.counter_offer_amount)}${loan.counter_offer_by ? ` • ${loan.counter_offer_by}` : ''}`} />
+                    ) : null}
+                    <Row label="Approved amount" value={approvedAmount != null ? money(approvedAmount) : 'Not yet approved'} />
+                    <Row label="Disbursed amount" value={loan.disbursed_amount ? money(loan.disbursed_amount) : 'Not disbursed'} />
+                    <Row label="Approved by" value={loan.admin_approved_by || loan.approved_by || '—'} />
+                    <Row label="Approved on" value={dayTime(loan.admin_approved_at || loan.approved_at)} />
+                    <Row label="Paid to date" value={money(loan.paid_amount || totalPaid)} />
+                    {loan.penalty_amount ? <Row label="Penalties" value={money(loan.penalty_amount)} /> : null}
+                    {loan.counter_offer_comments && (
+                      <p className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap">Admin note: {loan.counter_offer_comments}</p>
                     )}
                   </CardContent>
                 </Card>
               </div>
+
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm">System evaluation report</CardTitle></CardHeader>
+                <CardContent className="pt-0">
+                  {evaluation ? (
+                    <div className="grid gap-x-8 md:grid-cols-2">
+                      <div>
+                        <Row label="Decision" value={<span className="uppercase">{evaluation.decision || '—'}</span>} />
+                        <Row label="Risk score" value={evaluation.risk_score != null ? `${evaluation.risk_score}/100` : '—'} />
+                        <Row label="Max eligible limit" value={money(evaluation.max_limit)} />
+                        <Row label="Recommended amount" value={money(evaluation.recommended_amount)} />
+                      </div>
+                      <div>
+                        <Row label="Recommended type" value={LOAN_LABELS[evaluation.recommended_loan_type] || evaluation.recommended_loan_type || '—'} />
+                        <Row label="Recommended duration" value={evaluation.recommended_duration_months ? `${evaluation.recommended_duration_months} months` : '—'} />
+                        <Row label="Evaluated on" value={dayTime(evaluation.created_at)} />
+                        <Row label="Valid until" value={dayTime(evaluation.valid_until)} />
+                      </div>
+                      {factorList.length > 0 && (
+                        <div className="md:col-span-2 mt-3">
+                          <p className="text-xs font-semibold mb-1">Assessment factors</p>
+                          <ul className="space-y-1">
+                            {factorList.map((f, i) => (
+                              <li key={i} className="text-xs text-muted-foreground flex justify-between gap-4 border-b border-dashed py-1">
+                                <span>{f.label}</span><span className="font-medium text-right">{f.value}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {historyList.length > 0 && (
+                        <div className="md:col-span-2 mt-3">
+                          <p className="text-xs font-semibold mb-1">Borrowing history summary</p>
+                          <ul className="space-y-1">
+                            {historyList.map((f, i) => (
+                              <li key={i} className="text-xs text-muted-foreground flex justify-between gap-4 border-b border-dashed py-1">
+                                <span>{f.label}</span><span className="font-medium text-right">{f.value}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      <p className="md:col-span-2 text-[10px] text-muted-foreground mt-3">
+                        {evaluation.applied_loan_id === loan.id
+                          ? 'Evaluation issued for this application.'
+                          : 'Latest evaluation on record for this employee (not tied to this application).'}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">No evaluation report was issued for this application.</p>
+                  )}
+                </CardContent>
+              </Card>
 
               <Card>
                 <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Calendar className="h-4 w-4" /> Repayment schedule</CardTitle></CardHeader>
