@@ -191,6 +191,37 @@ const LoanDetailsDialog = ({ loan, open, onClose }: Props) => {
                 </Button>
               </div>
 
+              {allGuarantorsApproved ? (
+                <Card className="border-primary/40">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Shield className="h-4 w-4" /> Signature documents — all guarantors approved
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0 flex flex-wrap gap-2">
+                    <Button size="sm" onClick={() => printLoanDoc(buildFullLoanTermsPackHtml(loan))}>
+                      <Printer className="h-3.5 w-3.5 mr-1" /> Print full terms pack
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => printLoanDoc(buildBorrowerTermsHtml(loan))}>
+                      <Printer className="h-3.5 w-3.5 mr-1" /> Borrower T&amp;Cs
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => printLoanDoc(buildGuarantorTermsHtml(loan, 1))}>
+                      <Printer className="h-3.5 w-3.5 mr-1" /> Guarantor 1 terms
+                    </Button>
+                    {needsG2 && (
+                      <Button size="sm" variant="outline" onClick={() => printLoanDoc(buildGuarantorTermsHtml(loan, 2))}>
+                        <Printer className="h-3.5 w-3.5 mr-1" /> Guarantor 2 terms
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="text-xs text-muted-foreground border rounded-md p-3">
+                  Loan terms &amp; guarantor undertakings become printable once all guarantors have approved.
+                </div>
+              )}
+
+
               <div className="grid gap-4 md:grid-cols-2">
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><User className="h-4 w-4" /> Borrower</CardTitle></CardHeader>
