@@ -142,12 +142,26 @@ const LoanDetailsDialog = ({ loan, open, onClose }: Props) => {
         ${needsG2 ? `<div class="r"><span>Guarantor 2</span><b>${loan.guarantor2_name} — ${loan.guarantor2_approved ? 'Approved' : loan.guarantor2_declined ? 'Declined' : 'Pending'}</b></div>
         <div class="r"><span>Contact</span><b>${loan.guarantor2_phone || loan.guarantor2_email || '—'}</b></div>` : ''}
       </div>
-      ${evaluation ? `<h2>Evaluation</h2><div class="grid">
+      <h2>Amounts &amp; approval</h2><div class="grid">
+        <div class="r"><span>Amount requested</span><b>${money(loan.original_loan_amount || loan.loan_amount)}</b></div>
+        ${loan.counter_offer_amount ? `<div class="r"><span>Counter-offer</span><b>${money(loan.counter_offer_amount)}</b></div>` : ''}
+        <div class="r"><span>Approved amount</span><b>${approvedAmount != null ? money(approvedAmount) : 'Not yet approved'}</b></div>
+        <div class="r"><span>Disbursed amount</span><b>${loan.disbursed_amount ? money(loan.disbursed_amount) : 'Not disbursed'}</b></div>
+        <div class="r"><span>Approved by</span><b>${loan.admin_approved_by || loan.approved_by || '—'}</b></div>
+        <div class="r"><span>Approved on</span><b>${dayTime(loan.admin_approved_at || loan.approved_at)}</b></div>
+      </div>
+      ${evaluation ? `<h2>System evaluation report</h2><div class="grid">
         <div class="r"><span>Decision</span><b>${evaluation.decision || '—'}</b></div>
         <div class="r"><span>Risk score</span><b>${evaluation.risk_score ?? '—'}</b></div>
-        <div class="r"><span>Max limit</span><b>${money(evaluation.max_limit)}</b></div>
-        <div class="r"><span>Recommended</span><b>${money(evaluation.recommended_amount)}</b></div>
-      </div><div style="margin-top:6px">${evaluation.summary || evaluation.notes || ''}</div>` : ''}
+        <div class="r"><span>Max eligible limit</span><b>${money(evaluation.max_limit)}</b></div>
+        <div class="r"><span>Recommended amount</span><b>${money(evaluation.recommended_amount)}</b></div>
+        <div class="r"><span>Recommended type</span><b>${LOAN_LABELS[evaluation.recommended_loan_type] || evaluation.recommended_loan_type || '—'}</b></div>
+        <div class="r"><span>Recommended duration</span><b>${evaluation.recommended_duration_months ? `${evaluation.recommended_duration_months} months` : '—'}</b></div>
+        <div class="r"><span>Evaluated on</span><b>${dayTime(evaluation.created_at)}</b></div>
+        <div class="r"><span>Valid until</span><b>${dayTime(evaluation.valid_until)}</b></div>
+      </div>
+      ${factorList.length ? `<table><thead><tr><th>Assessment factor</th><th>Value</th></tr></thead><tbody>${factorList.map(f => `<tr><td>${f.label}</td><td>${f.value}</td></tr>`).join('')}</tbody></table>` : ''}
+      ${historyList.length ? `<table><thead><tr><th>Borrowing history</th><th>Value</th></tr></thead><tbody>${historyList.map(f => `<tr><td>${f.label}</td><td>${f.value}</td></tr>`).join('')}</tbody></table>` : ''}` : '<h2>System evaluation report</h2><div>No evaluation report was issued for this application.</div>'}
       ${rows ? `<h2>Repayment schedule</h2><table><thead><tr><th>#</th><th>Due date</th><th>Due</th><th>Paid</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>` : ''}
       <div class="sign"><div>Reviewed by (Administrator)<br/><br/>__________________<br/>Name / Date</div><div>Borrower acknowledgement<br/><br/>__________________<br/>Name / Date</div></div>
       </body></html>`);
