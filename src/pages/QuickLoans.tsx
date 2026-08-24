@@ -3311,11 +3311,20 @@ const QuickLoans = () => {
                           <TableCell>{loan.duration_months}mo {loan.repayment_frequency === 'weekly' ? `(${loan.total_weeks || '?'}wks)` : ''}</TableCell>
                           <TableCell>{loan.repayment_frequency === 'weekly' ? `${(loan.daily_interest_rate || 0).toFixed(2)}%/day` : `${loan.interest_rate}%`}</TableCell>
                           <TableCell>UGX {loan.monthly_installment?.toLocaleString()}{loan.repayment_frequency === 'weekly' ? '/wk' : '/mo'}</TableCell>
-                          <TableCell className="text-sm">{loan.guarantor_name}</TableCell>
+                          <TableCell className="text-sm">
+                            <div>{loan.guarantor_name || '—'}{loan.guarantor_email && (loan.guarantor_declined ? <Badge variant="destructive" className="ml-1 text-[10px]">declined</Badge> : loan.guarantor_approved ? <Badge className="ml-1 text-[10px] bg-emerald-600 hover:bg-emerald-600">approved</Badge> : <Badge variant="secondary" className="ml-1 text-[10px]">pending</Badge>)}</div>
+                            {loan.guarantor2_email && (
+                              <div className="mt-0.5">{loan.guarantor2_name}{loan.guarantor2_declined ? <Badge variant="destructive" className="ml-1 text-[10px]">declined</Badge> : loan.guarantor2_approved ? <Badge className="ml-1 text-[10px] bg-emerald-600 hover:bg-emerald-600">approved</Badge> : <Badge variant="secondary" className="ml-1 text-[10px]">pending</Badge>}</div>
+                            )}
+                          </TableCell>
                           <TableCell>{getStatusBadge(loan.status)}</TableCell>
                           <TableCell>UGX {loan.remaining_balance?.toLocaleString()}</TableCell>
                           <TableCell>
                             <div className="flex gap-1 flex-wrap">
+                              <Button size="sm" variant="outline" onClick={() => setTrackLoan(loan)}>
+                                <Eye className="mr-1 h-3 w-3" /> Track approvals
+                              </Button>
+
                               <Button size="sm" variant="ghost" onClick={() => printLoanStatement(loan)}>
                                 <FileText className="mr-1 h-3 w-3" /> Statement
                               </Button>
