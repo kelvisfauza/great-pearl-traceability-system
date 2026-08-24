@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +7,10 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
-import { Download, Receipt, Loader2, Plus, Trash2 } from 'lucide-react';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import { Download, Receipt, Loader2, Plus, Trash2, RefreshCw } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
 import { buildDocumentQr, drawQrBlock } from '@/utils/pdfQrCode';
