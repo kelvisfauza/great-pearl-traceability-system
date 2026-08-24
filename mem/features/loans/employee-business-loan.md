@@ -7,6 +7,7 @@ type: feature
 
 - Purpose: capital for employees' side businesses that back up their employment.
 - Interest: 4% per month flat, total interest capped at 30%. `loans.interest_rate = 4`. Borrower must accept detailed T&Cs (version tracked in `loans.terms_version`, signature in `loans.terms_signature`) via the prefilled application form before submission.
+- Minimum facility: UGX 500,000 (enforced on application; requests below are rejected).
 - Duration: 1–8 months (the `loans_duration_months_check` constraint allows up to 8). Monthly repayment only, flexible amount driven by the schedule.
 - Guarantors: TWO required. Second guarantor lives in `loans.guarantor2_*` columns (id, name, email, phone, approval_code, approved, approved_at, declined). Loan moves to `pending_admin` only after BOTH guarantors enter their own 6-digit codes.
 - Evaluation (`loan-evaluation` edge function) takes `guarantor_emails[]` and assesses each guarantor:

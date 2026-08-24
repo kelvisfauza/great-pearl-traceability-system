@@ -29,12 +29,13 @@ import LoanTermsDialog, { LOAN_TERMS_VERSION, type LoanTermsApplication } from '
 type LoanType = 'quick' | 'long_term' | 'pure_salary' | 'business';
 type RepaymentFrequency = 'weekly' | 'monthly' | 'bullet';
 
-const LOAN_TYPE_CONFIG: Record<LoanType, { label: string; monthlyRate: number; maxRate: number; description: string; frequencies: RepaymentFrequency[]; maxMonths?: number; requiresGuarantor?: boolean; guarantorsRequired?: number }> = {
+const LOAN_TYPE_CONFIG: Record<LoanType, { label: string; monthlyRate: number; maxRate: number; description: string; frequencies: RepaymentFrequency[]; maxMonths?: number; requiresGuarantor?: boolean; guarantorsRequired?: number; minAmount?: number }> = {
   quick: { label: 'Quick Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Short-term, weekly repayments (total interest cap 35%)', frequencies: ['weekly'], maxMonths: 6, requiresGuarantor: true, guarantorsRequired: 1 },
   long_term: { label: 'Long-Term Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Flexible repayment, monthly or bullet (total interest cap 35%)', frequencies: ['monthly', 'bullet'], maxMonths: 6, requiresGuarantor: true, guarantorsRequired: 1 },
   pure_salary: { label: 'Pure Salary Loan', monthlyRate: 15, maxRate: 45, description: '15%/month – Repaid by 50% of monthly salary (no guarantor, max 3 months)', frequencies: ['monthly'], maxMonths: 3, requiresGuarantor: false },
-  business: { label: 'Employee Business Loan', monthlyRate: 4, maxRate: 30, description: '4%/month – Low-rate business capital, flexible monthly repayment up to 8 months, 2 guarantors required (total interest cap 30%)', frequencies: ['monthly'], maxMonths: 8, requiresGuarantor: true, guarantorsRequired: 2 },
+  business: { label: 'Employee Business Loan', monthlyRate: 4, maxRate: 30, description: '4%/month – Low-rate business capital, minimum UGX 500,000, flexible monthly repayment up to 8 months, 2 guarantors required (total interest cap 30%)', frequencies: ['monthly'], maxMonths: 8, requiresGuarantor: true, guarantorsRequired: 2, minAmount: 500000 },
 };
+
 
 const getGuarantorsRequired = (t: LoanType) =>
   LOAN_TYPE_CONFIG[t].requiresGuarantor === false ? 0 : (LOAN_TYPE_CONFIG[t].guarantorsRequired ?? 1);
@@ -418,10 +419,15 @@ const QuickLoans = () => {
       toast({ title: "Error", description: "Please fill all fields", variant: "destructive" });
       return;
     }
+    if (cfg.minAmount && requested < cfg.minAmount) {
+      toast({ title: 'Amount too low', description: `${cfg.label} has a minimum of UGX ${cfg.minAmount.toLocaleString()}.`, variant: 'destructive' });
+      return;
+    }
     if (cfg.maxMonths && months > cfg.maxMonths) {
       toast({ title: 'Duration too long', description: `${cfg.label} is limited to ${cfg.maxMonths} months.`, variant: 'destructive' });
       return;
     }
+
     const FEE = 10000;
     const amount = requested + FEE; // fee added to principal
     const dailyRate = getDailyRate(loanType);
@@ -2162,7 +2168,11 @@ const QuickLoans = () => {
                         Max: UGX {(Math.floor((employee?.salary || 0) * 0.5) * (parseInt(durationMonths) || 1)).toLocaleString()} (50% of salary × {parseInt(durationMonths) || 1} month{(parseInt(durationMonths) || 1) > 1 ? 's' : ''})
                       </p>
                     ) : (
-                      <p className="text-xs text-muted-foreground mt-1">Max: UGX {(myLimit?.availableLimit || (employee?.salary || 0) * 5).toLocaleString()} (5x salary)</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Max: UGX {(myLimit?.availableLimit || (employee?.salary || 0) * 5).toLocaleString()} (5x salary)
+                        {LOAN_TYPE_CONFIG[loanType].minAmount ? ` • Min: UGX ${LOAN_TYPE_CONFIG[loanType].minAmount!.toLocaleString()}` : ''}
+                      </p>
+
                     )}
                   </div>
                   <div>
@@ -3417,14 +3427,16 @@ const QuickLoans = () => {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Employee</TableHead>
+                          <TableHead>Loan Type</TableHead>
                           <TableHead>Salary</TableHead>
                           <TableHead>Wallet</TableHead>
                           <TableHead>Amount</TableHead>
                           <TableHead>Duration</TableHead>
                           <TableHead>Total Repayable</TableHead>
                           <TableHead>Available Limit</TableHead>
-                          <TableHead>Guarantor</TableHead>
+                          <TableHead>Guarantor(s)</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead>Awaiting</TableHead>
                           <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -3432,11 +3444,26 @@ const QuickLoans = () => {
                         {loans.map(loan => {
                           const emp = employees.find(e => e.email === loan.employee_email);
                           const limit = getLoanLimit(loan.employee_email, emp?.salary || 0, emp?.auth_user_id);
+                          const cfg = LOAN_TYPE_CONFIG[(loan.loan_type || 'quick') as LoanType];
+                          const needsG2 = !!loan.guarantor2_email;
+                          const gBadge = (approved: boolean, declined: boolean) =>
+                            approved ? <Badge variant="default" className="text-xs">Approved</Badge>
+                              : declined ? <Badge variant="destructive" className="text-xs">Declined</Badge>
+                              : <Badge variant="outline" className="text-xs">Pending</Badge>;
+                          const awaiting = loan.status === 'pending_guarantor'
+                            ? (!loan.guarantor_approved ? `${loan.guarantor_name || 'Guarantor 1'} (G1)` : needsG2 && !loan.guarantor2_approved ? `${loan.guarantor2_name || 'Guarantor 2'} (G2)` : 'Guarantor')
+                            : loan.status === 'pending_admin' ? 'Administrator'
+                            : loan.status === 'counter_offered' ? `${loan.employee_name} (borrower)`
+                            : '—';
                           return (
                           <TableRow key={loan.id}>
                             <TableCell>
                               <div>{loan.employee_name}</div>
                               <div className="text-xs text-muted-foreground">{loan.employee_email}</div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary" className="text-[10px]">{cfg?.label || loan.loan_type || 'Quick Loan'}</Badge>
+                              <div className="text-[10px] text-muted-foreground mt-0.5">{loan.interest_rate}%/mo • {loan.repayment_frequency || 'monthly'}</div>
                             </TableCell>
                             <TableCell className="text-xs">UGX {(emp?.salary || 0).toLocaleString()}</TableCell>
                             <TableCell className="text-xs">UGX {Math.max(0, limit.walletBal).toLocaleString()}</TableCell>
@@ -3448,10 +3475,21 @@ const QuickLoans = () => {
                             <TableCell>UGX {loan.total_repayable?.toLocaleString()}</TableCell>
                             <TableCell className="text-xs font-medium text-green-600">UGX {limit.availableLimit.toLocaleString()}</TableCell>
                             <TableCell>
-                              <div>{loan.guarantor_name}</div>
-                              <div className="text-xs">{loan.guarantor_approved ? <Badge variant="default" className="text-xs">Approved</Badge> : loan.guarantor_declined ? <Badge variant="destructive" className="text-xs">Declined</Badge> : <Badge variant="outline" className="text-xs">Pending</Badge>}</div>
+                              <div className="space-y-1">
+                                <div>
+                                  <div className="text-xs">{loan.guarantor_name || '—'}</div>
+                                  {gBadge(!!loan.guarantor_approved, !!loan.guarantor_declined)}
+                                </div>
+                                {needsG2 && (
+                                  <div>
+                                    <div className="text-xs">{loan.guarantor2_name}</div>
+                                    {gBadge(!!loan.guarantor2_approved, !!loan.guarantor2_declined)}
+                                  </div>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell>{getStatusBadge(loan.status)}</TableCell>
+                            <TableCell className="text-xs">{awaiting}</TableCell>
                             <TableCell>
                               {loan.status === 'pending_admin' && (
                                 <Button size="sm" variant="outline" onClick={() => setReviewLoan(loan)} disabled={submitting}>
@@ -3463,8 +3501,9 @@ const QuickLoans = () => {
                           );
                         })}
                         {loans.length === 0 && (
-                          <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">No loan requests</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-8">No loan requests</TableCell></TableRow>
                         )}
+
                       </TableBody>
                     </Table>
                   </CardContent>
