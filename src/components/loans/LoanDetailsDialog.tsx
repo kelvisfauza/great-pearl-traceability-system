@@ -7,6 +7,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { FileText, Printer, Loader2, User, Shield, Banknote, Calendar } from 'lucide-react';
+import { buildBorrowerTermsHtml, buildGuarantorTermsHtml, buildFullLoanTermsPackHtml, printLoanDoc } from '@/utils/loanTermsPrint';
+
 
 const LOAN_LABELS: Record<string, string> = {
   quick: 'Quick Loan',
@@ -72,6 +74,8 @@ const LoanDetailsDialog = ({ loan, open, onClose }: Props) => {
   const typeLabel = LOAN_LABELS[loan.loan_type || 'quick'] || loan.loan_type;
   const needsG2 = !!loan.guarantor2_email;
   const totalPaid = schedule.reduce((s, r) => s + (r.amount_paid || 0), 0);
+  const allGuarantorsApproved = !!loan.guarantor_approved && (!needsG2 || !!loan.guarantor2_approved);
+
   const awaiting = loan.status === 'pending_guarantor'
     ? (!loan.guarantor_approved ? `${loan.guarantor_name || 'Guarantor 1'} (Guarantor 1)` : needsG2 && !loan.guarantor2_approved ? `${loan.guarantor2_name || 'Guarantor 2'} (Guarantor 2)` : 'Guarantor')
     : loan.status === 'pending_admin' ? 'Administrator'
@@ -190,6 +194,37 @@ const LoanDetailsDialog = ({ loan, open, onClose }: Props) => {
                   <Printer className="h-3.5 w-3.5 mr-1" /> Print form
                 </Button>
               </div>
+
+              {allGuarantorsApproved ? (
+                <Card className="border-primary/40">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Shield className="h-4 w-4" /> Signature documents — all guarantors approved
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0 flex flex-wrap gap-2">
+                    <Button size="sm" onClick={() => printLoanDoc(buildFullLoanTermsPackHtml(loan))}>
+                      <Printer className="h-3.5 w-3.5 mr-1" /> Print full terms pack
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => printLoanDoc(buildBorrowerTermsHtml(loan))}>
+                      <Printer className="h-3.5 w-3.5 mr-1" /> Borrower T&amp;Cs
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => printLoanDoc(buildGuarantorTermsHtml(loan, 1))}>
+                      <Printer className="h-3.5 w-3.5 mr-1" /> Guarantor 1 terms
+                    </Button>
+                    {needsG2 && (
+                      <Button size="sm" variant="outline" onClick={() => printLoanDoc(buildGuarantorTermsHtml(loan, 2))}>
+                        <Printer className="h-3.5 w-3.5 mr-1" /> Guarantor 2 terms
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="text-xs text-muted-foreground border rounded-md p-3">
+                  Loan terms &amp; guarantor undertakings become printable once all guarantors have approved.
+                </div>
+              )}
+
 
               <div className="grid gap-4 md:grid-cols-2">
                 <Card>
