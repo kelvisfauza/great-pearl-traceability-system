@@ -78,6 +78,28 @@ const LoanDetailsDialog = ({ loan, open, onClose }: Props) => {
     : loan.status === 'counter_offered' ? `${loan.employee_name} (borrower response)`
     : 'No action pending';
 
+  const isApproved = !!(loan.admin_approved || loan.admin_approved_at || loan.approved_at || ['approved', 'active', 'disbursed', 'completed', 'overdue'].includes(loan.status));
+  const approvedAmount = isApproved ? (loan.disbursed_amount || loan.loan_amount) : null;
+
+  const prettyLabel = (k: string) => k.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+  const prettyValue = (v: any) => {
+    if (v === null || v === undefined || v === '') return '—';
+    if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+    if (typeof v === 'number') return v > 9999 ? money(v) : String(v);
+    if (typeof v === 'object') return JSON.stringify(v);
+    return String(v);
+  };
+  const toList = (obj: any): { label: string; value: string }[] => {
+    if (!obj) return [];
+    if (Array.isArray(obj)) return obj.map((x, i) => typeof x === 'object' && x
+      ? { label: prettyLabel(String(x.label ?? x.name ?? x.factor ?? `Item ${i + 1}`)), value: prettyValue(x.value ?? x.score ?? x.detail ?? x.status) }
+      : { label: `Item ${i + 1}`, value: prettyValue(x) });
+    if (typeof obj === 'object') return Object.entries(obj).map(([k, v]) => ({ label: prettyLabel(k), value: prettyValue(v) }));
+    return [];
+  };
+  const factorList = toList(evaluation?.factors);
+  const historyList = toList(evaluation?.history_summary);
+
   const gStatus = (approved: boolean, declined: boolean) =>
     approved ? <Badge className="text-[10px]">Approved</Badge>
       : declined ? <Badge variant="destructive" className="text-[10px]">Declined</Badge>
