@@ -3,6 +3,7 @@ import { renderAsync } from 'npm:@react-email/components@0.0.22'
 import { sendLovableEmail } from 'npm:@lovable.dev/email-js@0.0.4'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.5'
 import { TEMPLATES } from '../_shared/transactional-email-templates/registry.ts'
+import { toGsm7 } from '../_shared/gsm7.ts'
 
 const SITE_NAME = "Great Agro Coffee"
 const SENDER_DOMAIN = "notify.greatpearlcoffeesystem.site"
@@ -242,7 +243,8 @@ Deno.serve(async (req) => {
         .split('\n')
         .map((l: string) => l.trim())
         .filter((l: string) => l.length > 0)[0] || ''
-      const smsBody = `${resolvedSubject}${firstLine ? ` — ${firstLine}` : ''}`.slice(0, 320)
+      // Strip emojis / smart punctuation so BulkSMS bills GSM-7 (160 chars/segment)
+      const smsBody = toGsm7(`${resolvedSubject}${firstLine ? ` - ${firstLine}` : ''}`).slice(0, 320)
 
       const { error: smsErr } = await supa.functions.invoke('send-sms', {
         body: {
