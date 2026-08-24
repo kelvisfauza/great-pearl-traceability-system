@@ -11,9 +11,10 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Inbox, Loader2, Check, X, Copy, ExternalLink, Banknote, Smartphone, Wallet } from 'lucide-react';
+import { Inbox, Loader2, Check, X, Copy, ExternalLink, Banknote, Smartphone, Wallet, ShieldCheck } from 'lucide-react';
 import { printProviderAcknowledgement } from '@/utils/printProviderAcknowledgement';
 import FingerprintApprovalDialog, { FingerprintApprovalTarget } from '@/components/approval/FingerprintApprovalDialog';
+import ApprovalCodeDialog, { ApprovalCodeTarget } from '@/components/approval/ApprovalCodeDialog';
 import { requiresFingerprintApproval } from '@/utils/fingerprintApproval';
 
 const ProviderSubmissionApprovals: React.FC = () => {
