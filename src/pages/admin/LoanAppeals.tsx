@@ -131,16 +131,20 @@ export default function LoanAppeals() {
         counter_amount: voteType === 'counter' ? Number(counterAmount) : null,
         counter_term_months: voteType === 'counter' ? Number(counterTerm) : null,
       };
-      const { error } = await (supabase as any).from('loan_appeal_votes').insert(payload);
+      const { error } = editingVoteId
+        ? await (supabase as any).from('loan_appeal_votes').update(payload).eq('id', editingVoteId)
+        : await (supabase as any).from('loan_appeal_votes').insert(payload);
       if (error) throw error;
-      toast({ title: 'Vote recorded', description: 'Appeal auto-finalizes when 3 admins agree.' });
+      toast({ title: editingVoteId ? 'Vote updated' : 'Vote recorded', description: 'Appeal auto-finalizes when 3 admins agree.' });
       const appealIdJustVoted = voteFor.id;
       setVoteFor(null);
+      setEditingVoteId(null);
       setReason('');
       setCounterAmount('');
       setCounterTerm('');
       setVoteType('uphold');
       await fetchAll();
+
       // Re-read the appeal to see if it just became decided — then auto-disburse
       const { data: fresh } = await (supabase as any).from('loan_appeals').select('status, resulting_loan_id').eq('id', appealIdJustVoted).maybeSingle();
       if (fresh && !fresh.resulting_loan_id && ['decided_approve', 'decided_counter'].includes(fresh.status)) {
