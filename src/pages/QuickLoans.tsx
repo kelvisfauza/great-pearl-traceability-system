@@ -20,6 +20,7 @@ import LoanAppealsPage from '@/pages/admin/LoanAppeals';
 import { Textarea } from '@/components/ui/textarea';
 import LoanAdvertDialog from '@/components/loans/LoanAdvertDialog';
 import LoanReviewModal from '@/components/loans/LoanReviewModal';
+import LoanDetailsDialog from '@/components/loans/LoanDetailsDialog';
 import LoanRepaymentSlip from '@/components/loans/LoanRepaymentSlip';
 import { generateLoanAgreementPdf } from '@/utils/loanAgreementPdf';
 import LoanAppealDialog from '@/components/loans/LoanAppealDialog';
@@ -112,6 +113,7 @@ const QuickLoans = () => {
   const [pendingGuarantorLoan, setPendingGuarantorLoan] = useState<any>(null);
   const [guaranteedLoans, setGuaranteedLoans] = useState<any[]>([]);
   const [reviewLoan, setReviewLoan] = useState<any>(null);
+  const [detailsLoan, setDetailsLoan] = useState<any>(null);
   const [showRepaymentSlip, setShowRepaymentSlip] = useState(false);
   const [repaymentSlipData, setRepaymentSlipData] = useState<any>(null);
   const [showMomoRepayDialog, setShowMomoRepayDialog] = useState(false);
@@ -3618,6 +3620,8 @@ const QuickLoans = () => {
             </TabsContent>
           </Tabs>
       </div>
+
+      <LoanDetailsDialog loan={detailsLoan} open={!!detailsLoan} onClose={() => setDetailsLoan(null)} />
 
       <LoanReviewModal
         loan={reviewLoan}
