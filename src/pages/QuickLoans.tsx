@@ -21,6 +21,8 @@ import { Textarea } from '@/components/ui/textarea';
 import LoanAdvertDialog from '@/components/loans/LoanAdvertDialog';
 import LoanReviewModal from '@/components/loans/LoanReviewModal';
 import LoanDetailsDialog from '@/components/loans/LoanDetailsDialog';
+import LoanApprovalTracker from '@/components/loans/LoanApprovalTracker';
+
 import LoanRepaymentSlip from '@/components/loans/LoanRepaymentSlip';
 import { generateLoanAgreementPdf } from '@/utils/loanAgreementPdf';
 import LoanAppealDialog from '@/components/loans/LoanAppealDialog';
