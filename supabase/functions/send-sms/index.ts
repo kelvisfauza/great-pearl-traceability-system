@@ -335,6 +335,7 @@ serve(async (req) => {
     // All other notifications should use email instead to save SMS credits
     const ALLOWED_SMS_TYPES = [
       'verification',
+      'admin_approval_code',
       'otp',
       'login_code',
       'twofa',
