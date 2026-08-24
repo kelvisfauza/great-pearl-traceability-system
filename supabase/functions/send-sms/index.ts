@@ -300,7 +300,7 @@ serve(async (req) => {
           const smsResponse = await fetch('https://yoolasms.com/api/v1/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone: formattedPhone, message: msg.message, api_key: apiKey })
+            body: JSON.stringify({ phone: formattedPhone, message: toGsm7(msg.message || ''), api_key: apiKey })
           })
 
           const success = smsResponse.ok
@@ -314,7 +314,7 @@ serve(async (req) => {
 
           // If YoolaSMS failed, try Infobip fallback
           if (!success) {
-            const infobipResult = await sendInfobipSmsFallback(formattedPhone, msg.message, supabase, {
+            const infobipResult = await sendInfobipSmsFallback(formattedPhone, toGsm7(msg.message || ''), supabase, {
               userName: 'Employee', recipientEmail: msg.recipient_email, messageType: msg.notification_type
             })
             if (infobipResult.success) {
