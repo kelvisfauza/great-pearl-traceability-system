@@ -7,6 +7,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { FileText, Printer, Loader2, User, Shield, Banknote, Calendar } from 'lucide-react';
+import { buildBorrowerTermsHtml, buildGuarantorTermsHtml, buildFullLoanTermsPackHtml, printLoanDoc } from '@/utils/loanTermsPrint';
+
 
 const LOAN_LABELS: Record<string, string> = {
   quick: 'Quick Loan',
