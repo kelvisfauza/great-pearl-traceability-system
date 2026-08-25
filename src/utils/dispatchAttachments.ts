@@ -28,10 +28,28 @@ export const getDispatchAttachmentUrl = async (value?: string | null): Promise<s
   return data?.signedUrl ?? null;
 };
 
-/** Opens a stored dispatch attachment in a new tab using a fresh signed URL. */
+/**
+ * Opens a stored dispatch attachment in a new tab using a fresh signed URL.
+ * The tab is opened synchronously (inside the click gesture) so pop-up
+ * blockers such as Safari's do not swallow it while the URL is signed.
+ */
 export const openDispatchAttachment = async (value?: string | null): Promise<boolean> => {
-  const url = await getDispatchAttachmentUrl(value);
-  if (!url) return false;
-  window.open(url, '_blank', 'noopener,noreferrer');
-  return true;
+  const tab = window.open('', '_blank', 'noopener,noreferrer');
+  try {
+    const url = await getDispatchAttachmentUrl(value);
+    if (!url) {
+      tab?.close();
+      return false;
+    }
+    if (tab) {
+      tab.location.href = url;
+    } else {
+      // Pop-up was blocked entirely — fall back to same-tab navigation.
+      window.location.href = url;
+    }
+    return true;
+  } catch {
+    tab?.close();
+    return false;
+  }
 };

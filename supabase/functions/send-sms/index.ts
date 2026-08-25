@@ -652,18 +652,26 @@ serve(async (req) => {
         'verification', 'login_verification', 'withdrawal_verification',
         'admin_wallet_otp', 'admin_approval_code', 'qr_access_otp',
       ])
+      // Signature of the *facts* in a message (amounts, balances, references).
+      // Two sends of the same event repeat the same numbers; two genuinely
+      // different operations (debit then credit) never do — so a number
+      // mismatch means this is NEW information and must always go out.
+      const factSignature = (txt?: string | null) =>
+        (txt || '').replace(/[^0-9]/g, '')
+
       let eventDup: any = null
       if (!exactDup?.id && eventKey && !OTP_EXEMPT.has(eventKey)) {
         const { data } = await supabase
           .from('sms_logs')
-          .select('id, status, created_at, message_type')
+          .select('id, status, created_at, message_type, message_content')
           .eq('recipient_phone', formattedPhone)
           .in('status', ['sent', 'redirected_to_email'])
           .gte('created_at', sinceIso)
           .or(`message_type.eq.${eventKey},message_type.eq.tx:${eventKey.replace(/_/g, '-')},message_type.eq.${messageType}`)
-          .limit(1)
-          .maybeSingle()
-        eventDup = data
+          .order('created_at', { ascending: false })
+          .limit(5)
+        const mySig = factSignature(message)
+        eventDup = (data || []).find((row: any) => factSignature(row.message_content) === mySig) || null
       }
 
       const recentDup = exactDup?.id ? exactDup : eventDup
