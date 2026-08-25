@@ -267,6 +267,22 @@ const ApprovalCenter = () => {
     return `UGX ${numericAmount.toLocaleString()}`;
   };
 
+  const SOURCE_LABELS: Record<string, string> = {
+    supabase: 'System',
+    firebase: 'Legacy System',
+    wallet: 'Wallet',
+    manual: 'Manual Entry',
+  };
+
+  const formatSource = (source?: string | null) => {
+    if (!source) return 'System';
+    const key = String(source).toLowerCase();
+    if (SOURCE_LABELS[key]) return SOURCE_LABELS[key];
+    return key.replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+
+
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -427,35 +443,36 @@ const ApprovalCenter = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <p className="text-sm font-medium">{request.requestedBy}</p>
-                            <p className="text-xs text-muted-foreground">{request.department}</p>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate" title={String(request.requestedBy ?? '')}>{request.requestedBy}</p>
+                            <p className="text-xs text-muted-foreground truncate">{request.department}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <p className="text-sm font-medium">{request.dateRequested}</p>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{request.dateRequested}</p>
                             <p className="text-xs text-muted-foreground">Requested</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <p className="text-sm font-medium">{formatAmount(request.amount)}</p>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <DollarSign className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{formatAmount(request.amount)}</p>
                             <p className="text-xs text-muted-foreground">Amount</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <p className="text-sm font-medium">{request.source}</p>
-                            <p className="text-xs text-muted-foreground">Source</p>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{formatSource(request.source)}</p>
+                            <p className="text-xs text-muted-foreground">Channel</p>
                           </div>
                         </div>
                       </div>
+
 
                       {/* Failed payout banner */}
                       {request.details?.is_failed_payout && (
