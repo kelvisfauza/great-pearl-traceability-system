@@ -267,6 +267,22 @@ const ApprovalCenter = () => {
     return `UGX ${numericAmount.toLocaleString()}`;
   };
 
+  const SOURCE_LABELS: Record<string, string> = {
+    supabase: 'System',
+    firebase: 'Legacy System',
+    wallet: 'Wallet',
+    manual: 'Manual Entry',
+  };
+
+  const formatSource = (source?: string | null) => {
+    if (!source) return 'System';
+    const key = String(source).toLowerCase();
+    if (SOURCE_LABELS[key]) return SOURCE_LABELS[key];
+    return key.replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+
+
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
