@@ -3,7 +3,7 @@ import QRCode from 'qrcode';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Fingerprint, Loader2, ShieldCheck, Smartphone, CheckCircle2, ExternalLink } from 'lucide-react';
+import { Fingerprint, Loader2, ShieldCheck, Smartphone, CheckCircle2, ExternalLink, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -25,6 +25,8 @@ export type FingerprintApprovalTarget = {
 interface Props {
   target: FingerprintApprovalTarget | null;
   onClose: () => void;
+  /** Optional fallback: approve with a 6-digit SMS code instead of a fingerprint. */
+  onUseSmsCode?: (target: FingerprintApprovalTarget) => void;
 }
 
 /**
@@ -32,7 +34,7 @@ interface Props {
  * The admin scans the QR with their phone and touches the sensor there — the
  * phone broadcasts the confirmation back to this laptop over Supabase realtime.
  */
-const FingerprintApprovalDialog: React.FC<Props> = ({ target, onClose }) => {
+const FingerprintApprovalDialog: React.FC<Props> = ({ target, onClose, onUseSmsCode }) => {
   const { user } = useAuth();
   const email = user?.email?.toLowerCase() || '';
   const [sessionId] = useState(newApprovalSessionId);
@@ -227,6 +229,22 @@ const FingerprintApprovalDialog: React.FC<Props> = ({ target, onClose }) => {
             </Button>
             )}
           </div>
+
+          {onUseSmsCode && (
+            <Button
+              variant="ghost"
+              className="w-full"
+              disabled={busy || confirmed}
+              onClick={() => {
+                const t = targetRef.current;
+                onClose();
+                if (t) onUseSmsCode(t);
+              }}
+            >
+              <MessageSquare className="mr-2 h-4 w-4" />
+              Approve with SMS code instead
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>

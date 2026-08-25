@@ -15,6 +15,7 @@ import { DelegateApprovalModal } from './approval/DelegateApprovalModal';
 import { DisbursePaymentModal, DisburseTarget } from './approval/DisbursePaymentModal';
 import FingerprintApprovalDialog, { FingerprintApprovalTarget } from './approval/FingerprintApprovalDialog';
 import { requiresFingerprintApproval } from '@/utils/fingerprintApproval';
+import ApprovalCodeDialog, { ApprovalCodeTarget } from './approval/ApprovalCodeDialog';
 import { AwaitingDisbursementPanel } from './approval/AwaitingDisbursementPanel';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -35,6 +36,7 @@ const ApprovalCenter = () => {
   const [delegateModal, setDelegateModal] = useState<{ open: boolean; reason: string; requestId: string; amount: number; title?: string }>({ open: false, reason: '', requestId: '', amount: 0 });
   const [disburseTarget, setDisburseTarget] = useState<DisburseTarget | null>(null);
   const [fingerprintTarget, setFingerprintTarget] = useState<FingerprintApprovalTarget | null>(null);
+  const [codeTarget, setCodeTarget] = useState<ApprovalCodeTarget | null>(null);
 
   // Auto-refresh pending requests in background to prevent double approvals
   useEffect(() => {
@@ -645,7 +647,15 @@ const ApprovalCenter = () => {
       <FingerprintApprovalDialog
         target={fingerprintTarget}
         onClose={() => setFingerprintTarget(null)}
+        onUseSmsCode={(t) => setCodeTarget({
+          targetType: 'approval_request',
+          targetId: t.requestId || 'unknown',
+          label: t.title,
+          amount: t.amount,
+          onVerified: () => { void t.onConfirmed(); },
+        })}
       />
+      <ApprovalCodeDialog target={codeTarget} onClose={() => setCodeTarget(null)} />
     </div>
   );
 };
