@@ -13,6 +13,12 @@ import { openDispatchAttachment } from '@/utils/dispatchAttachments';
 import { printDispatchAnalysis } from '@/utils/dispatchAnalysisPrint';
 import { Printer } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { toast as sonnerToast } from 'sonner';
+
+const openAttachmentWithFeedback = async (url?: string | null) => {
+  const ok = await openDispatchAttachment(url);
+  if (!ok) sonnerToast.error('Could not open this attachment. The file may have been moved or removed.');
+};
 
 interface TruckData {
   truck_number: string;
@@ -167,7 +173,7 @@ const EUDRDispatchReportsList = ({ reports, showAll = false, onRefresh }: EUDRDi
                          <Button
                            variant="ghost"
                            size="sm"
-                           onClick={() => openDispatchAttachment(report.attachment_url)}
+                           onClick={() => void openAttachmentWithFeedback(report.attachment_url)}
                          >
                            <Download className="h-4 w-4" />
                          </Button>
@@ -409,7 +415,7 @@ const DispatchReportDetail = ({ report }: { report: DispatchReport }) => {
             <CardTitle className="text-sm">Attachment</CardTitle>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" onClick={() => openDispatchAttachment(report.attachment_url)}>
+            <Button variant="outline" onClick={() => void openAttachmentWithFeedback(report.attachment_url)}>
               <Download className="h-4 w-4 mr-2" />
               {report.attachment_name || 'Download Attachment'}
             </Button>
