@@ -475,6 +475,120 @@ export default function GRNScanPay() {
     }
   };
 
+  // ---- Bulk submit: send every queued GRN to one finance approver in one go ----
+  const queuedRefs = useMemo(() => queue.filter((q) => !q.paid).map((q) => q.ref), [queue]);
+
+  const alreadySubmitted = (ref: string) =>
+    referrals.some((r) => r.status === 'pending' && normalizeRef(r.batch_number) === normalizeRef(ref));
+
+  const pendingBulkRefs = useMemo(
+    () => queuedRefs.filter((r) => !alreadySubmitted(r)),
+    [queuedRefs, referrals],
+  );
+
+  const resolveQueuedGrn = async (ref: string) => {
+    const raw = normalizeRef(ref);
+    let resolved = raw;
+    if (!/^\d{6,16}$/.test(raw)) {
+      const { data } = await supabase.rpc('resolve_grn_reference' as any, { p_code: raw });
+      resolved = (data as string) || '';
+    }
+    if (!resolved) return { error: 'Unknown pay code' } as const;
+
+    const { data: lots } = await supabase
+      .from('finance_coffee_lots')
+      .select('*')
+      .or(`batch_number.eq.${resolved},coffee_record_id.eq.${resolved}`)
+      .order('created_at', { ascending: true });
+
+    const unpaid = (lots || []).filter(
+      (l: any) => String(l.finance_status || '').toUpperCase() !== 'PAID',
+    );
+    if (unpaid.length === 0) {
+      return { error: (lots || []).length ? 'Already paid' : 'Not ready for payment' } as const;
+    }
+
+    const { data: recs } = await supabase
+      .from('coffee_records')
+      .select('supplier_name, coffee_type, supplier_id, id')
+      .eq('batch_number', resolved);
+
+    const code = await getGrnPayCode(resolved).catch(() => null);
+
+    return { resolved, lots: unpaid, records: (recs || []) as any[], payCode: code } as const;
+  };
+
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const [bulkResults, setBulkResults] = useState<{ ref: string; ok: boolean; message: string }[]>([]);
+
+  const handleBulkSubmit = async () => {
+    if (!payerEmail || pendingBulkRefs.length === 0) return;
+    const payer = (payers || []).find((p) => p.email === payerEmail);
+    setBulkRunning(true);
+    setBulkResults([]);
+    const results: { ref: string; ok: boolean; message: string }[] = [];
+
+    for (const ref of pendingBulkRefs) {
+      try {
+        const resolvedGrn = await resolveQueuedGrn(ref);
+        if ('error' in resolvedGrn) {
+          results.push({ ref, ok: false, message: resolvedGrn.error });
+          setBulkResults([...results]);
+          continue;
+        }
+
+        for (const l of resolvedGrn.lots) {
+          const record =
+            resolvedGrn.records.find((r) => r.id === l.coffee_record_id) ||
+            resolvedGrn.records.find((r) => r.supplier_id && r.supplier_id === l.supplier_id) ||
+            resolvedGrn.records[0] ||
+            null;
+
+          await createReferral({
+            batch_number: l.batch_number || resolvedGrn.resolved,
+            lot_id: l.id,
+            pay_code: resolvedGrn.payCode || null,
+            supplier_name: record?.supplier_name || null,
+            coffee_type: record?.coffee_type || null,
+            quantity_kg: l.quantity_kg ?? null,
+            amount_ugx: Number(l.total_amount_ugx || 0),
+            assigned_to_email: payerEmail,
+            assigned_to_name: payer?.name || null,
+            notes: referralNotes || null,
+          });
+        }
+
+        results.push({
+          ref,
+          ok: true,
+          message: `${resolvedGrn.lots.length} lot${resolvedGrn.lots.length > 1 ? 's' : ''} submitted`,
+        });
+        setBulkResults([...results]);
+      } catch (e: any) {
+        results.push({ ref, ok: false, message: e.message || 'Submit failed' });
+        setBulkResults([...results]);
+      }
+    }
+
+    const sent = results.filter((r) => r.ok).length;
+    if (sent > 0) {
+      trackActivity('form_submission', `submitting ${sent} GRNs for payment in bulk`, {
+        form_name: 'GRN Payment Referral (bulk)',
+        count: sent,
+      });
+      toast.success(`${sent} GRN${sent > 1 ? 's' : ''} submitted to ${payer?.name || payerEmail}`);
+    }
+    const failed = results.length - sent;
+    if (failed > 0) toast.error(`${failed} GRN${failed > 1 ? 's' : ''} could not be submitted`);
+
+    setBulkRunning(false);
+    setReferralNotes('');
+    refetchReferrals();
+  };
+
+
+
 
   if (isLoading || resolving) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
