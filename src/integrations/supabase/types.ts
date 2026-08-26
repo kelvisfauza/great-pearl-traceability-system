@@ -4918,6 +4918,75 @@ export type Database = {
         }
         Relationships: []
       }
+      grn_payment_allocations: {
+        Row: {
+          amount_ugx: number
+          assigned_to_email: string
+          assigned_to_name: string | null
+          batch_number: string
+          coffee_type: string | null
+          created_at: string
+          id: string
+          lot_id: string | null
+          notes: string | null
+          paid_at: string | null
+          paid_by_email: string | null
+          pay_code: string | null
+          payer_reward_ugx: number
+          quantity_kg: number | null
+          referred_by_email: string
+          referred_by_name: string | null
+          referrer_reward_ugx: number
+          status: string
+          supplier_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_ugx?: number
+          assigned_to_email: string
+          assigned_to_name?: string | null
+          batch_number: string
+          coffee_type?: string | null
+          created_at?: string
+          id?: string
+          lot_id?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          paid_by_email?: string | null
+          pay_code?: string | null
+          payer_reward_ugx?: number
+          quantity_kg?: number | null
+          referred_by_email: string
+          referred_by_name?: string | null
+          referrer_reward_ugx?: number
+          status?: string
+          supplier_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_ugx?: number
+          assigned_to_email?: string
+          assigned_to_name?: string | null
+          batch_number?: string
+          coffee_type?: string | null
+          created_at?: string
+          id?: string
+          lot_id?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          paid_by_email?: string | null
+          pay_code?: string | null
+          payer_reward_ugx?: number
+          quantity_kg?: number | null
+          referred_by_email?: string
+          referred_by_name?: string | null
+          referrer_reward_ugx?: number
+          status?: string
+          supplier_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       group_call_participants: {
         Row: {
           call_id: string
@@ -15599,6 +15668,10 @@ export type Database = {
       cleanup_expired_verification_codes: { Args: never; Returns: undefined }
       cleanup_inactive_sessions: { Args: never; Returns: undefined }
       cleanup_old_price_calculations: { Args: never; Returns: undefined }
+      complete_grn_referral: {
+        Args: { p_batch: string; p_lot_id?: string; p_payer_email?: string }
+        Returns: Json
+      }
       confirm_cash_transaction: {
         Args: {
           p_approval_role: string
