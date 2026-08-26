@@ -124,7 +124,7 @@ async function sendBulkSmsPremium(phone: string, message: string, supabase: any,
 
 // Message types that should be routed via BulkSMS Premium first (high-priority)
 const PREMIUM_SMS_TYPES = new Set([
-  'loan_reminder',
+  // NOTE: 'loan_reminder' is intentionally excluded — reminders go via YoolaSMS.
   'loan_guarantor_request',
   'loan_repayment',
   'loan_recovery',
