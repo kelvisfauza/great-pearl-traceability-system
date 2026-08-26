@@ -279,6 +279,18 @@ const PendingPaymentsTab = () => {
               {selectedIds.size > 0 && (
                 <Button
                   size="sm"
+                  variant="secondary"
+                  className="gap-1"
+                  disabled={printing}
+                  onClick={() => printGrns(filtered.filter((l) => selectedIds.has(l.id)))}
+                >
+                  {printing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Printer className="h-3 w-3" />}
+                  Print GRNs ({selectedIds.size})
+                </Button>
+              )}
+              {selectedIds.size > 0 && (
+                <Button
+                  size="sm"
                   variant="destructive"
                   onClick={() => setDeleteDialog(true)}
                   className="gap-1"
