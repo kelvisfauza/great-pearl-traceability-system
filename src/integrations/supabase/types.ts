@@ -15889,6 +15889,15 @@ export type Database = {
         Args: { _auth_user_id: string }
         Returns: string
       }
+      get_finance_payment_assignees: {
+        Args: never
+        Returns: {
+          department: string
+          email: string
+          job_title: string
+          name: string
+        }[]
+      }
       get_guarantor_candidates: {
         Args: never
         Returns: {
