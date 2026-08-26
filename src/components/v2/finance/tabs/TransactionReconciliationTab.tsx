@@ -30,8 +30,28 @@ const TransactionReconciliationTab = () => {
 
   const paidIds = new Set(financeLots?.filter(l => l.finance_status === 'PAID').map(l => l.quality_assessment_id) || []);
   const processedIds = new Set(financeLots?.map(l => l.quality_assessment_id) || []);
-  const unpaid = qualityApproved?.filter(q => !paidIds.has(q.id)) || [];
   const paid = qualityApproved?.filter(q => paidIds.has(q.id)) || [];
+
+  // Group by batch number so the same batch is never listed twice.
+  const byBatch = new Map<string, any[]>();
+  (qualityApproved || []).forEach((q: any) => {
+    const key = String(q.batch_number || q.id);
+    byBatch.set(key, [...(byBatch.get(key) || []), q]);
+  });
+
+  // Duplicates = one batch number with more than one quality assessment.
+  const duplicateBatches = Array.from(byBatch.entries())
+    .filter(([, rows]) => rows.length > 1)
+    .map(([batch, rows]) => ({
+      batch,
+      count: rows.length,
+      paidCount: rows.filter((r: any) => paidIds.has(r.id)).length,
+    }));
+
+  // Keep only the newest assessment per batch, and only if none of its rows is paid.
+  const unpaid = Array.from(byBatch.values())
+    .filter((rows) => !rows.some((r: any) => paidIds.has(r.id)))
+    .map((rows) => rows[0]);
 
   return (
     <div className="space-y-4 mt-4">
