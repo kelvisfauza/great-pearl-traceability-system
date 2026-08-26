@@ -60,6 +60,70 @@ export const useFinancePayers = () =>
     },
   });
 
+/** Sends an in-app notification + branded email to the finance approver a GRN was forwarded to. */
+const notifyReferralAssignee = async (p: {
+  allocationId: string;
+  assignedEmail: string;
+  assignedName: string;
+  referrerName: string;
+  batchNumber: string;
+  supplierName: string | null;
+  coffeeType: string | null;
+  quantityKg: number | null;
+  amountUgx: number;
+  notes: string | null;
+}) => {
+  const money = `UGX ${Number(p.amountUgx || 0).toLocaleString()}`;
+  const title = 'GRN forwarded to you for payment';
+  const lines = [
+    `${p.referrerName} has scanned and forwarded a GRN to you for payment release.`,
+    '',
+    `Batch: ${p.batchNumber}`,
+    p.supplierName ? `Supplier: ${p.supplierName}` : '',
+    p.coffeeType ? `Coffee type: ${p.coffeeType}` : '',
+    p.quantityKg ? `Quantity: ${Number(p.quantityKg).toLocaleString()} kg` : '',
+    `Amount: ${money}`,
+    p.notes ? `Notes: ${p.notes}` : '',
+    '',
+    'Open Finance > Referrals to review, pay and print the payment receipt.',
+  ].filter(Boolean);
+
+  // In-app notification (resolve the assignee's employee record)
+  const { data: emp } = await supabase
+    .from('employees')
+    .select('id, name, department')
+    .ilike('email', p.assignedEmail)
+    .maybeSingle();
+
+  if (emp?.id) {
+    await supabase.from('notifications').insert({
+      type: 'approval_request',
+      title,
+      message: `${p.referrerName} forwarded GRN ${p.batchNumber} (${money}) to you for payment.`,
+      priority: 'high',
+      target_user_id: (emp as any).id,
+      target_department: (emp as any).department || 'Finance',
+      is_read: false,
+      metadata: { source: 'grn_referral', allocation_id: p.allocationId, batch_number: p.batchNumber },
+    } as any);
+  }
+
+  await supabase.functions.invoke('send-transactional-email', {
+    body: {
+      templateName: 'general-notification',
+      recipientEmail: p.assignedEmail,
+      idempotencyKey: `grn-referral-${p.allocationId}`,
+      templateData: {
+        subject: `GRN ${p.batchNumber} forwarded for payment — ${money}`,
+        title,
+        recipientName: emp?.name || p.assignedName,
+        message: lines.join('\n'),
+      },
+    },
+  });
+};
+
+
 export const useGrnReferrals = () => {
   const { user, employee } = useAuth();
   const myEmail = (employee?.email || user?.email || '').toLowerCase();
