@@ -445,6 +445,8 @@ serve(async (req) => {
       'job_application_rejected',
       'interview_invite',
       'hr_notification',
+      // Daily operations report readiness alert to admins
+      'daily_report',
     ]
     
     const lowerType = (messageType || '').toLowerCase()
