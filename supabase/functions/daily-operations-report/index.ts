@@ -332,6 +332,7 @@ Deno.serve(async (req) => {
     const text = `Great Agro Coffee — Daily Operations Report ${prettyDate}
 Purchased: ${fmt(totals.purchasedKg)} kg | Sales: ${S.length} (${fmt(totals.salesKg)} kg, ${money(totals.salesValue)})
 Trucks: ${fmt(totals.trucks)} | Quality assessments: ${Q.length} | Hulled: ${fmt(totals.hulledKg)} kg | Collected: ${money(totals.collected)}
+Deposits: ${money(wallet.deposits)} | Bonuses: ${money(wallet.bonuses)} | Loyalty: ${money(wallet.loyalty)} | Withdrawals: ${money(wallet.withdrawals)} | Fees: ${money(wallet.fees)}
 Download the PDF: ${downloadUrl}`
 
     const recipients = testEmail
