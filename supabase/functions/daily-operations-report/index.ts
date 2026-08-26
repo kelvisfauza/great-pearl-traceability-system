@@ -300,7 +300,7 @@ Deno.serve(async (req) => {
           <div style="font-size:14px;margin-top:10px;">Daily Operations Report — ${prettyDate}</div>
         </div>
         <div style="padding:24px;">
-          <p style="color:#334155;font-size:14px;">The automated daily operations report has been generated. The full PDF covers purchases, sales, dispatch monitoring, quality, milling, collections and user activity.</p>
+          <p style="color:#334155;font-size:14px;">The automated daily operations report has been generated. The full PDF covers purchases, sales, dispatch monitoring, quality, milling, collections, wallet money movements (deposits, bonuses, withdrawals, fees) and user activity.</p>
           <table style="width:100%;border-collapse:collapse;font-size:13px;margin:16px 0;">
             ${row('Coffee purchased', `${fmt(totals.purchasedKg)} kg (${P.length} deliveries)`)}
             ${row('Sales', `${S.length} sales — ${fmt(totals.salesKg)} kg`)}
