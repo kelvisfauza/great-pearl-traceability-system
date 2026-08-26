@@ -165,16 +165,20 @@ const PendingPaymentsTab = () => {
 
   const printGrns = async (items: FinanceLot[]) => {
     if (!items.length) return;
+    const batch = items.slice(0, MAX_BULK_PRINT);
     setPrinting(true);
     try {
-      await openBulkGRNPrintWindow(items.map(toGrnData));
-      toast.success(`${items.length} GRN document(s) prepared for printing`);
+      await openBulkGRNPrintWindow(batch.map(toGrnData));
+      markPrinted(batch.map((l) => l.id));
+      setSelectedIds(new Set());
+      toast.success(`${batch.length} GRN document(s) prepared for printing`);
     } catch (err: any) {
       toast.error("Print failed: " + (err?.message || "Unknown error"));
     } finally {
       setPrinting(false);
     }
   };
+
 
 
   // Payment is always made against the physical GRN document: open the same
