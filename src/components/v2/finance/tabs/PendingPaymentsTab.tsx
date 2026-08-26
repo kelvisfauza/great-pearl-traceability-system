@@ -225,18 +225,27 @@ const PendingPaymentsTab = () => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
-      else next.add(id);
+      else if (next.size >= MAX_BULK_PRINT) {
+        toast.warning(`You can select up to ${MAX_BULK_PRINT} GRNs at a time`);
+        return prev;
+      } else next.add(id);
       return next;
     });
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === filtered.length) {
+    const selectable = filtered.filter((l) => !printedIds.has(l.id)).slice(0, MAX_BULK_PRINT);
+    if (selectedIds.size > 0) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filtered.map((l) => l.id)));
+      if (!selectable.length) {
+        toast.info("All visible GRNs have already been printed");
+        return;
+      }
+      setSelectedIds(new Set(selectable.map((l) => l.id)));
     }
   };
+
 
   if (isLoading) {
     return (
