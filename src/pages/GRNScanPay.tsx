@@ -642,11 +642,34 @@ export default function GRNScanPay() {
                     <QrCode className="h-4 w-4 mr-2" /> Scan other
                   </Button>
                 </div>
-              ) : (
+              ) : canPay ? (
                 <Button onClick={() => setPayOpen(true)} className="w-full">
                   <CreditCard className="h-4 w-4 mr-2" /> Pay this GRN
                 </Button>
+              ) : (
+                <div className="space-y-2">
+                  {myReferral ? (
+                    <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900">
+                      Submitted for payment to{' '}
+                      <span className="font-medium">{myReferral.assigned_to_name || myReferral.assigned_to_email}</span>{' '}
+                      on {dt(myReferral.created_at)}. Waiting for them to release the money.
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      You can scan and verify GRNs but not release money. Submit this GRN to a finance approver for
+                      payment and receipt printing.
+                    </p>
+                  )}
+                  <Button onClick={() => setSubmitOpen(true)} className="w-full" disabled={!!myReferral}>
+                    <Send className="h-4 w-4 mr-2" />
+                    {myReferral ? 'Already submitted' : 'Submit for payment'}
+                  </Button>
+                  <Button variant="outline" onClick={() => setScanOpen(true)} className="w-full">
+                    <QrCode className="h-4 w-4 mr-2" /> Scan another GRN
+                  </Button>
+                </div>
               )}
+
             </>
           )}
         </CardContent>
