@@ -443,15 +443,21 @@ const PendingPaymentsTab = () => {
                         </Button>
                         <Button
                           size="sm"
-                          variant="secondary"
+                          variant={printedIds.has(lot.id) ? "outline" : "secondary"}
                           onClick={() => printGrns([lot])}
                           disabled={printing}
                           className="gap-1"
-                          title="Re-print this GRN with the coffee details and pay QR"
+                          title="Print this GRN with the coffee details and pay QR"
                         >
                           <Printer className="h-3 w-3" />
-                          Print GRN
+                          {printedIds.has(lot.id) ? "Reprint" : "Print GRN"}
                         </Button>
+                        {printedIds.has(lot.id) && (
+                          <Badge variant="secondary" className="gap-1 text-[10px]">
+                            <CheckCircle2 className="h-3 w-3" /> Printed
+                          </Badge>
+                        )}
+
                       </div>
                     </TableCell>
                   </TableRow>
