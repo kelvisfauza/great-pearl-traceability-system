@@ -704,7 +704,43 @@ export default function GRNScanPay() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={submitOpen} onOpenChange={setSubmitOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Submit GRN for payment</DialogTitle>
+            <DialogDescription>
+              Allocate GRN-{lot?.batch_number || batch} ({money(lot?.total_amount_ugx)}) to a finance approver. They
+              release the money and print the payment receipt — you are both rewarded once it is paid.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Select value={payerEmail} onValueChange={setPayerEmail}>
+              <SelectTrigger><SelectValue placeholder="Select who should pay" /></SelectTrigger>
+              <SelectContent>
+                {(payers || []).map((p) => (
+                  <SelectItem key={p.email} value={p.email}>
+                    {p.name} {p.position ? `· ${p.position}` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Textarea
+              placeholder="Notes for the payer (optional)"
+              value={referralNotes}
+              onChange={(e) => setReferralNotes(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSubmitOpen(false)} disabled={submitting}>Cancel</Button>
+            <Button onClick={handleSubmitForPayment} disabled={submitting || !payerEmail}>
+              {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Submit
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <GRNScannerDialog open={scanOpen} onOpenChange={setScanOpen} />
+
     </div>
   );
 }
