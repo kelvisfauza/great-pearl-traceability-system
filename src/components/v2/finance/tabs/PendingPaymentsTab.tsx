@@ -374,20 +374,33 @@ const PendingPaymentsTab = () => {
                       {new Date(lot.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleProcessPayment(lot)}
-                        disabled={openingId === lot.id}
-                        className="gap-1"
-                      >
-                        {openingId === lot.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Receipt className="h-3 w-3" />
-                        )}
-                        Process Payment
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleProcessPayment(lot)}
+                          disabled={openingId === lot.id}
+                          className="gap-1"
+                        >
+                          {openingId === lot.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Receipt className="h-3 w-3" />
+                          )}
+                          Process Payment
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => printGrns([lot])}
+                          disabled={printing}
+                          className="gap-1"
+                          title="Re-print this GRN with the coffee details and pay QR"
+                        >
+                          <Printer className="h-3 w-3" />
+                          Print GRN
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
