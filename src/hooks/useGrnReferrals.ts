@@ -60,6 +60,70 @@ export const useFinancePayers = () =>
     },
   });
 
+/** Sends an in-app notification + branded email to the finance approver a GRN was forwarded to. */
+const notifyReferralAssignee = async (p: {
+  allocationId: string;
+  assignedEmail: string;
+  assignedName: string;
+  referrerName: string;
+  batchNumber: string;
+  supplierName: string | null;
+  coffeeType: string | null;
+  quantityKg: number | null;
+  amountUgx: number;
+  notes: string | null;
+}) => {
+  const money = `UGX ${Number(p.amountUgx || 0).toLocaleString()}`;
+  const title = 'GRN forwarded to you for payment';
+  const lines = [
+    `${p.referrerName} has scanned and forwarded a GRN to you for payment release.`,
+    '',
+    `Batch: ${p.batchNumber}`,
+    p.supplierName ? `Supplier: ${p.supplierName}` : '',
+    p.coffeeType ? `Coffee type: ${p.coffeeType}` : '',
+    p.quantityKg ? `Quantity: ${Number(p.quantityKg).toLocaleString()} kg` : '',
+    `Amount: ${money}`,
+    p.notes ? `Notes: ${p.notes}` : '',
+    '',
+    'Open Finance > Referrals to review, pay and print the payment receipt.',
+  ].filter(Boolean);
+
+  // In-app notification (resolve the assignee's employee record)
+  const { data: emp } = await supabase
+    .from('employees')
+    .select('id, name, department')
+    .ilike('email', p.assignedEmail)
+    .maybeSingle();
+
+  if (emp?.id) {
+    await supabase.from('notifications').insert({
+      type: 'approval_request',
+      title,
+      message: `${p.referrerName} forwarded GRN ${p.batchNumber} (${money}) to you for payment.`,
+      priority: 'high',
+      target_user_id: (emp as any).id,
+      target_department: (emp as any).department || 'Finance',
+      is_read: false,
+      metadata: { source: 'grn_referral', allocation_id: p.allocationId, batch_number: p.batchNumber },
+    } as any);
+  }
+
+  await supabase.functions.invoke('send-transactional-email', {
+    body: {
+      templateName: 'general-notification',
+      recipientEmail: p.assignedEmail,
+      idempotencyKey: `grn-referral-${p.allocationId}`,
+      templateData: {
+        subject: `GRN ${p.batchNumber} forwarded for payment — ${money}`,
+        title,
+        recipientName: emp?.name || p.assignedName,
+        message: lines.join('\n'),
+      },
+    },
+  });
+};
+
+
 export const useGrnReferrals = () => {
   const { user, employee } = useAuth();
   const myEmail = (employee?.email || user?.email || '').toLowerCase();
@@ -93,23 +157,47 @@ export const useGrnReferrals = () => {
       assigned_to_name?: string | null;
       notes?: string | null;
     }) => {
-      const { error } = await supabase.from('grn_payment_allocations').insert({
-        batch_number: input.batch_number,
-        lot_id: input.lot_id || null,
-        pay_code: input.pay_code || null,
-        supplier_name: input.supplier_name || null,
-        coffee_type: input.coffee_type || null,
-        quantity_kg: input.quantity_kg ?? null,
-        amount_ugx: input.amount_ugx || 0,
-        referred_by_email: myEmail,
-        referred_by_name: employee?.name || myEmail,
-        assigned_to_email: input.assigned_to_email.toLowerCase(),
-        assigned_to_name: input.assigned_to_name || null,
-        notes: input.notes || null,
-        status: 'pending',
-      } as any);
+      const assignedEmail = input.assigned_to_email.toLowerCase();
+      const { data: inserted, error } = await supabase
+        .from('grn_payment_allocations')
+        .insert({
+          batch_number: input.batch_number,
+          lot_id: input.lot_id || null,
+          pay_code: input.pay_code || null,
+          supplier_name: input.supplier_name || null,
+          coffee_type: input.coffee_type || null,
+          quantity_kg: input.quantity_kg ?? null,
+          amount_ugx: input.amount_ugx || 0,
+          referred_by_email: myEmail,
+          referred_by_name: employee?.name || myEmail,
+          assigned_to_email: assignedEmail,
+          assigned_to_name: input.assigned_to_name || null,
+          notes: input.notes || null,
+          status: 'pending',
+        } as any)
+        .select('id')
+        .maybeSingle();
       if (error) throw error;
+
+      // Notify the assignee: in-app notification + branded email
+      try {
+        await notifyReferralAssignee({
+          allocationId: (inserted as any)?.id || input.batch_number,
+          assignedEmail,
+          assignedName: input.assigned_to_name || assignedEmail.split('@')[0],
+          referrerName: employee?.name || myEmail,
+          batchNumber: input.batch_number,
+          supplierName: input.supplier_name || null,
+          coffeeType: input.coffee_type || null,
+          quantityKg: input.quantity_kg ?? null,
+          amountUgx: input.amount_ugx || 0,
+          notes: input.notes || null,
+        });
+      } catch (e) {
+        console.error('Referral notification failed', e);
+      }
     },
+
     onSuccess: () => qc.invalidateQueries({ queryKey: ['grn-referrals'] }),
   });
 
