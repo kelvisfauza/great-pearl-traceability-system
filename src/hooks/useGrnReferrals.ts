@@ -93,23 +93,47 @@ export const useGrnReferrals = () => {
       assigned_to_name?: string | null;
       notes?: string | null;
     }) => {
-      const { error } = await supabase.from('grn_payment_allocations').insert({
-        batch_number: input.batch_number,
-        lot_id: input.lot_id || null,
-        pay_code: input.pay_code || null,
-        supplier_name: input.supplier_name || null,
-        coffee_type: input.coffee_type || null,
-        quantity_kg: input.quantity_kg ?? null,
-        amount_ugx: input.amount_ugx || 0,
-        referred_by_email: myEmail,
-        referred_by_name: employee?.name || myEmail,
-        assigned_to_email: input.assigned_to_email.toLowerCase(),
-        assigned_to_name: input.assigned_to_name || null,
-        notes: input.notes || null,
-        status: 'pending',
-      } as any);
+      const assignedEmail = input.assigned_to_email.toLowerCase();
+      const { data: inserted, error } = await supabase
+        .from('grn_payment_allocations')
+        .insert({
+          batch_number: input.batch_number,
+          lot_id: input.lot_id || null,
+          pay_code: input.pay_code || null,
+          supplier_name: input.supplier_name || null,
+          coffee_type: input.coffee_type || null,
+          quantity_kg: input.quantity_kg ?? null,
+          amount_ugx: input.amount_ugx || 0,
+          referred_by_email: myEmail,
+          referred_by_name: employee?.name || myEmail,
+          assigned_to_email: assignedEmail,
+          assigned_to_name: input.assigned_to_name || null,
+          notes: input.notes || null,
+          status: 'pending',
+        } as any)
+        .select('id')
+        .maybeSingle();
       if (error) throw error;
+
+      // Notify the assignee: in-app notification + branded email
+      try {
+        await notifyReferralAssignee({
+          allocationId: (inserted as any)?.id || input.batch_number,
+          assignedEmail,
+          assignedName: input.assigned_to_name || assignedEmail.split('@')[0],
+          referrerName: employee?.name || myEmail,
+          batchNumber: input.batch_number,
+          supplierName: input.supplier_name || null,
+          coffeeType: input.coffee_type || null,
+          quantityKg: input.quantity_kg ?? null,
+          amountUgx: input.amount_ugx || 0,
+          notes: input.notes || null,
+        });
+      } catch (e) {
+        console.error('Referral notification failed', e);
+      }
     },
+
     onSuccess: () => qc.invalidateQueries({ queryKey: ['grn-referrals'] }),
   });
 
