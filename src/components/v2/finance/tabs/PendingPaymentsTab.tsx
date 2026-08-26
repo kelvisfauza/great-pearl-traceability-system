@@ -39,6 +39,7 @@ const PendingPaymentsTab = () => {
   const [scanOpen, setScanOpen] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
