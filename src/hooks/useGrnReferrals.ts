@@ -47,25 +47,14 @@ export const useFinancePayers = () =>
   useQuery({
     queryKey: ['finance-payers'],
     queryFn: async (): Promise<FinancePayer[]> => {
-      const { data, error } = await supabase
-        .from('employees')
-        .select('name, email, position, department, role, permissions, disabled')
-        .order('name');
+      const { data, error } = await (supabase as any).rpc('get_finance_payment_assignees');
       if (error) throw error;
       return (data || [])
-        .filter((e: any) => !e.disabled)
-        .filter((e: any) => {
-          const perms: string[] = e.permissions || [];
-          return (
-            perms.includes('*') ||
-            perms.includes('Finance:process') ||
-            perms.includes('Finance:approve')
-          );
-        })
+        .filter((e: any) => e?.name && e?.email)
         .map((e: any) => ({
           name: e.name,
-          email: e.email,
-          position: e.position || e.role || null,
+          email: String(e.email).toLowerCase(),
+          position: e.job_title || e.position || null,
           department: e.department || null,
         }));
     },

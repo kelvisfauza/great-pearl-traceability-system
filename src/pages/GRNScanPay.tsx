@@ -83,7 +83,7 @@ export default function GRNScanPay() {
   // Scan-only finance staff (Finance:view + Finance:create) cannot release money —
   // they submit the scanned GRN to an approver who pays and prints the receipt.
   const canPay = useCanReleasePayments();
-  const { data: payers } = useFinancePayers();
+  const { data: payers, isLoading: payersLoading, error: payersError } = useFinancePayers();
   const { referrals, createReferral, refetch: refetchReferrals } = useGrnReferrals();
   const [submitOpen, setSubmitOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -808,7 +808,7 @@ export default function GRNScanPay() {
           </DialogHeader>
           <div className="space-y-3">
             <Select value={payerEmail} onValueChange={setPayerEmail}>
-              <SelectTrigger><SelectValue placeholder="Select who should pay" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={payersLoading ? 'Loading finance approvers...' : 'Select who should pay'} /></SelectTrigger>
               <SelectContent>
                 {(payers || []).map((p) => (
                   <SelectItem key={p.email} value={p.email}>
@@ -817,6 +817,12 @@ export default function GRNScanPay() {
                 ))}
               </SelectContent>
             </Select>
+            {!payersLoading && payersError && (
+              <p className="text-xs text-destructive">Finance approvers could not be loaded. Refresh and try again.</p>
+            )}
+            {!payersLoading && !payersError && (payers || []).length === 0 && (
+              <p className="text-xs text-muted-foreground">No active finance approvers are available.</p>
+            )}
             <Textarea
               placeholder="Notes for the payer (optional)"
               value={referralNotes}
@@ -825,7 +831,7 @@ export default function GRNScanPay() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSubmitOpen(false)} disabled={submitting}>Cancel</Button>
-            <Button onClick={handleSubmitForPayment} disabled={submitting || !payerEmail}>
+            <Button onClick={handleSubmitForPayment} disabled={submitting || payersLoading || !payerEmail}>
               {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Submit
             </Button>
           </DialogFooter>
