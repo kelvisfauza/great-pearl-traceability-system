@@ -249,7 +249,26 @@ Deno.serve(async (req) => {
       ['TOTAL COLLECTED', money(totals.collected)],
     ])
 
-    table('9. Most active users today', ['#', 'User', 'Recorded actions'],
+    table('9. Wallet & system money movements', ['Item', 'Amount', 'Entries'], [
+      ['Total deposits into wallets', money(wallet.deposits), `${wallet.depositsCount}`],
+      ['— Self deposits (top-ups)', money(wallet.selfDeposits), ''],
+      ['— System awards / credits', money(wallet.systemAwards), ''],
+      ['— Salary credits', money(wallet.salary), ''],
+      ['— Loan disbursements', money(wallet.loanDisbursed), ''],
+      ['Bonuses awarded', money(wallet.bonuses), `${wallet.bonusesCount}`],
+      ['Loyalty rewards awarded', money(wallet.loyalty), `${wallet.loyaltyCount}`],
+      ['Total withdrawals', money(wallet.withdrawals), `${wallet.withdrawalsCount}`],
+      ['— Instant withdrawals (mobile money)', money(wallet.instantWithdrawals), ''],
+      ['Wallet-to-wallet transfers', money(wallet.transfers), ''],
+      ['Fees & service charges', money(wallet.fees), ''],
+      ['Overdraft draws', money(wallet.overdraftDraws), ''],
+      ['Overdraft interest charged', money(wallet.overdraftInterest), ''],
+      ['Loan recoveries', money(wallet.loanRecovery), ''],
+      ['Admin adjustments', money(wallet.adminAdjustments), ''],
+      ['NET WALLET MOVEMENT (in - out)', money(wallet.deposits + wallet.bonuses + wallet.loyalty - wallet.withdrawals - wallet.fees), ''],
+    ])
+
+    table('10. Most active users today', ['#', 'User', 'Recorded actions'],
       activeUsers.map((u, i) => [`${i + 1}`, u.name, `${u.actions}`]))
 
     const pages = doc.getNumberOfPages()
