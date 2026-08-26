@@ -10,11 +10,18 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Loader2, CheckCircle2, CreditCard, Printer, ArrowLeft, History, FlaskConical, QrCode } from 'lucide-react';
+import { Loader2, CheckCircle2, CreditCard, Printer, ArrowLeft, History, FlaskConical, QrCode, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { printGrnPaymentReceipt } from '@/utils/grnPaymentReceipt';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
 import GRNScannerDialog from '@/components/finance/GRNScannerDialog';
+import {
+  useCanReleasePayments,
+  useFinancePayers,
+  useGrnReferrals,
+  completeGrnReferral,
+} from '@/hooks/useGrnReferrals';
+
 import {
   addToQueue,
   getQueue,
@@ -72,6 +79,17 @@ export default function GRNScanPay() {
   // A batch number can legitimately carry more than one finance lot (historical
   // duplicate batch numbers). Finance must see which lot is already paid and pay the rest.
   const [selectedLotId, setSelectedLotId] = useState<string | null>(null);
+
+  // Scan-only finance staff (Finance:view + Finance:create) cannot release money —
+  // they submit the scanned GRN to an approver who pays and prints the receipt.
+  const canPay = useCanReleasePayments();
+  const { data: payers } = useFinancePayers();
+  const { referrals, createReferral, refetch: refetchReferrals } = useGrnReferrals();
+  const [submitOpen, setSubmitOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [payerEmail, setPayerEmail] = useState('');
+  const [referralNotes, setReferralNotes] = useState('');
+
 
   useEffect(() => subscribeQueue(() => setQueue(getQueue())), []);
 
@@ -396,8 +414,15 @@ export default function GRNScanPay() {
         setSelectedLotId(remaining[0].lot.id);
         toast.info(`${remaining.length} more unpaid lot(s) share batch ${batch} — pay them next`);
       }
+      // Close any referral on this GRN and reward both the scanner and the payer
+      const rewards = await completeGrnReferral(lot.batch_number || batch, lot.id);
+      if (rewards?.ok) {
+        toast.success('Referral closed — scanner and payer rewarded');
+        refetchReferrals();
+      }
       await qc.invalidateQueries({ queryKey: ['grn-scan-lot', batch] });
       qc.invalidateQueries({ queryKey: ['finance-pending-payments'] });
+      qc.invalidateQueries({ queryKey: ['grn-referrals'] });
       setTimeout(receipt, 300);
     } catch (e: any) {
       toast.error('Payment failed: ' + (e.message || 'Unknown error'));
@@ -405,6 +430,51 @@ export default function GRNScanPay() {
       setProcessing(false);
     }
   };
+
+  // Referral already raised by this user for the GRN on screen
+  const myReferral = useMemo(
+    () =>
+      referrals.find(
+        (r) =>
+          r.status === 'pending' &&
+          normalizeRef(r.batch_number) === normalizeRef(lot?.batch_number || batch),
+      ) || null,
+    [referrals, lot, batch],
+  );
+
+  const handleSubmitForPayment = async () => {
+    if (!lot || !payerEmail) return;
+    setSubmitting(true);
+    try {
+      const payer = (payers || []).find((p) => p.email === payerEmail);
+      await createReferral({
+        batch_number: lot.batch_number || batch,
+        lot_id: lot.id,
+        pay_code: payCode || null,
+        supplier_name: entry?.supplierName || null,
+        coffee_type: entryRecord?.coffee_type || null,
+        quantity_kg: lot.quantity_kg ?? null,
+        amount_ugx: Number(lot.total_amount_ugx || 0),
+        assigned_to_email: payerEmail,
+        assigned_to_name: payer?.name || null,
+        notes: referralNotes || null,
+      });
+      trackActivity('form_submission', `submitting GRN ${lot.batch_number || batch} for payment`, {
+        form_name: 'GRN Payment Referral',
+        batch: lot.batch_number || batch,
+        amount: lot.total_amount_ugx,
+      });
+      toast.success(`GRN submitted to ${payer?.name || payerEmail} for payment`);
+      setSubmitOpen(false);
+      setReferralNotes('');
+      refetchReferrals();
+    } catch (e: any) {
+      toast.error('Submit failed: ' + (e.message || 'Unknown error'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
 
   if (isLoading || resolving) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
@@ -642,11 +712,34 @@ export default function GRNScanPay() {
                     <QrCode className="h-4 w-4 mr-2" /> Scan other
                   </Button>
                 </div>
-              ) : (
+              ) : canPay ? (
                 <Button onClick={() => setPayOpen(true)} className="w-full">
                   <CreditCard className="h-4 w-4 mr-2" /> Pay this GRN
                 </Button>
+              ) : (
+                <div className="space-y-2">
+                  {myReferral ? (
+                    <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900">
+                      Submitted for payment to{' '}
+                      <span className="font-medium">{myReferral.assigned_to_name || myReferral.assigned_to_email}</span>{' '}
+                      on {dt(myReferral.created_at)}. Waiting for them to release the money.
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      You can scan and verify GRNs but not release money. Submit this GRN to a finance approver for
+                      payment and receipt printing.
+                    </p>
+                  )}
+                  <Button onClick={() => setSubmitOpen(true)} className="w-full" disabled={!!myReferral}>
+                    <Send className="h-4 w-4 mr-2" />
+                    {myReferral ? 'Already submitted' : 'Submit for payment'}
+                  </Button>
+                  <Button variant="outline" onClick={() => setScanOpen(true)} className="w-full">
+                    <QrCode className="h-4 w-4 mr-2" /> Scan another GRN
+                  </Button>
+                </div>
               )}
+
             </>
           )}
         </CardContent>
@@ -704,7 +797,43 @@ export default function GRNScanPay() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={submitOpen} onOpenChange={setSubmitOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Submit GRN for payment</DialogTitle>
+            <DialogDescription>
+              Allocate GRN-{lot?.batch_number || batch} ({money(lot?.total_amount_ugx)}) to a finance approver. They
+              release the money and print the payment receipt — you are both rewarded once it is paid.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Select value={payerEmail} onValueChange={setPayerEmail}>
+              <SelectTrigger><SelectValue placeholder="Select who should pay" /></SelectTrigger>
+              <SelectContent>
+                {(payers || []).map((p) => (
+                  <SelectItem key={p.email} value={p.email}>
+                    {p.name} {p.position ? `· ${p.position}` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Textarea
+              placeholder="Notes for the payer (optional)"
+              value={referralNotes}
+              onChange={(e) => setReferralNotes(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSubmitOpen(false)} disabled={submitting}>Cancel</Button>
+            <Button onClick={handleSubmitForPayment} disabled={submitting || !payerEmail}>
+              {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Submit
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <GRNScannerDialog open={scanOpen} onOpenChange={setScanOpen} />
+
     </div>
   );
 }
