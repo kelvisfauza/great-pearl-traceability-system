@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
     // ─────────── Gather ───────────
     const [
       purchases, sales, quality, dispatchAnalyses, eudrDispatches,
-      millingTx, millingJobs, millingCash, activity, admins,
+      millingTx, millingJobs, millingCash, activity, admins, ledger,
     ] = await Promise.all([
       supabase.from('coffee_records')
         .select('batch_number, supplier_name, coffee_type, kilograms, bags, status')
