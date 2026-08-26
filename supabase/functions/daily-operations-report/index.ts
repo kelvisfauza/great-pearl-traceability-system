@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
     // ─────────── Gather ───────────
     const [
       purchases, sales, quality, dispatchAnalyses, eudrDispatches,
-      millingTx, millingJobs, millingCash, activity, admins,
+      millingTx, millingJobs, millingCash, activity, admins, ledger,
     ] = await Promise.all([
       supabase.from('coffee_records')
         .select('batch_number, supplier_name, coffee_type, kilograms, bags, status')
@@ -91,6 +91,9 @@ Deno.serve(async (req) => {
       supabase.from('employees')
         .select('id, name, email, phone, role, auth_user_id')
         .eq('status', 'Active').eq('role', 'Administrator'),
+      supabase.from('ledger_entries')
+        .select('entry_type, source_category, amount')
+        .gte('created_at', fromIso).lte('created_at', toIso),
     ])
 
     const P = purchases.data || []
@@ -103,6 +106,37 @@ Deno.serve(async (req) => {
     const MC = millingCash.data || []
     const ACT = activity.data || []
     const ADMINS = admins.data || []
+    const LE = ledger.data || []
+
+    // ─────────── Wallet / system money movements for the day ───────────
+    const sumWhere = (fn: (r: any) => boolean) =>
+      LE.filter(fn).reduce((s, r) => s + Math.abs(num(r.amount)), 0)
+    const countWhere = (fn: (r: any) => boolean) => LE.filter(fn).length
+    const type = (r: any) => String(r.entry_type || '').toUpperCase()
+    const cat = (r: any) => String(r.source_category || '').toUpperCase()
+
+    const wallet = {
+      deposits: sumWhere((r) => type(r) === 'DEPOSIT'),
+      depositsCount: countWhere((r) => type(r) === 'DEPOSIT'),
+      selfDeposits: sumWhere((r) => type(r) === 'DEPOSIT' && cat(r) === 'SELF_DEPOSIT'),
+      systemAwards: sumWhere((r) => type(r) === 'DEPOSIT' && cat(r) === 'SYSTEM_AWARD'),
+      salary: sumWhere((r) => type(r) === 'DEPOSIT' && cat(r) === 'SALARY'),
+      loanDisbursed: sumWhere((r) => cat(r) === 'LOAN_DISBURSEMENT'),
+      bonuses: sumWhere((r) => type(r) === 'BONUS'),
+      bonusesCount: countWhere((r) => type(r) === 'BONUS'),
+      loyalty: sumWhere((r) => type(r) === 'LOYALTY_REWARD'),
+      loyaltyCount: countWhere((r) => type(r) === 'LOYALTY_REWARD'),
+      withdrawals: sumWhere((r) => type(r) === 'WITHDRAWAL' && cat(r) !== 'INTERNAL_TRANSFER'),
+      withdrawalsCount: countWhere((r) => type(r) === 'WITHDRAWAL' && cat(r) !== 'INTERNAL_TRANSFER'),
+      instantWithdrawals: sumWhere((r) => cat(r) === 'INSTANT_WITHDRAWAL'),
+      transfers: sumWhere((r) => type(r) === 'WITHDRAWAL' && cat(r) === 'INTERNAL_TRANSFER'),
+      fees: sumWhere((r) => cat(r).includes('FEE')),
+      overdraftInterest: sumWhere((r) => cat(r) === 'OVERDRAFT_INTEREST'),
+      overdraftDraws: sumWhere((r) => cat(r) === 'OVERDRAFT_DRAW'),
+      loanRecovery: sumWhere((r) => type(r) === 'LOAN_RECOVERY' || cat(r) === 'LOAN_REPAYMENT'),
+      adminAdjustments: sumWhere((r) => cat(r) === 'ADMIN_ADJUSTMENT'),
+    }
+
 
     // Most active users
     const counts = new Map<string, number>()
@@ -180,6 +214,11 @@ Deno.serve(async (req) => {
       ['Milling charged', money(totals.millingCharged)],
       ['Amount collected', money(totals.collected)],
       ['Dispatch analyses (EUDR)', `${DA.length}`],
+      ['Total system deposits', `${money(wallet.deposits)} (${wallet.depositsCount})`],
+      ['Bonuses awarded', `${money(wallet.bonuses)} (${wallet.bonusesCount})`],
+      ['Loyalty rewards awarded', `${money(wallet.loyalty)} (${wallet.loyaltyCount})`],
+      ['Total withdrawals', `${money(wallet.withdrawals)} (${wallet.withdrawalsCount})`],
+      ['Fees & charges collected', money(wallet.fees)],
       ['Active users', `${activeUsers.length}`],
     ], 42)
 
@@ -210,7 +249,26 @@ Deno.serve(async (req) => {
       ['TOTAL COLLECTED', money(totals.collected)],
     ])
 
-    table('9. Most active users today', ['#', 'User', 'Recorded actions'],
+    table('9. Wallet & system money movements', ['Item', 'Amount', 'Entries'], [
+      ['Total deposits into wallets', money(wallet.deposits), `${wallet.depositsCount}`],
+      ['— Self deposits (top-ups)', money(wallet.selfDeposits), ''],
+      ['— System awards / credits', money(wallet.systemAwards), ''],
+      ['— Salary credits', money(wallet.salary), ''],
+      ['— Loan disbursements', money(wallet.loanDisbursed), ''],
+      ['Bonuses awarded', money(wallet.bonuses), `${wallet.bonusesCount}`],
+      ['Loyalty rewards awarded', money(wallet.loyalty), `${wallet.loyaltyCount}`],
+      ['Total withdrawals', money(wallet.withdrawals), `${wallet.withdrawalsCount}`],
+      ['— Instant withdrawals (mobile money)', money(wallet.instantWithdrawals), ''],
+      ['Wallet-to-wallet transfers', money(wallet.transfers), ''],
+      ['Fees & service charges', money(wallet.fees), ''],
+      ['Overdraft draws', money(wallet.overdraftDraws), ''],
+      ['Overdraft interest charged', money(wallet.overdraftInterest), ''],
+      ['Loan recoveries', money(wallet.loanRecovery), ''],
+      ['Admin adjustments', money(wallet.adminAdjustments), ''],
+      ['NET WALLET MOVEMENT (in - out)', money(wallet.deposits + wallet.bonuses + wallet.loyalty - wallet.withdrawals - wallet.fees), ''],
+    ])
+
+    table('10. Most active users today', ['#', 'User', 'Recorded actions'],
       activeUsers.map((u, i) => [`${i + 1}`, u.name, `${u.actions}`]))
 
     const pages = doc.getNumberOfPages()
@@ -242,7 +300,7 @@ Deno.serve(async (req) => {
           <div style="font-size:14px;margin-top:10px;">Daily Operations Report — ${prettyDate}</div>
         </div>
         <div style="padding:24px;">
-          <p style="color:#334155;font-size:14px;">The automated daily operations report has been generated. The full PDF covers purchases, sales, dispatch monitoring, quality, milling, collections and user activity.</p>
+          <p style="color:#334155;font-size:14px;">The automated daily operations report has been generated. The full PDF covers purchases, sales, dispatch monitoring, quality, milling, collections, wallet money movements (deposits, bonuses, withdrawals, fees) and user activity.</p>
           <table style="width:100%;border-collapse:collapse;font-size:13px;margin:16px 0;">
             ${row('Coffee purchased', `${fmt(totals.purchasedKg)} kg (${P.length} deliveries)`)}
             ${row('Sales', `${S.length} sales — ${fmt(totals.salesKg)} kg`)}
@@ -252,6 +310,14 @@ Deno.serve(async (req) => {
             ${row('Dispatch analyses (EUDR)', `${DA.length}`)}
             ${row('Kgs hulled', `${fmt(totals.hulledKg)} kg`)}
             ${row('Amount collected', money(totals.collected))}
+            ${row('Total system deposits', `${money(wallet.deposits)} (${wallet.depositsCount} entries)`)}
+            ${row('Bonuses awarded', `${money(wallet.bonuses)} (${wallet.bonusesCount})`)}
+            ${row('Loyalty rewards awarded', `${money(wallet.loyalty)} (${wallet.loyaltyCount})`)}
+            ${row('Total withdrawals', `${money(wallet.withdrawals)} (${wallet.withdrawalsCount})`)}
+            ${row('Wallet-to-wallet transfers', money(wallet.transfers))}
+            ${row('Fees &amp; charges collected', money(wallet.fees))}
+            ${row('Overdraft draws / interest', `${money(wallet.overdraftDraws)} / ${money(wallet.overdraftInterest)}`)}
+            ${row('Loan disbursed / recovered', `${money(wallet.loanDisbursed)} / ${money(wallet.loanRecovery)}`)}
             ${row('Most active user', activeUsers[0] ? `${activeUsers[0].name} (${activeUsers[0].actions} actions)` : 'n/a')}
           </table>
           <p style="text-align:center;margin:26px 0;">
@@ -266,6 +332,7 @@ Deno.serve(async (req) => {
     const text = `Great Agro Coffee — Daily Operations Report ${prettyDate}
 Purchased: ${fmt(totals.purchasedKg)} kg | Sales: ${S.length} (${fmt(totals.salesKg)} kg, ${money(totals.salesValue)})
 Trucks: ${fmt(totals.trucks)} | Quality assessments: ${Q.length} | Hulled: ${fmt(totals.hulledKg)} kg | Collected: ${money(totals.collected)}
+Deposits: ${money(wallet.deposits)} | Bonuses: ${money(wallet.bonuses)} | Loyalty: ${money(wallet.loyalty)} | Withdrawals: ${money(wallet.withdrawals)} | Fees: ${money(wallet.fees)}
 Download the PDF: ${downloadUrl}`
 
     const recipients = testEmail
