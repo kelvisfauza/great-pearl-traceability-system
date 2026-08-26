@@ -32,16 +32,39 @@ interface FinanceLot {
   bags?: number;
 }
 
+const MAX_BULK_PRINT = 20;
+const PRINTED_KEY = "finance-grn-printed-ids";
+
+const loadPrintedIds = (): Set<string> => {
+  try {
+    const raw = localStorage.getItem(PRINTED_KEY);
+    return new Set<string>(raw ? JSON.parse(raw) : []);
+  } catch {
+    return new Set<string>();
+  }
+};
+
 const PendingPaymentsTab = () => {
   const [search, setSearch] = useState("");
   const [openingId, setOpeningId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [printedIds, setPrintedIds] = useState<Set<string>>(() => loadPrintedIds());
   const [scanOpen, setScanOpen] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [printing, setPrinting] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+
+  const markPrinted = (ids: string[]) => {
+    setPrintedIds((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => next.add(id));
+      try { localStorage.setItem(PRINTED_KEY, JSON.stringify(Array.from(next))); } catch { /* ignore */ }
+      return next;
+    });
+  };
+
 
   const { data: lots, isLoading } = useQuery({
     queryKey: ["finance-pending-payments"],
