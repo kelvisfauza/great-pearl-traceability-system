@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Loader2, Search, CreditCard, CheckCircle2, DollarSign, Coffee, Trash2, QrCode, Receipt } from "lucide-react";
+import { Loader2, Search, CreditCard, CheckCircle2, DollarSign, Coffee, Trash2, QrCode, Receipt, Printer } from "lucide-react";
+import { openBulkGRNPrintWindow, GRNData } from "@/utils/bulkGRNPrint";
 import { toast } from "sonner";
 import GRNScannerDialog from "@/components/finance/GRNScannerDialog";
 import { useNavigate } from "react-router-dom";
@@ -28,6 +29,7 @@ interface FinanceLot {
   quality_json: any;
   supplier_name?: string;
   coffee_type?: string;
+  bags?: number;
 }
 
 const PendingPaymentsTab = () => {
@@ -37,6 +39,7 @@ const PendingPaymentsTab = () => {
   const [scanOpen, setScanOpen] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -62,20 +65,21 @@ const PendingPaymentsTab = () => {
 
       // Get coffee record details for supplier/type info
       const coffeeRecordIds = [...new Set(allLots.map((l: any) => l.coffee_record_id).filter(Boolean))];
-      let supplierMap = new Map<string, { supplier_name: string; coffee_type: string; batch_number: string }>();
+      let supplierMap = new Map<string, { supplier_name: string; coffee_type: string; batch_number: string; bags: number }>();
 
       // Fetch in chunks of 500
       for (let i = 0; i < coffeeRecordIds.length; i += 500) {
         const chunk = coffeeRecordIds.slice(i, i + 500);
         const { data: records } = await supabase
           .from("coffee_records")
-          .select("id, supplier_name, coffee_type, batch_number")
+          .select("id, supplier_name, coffee_type, batch_number, bags")
           .in("id", chunk);
         records?.forEach((r: any) => {
           supplierMap.set(r.id, {
             supplier_name: r.supplier_name,
             coffee_type: r.coffee_type,
             batch_number: r.batch_number,
+            bags: Number(r.bags) || 0,
           });
         });
       }
@@ -101,11 +105,54 @@ const PendingPaymentsTab = () => {
             record?.supplier_name ||
             "Unknown Supplier",
           coffee_type: record?.coffee_type || "N/A",
+          bags: record?.bags || 0,
           batch_number: lot.batch_number || record?.batch_number || lot.coffee_record_id,
         };
       }) as FinanceLot[];
     },
   });
+
+  // Re-print a misplaced GRN with the real coffee details + secure pay QR so
+  // finance can simply scan the printout to pay.
+  const toGrnData = (lot: FinanceLot): GRNData => {
+    const q = lot.quality_json || {};
+    return {
+      grnNumber: `GRN-${lot.batch_number || lot.coffee_record_id}`,
+      batchNumber: lot.batch_number || undefined,
+      supplierName: lot.supplier_name || "Unknown Supplier",
+      supplierId: lot.supplier_id || undefined,
+      coffeeType: lot.coffee_type || "",
+      numberOfBags: lot.bags || 0,
+      totalKgs: lot.quantity_kg || 0,
+      unitPrice: lot.unit_price_ugx || 0,
+      totalAmount: lot.total_amount_ugx || 0,
+      assessedBy: lot.assessed_by || "",
+      createdAt: lot.created_at,
+      moisture: q.moisture_content ?? q.moisture,
+      group1_defects: q.group1_percentage ?? q.group1_defects,
+      group2_defects: q.group2_percentage ?? q.group2_defects,
+      below12: q.below12,
+      pods: q.pods,
+      husks: q.husks,
+      stones: q.stones,
+      outturn: q.outturn_percentage ?? q.outturn,
+      calculatorComments: q.comments,
+    };
+  };
+
+  const printGrns = async (items: FinanceLot[]) => {
+    if (!items.length) return;
+    setPrinting(true);
+    try {
+      await openBulkGRNPrintWindow(items.map(toGrnData));
+      toast.success(`${items.length} GRN document(s) prepared for printing`);
+    } catch (err: any) {
+      toast.error("Print failed: " + (err?.message || "Unknown error"));
+    } finally {
+      setPrinting(false);
+    }
+  };
+
 
   // Payment is always made against the physical GRN document: open the same
   // secure GRN pay screen used by the scanner (issues the payment receipt).
@@ -327,20 +374,33 @@ const PendingPaymentsTab = () => {
                       {new Date(lot.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleProcessPayment(lot)}
-                        disabled={openingId === lot.id}
-                        className="gap-1"
-                      >
-                        {openingId === lot.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Receipt className="h-3 w-3" />
-                        )}
-                        Process Payment
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleProcessPayment(lot)}
+                          disabled={openingId === lot.id}
+                          className="gap-1"
+                        >
+                          {openingId === lot.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Receipt className="h-3 w-3" />
+                          )}
+                          Process Payment
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => printGrns([lot])}
+                          disabled={printing}
+                          className="gap-1"
+                          title="Re-print this GRN with the coffee details and pay QR"
+                        >
+                          <Printer className="h-3 w-3" />
+                          Print GRN
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
