@@ -979,7 +979,66 @@ export default function GRNScanPay() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={bulkOpen} onOpenChange={(o) => !bulkRunning && setBulkOpen(o)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Submit queued GRNs for payment</DialogTitle>
+            <DialogDescription>
+              {pendingBulkRefs.length} GRN{pendingBulkRefs.length === 1 ? '' : 's'} in your queue will be allocated to
+              one finance approver. Already-paid or not-yet-ready GRNs are skipped automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="max-h-32 overflow-y-auto rounded-md border p-2 text-xs font-mono">
+              {pendingBulkRefs.map((r) => (
+                <div key={r}>{r}</div>
+              ))}
+            </div>
+            <Select value={payerEmail} onValueChange={setPayerEmail}>
+              <SelectTrigger>
+                <SelectValue placeholder={payersLoading ? 'Loading finance approvers...' : 'Select who should pay'} />
+              </SelectTrigger>
+              <SelectContent>
+                {(payers || []).map((p) => (
+                  <SelectItem key={p.email} value={p.email}>
+                    {p.name} {p.position ? `· ${p.position}` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Textarea
+              placeholder="Notes for the payer (optional)"
+              value={referralNotes}
+              onChange={(e) => setReferralNotes(e.target.value)}
+            />
+            {bulkResults.length > 0 && (
+              <div className="max-h-40 overflow-y-auto space-y-1 rounded-md border p-2 text-xs">
+                {bulkResults.map((r) => (
+                  <div key={r.ref} className="flex items-center justify-between gap-2">
+                    <span className="font-mono">{r.ref}</span>
+                    <span className={r.ok ? 'text-green-700' : 'text-destructive'}>{r.message}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkOpen(false)} disabled={bulkRunning}>
+              Close
+            </Button>
+            <Button
+              onClick={handleBulkSubmit}
+              disabled={bulkRunning || payersLoading || !payerEmail || pendingBulkRefs.length === 0}
+            >
+              {bulkRunning && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Submit all
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <GRNScannerDialog open={scanOpen} onOpenChange={setScanOpen} />
+
 
     </div>
   );
