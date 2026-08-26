@@ -63,20 +63,21 @@ const PendingPaymentsTab = () => {
 
       // Get coffee record details for supplier/type info
       const coffeeRecordIds = [...new Set(allLots.map((l: any) => l.coffee_record_id).filter(Boolean))];
-      let supplierMap = new Map<string, { supplier_name: string; coffee_type: string; batch_number: string }>();
+      let supplierMap = new Map<string, { supplier_name: string; coffee_type: string; batch_number: string; bags: number }>();
 
       // Fetch in chunks of 500
       for (let i = 0; i < coffeeRecordIds.length; i += 500) {
         const chunk = coffeeRecordIds.slice(i, i + 500);
         const { data: records } = await supabase
           .from("coffee_records")
-          .select("id, supplier_name, coffee_type, batch_number")
+          .select("id, supplier_name, coffee_type, batch_number, bags")
           .in("id", chunk);
         records?.forEach((r: any) => {
           supplierMap.set(r.id, {
             supplier_name: r.supplier_name,
             coffee_type: r.coffee_type,
             batch_number: r.batch_number,
+            bags: Number(r.bags) || 0,
           });
         });
       }
