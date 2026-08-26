@@ -10,11 +10,18 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Loader2, CheckCircle2, CreditCard, Printer, ArrowLeft, History, FlaskConical, QrCode } from 'lucide-react';
+import { Loader2, CheckCircle2, CreditCard, Printer, ArrowLeft, History, FlaskConical, QrCode, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { printGrnPaymentReceipt } from '@/utils/grnPaymentReceipt';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
 import GRNScannerDialog from '@/components/finance/GRNScannerDialog';
+import {
+  useCanReleasePayments,
+  useFinancePayers,
+  useGrnReferrals,
+  completeGrnReferral,
+} from '@/hooks/useGrnReferrals';
+
 import {
   addToQueue,
   getQueue,
