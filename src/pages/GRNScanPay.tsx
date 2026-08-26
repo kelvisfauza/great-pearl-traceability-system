@@ -80,6 +80,17 @@ export default function GRNScanPay() {
   // duplicate batch numbers). Finance must see which lot is already paid and pay the rest.
   const [selectedLotId, setSelectedLotId] = useState<string | null>(null);
 
+  // Scan-only finance staff (Finance:view + Finance:create) cannot release money —
+  // they submit the scanned GRN to an approver who pays and prints the receipt.
+  const canPay = useCanReleasePayments();
+  const { data: payers } = useFinancePayers();
+  const { referrals, createReferral, refetch: refetchReferrals } = useGrnReferrals();
+  const [submitOpen, setSubmitOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [payerEmail, setPayerEmail] = useState('');
+  const [referralNotes, setReferralNotes] = useState('');
+
+
   useEffect(() => subscribeQueue(() => setQueue(getQueue())), []);
 
   // Keep the current GRN in the queue so the list always reflects what Finance is working through
