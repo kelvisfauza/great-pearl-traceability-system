@@ -106,6 +106,37 @@ Deno.serve(async (req) => {
     const MC = millingCash.data || []
     const ACT = activity.data || []
     const ADMINS = admins.data || []
+    const LE = ledger.data || []
+
+    // ─────────── Wallet / system money movements for the day ───────────
+    const sumWhere = (fn: (r: any) => boolean) =>
+      LE.filter(fn).reduce((s, r) => s + Math.abs(num(r.amount)), 0)
+    const countWhere = (fn: (r: any) => boolean) => LE.filter(fn).length
+    const type = (r: any) => String(r.entry_type || '').toUpperCase()
+    const cat = (r: any) => String(r.source_category || '').toUpperCase()
+
+    const wallet = {
+      deposits: sumWhere((r) => type(r) === 'DEPOSIT'),
+      depositsCount: countWhere((r) => type(r) === 'DEPOSIT'),
+      selfDeposits: sumWhere((r) => type(r) === 'DEPOSIT' && cat(r) === 'SELF_DEPOSIT'),
+      systemAwards: sumWhere((r) => type(r) === 'DEPOSIT' && cat(r) === 'SYSTEM_AWARD'),
+      salary: sumWhere((r) => type(r) === 'DEPOSIT' && cat(r) === 'SALARY'),
+      loanDisbursed: sumWhere((r) => cat(r) === 'LOAN_DISBURSEMENT'),
+      bonuses: sumWhere((r) => type(r) === 'BONUS'),
+      bonusesCount: countWhere((r) => type(r) === 'BONUS'),
+      loyalty: sumWhere((r) => type(r) === 'LOYALTY_REWARD'),
+      loyaltyCount: countWhere((r) => type(r) === 'LOYALTY_REWARD'),
+      withdrawals: sumWhere((r) => type(r) === 'WITHDRAWAL' && cat(r) !== 'INTERNAL_TRANSFER'),
+      withdrawalsCount: countWhere((r) => type(r) === 'WITHDRAWAL' && cat(r) !== 'INTERNAL_TRANSFER'),
+      instantWithdrawals: sumWhere((r) => cat(r) === 'INSTANT_WITHDRAWAL'),
+      transfers: sumWhere((r) => type(r) === 'WITHDRAWAL' && cat(r) === 'INTERNAL_TRANSFER'),
+      fees: sumWhere((r) => cat(r).includes('FEE')),
+      overdraftInterest: sumWhere((r) => cat(r) === 'OVERDRAFT_INTEREST'),
+      overdraftDraws: sumWhere((r) => cat(r) === 'OVERDRAFT_DRAW'),
+      loanRecovery: sumWhere((r) => type(r) === 'LOAN_RECOVERY' || cat(r) === 'LOAN_REPAYMENT'),
+      adminAdjustments: sumWhere((r) => cat(r) === 'ADMIN_ADJUSTMENT'),
+    }
+
 
     // Most active users
     const counts = new Map<string, number>()
