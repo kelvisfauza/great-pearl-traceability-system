@@ -16,7 +16,7 @@ const corsHeaders = {
 
 const SITE_NAME = 'Great Agro Coffee'
 const SENDER_DOMAIN = 'notify.greatpearlcoffeesystem.site'
-const FROM_DOMAIN = 'greatpearlcoffeesystem.site'
+const FROM_DOMAIN = 'notify.greatpearlcoffeesystem.site'
 const BUCKET = 'daily-reports'
 const TZ_OFFSET = '+03:00' // Africa/Kampala
 
@@ -281,7 +281,8 @@ Download the PDF: ${downloadUrl}`
           from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
           sender_domain: SENDER_DOMAIN,
           subject: `Daily Operations Report — ${prettyDate}`,
-          html, text, purpose: 'transactional', label: 'daily-operations-report',
+          html, text, reply_to: 'operations@greatpearlcoffee.com',
+          purpose: 'transactional', label: 'daily-operations-report',
           idempotency_key: idem, unsubscribe_token: token(),
         }, { apiKey: lovableApiKey, idempotencyKey: idem })
         emailResults.push({ email: r.email, status: 'sent' })
