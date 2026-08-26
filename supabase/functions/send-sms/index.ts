@@ -180,6 +180,8 @@ const NON_PREMIUM_SMS_TYPES = new Set([
   '2fa',
   'withdrawal_otp',
   'email_verification',
+  // Loan repayment reminders must go through YoolaSMS (not BulkSMS Premium)
+  'loan_reminder',
 ]);
 
 // Normalizes "tx:overtime-reward" / "source:tx:salary-credited" → "overtime_reward"
