@@ -348,26 +348,25 @@ const PendingPaymentsTab = () => {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
+          <div className="w-full overflow-x-auto">
+            <Table className="w-full text-xs [&_th]:px-2 [&_td]:px-2 [&_th]:py-2 [&_td]:py-2">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-10">
+                  <TableHead className="w-8">
                     <Checkbox
                       checked={selectedIds.size > 0}
                       onCheckedChange={toggleSelectAll}
                       title={`Select up to ${MAX_BULK_PRINT} unprinted GRNs`}
                     />
                   </TableHead>
-                  <TableHead>Batch / Record</TableHead>
-                  <TableHead>Supplier</TableHead>
-                  <TableHead>Coffee Type</TableHead>
-                  <TableHead className="text-right">Qty (kg)</TableHead>
-                  <TableHead className="text-right">Price/kg</TableHead>
-                  <TableHead className="text-right">Total (UGX)</TableHead>
-                  <TableHead>Quality</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Action</TableHead>
+                  <TableHead className="text-xs">Batch / Date</TableHead>
+                  <TableHead className="text-xs">Supplier</TableHead>
+                  <TableHead className="text-xs">Type</TableHead>
+                  <TableHead className="text-right text-xs">Kg</TableHead>
+                  <TableHead className="text-right text-xs">Price</TableHead>
+                  <TableHead className="text-right text-xs">Total</TableHead>
+                  <TableHead className="text-xs">Quality</TableHead>
+                  <TableHead className="text-right text-xs">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -382,25 +381,30 @@ const PendingPaymentsTab = () => {
                       />
                     </TableCell>
 
-                    <TableCell className="font-mono text-xs">
-                      {lot.batch_number || lot.coffee_record_id}
+                    <TableCell className="font-mono text-[11px] leading-tight">
+                      <span className="block">{lot.batch_number || lot.coffee_record_id}</span>
+                      <span className="block text-muted-foreground font-sans">
+                        {new Date(lot.created_at).toLocaleDateString()}
+                      </span>
                     </TableCell>
-                    <TableCell className="font-medium">{lot.supplier_name}</TableCell>
+                    <TableCell className="font-medium max-w-[120px] truncate" title={lot.supplier_name}>
+                      {lot.supplier_name}
+                    </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{lot.coffee_type}</Badge>
+                      <Badge variant="outline" className="text-[10px] px-1.5">{lot.coffee_type}</Badge>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right whitespace-nowrap">
                       {(lot.quantity_kg || 0).toLocaleString()}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right whitespace-nowrap">
                       {(lot.unit_price_ugx || 0).toLocaleString()}
                     </TableCell>
-                    <TableCell className="text-right font-semibold">
+                    <TableCell className="text-right font-semibold whitespace-nowrap">
                       {(lot.total_amount_ugx || 0).toLocaleString()}
                     </TableCell>
-                    <TableCell className="text-xs">
+                    <TableCell className="text-[11px] leading-tight">
                       {lot.quality_json ? (
-                        <div className="space-y-0.5">
+                        <div className="max-w-[110px]">
                           {lot.quality_json.moisture_content != null && (
                             <span className="block">M: {lot.quality_json.moisture_content}%</span>
                           )}
@@ -413,7 +417,7 @@ const PendingPaymentsTab = () => {
                             </span>
                           )}
                           {lot.quality_json.comments && (
-                            <span className="block text-muted-foreground truncate max-w-[120px]" title={lot.quality_json.comments}>
+                            <span className="block text-muted-foreground truncate" title={lot.quality_json.comments}>
                               {lot.quality_json.comments}
                             </span>
                           )}
@@ -422,53 +426,50 @@ const PendingPaymentsTab = () => {
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {new Date(lot.created_at).toLocaleDateString()}
-                    </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center justify-end gap-1">
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => handleProcessPayment(lot)}
                           disabled={openingId === lot.id}
-                          className="gap-1"
+                          className="h-7 gap-1 px-2 text-[11px]"
+                          title="Process payment"
                         >
                           {openingId === lot.id ? (
                             <Loader2 className="h-3 w-3 animate-spin" />
                           ) : (
                             <Receipt className="h-3 w-3" />
                           )}
-                          Process Payment
+                          Pay
                         </Button>
                         <Button
                           size="sm"
                           variant={printedIds.has(lot.id) ? "outline" : "secondary"}
                           onClick={() => printGrns([lot])}
                           disabled={printing}
-                          className="gap-1"
-                          title="Print this GRN with the coffee details and pay QR"
+                          className="h-7 gap-1 px-2 text-[11px]"
+                          title={printedIds.has(lot.id) ? "Already printed — reprint this GRN" : "Print this GRN with the coffee details and pay QR"}
                         >
-                          <Printer className="h-3 w-3" />
-                          {printedIds.has(lot.id) ? "Reprint" : "Print GRN"}
+                          {printedIds.has(lot.id) ? (
+                            <CheckCircle2 className="h-3 w-3" />
+                          ) : (
+                            <Printer className="h-3 w-3" />
+                          )}
+                          {printedIds.has(lot.id) ? "Reprint" : "Print"}
                         </Button>
-                        {printedIds.has(lot.id) && (
-                          <Badge variant="secondary" className="gap-1 text-[10px]">
-                            <CheckCircle2 className="h-3 w-3" /> Printed
-                          </Badge>
-                        )}
-
                       </div>
                     </TableCell>
                   </TableRow>
                 ))}
                 {filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                       {search ? "No matching lots found" : "All lots have been paid ✓"}
                     </TableCell>
                   </TableRow>
                 )}
+
               </TableBody>
             </Table>
           </div>
