@@ -354,8 +354,9 @@ const PendingPaymentsTab = () => {
                 <TableRow>
                   <TableHead className="w-10">
                     <Checkbox
-                      checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                      checked={selectedIds.size > 0}
                       onCheckedChange={toggleSelectAll}
+                      title={`Select up to ${MAX_BULK_PRINT} unprinted GRNs`}
                     />
                   </TableHead>
                   <TableHead>Batch / Record</TableHead>
@@ -375,9 +376,12 @@ const PendingPaymentsTab = () => {
                     <TableCell>
                       <Checkbox
                         checked={selectedIds.has(lot.id)}
+                        disabled={printedIds.has(lot.id)}
                         onCheckedChange={() => toggleSelect(lot.id)}
+                        title={printedIds.has(lot.id) ? "Already printed — use Reprint" : undefined}
                       />
                     </TableCell>
+
                     <TableCell className="font-mono text-xs">
                       {lot.batch_number || lot.coffee_record_id}
                     </TableCell>
