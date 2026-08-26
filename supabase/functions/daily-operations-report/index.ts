@@ -154,7 +154,9 @@ Deno.serve(async (req) => {
     doc.text(`Generated ${new Date().toLocaleString('en-GB', { timeZone: 'Africa/Kampala' })} (EAT)`, W - 14, 35, { align: 'right' })
 
     const table = (title: string, head: string[], rows: any[][], startY?: number) => {
-      const y = startY ?? (doc as any).lastAutoTable?.finalY + 10 ?? 42
+      let y = startY ?? (doc as any).lastAutoTable?.finalY + 10 ?? 42
+      // keep the section heading with at least its header row
+      if (y > doc.internal.pageSize.getHeight() - 45) { doc.addPage(); y = 20 }
       doc.setFontSize(10); doc.setFont('helvetica', 'bold')
       doc.text(title, 14, y)
       autoTable(doc, {
