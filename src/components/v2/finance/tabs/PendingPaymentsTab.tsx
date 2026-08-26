@@ -308,7 +308,7 @@ const PendingPaymentsTab = () => {
               <CreditCard className="h-5 w-5" />
               Ready for Payment ({filtered.length})
             </CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button size="sm" variant="outline" className="gap-1" onClick={() => setScanOpen(true)}>
                 <QrCode className="h-3.5 w-3.5" /> Scan GRN
               </Button>
