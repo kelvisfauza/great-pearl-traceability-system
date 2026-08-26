@@ -103,11 +103,54 @@ const PendingPaymentsTab = () => {
             record?.supplier_name ||
             "Unknown Supplier",
           coffee_type: record?.coffee_type || "N/A",
+          bags: record?.bags || 0,
           batch_number: lot.batch_number || record?.batch_number || lot.coffee_record_id,
         };
       }) as FinanceLot[];
     },
   });
+
+  // Re-print a misplaced GRN with the real coffee details + secure pay QR so
+  // finance can simply scan the printout to pay.
+  const toGrnData = (lot: FinanceLot): GRNData => {
+    const q = lot.quality_json || {};
+    return {
+      grnNumber: `GRN-${lot.batch_number || lot.coffee_record_id}`,
+      batchNumber: lot.batch_number || undefined,
+      supplierName: lot.supplier_name || "Unknown Supplier",
+      supplierId: lot.supplier_id || undefined,
+      coffeeType: lot.coffee_type || "",
+      numberOfBags: lot.bags || 0,
+      totalKgs: lot.quantity_kg || 0,
+      unitPrice: lot.unit_price_ugx || 0,
+      totalAmount: lot.total_amount_ugx || 0,
+      assessedBy: lot.assessed_by || "",
+      createdAt: lot.created_at,
+      moisture: q.moisture_content ?? q.moisture,
+      group1_defects: q.group1_percentage ?? q.group1_defects,
+      group2_defects: q.group2_percentage ?? q.group2_defects,
+      below12: q.below12,
+      pods: q.pods,
+      husks: q.husks,
+      stones: q.stones,
+      outturn: q.outturn_percentage ?? q.outturn,
+      calculatorComments: q.comments,
+    };
+  };
+
+  const printGrns = async (items: FinanceLot[]) => {
+    if (!items.length) return;
+    setPrinting(true);
+    try {
+      await openBulkGRNPrintWindow(items.map(toGrnData));
+      toast.success(`${items.length} GRN document(s) prepared for printing`);
+    } catch (err: any) {
+      toast.error("Print failed: " + (err?.message || "Unknown error"));
+    } finally {
+      setPrinting(false);
+    }
+  };
+
 
   // Payment is always made against the physical GRN document: open the same
   // secure GRN pay screen used by the scanner (issues the payment receipt).
