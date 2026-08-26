@@ -645,6 +645,7 @@ export default function GRNScanPay() {
             <div className="flex flex-wrap gap-1.5">
               {queue.map((q) => {
                 const current = q.ref.toUpperCase() === rawRef.toUpperCase();
+                const sent = alreadySubmitted(q.ref);
                 return (
                   <div
                     key={q.ref}
@@ -660,6 +661,9 @@ export default function GRNScanPay() {
                         <CheckCircle2 className="h-3 w-3" /> PAID
                       </span>
                     )}
+                    {!q.paid && sent && (
+                      <span className="text-[10px] font-semibold text-blue-700">SUBMITTED</span>
+                    )}
                     <button
                       className="text-muted-foreground hover:text-destructive"
                       onClick={() => removeFromQueue(q.ref)}
@@ -671,9 +675,32 @@ export default function GRNScanPay() {
                 );
               })}
             </div>
+
+            {!canPay && (
+              <div className="mt-3 space-y-2 border-t pt-3">
+                <p className="text-xs text-muted-foreground">
+                  Scan as many GRNs as you need, then send the whole queue to one finance approver in a single step.
+                </p>
+                <Button
+                  size="sm"
+                  className="w-full"
+                  disabled={pendingBulkRefs.length === 0}
+                  onClick={() => {
+                    setBulkResults([]);
+                    setBulkOpen(true);
+                  }}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  {pendingBulkRefs.length === 0
+                    ? 'All queued GRNs submitted'
+                    : `Submit ${pendingBulkRefs.length} queued GRN${pendingBulkRefs.length > 1 ? 's' : ''} for payment`}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
+
 
       {entries.length > 1 && (
         <Card className="border-amber-300">
