@@ -91,6 +91,9 @@ Deno.serve(async (req) => {
       supabase.from('employees')
         .select('id, name, email, phone, role, auth_user_id')
         .eq('status', 'Active').eq('role', 'Administrator'),
+      supabase.from('ledger_entries')
+        .select('entry_type, source_category, amount')
+        .gte('created_at', fromIso).lte('created_at', toIso),
     ])
 
     const P = purchases.data || []
