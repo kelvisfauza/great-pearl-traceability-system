@@ -32,16 +32,39 @@ interface FinanceLot {
   bags?: number;
 }
 
+const MAX_BULK_PRINT = 20;
+const PRINTED_KEY = "finance-grn-printed-ids";
+
+const loadPrintedIds = (): Set<string> => {
+  try {
+    const raw = localStorage.getItem(PRINTED_KEY);
+    return new Set<string>(raw ? JSON.parse(raw) : []);
+  } catch {
+    return new Set<string>();
+  }
+};
+
 const PendingPaymentsTab = () => {
   const [search, setSearch] = useState("");
   const [openingId, setOpeningId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [printedIds, setPrintedIds] = useState<Set<string>>(() => loadPrintedIds());
   const [scanOpen, setScanOpen] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [printing, setPrinting] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+
+  const markPrinted = (ids: string[]) => {
+    setPrintedIds((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => next.add(id));
+      try { localStorage.setItem(PRINTED_KEY, JSON.stringify(Array.from(next))); } catch { /* ignore */ }
+      return next;
+    });
+  };
+
 
   const { data: lots, isLoading } = useQuery({
     queryKey: ["finance-pending-payments"],
@@ -142,16 +165,20 @@ const PendingPaymentsTab = () => {
 
   const printGrns = async (items: FinanceLot[]) => {
     if (!items.length) return;
+    const batch = items.slice(0, MAX_BULK_PRINT);
     setPrinting(true);
     try {
-      await openBulkGRNPrintWindow(items.map(toGrnData));
-      toast.success(`${items.length} GRN document(s) prepared for printing`);
+      await openBulkGRNPrintWindow(batch.map(toGrnData));
+      markPrinted(batch.map((l) => l.id));
+      setSelectedIds(new Set());
+      toast.success(`${batch.length} GRN document(s) prepared for printing`);
     } catch (err: any) {
       toast.error("Print failed: " + (err?.message || "Unknown error"));
     } finally {
       setPrinting(false);
     }
   };
+
 
 
   // Payment is always made against the physical GRN document: open the same
@@ -198,18 +225,27 @@ const PendingPaymentsTab = () => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
-      else next.add(id);
+      else if (next.size >= MAX_BULK_PRINT) {
+        toast.warning(`You can select up to ${MAX_BULK_PRINT} GRNs at a time`);
+        return prev;
+      } else next.add(id);
       return next;
     });
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === filtered.length) {
+    const selectable = filtered.filter((l) => !printedIds.has(l.id)).slice(0, MAX_BULK_PRINT);
+    if (selectedIds.size > 0) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filtered.map((l) => l.id)));
+      if (!selectable.length) {
+        toast.info("All visible GRNs have already been printed");
+        return;
+      }
+      setSelectedIds(new Set(selectable.map((l) => l.id)));
     }
   };
+
 
   if (isLoading) {
     return (
@@ -318,8 +354,9 @@ const PendingPaymentsTab = () => {
                 <TableRow>
                   <TableHead className="w-10">
                     <Checkbox
-                      checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                      checked={selectedIds.size > 0}
                       onCheckedChange={toggleSelectAll}
+                      title={`Select up to ${MAX_BULK_PRINT} unprinted GRNs`}
                     />
                   </TableHead>
                   <TableHead>Batch / Record</TableHead>
@@ -339,9 +376,12 @@ const PendingPaymentsTab = () => {
                     <TableCell>
                       <Checkbox
                         checked={selectedIds.has(lot.id)}
+                        disabled={printedIds.has(lot.id)}
                         onCheckedChange={() => toggleSelect(lot.id)}
+                        title={printedIds.has(lot.id) ? "Already printed — use Reprint" : undefined}
                       />
                     </TableCell>
+
                     <TableCell className="font-mono text-xs">
                       {lot.batch_number || lot.coffee_record_id}
                     </TableCell>
@@ -403,15 +443,21 @@ const PendingPaymentsTab = () => {
                         </Button>
                         <Button
                           size="sm"
-                          variant="secondary"
+                          variant={printedIds.has(lot.id) ? "outline" : "secondary"}
                           onClick={() => printGrns([lot])}
                           disabled={printing}
                           className="gap-1"
-                          title="Re-print this GRN with the coffee details and pay QR"
+                          title="Print this GRN with the coffee details and pay QR"
                         >
                           <Printer className="h-3 w-3" />
-                          Print GRN
+                          {printedIds.has(lot.id) ? "Reprint" : "Print GRN"}
                         </Button>
+                        {printedIds.has(lot.id) && (
+                          <Badge variant="secondary" className="gap-1 text-[10px]">
+                            <CheckCircle2 className="h-3 w-3" /> Printed
+                          </Badge>
+                        )}
+
                       </div>
                     </TableCell>
                   </TableRow>
