@@ -414,8 +414,15 @@ export default function GRNScanPay() {
         setSelectedLotId(remaining[0].lot.id);
         toast.info(`${remaining.length} more unpaid lot(s) share batch ${batch} — pay them next`);
       }
+      // Close any referral on this GRN and reward both the scanner and the payer
+      const rewards = await completeGrnReferral(lot.batch_number || batch, lot.id);
+      if (rewards?.ok) {
+        toast.success('Referral closed — scanner and payer rewarded');
+        refetchReferrals();
+      }
       await qc.invalidateQueries({ queryKey: ['grn-scan-lot', batch] });
       qc.invalidateQueries({ queryKey: ['finance-pending-payments'] });
+      qc.invalidateQueries({ queryKey: ['grn-referrals'] });
       setTimeout(receipt, 300);
     } catch (e: any) {
       toast.error('Payment failed: ' + (e.message || 'Unknown error'));
@@ -423,6 +430,51 @@ export default function GRNScanPay() {
       setProcessing(false);
     }
   };
+
+  // Referral already raised by this user for the GRN on screen
+  const myReferral = useMemo(
+    () =>
+      referrals.find(
+        (r) =>
+          r.status === 'pending' &&
+          normalizeRef(r.batch_number) === normalizeRef(lot?.batch_number || batch),
+      ) || null,
+    [referrals, lot, batch],
+  );
+
+  const handleSubmitForPayment = async () => {
+    if (!lot || !payerEmail) return;
+    setSubmitting(true);
+    try {
+      const payer = (payers || []).find((p) => p.email === payerEmail);
+      await createReferral({
+        batch_number: lot.batch_number || batch,
+        lot_id: lot.id,
+        pay_code: payCode || null,
+        supplier_name: entry?.supplierName || null,
+        coffee_type: entryRecord?.coffee_type || null,
+        quantity_kg: lot.quantity_kg ?? null,
+        amount_ugx: Number(lot.total_amount_ugx || 0),
+        assigned_to_email: payerEmail,
+        assigned_to_name: payer?.name || null,
+        notes: referralNotes || null,
+      });
+      trackActivity('form_submission', `submitting GRN ${lot.batch_number || batch} for payment`, {
+        form_name: 'GRN Payment Referral',
+        batch: lot.batch_number || batch,
+        amount: lot.total_amount_ugx,
+      });
+      toast.success(`GRN submitted to ${payer?.name || payerEmail} for payment`);
+      setSubmitOpen(false);
+      setReferralNotes('');
+      refetchReferrals();
+    } catch (e: any) {
+      toast.error('Submit failed: ' + (e.message || 'Unknown error'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
 
   if (isLoading || resolving) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
