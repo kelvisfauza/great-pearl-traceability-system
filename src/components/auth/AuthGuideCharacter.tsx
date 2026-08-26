@@ -197,7 +197,8 @@ export const AuthGuideCharacter = ({ stage, className }: Props) => {
           <ambientLight intensity={0.7} />
           <directionalLight position={[2.5, 4, 3]} intensity={1.6} castShadow shadow-mapSize={[1024, 1024]} />
           <directionalLight position={[-3, 2, -2]} intensity={0.5} color="#c9a84c" />
-          <Environment preset="city" />
+          <hemisphereLight args={['#f5e7c4', '#3a2c18', 0.55]} />
+          <pointLight position={[0, 2.5, 2]} intensity={0.6} color="#fff6e0" />
           <group scale={0.72} position={[0, 0.05, 0]}><Character stage={stage} /></group>
           <ContactShadows position={[0, 0.02, 0]} opacity={0.4} scale={6} blur={2.4} far={2} />
         </Suspense>
