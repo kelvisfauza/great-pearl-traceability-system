@@ -28,6 +28,7 @@ interface FinanceLot {
   quality_json: any;
   supplier_name?: string;
   coffee_type?: string;
+  bags?: number;
 }
 
 const PendingPaymentsTab = () => {
