@@ -124,7 +124,7 @@ async function sendBulkSmsPremium(phone: string, message: string, supabase: any,
 
 // Message types that should be routed via BulkSMS Premium first (high-priority)
 const PREMIUM_SMS_TYPES = new Set([
-  'loan_reminder',
+  // NOTE: 'loan_reminder' is intentionally excluded — reminders go via YoolaSMS.
   'loan_guarantor_request',
   'loan_repayment',
   'loan_recovery',
@@ -180,6 +180,8 @@ const NON_PREMIUM_SMS_TYPES = new Set([
   '2fa',
   'withdrawal_otp',
   'email_verification',
+  // Loan repayment reminders must go through YoolaSMS (not BulkSMS Premium)
+  'loan_reminder',
 ]);
 
 // Normalizes "tx:overtime-reward" / "source:tx:salary-credited" → "overtime_reward"
