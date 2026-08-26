@@ -886,20 +886,20 @@ export function getGRNPreviewHTML(data: GRNDocumentData, options?: { includeFina
 
 /**
  * Auto-shrinks each GRN / Payment Order block so that it always fits on a single
- * A4 page (297mm tall minus the 10mm top/bottom @page margins).
+ * A4 page (297mm tall minus the 7mm top/bottom @page margins).
  */
 export function getGRNFitScript(): string {
   return `
     function gacFitGrnPages() {
       var MM = 96 / 25.4;                 // px per mm at CSS 96dpi
-      var LIMIT = 275 * MM;               // usable A4 height (297mm - 2*10mm margin - safety)
+      var LIMIT = 282 * MM;               // usable A4 height (297mm - 2*7mm margin - safety)
       var pages = document.querySelectorAll('.gac-grn-page');
       for (var i = 0; i < pages.length; i++) {
         var el = pages[i];
         el.style.zoom = '';
         // Measure with the exact geometry used when printing (A4 content box,
         // no preview padding) so the shrink factor is accurate on paper.
-        el.style.width = (186 * MM) + 'px';
+        el.style.width = (194 * MM) + 'px';
         el.style.maxWidth = 'none';
         el.style.padding = '0';
         var scale = 1;
