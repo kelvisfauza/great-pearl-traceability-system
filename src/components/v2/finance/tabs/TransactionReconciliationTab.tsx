@@ -57,11 +57,39 @@ const TransactionReconciliationTab = () => {
     <div className="space-y-4 mt-4">
       <h3 className="text-lg font-semibold flex items-center gap-2"><GitCompare className="h-5 w-5" />Quality → Payment Reconciliation</h3>
 
-      <div className="grid grid-cols-3 gap-4">
-        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Total Approved</p><p className="text-2xl font-bold">{qualityApproved?.length || 0}</p></CardContent></Card>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Total Approved</p><p className="text-2xl font-bold">{byBatch.size}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Paid</p><p className="text-2xl font-bold text-green-600">{paid.length}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Unpaid</p><p className="text-2xl font-bold text-orange-600">{unpaid.length}</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Duplicate Batches</p><p className="text-2xl font-bold text-amber-600">{duplicateBatches.length}</p></CardContent></Card>
       </div>
+
+      {duplicateBatches.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle>Duplicate Batches (same batch assessed more than once)</CardTitle></CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader><TableRow>
+                <TableHead>Batch</TableHead><TableHead>Assessments</TableHead><TableHead>Paid Records</TableHead><TableHead>Risk</TableHead>
+              </TableRow></TableHeader>
+              <TableBody>
+                {duplicateBatches.map((d) => (
+                  <TableRow key={d.batch}>
+                    <TableCell className="font-mono">{d.batch}</TableCell>
+                    <TableCell>{d.count}</TableCell>
+                    <TableCell>{d.paidCount}</TableCell>
+                    <TableCell>
+                      {d.paidCount > 1
+                        ? <Badge variant="destructive">Possible double payment</Badge>
+                        : <Badge variant="outline">Review duplicate entry</Badge>}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader><CardTitle>Unpaid Quality-Approved Batches</CardTitle></CardHeader>
