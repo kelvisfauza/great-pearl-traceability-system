@@ -214,6 +214,11 @@ Deno.serve(async (req) => {
       ['Milling charged', money(totals.millingCharged)],
       ['Amount collected', money(totals.collected)],
       ['Dispatch analyses (EUDR)', `${DA.length}`],
+      ['Total system deposits', `${money(wallet.deposits)} (${wallet.depositsCount})`],
+      ['Bonuses awarded', `${money(wallet.bonuses)} (${wallet.bonusesCount})`],
+      ['Loyalty rewards awarded', `${money(wallet.loyalty)} (${wallet.loyaltyCount})`],
+      ['Total withdrawals', `${money(wallet.withdrawals)} (${wallet.withdrawalsCount})`],
+      ['Fees & charges collected', money(wallet.fees)],
       ['Active users', `${activeUsers.length}`],
     ], 42)
 
