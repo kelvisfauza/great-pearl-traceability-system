@@ -310,6 +310,14 @@ Deno.serve(async (req) => {
             ${row('Dispatch analyses (EUDR)', `${DA.length}`)}
             ${row('Kgs hulled', `${fmt(totals.hulledKg)} kg`)}
             ${row('Amount collected', money(totals.collected))}
+            ${row('Total system deposits', `${money(wallet.deposits)} (${wallet.depositsCount} entries)`)}
+            ${row('Bonuses awarded', `${money(wallet.bonuses)} (${wallet.bonusesCount})`)}
+            ${row('Loyalty rewards awarded', `${money(wallet.loyalty)} (${wallet.loyaltyCount})`)}
+            ${row('Total withdrawals', `${money(wallet.withdrawals)} (${wallet.withdrawalsCount})`)}
+            ${row('Wallet-to-wallet transfers', money(wallet.transfers))}
+            ${row('Fees &amp; charges collected', money(wallet.fees))}
+            ${row('Overdraft draws / interest', `${money(wallet.overdraftDraws)} / ${money(wallet.overdraftInterest)}`)}
+            ${row('Loan disbursed / recovered', `${money(wallet.loanDisbursed)} / ${money(wallet.loanRecovery)}`)}
             ${row('Most active user', activeUsers[0] ? `${activeUsers[0].name} (${activeUsers[0].actions} actions)` : 'n/a')}
           </table>
           <p style="text-align:center;margin:26px 0;">
