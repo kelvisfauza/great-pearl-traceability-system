@@ -1,6 +1,6 @@
 import React, { Suspense, useMemo, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { ContactShadows, Environment } from '@react-three/drei';
+import { ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 
 export type GuideStage = 'idle' | 'email' | 'password' | 'submitting' | 'success' | 'error';
