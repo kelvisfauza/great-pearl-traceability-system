@@ -69,10 +69,11 @@ Deno.serve(async (req) => {
       Math.floor((Date.now() - new Date(inv.start_date).getTime()) / (24 * 60 * 60 * 1000))
     );
     const reducedInterest = principal * 0.25 * (Math.min(daysElapsed, totalDays) / totalDays);
-    // Early exit penalty: 5% of principal (waived if the term is already complete)
+    // Early exit penalty: 5% of the interest earned so far (principal stays intact; waived if term complete)
     const PENALTY_RATE = 0.05;
-    const penalty = daysElapsed >= totalDays ? 0 : Math.round(principal * PENALTY_RATE);
-    const payout = Math.max(0, principal + reducedInterest - penalty);
+    const penalty = daysElapsed >= totalDays ? 0 : Math.round(reducedInterest * PENALTY_RATE);
+    const netInterest = Math.max(0, reducedInterest - penalty);
+    const payout = Math.max(0, principal + netInterest);
     const refundRef = `INVEST-EARLY-${String(inv.id).slice(0, 8)}`;
 
     // Unified id for ledger
@@ -97,7 +98,7 @@ Deno.serve(async (req) => {
         reference: refundRef,
         source_category: "SYSTEM_AWARD",
         metadata: {
-          description: `Early investment withdrawal (pro-rated 25%, 5% early-exit penalty) - ${refundRef}`,
+          description: `Early investment withdrawal (pro-rated 25% interest, 5% penalty deducted from interest) - ${refundRef}`,
           type: "investment_early_withdrawal",
           investment_id: inv.id,
           principal,

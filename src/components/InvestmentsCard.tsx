@@ -68,7 +68,7 @@ export const InvestmentsCard = () => {
                 size="sm"
                 className="w-full text-xs h-7 text-amber-700 border-amber-200 hover:bg-amber-50"
                 onClick={() => {
-                  if (window.confirm('Early withdrawal gives pro-rated 25% interest based on days completed, minus a 5% early-exit penalty on your principal. Continue?')) {
+                  if (window.confirm('Early withdrawal gives pro-rated 25% interest based on days completed, minus a 5% early-exit penalty deducted from the interest earned so far (your principal stays intact). Continue?')) {
                     withdrawEarly(inv.id);
                   }
                 }}

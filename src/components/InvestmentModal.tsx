@@ -99,7 +99,7 @@ export const InvestmentModal = ({ open, onOpenChange, availableBalance }: Invest
 
           <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
             <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-            <span>Early withdrawal allowed (pro-rated 25%) but attracts a 5% early-exit penalty on your principal. After 3 months, interest compounds automatically — your money keeps growing!</span>
+            <span>Early withdrawal allowed (pro-rated 25%) but attracts a 5% penalty deducted from the interest earned so far — your principal is never touched. After 3 months, interest compounds automatically — your money keeps growing!</span>
           </div>
 
           <Button
