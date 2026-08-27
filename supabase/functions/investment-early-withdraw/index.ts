@@ -97,11 +97,12 @@ Deno.serve(async (req) => {
         reference: refundRef,
         source_category: "SYSTEM_AWARD",
         metadata: {
-          description: `Early investment withdrawal (pro-rated 25%) - ${refundRef}`,
+          description: `Early investment withdrawal (pro-rated 25%, 5% early-exit penalty) - ${refundRef}`,
           type: "investment_early_withdrawal",
           investment_id: inv.id,
           principal,
           reduced_interest: reducedInterest,
+          early_exit_penalty: penalty,
           days_elapsed: daysElapsed,
           bypass_treasury_check: true,
         },
@@ -124,6 +125,7 @@ Deno.serve(async (req) => {
       ok: true,
       payout,
       reducedInterest,
+      penalty,
       daysElapsed,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err: any) {
