@@ -60,7 +60,7 @@ const grabTitle = (win: Window): string => {
  * `w.print(); w.close();` — by the time the user picks "Print now" the original
  * window/iframe is already gone (or focus-trapped), so printing it silently fails.
  */
-function printHtmlInFreshWindow(html: string, title: string) {
+export function printHtmlInFreshWindow(html: string, title: string) {
   (window as any).__pqBypass = true;
   try {
     const w = window.open('', '_blank', 'width=900,height=1000');
