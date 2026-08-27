@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
         reference: refundRef,
         source_category: "SYSTEM_AWARD",
         metadata: {
-          description: `Early investment withdrawal (pro-rated 25%, 5% early-exit penalty) - ${refundRef}`,
+          description: `Early investment withdrawal (pro-rated 25% interest, 5% penalty deducted from interest) - ${refundRef}`,
           type: "investment_early_withdrawal",
           investment_id: inv.id,
           principal,
