@@ -143,15 +143,17 @@ const GrnReferralsTab = () => {
                   className="h-9 pl-7 w-52 text-xs"
                 />
               </div>
-              <Tabs value={scope} onValueChange={(v) => setScope(v as any)}>
-                <TabsList className="h-9">
-                  <TabsTrigger value="mine" className="text-xs px-2">
-                    {canPay ? 'Assigned to me' : 'Sent by me'}
-                  </TabsTrigger>
-                  <TabsTrigger value="pending" className="text-xs px-2">Pending</TabsTrigger>
-                  <TabsTrigger value="all" className="text-xs px-2">All</TabsTrigger>
-                </TabsList>
-              </Tabs>
+              {!scanOnly && (
+                <Tabs value={scope} onValueChange={(v) => setScope(v as any)}>
+                  <TabsList className="h-9">
+                    <TabsTrigger value="mine" className="text-xs px-2">
+                      {canPay ? 'Assigned to me' : 'Sent by me'}
+                    </TabsTrigger>
+                    <TabsTrigger value="pending" className="text-xs px-2">Pending</TabsTrigger>
+                    <TabsTrigger value="all" className="text-xs px-2">All</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              )}
             </div>
           </div>
         </CardHeader>
