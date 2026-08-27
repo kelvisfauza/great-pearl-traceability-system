@@ -84,7 +84,8 @@ export default function GRNScanPay() {
   // they submit the scanned GRN to an approver who pays and prints the receipt.
   const canPay = useCanReleasePayments();
   const { data: payers, isLoading: payersLoading, error: payersError } = useFinancePayers();
-  const { referrals, createReferral, refetch: refetchReferrals } = useGrnReferrals();
+  const { referrals, assignedToMe, createReferral, refetch: refetchReferrals } = useGrnReferrals();
+  const [openingReferral, setOpeningReferral] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [payerEmail, setPayerEmail] = useState('');
@@ -118,6 +119,30 @@ export default function GRNScanPay() {
     const next = nextPending(rawRef);
     if (!next) return toast.info('No more GRNs in the queue');
     openRef(next);
+  };
+
+  // Next pending referral assigned to me (so finance never has to go back to the referrals list)
+  const nextReferral = useMemo(() => {
+    const current = String(batch || rawRef || '').toLowerCase();
+    return (
+      assignedToMe.find(
+        (r) => String(r.batch_number).toLowerCase() !== current,
+      ) || null
+    );
+  }, [assignedToMe, batch, rawRef]);
+
+  const goNextReferral = async () => {
+    if (!nextReferral) return toast.info('No more referrals assigned to you');
+    setOpeningReferral(true);
+    try {
+      await refetchReferrals();
+      const code =
+        nextReferral.pay_code ||
+        (await getGrnPayCode(nextReferral.batch_number).catch(() => null));
+      openRef(code || nextReferral.batch_number);
+    } finally {
+      setOpeningReferral(false);
+    }
   };
 
   const { data, isLoading } = useQuery({
@@ -847,6 +872,21 @@ export default function GRNScanPay() {
                   {nextPending(rawRef) && (
                     <Button onClick={goNext} className="w-full">
                       Next GRN in queue ({queue.filter((q) => !q.paid).length} left)
+                    </Button>
+                  )}
+                  {canPay && nextReferral && (
+                    <Button
+                      onClick={goNextReferral}
+                      disabled={openingReferral}
+                      className="w-full"
+                      variant="secondary"
+                    >
+                      {openingReferral ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <CreditCard className="h-4 w-4 mr-2" />
+                      )}
+                      Pay next referral · GRN-{nextReferral.batch_number} ({assignedToMe.length} left)
                     </Button>
                   )}
                   <Button variant="outline" onClick={() => setScanOpen(true)} className="w-full">
