@@ -3,8 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Wallet, CheckCircle2, Receipt, CreditCard } from "lucide-react";
 import { Loader2 } from "lucide-react";
+import { useIsGrnInputOnly } from "@/hooks/useGrnInputRole";
 
 const FinanceOverviewTab = () => {
+  const scanOnly = useIsGrnInputOnly();
   const { data: stats, isLoading } = useQuery({
     queryKey: ["finance-overview-stats"],
     queryFn: async () => {
