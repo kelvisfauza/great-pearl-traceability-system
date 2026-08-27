@@ -874,6 +874,21 @@ export default function GRNScanPay() {
                       Next GRN in queue ({queue.filter((q) => !q.paid).length} left)
                     </Button>
                   )}
+                  {canPay && nextReferral && (
+                    <Button
+                      onClick={goNextReferral}
+                      disabled={openingReferral}
+                      className="w-full"
+                      variant="secondary"
+                    >
+                      {openingReferral ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <CreditCard className="h-4 w-4 mr-2" />
+                      )}
+                      Pay next referral · GRN-{nextReferral.batch_number} ({assignedToMe.length} left)
+                    </Button>
+                  )}
                   <Button variant="outline" onClick={() => setScanOpen(true)} className="w-full">
                     <QrCode className="h-4 w-4 mr-2" /> Scan other
                   </Button>
