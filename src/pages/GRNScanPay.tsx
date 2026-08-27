@@ -121,6 +121,30 @@ export default function GRNScanPay() {
     openRef(next);
   };
 
+  // Next pending referral assigned to me (so finance never has to go back to the referrals list)
+  const nextReferral = useMemo(() => {
+    const current = String(batch || rawRef || '').toLowerCase();
+    return (
+      assignedToMe.find(
+        (r) => String(r.batch_number).toLowerCase() !== current,
+      ) || null
+    );
+  }, [assignedToMe, batch, rawRef]);
+
+  const goNextReferral = async () => {
+    if (!nextReferral) return toast.info('No more referrals assigned to you');
+    setOpeningReferral(true);
+    try {
+      await refetchReferrals();
+      const code =
+        nextReferral.pay_code ||
+        (await getGrnPayCode(nextReferral.batch_number).catch(() => null));
+      openRef(code || nextReferral.batch_number);
+    } finally {
+      setOpeningReferral(false);
+    }
+  };
+
   const { data, isLoading } = useQuery({
     queryKey: ['grn-scan-lot', batch],
     enabled: !!batch && !resolving,
