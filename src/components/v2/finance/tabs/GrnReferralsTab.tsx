@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, CreditCard, UserCheck, Coffee, Gift, Search } from 'lucide-react';
 import { useGrnReferrals, useCanReleasePayments } from '@/hooks/useGrnReferrals';
+import { useIsGrnInputOnly } from '@/hooks/useGrnInputRole';
 import { getGrnPayCode } from '@/utils/grnPayCode';
 
 const money = (n?: number | null) => `UGX ${Number(n || 0).toLocaleString()}`;
