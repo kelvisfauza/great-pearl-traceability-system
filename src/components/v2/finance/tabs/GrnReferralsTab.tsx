@@ -18,11 +18,23 @@ const GrnReferralsTab = () => {
   const navigate = useNavigate();
   const canPay = useCanReleasePayments();
   const { referrals, loading, myEmail, assignedToMe, referredByMe, cancelReferral } = useGrnReferrals();
-  const [scope, setScope] = useState<'mine' | 'pending' | 'all'>(canPay ? 'mine' : 'pending');
+  const scanOnly = useIsGrnInputOnly();
+  const [scope, setScope] = useState<'mine' | 'pending' | 'all'>(canPay && !scanOnly ? 'mine' : scanOnly ? 'mine' : 'pending');
   const [search, setSearch] = useState('');
   const [opening, setOpening] = useState<string | null>(null);
 
   const rows = useMemo(() => {
+    // GRN input officers only ever see the referrals they themselves sent
+    if (scanOnly) {
+      const q0 = search.trim().toLowerCase();
+      return q0
+        ? referredByMe.filter((r) =>
+            [r.batch_number, r.supplier_name, r.assigned_to_name, r.assigned_to_email]
+              .filter(Boolean)
+              .some((v) => String(v).toLowerCase().includes(q0))
+          )
+        : referredByMe;
+    }
     const base =
       scope === 'mine'
         ? canPay
