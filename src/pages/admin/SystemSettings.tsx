@@ -12,6 +12,7 @@ import ProviderSettings from "@/components/admin/ProviderSettings";
 import SecuritySettings from "@/components/admin/SecuritySettings";
 import UserPermissionsList from "@/components/admin/UserPermissionsList";
 import RoleAssignmentManager from "@/components/admin/RoleAssignmentManager";
+import GrnInputRoleManager from "@/components/admin/GrnInputRoleManager";
 import QuickPermissionAssignment from "@/components/admin/QuickPermissionAssignment";
 import PermissionOverview from "@/components/admin/PermissionOverview";
 import { PermissionChangeApprovals } from "@/components/admin/PermissionChangeApprovals";
@@ -101,6 +102,7 @@ const SystemSettings = () => {
         </TabsContent>
 
         <TabsContent value="user-access" className="space-y-6">
+          <GrnInputRoleManager />
           <PermissionChangeApprovals />
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">

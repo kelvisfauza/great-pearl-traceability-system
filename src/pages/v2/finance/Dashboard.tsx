@@ -14,7 +14,7 @@ import FinanceReportsTab from "@/components/v2/finance/tabs/FinanceReportsTab";
 import { PaymentHistory } from "@/components/finance/PaymentHistory";
 import GrnReferralsTab from "@/components/v2/finance/tabs/GrnReferralsTab";
 
-const tabs = [
+const allTabs = [
   { id: "overview", label: "Overview", icon: Wallet },
   { id: "payments", label: "Pending Payments", icon: CreditCard },
   { id: "referrals", label: "Referrals", icon: UserCheck },
@@ -25,7 +25,12 @@ const tabs = [
   { id: "reports", label: "Reports", icon: FileText },
 ];
 
+// Scan-only GRN input officers only get these
+const SCAN_ONLY_TABS = ["overview", "payments", "referrals"];
+
 const FinanceDashboard = () => {
+  const scanOnly = useIsGrnInputOnly();
+  const tabs = scanOnly ? allTabs.filter(t => SCAN_ONLY_TABS.includes(t.id)) : allTabs;
   const [activeTab, setActiveTab] = useState("overview");
   const [scannerOpen, setScannerOpen] = useState(false);
 
