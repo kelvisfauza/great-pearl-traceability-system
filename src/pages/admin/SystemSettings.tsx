@@ -115,6 +115,7 @@ const SystemSettings = () => {
 
         <TabsContent value="user-accounts" className="space-y-6">
           <AccountStatusManager />
+          <EmployeeSuspensionManager />
           <DeletionRequestsManager />
         </TabsContent>
 
