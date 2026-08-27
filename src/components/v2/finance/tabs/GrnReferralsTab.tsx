@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, CreditCard, UserCheck, Coffee, Gift, Search } from 'lucide-react';
 import { useGrnReferrals, useCanReleasePayments } from '@/hooks/useGrnReferrals';
+import { useIsGrnInputOnly } from '@/hooks/useGrnInputRole';
 import { getGrnPayCode } from '@/utils/grnPayCode';
 
 const money = (n?: number | null) => `UGX ${Number(n || 0).toLocaleString()}`;
@@ -17,11 +18,23 @@ const GrnReferralsTab = () => {
   const navigate = useNavigate();
   const canPay = useCanReleasePayments();
   const { referrals, loading, myEmail, assignedToMe, referredByMe, cancelReferral } = useGrnReferrals();
-  const [scope, setScope] = useState<'mine' | 'pending' | 'all'>(canPay ? 'mine' : 'pending');
+  const scanOnly = useIsGrnInputOnly();
+  const [scope, setScope] = useState<'mine' | 'pending' | 'all'>(canPay && !scanOnly ? 'mine' : scanOnly ? 'mine' : 'pending');
   const [search, setSearch] = useState('');
   const [opening, setOpening] = useState<string | null>(null);
 
   const rows = useMemo(() => {
+    // GRN input officers only ever see the referrals they themselves sent
+    if (scanOnly) {
+      const q0 = search.trim().toLowerCase();
+      return q0
+        ? referredByMe.filter((r) =>
+            [r.batch_number, r.supplier_name, r.assigned_to_name, r.assigned_to_email]
+              .filter(Boolean)
+              .some((v) => String(v).toLowerCase().includes(q0))
+          )
+        : referredByMe;
+    }
     const base =
       scope === 'mine'
         ? canPay
@@ -37,7 +50,7 @@ const GrnReferralsTab = () => {
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q))
     );
-  }, [scope, canPay, assignedToMe, referredByMe, referrals, search]);
+  }, [scope, canPay, scanOnly, assignedToMe, referredByMe, referrals, search]);
 
   const openForPayment = async (batch: string, id: string) => {
     setOpening(id);
@@ -65,13 +78,13 @@ const GrnReferralsTab = () => {
 
   return (
     <div className="space-y-4 mt-4">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className={`grid grid-cols-2 ${scanOnly ? 'md:grid-cols-3' : 'md:grid-cols-4'} gap-4`}>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <UserCheck className="h-7 w-7 text-blue-500" />
             <div>
-              <p className="text-xs text-muted-foreground">Awaiting my payment</p>
-              <p className="text-xl font-bold">{canPay ? assignedToMe.length : '—'}</p>
+              <p className="text-xs text-muted-foreground">{scanOnly ? 'GRNs I sent' : 'Awaiting my payment'}</p>
+              <p className="text-xl font-bold">{scanOnly ? referredByMe.length : canPay ? assignedToMe.length : '—'}</p>
             </div>
           </CardContent>
         </Card>
@@ -79,11 +92,14 @@ const GrnReferralsTab = () => {
           <CardContent className="p-4 flex items-center gap-3">
             <Coffee className="h-7 w-7 text-orange-500" />
             <div>
-              <p className="text-xs text-muted-foreground">Pending referrals</p>
-              <p className="text-xl font-bold">{pendingCount}</p>
+              <p className="text-xs text-muted-foreground">{scanOnly ? 'My pending referrals' : 'Pending referrals'}</p>
+              <p className="text-xl font-bold">
+                {scanOnly ? referredByMe.filter((r) => r.status === 'pending').length : pendingCount}
+              </p>
             </div>
           </CardContent>
         </Card>
+        {!scanOnly && (
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <CreditCard className="h-7 w-7 text-red-500" />
@@ -93,6 +109,7 @@ const GrnReferralsTab = () => {
             </div>
           </CardContent>
         </Card>
+        )}
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <Gift className="h-7 w-7 text-green-600" />
@@ -126,15 +143,17 @@ const GrnReferralsTab = () => {
                   className="h-9 pl-7 w-52 text-xs"
                 />
               </div>
-              <Tabs value={scope} onValueChange={(v) => setScope(v as any)}>
-                <TabsList className="h-9">
-                  <TabsTrigger value="mine" className="text-xs px-2">
-                    {canPay ? 'Assigned to me' : 'Sent by me'}
-                  </TabsTrigger>
-                  <TabsTrigger value="pending" className="text-xs px-2">Pending</TabsTrigger>
-                  <TabsTrigger value="all" className="text-xs px-2">All</TabsTrigger>
-                </TabsList>
-              </Tabs>
+              {!scanOnly && (
+                <Tabs value={scope} onValueChange={(v) => setScope(v as any)}>
+                  <TabsList className="h-9">
+                    <TabsTrigger value="mine" className="text-xs px-2">
+                      {canPay ? 'Assigned to me' : 'Sent by me'}
+                    </TabsTrigger>
+                    <TabsTrigger value="pending" className="text-xs px-2">Pending</TabsTrigger>
+                    <TabsTrigger value="all" className="text-xs px-2">All</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              )}
             </div>
           </div>
         </CardHeader>

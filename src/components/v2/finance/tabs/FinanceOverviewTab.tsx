@@ -3,8 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Wallet, CheckCircle2, Receipt, CreditCard } from "lucide-react";
 import { Loader2 } from "lucide-react";
+import { useIsGrnInputOnly } from "@/hooks/useGrnInputRole";
 
 const FinanceOverviewTab = () => {
+  const scanOnly = useIsGrnInputOnly();
   const { data: stats, isLoading } = useQuery({
     queryKey: ["finance-overview-stats"],
     queryFn: async () => {
@@ -29,8 +31,13 @@ const FinanceOverviewTab = () => {
   const cards = [
     { label: "Ready for Payment", value: stats?.readyPayment || 0, icon: CheckCircle2, color: "text-green-500" },
     { label: "Pending Approvals", value: stats?.pendingApprovals || 0, icon: Receipt, color: "text-orange-500" },
-    { label: "Cash Balance", value: `UGX ${(stats?.cashBalance || 0).toLocaleString()}`, icon: Wallet, color: "text-blue-500" },
-    { label: "Total Paid Out", value: `UGX ${(stats?.totalPaid || 0).toLocaleString()}`, icon: CreditCard, color: "text-purple-500" },
+    // Company-wide money figures are hidden from scan-only GRN input officers
+    ...(scanOnly
+      ? []
+      : [
+          { label: "Cash Balance", value: `UGX ${(stats?.cashBalance || 0).toLocaleString()}`, icon: Wallet, color: "text-blue-500" },
+          { label: "Total Paid Out", value: `UGX ${(stats?.totalPaid || 0).toLocaleString()}`, icon: CreditCard, color: "text-purple-500" },
+        ]),
   ];
 
   return (
