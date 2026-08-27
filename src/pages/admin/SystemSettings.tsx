@@ -16,6 +16,7 @@ import QuickPermissionAssignment from "@/components/admin/QuickPermissionAssignm
 import PermissionOverview from "@/components/admin/PermissionOverview";
 import { PermissionChangeApprovals } from "@/components/admin/PermissionChangeApprovals";
 import AccountStatusManager from "@/components/admin/AccountStatusManager";
+import EmployeeSuspensionManager from "@/components/admin/EmployeeSuspensionManager";
 import DeletionRequestsManager from "@/components/admin/DeletionRequestsManager";
 import { DatabaseCleanupTool } from "@/components/admin/DatabaseCleanupTool";
 import { DataArchiveManager } from "@/components/admin/DataArchiveManager";
