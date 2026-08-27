@@ -3063,6 +3063,72 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_suspensions: {
+        Row: {
+          created_at: string
+          details: string | null
+          employee_email: string
+          employee_id: string | null
+          employee_name: string
+          employee_phone: string | null
+          end_date: string
+          id: string
+          issued_by: string | null
+          letter_body: string | null
+          lift_notes: string | null
+          lifted_at: string | null
+          lifted_by: string | null
+          pay_status: string
+          reason: string
+          report_back_date: string | null
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          details?: string | null
+          employee_email: string
+          employee_id?: string | null
+          employee_name: string
+          employee_phone?: string | null
+          end_date: string
+          id?: string
+          issued_by?: string | null
+          letter_body?: string | null
+          lift_notes?: string | null
+          lifted_at?: string | null
+          lifted_by?: string | null
+          pay_status?: string
+          reason: string
+          report_back_date?: string | null
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          details?: string | null
+          employee_email?: string
+          employee_id?: string | null
+          employee_name?: string
+          employee_phone?: string | null
+          end_date?: string
+          id?: string
+          issued_by?: string | null
+          letter_body?: string | null
+          lift_notes?: string | null
+          lifted_at?: string | null
+          lifted_by?: string | null
+          pay_status?: string
+          reason?: string
+          report_back_date?: string | null
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       employee_tax_profile: {
         Row: {
           created_at: string

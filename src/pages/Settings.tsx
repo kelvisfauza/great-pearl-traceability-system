@@ -17,6 +17,7 @@ import UserPresencePanel from '@/components/admin/UserPresencePanel';
 import AccountStatusManager from '@/components/admin/AccountStatusManager';
 import HolidayManager from '@/components/settings/HolidayManager';
 import StatutoryInfoExport from '@/components/admin/StatutoryInfoExport';
+import EmployeeSuspensionManager from '@/components/admin/EmployeeSuspensionManager';
 import { Database, ArrowRight } from 'lucide-react';
 
 const Settings = () => {
@@ -118,6 +119,7 @@ const Settings = () => {
           {isAdmin() && (
             <TabsContent value="admin" className="space-y-6">
               <AccountStatusManager />
+              <EmployeeSuspensionManager />
               <StatutoryInfoExport />
               
               <Card>

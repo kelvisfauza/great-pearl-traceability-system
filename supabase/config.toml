@@ -191,6 +191,8 @@ project_id = "pudfybkyfedeggmokhco"
     verify_jwt = false
   [functions.send-airtime-denis-wyclif-aug2026]
     verify_jwt = false
+  [functions.employee-suspension]
+    verify_jwt = true
 
 [inbucket]
   enabled = true
