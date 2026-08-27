@@ -50,7 +50,7 @@ const GrnReferralsTab = () => {
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q))
     );
-  }, [scope, canPay, assignedToMe, referredByMe, referrals, search]);
+  }, [scope, canPay, scanOnly, assignedToMe, referredByMe, referrals, search]);
 
   const openForPayment = async (batch: string, id: string) => {
     setOpening(id);
@@ -78,13 +78,13 @@ const GrnReferralsTab = () => {
 
   return (
     <div className="space-y-4 mt-4">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className={`grid grid-cols-2 ${scanOnly ? 'md:grid-cols-3' : 'md:grid-cols-4'} gap-4`}>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <UserCheck className="h-7 w-7 text-blue-500" />
             <div>
-              <p className="text-xs text-muted-foreground">Awaiting my payment</p>
-              <p className="text-xl font-bold">{canPay ? assignedToMe.length : '—'}</p>
+              <p className="text-xs text-muted-foreground">{scanOnly ? 'GRNs I sent' : 'Awaiting my payment'}</p>
+              <p className="text-xl font-bold">{scanOnly ? referredByMe.length : canPay ? assignedToMe.length : '—'}</p>
             </div>
           </CardContent>
         </Card>
@@ -92,11 +92,14 @@ const GrnReferralsTab = () => {
           <CardContent className="p-4 flex items-center gap-3">
             <Coffee className="h-7 w-7 text-orange-500" />
             <div>
-              <p className="text-xs text-muted-foreground">Pending referrals</p>
-              <p className="text-xl font-bold">{pendingCount}</p>
+              <p className="text-xs text-muted-foreground">{scanOnly ? 'My pending referrals' : 'Pending referrals'}</p>
+              <p className="text-xl font-bold">
+                {scanOnly ? referredByMe.filter((r) => r.status === 'pending').length : pendingCount}
+              </p>
             </div>
           </CardContent>
         </Card>
+        {!scanOnly && (
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <CreditCard className="h-7 w-7 text-red-500" />
@@ -106,6 +109,7 @@ const GrnReferralsTab = () => {
             </div>
           </CardContent>
         </Card>
+        )}
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <Gift className="h-7 w-7 text-green-600" />
