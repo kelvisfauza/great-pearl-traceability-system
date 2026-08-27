@@ -13,6 +13,7 @@ import DuplicateDetectionTab from "@/components/v2/finance/tabs/DuplicateDetecti
 import FinanceReportsTab from "@/components/v2/finance/tabs/FinanceReportsTab";
 import { PaymentHistory } from "@/components/finance/PaymentHistory";
 import GrnReferralsTab from "@/components/v2/finance/tabs/GrnReferralsTab";
+import { useIsGrnInputOnly } from "@/hooks/useGrnInputRole";
 
 const allTabs = [
   { id: "overview", label: "Overview", icon: Wallet },
