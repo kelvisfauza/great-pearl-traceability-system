@@ -65,11 +65,15 @@ const FinanceDashboard = () => {
               <TabsContent value="overview"><FinanceOverviewTab /></TabsContent>
               <TabsContent value="payments"><PendingPaymentsTab /></TabsContent>
               <TabsContent value="referrals"><GrnReferralsTab /></TabsContent>
-              <TabsContent value="history"><PaymentHistory /></TabsContent>
-              <TabsContent value="reconciliation"><TransactionReconciliationTab /></TabsContent>
-              <TabsContent value="advances"><AdvancesRecoveriesTab /></TabsContent>
-              <TabsContent value="duplicates"><DuplicateDetectionTab /></TabsContent>
-              <TabsContent value="reports"><FinanceReportsTab /></TabsContent>
+              {!scanOnly && (
+                <>
+                  <TabsContent value="history"><PaymentHistory /></TabsContent>
+                  <TabsContent value="reconciliation"><TransactionReconciliationTab /></TabsContent>
+                  <TabsContent value="advances"><AdvancesRecoveriesTab /></TabsContent>
+                  <TabsContent value="duplicates"><DuplicateDetectionTab /></TabsContent>
+                  <TabsContent value="reports"><FinanceReportsTab /></TabsContent>
+                </>
+              )}
             </Tabs>
           </div>
         </div>
