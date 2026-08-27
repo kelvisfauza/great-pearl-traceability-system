@@ -69,7 +69,10 @@ Deno.serve(async (req) => {
       Math.floor((Date.now() - new Date(inv.start_date).getTime()) / (24 * 60 * 60 * 1000))
     );
     const reducedInterest = principal * 0.25 * (Math.min(daysElapsed, totalDays) / totalDays);
-    const payout = principal + reducedInterest;
+    // Early exit penalty: 5% of principal (waived if the term is already complete)
+    const PENALTY_RATE = 0.05;
+    const penalty = daysElapsed >= totalDays ? 0 : Math.round(principal * PENALTY_RATE);
+    const payout = Math.max(0, principal + reducedInterest - penalty);
     const refundRef = `INVEST-EARLY-${String(inv.id).slice(0, 8)}`;
 
     // Unified id for ledger
@@ -94,11 +97,12 @@ Deno.serve(async (req) => {
         reference: refundRef,
         source_category: "SYSTEM_AWARD",
         metadata: {
-          description: `Early investment withdrawal (pro-rated 25%) - ${refundRef}`,
+          description: `Early investment withdrawal (pro-rated 25%, 5% early-exit penalty) - ${refundRef}`,
           type: "investment_early_withdrawal",
           investment_id: inv.id,
           principal,
           reduced_interest: reducedInterest,
+          early_exit_penalty: penalty,
           days_elapsed: daysElapsed,
           bypass_treasury_check: true,
         },
@@ -121,6 +125,7 @@ Deno.serve(async (req) => {
       ok: true,
       payout,
       reducedInterest,
+      penalty,
       daysElapsed,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err: any) {

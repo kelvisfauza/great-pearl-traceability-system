@@ -76,7 +76,7 @@ export const useInvestments = () => {
 
       toast({
         title: "Early Withdrawal Complete",
-        description: `UGX ${Number(data.payout).toLocaleString()} returned (${Math.round(Number(data.reducedInterest)).toLocaleString()} interest for ${data.daysElapsed} days)`,
+        description: `UGX ${Number(data.payout).toLocaleString()} returned (${Math.round(Number(data.reducedInterest)).toLocaleString()} interest for ${data.daysElapsed} days, less UGX ${Math.round(Number(data.penalty) || 0).toLocaleString()} early-exit penalty)`,
       });
       fetchInvestments();
       return true;
