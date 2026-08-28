@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,22 +33,11 @@ interface FinanceLot {
 }
 
 const MAX_BULK_PRINT = 20;
-const PRINTED_KEY = "finance-grn-printed-ids";
-
-const loadPrintedIds = (): Set<string> => {
-  try {
-    const raw = localStorage.getItem(PRINTED_KEY);
-    return new Set<string>(raw ? JSON.parse(raw) : []);
-  } catch {
-    return new Set<string>();
-  }
-};
 
 const PendingPaymentsTab = () => {
   const [search, setSearch] = useState("");
   const [openingId, setOpeningId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [printedIds, setPrintedIds] = useState<Set<string>>(() => loadPrintedIds());
   const [scanOpen, setScanOpen] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -56,14 +45,40 @@ const PendingPaymentsTab = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  const markPrinted = (ids: string[]) => {
-    setPrintedIds((prev) => {
-      const next = new Set(prev);
-      ids.forEach((id) => next.add(id));
-      try { localStorage.setItem(PRINTED_KEY, JSON.stringify(Array.from(next))); } catch { /* ignore */ }
-      return next;
-    });
+  // Print state is shared across devices/users via public.grn_print_log
+  const { data: printedRows } = useQuery({
+    queryKey: ["finance-grn-print-log"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("grn_print_log")
+        .select("lot_id");
+      if (error) throw error;
+      return (data || []) as { lot_id: string }[];
+    },
+  });
+  const printedIds = useMemo(
+    () => new Set<string>((printedRows || []).map((r) => r.lot_id)),
+    [printedRows]
+  );
+
+  const markPrinted = async (items: { id: string; batch_number: string | null }[]) => {
+    const { data: auth } = await supabase.auth.getUser();
+    const email = auth?.user?.email?.toLowerCase() || null;
+    const nowIso = new Date().toISOString();
+    try {
+      await (supabase as any).from("grn_print_log").upsert(
+        items.map((l) => ({
+          lot_id: l.id,
+          batch_number: l.batch_number,
+          printed_by_email: email,
+          last_printed_at: nowIso,
+        })),
+        { onConflict: "lot_id" }
+      );
+    } catch { /* printing already happened — never block on logging */ }
+    queryClient.invalidateQueries({ queryKey: ["finance-grn-print-log"] });
   };
+
 
 
   const { data: lots, isLoading } = useQuery({
@@ -169,7 +184,7 @@ const PendingPaymentsTab = () => {
     setPrinting(true);
     try {
       await openBulkGRNPrintWindow(batch.map(toGrnData));
-      markPrinted(batch.map((l) => l.id));
+      await markPrinted(batch.map((l) => ({ id: l.id, batch_number: l.batch_number })));
       setSelectedIds(new Set());
       toast.success(`${batch.length} GRN document(s) prepared for printing`);
     } catch (err: any) {

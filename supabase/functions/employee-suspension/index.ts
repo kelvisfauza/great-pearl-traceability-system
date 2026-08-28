@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
       .ilike("email", callerEmail)
       .maybeSingle();
 
-    if (!caller || caller.role !== "Administrator") {
+    if (!caller || (caller.role !== "Administrator" && caller.role !== "Super Admin")) {
       return respond(false, { error: "Only administrators can manage suspensions" }, 403);
     }
 
