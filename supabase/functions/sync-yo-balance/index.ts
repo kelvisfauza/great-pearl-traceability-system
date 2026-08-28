@@ -59,8 +59,9 @@ serve(async (req) => {
       );
     }
 
-    // Yo returns nested blocks: <Balance><Currency>UGX</Currency><Balance>123</Balance></Balance>
-    // Pair each <Currency> with the <Balance> value that follows it.
+    // Yo returns per-network wallets:
+    // <Currency><Code>UGX-MTNMM</Code><Balance>18750.00</Balance></Currency>
+    // Sum every UGX-* wallet.
     let totalUGX = 0;
     const balances: Array<{ currency: string; balance: number }> = [];
     const pairRe = /<Code>([\s\S]*?)<\/Code>\s*<Balance>([\s\S]*?)<\/Balance>/g;
