@@ -2,6 +2,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { GRNDocumentData } from "@/utils/grnPrintTemplate";
 import { getGrnPayCode } from "@/utils/grnPayCode";
 import { getGrnScanQrDataUrl } from "@/utils/grnScanUrl";
+import { getGrnBarcodeDataUrl } from "@/utils/grnBarcode";
+
 import { stripLegacySupplierSuffix } from "@/utils/supplierDisplay";
 
 type SupplierRow = {
