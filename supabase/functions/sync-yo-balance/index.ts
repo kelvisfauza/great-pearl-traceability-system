@@ -59,15 +59,19 @@ serve(async (req) => {
       );
     }
 
-    // Yo returns one or more <Balance> blocks; sum UGX balances.
+    // Yo returns per-network wallets:
+    // <Currency><Code>UGX-MTNMM</Code><Balance>18750.00</Balance></Currency>
+    // Sum every UGX-* wallet.
     let totalUGX = 0;
-    const balanceBlocks = xml.match(/<Balance>[\s\S]*?<\/Balance>/g) || [];
     const balances: Array<{ currency: string; balance: number }> = [];
-    for (const blk of balanceBlocks) {
-      const currency = extractTag(blk, "Currency") || "UGX";
-      const bal = parseFloat(extractTag(blk, "Balance") || "0");
+    const pairRe = /<Code>([\s\S]*?)<\/Code>\s*<Balance>([\s\S]*?)<\/Balance>/g;
+    let m: RegExpExecArray | null;
+    while ((m = pairRe.exec(xml)) !== null) {
+      const currency = m[1].trim() || "UGX";
+      const bal = parseFloat(m[2].trim() || "0");
+      if (!Number.isFinite(bal)) continue;
       balances.push({ currency, balance: bal });
-      if (currency.toUpperCase() === "UGX") totalUGX += bal;
+      if (currency.toUpperCase().startsWith("UGX")) totalUGX += bal;
     }
 
     // Persist as reconciliation entry + update balance snapshot
