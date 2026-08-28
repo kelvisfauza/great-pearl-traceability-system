@@ -470,13 +470,14 @@ export default function GRNScanPay() {
     [referrals, lot, batch],
   );
 
-  // Any referral (pending or completed) for this GRN — used as "Input by" on receipts
+  // Any referral (pending or completed) for this GRN — used as "Input by" on receipts.
+  // Paid referrals are hidden from the active list but we still need them for receipts.
   const grnReferral = useMemo(
     () =>
-      referrals.find(
+      allReferrals.find(
         (r) => normalizeRef(r.batch_number) === normalizeRef(lot?.batch_number || batch),
       ) || null,
-    [referrals, lot, batch],
+    [allReferrals, lot, batch],
   );
 
   const handleSubmitForPayment = async () => {
