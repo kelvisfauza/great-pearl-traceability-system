@@ -84,7 +84,7 @@ export default function GRNScanPay() {
   // they submit the scanned GRN to an approver who pays and prints the receipt.
   const canPay = useCanReleasePayments();
   const { data: payers, isLoading: payersLoading, error: payersError } = useFinancePayers();
-  const { referrals, assignedToMe, createReferral, refetch: refetchReferrals } = useGrnReferrals();
+  const { referrals, allReferrals, assignedToMe, createReferral, refetch: refetchReferrals } = useGrnReferrals();
   const [openingReferral, setOpeningReferral] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -470,13 +470,14 @@ export default function GRNScanPay() {
     [referrals, lot, batch],
   );
 
-  // Any referral (pending or completed) for this GRN — used as "Input by" on receipts
+  // Any referral (pending or completed) for this GRN — used as "Input by" on receipts.
+  // Paid referrals are hidden from the active list but we still need them for receipts.
   const grnReferral = useMemo(
     () =>
-      referrals.find(
+      allReferrals.find(
         (r) => normalizeRef(r.batch_number) === normalizeRef(lot?.batch_number || batch),
       ) || null,
-    [referrals, lot, batch],
+    [allReferrals, lot, batch],
   );
 
   const handleSubmitForPayment = async () => {

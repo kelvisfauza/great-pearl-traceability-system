@@ -179,7 +179,12 @@ export const useGrnReferrals = () => {
     },
   });
 
-  const referrals = query.data || [];
+  const allReferrals = query.data || [];
+
+  // Paid referrals should disappear from the active referrals list, but we keep
+  // the full dataset for receipts/history lookups and reward calculations.
+  const referrals = allReferrals.filter((r) => r.status !== 'paid');
+  const paidReferrals = allReferrals.filter((r) => r.status === 'paid');
 
   const create = useMutation({
     mutationFn: async (input: {
@@ -249,14 +254,21 @@ export const useGrnReferrals = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['grn-referrals'] }),
   });
 
+  const pending = referrals.filter((r) => r.status === 'pending');
+  const assignedToMe = pending.filter((r) => r.assigned_to_email.toLowerCase() === myEmail);
+  const referredByMe = referrals.filter((r) => r.referred_by_email.toLowerCase() === myEmail);
+  const allReferredByMe = allReferrals.filter((r) => r.referred_by_email.toLowerCase() === myEmail);
+  const referralRewards = allReferredByMe.reduce((s, r) => s + Number(r.referrer_reward_ugx || 0), 0);
+
   return {
     referrals,
+    allReferrals,
+    paidReferrals,
     myEmail,
-    pending: referrals.filter((r) => r.status === 'pending'),
-    assignedToMe: referrals.filter(
-      (r) => r.status === 'pending' && r.assigned_to_email.toLowerCase() === myEmail
-    ),
-    referredByMe: referrals.filter((r) => r.referred_by_email.toLowerCase() === myEmail),
+    pending,
+    assignedToMe,
+    referredByMe,
+    referralRewards,
     loading: query.isLoading,
     refetch: query.refetch,
     createReferral: create.mutateAsync,

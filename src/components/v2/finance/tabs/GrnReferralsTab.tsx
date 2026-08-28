@@ -17,7 +17,7 @@ const dt = (v?: string | null) => (v ? new Date(v).toLocaleString('en-GB') : 'â€
 const GrnReferralsTab = () => {
   const navigate = useNavigate();
   const canPay = useCanReleasePayments();
-  const { referrals, loading, myEmail, assignedToMe, referredByMe, cancelReferral } = useGrnReferrals();
+  const { referrals, loading, myEmail, assignedToMe, referredByMe, cancelReferral, referralRewards } = useGrnReferrals();
   const scanOnly = useIsGrnInputOnly();
   const [scope, setScope] = useState<'mine' | 'pending' | 'all'>(canPay && !scanOnly ? 'mine' : scanOnly ? 'mine' : 'pending');
   const [search, setSearch] = useState('');
@@ -62,7 +62,7 @@ const GrnReferralsTab = () => {
     }
   };
 
-  const myEarnings = referredByMe.reduce((s, r) => s + Number(r.referrer_reward_ugx || 0), 0);
+  const myEarnings = referralRewards;
   const pendingCount = referrals.filter((r) => r.status === 'pending').length;
   const pendingValue = referrals
     .filter((r) => r.status === 'pending')
