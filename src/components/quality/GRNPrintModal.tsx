@@ -11,6 +11,8 @@ import { stripLegacySupplierSuffix } from '@/utils/supplierDisplay';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
 import { getGrnPayCode } from '@/utils/grnPayCode';
 import { getGrnScanQrDataUrl } from '@/utils/grnScanUrl';
+import { getGrnBarcodeDataUrl } from '@/utils/grnBarcode';
+
 
 interface GRNPrintModalProps {
   open: boolean;
