@@ -235,7 +235,9 @@ export default function MobileGrnScanner() {
             <QrCode className="h-5 w-5" /> Scan GRN
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Point the camera at the QR code on a printed GRN. The first one opens on the paired computer and
+            Point the camera at the QR code on a printed GRN, or at the pay-code barcode on the Payment
+            Order if the QR won't read. The first one opens on the paired computer and
+
             every extra scan is added to the pay queue — keep scanning all the GRNs you want to pay.
           </p>
         </CardHeader>
