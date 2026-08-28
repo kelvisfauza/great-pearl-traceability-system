@@ -480,11 +480,12 @@ export function getGRNDocumentStyles(): string {
         font-weight: 700;
       }
       .gac-grn-qr {
-        width: 52px;
-        height: 52px;
+        width: 82px;
+        height: 82px;
         border: 1px solid #ccc;
-        padding: 2px;
+        padding: 3px;
         background: #fff;
+        image-rendering: pixelated;
       }
       .gac-grn-qr-label {
         margin-top: 2px;
