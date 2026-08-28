@@ -38,8 +38,12 @@ export interface FinancePayer {
  */
 export const useCanReleasePayments = () => {
   const { hasPermission, isAdmin } = useAuth();
+  const inputOnly = useIsGrnInputOnly();
   const admin = typeof isAdmin === 'function' ? isAdmin() : false;
-  return admin || hasPermission('Finance:process') || hasPermission('Finance:approve');
+  if (admin || hasPermission('Finance:process') || hasPermission('Finance:approve')) return true;
+  // Legacy module-level finance access ("Finance" / "Finance Management") still
+  // releases payments — only the scan-only GRN input role is restricted.
+  return !inputOnly && (hasPermission('Finance') || hasPermission('Finance Management'));
 };
 
 /** Finance approvers a scanned GRN can be allocated to. */
