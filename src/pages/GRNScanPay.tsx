@@ -84,7 +84,7 @@ export default function GRNScanPay() {
   // they submit the scanned GRN to an approver who pays and prints the receipt.
   const canPay = useCanReleasePayments();
   const { data: payers, isLoading: payersLoading, error: payersError } = useFinancePayers();
-  const { referrals, assignedToMe, createReferral, refetch: refetchReferrals } = useGrnReferrals();
+  const { referrals, allReferrals, assignedToMe, createReferral, refetch: refetchReferrals } = useGrnReferrals();
   const [openingReferral, setOpeningReferral] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
