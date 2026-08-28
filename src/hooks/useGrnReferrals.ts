@@ -65,7 +65,14 @@ export const useFinancePayers = () =>
     },
   });
 
-/** Sends an in-app notification + branded email to the finance approver a GRN was forwarded to. */
+/**
+ * Batch digest: we do NOT email on every single referral (that flooded inboxes).
+ * An in-app notification is always created, but the email/SMS digest only goes
+ * out once the assignee's pending queue hits a multiple of BATCH_SIZE — one
+ * email listing all GRNs ready for payment.
+ */
+const BATCH_SIZE = 10;
+
 const notifyReferralAssignee = async (p: {
   allocationId: string;
   assignedEmail: string;
@@ -79,21 +86,8 @@ const notifyReferralAssignee = async (p: {
   notes: string | null;
 }) => {
   const money = `UGX ${Number(p.amountUgx || 0).toLocaleString()}`;
-  const title = 'GRN forwarded to you for payment';
-  const lines = [
-    `${p.referrerName} has scanned and forwarded a GRN to you for payment release.`,
-    '',
-    `Batch: ${p.batchNumber}`,
-    p.supplierName ? `Supplier: ${p.supplierName}` : '',
-    p.coffeeType ? `Coffee type: ${p.coffeeType}` : '',
-    p.quantityKg ? `Quantity: ${Number(p.quantityKg).toLocaleString()} kg` : '',
-    `Amount: ${money}`,
-    p.notes ? `Notes: ${p.notes}` : '',
-    '',
-    'Open Finance > Referrals to review, pay and print the payment receipt.',
-  ].filter(Boolean);
 
-  // In-app notification (resolve the assignee's employee record)
+  // In-app notification (resolve the assignee's employee record) — always
   const { data: emp } = await supabase
     .from('employees')
     .select('id, name, department')
@@ -103,7 +97,7 @@ const notifyReferralAssignee = async (p: {
   if (emp?.id) {
     await supabase.from('notifications').insert({
       type: 'approval_request',
-      title,
+      title: 'GRN forwarded to you for payment',
       message: `${p.referrerName} forwarded GRN ${p.batchNumber} (${money}) to you for payment.`,
       priority: 'high',
       target_user_id: (emp as any).id,
@@ -113,16 +107,54 @@ const notifyReferralAssignee = async (p: {
     } as any);
   }
 
+  // Pending queue for this assignee
+  const { data: pending } = await supabase
+    .from('grn_payment_allocations')
+    .select('batch_number, supplier_name, coffee_type, quantity_kg, amount_ugx, referred_by_name, referred_by_email')
+    .ilike('assigned_to_email', p.assignedEmail)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true })
+    .limit(200);
+
+  const rows = (pending || []) as any[];
+  const count = rows.length;
+  if (count < BATCH_SIZE || count % BATCH_SIZE !== 0) return; // wait for the next full batch
+
+  const total = rows.reduce((s, r) => s + Number(r.amount_ugx || 0), 0);
+  const title = `${count} GRNs ready for payment`;
+  const table = [
+    'Batch | Supplier | Coffee | KG | Amount (UGX) | Input by',
+    ...rows.map((r) =>
+      [
+        r.batch_number,
+        r.supplier_name || '-',
+        r.coffee_type || '-',
+        r.quantity_kg ? Number(r.quantity_kg).toLocaleString() : '-',
+        Number(r.amount_ugx || 0).toLocaleString(),
+        r.referred_by_name || r.referred_by_email || '-',
+      ].join(' | ')
+    ),
+  ].join('\n');
+
+  const message = [
+    `You have ${count} GRNs awaiting payment release, totalling UGX ${total.toLocaleString()}.`,
+    '',
+    table,
+    '',
+    'Open Finance > Referrals to review, pay and print the payment receipts.',
+  ].join('\n');
+
   await supabase.functions.invoke('send-transactional-email', {
     body: {
       templateName: 'general-notification',
       recipientEmail: p.assignedEmail,
-      idempotencyKey: `grn-referral-${p.allocationId}`,
+      // one digest per batch milestone (10, 20, 30 ...) per day
+      idempotencyKey: `grn-referral-digest-${p.assignedEmail}-${count}-${new Date().toISOString().slice(0, 10)}`,
       templateData: {
-        subject: `GRN ${p.batchNumber} forwarded for payment — ${money}`,
+        subject: `${count} GRNs ready for payment — UGX ${total.toLocaleString()}`,
         title,
         recipientName: emp?.name || p.assignedName,
-        message: lines.join('\n'),
+        message,
       },
     },
   });
