@@ -9,10 +9,13 @@ import { toast } from "sonner";
 import { parseGrnReference } from "@/components/finance/GRNScannerDialog";
 
 const REGION_ID = "mobile-grn-reader";
+const PHOTO_REGION_ID = "mobile-grn-photo-reader";
 
 export default function MobileGrnScanner() {
   const { sessionId = "" } = useParams();
   const scannerRef = useRef<any>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [nativeMode, setNativeMode] = useState(false);
   const channelRef = useRef<any>(null);
   const [starting, setStarting] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -197,7 +200,29 @@ export default function MobileGrnScanner() {
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div id={REGION_ID} className="w-full rounded-md overflow-hidden bg-muted min-h-[260px]" />
+          <div className="w-full rounded-md overflow-hidden bg-muted min-h-[260px] relative">
+            <video
+              ref={videoRef}
+              playsInline
+              muted
+              className={`w-full h-full object-cover ${nativeMode ? "" : "hidden"}`}
+            />
+            <div id={REGION_ID} className={nativeMode ? "hidden" : "w-full"} />
+          </div>
+          <div id={PHOTO_REGION_ID} className="hidden" />
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Camera not reading it? Take a photo of the QR instead</p>
+            <Input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) scanFromPhoto(f);
+                e.currentTarget.value = "";
+              }}
+            />
+          </div>
           {starting && (
             <p className="text-sm text-muted-foreground flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" /> Starting camera…
