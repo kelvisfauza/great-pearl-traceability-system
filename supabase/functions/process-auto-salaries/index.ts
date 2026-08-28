@@ -145,10 +145,14 @@ Deno.serve(async (req) => {
 
         const netSalary = Math.max(0, stat.net - totalAdvanceDeduction);
 
-        // 2b. Active loan installment recovery (e.g. pure_salary loan monthly installment)
+        // 2b. Active loan recovery — ONLY installments that are already DUE.
+        // Loans must never be settled ahead of their schedule: if the next
+        // installment falls after the payroll date, the borrower keeps the
+        // time they were given to clear it themselves.
         let totalLoanDeduction = 0;
         const loanDetails: any[] = [];
         try {
+          const today = new Date().toISOString().slice(0, 10);
           const { data: activeLoans } = await supabase
             .from('loans')
             .select('id, monthly_installment, remaining_balance, paid_amount, loan_type')
@@ -160,8 +164,37 @@ Deno.serve(async (req) => {
             // Budget cap: don't push net below zero from loans alone
             let remainingBudget = Math.max(0, netSalary - totalLoanDeduction);
             for (const loan of activeLoans) {
-              const installment = Number(loan.monthly_installment) || 0;
-              const deduction = Math.min(installment, Number(loan.remaining_balance), remainingBudget);
+              // Only installments whose due date has arrived (on or before today)
+              const { data: dueInstallments } = await supabase
+                .from('loan_repayments')
+                .select('id, amount_due, amount_paid, due_date, installment_number')
+                .eq('loan_id', loan.id)
+                .in('status', ['pending', 'partial'])
+                .lte('due_date', today)
+                .order('installment_number', { ascending: true });
+
+              // Total outstanding on the DUE installments only
+              let dueOutstanding = (dueInstallments || []).reduce(
+                (sum, inst) => sum + Math.max(0, Number(inst.amount_due) - Number(inst.amount_paid || 0)),
+                0,
+              );
+
+              if (!dueInstallments || dueInstallments.length === 0) {
+                // No schedule rows at all (legacy loans) → fall back to one
+                // monthly installment. If a schedule exists but nothing is due
+                // yet, deduct nothing.
+                const { count: scheduleCount } = await supabase
+                  .from('loan_repayments')
+                  .select('id', { count: 'exact', head: true })
+                  .eq('loan_id', loan.id);
+                if ((scheduleCount || 0) > 0) {
+                  console.log(`⏭️ Loan ${loan.id}: no installment due yet — skipping recovery`);
+                  continue;
+                }
+                dueOutstanding = Number(loan.monthly_installment) || 0;
+              }
+
+              const deduction = Math.min(dueOutstanding, Number(loan.remaining_balance), remainingBudget);
               if (deduction <= 0) continue;
               totalLoanDeduction += deduction;
               remainingBudget -= deduction;
@@ -187,18 +220,16 @@ Deno.serve(async (req) => {
                 continue;
               }
 
-              // Update next pending installment
-              const { data: nextInst } = await supabase
-                .from('loan_repayments')
-                .select('id, amount_due, amount_paid')
-                .eq('loan_id', loan.id)
-                .in('status', ['pending', 'partial'])
-                .order('installment_number', { ascending: true })
-                .limit(1)
-                .maybeSingle();
-              if (nextInst) {
-                const paidNow = Number(nextInst.amount_paid || 0) + deduction;
-                const fullyPaid = paidNow >= Number(nextInst.amount_due);
+              // Apply the deduction across the due installments, oldest first
+              let toApply = deduction;
+              for (const inst of dueInstallments || []) {
+                if (toApply <= 0) break;
+                const outstanding = Math.max(0, Number(inst.amount_due) - Number(inst.amount_paid || 0));
+                if (outstanding <= 0) continue;
+                const applied = Math.min(outstanding, toApply);
+                toApply -= applied;
+                const paidNow = Number(inst.amount_paid || 0) + applied;
+                const fullyPaid = paidNow >= Number(inst.amount_due);
                 const { error: instErr } = await supabase.from('loan_repayments').update({
                   amount_paid: paidNow,
                   status: fullyPaid ? 'paid' : 'partial',
@@ -206,7 +237,7 @@ Deno.serve(async (req) => {
                   deducted_from: `Salary - ${currentMonth}`,
                   payment_reference: `AUTO-SAL-LOAN-${loan.id}-${currentMonth.replace(/\s/g,'')}`,
                   updated_at: new Date().toISOString(),
-                }).eq('id', nextInst.id);
+                }).eq('id', inst.id);
                 if (instErr) console.error(`❌ Installment update failed for loan ${loan.id}:`, instErr);
               }
 
@@ -217,12 +248,13 @@ Deno.serve(async (req) => {
                 remaining_after: newRemaining,
                 status_after: newStatus,
               });
-              console.log(`💳 Loan ${loan.id} deduction: UGX ${deduction.toLocaleString()} (remaining ${newRemaining})`);
+              console.log(`💳 Loan ${loan.id} due-installment deduction: UGX ${deduction.toLocaleString()} (remaining ${newRemaining})`);
             }
           }
         } catch (loanErr) {
           console.error(`⚠️ Loan deduction error for ${emp.name}:`, loanErr);
         }
+
 
         const netAfterLoans = Math.max(0, netSalary - totalLoanDeduction);
 
