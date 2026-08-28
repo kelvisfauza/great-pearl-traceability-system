@@ -76,6 +76,7 @@ import { template as overdraftPenaltyWarning } from './overdraft-penalty-warning
 import { template as labourDayClosureEmployees } from './labour-day-closure-employees.tsx'
 import { template as labourDayClosureSuppliers } from './labour-day-closure-suppliers.tsx'
 import { template as investmentMatured } from './investment-matured.tsx'
+import { template as governmentCleaningDelay } from './government-cleaning-delay.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'verification-code': verificationCode,
@@ -145,4 +146,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'overdraft-penalty-warning': overdraftPenaltyWarning,
   'labour-day-closure-employees': labourDayClosureEmployees,
   'labour-day-closure-suppliers': labourDayClosureSuppliers,
+  'government-cleaning-delay': governmentCleaningDelay,
 }
