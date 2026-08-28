@@ -59,55 +59,130 @@ export default function MobileGrnScanner() {
     toast.success(`Sent ${reference} to the system`);
   };
 
+  // 1) Native BarcodeDetector (fast + reliable on Android Chrome), 2) html5-qrcode fallback.
   useEffect(() => {
     let cancelled = false;
+    let raf = 0;
+    let stream: MediaStream | null = null;
+
+    const onDecoded = (decoded: string) => {
+      setLastRaw(decoded);
+      const ref = parseGrnReference(decoded);
+      if (ref) send(ref);
+    };
+
+    const startNative = async () => {
+      const Detector = (window as any).BarcodeDetector;
+      if (!Detector || !navigator.mediaDevices?.getUserMedia) return false;
+      let detector: any;
+      try {
+        const supported = await Detector.getSupportedFormats?.();
+        if (supported && !supported.includes("qr_code")) return false;
+        detector = new Detector({ formats: ["qr_code", "code_128", "code_39", "ean_13"] });
+      } catch {
+        return false;
+      }
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false,
+        });
+      } catch {
+        return false;
+      }
+      const video = videoRef.current;
+      if (!video || cancelled) return false;
+      video.srcObject = stream;
+      video.setAttribute("playsinline", "true");
+      video.muted = true;
+      await video.play().catch(() => {});
+      setNativeMode(true);
+      const tick = async () => {
+        if (cancelled) return;
+        try {
+          if (video.readyState >= 2) {
+            const codes = await detector.detect(video);
+            if (codes?.length) onDecoded(codes[0].rawValue || "");
+          }
+        } catch {
+          /* keep scanning */
+        }
+        raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+      return true;
+    };
+
+    const startFallback = async () => {
+      const { Html5Qrcode } = await import("html5-qrcode");
+      if (cancelled) return;
+      const scanner = new Html5Qrcode(REGION_ID, { verbose: false } as any);
+      scannerRef.current = scanner;
+      // Try progressively simpler configs — strict qrbox/aspectRatio fails on some phones.
+      const configs = [
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        { fps: 10 },
+      ];
+      let lastErr: any = null;
+      for (const cfg of configs) {
+        try {
+          await scanner.start({ facingMode: "environment" }, cfg as any, onDecoded, () => {});
+          return;
+        } catch (e) {
+          lastErr = e;
+        }
+      }
+      try {
+        await scanner.start({ facingMode: "user" }, { fps: 10 } as any, onDecoded, () => {});
+        return;
+      } catch (e) {
+        lastErr = e;
+      }
+      throw lastErr;
+    };
+
     (async () => {
       try {
-        const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import("html5-qrcode");
-        if (cancelled) return;
-        const scanner = new Html5Qrcode(REGION_ID, {
-          formatsToSupport: [
-            Html5QrcodeSupportedFormats.QR_CODE,
-            Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.CODE_39,
-            Html5QrcodeSupportedFormats.EAN_13,
-          ],
-          useBarCodeDetectorIfSupported: true,
-          verbose: false,
-        } as any);
-        scannerRef.current = scanner;
-        await scanner.start(
-          { facingMode: "environment" },
-          {
-            fps: 15,
-            qrbox: (vw: number, vh: number) => {
-              const size = Math.floor(Math.min(vw, vh) * 0.8);
-              return { width: size, height: size };
-            },
-            aspectRatio: 1.0,
-            experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-          } as any,
-          (decoded: string) => {
-            setLastRaw(decoded);
-            const ref = parseGrnReference(decoded);
-            if (!ref) return;
-            send(ref);
-          },
-          () => {}
-        );
+        const ok = await startNative();
+        if (!ok && !cancelled) await startFallback();
       } catch (e: any) {
-        if (!cancelled) setError(e?.message || "Unable to access the camera");
+        if (!cancelled)
+          setError(
+            e?.message ||
+              "Unable to access the camera. Allow camera permission for this site, then reload — or type the pay code below.",
+          );
       } finally {
         if (!cancelled) setStarting(false);
       }
     })();
+
     return () => {
       cancelled = true;
+      if (raf) cancelAnimationFrame(raf);
+      stream?.getTracks().forEach((t) => t.stop());
       const s = scannerRef.current;
       scannerRef.current = null;
       if (s) s.stop().then(() => s.clear()).catch(() => {});
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Last-resort: decode a photo of the QR taken with the camera app.
+  const scanFromPhoto = async (file: File) => {
+    try {
+      const { Html5Qrcode } = await import("html5-qrcode");
+      const tmp = new Html5Qrcode(PHOTO_REGION_ID, { verbose: false } as any);
+      const decoded = await tmp.scanFile(file, true);
+      setLastRaw(decoded);
+      const ref = parseGrnReference(decoded);
+      if (ref) send(ref);
+      else toast.error("That photo is not a GRN code");
+      await tmp.clear();
+    } catch {
+      toast.error("Could not read a code from that photo — try a closer, sharper shot");
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-background p-4">
