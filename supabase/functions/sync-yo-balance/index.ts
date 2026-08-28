@@ -63,7 +63,7 @@ serve(async (req) => {
     // Pair each <Currency> with the <Balance> value that follows it.
     let totalUGX = 0;
     const balances: Array<{ currency: string; balance: number }> = [];
-    const pairRe = /<Currency>([\s\S]*?)<\/Currency>\s*<Balance>([\s\S]*?)<\/Balance>/g;
+    const pairRe = /<Code>([\s\S]*?)<\/Code>\s*<Balance>([\s\S]*?)<\/Balance>/g;
     let m: RegExpExecArray | null;
     while ((m = pairRe.exec(xml)) !== null) {
       const currency = m[1].trim() || "UGX";
