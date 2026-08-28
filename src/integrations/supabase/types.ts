@@ -5053,6 +5053,39 @@ export type Database = {
         }
         Relationships: []
       }
+      grn_print_log: {
+        Row: {
+          batch_number: string | null
+          first_printed_at: string
+          id: string
+          last_printed_at: string
+          lot_id: string
+          print_count: number
+          printed_by_email: string | null
+          printed_by_name: string | null
+        }
+        Insert: {
+          batch_number?: string | null
+          first_printed_at?: string
+          id?: string
+          last_printed_at?: string
+          lot_id: string
+          print_count?: number
+          printed_by_email?: string | null
+          printed_by_name?: string | null
+        }
+        Update: {
+          batch_number?: string | null
+          first_printed_at?: string
+          id?: string
+          last_printed_at?: string
+          lot_id?: string
+          print_count?: number
+          printed_by_email?: string | null
+          printed_by_name?: string | null
+        }
+        Relationships: []
+      }
       group_call_participants: {
         Row: {
           call_id: string
