@@ -71,7 +71,7 @@ serve(async (req) => {
       const bal = parseFloat(m[2].trim() || "0");
       if (!Number.isFinite(bal)) continue;
       balances.push({ currency, balance: bal });
-      if (currency.toUpperCase() === "UGX") totalUGX += bal;
+      if (currency.toUpperCase().startsWith("UGX")) totalUGX += bal;
     }
 
     // Persist as reconciliation entry + update balance snapshot
