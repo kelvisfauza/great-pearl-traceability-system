@@ -59,13 +59,16 @@ serve(async (req) => {
       );
     }
 
-    // Yo returns one or more <Balance> blocks; sum UGX balances.
+    // Yo returns nested blocks: <Balance><Currency>UGX</Currency><Balance>123</Balance></Balance>
+    // Pair each <Currency> with the <Balance> value that follows it.
     let totalUGX = 0;
-    const balanceBlocks = xml.match(/<Balance>[\s\S]*?<\/Balance>/g) || [];
     const balances: Array<{ currency: string; balance: number }> = [];
-    for (const blk of balanceBlocks) {
-      const currency = extractTag(blk, "Currency") || "UGX";
-      const bal = parseFloat(extractTag(blk, "Balance") || "0");
+    const pairRe = /<Currency>([\s\S]*?)<\/Currency>\s*<Balance>([\s\S]*?)<\/Balance>/g;
+    let m: RegExpExecArray | null;
+    while ((m = pairRe.exec(xml)) !== null) {
+      const currency = m[1].trim() || "UGX";
+      const bal = parseFloat(m[2].trim() || "0");
+      if (!Number.isFinite(bal)) continue;
       balances.push({ currency, balance: bal });
       if (currency.toUpperCase() === "UGX") totalUGX += bal;
     }
