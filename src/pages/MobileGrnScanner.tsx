@@ -147,6 +147,24 @@ export default function MobileGrnScanner() {
       for (const cfg of configs) {
         try {
           await scanner.start({ facingMode: "environment" }, cfg as any, onDecoded, () => {});
+          // Existing GRNs have a physically small QR in the footer. Ask the
+          // rear camera for optical/digital zoom and continuous focus where
+          // the browser exposes those controls (notably iPhone Safari).
+          try {
+            const capabilities = scanner.getRunningTrackCapabilities?.() as any;
+            const advanced: Record<string, unknown> = {};
+            if (capabilities?.zoom) {
+              advanced.zoom = Math.min(3, Number(capabilities.zoom.max || 2));
+            }
+            if (Array.isArray(capabilities?.focusMode) && capabilities.focusMode.includes("continuous")) {
+              advanced.focusMode = "continuous";
+            }
+            if (Object.keys(advanced).length) {
+              await scanner.applyVideoConstraints({ advanced: [advanced] } as any);
+            }
+          } catch {
+            // Scanning still works on browsers that do not expose camera controls.
+          }
           return;
         } catch (e) {
           lastErr = e;
