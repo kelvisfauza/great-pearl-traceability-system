@@ -490,6 +490,15 @@ export function getGRNDocumentStyles(): string {
         background: #fff;
         image-rendering: pixelated;
       }
+      .gac-grn-barcode {
+        display: block;
+        margin: 4px auto 0;
+        width: 150px;
+        height: auto;
+        background: #fff;
+        image-rendering: pixelated;
+      }
+
       .gac-grn-qr-label {
         margin-top: 2px;
         color: #666;
