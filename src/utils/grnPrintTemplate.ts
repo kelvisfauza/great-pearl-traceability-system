@@ -8,6 +8,9 @@ export interface GRNDocumentData {
   payCode?: string;
   /** Locally generated QR image (data URL) so printing never depends on the network */
   qrDataUrl?: string;
+  /** Locally generated Code 128 barcode of the pay code (fallback when the QR won't scan) */
+  barcodeDataUrl?: string;
+
   supplierName: string;
   coffeeType: string;
   qualityAssessment?: string;
