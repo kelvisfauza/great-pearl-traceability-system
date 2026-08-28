@@ -125,7 +125,12 @@ export default function MobileGrnScanner() {
       if (cancelled) return;
       const { Html5QrcodeSupportedFormats } = await import("html5-qrcode");
       const scanner = new Html5Qrcode(REGION_ID, {
-        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.QR_CODE,
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.CODE_39,
+        ],
+
         useBarCodeDetectorIfSupported: false,
         verbose: false,
       } as any);
