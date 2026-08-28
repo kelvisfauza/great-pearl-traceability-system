@@ -184,7 +184,7 @@ const PendingPaymentsTab = () => {
     setPrinting(true);
     try {
       await openBulkGRNPrintWindow(batch.map(toGrnData));
-      markPrinted(batch.map((l) => l.id));
+      await markPrinted(batch.map((l) => ({ id: l.id, batch_number: l.batch_number })));
       setSelectedIds(new Set());
       toast.success(`${batch.length} GRN document(s) prepared for printing`);
     } catch (err: any) {
