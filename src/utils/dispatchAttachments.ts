@@ -34,7 +34,10 @@ export const getDispatchAttachmentUrl = async (value?: string | null): Promise<s
  * blockers such as Safari's do not swallow it while the URL is signed.
  */
 export const openDispatchAttachment = async (value?: string | null): Promise<boolean> => {
-  const tab = window.open('', '_blank', 'noopener,noreferrer');
+  // NOTE: do not pass "noopener" here — per spec window.open() then returns null
+  // and we would lose the handle (and navigate the current tab instead).
+  const tab = window.open('', '_blank');
+  try { if (tab) (tab as any).opener = null; } catch { /* ignore */ }
   try {
     const url = await getDispatchAttachmentUrl(value);
     if (!url) {
