@@ -146,4 +146,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'overdraft-penalty-warning': overdraftPenaltyWarning,
   'labour-day-closure-employees': labourDayClosureEmployees,
   'labour-day-closure-suppliers': labourDayClosureSuppliers,
+  'government-cleaning-delay': governmentCleaningDelay,
 }
