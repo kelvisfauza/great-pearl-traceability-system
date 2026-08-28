@@ -253,7 +253,7 @@ export default function MobileGrnScanner() {
           </div>
           <div id={PHOTO_REGION_ID} className="hidden" />
           <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">Camera not reading it? Take a photo of the QR instead</p>
+            <p className="text-xs text-muted-foreground">Camera not reading it? Take a photo of the QR or barcode instead</p>
             <Input
               type="file"
               accept="image/*"
