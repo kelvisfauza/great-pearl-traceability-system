@@ -15,6 +15,7 @@ export interface GrnReceiptData {
   paidAt: string;
   paidBy: string;
   paidByPosition?: string | null;
+  inputBy?: string | null;
   printedBy?: string | null;
   notes?: string | null;
   receiptNo: string;

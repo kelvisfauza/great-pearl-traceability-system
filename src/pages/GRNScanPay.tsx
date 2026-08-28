@@ -467,6 +467,15 @@ export default function GRNScanPay() {
     [referrals, lot, batch],
   );
 
+  // Any referral (pending or completed) for this GRN — used as "Input by" on receipts
+  const grnReferral = useMemo(
+    () =>
+      referrals.find(
+        (r) => normalizeRef(r.batch_number) === normalizeRef(lot?.batch_number || batch),
+      ) || null,
+    [referrals, lot, batch],
+  );
+
   const handleSubmitForPayment = async () => {
     if (!lot || !payerEmail) return;
     setSubmitting(true);
