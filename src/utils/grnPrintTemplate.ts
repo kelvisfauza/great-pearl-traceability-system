@@ -8,6 +8,9 @@ export interface GRNDocumentData {
   payCode?: string;
   /** Locally generated QR image (data URL) so printing never depends on the network */
   qrDataUrl?: string;
+  /** Locally generated Code 128 barcode of the pay code (fallback when the QR won't scan) */
+  barcodeDataUrl?: string;
+
   supplierName: string;
   coffeeType: string;
   qualityAssessment?: string;
@@ -487,6 +490,15 @@ export function getGRNDocumentStyles(): string {
         background: #fff;
         image-rendering: pixelated;
       }
+      .gac-grn-barcode {
+        display: block;
+        margin: 4px auto 0;
+        width: 150px;
+        height: auto;
+        background: #fff;
+        image-rendering: pixelated;
+      }
+
       .gac-grn-qr-label {
         margin-top: 2px;
         color: #666;
@@ -867,8 +879,10 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
           <td class="gac-grn-footer-right">
             <img src="${qrCodeUrl}" alt="Open GRN in system" class="gac-grn-qr" />
             <div class="gac-grn-qr-label">Scan to open in system &amp; pay</div>
+            ${data.barcodeDataUrl ? `<img src="${data.barcodeDataUrl}" alt="Pay code barcode" class="gac-grn-barcode" /><div class="gac-grn-qr-label">Or scan this barcode to pay</div>` : ""}
             ${data.payCode ? `<div class="gac-grn-qr-label"><strong>Pay code: ${escapeHtml(formatPayCode(data.payCode))}</strong></div>` : ""}
             <div class="gac-grn-qr-label">${escapeHtml(verificationUrl)}</div>
+
           </td>
         </tr>
       </table>
@@ -1199,8 +1213,10 @@ export function getPaymentOrderMarkup(data: GRNDocumentData): string {
           <td class="gac-grn-footer-right">
             <img src="${qrCodeUrl}" alt="Open GRN in system" class="gac-grn-qr" />
             <div class="gac-grn-qr-label">Scan to open in system &amp; pay</div>
+            ${data.barcodeDataUrl ? `<img src="${data.barcodeDataUrl}" alt="Pay code barcode" class="gac-grn-barcode" /><div class="gac-grn-qr-label">Or scan this barcode to pay</div>` : ""}
             ${data.payCode ? `<div class="gac-grn-qr-label"><strong>Pay code: ${escapeHtml(formatPayCode(data.payCode))}</strong></div>` : ""}
             <div class="gac-grn-qr-label">${escapeHtml(verificationUrl)}</div>
+
           </td>
         </tr>
       </table>

@@ -125,7 +125,12 @@ export default function MobileGrnScanner() {
       if (cancelled) return;
       const { Html5QrcodeSupportedFormats } = await import("html5-qrcode");
       const scanner = new Html5Qrcode(REGION_ID, {
-        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.QR_CODE,
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.CODE_39,
+        ],
+
         useBarCodeDetectorIfSupported: false,
         verbose: false,
       } as any);
@@ -230,7 +235,9 @@ export default function MobileGrnScanner() {
             <QrCode className="h-5 w-5" /> Scan GRN
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Point the camera at the QR code on a printed GRN. The first one opens on the paired computer and
+            Point the camera at the QR code on a printed GRN, or at the pay-code barcode on the Payment
+            Order if the QR won't read. The first one opens on the paired computer and
+
             every extra scan is added to the pay queue — keep scanning all the GRNs you want to pay.
           </p>
         </CardHeader>
@@ -246,7 +253,7 @@ export default function MobileGrnScanner() {
           </div>
           <div id={PHOTO_REGION_ID} className="hidden" />
           <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">Camera not reading it? Take a photo of the QR instead</p>
+            <p className="text-xs text-muted-foreground">Camera not reading it? Take a photo of the QR or barcode instead</p>
             <Input
               type="file"
               accept="image/*"
