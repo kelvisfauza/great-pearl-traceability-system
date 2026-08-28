@@ -75,6 +75,10 @@ export default function MobileGrnScanner() {
     };
 
     const startNative = async () => {
+      // Safari exposes BarcodeDetector on some iPhones but frequently fails to
+      // decode small printed QR codes from a live video frame. Let html5-qrcode
+      // use its cropped ZXing pipeline on iOS instead.
+      if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) return false;
       const Detector = (window as any).BarcodeDetector;
       if (!Detector || !navigator.mediaDevices?.getUserMedia) return false;
       let detector: any;
@@ -119,24 +123,55 @@ export default function MobileGrnScanner() {
     const startFallback = async () => {
       const { Html5Qrcode } = await import("html5-qrcode");
       if (cancelled) return;
-      const scanner = new Html5Qrcode(REGION_ID, { verbose: false } as any);
+      const { Html5QrcodeSupportedFormats } = await import("html5-qrcode");
+      const scanner = new Html5Qrcode(REGION_ID, {
+        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+        useBarCodeDetectorIfSupported: false,
+        verbose: false,
+      } as any);
       scannerRef.current = scanner;
-      // Try progressively simpler configs — strict qrbox/aspectRatio fails on some phones.
+      // A large square scan region gives the decoder many more QR pixels while
+      // still accepting the full-frame fallback on unusual camera dimensions.
       const configs = [
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        { fps: 10 },
+        {
+          fps: 15,
+          qrbox: (viewWidth: number, viewHeight: number) => {
+            const size = Math.floor(Math.min(viewWidth, viewHeight) * 0.86);
+            return { width: size, height: size };
+          },
+          disableFlip: true,
+        },
+        { fps: 15, disableFlip: true },
       ];
       let lastErr: any = null;
       for (const cfg of configs) {
         try {
           await scanner.start({ facingMode: "environment" }, cfg as any, onDecoded, () => {});
+          // Existing GRNs have a physically small QR in the footer. Ask the
+          // rear camera for optical/digital zoom and continuous focus where
+          // the browser exposes those controls (notably iPhone Safari).
+          try {
+            const capabilities = scanner.getRunningTrackCapabilities?.() as any;
+            const advanced: Record<string, unknown> = {};
+            if (capabilities?.zoom) {
+              advanced.zoom = Math.min(3, Number(capabilities.zoom.max || 2));
+            }
+            if (Array.isArray(capabilities?.focusMode) && capabilities.focusMode.includes("continuous")) {
+              advanced.focusMode = "continuous";
+            }
+            if (Object.keys(advanced).length) {
+              await scanner.applyVideoConstraints({ advanced: [advanced] } as any);
+            }
+          } catch {
+            // Scanning still works on browsers that do not expose camera controls.
+          }
           return;
         } catch (e) {
           lastErr = e;
         }
       }
       try {
-        await scanner.start({ facingMode: "user" }, { fps: 10 } as any, onDecoded, () => {});
+        await scanner.start({ facingMode: "user" }, { fps: 15 } as any, onDecoded, () => {});
         return;
       } catch (e) {
         lastErr = e;
