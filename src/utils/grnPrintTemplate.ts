@@ -870,8 +870,10 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
           <td class="gac-grn-footer-right">
             <img src="${qrCodeUrl}" alt="Open GRN in system" class="gac-grn-qr" />
             <div class="gac-grn-qr-label">Scan to open in system &amp; pay</div>
+            ${data.barcodeDataUrl ? `<img src="${data.barcodeDataUrl}" alt="Pay code barcode" class="gac-grn-barcode" /><div class="gac-grn-qr-label">Or scan this barcode to pay</div>` : ""}
             ${data.payCode ? `<div class="gac-grn-qr-label"><strong>Pay code: ${escapeHtml(formatPayCode(data.payCode))}</strong></div>` : ""}
             <div class="gac-grn-qr-label">${escapeHtml(verificationUrl)}</div>
+
           </td>
         </tr>
       </table>
