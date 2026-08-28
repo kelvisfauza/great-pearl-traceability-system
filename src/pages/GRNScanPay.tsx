@@ -360,6 +360,9 @@ export default function GRNScanPay() {
       method: entry?.payment?.method || method,
       paidAt: entry?.payment?.created_at || lot.updated_at || new Date().toISOString(),
       paidBy: entry?.paidByName || entry?.payment?.requested_by || 'Finance Department',
+      inputBy: grnReferral
+        ? (grnReferral.referred_by_name || grnReferral.referred_by_email)
+        : null,
       printedBy: employee?.name
         ? `${employee.name}${(employee as any)?.position ? ` · ${(employee as any).position}` : ''}`
         : (user?.email || 'Finance Department'),
