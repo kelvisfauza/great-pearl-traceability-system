@@ -141,11 +141,14 @@ export async function enrichGRNWithSupplier(
   const recoveries = supplier?.id ? await fetchRecoveries(supplier.id) : grn.recoveries || [];
   const payCode = grn.payCode || (await getGrnPayCode(grn.grnNumber)) || undefined;
   const qrDataUrl = grn.qrDataUrl || (await getGrnScanQrDataUrl(grn.grnNumber, 220, payCode));
+  const barcodeDataUrl = grn.barcodeDataUrl || getGrnBarcodeDataUrl(grn.grnNumber, payCode);
 
   return {
     ...grn,
     payCode,
     qrDataUrl,
+    barcodeDataUrl,
+
     supplierAddress: grn.supplierAddress || supplier?.origin || undefined,
     supplierPhone: grn.supplierPhone || supplier?.phone || undefined,
     supplierEmail: grn.supplierEmail || supplier?.email || undefined,
