@@ -211,6 +211,9 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
       ...grnData,
       payCode: grnData.payCode || payCode,
       qrDataUrl: grnData.qrDataUrl || qrDataUrl,
+      barcodeDataUrl:
+        grnData.barcodeDataUrl || getGrnBarcodeDataUrl(grnData.grnNumber, grnData.payCode || payCode),
+
       verificationCode: verificationCode ?? grnData.verificationCode,
       supplierAddress: grnData.supplierAddress || supplierInfo?.origin || undefined,
       supplierPhone: grnData.supplierPhone || supplierInfo?.phone || undefined,
