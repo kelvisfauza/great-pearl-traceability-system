@@ -340,13 +340,15 @@ serve(async (req) => {
 
       const { data: target } = await supabase
         .from("employees")
-        .select("id, name, email, phone")
+        .select("id, auth_user_id, name, email, phone")
         .eq("email", target_email)
         .maybeSingle();
       if (!target) return respond(false, { error: "Target employee not found" });
 
+      // Always operate on the wallet identity that actually holds the ledger:
+      // auth_user_id first, unified id next, employees.id only as a last resort.
       const { data: targetUid } = await supabase.rpc("get_unified_user_id", { input_email: target.email });
-      const targetUserId = targetUid || target.id;
+      const targetUserId = (target as any).auth_user_id || targetUid || target.id;
 
       let destUserId: string | null = null;
       let destName: string | null = null;
@@ -354,10 +356,10 @@ serve(async (req) => {
         if (!destination_email) return respond(false, { error: "destination_email required for transfer" });
         if (destination_email === target_email) return respond(false, { error: "Source and destination cannot be same" });
         const { data: dest } = await supabase
-          .from("employees").select("id, name, email").eq("email", destination_email).maybeSingle();
+          .from("employees").select("id, auth_user_id, name, email").eq("email", destination_email).maybeSingle();
         if (!dest) return respond(false, { error: "Destination employee not found" });
         const { data: destUid } = await supabase.rpc("get_unified_user_id", { input_email: dest.email });
-        destUserId = destUid || dest.id;
+        destUserId = (dest as any).auth_user_id || destUid || dest.id;
         destName = dest.name;
       }
 
