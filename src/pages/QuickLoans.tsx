@@ -2143,7 +2143,10 @@ const QuickLoans = () => {
     return { salary: empSalary, maxFromSalary, outstanding, activeCount, walletBal, availableLimit };
   };
 
-  const myLimit = employee ? getLoanLimit(employee.email, employee.salary || 0, employee.authUserId) : null;
+  const myLimitBase = employee ? getLoanLimit(employee.email, employee.salary || 0, employee.authUserId) : null;
+  // Show the same spendable figure as the header/wallet page (available balance,
+  // i.e. gross ledger minus pending withdrawals & locked funds) so the two never disagree.
+  const myLimit = myLimitBase ? { ...myLimitBase, walletBal: myWalletBalance } : null;
 
   const { monthlyRate: previewRate, dailyRate: previewDailyRate, interest: previewInterest, total: previewTotal, weekly: previewWeekly, totalWeeks: previewTotalWeeks, totalDays: previewTotalDays } = calculateLoanDetails();
 
