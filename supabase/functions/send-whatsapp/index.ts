@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { isBirdConfigured, sendBirdWhatsApp, normalizeUgPhoneE164 } from "../_shared/bird-whatsapp.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -43,9 +44,9 @@ serve(async (req) => {
 
   try {
     const { phone, message, userName, messageType, templateName, placeholders, department, recipientEmail, requestId, triggeredBy } = await req.json()
-    
+
     console.log('WhatsApp request:', { phone, userName, messageType, templateName })
-    
+
     if (!phone) {
       return new Response(
         JSON.stringify({ error: 'Phone number is required' }),
@@ -53,11 +54,68 @@ serve(async (req) => {
       )
     }
 
+    // ── Route 1: Bird (MessageBird) WhatsApp ──────────────────────────
+    if (isBirdConfigured()) {
+      const templateParameters = (placeholders || []).map((p: string, i: number) => ({
+        type: 'text',
+        name: `param_${i + 1}`,
+        text: String(p),
+      }))
+
+      const bird = await sendBirdWhatsApp({
+        to: phone,
+        text: message,
+        templateSlug: templateName || undefined,
+        templateParameters,
+      })
+
+      const formatted = normalizeUgPhoneE164(phone)
+
+      // Log to sms_logs
+      try {
+        await supabase.from('sms_logs').insert({
+          recipient_phone: formatted,
+          recipient_name: userName,
+          recipient_email: recipientEmail,
+          message_content: message || `WhatsApp template: ${templateName || 'default'}`,
+          message_type: messageType || 'whatsapp',
+          status: bird.ok ? 'sent' : 'failed',
+          provider: 'WhatsApp-Bird',
+          provider_response: (bird.raw || {}) as any,
+          credits_used: 1,
+          department: department,
+          triggered_by: triggeredBy || userId,
+          request_id: requestId,
+          failure_reason: bird.ok ? null : bird.error,
+        })
+      } catch (dbError) {
+        console.error('Failed to log Bird WhatsApp to database:', dbError)
+      }
+
+      if (bird.ok) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: 'WhatsApp message sent via Bird',
+            id: bird.messageId,
+            status: bird.status,
+            phone: formatted,
+            provider: 'WhatsApp-Bird',
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      console.warn('⚠️ Bird WhatsApp failed, trying Infobip fallback:', bird.error)
+    } else {
+      console.log('Bird not configured — using Infobip route')
+    }
+
+    // ── Route 2: Infobip fallback ─────────────────────────────────────
     const infobipApiKey = Deno.env.get('INFOBIP_API_KEY')
     const infobipBaseUrl = Deno.env.get('INFOBIP_BASE_URL')
-    
+
     if (!infobipApiKey || !infobipBaseUrl) {
-      console.error('Infobip credentials not configured')
+      console.error('No WhatsApp provider configured (Bird failed/not configured, Infobip missing)')
       return new Response(
         JSON.stringify({ error: 'WhatsApp service not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
