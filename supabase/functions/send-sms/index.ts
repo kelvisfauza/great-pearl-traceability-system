@@ -299,10 +299,12 @@ serve(async (req) => {
           const apiKey = Deno.env.get('YOOLA_SMS_API_KEY')
           if (!apiKey) { results.push({ id: msg.id, success: false, error: 'No API key' }); continue; }
 
+          // YoolaSMS only accepts local Uganda format (07XXXXXXXX)
+          const yoolaPhone = formattedPhone.replace(/^\+256/, '0')
           const smsResponse = await fetch('https://yoolasms.com/api/v1/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone: formattedPhone, message: toGsm7(msg.message || ''), api_key: apiKey })
+            body: JSON.stringify({ phone: yoolaPhone, message: toGsm7(msg.message || ''), api_key: apiKey })
           })
 
           const success = smsResponse.ok
@@ -783,7 +785,8 @@ serve(async (req) => {
         console.log(`Sending SMS via YoolaSMS API... (attempt ${attempt}/${maxRetries})`);
         
         const postData = JSON.stringify({
-          phone: formattedPhone,
+          // YoolaSMS rejects +256 (treats it as international) — send local 07XXXXXXXX
+          phone: formattedPhone.replace(/^\+256/, '0'),
           message: message,
           api_key: apiKey
         });
