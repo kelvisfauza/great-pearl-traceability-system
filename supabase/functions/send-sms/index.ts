@@ -785,7 +785,8 @@ serve(async (req) => {
         console.log(`Sending SMS via YoolaSMS API... (attempt ${attempt}/${maxRetries})`);
         
         const postData = JSON.stringify({
-          phone: formattedPhone,
+          // YoolaSMS rejects +256 (treats it as international) — send local 07XXXXXXXX
+          phone: formattedPhone.replace(/^\+256/, '0'),
           message: message,
           api_key: apiKey
         });
