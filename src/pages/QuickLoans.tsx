@@ -3183,7 +3183,7 @@ const QuickLoans = () => {
                     <p className="text-lg font-bold">UGX {myLimit.salary.toLocaleString()}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Wallet Balance</p>
+                    <p className="text-xs text-muted-foreground">Wallet Balance (available)</p>
                     <p className="text-lg font-bold text-primary">UGX {Math.max(0, myLimit.walletBal).toLocaleString()}</p>
                   </div>
                   <div>
