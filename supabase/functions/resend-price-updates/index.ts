@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
         failed++
         errors.push(`${phone}: ${(e as Error).message}`)
       }
-      await new Promise((r) => setTimeout(r, 250))
+      await new Promise((r) => setTimeout(r, 2500))
     }
 
     return new Response(JSON.stringify({ ok: true, date: day, total: targets.size, sent, failed, errors: errors.slice(0, 10) }), {
