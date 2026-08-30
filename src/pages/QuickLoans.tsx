@@ -2143,7 +2143,10 @@ const QuickLoans = () => {
     return { salary: empSalary, maxFromSalary, outstanding, activeCount, walletBal, availableLimit };
   };
 
-  const myLimit = employee ? getLoanLimit(employee.email, employee.salary || 0, employee.authUserId) : null;
+  const myLimitBase = employee ? getLoanLimit(employee.email, employee.salary || 0, employee.authUserId) : null;
+  // Show the same spendable figure as the header/wallet page (available balance,
+  // i.e. gross ledger minus pending withdrawals & locked funds) so the two never disagree.
+  const myLimit = myLimitBase ? { ...myLimitBase, walletBal: myWalletBalance } : null;
 
   const { monthlyRate: previewRate, dailyRate: previewDailyRate, interest: previewInterest, total: previewTotal, weekly: previewWeekly, totalWeeks: previewTotalWeeks, totalDays: previewTotalDays } = calculateLoanDetails();
 
@@ -3180,7 +3183,7 @@ const QuickLoans = () => {
                     <p className="text-lg font-bold">UGX {myLimit.salary.toLocaleString()}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Wallet Balance</p>
+                    <p className="text-xs text-muted-foreground">Wallet Balance (available)</p>
                     <p className="text-lg font-bold text-primary">UGX {Math.max(0, myLimit.walletBal).toLocaleString()}</p>
                   </div>
                   <div>
