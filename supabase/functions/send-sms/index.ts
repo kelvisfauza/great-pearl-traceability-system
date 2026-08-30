@@ -726,6 +726,38 @@ serve(async (req) => {
     );
     const usePremiumRoute = isPremium && smsCfg.bulksms_premium !== false;
 
+    // 🟢 WHATSAPP MIRROR: every SMS that passes the gate is also mirrored to
+    // WhatsApp via Bird (fire-and-forget — never blocks or fails the SMS).
+    try {
+      const waMirror = fetch(`${supabaseUrl}/functions/v1/send-whatsapp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseServiceKey}`,
+        },
+        body: JSON.stringify({
+          phone: formattedPhone,
+          message,
+          userName,
+          messageType: messageType || 'general',
+          department,
+          recipientEmail,
+          requestId,
+          triggeredBy: triggeredBy || userId,
+        }),
+      }).then(async (r) => {
+        const t = await r.text();
+        console.log(`WhatsApp mirror for ${formattedPhone}: ${r.ok ? 'sent' : 'failed'} (${r.status}) ${t.substring(0, 200)}`);
+      }).catch((e) => console.error('WhatsApp mirror error:', (e as Error).message));
+
+      const edgeRt = (globalThis as any).EdgeRuntime;
+      if (edgeRt?.waitUntil) edgeRt.waitUntil(waMirror);
+      else await waMirror;
+    } catch (waErr) {
+      console.error('WhatsApp mirror setup failed:', (waErr as Error).message);
+    }
+
+
     // PREMIUM ROUTE: try BulkSMS Premium first, fall back to YoolaSMS/Infobip below if it fails
     if (usePremiumRoute) {
       console.log(`💎 Premium routing for type=${messageType}`);
