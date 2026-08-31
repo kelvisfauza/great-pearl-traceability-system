@@ -16,6 +16,28 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const STATUSES = ["Received", "Pending", "Reviewed", "Interview Scheduled", "Interviewed", "Shortlisted", "Accepted", "Rejected"] as const;
 
+// CV links are stored as signed URLs which eventually expire.
+// Re-sign from the storage path so HR always gets a working link.
+const openCv = async (cvUrl: string) => {
+  try {
+    const marker = "/job-applications/";
+    const idx = cvUrl.indexOf(marker);
+    if (idx !== -1) {
+      const path = decodeURIComponent(cvUrl.slice(idx + marker.length).split("?")[0]);
+      const { data, error } = await supabase.storage
+        .from("job-applications")
+        .createSignedUrl(path, 60 * 60);
+      if (!error && data?.signedUrl) {
+        window.open(data.signedUrl, "_blank", "noopener");
+        return;
+      }
+    }
+    window.open(cvUrl, "_blank", "noopener");
+  } catch {
+    window.open(cvUrl, "_blank", "noopener");
+  }
+};
+
 const statusColors: Record<string, string> = {
   Received: "bg-emerald-100 text-emerald-800",
   Pending: "bg-yellow-100 text-yellow-800",
@@ -359,11 +381,7 @@ const JobApplicationsManager = () => {
                         <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{app.phone}</span>
                         {app.email && <span className="text-primary">{app.email}</span>}
                         <span>{format(new Date(app.created_at), "MMM dd, yyyy")}</span>
-                        {app.cv_url && (
-                          <a href={app.cv_url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-primary hover:underline">
-                            <ExternalLink className="h-3 w-3" />CV: {app.cv_filename || "View"}
-                          </a>
-                        )}
+                        {!app.cv_url && <span className="italic">No CV attached</span>}
                       </div>
                       {app.notes && <p className="text-xs text-muted-foreground mt-1">Notes: {app.notes}</p>}
                       {(app.years_experience != null || app.education_level || app.expected_salary != null || app.current_employer || app.source) && (
@@ -382,7 +400,13 @@ const JobApplicationsManager = () => {
                         <p className="text-xs text-muted-foreground mt-1 line-clamp-3">Cover letter: {app.cover_letter}</p>
                       )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
+                      {app.cv_url && (
+                        <Button size="sm" variant="secondary" onClick={() => openCv(app.cv_url)}>
+                          <ExternalLink className="h-3 w-3 mr-1" />
+                          View CV
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="outline"
