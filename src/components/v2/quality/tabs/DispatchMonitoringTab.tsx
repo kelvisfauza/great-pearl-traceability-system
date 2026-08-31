@@ -85,6 +85,41 @@ const DispatchMonitoringTab = () => {
     },
   });
 
+  const { data: dispatchForms = [] } = useQuery({
+    queryKey: ["dispatch-forms-for-quality"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("dispatch_monitoring_forms")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return (data || []) as any[];
+    },
+  });
+
+  const applyDispatchForm = (id: string) => {
+    const f = dispatchForms.find((d) => d.id === id);
+    if (!f) { set("dispatch_form_id", ""); return; }
+    setForm((prev) => ({
+      ...prev,
+      dispatch_form_id: id,
+      dispatch_date: f.dispatch_date || prev.dispatch_date,
+      truck_serial_number: f.truck_serial_number || prev.truck_serial_number,
+      vehicle_registration: f.vehicle_registrations || prev.vehicle_registration,
+      driver_name: f.driver_name || prev.driver_name,
+      destination_buyer: f.destination_buyer || prev.destination_buyer,
+      dispatch_location: f.warehouse || prev.dispatch_location,
+      coffee_type: f.coffee_type || prev.coffee_type,
+      batch_references: f.batch_references || prev.batch_references,
+      bags_loaded: f.bags_loaded != null ? String(f.bags_loaded) : prev.bags_loaded,
+      total_weight_kg:
+        f.net_weight != null ? String(f.net_weight)
+        : f.total_weight_store != null ? String(f.total_weight_store)
+        : prev.total_weight_kg,
+    }));
+  };
+
   const nextNumber = useMemo(() => {
     const prefix = `GAC/DA/${format(new Date(), "yyyyMM")}/`;
     const count = analyses.filter((a) => (a.analysis_number || "").startsWith(prefix)).length;
