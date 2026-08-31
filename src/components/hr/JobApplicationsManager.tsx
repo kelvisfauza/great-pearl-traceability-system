@@ -400,7 +400,13 @@ const JobApplicationsManager = () => {
                         <p className="text-xs text-muted-foreground mt-1 line-clamp-3">Cover letter: {app.cover_letter}</p>
                       )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
+                      {app.cv_url && (
+                        <Button size="sm" variant="secondary" onClick={() => openCv(app.cv_url)}>
+                          <ExternalLink className="h-3 w-3 mr-1" />
+                          View CV
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="outline"
