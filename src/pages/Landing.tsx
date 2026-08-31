@@ -38,7 +38,9 @@ export default function Landing() {
             <a href="#about" className="text-muted-foreground hover:text-foreground">About</a>
             <a href="#services" className="text-muted-foreground hover:text-foreground">What we do</a>
             <a href="#inquiry" className="text-muted-foreground hover:text-foreground">Place an order</a>
+            <a href="#careers" className="text-muted-foreground hover:text-foreground">Careers</a>
             <a href="#contact" className="text-muted-foreground hover:text-foreground">Contact us</a>
+
             <a href={WEBSITE_URL} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
               Website <ExternalLink className="h-3 w-3" />
             </a>
