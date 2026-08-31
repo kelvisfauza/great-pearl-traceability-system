@@ -142,6 +142,9 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Careers */}
+      <CareersSection />
+
       {/* Contact */}
       <section id="contact" className="mx-auto max-w-6xl px-4 py-16">
         <h2 className="text-3xl font-semibold">Contact us</h2>
