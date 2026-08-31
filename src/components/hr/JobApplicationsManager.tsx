@@ -366,6 +366,21 @@ const JobApplicationsManager = () => {
                         )}
                       </div>
                       {app.notes && <p className="text-xs text-muted-foreground mt-1">Notes: {app.notes}</p>}
+                      {(app.years_experience != null || app.education_level || app.expected_salary != null || app.current_employer || app.source) && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {[
+                            app.source === "website" ? "Online application" : null,
+                            app.education_level ? `Education: ${app.education_level}` : null,
+                            app.years_experience != null ? `${app.years_experience} yrs experience` : null,
+                            app.current_employer ? `Currently at ${app.current_employer}` : null,
+                            app.expected_salary != null ? `Expects UGX ${Number(app.expected_salary).toLocaleString()}` : null,
+                            app.availability_date ? `Available ${app.availability_date}` : null,
+                          ].filter(Boolean).join(" · ")}
+                        </p>
+                      )}
+                      {app.cover_letter && (
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-3">Cover letter: {app.cover_letter}</p>
+                      )}
                     </div>
                     <div className="flex gap-2">
                       <Button
