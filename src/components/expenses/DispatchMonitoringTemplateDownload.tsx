@@ -76,6 +76,23 @@ const emptyTruck = (): TruckRow => ({
   receipt_attached: false,
 });
 
+export const BLANK_MANUAL_VALUES: FormValues = {
+  dispatch_date: '',
+  warehouse: '',
+  coffee_type: '',
+  destination_buyer: '',
+  vehicle_registrations: '',
+  total_weight_store: '',
+  traceability_confirmed: false,
+  quality_analysis_attached: false,
+  buyer_weight: '',
+  receipt_attached: false,
+  remarks: '',
+  inputted_by: '',
+  manager_name: '',
+  trucks: Array.from({ length: 6 }, emptyTruck),
+};
+
 const num = (v: string) => {
   const n = parseFloat(String(v || '').replace(/,/g, ''));
   return Number.isFinite(n) ? n : 0;
@@ -85,7 +102,7 @@ const fmt = (n: number) => (n ? n.toLocaleString(undefined, { maximumFractionDig
 
 const line = (doc: jsPDF, x1: number, y: number, x2: number) => doc.line(x1, y, x2, y);
 
-const generateDispatchMonitoringForm = async (formNumber: string, v: FormValues) => {
+export const generateDispatchMonitoringForm = async (formNumber: string, v: FormValues) => {
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageW = 210;
   const pageH = 297;
