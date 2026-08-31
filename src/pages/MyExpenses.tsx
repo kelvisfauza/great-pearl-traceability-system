@@ -30,6 +30,7 @@ import QualityAnalysisFormDownload from '@/components/expenses/QualityAnalysisFo
 import PurchaseReportTemplateDownload from '@/components/expenses/PurchaseReportTemplateDownload';
 import SalesReceiptTemplateDownload from '@/components/expenses/SalesReceiptTemplateDownload';
 import DispatchMonitoringTemplateDownload from '@/components/expenses/DispatchMonitoringTemplateDownload';
+import DispatchMonitoringBlankTemplateDownload from '@/components/expenses/DispatchMonitoringBlankTemplateDownload';
 import FuelOrderModal from '@/components/finance/FuelOrderModal';
 
 interface ExpenseRequest {
@@ -618,6 +619,7 @@ const MyExpenses = () => {
             <PurchaseReportTemplateDownload />
             <SalesReceiptTemplateDownload />
             <DispatchMonitoringTemplateDownload />
+            <DispatchMonitoringBlankTemplateDownload />
           </TabsContent>
 
           {/* Fuel / Service Order Tab */}

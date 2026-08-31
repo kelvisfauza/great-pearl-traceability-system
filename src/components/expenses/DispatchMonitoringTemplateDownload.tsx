@@ -76,6 +76,23 @@ const emptyTruck = (): TruckRow => ({
   receipt_attached: false,
 });
 
+export const BLANK_MANUAL_VALUES: FormValues = {
+  dispatch_date: '',
+  warehouse: '',
+  coffee_type: '',
+  destination_buyer: '',
+  vehicle_registrations: '',
+  total_weight_store: '',
+  traceability_confirmed: false,
+  quality_analysis_attached: false,
+  buyer_weight: '',
+  receipt_attached: false,
+  remarks: '',
+  inputted_by: '',
+  manager_name: '',
+  trucks: Array.from({ length: 4 }, emptyTruck),
+};
+
 const num = (v: string) => {
   const n = parseFloat(String(v || '').replace(/,/g, ''));
   return Number.isFinite(n) ? n : 0;
@@ -85,7 +102,7 @@ const fmt = (n: number) => (n ? n.toLocaleString(undefined, { maximumFractionDig
 
 const line = (doc: jsPDF, x1: number, y: number, x2: number) => doc.line(x1, y, x2, y);
 
-const generateDispatchMonitoringForm = async (formNumber: string, v: FormValues) => {
+export const generateDispatchMonitoringForm = async (formNumber: string, v: FormValues, opts?: { blank?: boolean }) => {
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageW = 210;
   const pageH = 297;
@@ -112,9 +129,9 @@ const generateDispatchMonitoringForm = async (formNumber: string, v: FormValues)
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11.5);
-  doc.text('DISPATCH MONITORING FORM', pageW / 2, 30.5, { align: 'center' });
+  doc.text(opts?.blank ? 'DISPATCH MONITORING FORM  (MANUAL ENTRY)' : 'DISPATCH MONITORING FORM', pageW / 2, 30.5, { align: 'center' });
   doc.setFontSize(8);
-  doc.text(`Form No: ${formNumber}`, pageW - margin, 30.5, { align: 'right' });
+  doc.text(opts?.blank ? 'Form No: ________________' : `Form No: ${formNumber}`, pageW - margin, 30.5, { align: 'right' });
 
   doc.setLineWidth(0.35);
   let y = 34;
@@ -324,21 +341,29 @@ const generateDispatchMonitoringForm = async (formNumber: string, v: FormValues)
   doc.text('Inputted By (Name, Signature & Date)', margin, y + 4.5);
   doc.text('Manager (Name, Signature & Date)', pageW - margin - sigW, y + 4.5);
 
-  // --- QR block ---
-  const scanUrl = buildPublicUrl(`/verify/${encodeURIComponent(formNumber)}`);
-  const qrData = await QRCode.toDataURL(scanUrl, { margin: 0, width: 256, errorCorrectionLevel: 'M' });
-  const qrSize = 24;
-  const qrX = pageW / 2 - qrSize / 2;
-  const qrY = y + 9;
-  try { doc.addImage(qrData, 'PNG', qrX, qrY, qrSize, qrSize); } catch { /* ignore */ }
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7);
-  doc.text(formNumber, pageW / 2, qrY + qrSize + 3.5, { align: 'center' });
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(5.8);
-  doc.setTextColor(90, 90, 90);
-  doc.text('Scan this code in EUDR › New Dispatch Comparison Report to load this form', pageW / 2, qrY + qrSize + 6.5, { align: 'center' });
-  doc.setTextColor(0, 0, 0);
+  // --- QR block (skipped for blank manual-entry templates) ---
+  if (!opts?.blank) {
+    const scanUrl = buildPublicUrl(`/verify/${encodeURIComponent(formNumber)}`);
+    const qrData = await QRCode.toDataURL(scanUrl, { margin: 0, width: 256, errorCorrectionLevel: 'M' });
+    const qrSize = 24;
+    const qrX = pageW / 2 - qrSize / 2;
+    const qrY = y + 9;
+    try { doc.addImage(qrData, 'PNG', qrX, qrY, qrSize, qrSize); } catch { /* ignore */ }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    doc.text(formNumber, pageW / 2, qrY + qrSize + 3.5, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(5.8);
+    doc.setTextColor(90, 90, 90);
+    doc.text('Scan this code in EUDR › New Dispatch Comparison Report to load this form', pageW / 2, qrY + qrSize + 6.5, { align: 'center' });
+    doc.setTextColor(0, 0, 0);
+  } else {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(6.8);
+    doc.setTextColor(90, 90, 90);
+    doc.text('Blank manual-entry copy — fill in by hand, then enter it into the system (Store › Dispatch).', pageW / 2, y + 14, { align: 'center' });
+    doc.setTextColor(0, 0, 0);
+  }
 
   doc.setLineWidth(0.5);
   line(doc, margin, pageH - 14, pageW - margin);
@@ -352,7 +377,7 @@ const generateDispatchMonitoringForm = async (formNumber: string, v: FormValues)
     { align: 'center' },
   );
 
-  doc.save(`Dispatch-Monitoring-${formNumber}.pdf`);
+  doc.save(opts?.blank ? 'Dispatch-Monitoring-Blank-Manual.pdf' : `Dispatch-Monitoring-${formNumber}.pdf`);
   try {
     const blobUrl = doc.output('bloburl') as unknown as string;
     const printWin = window.open(blobUrl, '_blank');
