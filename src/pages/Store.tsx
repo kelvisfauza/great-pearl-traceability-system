@@ -1162,6 +1162,13 @@ const Store = () => {
           </TabsContent>
 
           {/* ------------------------------------------------------------------ */}
+          {/*                          Dispatch Monitoring                       */}
+          {/* ------------------------------------------------------------------ */}
+          <TabsContent value="dispatch" className="space-y-6">
+            <StoreDispatchMonitoring />
+          </TabsContent>
+
+          {/* ------------------------------------------------------------------ */}
           {/*                               Suppliers                            */}
           {/* ------------------------------------------------------------------ */}
           <TabsContent value="suppliers" className="space-y-6">
