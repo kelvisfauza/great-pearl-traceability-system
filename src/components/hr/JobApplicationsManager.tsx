@@ -14,9 +14,10 @@ import { UserPlus, Search, FileText, Phone, Send, Eye, Pencil, Trash2, Upload, E
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 
-const STATUSES = ["Pending", "Reviewed", "Interview Scheduled", "Interviewed", "Shortlisted", "Accepted", "Rejected"] as const;
+const STATUSES = ["Received", "Pending", "Reviewed", "Interview Scheduled", "Interviewed", "Shortlisted", "Accepted", "Rejected"] as const;
 
 const statusColors: Record<string, string> = {
+  Received: "bg-emerald-100 text-emerald-800",
   Pending: "bg-yellow-100 text-yellow-800",
   Reviewed: "bg-blue-100 text-blue-800",
   "Interview Scheduled": "bg-purple-100 text-purple-800",
