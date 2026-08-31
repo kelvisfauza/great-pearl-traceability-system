@@ -29,6 +29,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Landing from "./pages/Landing";
+import Careers from "./pages/Careers";
 import NotFound from "./pages/NotFound";
 import EmployeeProfile from "./pages/EmployeeProfile";
 import GRNScanPay from "./pages/GRNScanPay";
@@ -250,6 +251,7 @@ const App: React.ComponentType = () => {
               <GrnPairingListener />
               <Routes>
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/careers" element={<Careers />} />
                 <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
                 
                 {/* Public verification route - no auth required */}
