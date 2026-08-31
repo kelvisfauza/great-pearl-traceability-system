@@ -8,7 +8,6 @@ import {
   COMPANY_PHONE, COMPANY_PHONE_OPS, COMPANY_EMAIL, COMPANY_WEBSITE, COMPANY_REG,
 } from "@/utils/companyBrand";
 import InquiryForm from "@/components/landing/InquiryForm";
-import CareersSection from "@/components/landing/CareersSection";
 
 const WEBSITE_URL = "https://www.greatpearlcoffee.com";
 
@@ -38,7 +37,7 @@ export default function Landing() {
             <a href="#about" className="text-muted-foreground hover:text-foreground">About</a>
             <a href="#services" className="text-muted-foreground hover:text-foreground">What we do</a>
             <a href="#inquiry" className="text-muted-foreground hover:text-foreground">Place an order</a>
-            <a href="#careers" className="text-muted-foreground hover:text-foreground">Careers</a>
+            <Link to="/careers" className="text-muted-foreground hover:text-foreground">Careers</Link>
             <a href="#contact" className="text-muted-foreground hover:text-foreground">Contact us</a>
 
             <a href={WEBSITE_URL} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
@@ -143,7 +142,20 @@ export default function Landing() {
       </section>
 
       {/* Careers */}
-      <CareersSection />
+      <section id="careers" className="border-y bg-muted/30">
+        <div className="mx-auto flex max-w-6xl flex-col items-start gap-4 px-4 py-14 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-3xl font-semibold">Careers at {COMPANY_NAME}</h2>
+            <p className="mt-3 max-w-2xl text-muted-foreground">
+              See our current openings and apply online. Applications are reviewed by our Human Resources team
+              and you receive updates by SMS and email.
+            </p>
+          </div>
+          <Button asChild size="lg">
+            <Link to="/careers">View jobs & apply <ArrowRight className="ml-2 h-4 w-4" /></Link>
+          </Button>
+        </div>
+      </section>
 
       {/* Contact */}
       <section id="contact" className="mx-auto max-w-6xl px-4 py-16">
