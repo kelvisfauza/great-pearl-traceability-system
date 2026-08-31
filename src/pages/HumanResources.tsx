@@ -29,6 +29,7 @@ import EmployeeDetailsModal from '@/components/hr/EmployeeDetailsModal';
 import EmployeeFilters from '@/components/hr/EmployeeFilters';
 import EmptyState from '@/components/hr/EmptyState';
 import JobApplicationsManager from '@/components/hr/JobApplicationsManager';
+import JobOpeningsManager from '@/components/hr/JobOpeningsManager';
 import PrintCredentialsDialog from '@/components/hr/PrintCredentialsDialog';
 import SalaryPaymentRequestsManager from '@/components/hr/SalaryPaymentRequestsManager';
 import MySalaryRequests from '@/components/MySalaryRequests';
@@ -321,7 +322,10 @@ const HumanResources = () => {
           </TabsContent>
 
           <TabsContent value="job-applications">
-            <JobApplicationsManager />
+            <div className="space-y-6">
+              <JobOpeningsManager />
+              <JobApplicationsManager />
+            </div>
           </TabsContent>
           
           <TabsContent value="payments">
