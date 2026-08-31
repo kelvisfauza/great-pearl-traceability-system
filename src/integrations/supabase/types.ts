@@ -5615,48 +5615,155 @@ export type Database = {
       }
       job_applications: {
         Row: {
+          address: string | null
           applicant_name: string
+          availability_date: string | null
+          cover_letter: string | null
           created_at: string
           created_by: string
+          current_employer: string | null
+          current_position: string | null
           cv_filename: string | null
           cv_url: string | null
+          date_of_birth: string | null
+          education_level: string | null
           email: string | null
+          expected_salary: number | null
+          gender: string | null
           id: string
+          institution: string | null
           job_applied_for: string
+          national_id: string | null
           notes: string | null
+          opening_id: string | null
           phone: string
           ref_code: string
+          referees: string | null
+          source: string | null
           status: string
+          terms_accepted_at: string | null
+          updated_at: string
+          years_experience: number | null
+        }
+        Insert: {
+          address?: string | null
+          applicant_name: string
+          availability_date?: string | null
+          cover_letter?: string | null
+          created_at?: string
+          created_by: string
+          current_employer?: string | null
+          current_position?: string | null
+          cv_filename?: string | null
+          cv_url?: string | null
+          date_of_birth?: string | null
+          education_level?: string | null
+          email?: string | null
+          expected_salary?: number | null
+          gender?: string | null
+          id?: string
+          institution?: string | null
+          job_applied_for: string
+          national_id?: string | null
+          notes?: string | null
+          opening_id?: string | null
+          phone: string
+          ref_code: string
+          referees?: string | null
+          source?: string | null
+          status?: string
+          terms_accepted_at?: string | null
+          updated_at?: string
+          years_experience?: number | null
+        }
+        Update: {
+          address?: string | null
+          applicant_name?: string
+          availability_date?: string | null
+          cover_letter?: string | null
+          created_at?: string
+          created_by?: string
+          current_employer?: string | null
+          current_position?: string | null
+          cv_filename?: string | null
+          cv_url?: string | null
+          date_of_birth?: string | null
+          education_level?: string | null
+          email?: string | null
+          expected_salary?: number | null
+          gender?: string | null
+          id?: string
+          institution?: string | null
+          job_applied_for?: string
+          national_id?: string | null
+          notes?: string | null
+          opening_id?: string | null
+          phone?: string
+          ref_code?: string
+          referees?: string | null
+          source?: string | null
+          status?: string
+          terms_accepted_at?: string | null
+          updated_at?: string
+          years_experience?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_applications_opening_id_fkey"
+            columns: ["opening_id"]
+            isOneToOne: false
+            referencedRelation: "job_openings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_openings: {
+        Row: {
+          closing_date: string | null
+          created_at: string
+          created_by: string | null
+          department: string | null
+          employment_type: string | null
+          id: string
+          is_open: boolean
+          location: string | null
+          requirements: string | null
+          responsibilities: string | null
+          salary_range: string | null
+          summary: string | null
+          title: string
           updated_at: string
         }
         Insert: {
-          applicant_name: string
+          closing_date?: string | null
           created_at?: string
-          created_by: string
-          cv_filename?: string | null
-          cv_url?: string | null
-          email?: string | null
+          created_by?: string | null
+          department?: string | null
+          employment_type?: string | null
           id?: string
-          job_applied_for: string
-          notes?: string | null
-          phone: string
-          ref_code: string
-          status?: string
+          is_open?: boolean
+          location?: string | null
+          requirements?: string | null
+          responsibilities?: string | null
+          salary_range?: string | null
+          summary?: string | null
+          title: string
           updated_at?: string
         }
         Update: {
-          applicant_name?: string
+          closing_date?: string | null
           created_at?: string
-          created_by?: string
-          cv_filename?: string | null
-          cv_url?: string | null
-          email?: string | null
+          created_by?: string | null
+          department?: string | null
+          employment_type?: string | null
           id?: string
-          job_applied_for?: string
-          notes?: string | null
-          phone?: string
-          ref_code?: string
-          status?: string
+          is_open?: boolean
+          location?: string | null
+          requirements?: string | null
+          responsibilities?: string | null
+          salary_range?: string | null
+          summary?: string | null
+          title?: string
           updated_at?: string
         }
         Relationships: []

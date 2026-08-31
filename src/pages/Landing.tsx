@@ -8,6 +8,7 @@ import {
   COMPANY_PHONE, COMPANY_PHONE_OPS, COMPANY_EMAIL, COMPANY_WEBSITE, COMPANY_REG,
 } from "@/utils/companyBrand";
 import InquiryForm from "@/components/landing/InquiryForm";
+import CareersSection from "@/components/landing/CareersSection";
 
 const WEBSITE_URL = "https://www.greatpearlcoffee.com";
 

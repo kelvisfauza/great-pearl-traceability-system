@@ -32,6 +32,8 @@ project_id = "pudfybkyfedeggmokhco"
     verify_jwt = false
   [functions.submit-support-ticket]
     verify_jwt = false
+  [functions.submit-job-application]
+    verify_jwt = false
   [functions.reply-support-ticket]
     verify_jwt = true
   [functions.receipt-link]
