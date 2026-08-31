@@ -129,9 +129,9 @@ export const generateDispatchMonitoringForm = async (formNumber: string, v: Form
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11.5);
-  doc.text('DISPATCH MONITORING FORM', pageW / 2, 30.5, { align: 'center' });
+  doc.text(opts?.blank ? 'DISPATCH MONITORING FORM  (MANUAL ENTRY)' : 'DISPATCH MONITORING FORM', pageW / 2, 30.5, { align: 'center' });
   doc.setFontSize(8);
-  doc.text(`Form No: ${formNumber}`, pageW - margin, 30.5, { align: 'right' });
+  doc.text(opts?.blank ? 'Form No: ________________' : `Form No: ${formNumber}`, pageW - margin, 30.5, { align: 'right' });
 
   doc.setLineWidth(0.35);
   let y = 34;
