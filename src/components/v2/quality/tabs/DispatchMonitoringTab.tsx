@@ -44,6 +44,7 @@ const emptyForm = {
   approved_by: "",
   remarks: "",
   eudr_dispatch_report_id: "",
+  dispatch_form_id: "",
 };
 
 const num = (s: string) => (s === "" || s === null ? null : Number(s));
