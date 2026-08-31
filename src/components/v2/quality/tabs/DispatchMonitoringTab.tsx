@@ -160,12 +160,21 @@ const DispatchMonitoringTab = () => {
         dispatch_form_id: form.dispatch_form_id || null,
       };
 
+      const markForm = async () => {
+        if (!form.dispatch_form_id) return;
+        await (supabase as any)
+          .from("dispatch_monitoring_forms")
+          .update({ quality_analysis_attached: true })
+          .eq("id", form.dispatch_form_id);
+      };
+
       if (editingId) {
         const { error } = await (supabase as any)
           .from("quality_dispatch_analyses")
           .update(payload)
           .eq("id", editingId);
         if (error) throw error;
+        await markForm();
         return editingId;
       }
 
