@@ -213,7 +213,7 @@ const generateQualityForm = async (
 };
 
 const emptyValues: Values = {
-  supplier_name: '', analysis_date: new Date().toISOString().slice(0, 10), grams: '', moisture: '',
+  supplier_name: '', dispatch_number: '', analysis_date: new Date().toISOString().slice(0, 10), grams: '', moisture: '',
   below12: '', gp1: '', gp2: '', pods: '', husks: '', non_coffee: '', outturn: '',
   robusta: '', price: '', analysed_by: '', comments: '',
 };
@@ -421,6 +421,14 @@ const QualityAnalysisFormDownload = () => {
                   </div>
                 )}
 
+                <div className="space-y-2">
+                  <Label>Store Dispatch No.</Label>
+                  <Input
+                    value={values.dispatch_number || ''}
+                    onChange={(e) => setField('dispatch_number', e.target.value)}
+                    placeholder="e.g. GAC-DM-2608-0001"
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label>Analysis date</Label>
                   <Input
