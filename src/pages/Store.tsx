@@ -649,6 +649,10 @@ const Store = () => {
                 <Scale className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Operations
               </TabsTrigger>
+              <TabsTrigger value="dispatch" className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                <Truck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Dispatch
+              </TabsTrigger>
               <TabsTrigger value="suppliers" className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                 <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Suppliers
