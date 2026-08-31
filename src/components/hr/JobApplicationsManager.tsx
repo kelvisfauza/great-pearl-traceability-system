@@ -16,6 +16,28 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const STATUSES = ["Received", "Pending", "Reviewed", "Interview Scheduled", "Interviewed", "Shortlisted", "Accepted", "Rejected"] as const;
 
+// CV links are stored as signed URLs which eventually expire.
+// Re-sign from the storage path so HR always gets a working link.
+const openCv = async (cvUrl: string) => {
+  try {
+    const marker = "/job-applications/";
+    const idx = cvUrl.indexOf(marker);
+    if (idx !== -1) {
+      const path = decodeURIComponent(cvUrl.slice(idx + marker.length).split("?")[0]);
+      const { data, error } = await supabase.storage
+        .from("job-applications")
+        .createSignedUrl(path, 60 * 60);
+      if (!error && data?.signedUrl) {
+        window.open(data.signedUrl, "_blank", "noopener");
+        return;
+      }
+    }
+    window.open(cvUrl, "_blank", "noopener");
+  } catch {
+    window.open(cvUrl, "_blank", "noopener");
+  }
+};
+
 const statusColors: Record<string, string> = {
   Received: "bg-emerald-100 text-emerald-800",
   Pending: "bg-yellow-100 text-yellow-800",
