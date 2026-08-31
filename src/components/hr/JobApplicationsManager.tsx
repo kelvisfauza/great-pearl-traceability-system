@@ -28,6 +28,8 @@ const statusColors: Record<string, string> = {
 };
 
 const STATUS_SMS_MESSAGES: Record<string, (name: string, ref: string, extra?: string) => string> = {
+  Received: (name, ref) =>
+    `Dear ${name}, we have RECEIVED your job application under Ref: ${ref}. Our HR team will review it and contact you with updates. Great Agro Coffee.`,
   Pending: (name, ref) =>
     `Dear ${name}, your job application has been received under Ref: ${ref} and is currently PENDING review. Thank you for your interest in Great Agro Coffee.`,
   Reviewed: (name, ref) =>
