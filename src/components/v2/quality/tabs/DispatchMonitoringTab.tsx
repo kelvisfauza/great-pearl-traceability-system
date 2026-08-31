@@ -157,6 +157,7 @@ const DispatchMonitoringTab = () => {
         approved_by: form.approved_by || null,
         remarks: form.remarks || null,
         eudr_dispatch_report_id: form.eudr_dispatch_report_id || null,
+        dispatch_form_id: form.dispatch_form_id || null,
       };
 
       if (editingId) {
