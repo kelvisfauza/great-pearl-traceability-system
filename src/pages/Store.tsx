@@ -167,7 +167,7 @@ const Store = () => {
 
   const initialTabParam = searchParams.get("tab");
   const initialTab: StoreTab =
-    initialTabParam === "pricing" || initialTabParam === "operations" || initialTabParam === "suppliers"
+    initialTabParam === "pricing" || initialTabParam === "operations" || initialTabParam === "dispatch" || initialTabParam === "suppliers"
       ? initialTabParam
       : "records";
 
