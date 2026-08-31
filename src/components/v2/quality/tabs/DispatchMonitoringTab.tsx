@@ -195,10 +195,13 @@ const DispatchMonitoringTab = () => {
           .update({ dispatch_analysis_id: data.id })
           .eq("id", form.eudr_dispatch_report_id);
       }
+      await markForm();
       return data.id as string;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["quality-dispatch-analyses"] });
+      qc.invalidateQueries({ queryKey: ["dispatch-forms-for-quality"] });
+      qc.invalidateQueries({ queryKey: ["store-dispatch-forms"] });
       toast({ title: editingId ? "Dispatch analysis updated" : "Dispatch analysis saved" });
       setOpen(false);
       setEditingId(null);
