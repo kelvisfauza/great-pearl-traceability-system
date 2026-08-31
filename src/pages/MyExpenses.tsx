@@ -32,7 +32,7 @@ import SalesReceiptTemplateDownload from '@/components/expenses/SalesReceiptTemp
 import DispatchMonitoringTemplateDownload from '@/components/expenses/DispatchMonitoringTemplateDownload';
 import DispatchMonitoringBlankTemplateDownload from '@/components/expenses/DispatchMonitoringBlankTemplateDownload';
 import StoreCoffeeClearanceTemplateDownload from '@/components/expenses/StoreCoffeeClearanceTemplateDownload';
-import StoreReleaseQualityCheckTemplateDownload from '@/components/expenses/StoreReleaseQualityCheckTemplateDownload';
+
 import FuelOrderModal from '@/components/finance/FuelOrderModal';
 
 interface ExpenseRequest {
@@ -623,7 +623,7 @@ const MyExpenses = () => {
             <DispatchMonitoringTemplateDownload />
             <DispatchMonitoringBlankTemplateDownload />
             <StoreCoffeeClearanceTemplateDownload />
-            <StoreReleaseQualityCheckTemplateDownload />
+
           </TabsContent>
 
           {/* Fuel / Service Order Tab */}
