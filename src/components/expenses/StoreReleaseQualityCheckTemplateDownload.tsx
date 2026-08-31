@@ -69,9 +69,12 @@ export const generateStoreReleaseQualityCheckForm = async () => {
     doc.text(label, x + 2, yy + 3.6);
   };
 
-  // Link to the store clearance form
+  // Link to the store clearance / dispatch record
   cell('DATE', margin, half, y);
-  cell('ATTACHED TO CLEARANCE FORM NO.', margin + half, half, y);
+  cell('STORE DISPATCH NO. (e.g. GAC-DM-2608-0001)', margin + half, half, y);
+  y += rowH;
+  cell('ATTACHED TO CLEARANCE FORM NO.', margin, half, y);
+  cell('BUYER / DESTINATION', margin + half, half, y);
   y += rowH;
   cell('WAREHOUSE / STORE', margin, half, y);
   cell('LOT / BATCH REF. ANALYSED', margin + half, half, y);
