@@ -381,11 +381,7 @@ const JobApplicationsManager = () => {
                         <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{app.phone}</span>
                         {app.email && <span className="text-primary">{app.email}</span>}
                         <span>{format(new Date(app.created_at), "MMM dd, yyyy")}</span>
-                        {app.cv_url && (
-                          <a href={app.cv_url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-primary hover:underline">
-                            <ExternalLink className="h-3 w-3" />CV: {app.cv_filename || "View"}
-                          </a>
-                        )}
+                        {!app.cv_url && <span className="italic">No CV attached</span>}
                       </div>
                       {app.notes && <p className="text-xs text-muted-foreground mt-1">Notes: {app.notes}</p>}
                       {(app.years_experience != null || app.education_level || app.expected_salary != null || app.current_employer || app.source) && (
