@@ -37,11 +37,12 @@ const loadImageAsBase64 = (url: string): Promise<string | null> =>
   });
 
 type FieldKey =
-  | 'supplier_name' | 'analysis_date' | 'grams' | 'moisture' | 'below12' | 'gp1' | 'gp2'
+  | 'supplier_name' | 'dispatch_number' | 'analysis_date' | 'grams' | 'moisture' | 'below12' | 'gp1' | 'gp2'
   | 'pods' | 'husks' | 'non_coffee' | 'outturn' | 'robusta' | 'price' | 'analysed_by' | 'comments';
 
 const ROWS: { key?: FieldKey; label: string; hint?: string }[] = [
   { label: 'Form No.' },
+  { key: 'dispatch_number', label: 'Store Dispatch No.', hint: 'e.g. GAC-DM-2608-0001' },
   { key: 'supplier_name', label: 'Supplier Name' },
   { key: 'analysis_date', label: 'Date' },
   { key: 'grams', label: 'Grams Used (Sample Weight)' },
