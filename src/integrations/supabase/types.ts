@@ -2505,23 +2505,37 @@ export type Database = {
           attachment_name: string | null
           attachment_path: string | null
           attachment_uploaded_at: string | null
+          bags_loaded: number | null
+          batch_references: string | null
           buyer_weight: number | null
           coffee_type: string | null
+          container_number: string | null
           created_at: string
           created_by: string | null
           created_by_name: string | null
           destination_buyer: string | null
           dispatch_date: string | null
+          dispatch_time: string | null
+          dispatched_by: string | null
+          driver_id_number: string | null
+          driver_name: string | null
+          driver_phone: string | null
           form_number: string
+          gross_weight: number | null
           id: string
           inputted_by: string | null
           manager_name: string | null
+          net_weight: number | null
           quality_analysis_attached: boolean
           receipt_attached: boolean
           remarks: string | null
+          seal_numbers: string | null
           status: string
+          tare_weight: number | null
           total_weight_store: number | null
           traceability_confirmed: boolean
+          transporter: string | null
+          truck_serial_number: string | null
           trucks: Json
           updated_at: string
           vehicle_registrations: string | null
@@ -2532,23 +2546,37 @@ export type Database = {
           attachment_name?: string | null
           attachment_path?: string | null
           attachment_uploaded_at?: string | null
+          bags_loaded?: number | null
+          batch_references?: string | null
           buyer_weight?: number | null
           coffee_type?: string | null
+          container_number?: string | null
           created_at?: string
           created_by?: string | null
           created_by_name?: string | null
           destination_buyer?: string | null
           dispatch_date?: string | null
+          dispatch_time?: string | null
+          dispatched_by?: string | null
+          driver_id_number?: string | null
+          driver_name?: string | null
+          driver_phone?: string | null
           form_number: string
+          gross_weight?: number | null
           id?: string
           inputted_by?: string | null
           manager_name?: string | null
+          net_weight?: number | null
           quality_analysis_attached?: boolean
           receipt_attached?: boolean
           remarks?: string | null
+          seal_numbers?: string | null
           status?: string
+          tare_weight?: number | null
           total_weight_store?: number | null
           traceability_confirmed?: boolean
+          transporter?: string | null
+          truck_serial_number?: string | null
           trucks?: Json
           updated_at?: string
           vehicle_registrations?: string | null
@@ -2559,23 +2587,37 @@ export type Database = {
           attachment_name?: string | null
           attachment_path?: string | null
           attachment_uploaded_at?: string | null
+          bags_loaded?: number | null
+          batch_references?: string | null
           buyer_weight?: number | null
           coffee_type?: string | null
+          container_number?: string | null
           created_at?: string
           created_by?: string | null
           created_by_name?: string | null
           destination_buyer?: string | null
           dispatch_date?: string | null
+          dispatch_time?: string | null
+          dispatched_by?: string | null
+          driver_id_number?: string | null
+          driver_name?: string | null
+          driver_phone?: string | null
           form_number?: string
+          gross_weight?: number | null
           id?: string
           inputted_by?: string | null
           manager_name?: string | null
+          net_weight?: number | null
           quality_analysis_attached?: boolean
           receipt_attached?: boolean
           remarks?: string | null
+          seal_numbers?: string | null
           status?: string
+          tare_weight?: number | null
           total_weight_store?: number | null
           traceability_confirmed?: boolean
+          transporter?: string | null
+          truck_serial_number?: string | null
           trucks?: Json
           updated_at?: string
           vehicle_registrations?: string | null
@@ -9411,6 +9453,7 @@ export type Database = {
           cup_score: number | null
           destination_buyer: string | null
           dispatch_date: string
+          dispatch_form_id: string | null
           dispatch_location: string | null
           driver_name: string | null
           eudr_dispatch_report_id: string | null
@@ -9449,6 +9492,7 @@ export type Database = {
           cup_score?: number | null
           destination_buyer?: string | null
           dispatch_date?: string
+          dispatch_form_id?: string | null
           dispatch_location?: string | null
           driver_name?: string | null
           eudr_dispatch_report_id?: string | null
@@ -9487,6 +9531,7 @@ export type Database = {
           cup_score?: number | null
           destination_buyer?: string | null
           dispatch_date?: string
+          dispatch_form_id?: string | null
           dispatch_location?: string | null
           driver_name?: string | null
           eudr_dispatch_report_id?: string | null
@@ -9511,6 +9556,13 @@ export type Database = {
           verdict?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "quality_dispatch_analyses_dispatch_form_id_fkey"
+            columns: ["dispatch_form_id"]
+            isOneToOne: false
+            referencedRelation: "dispatch_monitoring_forms"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "quality_dispatch_analyses_eudr_dispatch_report_id_fkey"
             columns: ["eudr_dispatch_report_id"]

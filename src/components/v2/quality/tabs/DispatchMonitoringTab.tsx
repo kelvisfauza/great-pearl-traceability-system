@@ -44,6 +44,7 @@ const emptyForm = {
   approved_by: "",
   remarks: "",
   eudr_dispatch_report_id: "",
+  dispatch_form_id: "",
 };
 
 const num = (s: string) => (s === "" || s === null ? null : Number(s));
@@ -84,6 +85,41 @@ const DispatchMonitoringTab = () => {
     },
   });
 
+  const { data: dispatchForms = [] } = useQuery({
+    queryKey: ["dispatch-forms-for-quality"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("dispatch_monitoring_forms")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return (data || []) as any[];
+    },
+  });
+
+  const applyDispatchForm = (id: string) => {
+    const f = dispatchForms.find((d) => d.id === id);
+    if (!f) { set("dispatch_form_id", ""); return; }
+    setForm((prev) => ({
+      ...prev,
+      dispatch_form_id: id,
+      dispatch_date: f.dispatch_date || prev.dispatch_date,
+      truck_serial_number: f.truck_serial_number || prev.truck_serial_number,
+      vehicle_registration: f.vehicle_registrations || prev.vehicle_registration,
+      driver_name: f.driver_name || prev.driver_name,
+      destination_buyer: f.destination_buyer || prev.destination_buyer,
+      dispatch_location: f.warehouse || prev.dispatch_location,
+      coffee_type: f.coffee_type || prev.coffee_type,
+      batch_references: f.batch_references || prev.batch_references,
+      bags_loaded: f.bags_loaded != null ? String(f.bags_loaded) : prev.bags_loaded,
+      total_weight_kg:
+        f.net_weight != null ? String(f.net_weight)
+        : f.total_weight_store != null ? String(f.total_weight_store)
+        : prev.total_weight_kg,
+    }));
+  };
+
   const nextNumber = useMemo(() => {
     const prefix = `GAC/DA/${format(new Date(), "yyyyMM")}/`;
     const count = analyses.filter((a) => (a.analysis_number || "").startsWith(prefix)).length;
@@ -121,6 +157,15 @@ const DispatchMonitoringTab = () => {
         approved_by: form.approved_by || null,
         remarks: form.remarks || null,
         eudr_dispatch_report_id: form.eudr_dispatch_report_id || null,
+        dispatch_form_id: form.dispatch_form_id || null,
+      };
+
+      const markForm = async () => {
+        if (!form.dispatch_form_id) return;
+        await (supabase as any)
+          .from("dispatch_monitoring_forms")
+          .update({ quality_analysis_attached: true })
+          .eq("id", form.dispatch_form_id);
       };
 
       if (editingId) {
@@ -129,6 +174,7 @@ const DispatchMonitoringTab = () => {
           .update(payload)
           .eq("id", editingId);
         if (error) throw error;
+        await markForm();
         return editingId;
       }
 
@@ -149,10 +195,13 @@ const DispatchMonitoringTab = () => {
           .update({ dispatch_analysis_id: data.id })
           .eq("id", form.eudr_dispatch_report_id);
       }
+      await markForm();
       return data.id as string;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["quality-dispatch-analyses"] });
+      qc.invalidateQueries({ queryKey: ["dispatch-forms-for-quality"] });
+      qc.invalidateQueries({ queryKey: ["store-dispatch-forms"] });
       toast({ title: editingId ? "Dispatch analysis updated" : "Dispatch analysis saved" });
       setOpen(false);
       setEditingId(null);
@@ -289,6 +338,24 @@ const DispatchMonitoringTab = () => {
           </DialogHeader>
 
           <div className="space-y-5">
+            <div>
+              <Label className="text-xs">Store dispatch monitoring form</Label>
+              <Select value={form.dispatch_form_id || "none"} onValueChange={(v) => applyDispatchForm(v === "none" ? "" : v)}>
+                <SelectTrigger><SelectValue placeholder="Select the store dispatch record" /></SelectTrigger>
+                <SelectContent className="bg-background z-50">
+                  <SelectItem value="none">Not linked</SelectItem>
+                  {dispatchForms.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.form_number} — {f.vehicle_registrations || "no truck"} {f.destination_buyer ? `→ ${f.destination_buyer}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Picking a store record fills in the truck, driver, buyer and weights, and marks the quality analysis as attached.
+              </p>
+            </div>
+
             <div>
               <p className="text-sm font-semibold mb-2">A. Dispatch / Truck details</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
