@@ -102,7 +102,7 @@ const fmt = (n: number) => (n ? n.toLocaleString(undefined, { maximumFractionDig
 
 const line = (doc: jsPDF, x1: number, y: number, x2: number) => doc.line(x1, y, x2, y);
 
-export const generateDispatchMonitoringForm = async (formNumber: string, v: FormValues) => {
+export const generateDispatchMonitoringForm = async (formNumber: string, v: FormValues, opts?: { blank?: boolean }) => {
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageW = 210;
   const pageH = 297;
