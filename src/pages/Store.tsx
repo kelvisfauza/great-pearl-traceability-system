@@ -68,7 +68,7 @@ import StoreDispatchMonitoring from "@/components/store/StoreDispatchMonitoring"
 /*                               Helper Types                                 */
 /* -------------------------------------------------------------------------- */
 
-type StoreTab = "records" | "pricing" | "operations" | "suppliers" | "reports";
+type StoreTab = "records" | "pricing" | "operations" | "dispatch" | "suppliers" | "reports";
 
 type NewSupplierForm = {
   name: string;
