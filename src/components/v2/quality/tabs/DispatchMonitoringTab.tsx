@@ -339,6 +339,24 @@ const DispatchMonitoringTab = () => {
 
           <div className="space-y-5">
             <div>
+              <Label className="text-xs">Store dispatch monitoring form</Label>
+              <Select value={form.dispatch_form_id || "none"} onValueChange={(v) => applyDispatchForm(v === "none" ? "" : v)}>
+                <SelectTrigger><SelectValue placeholder="Select the store dispatch record" /></SelectTrigger>
+                <SelectContent className="bg-background z-50">
+                  <SelectItem value="none">Not linked</SelectItem>
+                  {dispatchForms.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.form_number} — {f.vehicle_registrations || "no truck"} {f.destination_buyer ? `→ ${f.destination_buyer}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Picking a store record fills in the truck, driver, buyer and weights, and marks the quality analysis as attached.
+              </p>
+            </div>
+
+            <div>
               <p className="text-sm font-semibold mb-2">A. Dispatch / Truck details</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
