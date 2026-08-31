@@ -90,7 +90,7 @@ export const BLANK_MANUAL_VALUES: FormValues = {
   remarks: '',
   inputted_by: '',
   manager_name: '',
-  trucks: Array.from({ length: 6 }, emptyTruck),
+  trucks: Array.from({ length: 4 }, emptyTruck),
 };
 
 const num = (v: string) => {
