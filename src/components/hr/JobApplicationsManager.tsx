@@ -14,9 +14,10 @@ import { UserPlus, Search, FileText, Phone, Send, Eye, Pencil, Trash2, Upload, E
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 
-const STATUSES = ["Pending", "Reviewed", "Interview Scheduled", "Interviewed", "Shortlisted", "Accepted", "Rejected"] as const;
+const STATUSES = ["Received", "Pending", "Reviewed", "Interview Scheduled", "Interviewed", "Shortlisted", "Accepted", "Rejected"] as const;
 
 const statusColors: Record<string, string> = {
+  Received: "bg-emerald-100 text-emerald-800",
   Pending: "bg-yellow-100 text-yellow-800",
   Reviewed: "bg-blue-100 text-blue-800",
   "Interview Scheduled": "bg-purple-100 text-purple-800",
@@ -27,6 +28,8 @@ const statusColors: Record<string, string> = {
 };
 
 const STATUS_SMS_MESSAGES: Record<string, (name: string, ref: string, extra?: string) => string> = {
+  Received: (name, ref) =>
+    `Dear ${name}, we have RECEIVED your job application under Ref: ${ref}. Our HR team will review it and contact you with updates. Great Agro Coffee.`,
   Pending: (name, ref) =>
     `Dear ${name}, your job application has been received under Ref: ${ref} and is currently PENDING review. Thank you for your interest in Great Agro Coffee.`,
   Reviewed: (name, ref) =>
@@ -363,6 +366,21 @@ const JobApplicationsManager = () => {
                         )}
                       </div>
                       {app.notes && <p className="text-xs text-muted-foreground mt-1">Notes: {app.notes}</p>}
+                      {(app.years_experience != null || app.education_level || app.expected_salary != null || app.current_employer || app.source) && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {[
+                            app.source === "website" ? "Online application" : null,
+                            app.education_level ? `Education: ${app.education_level}` : null,
+                            app.years_experience != null ? `${app.years_experience} yrs experience` : null,
+                            app.current_employer ? `Currently at ${app.current_employer}` : null,
+                            app.expected_salary != null ? `Expects UGX ${Number(app.expected_salary).toLocaleString()}` : null,
+                            app.availability_date ? `Available ${app.availability_date}` : null,
+                          ].filter(Boolean).join(" · ")}
+                        </p>
+                      )}
+                      {app.cover_letter && (
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-3">Cover letter: {app.cover_letter}</p>
+                      )}
                     </div>
                     <div className="flex gap-2">
                       <Button
