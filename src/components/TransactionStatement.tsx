@@ -256,7 +256,8 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       // amounts, causing the running balance to diverge from admin's view.
       const rawEntries = ((data || []) as LedgerEntry[]).filter((entry) => !isDirectAllowancePayout(entry));
       setTotalCount(rawEntries.length);
-      setEntries(rawEntries.slice(0, DISPLAY_LIMIT));
+      setEntries(rawEntries);
+      setVisibleCount(DISPLAY_LIMIT);
     } catch (err) {
       console.error('Error fetching ledger:', err);
     } finally {
