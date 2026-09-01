@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import MonthlyAirtimeManager from '@/components/v2/hr/MonthlyAirtimeManager';
 import { 
   Users, 
   UserPlus, 
