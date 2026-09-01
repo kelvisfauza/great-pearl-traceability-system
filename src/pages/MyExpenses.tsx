@@ -33,6 +33,7 @@ import DispatchMonitoringTemplateDownload from '@/components/expenses/DispatchMo
 import DispatchMonitoringBlankTemplateDownload from '@/components/expenses/DispatchMonitoringBlankTemplateDownload';
 import StoreCoffeeClearanceTemplateDownload from '@/components/expenses/StoreCoffeeClearanceTemplateDownload';
 import StoreReleaseQualityCheckTemplateDownload from '@/components/expenses/StoreReleaseQualityCheckTemplateDownload';
+import SupplierAdvanceAgreementTemplateDownload from '@/components/expenses/SupplierAdvanceAgreementTemplateDownload';
 
 import FuelOrderModal from '@/components/finance/FuelOrderModal';
 
@@ -625,6 +626,7 @@ const MyExpenses = () => {
             <DispatchMonitoringBlankTemplateDownload />
             <StoreCoffeeClearanceTemplateDownload />
             <StoreReleaseQualityCheckTemplateDownload />
+            <SupplierAdvanceAgreementTemplateDownload />
 
 
           </TabsContent>

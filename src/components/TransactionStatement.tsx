@@ -166,6 +166,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
+  const [visibleCount, setVisibleCount] = useState(DISPLAY_LIMIT);
 
   const entriesWithBalance = React.useMemo(() => {
     if (entries.length === 0) return [];
@@ -255,7 +256,8 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       // amounts, causing the running balance to diverge from admin's view.
       const rawEntries = ((data || []) as LedgerEntry[]).filter((entry) => !isDirectAllowancePayout(entry));
       setTotalCount(rawEntries.length);
-      setEntries(rawEntries.slice(0, DISPLAY_LIMIT));
+      setEntries(rawEntries);
+      setVisibleCount(DISPLAY_LIMIT);
     } catch (err) {
       console.error('Error fetching ledger:', err);
     } finally {
@@ -900,10 +902,10 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       ) : (
         <div className="space-y-1.5">
           <div className="text-xs text-muted-foreground mb-1">
-            Showing {Math.min(DISPLAY_LIMIT, entries.length)} most recent of {totalCount} transactions
+            Showing {Math.min(visibleCount, entries.length)} most recent of {totalCount} transactions
           </div>
 
-          {entriesWithBalance.map((entry) => {
+          {entriesWithBalance.slice(0, visibleCount).map((entry) => {
             const config = ENTRY_CONFIG[entry.entry_type] || DEFAULT_CONFIG;
             const isCredit = entry.amount > 0;
             const activityLabel = getActivityLabel(entry);
@@ -976,12 +978,23 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
             );
           })}
 
+          {visibleCount < entries.length && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full"
+              onClick={() => setVisibleCount((c) => c + 40)}
+            >
+              Show more transactions
+            </Button>
+          )}
+
           {/* Full Statement via Email */}
-          {totalCount > DISPLAY_LIMIT && (
+          {totalCount > visibleCount && (
             <div className="border border-dashed rounded-lg p-4 text-center space-y-2 bg-muted/30">
               <Mail className="h-5 w-5 mx-auto text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
-                You have <span className="font-semibold text-foreground">{totalCount - DISPLAY_LIMIT}</span> more transactions.
+                You have <span className="font-semibold text-foreground">{totalCount - visibleCount}</span> more transactions.
               </p>
               <p className="text-xs text-muted-foreground">
                 Select a date range and we'll email your full statement.
