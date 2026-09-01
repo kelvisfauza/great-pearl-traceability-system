@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import MonthlyAirtimeManager from '@/components/v2/hr/MonthlyAirtimeManager';
 import { 
   Users, 
   UserPlus, 
@@ -210,6 +211,7 @@ const HumanResources = () => {
               <TabsTrigger value="overtime" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Overtime</TabsTrigger>
               <TabsTrigger value="time-deductions" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Time Deductions</TabsTrigger>
               <TabsTrigger value="contracts" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Contracts</TabsTrigger>
+              <TabsTrigger value="airtime" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Monthly Airtime</TabsTrigger>
               <TabsTrigger value="qr-codes" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">QR Codes</TabsTrigger>
             </TabsList>
           </div>
@@ -362,6 +364,10 @@ const HumanResources = () => {
 
           <TabsContent value="contracts">
             <EmployeeContractsManager />
+          </TabsContent>
+
+          <TabsContent value="airtime">
+            <MonthlyAirtimeManager />
           </TabsContent>
 
           <TabsContent value="qr-codes">
