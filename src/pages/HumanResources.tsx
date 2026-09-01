@@ -364,6 +364,10 @@ const HumanResources = () => {
             <EmployeeContractsManager />
           </TabsContent>
 
+          <TabsContent value="airtime">
+            <MonthlyAirtimeManager />
+          </TabsContent>
+
           <TabsContent value="qr-codes">
             <EmployeeQRCodes employees={employees.filter(e => e.status === 'Active')} />
           </TabsContent>
