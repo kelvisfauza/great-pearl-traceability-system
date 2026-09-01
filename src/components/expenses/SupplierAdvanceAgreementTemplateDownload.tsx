@@ -42,17 +42,17 @@ export const generateSupplierAdvanceAgreementForm = async () => {
     }
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
+    doc.setFontSize(14);
     doc.text('GREAT AGRO COFFEE', margin + 20, 12);
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.2);
+    doc.setFontSize(8);
     doc.text('a member of YEDA COFFEE COMPANY LIMITED', margin + 20, 16.5);
     doc.text('P.O Box 431420, Kasese, Uganda  |  +256 393 001 626 / +256 393 101 103', margin + 20, 20);
     doc.text('info@greatpearlcoffee.com', margin + 20, 23);
     doc.setLineWidth(0.5);
     doc.line(margin, 26, pageW - margin, 26);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11.5);
+    doc.setFontSize(13);
     doc.text(subtitle, pageW / 2, 32, { align: 'center' });
     doc.setLineWidth(0.35);
     y = 37;
@@ -62,7 +62,7 @@ export const generateSupplierAdvanceAgreementForm = async () => {
     doc.setLineWidth(0.5);
     doc.line(margin, pageH - 14, pageW - margin, pageH - 14);
     doc.setFont('helvetica', 'italic');
-    doc.setFontSize(6.4);
+    doc.setFontSize(7.5);
     doc.setTextColor(80, 80, 80);
     doc.text(
       'Great Agro Coffee  |  a member of YEDA Coffee Company Limited  |  P.O Box 431420, Kasese, Uganda',
@@ -82,16 +82,16 @@ export const generateSupplierAdvanceAgreementForm = async () => {
   // ---------------- PAGE 1 : particulars ----------------
   drawHeader('SUPPLIER ADVANCE AGREEMENT & UNDERTAKING');
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.6);
+  doc.setFontSize(9);
   doc.text('Advance Ref: ______________________', pageW - margin, 32, { align: 'right' });
 
-  const rowH = 9;
+  const rowH = 10.5;
   const half = contentW / 2;
   const cell = (label: string, x: number, w: number, yy: number) => {
     doc.rect(x, yy, w, rowH);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.4);
-    doc.text(label, x + 2, yy + 3.4);
+    doc.setFontSize(8.5);
+    doc.text(label, x + 2, yy + 4);
   };
 
   cell('ADVANCE REFERENCE NO. (e.g. GAC-ADV-2609-0001)', margin, half, y);
@@ -125,24 +125,24 @@ export const generateSupplierAdvanceAgreementForm = async () => {
 
   // Recovery method selection
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.4);
+  doc.setFontSize(10);
   doc.text('RECOVERY METHOD (tick one)', margin, y);
-  y += 3;
-  doc.rect(margin, y, contentW, 20);
+  y += 4;
+  doc.rect(margin, y, contentW, 22);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.8);
+  doc.setFontSize(9);
   doc.rect(margin + 4, y + 4, 4, 4);
-  doc.text('RECOVERY THROUGH DELIVERIES — deducted per kilogram/consignment delivered until fully cleared.', margin + 11, y + 7.2);
-  doc.rect(margin + 4, y + 11, 4, 4);
-  doc.text('RECOVERY AT ONCE (LUMP SUM) — full repayment in cash on or before the recovery date above.', margin + 11, y + 14.2);
-  y += 24;
+  doc.text('RECOVERY THROUGH DELIVERIES — deducted per kilogram/consignment delivered until fully cleared.', margin + 11, y + 8);
+  doc.rect(margin + 4, y + 12, 4, 4);
+  doc.text('RECOVERY AT ONCE (LUMP SUM) — full repayment in cash on or before the recovery date above.', margin + 11, y + 16);
+  y += 26;
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.8);
+  doc.setFontSize(9);
   doc.text('Deduction rate per delivery (if by deliveries): ________ UGX/Kg or ________ % of consignment value.', margin, y);
-  y += 5;
+  y += 5.5;
   doc.text('Lump-sum repayment date (if at once): ______________________________', margin, y);
-  y += 8;
+  y += 9;
 
   // ---------------- PAGES 2-3 : terms ----------------
   doc.addPage();
