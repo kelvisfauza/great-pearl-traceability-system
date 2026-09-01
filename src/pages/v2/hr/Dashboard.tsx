@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import V2Navigation from "@/components/v2/V2Navigation";
 import PriceTicker from "@/components/PriceTicker";
-import { Users, Calendar, Award, Clock, MessageSquare, CreditCard, AlertTriangle, Gift, Ban, ShieldAlert, Calculator, Gauge } from "lucide-react";
+import { Users, Calendar, Award, Clock, MessageSquare, CreditCard, AlertTriangle, Gift, Ban, ShieldAlert, Calculator, Gauge, Smartphone } from "lucide-react";
 import AllocateBonusDialog from "@/components/v2/hr/AllocateBonusDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -81,6 +81,7 @@ const HRDashboard = () => {
     { title: "Absence Appeals", description: "Review and manage absence deduction appeals", icon: ShieldAlert, path: "/v2/hr/absence-appeals" },
     { title: "Per Diem", description: "Award per diem allowances to employees", icon: CreditCard, path: "/v2/hr/per-diem" },
     { title: "Payroll & Statutory", description: "NSSF & PAYE deductions, payroll runs", icon: Calculator, path: "/v2/hr/payroll" },
+    { title: "Monthly Airtime", description: "Review, edit, approve and send employee airtime", icon: Smartphone, path: "/v2/hr/airtime" },
     { title: "Loyalty Balances", description: "Track employee loyalty reward balances", icon: Gift, path: "/v2/hr/loyalty-balances" },
   ];
 
