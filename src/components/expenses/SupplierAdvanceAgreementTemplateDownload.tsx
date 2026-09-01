@@ -278,16 +278,16 @@ export const generateSupplierAdvanceAgreementForm = async () => {
   const rightEnd = sigBlock('WITNESS (Company Officer)', ['Name:', 'Title:', 'Signature:', 'Date:'], y, colW, margin + colW + 10);
   y = Math.max(leftEnd, rightEnd) + 6;
 
-  ensure(40, 'DECLARATION AND EXECUTION');
+  ensure(45, 'DECLARATION AND EXECUTION');
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.6);
+  doc.setFontSize(9);
   doc.text('FOR AND ON BEHALF OF GREAT AGRO COFFEE', margin, y);
   y += 5;
   const a1 = sigBlock('Approved By — Administrator', ['Name:', 'Signature:', 'Date:'], y, colW, margin);
   const a2 = sigBlock('Verified By — Finance / Procurement', ['Name:', 'Signature:', 'Date:'], y, colW, margin + colW + 10);
   y = Math.max(a1, a2) + 4;
   doc.setFont('helvetica', 'italic');
-  doc.setFontSize(6.8);
+  doc.setFontSize(8);
   doc.text('Company stamp: ______________________', margin, y + 4);
 
   const total = doc.getNumberOfPages();
