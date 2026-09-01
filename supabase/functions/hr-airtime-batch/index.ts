@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
           recipient_count: included.length,
           total_amount: included.reduce((s, i) => s + Number(i.amount || 0), 0),
         })
-        .eq('batch_id' in {} ? 'id' : 'id', batchId)
+        .eq('id', batchId)
         .eq('status', 'draft')
       if (error) return json({ ok: false, error: error.message })
 
