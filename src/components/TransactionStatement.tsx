@@ -166,6 +166,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
+  const [visibleCount, setVisibleCount] = useState(DISPLAY_LIMIT);
 
   const entriesWithBalance = React.useMemo(() => {
     if (entries.length === 0) return [];
