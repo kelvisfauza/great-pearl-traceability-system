@@ -902,10 +902,10 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       ) : (
         <div className="space-y-1.5">
           <div className="text-xs text-muted-foreground mb-1">
-            Showing {Math.min(DISPLAY_LIMIT, entries.length)} most recent of {totalCount} transactions
+            Showing {Math.min(visibleCount, entries.length)} most recent of {totalCount} transactions
           </div>
 
-          {entriesWithBalance.map((entry) => {
+          {entriesWithBalance.slice(0, visibleCount).map((entry) => {
             const config = ENTRY_CONFIG[entry.entry_type] || DEFAULT_CONFIG;
             const isCredit = entry.amount > 0;
             const activityLabel = getActivityLabel(entry);
