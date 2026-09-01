@@ -211,8 +211,8 @@ export const generateSupplierAdvanceAgreementForm = async () => {
     ['9. SIDE-SELLING', [
       'Selling, pledging or diverting to any other buyer coffee purchased with the Company Advance is expressly prohibited. The Company treats side-selling as obtaining money by false pretence and as a conversion of the Company property, and reserves the right to pursue both civil recovery and criminal prosecution.',
     ]],
-    ['10. SECURITY AND GUARANTORS', [
-      'The Company may require security, which may include a land agreement, logbook, stock pledge, post-dated cheque, or personal guarantee. Every guarantor signs jointly and severally with the Supplier and may be pursued for the whole outstanding balance without the Company first proceeding against the Supplier.',
+    ['10. SECURITY', [
+      'The Company may require security, which may include a land agreement, logbook, stock pledge, post-dated cheque, or other collateral acceptable to the Company. The Supplier agrees that the Company may enforce its security in accordance with the terms of the security document or applicable law without first obtaining a court order where the law permits.',
     ]],
   ];
 
@@ -277,7 +277,7 @@ export const generateSupplierAdvanceAgreementForm = async () => {
   renderClauses(clauses2, 'TERMS AND CONDITIONS OF THE ADVANCE (cont.)');
 
   // ---------------- Declaration & signatures ----------------
-  ensure(90, 'DECLARATION, GUARANTORS AND EXECUTION');
+  ensure(90, 'DECLARATION AND EXECUTION');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.4);
   doc.text('DECLARATION BY THE SUPPLIER', margin, y);
@@ -311,14 +311,9 @@ export const generateSupplierAdvanceAgreementForm = async () => {
   const colW = (contentW - 10) / 2;
   const leftEnd = sigBlock('SUPPLIER', ['Name:', 'NIN:', 'Signature / Thumbprint:', 'Date:'], y, colW, margin);
   const rightEnd = sigBlock('WITNESS (Company Officer)', ['Name:', 'Title:', 'Signature:', 'Date:'], y, colW, margin + colW + 10);
-  y = Math.max(leftEnd, rightEnd) + 4;
+  y = Math.max(leftEnd, rightEnd) + 6;
 
-  ensure(60, 'DECLARATION, GUARANTORS AND EXECUTION');
-  const g1 = sigBlock('GUARANTOR 1', ['Name:', 'NIN:', 'Tel:', 'Signature:', 'Date:'], y, colW, margin);
-  const g2 = sigBlock('GUARANTOR 2', ['Name:', 'NIN:', 'Tel:', 'Signature:', 'Date:'], y, colW, margin + colW + 10);
-  y = Math.max(g1, g2) + 6;
-
-  ensure(40, 'DECLARATION, GUARANTORS AND EXECUTION');
+  ensure(40, 'DECLARATION AND EXECUTION');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.6);
   doc.text('FOR AND ON BEHALF OF GREAT AGRO COFFEE', margin, y);
@@ -376,11 +371,10 @@ const SupplierAdvanceAgreementTemplateDownload = () => {
         </CardTitle>
         <CardDescription className="text-xs">
           Legal advance contract issued to suppliers for signing. Captures advance reference, issue date,
-          crop year, amount awarded (figures & words), supplier and security details, delivery schedule, and
-          recovery method (through deliveries or at once). Includes 21 detailed clauses covering side-selling,
-          delayed deliveries, default, demand notices, legal action, arrest and prosecution, attachment of
-          property, costs of recovery, set-off and governing law — plus supplier, witness, guarantor and
-          company signature blocks.
+          crop year, amount awarded (figures & words), supplier and security details, and recovery method
+          (through deliveries or at once). Includes 21 detailed clauses covering side-selling, delayed
+          deliveries, default, demand notices, legal action, arrest and prosecution, attachment of property,
+          costs of recovery, set-off and governing law — plus supplier, witness and company signature blocks.
         </CardDescription>
       </CardHeader>
       <CardContent>
