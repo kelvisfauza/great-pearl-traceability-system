@@ -42,17 +42,17 @@ export const generateSupplierAdvanceAgreementForm = async () => {
     }
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
+    doc.setFontSize(14);
     doc.text('GREAT AGRO COFFEE', margin + 20, 12);
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.2);
+    doc.setFontSize(8);
     doc.text('a member of YEDA COFFEE COMPANY LIMITED', margin + 20, 16.5);
     doc.text('P.O Box 431420, Kasese, Uganda  |  +256 393 001 626 / +256 393 101 103', margin + 20, 20);
     doc.text('info@greatpearlcoffee.com', margin + 20, 23);
     doc.setLineWidth(0.5);
     doc.line(margin, 26, pageW - margin, 26);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11.5);
+    doc.setFontSize(13);
     doc.text(subtitle, pageW / 2, 32, { align: 'center' });
     doc.setLineWidth(0.35);
     y = 37;
@@ -62,7 +62,7 @@ export const generateSupplierAdvanceAgreementForm = async () => {
     doc.setLineWidth(0.5);
     doc.line(margin, pageH - 14, pageW - margin, pageH - 14);
     doc.setFont('helvetica', 'italic');
-    doc.setFontSize(6.4);
+    doc.setFontSize(7.5);
     doc.setTextColor(80, 80, 80);
     doc.text(
       'Great Agro Coffee  |  a member of YEDA Coffee Company Limited  |  P.O Box 431420, Kasese, Uganda',
@@ -82,16 +82,16 @@ export const generateSupplierAdvanceAgreementForm = async () => {
   // ---------------- PAGE 1 : particulars ----------------
   drawHeader('SUPPLIER ADVANCE AGREEMENT & UNDERTAKING');
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.6);
+  doc.setFontSize(9);
   doc.text('Advance Ref: ______________________', pageW - margin, 32, { align: 'right' });
 
-  const rowH = 9;
+  const rowH = 10.5;
   const half = contentW / 2;
   const cell = (label: string, x: number, w: number, yy: number) => {
     doc.rect(x, yy, w, rowH);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.4);
-    doc.text(label, x + 2, yy + 3.4);
+    doc.setFontSize(8.5);
+    doc.text(label, x + 2, yy + 4);
   };
 
   cell('ADVANCE REFERENCE NO. (e.g. GAC-ADV-2609-0001)', margin, half, y);
@@ -117,67 +117,32 @@ export const generateSupplierAdvanceAgreementForm = async () => {
   cell('AGREED PRICE BASIS (UGX / Kg)', margin + half, half, y);
   y += rowH;
   cell('TOTAL KILOGRAMS PLEDGED AGAINST THIS ADVANCE', margin, half, y);
-  cell('FIRST DELIVERY DUE DATE', margin + half, half, y);
+  cell('FINAL RECOVERY / EXPIRY DATE', margin + half, half, y);
   y += rowH;
-  cell('FINAL RECOVERY / EXPIRY DATE', margin, half, y);
-  cell('DISBURSEMENT MODE (Cash / MoMo / Bank)', margin + half, half, y);
+  cell('DISBURSEMENT MODE (Cash / MoMo / Bank)', margin, half, y);
+  cell('EXPECTED FIRST DELIVERY DATE', margin + half, half, y);
   y += rowH + 5;
 
   // Recovery method selection
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.4);
+  doc.setFontSize(10);
   doc.text('RECOVERY METHOD (tick one)', margin, y);
-  y += 3;
-  doc.rect(margin, y, contentW, 20);
+  y += 4;
+  doc.rect(margin, y, contentW, 22);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.8);
+  doc.setFontSize(9);
   doc.rect(margin + 4, y + 4, 4, 4);
-  doc.text('RECOVERY THROUGH DELIVERIES — deducted per kilogram/consignment delivered until fully cleared.', margin + 11, y + 7.2);
-  doc.rect(margin + 4, y + 11, 4, 4);
-  doc.text('RECOVERY AT ONCE (LUMP SUM) — full repayment in cash on or before the recovery date below.', margin + 11, y + 14.2);
-  y += 24;
+  doc.text('RECOVERY THROUGH DELIVERIES — deducted per kilogram/consignment delivered until fully cleared.', margin + 11, y + 8);
+  doc.rect(margin + 4, y + 12, 4, 4);
+  doc.text('RECOVERY AT ONCE (LUMP SUM) — full repayment in cash on or before the recovery date above.', margin + 11, y + 16);
+  y += 26;
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.8);
+  doc.setFontSize(9);
   doc.text('Deduction rate per delivery (if by deliveries): ________ UGX/Kg or ________ % of consignment value.', margin, y);
-  y += 5;
+  y += 5.5;
   doc.text('Lump-sum repayment date (if at once): ______________________________', margin, y);
-  y += 8;
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.4);
-  doc.text('DELIVERY SCHEDULE', margin, y);
-  y += 2;
-  const schCols = [
-    { label: 'No.', w: 0.08 },
-    { label: 'Delivery Due Date', w: 0.24 },
-    { label: 'Quantity (Kg)', w: 0.20 },
-    { label: 'Value (UGX)', w: 0.24 },
-    { label: 'Advance Recovered (UGX)', w: 0.24 },
-  ];
-  const hH = 7;
-  let x = margin;
-  doc.setFillColor(235, 235, 235);
-  doc.rect(margin, y, contentW, hH, 'F');
-  doc.setFontSize(7.2);
-  schCols.forEach((c) => {
-    const cw = contentW * c.w;
-    doc.rect(x, y, cw, hH);
-    doc.text(c.label, x + cw / 2, y + hH / 2 + 1.3, { align: 'center' });
-    x += cw;
-  });
-  y += hH;
-  doc.setFont('helvetica', 'normal');
-  for (let i = 1; i <= 5; i++) {
-    x = margin;
-    schCols.forEach((c, ci) => {
-      const cw = contentW * c.w;
-      doc.rect(x, y, cw, 7.5);
-      if (ci === 0) doc.text(String(i), x + cw / 2, y + 5, { align: 'center' });
-      x += cw;
-    });
-    y += 7.5;
-  }
+  y += 9;
 
   // ---------------- PAGES 2-3 : terms ----------------
   doc.addPage();
@@ -211,8 +176,8 @@ export const generateSupplierAdvanceAgreementForm = async () => {
     ['9. SIDE-SELLING', [
       'Selling, pledging or diverting to any other buyer coffee purchased with the Company Advance is expressly prohibited. The Company treats side-selling as obtaining money by false pretence and as a conversion of the Company property, and reserves the right to pursue both civil recovery and criminal prosecution.',
     ]],
-    ['10. SECURITY AND GUARANTORS', [
-      'The Company may require security, which may include a land agreement, logbook, stock pledge, post-dated cheque, or personal guarantee. Every guarantor signs jointly and severally with the Supplier and may be pursued for the whole outstanding balance without the Company first proceeding against the Supplier.',
+    ['10. SECURITY', [
+      'The Company may require security, which may include a land agreement, logbook, stock pledge, post-dated cheque, or other collateral acceptable to the Company. The Supplier agrees that the Company may enforce its security in accordance with the terms of the security document or applicable law without first obtaining a court order where the law permits.',
     ]],
   ];
 
@@ -233,7 +198,7 @@ export const generateSupplierAdvanceAgreementForm = async () => {
       'The Company may at any time set off the outstanding balance against any sum payable to the Supplier under this or any other transaction, and shall have a lien over any coffee, goods, documents or property of the Supplier in its possession until the Advance is cleared in full.',
     ]],
     ['16. DEATH, INCAPACITY OR DISSOLUTION', [
-      'In the event of the death, incapacity or dissolution of the Supplier, the outstanding balance shall become immediately payable and shall be recoverable from the estate, successors, administrators, partners or guarantors of the Supplier.',
+      'In the event of the death, incapacity or dissolution of the Supplier, the outstanding balance shall become immediately payable and shall be recoverable from the estate, successors, administrators or partners of the Supplier.',
     ]],
     ['17. FORCE MAJEURE', [
       'Neither party shall be liable for failure caused by events genuinely beyond its control, including natural disaster, epidemic, civil unrest or government directive. The Supplier must notify the Company in writing within seven (7) days of the event. Force majeure suspends delivery obligations only and does not extinguish the debt.',
@@ -254,22 +219,22 @@ export const generateSupplierAdvanceAgreementForm = async () => {
 
   const renderClauses = (list: [string, string[]][], subtitle: string) => {
     list.forEach(([heading, paras]) => {
-      ensure(16, subtitle);
+      ensure(18, subtitle);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8.2);
+      doc.setFontSize(10);
       doc.text(heading, margin, y);
-      y += 4;
+      y += 5;
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7.6);
+      doc.setFontSize(9);
       paras.forEach((p) => {
         const lines = doc.splitTextToSize(p, contentW) as string[];
         lines.forEach((ln) => {
-          ensure(6, subtitle);
+          ensure(6.5, subtitle);
           doc.text(ln, margin, y);
-          y += 3.6;
+          y += 4.2;
         });
       });
-      y += 3;
+      y += 4;
     });
   };
 
@@ -277,33 +242,33 @@ export const generateSupplierAdvanceAgreementForm = async () => {
   renderClauses(clauses2, 'TERMS AND CONDITIONS OF THE ADVANCE (cont.)');
 
   // ---------------- Declaration & signatures ----------------
-  ensure(90, 'DECLARATION, GUARANTORS AND EXECUTION');
+  ensure(100, 'DECLARATION AND EXECUTION');
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.4);
+  doc.setFontSize(10);
   doc.text('DECLARATION BY THE SUPPLIER', margin, y);
-  y += 4;
+  y += 5;
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.6);
+  doc.setFontSize(9);
   const decl =
     'I confirm that the particulars given by me are true, that this Agreement has been read out and explained to me in a language I understand, that I have received the Advance stated overleaf, and that I accept all the terms above including recovery through deliveries or at once, delayed-delivery charges, civil suit, arrest, prosecution and attachment of my property in the event of default.';
   (doc.splitTextToSize(decl, contentW) as string[]).forEach((ln) => {
     doc.text(ln, margin, y);
-    y += 3.6;
+    y += 4.2;
   });
-  y += 6;
+  y += 7;
 
   const sigBlock = (title: string, rows: string[], startY: number, w: number, xPos: number) => {
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.6);
+    doc.setFontSize(9);
     doc.text(title, xPos, startY);
-    let yy = startY + 5;
+    let yy = startY + 6;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.2);
+    doc.setFontSize(8.5);
     rows.forEach((r) => {
       doc.text(r, xPos, yy);
       doc.setLineWidth(0.25);
       doc.line(xPos + doc.getTextWidth(r) + 2, yy + 0.8, xPos + w, yy + 0.8);
-      yy += 7;
+      yy += 8;
     });
     return yy;
   };
@@ -311,23 +276,18 @@ export const generateSupplierAdvanceAgreementForm = async () => {
   const colW = (contentW - 10) / 2;
   const leftEnd = sigBlock('SUPPLIER', ['Name:', 'NIN:', 'Signature / Thumbprint:', 'Date:'], y, colW, margin);
   const rightEnd = sigBlock('WITNESS (Company Officer)', ['Name:', 'Title:', 'Signature:', 'Date:'], y, colW, margin + colW + 10);
-  y = Math.max(leftEnd, rightEnd) + 4;
+  y = Math.max(leftEnd, rightEnd) + 6;
 
-  ensure(60, 'DECLARATION, GUARANTORS AND EXECUTION');
-  const g1 = sigBlock('GUARANTOR 1', ['Name:', 'NIN:', 'Tel:', 'Signature:', 'Date:'], y, colW, margin);
-  const g2 = sigBlock('GUARANTOR 2', ['Name:', 'NIN:', 'Tel:', 'Signature:', 'Date:'], y, colW, margin + colW + 10);
-  y = Math.max(g1, g2) + 6;
-
-  ensure(40, 'DECLARATION, GUARANTORS AND EXECUTION');
+  ensure(45, 'DECLARATION AND EXECUTION');
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.6);
+  doc.setFontSize(9);
   doc.text('FOR AND ON BEHALF OF GREAT AGRO COFFEE', margin, y);
   y += 5;
   const a1 = sigBlock('Approved By — Administrator', ['Name:', 'Signature:', 'Date:'], y, colW, margin);
   const a2 = sigBlock('Verified By — Finance / Procurement', ['Name:', 'Signature:', 'Date:'], y, colW, margin + colW + 10);
   y = Math.max(a1, a2) + 4;
   doc.setFont('helvetica', 'italic');
-  doc.setFontSize(6.8);
+  doc.setFontSize(8);
   doc.text('Company stamp: ______________________', margin, y + 4);
 
   const total = doc.getNumberOfPages();
@@ -376,11 +336,10 @@ const SupplierAdvanceAgreementTemplateDownload = () => {
         </CardTitle>
         <CardDescription className="text-xs">
           Legal advance contract issued to suppliers for signing. Captures advance reference, issue date,
-          crop year, amount awarded (figures & words), supplier and security details, delivery schedule, and
-          recovery method (through deliveries or at once). Includes 21 detailed clauses covering side-selling,
-          delayed deliveries, default, demand notices, legal action, arrest and prosecution, attachment of
-          property, costs of recovery, set-off and governing law — plus supplier, witness, guarantor and
-          company signature blocks.
+          crop year, amount awarded (figures & words), supplier and security details, and recovery method
+          (through deliveries or at once). Includes 21 detailed clauses covering side-selling, delayed
+          deliveries, default, demand notices, legal action, arrest and prosecution, attachment of property,
+          costs of recovery, set-off and governing law — plus supplier, witness and company signature blocks.
         </CardDescription>
       </CardHeader>
       <CardContent>
