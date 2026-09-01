@@ -978,12 +978,23 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
             );
           })}
 
+          {visibleCount < entries.length && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full"
+              onClick={() => setVisibleCount((c) => c + 40)}
+            >
+              Show more transactions
+            </Button>
+          )}
+
           {/* Full Statement via Email */}
-          {totalCount > DISPLAY_LIMIT && (
+          {totalCount > visibleCount && (
             <div className="border border-dashed rounded-lg p-4 text-center space-y-2 bg-muted/30">
               <Mail className="h-5 w-5 mx-auto text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
-                You have <span className="font-semibold text-foreground">{totalCount - DISPLAY_LIMIT}</span> more transactions.
+                You have <span className="font-semibold text-foreground">{totalCount - visibleCount}</span> more transactions.
               </p>
               <p className="text-xs text-muted-foreground">
                 Select a date range and we'll email your full statement.
