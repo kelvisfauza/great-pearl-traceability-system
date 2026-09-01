@@ -625,6 +625,7 @@ const MyExpenses = () => {
             <DispatchMonitoringBlankTemplateDownload />
             <StoreCoffeeClearanceTemplateDownload />
             <StoreReleaseQualityCheckTemplateDownload />
+            <SupplierAdvanceAgreementTemplateDownload />
 
 
           </TabsContent>
