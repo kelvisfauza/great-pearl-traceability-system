@@ -96,6 +96,7 @@ const DEPARTMENT_NAV_CONFIG: Record<string, {
         { icon: ShieldAlert, label: "Absence Appeals", path: "/v2/hr/absence-appeals", permission: "Human Resources" },
         { icon: Wallet, label: "Per Diem", path: "/v2/hr/per-diem", permission: "Human Resources" },
         { icon: Calculator, label: "Payroll & Statutory", path: "/v2/hr/payroll", permission: "Human Resources" },
+        { icon: Smartphone, label: "Monthly Airtime", path: "/v2/hr/airtime", permission: "Human Resources" },
       ]
     }
   ],

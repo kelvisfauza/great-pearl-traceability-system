@@ -298,6 +298,7 @@ const App: React.ComponentType = () => {
                 <Route path="/v2/hr/leave" element={<ProtectedRoute requiredPermissions={["Human Resources"]}><V2HRLeaveManagement /></ProtectedRoute>} />
                 <Route path="/v2/hr/per-diem" element={<ProtectedRoute requiredPermissions={["Human Resources"]} requiredRoles={["Administrator", "Super Admin"]}><V2HRPerDiem /></ProtectedRoute>} />
                 <Route path="/v2/hr/payroll" element={<ProtectedRoute requiredPermissions={["Human Resources"]} requiredRoles={["Administrator", "Super Admin"]}><V2HRPayroll /></ProtectedRoute>} />
+                <Route path="/v2/hr/airtime" element={<ProtectedRoute requiredPermissions={["Human Resources"]} requiredRoles={["Administrator", "Super Admin"]}><V2HRAirtime /></ProtectedRoute>} />
                 <Route path="/v2/hr/absence-appeals" element={<ProtectedRoute requiredPermissions={["Human Resources"]}><V2HRAbsenceAppeals /></ProtectedRoute>} />
                 <Route path="/my-deductions" element={<ProtectedRoute><MyDeductionsPage /></ProtectedRoute>} />
                 <Route path="/print-queue" element={<ProtectedRoute><PrintQueuePage /></ProtectedRoute>} />
