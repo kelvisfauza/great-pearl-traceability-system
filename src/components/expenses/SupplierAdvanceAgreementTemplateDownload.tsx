@@ -198,7 +198,7 @@ export const generateSupplierAdvanceAgreementForm = async () => {
       'The Company may at any time set off the outstanding balance against any sum payable to the Supplier under this or any other transaction, and shall have a lien over any coffee, goods, documents or property of the Supplier in its possession until the Advance is cleared in full.',
     ]],
     ['16. DEATH, INCAPACITY OR DISSOLUTION', [
-      'In the event of the death, incapacity or dissolution of the Supplier, the outstanding balance shall become immediately payable and shall be recoverable from the estate, successors, administrators, partners or guarantors of the Supplier.',
+      'In the event of the death, incapacity or dissolution of the Supplier, the outstanding balance shall become immediately payable and shall be recoverable from the estate, successors, administrators or partners of the Supplier.',
     ]],
     ['17. FORCE MAJEURE', [
       'Neither party shall be liable for failure caused by events genuinely beyond its control, including natural disaster, epidemic, civil unrest or government directive. The Supplier must notify the Company in writing within seven (7) days of the event. Force majeure suspends delivery obligations only and does not extinguish the debt.',
@@ -219,22 +219,22 @@ export const generateSupplierAdvanceAgreementForm = async () => {
 
   const renderClauses = (list: [string, string[]][], subtitle: string) => {
     list.forEach(([heading, paras]) => {
-      ensure(16, subtitle);
+      ensure(18, subtitle);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8.2);
+      doc.setFontSize(10);
       doc.text(heading, margin, y);
-      y += 4;
+      y += 5;
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7.6);
+      doc.setFontSize(9);
       paras.forEach((p) => {
         const lines = doc.splitTextToSize(p, contentW) as string[];
         lines.forEach((ln) => {
-          ensure(6, subtitle);
+          ensure(6.5, subtitle);
           doc.text(ln, margin, y);
-          y += 3.6;
+          y += 4.2;
         });
       });
-      y += 3;
+      y += 4;
     });
   };
 
@@ -242,33 +242,33 @@ export const generateSupplierAdvanceAgreementForm = async () => {
   renderClauses(clauses2, 'TERMS AND CONDITIONS OF THE ADVANCE (cont.)');
 
   // ---------------- Declaration & signatures ----------------
-  ensure(90, 'DECLARATION AND EXECUTION');
+  ensure(100, 'DECLARATION AND EXECUTION');
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.4);
+  doc.setFontSize(10);
   doc.text('DECLARATION BY THE SUPPLIER', margin, y);
-  y += 4;
+  y += 5;
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.6);
+  doc.setFontSize(9);
   const decl =
     'I confirm that the particulars given by me are true, that this Agreement has been read out and explained to me in a language I understand, that I have received the Advance stated overleaf, and that I accept all the terms above including recovery through deliveries or at once, delayed-delivery charges, civil suit, arrest, prosecution and attachment of my property in the event of default.';
   (doc.splitTextToSize(decl, contentW) as string[]).forEach((ln) => {
     doc.text(ln, margin, y);
-    y += 3.6;
+    y += 4.2;
   });
-  y += 6;
+  y += 7;
 
   const sigBlock = (title: string, rows: string[], startY: number, w: number, xPos: number) => {
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.6);
+    doc.setFontSize(9);
     doc.text(title, xPos, startY);
-    let yy = startY + 5;
+    let yy = startY + 6;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.2);
+    doc.setFontSize(8.5);
     rows.forEach((r) => {
       doc.text(r, xPos, yy);
       doc.setLineWidth(0.25);
       doc.line(xPos + doc.getTextWidth(r) + 2, yy + 0.8, xPos + w, yy + 0.8);
-      yy += 7;
+      yy += 8;
     });
     return yy;
   };
