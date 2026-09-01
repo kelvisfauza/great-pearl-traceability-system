@@ -201,6 +201,7 @@ const ADMIN_NAV = [
       { icon: ShoppingCart, label: "Sales", path: "/v2/sales" },
       { icon: Wallet, label: "Finance", path: "/v2/finance" },
       { icon: Users, label: "HR", path: "/v2/hr" },
+      { icon: Smartphone, label: "Monthly Airtime", path: "/v2/hr/airtime" },
       { icon: MapPin, label: "Field Ops", path: "/v2/field-operations" },
       { icon: BarChart3, label: "Analytics", path: "/v2/analytics" },
       { icon: Leaf, label: "EUDR", path: "/v2/eudr" },
