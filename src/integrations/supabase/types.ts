@@ -348,6 +348,116 @@ export type Database = {
           },
         ]
       }
+      airtime_batch_items: {
+        Row: {
+          amount: number
+          batch_id: string
+          created_at: string
+          department: string | null
+          employee_email: string
+          employee_name: string
+          error_message: string | null
+          id: string
+          included: boolean
+          paid_at: string | null
+          payment_status: string
+          phone: string
+          tier: string
+          updated_at: string
+          yo_reference: string | null
+        }
+        Insert: {
+          amount?: number
+          batch_id: string
+          created_at?: string
+          department?: string | null
+          employee_email: string
+          employee_name: string
+          error_message?: string | null
+          id?: string
+          included?: boolean
+          paid_at?: string | null
+          payment_status?: string
+          phone: string
+          tier?: string
+          updated_at?: string
+          yo_reference?: string | null
+        }
+        Update: {
+          amount?: number
+          batch_id?: string
+          created_at?: string
+          department?: string | null
+          employee_email?: string
+          employee_name?: string
+          error_message?: string | null
+          id?: string
+          included?: boolean
+          paid_at?: string | null
+          payment_status?: string
+          phone?: string
+          tier?: string
+          updated_at?: string
+          yo_reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "airtime_batch_items_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "airtime_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      airtime_batches: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          month_year: string
+          notes: string | null
+          recipient_count: number
+          sent_at: string | null
+          status: string
+          title: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          month_year: string
+          notes?: string | null
+          recipient_count?: number
+          sent_at?: string | null
+          status?: string
+          title?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          month_year?: string
+          notes?: string | null
+          recipient_count?: number
+          sent_at?: string | null
+          status?: string
+          title?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       announcements: {
         Row: {
           created_at: string
