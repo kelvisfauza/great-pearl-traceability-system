@@ -142,6 +142,7 @@ const BiometricAttendanceImport = ({ people, onImported }: Props) => {
           attendance_status: d.status,
           assumed_arrival: d.assumedArrival,
           assumed_departure: d.assumedDeparture,
+          has_existing: false,
           notes: `Biometric import (${fileName})`,
         });
       });
@@ -154,6 +155,7 @@ const BiometricAttendanceImport = ({ people, onImported }: Props) => {
 
     setImporting(true);
     setProgress(0);
+    let createdBatchId: string | null = null;
     try {
       // 1) Compare against what is already in the system for these employees/dates
       const dates = rows.map((r) => r.record_date).sort();
@@ -194,6 +196,7 @@ const BiometricAttendanceImport = ({ people, onImported }: Props) => {
         .select()
         .single();
       if (batchErr) throw batchErr;
+      createdBatchId = (batch as any).id;
 
       // 3) Stage the rows
       const chunkSize = 200;
@@ -212,6 +215,9 @@ const BiometricAttendanceImport = ({ people, onImported }: Props) => {
       setFileName('');
       onImported?.();
     } catch (err: any) {
+      if (createdBatchId) {
+        await supabase.from('attendance_import_batches' as any).delete().eq('id', createdBatchId);
+      }
       toast.error('Could not submit for approval: ' + err.message);
     } finally {
       setImporting(false);
