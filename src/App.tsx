@@ -91,6 +91,7 @@ import V2HRLoyaltyBalances from "./pages/v2/hr/LoyaltyBalances";
 import V2HRLeaveManagement from "./pages/v2/hr/LeaveManagement";
 import V2HRPerDiem from "./pages/v2/hr/PerDiem";
 import V2HRPayroll from "./pages/v2/hr/Payroll";
+import V2HRAirtime from "./pages/v2/hr/Airtime";
 import V2FieldOpsDashboard from "./pages/v2/field-operations/Dashboard";
 import V2AnalyticsDashboard from "./pages/v2/analytics/Dashboard";
 import V2EUDRDashboard from "./pages/v2/eudr/Dashboard";
