@@ -117,10 +117,10 @@ export const generateSupplierAdvanceAgreementForm = async () => {
   cell('AGREED PRICE BASIS (UGX / Kg)', margin + half, half, y);
   y += rowH;
   cell('TOTAL KILOGRAMS PLEDGED AGAINST THIS ADVANCE', margin, half, y);
-  cell('FIRST DELIVERY DUE DATE', margin + half, half, y);
+  cell('FINAL RECOVERY / EXPIRY DATE', margin + half, half, y);
   y += rowH;
-  cell('FINAL RECOVERY / EXPIRY DATE', margin, half, y);
-  cell('DISBURSEMENT MODE (Cash / MoMo / Bank)', margin + half, half, y);
+  cell('DISBURSEMENT MODE (Cash / MoMo / Bank)', margin, half, y);
+  cell('EXPECTED FIRST DELIVERY DATE', margin + half, half, y);
   y += rowH + 5;
 
   // Recovery method selection
@@ -134,7 +134,7 @@ export const generateSupplierAdvanceAgreementForm = async () => {
   doc.rect(margin + 4, y + 4, 4, 4);
   doc.text('RECOVERY THROUGH DELIVERIES — deducted per kilogram/consignment delivered until fully cleared.', margin + 11, y + 7.2);
   doc.rect(margin + 4, y + 11, 4, 4);
-  doc.text('RECOVERY AT ONCE (LUMP SUM) — full repayment in cash on or before the recovery date below.', margin + 11, y + 14.2);
+  doc.text('RECOVERY AT ONCE (LUMP SUM) — full repayment in cash on or before the recovery date above.', margin + 11, y + 14.2);
   y += 24;
 
   doc.setFont('helvetica', 'normal');
@@ -143,41 +143,6 @@ export const generateSupplierAdvanceAgreementForm = async () => {
   y += 5;
   doc.text('Lump-sum repayment date (if at once): ______________________________', margin, y);
   y += 8;
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.4);
-  doc.text('DELIVERY SCHEDULE', margin, y);
-  y += 2;
-  const schCols = [
-    { label: 'No.', w: 0.08 },
-    { label: 'Delivery Due Date', w: 0.24 },
-    { label: 'Quantity (Kg)', w: 0.20 },
-    { label: 'Value (UGX)', w: 0.24 },
-    { label: 'Advance Recovered (UGX)', w: 0.24 },
-  ];
-  const hH = 7;
-  let x = margin;
-  doc.setFillColor(235, 235, 235);
-  doc.rect(margin, y, contentW, hH, 'F');
-  doc.setFontSize(7.2);
-  schCols.forEach((c) => {
-    const cw = contentW * c.w;
-    doc.rect(x, y, cw, hH);
-    doc.text(c.label, x + cw / 2, y + hH / 2 + 1.3, { align: 'center' });
-    x += cw;
-  });
-  y += hH;
-  doc.setFont('helvetica', 'normal');
-  for (let i = 1; i <= 5; i++) {
-    x = margin;
-    schCols.forEach((c, ci) => {
-      const cw = contentW * c.w;
-      doc.rect(x, y, cw, 7.5);
-      if (ci === 0) doc.text(String(i), x + cw / 2, y + 5, { align: 'center' });
-      x += cw;
-    });
-    y += 7.5;
-  }
 
   // ---------------- PAGES 2-3 : terms ----------------
   doc.addPage();
