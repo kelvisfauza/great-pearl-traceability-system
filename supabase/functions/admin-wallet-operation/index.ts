@@ -157,23 +157,16 @@ async function hashOtp(code: string, opId: string): Promise<string> {
 }
 
 async function getLedgerBalance(supabase: any, userId: string): Promise<number> {
-  const { data } = await supabase
-    .from("ledger_entries")
-    .select("entry_type, amount")
-    .eq("user_id", userId);
-  return (data || []).reduce((s: number, r: any) => {
-    const amt = Number(r.amount) || 0;
-    // Amounts are stored SIGNED (a DB trigger normalises debits to negative).
-    // Never re-apply a sign to an already-negative amount — that turns debits
-    // into credits and silently inflates the balance (missed overdraft fees).
-    if (amt < 0) return s + amt;
-    const credits = new Set([
-      "DEPOSIT","LOYALTY_REWARD","BONUS","MONTHLY_SALARY","LOAN_DISBURSEMENT",
-      "HOST_MEETING_BONUS","MEETING_ATTENDANCE_BONUS","REVERSAL","ADJUSTMENT",
-    ]);
-    return credits.has(r.entry_type) ? s + amt : s - amt;
-  }, 0);
+  // Canonical source of truth. Never sum ledger_entries client-side here: the
+  // PostgREST default 1000-row cap silently truncates users with long histories
+  // (e.g. 2,000+ loyalty rows) and reports a false negative balance.
+  const { data, error } = await supabase.rpc("get_effective_wallet_balance", {
+    p_user_id: userId,
+  });
+  if (error) throw new Error(`Failed to read wallet balance: ${error.message}`);
+  return Number(data) || 0;
 }
+
 
 async function postLedger(supabase: any, args: {
   user_id: string;
