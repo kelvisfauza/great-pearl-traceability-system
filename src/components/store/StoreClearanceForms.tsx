@@ -389,7 +389,29 @@ const StoreClearanceForms = () => {
                 </SelectContent>
               </Select>
             </div>
+            <div className="md:col-span-2">
+              <Label>Procurement / sales contract (optional)</Label>
+              <Select
+                value={form.contract_id || "none"}
+                onValueChange={(v) => {
+                  const picked = contracts.find((c: any) => c.id === v);
+                  set("contract_id", v === "none" ? "" : v);
+                  if (picked && !form.destination_buyer) set("destination_buyer", picked.buyer_name || "");
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="Not linked to a contract" /></SelectTrigger>
+                <SelectContent className="bg-background z-50">
+                  <SelectItem value="none">Not linked to a contract</SelectItem>
+                  {contracts.map((c: any) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.contract_ref || "Contract"} — {c.buyer_name} — {n(c.total_quantity).toLocaleString()} kg
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
 
           <div className="space-y-2">
             <Label>Coffee released from store</Label>
