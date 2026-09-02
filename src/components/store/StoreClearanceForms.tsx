@@ -387,6 +387,37 @@ const StoreClearanceForms = () => {
 
           <div><Label>Remarks</Label><Textarea value={form.remarks} onChange={(e) => set("remarks", e.target.value)} rows={2} /></div>
 
+          <div className="space-y-2">
+            <Label>Attach signed form / scan (PDF or image)</Label>
+            <Input
+              type="file"
+              multiple
+              accept="application/pdf,image/*"
+              disabled={uploading}
+              onChange={(e) => uploadFiles(e.target.files)}
+            />
+            {uploading && (
+              <p className="text-xs text-muted-foreground flex items-center gap-2">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…
+              </p>
+            )}
+            {attachments.length > 0 && (
+              <ul className="space-y-1">
+                {attachments.map((a, idx) => (
+                  <li key={a.path} className="flex items-center justify-between border rounded-md px-2 py-1 text-sm">
+                    <button type="button" className="flex items-center gap-2 hover:underline text-left" onClick={() => openAttachment(a.path)}>
+                      <Paperclip className="h-3.5 w-3.5" /> {a.name}
+                    </button>
+                    <Button size="sm" variant="ghost" onClick={() => setAttachments((p) => p.filter((_, i) => i !== idx))}>
+                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div><Label>Released By — Store Manager</Label><Input value={form.released_by} onChange={(e) => set("released_by", e.target.value)} /></div>
             <div><Label>Received By — Driver</Label><Input value={form.received_by_driver} onChange={(e) => set("received_by_driver", e.target.value)} /></div>
