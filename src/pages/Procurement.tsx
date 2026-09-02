@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ComprehensiveReports from "@/components/procurement/ComprehensiveReports";
+import ProcurementActionCenter from "@/components/procurement/ProcurementActionCenter";
 import { 
   Package, 
   Plus, 
