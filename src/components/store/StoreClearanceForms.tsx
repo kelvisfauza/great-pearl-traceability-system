@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, Plus, ClipboardList, Trash2, Scale, Pencil } from "lucide-react";
+import { Loader2, Plus, ClipboardList, Trash2, Scale, Pencil, Paperclip } from "lucide-react";
 import { useEUDRDispatchReports } from "@/hooks/useEUDRDispatchReports";
 
 interface ClearanceItem {
@@ -110,6 +110,7 @@ const StoreClearanceForms = () => {
   const resetForm = () => {
     setForm({ ...emptyForm, released_by: employee?.name || "" });
     setItems([{ ...emptyItem }]);
+    setAttachments([]);
     setEditingId(null);
   };
 
@@ -166,6 +167,7 @@ const StoreClearanceForms = () => {
         received_by_driver: form.received_by_driver || null,
         approved_by: form.approved_by || null,
         dispatch_report_id: form.dispatch_report_id || null,
+        attachments,
       };
 
       if (editingId) {
@@ -269,12 +271,13 @@ const StoreClearanceForms = () => {
                       <TableHead>Driver</TableHead>
                       <TableHead className="text-right">Bags</TableHead>
                       <TableHead className="text-right">Weight (kg)</TableHead>
+                      <TableHead>Attachments</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {forms.length === 0 ? (
-                      <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-6">No clearance forms recorded yet</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-6">No clearance forms recorded yet</TableCell></TableRow>
                     ) : forms.map((f: any) => (
                       <TableRow key={f.id}>
                         <TableCell className="font-mono text-xs">{f.form_number || "—"}</TableCell>
@@ -285,6 +288,19 @@ const StoreClearanceForms = () => {
                         <TableCell>{f.driver_name || "—"}</TableCell>
                         <TableCell className="text-right">{n(f.total_bags).toLocaleString()}</TableCell>
                         <TableCell className="text-right font-semibold">{n(f.total_weight_kg).toLocaleString()}</TableCell>
+                        <TableCell>
+                          {(Array.isArray(f.attachments) ? f.attachments : []).length === 0 ? (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          ) : (
+                            <div className="flex flex-col gap-0.5">
+                              {(f.attachments as any[]).map((a: any) => (
+                                <button key={a.path} type="button" onClick={() => openAttachment(a.path)} className="text-xs text-primary hover:underline flex items-center gap-1">
+                                  <Paperclip className="h-3 w-3" /> {a.name}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right whitespace-nowrap">
                           <Button size="sm" variant="ghost" onClick={() => openEdit(f)}><Pencil className="h-3.5 w-3.5" /></Button>
                           <Button size="sm" variant="ghost" onClick={() => remove.mutate(f.id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
