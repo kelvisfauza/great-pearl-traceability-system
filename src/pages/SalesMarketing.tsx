@@ -151,13 +151,19 @@ const SalesMarketing = () => {
               <TabsTrigger value="supplier-subcontracts" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Subcontracts</TabsTrigger>
               <TabsTrigger value="campaigns" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Campaigns</TabsTrigger>
               <TabsTrigger value="analytics" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Analytics</TabsTrigger>
+              <TabsTrigger value="clearance" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Store Clearance</TabsTrigger>
             </TabsList>
           </div>
+
+          <TabsContent value="clearance" className="space-y-4">
+            <StoreClearanceForms />
+          </TabsContent>
 
           <TabsContent value="sales-form" className="space-y-4">
             <SalesForm />
             <SalesHistory />
           </TabsContent>
+
 
           <TabsContent value="contract-files" className="space-y-4">
             <ContractFileUpload />
