@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
 import {
   AlertTriangle, CalendarClock, PackageX, Handshake, UserX, Wallet,
   RefreshCw, Printer, CheckCircle2, ListChecks, Truck,
+  Phone, MessageSquare, ExternalLink, Loader2,
 } from "lucide-react";
 
 type Severity = "critical" | "warning" | "info";
@@ -21,6 +24,10 @@ type ActionItem = {
   detail: string;
   severity: Severity;
   due?: string;
+  supplierId?: string;
+  supplierName?: string;
+  phone?: string | null;
+  smsMessage?: string;
 };
 
 const DAY = 86400000;
@@ -54,6 +61,35 @@ const WEEKLY_TASKS = [
 
 const ProcurementActionCenter = () => {
   const [done, setDone] = useState<Record<string, boolean>>({});
+  const [sending, setSending] = useState<string | null>(null);
+  const [sent, setSent] = useState<Record<string, boolean>>({});
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const sendReminder = async (item: ActionItem) => {
+    if (!item.phone) {
+      toast({ title: "No phone number", description: `${item.title} has no phone number on file.`, variant: "destructive" });
+      return;
+    }
+    setSending(item.id);
+    try {
+      const { error } = await supabase.functions.invoke("send-sms", {
+        body: {
+          phone: item.phone,
+          message: item.smsMessage || `Dear ${item.supplierName || item.title}, please contact Great Agro Coffee procurement on 0393101103.`,
+          userName: item.supplierName || item.title,
+          messageType: "procurement_reminder",
+        },
+      });
+      if (error) throw error;
+      setSent(p => ({ ...p, [item.id]: true }));
+      toast({ title: "Reminder sent", description: `SMS delivered to ${item.title} via BulkSMS.` });
+    } catch (e: any) {
+      toast({ title: "Reminder failed", description: e?.message || "Could not send the SMS.", variant: "destructive" });
+    } finally {
+      setSending(null);
+    }
+  };
 
   const { data, isFetching, refetch } = useQuery({
     queryKey: ["procurement-action-center"],
@@ -98,6 +134,8 @@ const ProcurementActionCenter = () => {
           out.push({
             id: `nodel-${s.id}`, group: "Dormant suppliers", severity: "warning",
             title: s.name, detail: `Registered ${reg} days ago with no delivery recorded yet — call and confirm intent.`,
+            supplierId: s.id, supplierName: s.name, phone: s.phone,
+            smsMessage: `Dear ${s.name}, you registered with Great Agro Coffee but we have not yet received any delivery from you. Please contact procurement on 0393101103 to confirm your supply plan.`,
           });
         }
       } else if (d >= 21) {
@@ -105,6 +143,8 @@ const ProcurementActionCenter = () => {
           id: `inactive-${s.id}`, group: "Dormant suppliers",
           severity: d >= 45 ? "critical" : "warning",
           title: s.name, detail: `No delivery for ${d} days — last supply ${new Date(last.get(s.id) || last.get(s.name)!).toLocaleDateString()}.`,
+          supplierId: s.id, supplierName: s.name, phone: s.phone,
+          smsMessage: `Dear ${s.name}, we have not received coffee from you in ${d} days. Great Agro Coffee is buying today. Please call procurement on 0393101103 for the current price.`,
         });
       }
       const missing = [
@@ -117,21 +157,29 @@ const ProcurementActionCenter = () => {
         out.push({
           id: `profile-${s.id}`, group: "Incomplete supplier profiles", severity: "info",
           title: s.name, detail: `Missing ${missing.join(", ")} — complete before the next payment run.`,
+          supplierId: s.id, supplierName: s.name, phone: s.phone,
+          smsMessage: `Dear ${s.name}, please share your ${missing.join(", ")} with Great Agro Coffee procurement on 0393101103 so we can process your payments without delay.`,
         });
       }
     }
+
+    const byName = new Map((data.suppliers as any[]).map(s => [String(s.name || "").trim().toLowerCase(), s]));
+    const findSupplier = (name?: string) => byName.get(String(name || "").trim().toLowerCase());
 
     for (const b of data.bookings as any[]) {
       const remaining = Number(b.remaining_quantity_kg ?? (Number(b.booked_quantity_kg || 0) - Number(b.delivered_quantity_kg || 0)));
       if (remaining <= 0 || String(b.status).toLowerCase() === "cancelled") continue;
       const dueIn = until(b.expected_delivery_date);
       const expIn = until(b.expiry_date);
+      const sup = findSupplier(b.supplier_name);
       if (dueIn !== null && dueIn < 0) {
         out.push({
           id: `bk-late-${b.id}`, group: "Overdue bookings", severity: "critical",
           title: `${b.supplier_name} — ${b.coffee_type}`,
           detail: `${fmt(remaining)} kg undelivered, ${Math.abs(dueIn)} day(s) past the expected delivery date.`,
           due: b.expected_delivery_date,
+          supplierId: sup?.id, supplierName: b.supplier_name, phone: sup?.phone,
+          smsMessage: `Dear ${b.supplier_name}, your booking of ${fmt(remaining)} kg ${b.coffee_type} is ${Math.abs(dueIn)} day(s) overdue. Please deliver or contact Great Agro Coffee procurement on 0393101103.`,
         });
       } else if (expIn !== null && expIn <= 7) {
         out.push({
@@ -139,6 +187,8 @@ const ProcurementActionCenter = () => {
           title: `${b.supplier_name} — ${b.coffee_type}`,
           detail: `${fmt(remaining)} kg outstanding, booking expires in ${Math.max(expIn, 0)} day(s).`,
           due: b.expiry_date,
+          supplierId: sup?.id, supplierName: b.supplier_name, phone: sup?.phone,
+          smsMessage: `Dear ${b.supplier_name}, your booking of ${fmt(remaining)} kg ${b.coffee_type} expires in ${Math.max(expIn, 0)} day(s). Please deliver in time or call Great Agro Coffee on 0393101103.`,
         });
       }
     }
@@ -160,24 +210,30 @@ const ProcurementActionCenter = () => {
 
     for (const c of data.supContracts as any[]) {
       if (String(c.approval_status || "").toLowerCase() === "pending") {
+        const sup = findSupplier(c.supplier_name);
         out.push({
           id: `sc-${c.id}`, group: "Supplier contracts pending approval", severity: "warning",
           title: c.supplier_name,
           detail: `${fmt(Number(c.kilograms_expected || 0))} kg contract awaiting approval since ${c.date ? new Date(c.date).toLocaleDateString() : "—"}.`,
+          supplierId: sup?.id, supplierName: c.supplier_name, phone: sup?.phone,
+          smsMessage: `Dear ${c.supplier_name}, your supply contract with Great Agro Coffee is being processed. Our procurement team will contact you shortly on 0393101103.`,
         });
       }
     }
 
-    const supplierName = new Map((data.suppliers as any[]).map(s => [s.id, s.name]));
+    const supplierById = new Map((data.suppliers as any[]).map(s => [s.id, s]));
     for (const a of data.advances as any[]) {
       const outstanding = Number(a.outstanding_ugx ?? a.amount_ugx ?? 0);
       const age = days(a.issued_at);
       if (!a.is_closed && outstanding > 0 && age !== null && age >= 30) {
+        const sup: any = supplierById.get(a.supplier_id);
         out.push({
           id: `adv-${a.id}`, group: "Advances due for recovery",
           severity: age >= 60 ? "critical" : "warning",
-          title: supplierName.get(a.supplier_id) || "Supplier",
+          title: sup?.name || "Supplier",
           detail: `UGX ${fmt(outstanding)} outstanding for ${age} days — recover through deliveries or enforce the signed undertaking.`,
+          supplierId: a.supplier_id, supplierName: sup?.name, phone: sup?.phone,
+          smsMessage: `Dear ${sup?.name || "Supplier"}, your advance balance of UGX ${fmt(outstanding)} with Great Agro Coffee has been outstanding for ${age} days. Please deliver coffee or settle it. Procurement: 0393101103.`,
         });
       }
     }
@@ -314,6 +370,37 @@ const ProcurementActionCenter = () => {
                                   {i.severity === "critical" ? "Urgent" : i.severity === "warning" ? "Follow up" : "Info"}
                                 </Badge>
                               </div>
+                              {(i.phone || i.supplierId) && (
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  {i.phone && (
+                                    <Button asChild size="sm" variant="outline" className="h-7 text-xs">
+                                      <a href={`tel:${i.phone}`}><Phone className="h-3 w-3 mr-1" />Call {i.phone}</a>
+                                    </Button>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    variant={sent[i.id] ? "secondary" : "default"}
+                                    className="h-7 text-xs"
+                                    disabled={!i.phone || sending === i.id}
+                                    onClick={() => sendReminder(i)}
+                                  >
+                                    {sending === i.id
+                                      ? <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                      : <MessageSquare className="h-3 w-3 mr-1" />}
+                                    {sent[i.id] ? "Reminder sent" : "Send reminder"}
+                                  </Button>
+                                  {i.supplierId && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-7 text-xs"
+                                      onClick={() => navigate(`/suppliers?supplier=${i.supplierId}`)}
+                                    >
+                                      <ExternalLink className="h-3 w-3 mr-1" />Open profile
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>

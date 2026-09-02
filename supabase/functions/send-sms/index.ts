@@ -165,6 +165,8 @@ const PREMIUM_SMS_TYPES = new Set([
   'admin_wallet_operation_failed',
   // Admin approval codes — user requires delivery via BulkSMS.com
   'admin_approval_code',
+  // Procurement follow-up reminders to suppliers — BulkSMS.com route
+  'procurement_reminder',
 ]);
 
 
@@ -451,6 +453,8 @@ serve(async (req) => {
       'hr_notification',
       // Daily operations report readiness alert to admins
       'daily_report',
+      // Procurement supplier follow-up reminders
+      'procurement_reminder',
     ]
     
     const lowerType = (messageType || '').toLowerCase()
