@@ -26,17 +26,21 @@ const ComprehensiveReports = () => {
   const { data, isLoading } = useQuery({
     queryKey: ["procurement-comprehensive-reports", from, to],
     queryFn: async () => {
-      const [purchases, eudr, clearance, sales] = await Promise.all([
+      const [purchases, eudr, clearance, sales, contracts, allocations] = await Promise.all([
         (supabase as any).from("coffee_records").select("*").gte("date", from).lte("date", to).order("date", { ascending: false }).limit(1000),
         (supabase as any).from("eudr_dispatch_reports").select("*").gte("dispatch_date", from).lte("dispatch_date", to).order("dispatch_date", { ascending: false }).limit(500),
         (supabase as any).from("store_clearance_forms").select("*").gte("clearance_date", from).lte("clearance_date", to).order("clearance_date", { ascending: false }).limit(500),
         (supabase as any).from("sales_transactions").select("*").gte("date", from).lte("date", to).order("date", { ascending: false }).limit(1000),
+        (supabase as any).from("buyer_contracts").select("*").order("created_at", { ascending: false }).limit(300),
+        (supabase as any).from("contract_allocations").select("*").limit(2000),
       ]);
       return {
         purchases: (purchases.data || []) as any[],
         eudr: (eudr.data || []) as any[],
         clearance: (clearance.data || []) as any[],
         sales: (sales.data || []) as any[],
+        contracts: (contracts.data || []) as any[],
+        allocations: (allocations.data || []) as any[],
       };
     },
   });
@@ -45,6 +49,39 @@ const ComprehensiveReports = () => {
   const eudr = data?.eudr || [];
   const clearance = data?.clearance || [];
   const sales = data?.sales || [];
+  const contracts = data?.contracts || [];
+  const allocations = data?.allocations || [];
+
+  const byContract = useMemo(() => {
+    const norm = (v: any) => String(v || "").replace(/[^a-z0-9]/gi, "").toLowerCase();
+    const salesById = new Map(sales.map((s: any) => [s.id, s]));
+    return contracts.map((c: any) => {
+      const contractClearances = clearance.filter((f: any) => f.contract_id === c.id);
+      const released = contractClearances.reduce((s2: number, f: any) => s2 + n(f.total_weight_kg), 0);
+      const dispatched = contractClearances.reduce((s2: number, f: any) => {
+        const rep = eudr.find((r: any) =>
+          f.dispatch_report_id ? r.id === f.dispatch_report_id
+            : norm(f.vehicle_registration).length > 3 && norm(r.vehicle_registrations).includes(norm(f.vehicle_registration)));
+        if (!rep || !Array.isArray(rep.trucks)) return s2;
+        return s2 + rep.trucks.reduce((t: number, x: any) => t + n(x.total_weight_store), 0);
+      }, 0);
+      const contractAllocs = allocations.filter((a: any) => a.contract_id === c.id);
+      const allocated = contractAllocs.reduce((s2: number, a: any) => s2 + n(a.allocated_kg), 0) || n(c.allocated_quantity);
+      const sold = contractAllocs.reduce((s2: number, a: any) => {
+        const sale: any = salesById.get(a.sale_id);
+        return s2 + (sale ? n(sale.weight) : n(a.allocated_kg));
+      }, 0);
+      return {
+        contract: c,
+        forms: contractClearances.length,
+        contracted: n(c.total_quantity),
+        allocated, released, dispatched, sold,
+        releasedVsDispatched: dispatched - released,
+        allocatedVsReleased: released - allocated,
+        releasedVsSold: sold - released,
+      };
+    }).sort((a: any, b: any) => b.released - a.released);
+  }, [contracts, clearance, eudr, allocations, sales]);
 
   const totals = useMemo(() => {
     const purchasedKg = purchases.reduce((s, r) => s + n(r.kilograms), 0);
@@ -127,7 +164,12 @@ const ComprehensiveReports = () => {
       fmt(r.total_bags), fmt(r.total_weight_kg)]),
       ["Date", "Form No.", "Warehouse", "Buyer", "Vehicle", "Bags", "Kg"])}
 
-    <h2>4. Sales Report</h2>
+    <h2>4. Contract Reconciliation (Allocated vs Released vs Dispatched vs Sold)</h2>
+    ${rows(byContract.map((r) => [r.contract.contract_ref || "—", r.contract.buyer_name, fmt(r.contracted), fmt(r.allocated),
+      fmt(r.released), fmt(r.dispatched), fmt(r.sold), fmt(r.releasedVsDispatched), fmt(r.releasedVsSold)]),
+      ["Contract", "Buyer", "Contracted Kg", "Allocated Kg", "Released Kg", "Dispatched Kg", "Sold Kg", "Rel vs Disp", "Rel vs Sold"])}
+
+    <h2>5. Sales Report</h2>
     ${rows(sales.map((r) => [r.date, r.customer, r.coffee_type, fmt(r.weight), fmt(r.unit_price), fmt(r.total_amount), r.status]),
       ["Date", "Customer", "Type", "Kg", "Unit Price", "Total (UGX)", "Status"])}
 
@@ -299,6 +341,50 @@ const ComprehensiveReports = () => {
                   </TableBody>
                 </Table>
               </CardContent></Card>
+            </TabsContent>
+
+            <TabsContent value="contracts" className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">By Contract — Allocated vs Released vs Dispatched vs Sold</CardTitle>
+                  <CardDescription>Store clearances linked to a buyer contract, matched to their dispatch reports and allocated sales.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0 overflow-x-auto">
+                  <Table>
+                    <TableHeader><TableRow>
+                      <TableHead>Contract</TableHead><TableHead>Buyer</TableHead>
+                      <TableHead className="text-right">Contracted</TableHead>
+                      <TableHead className="text-right">Allocated</TableHead>
+                      <TableHead className="text-right">Released</TableHead>
+                      <TableHead className="text-right">Dispatched</TableHead>
+                      <TableHead className="text-right">Sold</TableHead>
+                      <TableHead className="text-right">Rel vs Disp</TableHead>
+                      <TableHead className="text-right">Rel vs Sold</TableHead>
+                    </TableRow></TableHeader>
+                    <TableBody>
+                      {byContract.length === 0 ? (
+                        <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">No contracts yet</TableCell></TableRow>
+                      ) : byContract.map((r: any) => (
+                        <TableRow key={r.contract.id}>
+                          <TableCell className="font-mono text-xs">{r.contract.contract_ref || "—"}</TableCell>
+                          <TableCell>{r.contract.buyer_name || "—"}</TableCell>
+                          <TableCell className="text-right">{fmt(r.contracted)}</TableCell>
+                          <TableCell className="text-right">{fmt(r.allocated)}</TableCell>
+                          <TableCell className="text-right font-semibold">{fmt(r.released)} <span className="text-xs text-muted-foreground">({r.forms})</span></TableCell>
+                          <TableCell className="text-right">{fmt(r.dispatched)}</TableCell>
+                          <TableCell className="text-right">{fmt(r.sold)}</TableCell>
+                          <TableCell className="text-right">
+                            <Badge variant={Math.abs(r.releasedVsDispatched) < 0.5 ? "secondary" : r.releasedVsDispatched < 0 ? "destructive" : "default"}>{fmt(r.releasedVsDispatched)} kg</Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Badge variant={Math.abs(r.releasedVsSold) < 0.5 ? "secondary" : r.releasedVsSold < 0 ? "destructive" : "default"}>{fmt(r.releasedVsSold)} kg</Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="reconciliation" className="mt-4">
