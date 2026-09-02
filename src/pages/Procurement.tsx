@@ -598,6 +598,7 @@ const Procurement = () => {
           </TabsContent>
 
           <TabsContent value="action-center" className="space-y-4">
+            <DailyProcurementReport />
             <ProcurementActionCenter />
           </TabsContent>
 
