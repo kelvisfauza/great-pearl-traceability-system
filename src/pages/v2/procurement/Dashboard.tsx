@@ -60,6 +60,7 @@ const ProcurementDashboard = () => {
                 ))}
               </TabsList>
               <TabsContent value="overview"><ProcurementOverviewTab /></TabsContent>
+              <TabsContent value="action-center"><ProcurementActionCenter /></TabsContent>
               <TabsContent value="sales-contracts"><BuyerContractsTab /></TabsContent>
               <TabsContent value="supplier-contracts"><SupplierContractsTab /></TabsContent>
               <TabsContent value="suppliers"><SupplierRecordsTab /></TabsContent>
