@@ -39,6 +39,7 @@ const emptyForm = {
   received_by_driver: "",
   approved_by: "",
   dispatch_report_id: "",
+  contract_id: "",
 };
 
 const n = (v: any) => (v === "" || v === null || v === undefined ? 0 : Number(v) || 0);
@@ -102,6 +103,24 @@ const StoreClearanceForms = () => {
     },
   });
 
+  const { data: contracts = [] } = useQuery({
+    queryKey: ["clearance-buyer-contracts"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("buyer_contracts")
+        .select("id, contract_ref, buyer_name, total_quantity, status")
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+
+  const contractById = useMemo(
+    () => new Map((contracts as any[]).map((c: any) => [c.id, c])),
+    [contracts],
+  );
+
   const totals = useMemo(() => ({
     bags: items.reduce((s, i) => s + n(i.bags), 0),
     weight: items.reduce((s, i) => s + n(i.weight_kg), 0),
@@ -135,6 +154,7 @@ const StoreClearanceForms = () => {
       received_by_driver: row.received_by_driver || "",
       approved_by: row.approved_by || "",
       dispatch_report_id: row.dispatch_report_id || "",
+      contract_id: row.contract_id || "",
     });
     setItems(Array.isArray(row.items) && row.items.length ? row.items.map((i: any) => ({
       lot_ref: i.lot_ref || "", coffee_type: i.coffee_type || "", bags: String(i.bags ?? ""), weight_kg: String(i.weight_kg ?? ""),
@@ -167,6 +187,7 @@ const StoreClearanceForms = () => {
         received_by_driver: form.received_by_driver || null,
         approved_by: form.approved_by || null,
         dispatch_report_id: form.dispatch_report_id || null,
+        contract_id: form.contract_id || null,
         attachments,
       };
 
@@ -266,6 +287,7 @@ const StoreClearanceForms = () => {
                       <TableHead>Form No.</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Warehouse</TableHead>
+                      <TableHead>Contract</TableHead>
                       <TableHead>Destination / Buyer</TableHead>
                       <TableHead>Vehicle</TableHead>
                       <TableHead>Driver</TableHead>
@@ -277,12 +299,13 @@ const StoreClearanceForms = () => {
                   </TableHeader>
                   <TableBody>
                     {forms.length === 0 ? (
-                      <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-6">No clearance forms recorded yet</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground py-6">No clearance forms recorded yet</TableCell></TableRow>
                     ) : forms.map((f: any) => (
                       <TableRow key={f.id}>
                         <TableCell className="font-mono text-xs">{f.form_number || "—"}</TableCell>
                         <TableCell>{f.clearance_date}</TableCell>
                         <TableCell>{f.warehouse || "—"}</TableCell>
+                        <TableCell className="text-xs">{contractById.get(f.contract_id)?.contract_ref || "—"}</TableCell>
                         <TableCell>{f.destination_buyer || "—"}</TableCell>
                         <TableCell className="font-mono text-xs">{f.vehicle_registration}</TableCell>
                         <TableCell>{f.driver_name || "—"}</TableCell>
@@ -389,7 +412,29 @@ const StoreClearanceForms = () => {
                 </SelectContent>
               </Select>
             </div>
+            <div className="md:col-span-2">
+              <Label>Procurement / sales contract (optional)</Label>
+              <Select
+                value={form.contract_id || "none"}
+                onValueChange={(v) => {
+                  const picked = contracts.find((c: any) => c.id === v);
+                  set("contract_id", v === "none" ? "" : v);
+                  if (picked && !form.destination_buyer) set("destination_buyer", picked.buyer_name || "");
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="Not linked to a contract" /></SelectTrigger>
+                <SelectContent className="bg-background z-50">
+                  <SelectItem value="none">Not linked to a contract</SelectItem>
+                  {contracts.map((c: any) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.contract_ref || "Contract"} — {c.buyer_name} — {n(c.total_quantity).toLocaleString()} kg
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
 
           <div className="space-y-2">
             <Label>Coffee released from store</Label>
