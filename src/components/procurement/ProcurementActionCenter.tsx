@@ -61,6 +61,35 @@ const WEEKLY_TASKS = [
 
 const ProcurementActionCenter = () => {
   const [done, setDone] = useState<Record<string, boolean>>({});
+  const [sending, setSending] = useState<string | null>(null);
+  const [sent, setSent] = useState<Record<string, boolean>>({});
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const sendReminder = async (item: ActionItem) => {
+    if (!item.phone) {
+      toast({ title: "No phone number", description: `${item.title} has no phone number on file.`, variant: "destructive" });
+      return;
+    }
+    setSending(item.id);
+    try {
+      const { error } = await supabase.functions.invoke("send-sms", {
+        body: {
+          phone: item.phone,
+          message: item.smsMessage || `Dear ${item.supplierName || item.title}, please contact Great Agro Coffee procurement on 0393101103.`,
+          userName: item.supplierName || item.title,
+          messageType: "procurement_reminder",
+        },
+      });
+      if (error) throw error;
+      setSent(p => ({ ...p, [item.id]: true }));
+      toast({ title: "Reminder sent", description: `SMS delivered to ${item.title} via BulkSMS.` });
+    } catch (e: any) {
+      toast({ title: "Reminder failed", description: e?.message || "Could not send the SMS.", variant: "destructive" });
+    } finally {
+      setSending(null);
+    }
+  };
 
   const { data, isFetching, refetch } = useQuery({
     queryKey: ["procurement-action-center"],
