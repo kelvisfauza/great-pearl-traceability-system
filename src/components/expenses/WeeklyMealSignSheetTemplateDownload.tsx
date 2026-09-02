@@ -176,10 +176,12 @@ export const generateWeeklyMealSignSheet = async (weekStartISO?: string, blankOn
   drawHeader();
   let y = drawTableHead(40);
 
-  const rows: Array<{ name?: string; dept?: string }> = [
-    ...employees.map((e) => ({ name: e.name, dept: e.department || '' })),
-    ...Array.from({ length: 5 }, () => ({})), // 5 manual-entry rows
-  ];
+  const rows: Array<{ name?: string; dept?: string }> = blankOnly
+    ? Array.from({ length: 25 }, () => ({}))
+    : [
+        ...employees.map((e) => ({ name: e.name, dept: e.department || '' })),
+        ...Array.from({ length: 5 }, () => ({})), // 5 manual-entry rows
+      ];
 
   const bottomLimit = pageH - 34;
   let counter = 1;
