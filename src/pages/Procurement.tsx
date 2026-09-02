@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ComprehensiveReports from "@/components/procurement/ComprehensiveReports";
+import ProcurementActionCenter from "@/components/procurement/ProcurementActionCenter";
 import { 
   Package, 
   Plus, 
@@ -167,6 +168,7 @@ const Procurement = () => {
         <Tabs defaultValue="suppliers" className="space-y-4">
           <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
             <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 bg-muted/50 p-1 rounded-xl gap-1">
+              <TabsTrigger value="action-center" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Action Center</TabsTrigger>
               <TabsTrigger value="suppliers" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Suppliers</TabsTrigger>
               <TabsTrigger value="orders" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Orders</TabsTrigger>
               <TabsTrigger value="deliveries" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Deliveries</TabsTrigger>
@@ -593,6 +595,10 @@ const Procurement = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="action-center" className="space-y-4">
+            <ProcurementActionCenter />
           </TabsContent>
 
           <TabsContent value="comprehensive" className="space-y-4">
