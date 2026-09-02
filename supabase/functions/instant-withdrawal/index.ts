@@ -1049,22 +1049,19 @@ serve(async (req) => {
       }
     }
 
-    // Calculate remaining balance for email
+    // Calculate remaining balance for email.
+    // Canonical source: get_effective_wallet_balance. Never sum ledger_entries
+    // client-side (PostgREST caps at 1000 rows => false/negative balances).
     let remainingBalance: number | undefined;
     try {
-      const { data: balRpc } = await supabase.rpc('get_user_balance_safe', { user_email: userEmail });
-      const wallet = Number((balRpc as any)?.[0]?.wallet_balance);
-      if (Number.isFinite(wallet)) {
-        remainingBalance = Math.max(0, wallet);
+      const { data: effBal } = await supabase.rpc('get_effective_wallet_balance', { p_user_id: resolvedUserId });
+      const eff = Number(effBal);
+      if (Number.isFinite(eff)) {
+        remainingBalance = eff;
       } else {
-        // Fallback to summing ledger entries by resolved user id
-        const { data: balData } = await supabase
-          .from('ledger_entries')
-          .select('amount')
-          .eq('user_id', resolvedUserId);
-        if (balData) {
-          remainingBalance = Math.max(0, balData.reduce((sum: number, e: any) => sum + Number(e.amount), 0));
-        }
+        const { data: balRpc } = await supabase.rpc('get_user_balance_safe', { user_email: userEmail });
+        const wallet = Number((balRpc as any)?.[0]?.wallet_balance);
+        if (Number.isFinite(wallet)) remainingBalance = wallet;
       }
     } catch (e) {
       console.error("Balance calc error:", e);
