@@ -2,7 +2,7 @@ import { useState } from "react";
 import V2Navigation from "@/components/v2/V2Navigation";
 import PriceTicker from "@/components/PriceTicker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShoppingBag, DollarSign, TrendingUp, FileCheck, FileText, Users, ShoppingCart, GitCompare, BookOpen, BarChart3, Landmark, Handshake } from "lucide-react";
+import { AlertTriangle, ShoppingBag, DollarSign, TrendingUp, FileCheck, FileText, Users, ShoppingCart, GitCompare, BookOpen, BarChart3, Landmark, Handshake } from "lucide-react";
 import ProcurementOverviewTab from "@/components/v2/procurement/tabs/ProcurementOverviewTab";
 import SupplierRecordsTab from "@/components/v2/procurement/tabs/SupplierRecordsTab";
 import OrderTrackingTab from "@/components/v2/procurement/tabs/OrderTrackingTab";
