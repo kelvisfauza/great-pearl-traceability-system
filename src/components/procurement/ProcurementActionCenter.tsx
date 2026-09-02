@@ -370,6 +370,37 @@ const ProcurementActionCenter = () => {
                                   {i.severity === "critical" ? "Urgent" : i.severity === "warning" ? "Follow up" : "Info"}
                                 </Badge>
                               </div>
+                              {(i.phone || i.supplierId) && (
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  {i.phone && (
+                                    <Button asChild size="sm" variant="outline" className="h-7 text-xs">
+                                      <a href={`tel:${i.phone}`}><Phone className="h-3 w-3 mr-1" />Call {i.phone}</a>
+                                    </Button>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    variant={sent[i.id] ? "secondary" : "default"}
+                                    className="h-7 text-xs"
+                                    disabled={!i.phone || sending === i.id}
+                                    onClick={() => sendReminder(i)}
+                                  >
+                                    {sending === i.id
+                                      ? <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                      : <MessageSquare className="h-3 w-3 mr-1" />}
+                                    {sent[i.id] ? "Reminder sent" : "Send reminder"}
+                                  </Button>
+                                  {i.supplierId && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-7 text-xs"
+                                      onClick={() => navigate(`/suppliers?supplier=${i.supplierId}`)}
+                                    >
+                                      <ExternalLink className="h-3 w-3 mr-1" />Open profile
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
