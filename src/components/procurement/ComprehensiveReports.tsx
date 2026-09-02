@@ -232,6 +232,7 @@ const ComprehensiveReports = () => {
               <TabsTrigger value="eudr">EUDR / Dispatch</TabsTrigger>
               <TabsTrigger value="clearance">Store Clearance</TabsTrigger>
               <TabsTrigger value="sales">Sales</TabsTrigger>
+              <TabsTrigger value="contracts">By Contract</TabsTrigger>
               <TabsTrigger value="reconciliation">Reconciliation</TabsTrigger>
             </TabsList>
 
