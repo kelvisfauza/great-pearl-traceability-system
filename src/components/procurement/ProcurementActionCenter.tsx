@@ -105,6 +105,8 @@ const ProcurementActionCenter = () => {
           out.push({
             id: `nodel-${s.id}`, group: "Dormant suppliers", severity: "warning",
             title: s.name, detail: `Registered ${reg} days ago with no delivery recorded yet — call and confirm intent.`,
+            supplierId: s.id, supplierName: s.name, phone: s.phone,
+            smsMessage: `Dear ${s.name}, you registered with Great Agro Coffee but we have not yet received any delivery from you. Please contact procurement on 0393101103 to confirm your supply plan.`,
           });
         }
       } else if (d >= 21) {
@@ -112,6 +114,8 @@ const ProcurementActionCenter = () => {
           id: `inactive-${s.id}`, group: "Dormant suppliers",
           severity: d >= 45 ? "critical" : "warning",
           title: s.name, detail: `No delivery for ${d} days — last supply ${new Date(last.get(s.id) || last.get(s.name)!).toLocaleDateString()}.`,
+          supplierId: s.id, supplierName: s.name, phone: s.phone,
+          smsMessage: `Dear ${s.name}, we have not received coffee from you in ${d} days. Great Agro Coffee is buying today. Please call procurement on 0393101103 for the current price.`,
         });
       }
       const missing = [
@@ -124,21 +128,29 @@ const ProcurementActionCenter = () => {
         out.push({
           id: `profile-${s.id}`, group: "Incomplete supplier profiles", severity: "info",
           title: s.name, detail: `Missing ${missing.join(", ")} — complete before the next payment run.`,
+          supplierId: s.id, supplierName: s.name, phone: s.phone,
+          smsMessage: `Dear ${s.name}, please share your ${missing.join(", ")} with Great Agro Coffee procurement on 0393101103 so we can process your payments without delay.`,
         });
       }
     }
+
+    const byName = new Map((data.suppliers as any[]).map(s => [String(s.name || "").trim().toLowerCase(), s]));
+    const findSupplier = (name?: string) => byName.get(String(name || "").trim().toLowerCase());
 
     for (const b of data.bookings as any[]) {
       const remaining = Number(b.remaining_quantity_kg ?? (Number(b.booked_quantity_kg || 0) - Number(b.delivered_quantity_kg || 0)));
       if (remaining <= 0 || String(b.status).toLowerCase() === "cancelled") continue;
       const dueIn = until(b.expected_delivery_date);
       const expIn = until(b.expiry_date);
+      const sup = findSupplier(b.supplier_name);
       if (dueIn !== null && dueIn < 0) {
         out.push({
           id: `bk-late-${b.id}`, group: "Overdue bookings", severity: "critical",
           title: `${b.supplier_name} — ${b.coffee_type}`,
           detail: `${fmt(remaining)} kg undelivered, ${Math.abs(dueIn)} day(s) past the expected delivery date.`,
           due: b.expected_delivery_date,
+          supplierId: sup?.id, supplierName: b.supplier_name, phone: sup?.phone,
+          smsMessage: `Dear ${b.supplier_name}, your booking of ${fmt(remaining)} kg ${b.coffee_type} is ${Math.abs(dueIn)} day(s) overdue. Please deliver or contact Great Agro Coffee procurement on 0393101103.`,
         });
       } else if (expIn !== null && expIn <= 7) {
         out.push({
@@ -146,6 +158,8 @@ const ProcurementActionCenter = () => {
           title: `${b.supplier_name} — ${b.coffee_type}`,
           detail: `${fmt(remaining)} kg outstanding, booking expires in ${Math.max(expIn, 0)} day(s).`,
           due: b.expiry_date,
+          supplierId: sup?.id, supplierName: b.supplier_name, phone: sup?.phone,
+          smsMessage: `Dear ${b.supplier_name}, your booking of ${fmt(remaining)} kg ${b.coffee_type} expires in ${Math.max(expIn, 0)} day(s). Please deliver in time or call Great Agro Coffee on 0393101103.`,
         });
       }
     }
@@ -167,24 +181,30 @@ const ProcurementActionCenter = () => {
 
     for (const c of data.supContracts as any[]) {
       if (String(c.approval_status || "").toLowerCase() === "pending") {
+        const sup = findSupplier(c.supplier_name);
         out.push({
           id: `sc-${c.id}`, group: "Supplier contracts pending approval", severity: "warning",
           title: c.supplier_name,
           detail: `${fmt(Number(c.kilograms_expected || 0))} kg contract awaiting approval since ${c.date ? new Date(c.date).toLocaleDateString() : "—"}.`,
+          supplierId: sup?.id, supplierName: c.supplier_name, phone: sup?.phone,
+          smsMessage: `Dear ${c.supplier_name}, your supply contract with Great Agro Coffee is being processed. Our procurement team will contact you shortly on 0393101103.`,
         });
       }
     }
 
-    const supplierName = new Map((data.suppliers as any[]).map(s => [s.id, s.name]));
+    const supplierById = new Map((data.suppliers as any[]).map(s => [s.id, s]));
     for (const a of data.advances as any[]) {
       const outstanding = Number(a.outstanding_ugx ?? a.amount_ugx ?? 0);
       const age = days(a.issued_at);
       if (!a.is_closed && outstanding > 0 && age !== null && age >= 30) {
+        const sup: any = supplierById.get(a.supplier_id);
         out.push({
           id: `adv-${a.id}`, group: "Advances due for recovery",
           severity: age >= 60 ? "critical" : "warning",
-          title: supplierName.get(a.supplier_id) || "Supplier",
+          title: sup?.name || "Supplier",
           detail: `UGX ${fmt(outstanding)} outstanding for ${age} days — recover through deliveries or enforce the signed undertaking.`,
+          supplierId: a.supplier_id, supplierName: sup?.name, phone: sup?.phone,
+          smsMessage: `Dear ${sup?.name || "Supplier"}, your advance balance of UGX ${fmt(outstanding)} with Great Agro Coffee has been outstanding for ${age} days. Please deliver coffee or settle it. Procurement: 0393101103.`,
         });
       }
     }
