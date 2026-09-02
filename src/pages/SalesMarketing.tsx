@@ -15,6 +15,8 @@ import SalesForm from "@/components/sales/SalesForm";
 import SalesHistory from "@/components/sales/SalesHistory";
 import { ContractFileUpload } from "@/components/sales/ContractFileUpload";
 import { BuyerContractsManager } from "@/components/sales/BuyerContractsManager";
+import StoreClearanceForms from "@/components/store/StoreClearanceForms";
+
 
 const SalesMarketing = () => {
   const {
