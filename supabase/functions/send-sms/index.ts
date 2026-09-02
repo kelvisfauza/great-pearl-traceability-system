@@ -453,6 +453,8 @@ serve(async (req) => {
       'hr_notification',
       // Daily operations report readiness alert to admins
       'daily_report',
+      // Procurement supplier follow-up reminders
+      'procurement_reminder',
     ]
     
     const lowerType = (messageType || '').toLowerCase()
