@@ -47,12 +47,10 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Compute true balance directly from ledger (authoritative; avoids RPC returning 0)
-        const { data: ledgerRows } = await admin
-          .from("ledger_entries")
-          .select("amount")
-          .eq("user_id", userId);
-        const balance = (ledgerRows || []).reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
+        // Canonical balance via RPC. Never sum ledger_entries client-side:
+        // PostgREST caps at 1000 rows and truncates long histories.
+        const { data: effBal } = await admin.rpc("get_effective_wallet_balance", { p_user_id: userId });
+        const balance = Number(effBal) || 0;
 
         let overdraftUsed = 0;
         let overdraftFee = 0;
