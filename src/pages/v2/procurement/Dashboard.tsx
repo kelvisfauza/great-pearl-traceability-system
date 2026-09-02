@@ -20,6 +20,7 @@ import ProcurementActionCenter from "@/components/procurement/ProcurementActionC
 
 const tabs = [
   { id: "overview", label: "Overview", icon: ShoppingBag },
+  { id: "action-center", label: "Action Center", icon: AlertTriangle },
   { id: "sales-contracts", label: "Sales Contracts", icon: FileText },
   { id: "supplier-contracts", label: "Supplier Contracts", icon: Handshake },
   { id: "suppliers", label: "Suppliers", icon: Users },
