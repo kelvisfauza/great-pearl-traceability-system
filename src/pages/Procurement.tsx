@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ComprehensiveReports from "@/components/procurement/ComprehensiveReports";
 import ProcurementActionCenter from "@/components/procurement/ProcurementActionCenter";
+import DailyProcurementReport from "@/components/procurement/DailyProcurementReport";
 import { 
   Package, 
   Plus, 
@@ -598,6 +599,7 @@ const Procurement = () => {
           </TabsContent>
 
           <TabsContent value="action-center" className="space-y-4">
+            <DailyProcurementReport />
             <ProcurementActionCenter />
           </TabsContent>
 

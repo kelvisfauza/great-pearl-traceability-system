@@ -8835,6 +8835,63 @@ export type Database = {
         }
         Relationships: []
       }
+      procurement_daily_reports: {
+        Row: {
+          actions_taken: string | null
+          average_price: number
+          created_at: string
+          deliveries_expected: string | null
+          emailed_at: string | null
+          id: string
+          issues: string | null
+          kilograms_purchased: number
+          market_notes: string | null
+          observations: string
+          plan_next_day: string | null
+          report_date: string
+          submitted_by_email: string
+          submitted_by_name: string | null
+          suppliers_visited: number
+          updated_at: string
+        }
+        Insert: {
+          actions_taken?: string | null
+          average_price?: number
+          created_at?: string
+          deliveries_expected?: string | null
+          emailed_at?: string | null
+          id?: string
+          issues?: string | null
+          kilograms_purchased?: number
+          market_notes?: string | null
+          observations: string
+          plan_next_day?: string | null
+          report_date?: string
+          submitted_by_email: string
+          submitted_by_name?: string | null
+          suppliers_visited?: number
+          updated_at?: string
+        }
+        Update: {
+          actions_taken?: string | null
+          average_price?: number
+          created_at?: string
+          deliveries_expected?: string | null
+          emailed_at?: string | null
+          id?: string
+          issues?: string | null
+          kilograms_purchased?: number
+          market_notes?: string | null
+          observations?: string
+          plan_next_day?: string | null
+          report_date?: string
+          submitted_by_email?: string
+          submitted_by_name?: string | null
+          suppliers_visited?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           address: string | null

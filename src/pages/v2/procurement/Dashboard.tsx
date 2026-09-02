@@ -17,6 +17,7 @@ import BookingsTab from "@/components/v2/procurement/tabs/BookingsTab";
 import BuyingPriceAnalysisTab from "@/components/v2/procurement/tabs/BuyingPriceAnalysisTab";
 import ComprehensiveReports from "@/components/procurement/ComprehensiveReports";
 import ProcurementActionCenter from "@/components/procurement/ProcurementActionCenter";
+import DailyProcurementReport from "@/components/procurement/DailyProcurementReport";
 
 const tabs = [
   { id: "overview", label: "Overview", icon: ShoppingBag },
@@ -60,7 +61,10 @@ const ProcurementDashboard = () => {
                 ))}
               </TabsList>
               <TabsContent value="overview"><ProcurementOverviewTab /></TabsContent>
-              <TabsContent value="action-center"><ProcurementActionCenter /></TabsContent>
+              <TabsContent value="action-center" className="space-y-4">
+                <DailyProcurementReport />
+                <ProcurementActionCenter />
+              </TabsContent>
               <TabsContent value="sales-contracts"><BuyerContractsTab /></TabsContent>
               <TabsContent value="supplier-contracts"><SupplierContractsTab /></TabsContent>
               <TabsContent value="suppliers"><SupplierRecordsTab /></TabsContent>
