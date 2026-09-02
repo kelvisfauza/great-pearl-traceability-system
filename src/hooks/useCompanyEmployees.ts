@@ -105,7 +105,11 @@ export const useCompanyEmployees = () => {
         .from('employees')
         .insert([{
           name: employeeData.full_name,
-          email: employeeData.email || '',
+          // employees.email is UNIQUE and NOT NULL — blank emails collide with each other,
+          // so generate a unique placeholder for staff without a login/email.
+          email: employeeData.email?.trim()
+            ? employeeData.email.trim().toLowerCase()
+            : `${(employeeData.employee_id || 'staff').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}@noauth.greatpearlcoffee.com`,
           position: employeeData.position,
           department: employeeData.department,
           salary: employeeData.base_salary,
