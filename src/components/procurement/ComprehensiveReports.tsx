@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, FileBarChart, Printer, Package, Leaf, ClipboardList, ShoppingCart } from "lucide-react";
-import { COMPANY_NAME, COMPANY_PARENT, COMPANY_ADDRESS, COMPANY_OPERATIONS_PHONE } from "@/constants/company";
+import { COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES } from "@/utils/companyBrand";
 
 const n = (v: any) => (v === "" || v === null || v === undefined ? 0 : Number(v) || 0);
 const fmt = (v: number) => n(v).toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -92,7 +92,7 @@ const ComprehensiveReports = () => {
     </style></head><body>
     <div class="head">
       <h1>${COMPANY_NAME}</h1>
-      <div class="muted">A member of ${COMPANY_PARENT} · ${COMPANY_ADDRESS} · Operations: ${COMPANY_OPERATIONS_PHONE}</div>
+      <div class="muted">${COMPANY_TAGLINE} · ${COMPANY_ADDRESS} · ${COMPANY_PHONES}</div>
       <h2 style="border:none;margin:8px 0 0">Comprehensive Procurement Report</h2>
       <div class="muted">Period: ${from} to ${to} · Generated: ${new Date().toLocaleString()}</div>
     </div>
