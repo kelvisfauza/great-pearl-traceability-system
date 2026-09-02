@@ -607,11 +607,20 @@ const EUDRDocumentation = () => {
             <Truck className="h-4 w-4 mr-2" />
             Dispatch Comparison
           </TabsTrigger>
+          <TabsTrigger value="store-clearance">
+            <ClipboardList className="h-4 w-4 mr-2" />
+            Store Clearance
+          </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="store-clearance" className="space-y-4">
+          <StoreClearanceForms />
+        </TabsContent>
 
         <TabsContent value="inventory-linking" className="space-y-4">
           <EUDRInventoryLinking />
         </TabsContent>
+
 
         <TabsContent value="batches" className="space-y-4">
           <Card>
