@@ -596,6 +596,10 @@ const Procurement = () => {
             </Card>
           </TabsContent>
 
+          <TabsContent value="action-center" className="space-y-4">
+            <ProcurementActionCenter />
+          </TabsContent>
+
           <TabsContent value="comprehensive" className="space-y-4">
             <ComprehensiveReports />
           </TabsContent>
