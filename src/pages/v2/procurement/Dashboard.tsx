@@ -30,6 +30,7 @@ const tabs = [
   { id: "docs", label: "Docs", icon: FileCheck },
   { id: "workflow", label: "Workflow", icon: GitCompare },
   { id: "reports", label: "Reports", icon: Landmark },
+  { id: "comprehensive", label: "Comprehensive Report", icon: BarChart3 },
 ];
 
 const ProcurementDashboard = () => {

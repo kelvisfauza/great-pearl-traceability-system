@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ComprehensiveReports from "@/components/procurement/ComprehensiveReports";
 import { 
   Package, 
   Plus, 
@@ -173,6 +174,7 @@ const Procurement = () => {
               <TabsTrigger value="documents" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Docs</TabsTrigger>
               <TabsTrigger value="pricing" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Pricing</TabsTrigger>
               <TabsTrigger value="approvals" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Approvals</TabsTrigger>
+              <TabsTrigger value="comprehensive" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Reports Hub</TabsTrigger>
             </TabsList>
           </div>
 
@@ -591,6 +593,10 @@ const Procurement = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="comprehensive" className="space-y-4">
+            <ComprehensiveReports />
           </TabsContent>
         </Tabs>
 
