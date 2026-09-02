@@ -15,6 +15,7 @@ import BuyerContractsTab from "@/components/v2/procurement/tabs/BuyerContractsTa
 import SupplierContractsTab from "@/components/v2/procurement/tabs/SupplierContractsTab";
 import BookingsTab from "@/components/v2/procurement/tabs/BookingsTab";
 import BuyingPriceAnalysisTab from "@/components/v2/procurement/tabs/BuyingPriceAnalysisTab";
+import ComprehensiveReports from "@/components/procurement/ComprehensiveReports";
 
 const tabs = [
   { id: "overview", label: "Overview", icon: ShoppingBag },
@@ -67,6 +68,7 @@ const ProcurementDashboard = () => {
               <TabsContent value="docs"><DocumentationTab /></TabsContent>
               <TabsContent value="workflow"><CrossDepartmentTab /></TabsContent>
               <TabsContent value="reports"><ProcurementReportsTab /></TabsContent>
+              <TabsContent value="comprehensive"><ComprehensiveReports /></TabsContent>
             </Tabs>
           </div>
         </div>
