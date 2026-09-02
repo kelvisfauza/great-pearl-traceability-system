@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
 import {
   AlertTriangle, CalendarClock, PackageX, Handshake, UserX, Wallet,
   RefreshCw, Printer, CheckCircle2, ListChecks, Truck,
+  Phone, MessageSquare, ExternalLink, Loader2,
 } from "lucide-react";
 
 type Severity = "critical" | "warning" | "info";
@@ -21,6 +24,10 @@ type ActionItem = {
   detail: string;
   severity: Severity;
   due?: string;
+  supplierId?: string;
+  supplierName?: string;
+  phone?: string | null;
+  smsMessage?: string;
 };
 
 const DAY = 86400000;
