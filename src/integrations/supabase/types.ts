@@ -11475,6 +11475,7 @@ export type Database = {
           attachments: Json
           clearance_date: string
           coffee_type: string | null
+          contract_id: string | null
           created_at: string
           created_by: string | null
           destination_buyer: string | null
@@ -11498,6 +11499,7 @@ export type Database = {
           attachments?: Json
           clearance_date?: string
           coffee_type?: string | null
+          contract_id?: string | null
           created_at?: string
           created_by?: string | null
           destination_buyer?: string | null
@@ -11521,6 +11523,7 @@ export type Database = {
           attachments?: Json
           clearance_date?: string
           coffee_type?: string | null
+          contract_id?: string | null
           created_at?: string
           created_by?: string | null
           destination_buyer?: string | null
@@ -11539,7 +11542,15 @@ export type Database = {
           vehicle_registration?: string | null
           warehouse?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "store_clearance_forms_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "buyer_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       store_damaged_bags: {
         Row: {
