@@ -53,8 +53,41 @@ const StoreClearanceForms = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<any>({ ...emptyForm });
   const [items, setItems] = useState<ClearanceItem[]>([{ ...emptyItem }]);
+  const [attachments, setAttachments] = useState<{ name: string; path: string }[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   const set = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }));
+
+  const uploadFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      const uploaded: { name: string; path: string }[] = [];
+      for (const file of Array.from(files)) {
+        const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const path = `clearance-forms/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safe}`;
+        const { error } = await supabase.storage.from("dispatch-attachments").upload(path, file, { upsert: false });
+        if (error) throw error;
+        uploaded.push({ name: file.name, path });
+      }
+      setAttachments((p) => [...p, ...uploaded]);
+      toast({ title: `${uploaded.length} file(s) attached` });
+    } catch (e: any) {
+      toast({ title: "Upload failed", description: e.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const openAttachment = async (path: string) => {
+    const { data, error } = await supabase.storage.from("dispatch-attachments").createSignedUrl(path, 3600);
+    if (error || !data?.signedUrl) {
+      toast({ title: "Could not open file", description: error?.message, variant: "destructive" });
+      return;
+    }
+    window.open(data.signedUrl, "_blank");
+  };
+
 
   const { data: forms = [], isLoading } = useQuery({
     queryKey: ["store-clearance-forms"],
