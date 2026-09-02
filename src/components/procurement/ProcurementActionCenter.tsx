@@ -401,7 +401,7 @@ const ProcurementActionCenter = () => {
                                     variant={sent[i.id] ? "secondary" : "default"}
                                     className="h-7 text-xs"
                                     disabled={!i.phone || sending === i.id}
-                                    onClick={() => sendReminder(i)}
+                                    onClick={() => openPreview(i)}
                                   >
                                     {sending === i.id
                                       ? <Loader2 className="h-3 w-3 mr-1 animate-spin" />
