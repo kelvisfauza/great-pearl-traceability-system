@@ -627,6 +627,7 @@ const MyExpenses = () => {
             <StoreCoffeeClearanceTemplateDownload />
             <StoreReleaseQualityCheckTemplateDownload />
             <SupplierAdvanceAgreementTemplateDownload />
+            <WeeklyMealSignSheetTemplateDownload />
 
 
           </TabsContent>
