@@ -11412,6 +11412,75 @@ export type Database = {
         }
         Relationships: []
       }
+      store_clearance_forms: {
+        Row: {
+          approved_by: string | null
+          clearance_date: string
+          coffee_type: string | null
+          created_at: string
+          created_by: string | null
+          destination_buyer: string | null
+          dispatch_report_id: string | null
+          driver_name: string | null
+          driver_phone: string | null
+          form_number: string | null
+          id: string
+          items: Json
+          received_by_driver: string | null
+          released_by: string | null
+          remarks: string | null
+          total_bags: number
+          total_weight_kg: number
+          updated_at: string
+          vehicle_registration: string | null
+          warehouse: string | null
+        }
+        Insert: {
+          approved_by?: string | null
+          clearance_date?: string
+          coffee_type?: string | null
+          created_at?: string
+          created_by?: string | null
+          destination_buyer?: string | null
+          dispatch_report_id?: string | null
+          driver_name?: string | null
+          driver_phone?: string | null
+          form_number?: string | null
+          id?: string
+          items?: Json
+          received_by_driver?: string | null
+          released_by?: string | null
+          remarks?: string | null
+          total_bags?: number
+          total_weight_kg?: number
+          updated_at?: string
+          vehicle_registration?: string | null
+          warehouse?: string | null
+        }
+        Update: {
+          approved_by?: string | null
+          clearance_date?: string
+          coffee_type?: string | null
+          created_at?: string
+          created_by?: string | null
+          destination_buyer?: string | null
+          dispatch_report_id?: string | null
+          driver_name?: string | null
+          driver_phone?: string | null
+          form_number?: string | null
+          id?: string
+          items?: Json
+          received_by_driver?: string | null
+          released_by?: string | null
+          remarks?: string | null
+          total_bags?: number
+          total_weight_kg?: number
+          updated_at?: string
+          vehicle_registration?: string | null
+          warehouse?: string | null
+        }
+        Relationships: []
+      }
       store_damaged_bags: {
         Row: {
           action_taken: string | null

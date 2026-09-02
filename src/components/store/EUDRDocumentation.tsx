@@ -9,8 +9,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Plus, DollarSign, Package, AlertTriangle, CheckCircle, Clock, Layers, BarChart3, Calendar, Printer, Download, Eye, Trash2, Pencil, Link2, Truck, ShoppingCart } from 'lucide-react';
+import { FileText, Plus, DollarSign, Package, AlertTriangle, CheckCircle, Clock, Layers, BarChart3, Calendar, Printer, Download, Eye, Trash2, Pencil, Link2, Truck, ShoppingCart, ClipboardList } from 'lucide-react';
+import StoreClearanceForms from './StoreClearanceForms';
 import AttachSaleDialog from '@/components/v2/eudr/AttachSaleDialog';
+
 import { useEUDRDocumentation } from '@/hooks/useEUDRDocumentation';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -607,11 +609,20 @@ const EUDRDocumentation = () => {
             <Truck className="h-4 w-4 mr-2" />
             Dispatch Comparison
           </TabsTrigger>
+          <TabsTrigger value="store-clearance">
+            <ClipboardList className="h-4 w-4 mr-2" />
+            Store Clearance
+          </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="store-clearance" className="space-y-4">
+          <StoreClearanceForms />
+        </TabsContent>
 
         <TabsContent value="inventory-linking" className="space-y-4">
           <EUDRInventoryLinking />
         </TabsContent>
+
 
         <TabsContent value="batches" className="space-y-4">
           <Card>
