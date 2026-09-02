@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, Plus, ClipboardList, Trash2, Scale, Pencil } from "lucide-react";
+import { Loader2, Plus, ClipboardList, Trash2, Scale, Pencil, Paperclip } from "lucide-react";
 import { useEUDRDispatchReports } from "@/hooks/useEUDRDispatchReports";
 
 interface ClearanceItem {
@@ -53,8 +53,41 @@ const StoreClearanceForms = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<any>({ ...emptyForm });
   const [items, setItems] = useState<ClearanceItem[]>([{ ...emptyItem }]);
+  const [attachments, setAttachments] = useState<{ name: string; path: string }[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   const set = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }));
+
+  const uploadFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      const uploaded: { name: string; path: string }[] = [];
+      for (const file of Array.from(files)) {
+        const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const path = `clearance-forms/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safe}`;
+        const { error } = await supabase.storage.from("dispatch-attachments").upload(path, file, { upsert: false });
+        if (error) throw error;
+        uploaded.push({ name: file.name, path });
+      }
+      setAttachments((p) => [...p, ...uploaded]);
+      toast({ title: `${uploaded.length} file(s) attached` });
+    } catch (e: any) {
+      toast({ title: "Upload failed", description: e.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const openAttachment = async (path: string) => {
+    const { data, error } = await supabase.storage.from("dispatch-attachments").createSignedUrl(path, 3600);
+    if (error || !data?.signedUrl) {
+      toast({ title: "Could not open file", description: error?.message, variant: "destructive" });
+      return;
+    }
+    window.open(data.signedUrl, "_blank");
+  };
+
 
   const { data: forms = [], isLoading } = useQuery({
     queryKey: ["store-clearance-forms"],
@@ -77,6 +110,7 @@ const StoreClearanceForms = () => {
   const resetForm = () => {
     setForm({ ...emptyForm, released_by: employee?.name || "" });
     setItems([{ ...emptyItem }]);
+    setAttachments([]);
     setEditingId(null);
   };
 
@@ -133,6 +167,7 @@ const StoreClearanceForms = () => {
         received_by_driver: form.received_by_driver || null,
         approved_by: form.approved_by || null,
         dispatch_report_id: form.dispatch_report_id || null,
+        attachments,
       };
 
       if (editingId) {
@@ -236,12 +271,13 @@ const StoreClearanceForms = () => {
                       <TableHead>Driver</TableHead>
                       <TableHead className="text-right">Bags</TableHead>
                       <TableHead className="text-right">Weight (kg)</TableHead>
+                      <TableHead>Attachments</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {forms.length === 0 ? (
-                      <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-6">No clearance forms recorded yet</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-6">No clearance forms recorded yet</TableCell></TableRow>
                     ) : forms.map((f: any) => (
                       <TableRow key={f.id}>
                         <TableCell className="font-mono text-xs">{f.form_number || "—"}</TableCell>
@@ -252,6 +288,19 @@ const StoreClearanceForms = () => {
                         <TableCell>{f.driver_name || "—"}</TableCell>
                         <TableCell className="text-right">{n(f.total_bags).toLocaleString()}</TableCell>
                         <TableCell className="text-right font-semibold">{n(f.total_weight_kg).toLocaleString()}</TableCell>
+                        <TableCell>
+                          {(Array.isArray(f.attachments) ? f.attachments : []).length === 0 ? (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          ) : (
+                            <div className="flex flex-col gap-0.5">
+                              {(f.attachments as any[]).map((a: any) => (
+                                <button key={a.path} type="button" onClick={() => openAttachment(a.path)} className="text-xs text-primary hover:underline flex items-center gap-1">
+                                  <Paperclip className="h-3 w-3" /> {a.name}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right whitespace-nowrap">
                           <Button size="sm" variant="ghost" onClick={() => openEdit(f)}><Pencil className="h-3.5 w-3.5" /></Button>
                           <Button size="sm" variant="ghost" onClick={() => remove.mutate(f.id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
@@ -386,6 +435,37 @@ const StoreClearanceForms = () => {
           </div>
 
           <div><Label>Remarks</Label><Textarea value={form.remarks} onChange={(e) => set("remarks", e.target.value)} rows={2} /></div>
+
+          <div className="space-y-2">
+            <Label>Attach signed form / scan (PDF or image)</Label>
+            <Input
+              type="file"
+              multiple
+              accept="application/pdf,image/*"
+              disabled={uploading}
+              onChange={(e) => uploadFiles(e.target.files)}
+            />
+            {uploading && (
+              <p className="text-xs text-muted-foreground flex items-center gap-2">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…
+              </p>
+            )}
+            {attachments.length > 0 && (
+              <ul className="space-y-1">
+                {attachments.map((a, idx) => (
+                  <li key={a.path} className="flex items-center justify-between border rounded-md px-2 py-1 text-sm">
+                    <button type="button" className="flex items-center gap-2 hover:underline text-left" onClick={() => openAttachment(a.path)}>
+                      <Paperclip className="h-3.5 w-3.5" /> {a.name}
+                    </button>
+                    <Button size="sm" variant="ghost" onClick={() => setAttachments((p) => p.filter((_, i) => i !== idx))}>
+                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div><Label>Released By — Store Manager</Label><Input value={form.released_by} onChange={(e) => set("released_by", e.target.value)} /></div>

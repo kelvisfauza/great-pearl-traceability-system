@@ -11415,6 +11415,7 @@ export type Database = {
       store_clearance_forms: {
         Row: {
           approved_by: string | null
+          attachments: Json
           clearance_date: string
           coffee_type: string | null
           created_at: string
@@ -11437,6 +11438,7 @@ export type Database = {
         }
         Insert: {
           approved_by?: string | null
+          attachments?: Json
           clearance_date?: string
           coffee_type?: string | null
           created_at?: string
@@ -11459,6 +11461,7 @@ export type Database = {
         }
         Update: {
           approved_by?: string | null
+          attachments?: Json
           clearance_date?: string
           coffee_type?: string | null
           created_at?: string
