@@ -435,6 +435,34 @@ const ProcurementActionCenter = () => {
         <TabsContent value="daily" className="mt-4">{checklist("Daily procurement routine", DAILY_TASKS, "d")}</TabsContent>
         <TabsContent value="weekly" className="mt-4">{checklist("Weekly procurement routine", WEEKLY_TASKS, "w")}</TabsContent>
       </Tabs>
+
+      <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Review message before sending</DialogTitle>
+            <DialogDescription>
+              To {preview?.supplierName || preview?.title} · {preview?.phone} · via BulkSMS
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={6}
+            className="text-sm"
+          />
+          <p className="text-xs text-muted-foreground">
+            {draft.length} characters · {Math.max(1, Math.ceil(draft.length / 160))} SMS part(s)
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPreview(null)}>Cancel</Button>
+            <Button onClick={sendReminder} disabled={!!sending}>
+              {sending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <MessageSquare className="h-4 w-4 mr-1" />}
+              Send SMS
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 };
