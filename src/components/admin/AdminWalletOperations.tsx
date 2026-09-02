@@ -235,7 +235,7 @@ export default function AdminWalletOperations() {
                   <Select value={targetEmail} onValueChange={setTargetEmail}>
                     <SelectTrigger><SelectValue placeholder="Select employee" /></SelectTrigger>
                     <SelectContent>
-                      {employees.map(e => (
+                      {employees.filter(e => !!e.email).map(e => (
                         <SelectItem key={e.email} value={e.email}>{e.name} — {e.email}</SelectItem>
                       ))}
                     </SelectContent>
@@ -256,7 +256,7 @@ export default function AdminWalletOperations() {
                     <Select value={destinationEmail} onValueChange={setDestinationEmail}>
                       <SelectTrigger><SelectValue placeholder="Select destination" /></SelectTrigger>
                       <SelectContent>
-                        {employees.filter(e => e.email !== targetEmail).map(e => (
+                        {employees.filter(e => !!e.email && e.email !== targetEmail).map(e => (
                           <SelectItem key={e.email} value={e.email}>{e.name} — {e.email}</SelectItem>
                         ))}
                       </SelectContent>
