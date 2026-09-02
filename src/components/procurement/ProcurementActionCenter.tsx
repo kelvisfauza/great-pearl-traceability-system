@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertTriangle, CalendarClock, PackageX, Handshake, UserX, Wallet,
@@ -63,12 +66,29 @@ const ProcurementActionCenter = () => {
   const [done, setDone] = useState<Record<string, boolean>>({});
   const [sending, setSending] = useState<string | null>(null);
   const [sent, setSent] = useState<Record<string, boolean>>({});
+  const [preview, setPreview] = useState<ActionItem | null>(null);
+  const [draft, setDraft] = useState("");
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const sendReminder = async (item: ActionItem) => {
+  const defaultMessage = (item: ActionItem) =>
+    item.smsMessage || `Dear ${item.supplierName || item.title}, please contact Great Agro Coffee procurement on 0393101103.`;
+
+  const openPreview = (item: ActionItem) => {
     if (!item.phone) {
       toast({ title: "No phone number", description: `${item.title} has no phone number on file.`, variant: "destructive" });
+      return;
+    }
+    setDraft(defaultMessage(item));
+    setPreview(item);
+  };
+
+  const sendReminder = async () => {
+    const item = preview;
+    if (!item || !item.phone) return;
+    const message = draft.trim();
+    if (!message) {
+      toast({ title: "Empty message", description: "Type the message to send.", variant: "destructive" });
       return;
     }
     setSending(item.id);
@@ -76,13 +96,14 @@ const ProcurementActionCenter = () => {
       const { error } = await supabase.functions.invoke("send-sms", {
         body: {
           phone: item.phone,
-          message: item.smsMessage || `Dear ${item.supplierName || item.title}, please contact Great Agro Coffee procurement on 0393101103.`,
+          message,
           userName: item.supplierName || item.title,
           messageType: "procurement_reminder",
         },
       });
       if (error) throw error;
       setSent(p => ({ ...p, [item.id]: true }));
+      setPreview(null);
       toast({ title: "Reminder sent", description: `SMS delivered to ${item.title} via BulkSMS.` });
     } catch (e: any) {
       toast({ title: "Reminder failed", description: e?.message || "Could not send the SMS.", variant: "destructive" });
@@ -90,6 +111,7 @@ const ProcurementActionCenter = () => {
       setSending(null);
     }
   };
+
 
   const { data, isFetching, refetch } = useQuery({
     queryKey: ["procurement-action-center"],
@@ -382,7 +404,7 @@ const ProcurementActionCenter = () => {
                                     variant={sent[i.id] ? "secondary" : "default"}
                                     className="h-7 text-xs"
                                     disabled={!i.phone || sending === i.id}
-                                    onClick={() => sendReminder(i)}
+                                    onClick={() => openPreview(i)}
                                   >
                                     {sending === i.id
                                       ? <Loader2 className="h-3 w-3 mr-1 animate-spin" />
@@ -416,6 +438,34 @@ const ProcurementActionCenter = () => {
         <TabsContent value="daily" className="mt-4">{checklist("Daily procurement routine", DAILY_TASKS, "d")}</TabsContent>
         <TabsContent value="weekly" className="mt-4">{checklist("Weekly procurement routine", WEEKLY_TASKS, "w")}</TabsContent>
       </Tabs>
+
+      <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Review message before sending</DialogTitle>
+            <DialogDescription>
+              To {preview?.supplierName || preview?.title} · {preview?.phone} · via BulkSMS
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={6}
+            className="text-sm"
+          />
+          <p className="text-xs text-muted-foreground">
+            {draft.length} characters · {Math.max(1, Math.ceil(draft.length / 160))} SMS part(s)
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPreview(null)}>Cancel</Button>
+            <Button onClick={sendReminder} disabled={!!sending}>
+              {sending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <MessageSquare className="h-4 w-4 mr-1" />}
+              Send SMS
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 };
