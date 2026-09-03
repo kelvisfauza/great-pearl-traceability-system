@@ -159,6 +159,7 @@ const StoreClearanceForms = () => {
     setItems(Array.isArray(row.items) && row.items.length ? row.items.map((i: any) => ({
       lot_ref: i.lot_ref || "", coffee_type: i.coffee_type || "", bags: String(i.bags ?? ""), weight_kg: String(i.weight_kg ?? ""),
     })) : [{ ...emptyItem }]);
+    setAttachments(Array.isArray(row.attachments) ? row.attachments : []);
     setOpen(true);
   };
 
