@@ -217,6 +217,14 @@ Deno.serve(async (req) => {
           })
         } catch (_) { /* non-blocking */ }
       }
+      } catch (loopErr) {
+        // Never leave the batch stuck in 'processing' — allow a retry.
+        await supabase.from('airtime_batches').update({
+          status: 'partial',
+          notes: `Disbursement interrupted (${(loopErr as Error).message}). ${sent} sent, ${failed} failed. Retry to continue.`,
+        }).eq('id', batchId)
+        return json({ ok: false, error: (loopErr as Error).message, sent, failed, status: 'partial' })
+      }
 
       const { data: remaining } = await supabase
         .from('airtime_batch_items')
