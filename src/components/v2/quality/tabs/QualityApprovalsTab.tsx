@@ -572,7 +572,26 @@ const QualityApprovalsTab = () => {
         </DialogContent>
       </Dialog>
 
-      <GRNPrintModal open={!!grnData} onClose={() => setGrnData(null)} grnData={grnData} />
+      <GRNPrintModal
+        open={!!grnData}
+        onClose={() => { setGrnData(null); setGrnTarget(null); }}
+        grnData={grnData}
+        onPrinted={async () => {
+          if (!grnTarget) return;
+          const nowIso = new Date().toISOString();
+          await supabase
+            .from("quality_assessments")
+            .update({ grn_printed: true, grn_printed_by: reviewerName || reviewerEmail || "Unknown", grn_printed_at: nowIso })
+            .eq("id", grnTarget.assessmentId);
+          if (grnTarget.storeRecordId) {
+            await (supabase.from("coffee_records") as any)
+              .update({ grn_printed_at: nowIso, grn_printed_by: reviewerEmail || reviewerName || "unknown" })
+              .eq("id", grnTarget.storeRecordId);
+          }
+          queryClient.invalidateQueries({ queryKey: ["qm-grn-printed"] });
+          queryClient.invalidateQueries({ queryKey: ["assessment-history"] });
+        }}
+      />
     </div>
   );
 };
