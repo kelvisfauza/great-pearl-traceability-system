@@ -398,18 +398,29 @@ const QualityApprovalsTab = () => {
                         {r.action === "rejected" ? (
                           "—"
                         ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={grnLoadingId === r.id}
-                            onClick={() => printGRN(r.batch_number, r.id)}
-                          >
-                            {grnLoadingId === r.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <><Printer className="h-4 w-4 mr-1" /> Print GRN</>
+                          <div className="flex items-center justify-end gap-2">
+                            {printedMap[r.batch_number] && (
+                              <Badge variant="secondary" className="gap-1 text-[10px]">
+                                <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                Printed
+                                {printedMap[r.batch_number]?.grn_printed_at
+                                  ? ` · ${format(new Date(printedMap[r.batch_number].grn_printed_at), "dd MMM")}`
+                                  : ""}
+                              </Badge>
                             )}
-                          </Button>
+                            <Button
+                              size="sm"
+                              variant={printedMap[r.batch_number] ? "ghost" : "outline"}
+                              disabled={grnLoadingId === r.id}
+                              onClick={() => printGRN(r.batch_number, r.id)}
+                            >
+                              {grnLoadingId === r.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <><Printer className="h-4 w-4 mr-1" /> {printedMap[r.batch_number] ? "Reprint" : "Print GRN"}</>
+                              )}
+                            </Button>
+                          </div>
                         )}
                       </TableCell>
                     </TableRow>
