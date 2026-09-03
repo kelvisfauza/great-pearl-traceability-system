@@ -768,6 +768,7 @@ serve(async (req) => {
     } catch (waErr) {
       console.error('WhatsApp mirror setup failed:', (waErr as Error).message);
     }
+    }
 
 
     // PREMIUM ROUTE: try BulkSMS Premium first, fall back to YoolaSMS/Infobip below if it fails
