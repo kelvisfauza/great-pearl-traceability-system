@@ -163,6 +163,26 @@ const QualityApprovalsTab = () => {
     },
   });
 
+  // Shared print state so an already-printed GRN is never silently reprinted
+  const logBatches = (log as any[]).map((r) => r.batch_number).filter(Boolean);
+  const { data: printedMap = {} } = useQuery({
+    queryKey: ["qm-grn-printed", logBatches.join(",")],
+    enabled: canApproveQualityPricing && logBatches.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("quality_assessments")
+        .select("batch_number, grn_printed, grn_printed_by, grn_printed_at")
+        .in("batch_number", logBatches);
+      if (error) throw error;
+      const map: Record<string, any> = {};
+      for (const row of (data as any[]) || []) {
+        if (row.grn_printed) map[row.batch_number] = row;
+      }
+      return map;
+    },
+  });
+
+
   const review = useMutation({
     mutationFn: async ({ row, action }: { row: any; action: "approved" | "adjusted" | "rejected" }) => {
       const approvedPrice = action === "rejected" ? null : Number(price || row.suggested_price || 0);
