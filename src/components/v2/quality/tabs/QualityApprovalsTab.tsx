@@ -35,6 +35,7 @@ const QualityApprovalsTab = () => {
   const [notes, setNotes] = useState<string>("");
   const [grnData, setGrnData] = useState<any>(null);
   const [grnLoadingId, setGrnLoadingId] = useState<string | null>(null);
+  const [grnTarget, setGrnTarget] = useState<{ assessmentId: string; storeRecordId?: string | null } | null>(null);
 
   /** Build & open the GRN for an approved assessment (QM or admin). */
   const printGRN = async (batchNumber: string, logId: string) => {
