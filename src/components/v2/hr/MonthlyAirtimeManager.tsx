@@ -212,7 +212,7 @@ const MonthlyAirtimeManager = () => {
                   </Button>
                   <Button
                     onClick={disburse}
-                    disabled={busy || !['approved', 'partial'].includes(selected.status)}
+                    disabled={busy || !['approved', 'partial', 'processing'].includes(selected.status)}
                     className="bg-green-600 hover:bg-green-700"
                   >
                     {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}

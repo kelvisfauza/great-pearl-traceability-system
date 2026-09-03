@@ -127,7 +127,9 @@ Deno.serve(async (req) => {
         .eq('id', batchId)
         .maybeSingle()
       if (!batch) return json({ ok: false, error: 'Batch not found' })
-      if (batch.status !== 'approved' && batch.status !== 'partial') {
+      // 'processing' is allowed so a crashed/timed-out run can be retried.
+      // Items already sent are skipped by the payment_status filter below.
+      if (!['approved', 'partial', 'processing'].includes(batch.status)) {
         return json({ ok: false, error: `Batch must be approved before disbursing (current: ${batch.status})` })
       }
 
@@ -143,6 +145,7 @@ Deno.serve(async (req) => {
       let sent = 0, failed = 0
       const sentPhones = new Set<string>()
 
+      try {
       for (const item of items || []) {
         const cleanPhone = normalizePhone(item.phone)
         if (sentPhones.has(cleanPhone)) {
@@ -213,6 +216,14 @@ Deno.serve(async (req) => {
             },
           })
         } catch (_) { /* non-blocking */ }
+      }
+      } catch (loopErr) {
+        // Never leave the batch stuck in 'processing' — allow a retry.
+        await supabase.from('airtime_batches').update({
+          status: 'partial',
+          notes: `Disbursement interrupted (${(loopErr as Error).message}). ${sent} sent, ${failed} failed. Retry to continue.`,
+        }).eq('id', batchId)
+        return json({ ok: false, error: (loopErr as Error).message, sent, failed, status: 'partial' })
       }
 
       const { data: remaining } = await supabase

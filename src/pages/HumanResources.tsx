@@ -211,7 +211,9 @@ const HumanResources = () => {
               <TabsTrigger value="overtime" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Overtime</TabsTrigger>
               <TabsTrigger value="time-deductions" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Time Deductions</TabsTrigger>
               <TabsTrigger value="contracts" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Contracts</TabsTrigger>
-              <TabsTrigger value="airtime" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Monthly Airtime</TabsTrigger>
+              {isAdmin() && (
+                <TabsTrigger value="airtime" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Monthly Airtime</TabsTrigger>
+              )}
               <TabsTrigger value="qr-codes" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">QR Codes</TabsTrigger>
             </TabsList>
           </div>
@@ -367,7 +369,13 @@ const HumanResources = () => {
           </TabsContent>
 
           <TabsContent value="airtime">
-            <MonthlyAirtimeManager />
+            {isAdmin() ? (
+              <MonthlyAirtimeManager />
+            ) : (
+              <div className="p-6 text-sm text-muted-foreground">
+                Monthly Airtime is restricted to Administrators.
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="qr-codes">

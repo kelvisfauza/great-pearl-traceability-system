@@ -730,8 +730,16 @@ serve(async (req) => {
     );
     const usePremiumRoute = isPremium && smsCfg.bulksms_premium !== false;
 
-    // 🟢 WHATSAPP MIRROR: every SMS that passes the gate is also mirrored to
-    // WhatsApp via Bird (fire-and-forget — never blocks or fails the SMS).
+    // 🟢 WHATSAPP MIRROR (opt-in): only when WHATSAPP_MIRROR_ENABLED=true, and
+    // never for OTP / verification / bulk price-update traffic — those would be
+    // duplicate deliveries and double-counted credits.
+    const mirrorEnabled = (Deno.env.get('WHATSAPP_MIRROR_ENABLED') || '').toLowerCase() === 'true'
+    const NO_MIRROR_TYPES = new Set([
+      'verification', 'login_verification', 'withdrawal_verification',
+      'admin_wallet_otp', 'admin_approval_code', 'qr_access_otp', 'otp',
+      'price_update',
+    ])
+    if (mirrorEnabled && !NO_MIRROR_TYPES.has(String(messageType || '').toLowerCase())) {
     try {
       const waMirror = fetch(`${supabaseUrl}/functions/v1/send-whatsapp`, {
         method: 'POST',
@@ -759,6 +767,7 @@ serve(async (req) => {
       else await waMirror;
     } catch (waErr) {
       console.error('WhatsApp mirror setup failed:', (waErr as Error).message);
+    }
     }
 
 
