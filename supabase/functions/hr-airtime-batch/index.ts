@@ -145,6 +145,7 @@ Deno.serve(async (req) => {
       let sent = 0, failed = 0
       const sentPhones = new Set<string>()
 
+      try {
       for (const item of items || []) {
         const cleanPhone = normalizePhone(item.phone)
         if (sentPhones.has(cleanPhone)) {
