@@ -35,6 +35,7 @@ const QualityApprovalsTab = () => {
   const [notes, setNotes] = useState<string>("");
   const [grnData, setGrnData] = useState<any>(null);
   const [grnLoadingId, setGrnLoadingId] = useState<string | null>(null);
+  const [grnTarget, setGrnTarget] = useState<{ assessmentId: string; storeRecordId?: string | null } | null>(null);
 
   /** Build & open the GRN for an approved assessment (QM or admin). */
   const printGRN = async (batchNumber: string, logId: string) => {
@@ -63,6 +64,7 @@ const QualityApprovalsTab = () => {
 
       const a: any = assessment;
       const cr: any = record || {};
+      setGrnTarget({ assessmentId: a.id, storeRecordId: a.store_record_id || null });
       setGrnData({
         grnNumber: `GRN-${a.batch_number}`,
         batchNumber: a.batch_number,
@@ -160,6 +162,26 @@ const QualityApprovalsTab = () => {
       return (data as any[]) || [];
     },
   });
+
+  // Shared print state so an already-printed GRN is never silently reprinted
+  const logBatches = (log as any[]).map((r) => r.batch_number).filter(Boolean);
+  const { data: printedMap = {} } = useQuery({
+    queryKey: ["qm-grn-printed", logBatches.join(",")],
+    enabled: canApproveQualityPricing && logBatches.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("quality_assessments")
+        .select("batch_number, grn_printed, grn_printed_by, grn_printed_at")
+        .in("batch_number", logBatches);
+      if (error) throw error;
+      const map: Record<string, any> = {};
+      for (const row of (data as any[]) || []) {
+        if (row.grn_printed) map[row.batch_number] = row;
+      }
+      return map;
+    },
+  });
+
 
   const review = useMutation({
     mutationFn: async ({ row, action }: { row: any; action: "approved" | "adjusted" | "rejected" }) => {
@@ -376,18 +398,29 @@ const QualityApprovalsTab = () => {
                         {r.action === "rejected" ? (
                           "—"
                         ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={grnLoadingId === r.id}
-                            onClick={() => printGRN(r.batch_number, r.id)}
-                          >
-                            {grnLoadingId === r.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <><Printer className="h-4 w-4 mr-1" /> Print GRN</>
+                          <div className="flex items-center justify-end gap-2">
+                            {printedMap[r.batch_number] && (
+                              <Badge variant="secondary" className="gap-1 text-[10px]">
+                                <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                Printed
+                                {printedMap[r.batch_number]?.grn_printed_at
+                                  ? ` · ${format(new Date(printedMap[r.batch_number].grn_printed_at), "dd MMM")}`
+                                  : ""}
+                              </Badge>
                             )}
-                          </Button>
+                            <Button
+                              size="sm"
+                              variant={printedMap[r.batch_number] ? "ghost" : "outline"}
+                              disabled={grnLoadingId === r.id}
+                              onClick={() => printGRN(r.batch_number, r.id)}
+                            >
+                              {grnLoadingId === r.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <><Printer className="h-4 w-4 mr-1" /> {printedMap[r.batch_number] ? "Reprint" : "Print GRN"}</>
+                              )}
+                            </Button>
+                          </div>
                         )}
                       </TableCell>
                     </TableRow>
@@ -539,7 +572,26 @@ const QualityApprovalsTab = () => {
         </DialogContent>
       </Dialog>
 
-      <GRNPrintModal open={!!grnData} onClose={() => setGrnData(null)} grnData={grnData} />
+      <GRNPrintModal
+        open={!!grnData}
+        onClose={() => { setGrnData(null); setGrnTarget(null); }}
+        grnData={grnData}
+        onPrinted={async () => {
+          if (!grnTarget) return;
+          const nowIso = new Date().toISOString();
+          await supabase
+            .from("quality_assessments")
+            .update({ grn_printed: true, grn_printed_by: reviewerName || reviewerEmail || "Unknown", grn_printed_at: nowIso })
+            .eq("id", grnTarget.assessmentId);
+          if (grnTarget.storeRecordId) {
+            await (supabase.from("coffee_records") as any)
+              .update({ grn_printed_at: nowIso, grn_printed_by: reviewerEmail || reviewerName || "unknown" })
+              .eq("id", grnTarget.storeRecordId);
+          }
+          queryClient.invalidateQueries({ queryKey: ["qm-grn-printed"] });
+          queryClient.invalidateQueries({ queryKey: ["assessment-history"] });
+        }}
+      />
     </div>
   );
 };
