@@ -127,7 +127,9 @@ Deno.serve(async (req) => {
         .eq('id', batchId)
         .maybeSingle()
       if (!batch) return json({ ok: false, error: 'Batch not found' })
-      if (batch.status !== 'approved' && batch.status !== 'partial') {
+      // 'processing' is allowed so a crashed/timed-out run can be retried.
+      // Items already sent are skipped by the payment_status filter below.
+      if (!['approved', 'partial', 'processing'].includes(batch.status)) {
         return json({ ok: false, error: `Batch must be approved before disbursing (current: ${batch.status})` })
       }
 

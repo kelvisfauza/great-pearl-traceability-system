@@ -369,7 +369,13 @@ const HumanResources = () => {
           </TabsContent>
 
           <TabsContent value="airtime">
-            <MonthlyAirtimeManager />
+            {isAdmin() ? (
+              <MonthlyAirtimeManager />
+            ) : (
+              <div className="p-6 text-sm text-muted-foreground">
+                Monthly Airtime is restricted to Administrators.
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="qr-codes">
