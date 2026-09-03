@@ -64,6 +64,7 @@ const QualityApprovalsTab = () => {
 
       const a: any = assessment;
       const cr: any = record || {};
+      setGrnTarget({ assessmentId: a.id, storeRecordId: a.store_record_id || null });
       setGrnData({
         grnNumber: `GRN-${a.batch_number}`,
         batchNumber: a.batch_number,
