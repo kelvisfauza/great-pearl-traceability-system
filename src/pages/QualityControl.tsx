@@ -1502,13 +1502,13 @@ const QualityControl = () => {
                         <TableHead className="w-10">
                           <Checkbox
                             checked={
-                              filteredAssessments.filter((a: any) => isGrnPrintable(a)).length > 0 &&
-                              selectedForBulkPrint.length === filteredAssessments.filter((a: any) => isGrnPrintable(a)).length
+                              filteredAssessments.filter((a: any) => isGrnPrintable(a) && !a.grn_printed).length > 0 &&
+                              selectedForBulkPrint.length === filteredAssessments.filter((a: any) => isGrnPrintable(a) && !a.grn_printed).length
                             }
                             onCheckedChange={(checked) => {
                               if (checked) {
                                 setSelectedForBulkPrint(
-                                  filteredAssessments.filter((a: any) => isGrnPrintable(a)).map((a: any) => a.id)
+                                  filteredAssessments.filter((a: any) => isGrnPrintable(a) && !a.grn_printed).map((a: any) => a.id)
                                 );
                               } else {
                                 setSelectedForBulkPrint([]);
@@ -1538,8 +1538,8 @@ const QualityControl = () => {
                           )}
                         >
                           <TableCell>
-                            <Checkbox
-                              disabled={!isGrnPrintable(assessment)}
+                             <Checkbox
+                               disabled={!isGrnPrintable(assessment) || (!!(assessment as any).grn_printed && !isAdmin())}
                               checked={selectedForBulkPrint.includes(assessment.id)}
                               onCheckedChange={(checked) => {
                                 if (checked) {
