@@ -276,16 +276,27 @@ await savePrices({
         await sendSmsWithDelay(allPhones[i], message, i === 0 ? 0 : 500);
       }
 
-      // Always send price SMS to suppliers
-      const { data: suppliers } = await supabase
-        .from('suppliers')
-        .select('phone')
-        .not('phone', 'is', null);
+      // Always send price SMS to suppliers (main registry + field operations records)
+      const [
+        { data: suppliers },
+        { data: fieldSuppliers },
+        { data: farmers },
+        { data: fieldAgents },
+      ] = await Promise.all([
+        supabase.from('suppliers').select('phone').not('phone', 'is', null),
+        supabase.from('field_assessment_suppliers').select('phone').not('phone', 'is', null),
+        supabase.from('farmer_profiles').select('phone').not('phone', 'is', null),
+        supabase.from('field_agents').select('phone').not('phone', 'is', null),
+      ]);
 
       // Dedupe suppliers, and skip anyone already messaged in the staff batch
       const staffSet = new Set(allPhones);
-      const supplierPhones = dedupePhones(suppliers?.map(s => s.phone) || [])
-        .filter(p => !staffSet.has(p));
+      const supplierPhones = dedupePhones([
+        ...(suppliers?.map(s => s.phone) || []),
+        ...(fieldSuppliers?.map(s => s.phone) || []),
+        ...(farmers?.map(f => f.phone) || []),
+        ...(fieldAgents?.map(a => a.phone) || []),
+      ]).filter(p => !staffSet.has(p));
       // Supplier message - plain text, no emojis, short for reliable delivery
       const supplierMessage = `${correctionPrefix}Great Agro Coffee Prices ${date}\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}%)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}%)\nSorted: UGX ${(request.sorted_price || 0).toLocaleString()}/kg\n${request.is_correction ? 'Disregard previous prices.' : 'Deliver your coffee now!'}`;
 
