@@ -92,6 +92,7 @@ import V2HRLeaveManagement from "./pages/v2/hr/LeaveManagement";
 import V2HRPerDiem from "./pages/v2/hr/PerDiem";
 import V2HRPayroll from "./pages/v2/hr/Payroll";
 import V2HRAirtime from "./pages/v2/hr/Airtime";
+import V2HRAttendance from "./pages/v2/hr/Attendance";
 import V2FieldOpsDashboard from "./pages/v2/field-operations/Dashboard";
 import V2AnalyticsDashboard from "./pages/v2/analytics/Dashboard";
 import V2EUDRDashboard from "./pages/v2/eudr/Dashboard";
@@ -299,6 +300,7 @@ const App: React.ComponentType = () => {
                 <Route path="/v2/hr/per-diem" element={<ProtectedRoute requiredPermissions={["Human Resources"]} requiredRoles={["Administrator", "Super Admin"]}><V2HRPerDiem /></ProtectedRoute>} />
                 <Route path="/v2/hr/payroll" element={<ProtectedRoute requiredPermissions={["Human Resources"]} requiredRoles={["Administrator", "Super Admin"]}><V2HRPayroll /></ProtectedRoute>} />
                 <Route path="/v2/hr/airtime" element={<ProtectedRoute requiredPermissions={["Human Resources"]} requiredRoles={["Administrator", "Super Admin"]}><V2HRAirtime /></ProtectedRoute>} />
+                <Route path="/v2/hr/attendance" element={<ProtectedRoute requiredPermissions={["Human Resources"]}><V2HRAttendance /></ProtectedRoute>} />
                 <Route path="/v2/hr/absence-appeals" element={<ProtectedRoute requiredPermissions={["Human Resources"]}><V2HRAbsenceAppeals /></ProtectedRoute>} />
                 <Route path="/my-deductions" element={<ProtectedRoute><MyDeductionsPage /></ProtectedRoute>} />
                 <Route path="/print-queue" element={<ProtectedRoute><PrintQueuePage /></ProtectedRoute>} />
