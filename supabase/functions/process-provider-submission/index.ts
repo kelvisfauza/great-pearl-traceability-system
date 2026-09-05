@@ -32,6 +32,9 @@ interface ServerReceiptInput {
   paymentMethod: string;
   transactionId: string;
   processedBy: string;
+  /** Approver who released the payment — signs the receipt */
+  approvedBy?: string;
+  approvedByTitle?: string;
 }
 
 const generateReceiptPdfBytes = (data: ServerReceiptInput): Uint8Array => {
