@@ -397,13 +397,16 @@ const Suppliers = () => {
   const getPaymentStatusBadge = (status?: string) => {
     if (!status) return <Badge variant="secondary">No Payment</Badge>;
     
+    const label = status === 'POSTED' || status === 'PAID' ? 'Paid' : status;
     const variants: Record<string, any> = {
       'Pending': 'secondary',
+      'PENDING': 'secondary',
       'Paid': 'default',
       'completed': 'default'
     };
 
-    return <Badge variant={variants[status] || 'secondary'}>{status}</Badge>;
+    return <Badge variant={variants[label] || 'secondary'}>{label}</Badge>;
+
   };
 
   const handlePrintSuppliersList = useReactToPrint({
