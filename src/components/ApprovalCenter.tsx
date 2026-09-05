@@ -97,8 +97,9 @@ const ApprovalCenter = () => {
               requestId: fresh.id,
               title: fresh.title,
               amount: Number(fresh.amount) || 0,
-              phone: fresh.disbursement_phone || d?.recipient_phone || d?.phone || '',
-              recipientName: d?.recipient_name || d?.employee_name || fresh.requestedby_name || fresh.requestedby,
+              phone: fresh.disbursement_phone || d?.recipient_phone || d?.beneficiary_phone || d?.phone || '',
+              recipientName: d?.recipient_name || d?.beneficiary_name || d?.employee_name || fresh.requestedby_name || fresh.requestedby,
+
             });
           }
         }
