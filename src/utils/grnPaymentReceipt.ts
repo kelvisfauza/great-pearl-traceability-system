@@ -96,7 +96,10 @@ export function printGrnPaymentReceipt(d: GrnReceiptData) {
     <div class="signs">
       <div><span></span><p>Received by (Supplier)</p></div>
       <div><span></span><p>Paid by (Finance)</p></div>
-      <div><span></span><p>Authorised by</p></div>
+      <div>
+        <span style="position:relative">${signer.signatureUrl ? `<img src="${signer.signatureUrl}" alt="signature" style="height:32px;position:absolute;left:50%;bottom:1px;transform:translateX(-50%)"/>` : ''}</span>
+        <p>Authorised by — ${signer.name}<br/><span style="font-weight:normal">${signer.title}</span></p>
+      </div>
     </div>
 
     <footer>
