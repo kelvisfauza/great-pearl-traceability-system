@@ -20,6 +20,8 @@ export interface ReceiptPayload {
   paidOn: string;          // ISO date
   processedBy: string;     // staff name
   processedByEmail?: string;
+  approvedBy?: string;       // approver who released the payment (signs the receipt)
+  approvedByEmail?: string;
   notes?: string;
 }
 
