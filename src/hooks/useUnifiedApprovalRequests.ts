@@ -964,14 +964,15 @@ export const useUnifiedApprovalRequests = () => {
             updateData.admin_final_approval = true;
             updateData.admin_final_approval_at = new Date().toISOString();
             updateData.admin_final_approval_by = adminName;
-            if (isSalaryAdvanceReq) {
-              // Salary Advance: one admin approval fully approves and disburses
+            if (isSalaryAdvanceReq || isRequisitionReq) {
+              // One admin approval fully approves; payout channel is chosen at release
               updateData.status = 'Approved';
               updateData.approval_stage = 'approved';
               updateData.finance_approved = true;
-              updateData.finance_approved_by = 'AUTO (Salary Advance)';
+              updateData.finance_approved_by = isSalaryAdvanceReq ? 'AUTO (Salary Advance)' : 'AUTO (Requisition)';
               updateData.finance_approved_at = new Date().toISOString();
-              console.log('✅ Salary Advance fully approved by single admin');
+              console.log('✅ Fully approved by single admin');
+
             } else {
               updateData.status = 'Pending Finance';
               updateData.approval_stage = 'pending_finance';
