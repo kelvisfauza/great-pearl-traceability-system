@@ -257,9 +257,29 @@ const Suppliers = () => {
         }
       });
 
+      // Fallback: finance lots hold the actual payment outcome for most batches
+      const recordIds = uniqueRecords.map((r: any) => r.id);
+      const financeByRecord = new Map<string, { amount: number; status: string }>();
+      if (recordIds.length > 0) {
+        const { data: lots, error: lotsError } = await supabase
+          .from('finance_coffee_lots')
+          .select('coffee_record_id, finance_status, total_amount_ugx')
+          .in('coffee_record_id', recordIds);
+        if (lotsError) {
+          console.error('❌ Error loading finance_coffee_lots:', lotsError);
+        }
+        (lots || []).forEach((l: any) => {
+          if (!l.coffee_record_id) return;
+          const prev = financeByRecord.get(l.coffee_record_id);
+          const amount = Number(l.total_amount_ugx || 0) + (prev?.amount || 0);
+          const status = prev?.status === 'PAID' ? 'PAID' : l.finance_status;
+          financeByRecord.set(l.coffee_record_id, { amount, status });
+        });
+      }
+
       // Merge the data
       const transactionsData: SupplierTransaction[] = uniqueRecords.map(record => {
-        const payment = paymentsByLot.get(record.id);
+        const payment = paymentsByLot.get(record.id) || financeByRecord.get(record.id);
         return {
           id: record.id,
           date: record.date,
@@ -272,6 +292,7 @@ const Suppliers = () => {
           payment_status: payment?.status,
         };
       });
+
 
       // Sort by date descending (latest first)
       transactionsData.sort((a, b) => {
@@ -376,13 +397,16 @@ const Suppliers = () => {
   const getPaymentStatusBadge = (status?: string) => {
     if (!status) return <Badge variant="secondary">No Payment</Badge>;
     
+    const label = status === 'POSTED' || status === 'PAID' ? 'Paid' : status;
     const variants: Record<string, any> = {
       'Pending': 'secondary',
+      'PENDING': 'secondary',
       'Paid': 'default',
       'completed': 'default'
     };
 
-    return <Badge variant={variants[status] || 'secondary'}>{status}</Badge>;
+    return <Badge variant={variants[label] || 'secondary'}>{label}</Badge>;
+
   };
 
   const handlePrintSuppliersList = useReactToPrint({
