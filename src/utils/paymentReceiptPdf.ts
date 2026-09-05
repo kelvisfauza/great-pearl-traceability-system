@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import logoUrl from '@/assets/great-agro-coffee-logo.png';
-import signatureUrl from '@/assets/mukobi-godwin-signature.png';
+import { resolveSignatureBlock } from '@/utils/approverSignatures';
 
 export interface ReceiptPayload {
   reference: string;             // RCP-xxxxxxxx
