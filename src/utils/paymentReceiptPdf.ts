@@ -35,10 +35,6 @@ const COMPANY = {
   website: 'www.greatpearlcoffee.com',
 };
 
-const FINANCE_MANAGER = {
-  name: 'Mukobi Godwin',
-  title: 'Finance Manager',
-};
 
 const formatUGX = (n: number) => `UGX ${Number(n || 0).toLocaleString('en-UG')}`;
 
