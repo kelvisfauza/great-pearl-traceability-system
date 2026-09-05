@@ -903,7 +903,12 @@ export const useUnifiedApprovalRequests = () => {
 
         // Salary Advance: single admin approval is enough (no 3-tier, no Finance step)
         const isSalaryAdvanceReq = request.requestType === 'Salary Advance';
+        // Requisitions are finalised by the admin, who then picks the payout channel
+        // (cash / Yo Payments / GosentePay) in the Release Payment dialog.
+        const isRequisitionReq = ['Cash Requisition', 'Requisition', 'Cash Requisition Form']
+          .includes(String(request.requestType || ''));
         const requiresThreeApprovals = !isSalaryAdvanceReq && currentReq.amount > 50000;
+
         const adminName = employee?.name || employee?.email || 'Admin';
         const updateData: any = {
           updated_at: new Date().toISOString()
