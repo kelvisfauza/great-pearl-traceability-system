@@ -20,6 +20,9 @@ export interface GrnReceiptData {
   printedBy?: string | null;
   notes?: string | null;
   receiptNo: string;
+  /** Approver who released the payment — their signature is stamped on the receipt */
+  approvedBy?: string | null;
+  approvedByEmail?: string | null;
 }
 
 const money = (n: number) => `UGX ${Number(n || 0).toLocaleString()}`;
