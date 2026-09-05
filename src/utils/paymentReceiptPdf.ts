@@ -292,11 +292,11 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
   doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
-  doc.text(FINANCE_MANAGER.name, margin, sigBoxY + 52);
+  doc.text(signer.name, margin, sigBoxY + 52);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.setTextColor(60, 60, 60);
-  doc.text(`${FINANCE_MANAGER.title} • Signed ${formatDate(new Date().toISOString())}`, margin, sigBoxY + 62);
+  doc.text(`${signer.title} • Signed ${formatDate(new Date().toISOString())}`, margin, sigBoxY + 62);
 
   // Validation note (right side, smaller)
   doc.setFont('helvetica', 'italic');
