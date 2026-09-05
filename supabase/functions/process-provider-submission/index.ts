@@ -488,6 +488,7 @@ serve(async (req) => {
                 paymentMethod: "Pending disbursement",
                 transactionId: submissionId,
                 processedBy: reviewerName,
+                approvedBy: reviewerName,
               },
             },
           });
@@ -661,6 +662,7 @@ serve(async (req) => {
             paymentMethod: paymentMethodLabel,
             transactionId: result.transactionRef || record.id,
             processedBy: reviewerName,
+                approvedBy: reviewerName,
           });
           const year = new Date().getFullYear();
           const path = `${year}/${pdfRef}.pdf`;
@@ -743,6 +745,7 @@ serve(async (req) => {
             paymentMethod: paymentMethodLabel,
               transactionId: result.transactionRef || record.id,
               processedBy: reviewerName,
+                approvedBy: reviewerName,
                 pdfUrl,
             },
           },
