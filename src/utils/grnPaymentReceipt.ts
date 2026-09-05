@@ -31,6 +31,7 @@ export function printGrnPaymentReceipt(d: GrnReceiptData) {
   const lotValue = Number(d.lotValue ?? d.amount ?? 0);
   const previouslyPaid = Number(d.previouslyPaid ?? 0);
   const balance = Number(d.balance ?? Math.max(lotValue - previouslyPaid - Number(d.amount || 0), 0));
+  const signer = resolveSignatureBlock(d.approvedByEmail, d.approvedBy || d.paidBy);
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Payment Receipt ${d.receiptNo}</title>
   <style>
     *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
