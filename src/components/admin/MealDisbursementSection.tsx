@@ -244,6 +244,8 @@ const MealDisbursementSection = () => {
         paidOn: payment.updated_at || payment.created_at,
         processedBy: payment.initiated_by_name || employee?.name || 'Finance Team',
         processedByEmail: payment.initiated_by || employee?.email,
+        approvedBy: payment.approved_by_name || employee?.name,
+        approvedByEmail: payment.approved_by || employee?.email,
       });
       if (result.ok) {
         const channels = [result.emailSent && 'email', result.smsSent && 'SMS'].filter(Boolean).join(' & ') || 'PDF only';

@@ -311,6 +311,8 @@ const ServiceProviderPayments = () => {
         paidOn: payment.updated_at || payment.created_at,
         processedBy: payment.initiated_by_name || employee?.name || 'Finance Team',
         processedByEmail: payment.initiated_by || employee?.email,
+        approvedBy: payment.approved_by_name || employee?.name,
+        approvedByEmail: payment.approved_by || employee?.email,
         notes: payment.notes || undefined,
       });
       if (result.ok) {

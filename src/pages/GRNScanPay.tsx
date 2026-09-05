@@ -367,6 +367,8 @@ export default function GRNScanPay() {
         ? `${employee.name}${(employee as any)?.position ? ` · ${(employee as any).position}` : ''}`
         : (user?.email || 'Finance Department'),
       notes: entry?.payment?.notes || lot.finance_notes,
+      approvedBy: employee?.name || entry?.paidByName || null,
+      approvedByEmail: employee?.email || user?.email || null,
       receiptNo: `RCP-${String(lot.batch_number || batch).replace(/[^A-Z0-9]/gi, '').slice(-8)}`,
     });
   };

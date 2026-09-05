@@ -1,5 +1,6 @@
 import { LOGO_URL } from '@/utils/companyBrand';
 import { getGrnScanQrUrl, getGrnScanUrl } from '@/utils/grnScanUrl';
+import { resolveSignatureBlock } from '@/utils/approverSignatures';
 
 export interface GrnReceiptData {
   grnNumber: string;
@@ -19,6 +20,9 @@ export interface GrnReceiptData {
   printedBy?: string | null;
   notes?: string | null;
   receiptNo: string;
+  /** Approver who released the payment — their signature is stamped on the receipt */
+  approvedBy?: string | null;
+  approvedByEmail?: string | null;
 }
 
 const money = (n: number) => `UGX ${Number(n || 0).toLocaleString()}`;
@@ -27,6 +31,7 @@ export function printGrnPaymentReceipt(d: GrnReceiptData) {
   const lotValue = Number(d.lotValue ?? d.amount ?? 0);
   const previouslyPaid = Number(d.previouslyPaid ?? 0);
   const balance = Number(d.balance ?? Math.max(lotValue - previouslyPaid - Number(d.amount || 0), 0));
+  const signer = resolveSignatureBlock(d.approvedByEmail, d.approvedBy || d.paidBy);
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Payment Receipt ${d.receiptNo}</title>
   <style>
     *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -91,7 +96,10 @@ export function printGrnPaymentReceipt(d: GrnReceiptData) {
     <div class="signs">
       <div><span></span><p>Received by (Supplier)</p></div>
       <div><span></span><p>Paid by (Finance)</p></div>
-      <div><span></span><p>Authorised by</p></div>
+      <div>
+        <span style="position:relative">${signer.signatureUrl ? `<img src="${signer.signatureUrl}" alt="signature" style="height:32px;position:absolute;left:50%;bottom:1px;transform:translateX(-50%)"/>` : ''}</span>
+        <p>Authorised by — ${signer.name}<br/><span style="font-weight:normal">${signer.title}</span></p>
+      </div>
     </div>
 
     <footer>

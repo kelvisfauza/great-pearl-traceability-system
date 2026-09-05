@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import logoUrl from '@/assets/great-agro-coffee-logo.png';
-import signatureUrl from '@/assets/mukobi-godwin-signature.png';
+import { resolveSignatureBlock } from '@/utils/approverSignatures';
 
 export interface ReceiptPayload {
   reference: string;             // RCP-xxxxxxxx
@@ -20,6 +20,8 @@ export interface ReceiptPayload {
   paidOn: string;          // ISO date
   processedBy: string;     // staff name
   processedByEmail?: string;
+  approvedBy?: string;       // approver who released the payment (signs the receipt)
+  approvedByEmail?: string;
   notes?: string;
 }
 
@@ -33,10 +35,6 @@ const COMPANY = {
   website: 'www.greatpearlcoffee.com',
 };
 
-const FINANCE_MANAGER = {
-  name: 'Mukobi Godwin',
-  title: 'Finance Manager',
-};
 
 const formatUGX = (n: number) => `UGX ${Number(n || 0).toLocaleString('en-UG')}`;
 
@@ -268,11 +266,20 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
   doc.setFillColor(255, 255, 255);
   doc.rect(margin, sigBoxY + 6, 150, 32, 'F');
 
+  // Approver who released the payment signs the receipt
+  const signer = resolveSignatureBlock(
+    data.approvedByEmail || data.processedByEmail,
+    data.approvedBy || data.processedBy,
+  );
+
   // Signature image (smaller, tucked above the name line)
-  try {
-    const sig = await loadImageAsDataUrl(signatureUrl);
-    doc.addImage(sig, 'PNG', margin + 4, sigBoxY + 8, 70, 28);
-  } catch {/* signature optional */}
+  if (signer.signatureUrl) {
+    try {
+      const sig = await loadImageAsDataUrl(signer.signatureUrl);
+      doc.addImage(sig, 'PNG', margin + 4, sigBoxY + 8, 70, 28);
+    } catch {/* signature optional */}
+  }
+
 
   // Underline & name (solid black for B&W print clarity)
   doc.setDrawColor(0, 0, 0);
@@ -281,11 +288,11 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
   doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
-  doc.text(FINANCE_MANAGER.name, margin, sigBoxY + 52);
+  doc.text(signer.name, margin, sigBoxY + 52);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.setTextColor(60, 60, 60);
-  doc.text(`${FINANCE_MANAGER.title} • Signed ${formatDate(new Date().toISOString())}`, margin, sigBoxY + 62);
+  doc.text(`${signer.title} • Signed ${formatDate(new Date().toISOString())}`, margin, sigBoxY + 62);
 
   // Validation note (right side, smaller)
   doc.setFont('helvetica', 'italic');

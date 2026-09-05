@@ -32,6 +32,9 @@ interface ServerReceiptInput {
   paymentMethod: string;
   transactionId: string;
   processedBy: string;
+  /** Approver who released the payment — signs the receipt */
+  approvedBy?: string;
+  approvedByTitle?: string;
 }
 
 const generateReceiptPdfBytes = (data: ServerReceiptInput): Uint8Array => {
@@ -205,11 +208,15 @@ const generateReceiptPdfBytes = (data: ServerReceiptInput): Uint8Array => {
   doc.setTextColor(0, 0, 0);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  doc.text("Mukobi Godwin", margin, sigBoxY + 52);
+  doc.text(data.approvedBy || data.processedBy || "Authorised Approver", margin, sigBoxY + 52);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   doc.setTextColor(60, 60, 60);
-  doc.text(`Finance Manager • Signed ${formatDate(new Date().toISOString())}`, margin, sigBoxY + 62);
+  doc.text(
+    `${data.approvedByTitle || "Approving Officer"} • Signed ${formatDate(new Date().toISOString())}`,
+    margin,
+    sigBoxY + 62,
+  );
   doc.setFont("helvetica", "italic");
   doc.setFontSize(8);
   doc.setTextColor(80, 80, 80);
@@ -481,6 +488,7 @@ serve(async (req) => {
                 paymentMethod: "Pending disbursement",
                 transactionId: submissionId,
                 processedBy: reviewerName,
+                approvedBy: reviewerName,
               },
             },
           });
@@ -654,6 +662,7 @@ serve(async (req) => {
             paymentMethod: paymentMethodLabel,
             transactionId: result.transactionRef || record.id,
             processedBy: reviewerName,
+                approvedBy: reviewerName,
           });
           const year = new Date().getFullYear();
           const path = `${year}/${pdfRef}.pdf`;
@@ -736,6 +745,7 @@ serve(async (req) => {
             paymentMethod: paymentMethodLabel,
               transactionId: result.transactionRef || record.id,
               processedBy: reviewerName,
+                approvedBy: reviewerName,
                 pdfUrl,
             },
           },
