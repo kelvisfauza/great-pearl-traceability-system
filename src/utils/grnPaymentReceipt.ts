@@ -1,5 +1,6 @@
 import { LOGO_URL } from '@/utils/companyBrand';
 import { getGrnScanQrUrl, getGrnScanUrl } from '@/utils/grnScanUrl';
+import { resolveSignatureBlock } from '@/utils/approverSignatures';
 
 export interface GrnReceiptData {
   grnNumber: string;
