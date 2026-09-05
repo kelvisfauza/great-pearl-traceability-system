@@ -270,11 +270,20 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
   doc.setFillColor(255, 255, 255);
   doc.rect(margin, sigBoxY + 6, 150, 32, 'F');
 
+  // Approver who released the payment signs the receipt
+  const signer = resolveSignatureBlock(
+    data.approvedByEmail || data.processedByEmail,
+    data.approvedBy || data.processedBy,
+  );
+
   // Signature image (smaller, tucked above the name line)
-  try {
-    const sig = await loadImageAsDataUrl(signatureUrl);
-    doc.addImage(sig, 'PNG', margin + 4, sigBoxY + 8, 70, 28);
-  } catch {/* signature optional */}
+  if (signer.signatureUrl) {
+    try {
+      const sig = await loadImageAsDataUrl(signer.signatureUrl);
+      doc.addImage(sig, 'PNG', margin + 4, sigBoxY + 8, 70, 28);
+    } catch {/* signature optional */}
+  }
+
 
   // Underline & name (solid black for B&W print clarity)
   doc.setDrawColor(0, 0, 0);
