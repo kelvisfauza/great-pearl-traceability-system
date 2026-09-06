@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useWithdrawalControl } from '@/hooks/useWithdrawalControl';
+import { useSundayWithdrawals } from '@/hooks/useSundayWithdrawals';
 import { useWithdrawalLimits } from '@/hooks/useWithdrawalLimits';
 import {
   InputOTP,
@@ -103,7 +104,15 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const { user, employee } = useAuth();
   const { toast } = useToast();
   const { isWithdrawalDisabled } = useWithdrawalControl();
-  const withdrawalStatus = isWithdrawalDisabled();
+  const { enabled: sundayWithdrawalsEnabled, blockedToday: sundayBlocked } = useSundayWithdrawals();
+  const baseWithdrawalStatus = isWithdrawalDisabled();
+  const withdrawalStatus = sundayBlocked
+    ? {
+        disabled: true,
+        reason: 'Withdrawals are closed on Sundays. Please try again on Monday.',
+        until: null as string | null,
+      }
+    : baseWithdrawalStatus;
   const { validateAmount: validateLimits } = useWithdrawalLimits();
   const isWalletFrozen = !!(employee as any)?.wallet_frozen;
   const walletLockedAmount = Math.max(0, Number((employee as any)?.wallet_locked_amount || 0));
@@ -139,7 +148,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     const day = nowEAT.getDay(); // 0=Sun, 6=Sat
     const minutesOfDay = nowEAT.getHours() * 60 + nowEAT.getMinutes();
     const CUTOFF = 19 * 60 + 15; // 7:15 PM EAT
-    if (day === 0) return { closed: true, reason: "Instant withdrawals are not available on Sundays. Available Mon–Sat before 7:15 PM." };
+    if (day === 0 && !sundayWithdrawalsEnabled) return { closed: true, reason: "Instant withdrawals are not available on Sundays. Available Mon–Sat before 7:15 PM." };
     if (minutesOfDay >= CUTOFF) return { closed: true, reason: "Instant withdrawals close at 7:15 PM daily. Please try again tomorrow morning." };
     return { closed: false, reason: "" };
   };
