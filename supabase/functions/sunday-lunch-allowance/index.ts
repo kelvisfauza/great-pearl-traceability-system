@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
         continue
       }
 
-      const { data: userId } = await supabase.rpc('get_unified_user_id', { user_email: emp.email })
+      const { data: userId } = await supabase.rpc('get_unified_user_id', { input_email: emp.email })
       if (!userId) {
         results.push({ email, status: 'skipped', reason: 'no unified user id' })
         continue
