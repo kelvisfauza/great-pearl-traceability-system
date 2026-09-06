@@ -270,6 +270,9 @@ const Suppliers = () => {
         }
         (lots || []).forEach((l: any) => {
           if (!l.coffee_record_id) return;
+          // Only count lots that have actually been paid out — READY_FOR_FINANCE /
+          // APPROVED_FOR_PAYMENT etc. are unpaid and must not inflate the totals.
+          if (l.finance_status !== 'PAID' && l.finance_status !== 'POSTED') return;
           const prev = financeByRecord.get(l.coffee_record_id);
           const amount = Number(l.total_amount_ugx || 0) + (prev?.amount || 0);
           const status = prev?.status === 'PAID' ? 'PAID' : l.finance_status;
