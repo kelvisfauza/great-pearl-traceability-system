@@ -155,7 +155,7 @@ const COLUMNS: { label: string; w: number; align?: 'left' | 'center' | 'right' }
 const generateSalesReceipt = async (v: ReceiptValues) => {
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageW = 210;
-  const pageH = 297;
+  
   const margin = 12;
   const contentW = pageW - margin * 2;
 
