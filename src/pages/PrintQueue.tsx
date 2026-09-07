@@ -132,10 +132,14 @@ const PrintQueuePage = () => {
             <CardTitle className="text-base flex items-center gap-2">
               <Inbox className="h-4 w-4 text-primary" /> Pending ({queued.length})
             </CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button size="sm" variant="outline" disabled={!selected.length}
                 onClick={() => runPrint(queued.filter(j => selected.includes(j.id)))}>
                 Print selected ({selected.length})
+              </Button>
+              <Button size="sm" variant="outline" disabled={!queued.length}
+                onClick={() => openSend(selected.length ? queued.filter(j => selected.includes(j.id)) : queued)}>
+                <Send className="h-4 w-4 mr-1" /> Send queue
               </Button>
               <Button size="sm" disabled={!queued.length} onClick={() => runPrint(queued)}>
                 <Printer className="h-4 w-4 mr-1" /> Print all
