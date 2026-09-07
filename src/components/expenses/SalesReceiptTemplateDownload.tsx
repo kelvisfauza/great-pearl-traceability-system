@@ -155,7 +155,7 @@ const COLUMNS: { label: string; w: number; align?: 'left' | 'center' | 'right' }
 const generateSalesReceipt = async (v: ReceiptValues) => {
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageW = 210;
-  const pageH = 297;
+  
   const margin = 12;
   const contentW = pageW - margin * 2;
 
@@ -343,43 +343,54 @@ const generateSalesReceipt = async (v: ReceiptValues) => {
     if (v.remarks) doc.text(doc.splitTextToSize(v.remarks, contentW - 24), margin + 20, y + 2.5);
     y += 13;
 
-    // Signatures
-    const sigW = (contentW - 12) / 2;
+    // Signature panel — three boxed areas with room to sign
+    y += 2;
+    const sigBoxH = 30;
+    const gap = 4;
+    const sigW = (contentW - gap * 2) / 3;
+    const sigBoxes = [
+      { title: 'SOLD / ISSUED BY', name: v.issuedBy || '' },
+      { title: 'RECEIVED BY (BUYER)', name: v.buyerName || '' },
+      { title: 'AUTHORISED BY (MANAGER)', name: '' },
+    ];
     doc.setLineWidth(0.3);
-    doc.line(margin, y + 6, margin + sigW, y + 6);
-    doc.line(pageW - margin - sigW, y + 6, pageW - margin, y + 6);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-    doc.text(`Issued by: ${v.issuedBy || ''}`, margin, y + 4);
-    doc.text('Sales / Store Officer (Sign & Date)', margin, y + 10);
-    doc.text('Buyer (Name, Signature & Date)', pageW - margin - sigW, y + 10);
+    sigBoxes.forEach((s, i) => {
+      const bx = margin + i * (sigW + gap);
+      doc.rect(bx, y, sigW, sigBoxH);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.text(s.title, bx + 2, y + 4.5);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Name:', bx + 2, y + 11);
+      doc.line(bx + 12, y + 11.5, bx + sigW - 2, y + 11.5);
+      if (s.name) doc.text(s.name, bx + 13, y + 10.6);
+      doc.text('Sign:', bx + 2, y + 21);
+      doc.line(bx + 12, y + 21.5, bx + sigW - 2, y + 21.5);
+      doc.text('Date:', bx + 2, y + 27);
+      doc.line(bx + 12, y + 27.5, bx + sigW - 2, y + 27.5);
+    });
+    y += sigBoxH + 4;
 
     // QR
-    drawQrBlock(doc, qr, pageW - margin - 16, y + 13, 16, 'Scan to verify');
+    drawQrBlock(doc, qr, pageW - margin - 16, y, 16, 'Scan to verify');
 
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(6.2);
     doc.setTextColor(80, 80, 80);
     doc.text(
-      'Goods once sold and weighed at our store are checked and accepted by the buyer. Thank you for your business.',
+      doc.splitTextToSize(
+        'Goods once sold and weighed at our store are checked and accepted by the buyer. Thank you for your business.',
+        contentW - 22,
+      ),
       margin,
-      y + 32,
+      y + 4,
     );
     doc.setTextColor(0, 0, 0);
   };
 
-  renderCopy(10, "CUSTOMER'S COPY");
-
-  // Divider between copies
-  doc.setLineWidth(0.3);
-  doc.setLineDashPattern([2, 2], 0);
-  doc.line(margin, pageH / 2 + 4, pageW - margin, pageH / 2 + 4);
-  doc.setLineDashPattern([], 0);
-  doc.setFont('helvetica', 'italic');
-  doc.setFontSize(6.2);
-  doc.text('cut here', pageW / 2, pageH / 2 + 2.5, { align: 'center' });
-
-  renderCopy(pageH / 2 + 9, 'OFFICE COPY');
+  renderCopy(12, "CUSTOMER'S COPY");
+  doc.addPage();
+  renderCopy(12, 'OFFICE COPY');
 
   const fileName = `Sales-Receipt-${(v.receiptNo || 'blank').replace(/[^\w-]/g, '') || 'blank'}.pdf`;
   doc.save(fileName);
