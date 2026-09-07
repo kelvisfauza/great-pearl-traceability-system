@@ -175,6 +175,38 @@ const PrintQueuePage = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={sendOpen} onOpenChange={setSendOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send queue to someone</DialogTitle>
+            <DialogDescription>
+              {sendJobs.length} document(s) will be copied to their print queue so they can print for you.
+              Your own copies stay in your queue and the printed-by record does not change.
+            </DialogDescription>
+          </DialogHeader>
+          <Input placeholder="Search staff by name or email" value={search} onChange={e => setSearch(e.target.value)} />
+          <div className="max-h-72 overflow-y-auto space-y-1">
+            {directory
+              .filter(u => `${u.name} ${u.email}`.toLowerCase().includes(search.toLowerCase()))
+              .map(u => (
+                <button
+                  key={u.auth_user_id}
+                  disabled={sending}
+                  onClick={() => doSend(u)}
+                  className="w-full text-left border border-border/40 rounded-lg px-3 py-2 hover:bg-muted disabled:opacity-50"
+                >
+                  <p className="text-sm font-medium">{u.name || u.email}</p>
+                  <p className="text-[11px] text-muted-foreground">{u.email}{u.department ? ` · ${u.department}` : ''}</p>
+                </button>
+              ))}
+            {directory.length === 0 && <p className="text-sm text-muted-foreground">Loading staff…</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSendOpen(false)} disabled={sending}>Cancel</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
