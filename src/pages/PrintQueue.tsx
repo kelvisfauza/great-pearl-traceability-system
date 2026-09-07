@@ -100,12 +100,19 @@ const PrintQueuePage = () => {
         <p className="text-[11px] text-muted-foreground">
           {job.doc_type} · {format(new Date(job.created_at), 'dd MMM yyyy HH:mm')}
           {job.printed_at && ` · printed ${format(new Date(job.printed_at), 'dd MMM HH:mm')}`}
+          {job.sent_by_name && ` · sent by ${job.sent_by_name}`}
         </p>
       </div>
       <Badge variant="outline" className="text-[10px] uppercase">{job.format}</Badge>
+      {job.sent_by_name && <Badge variant="secondary" className="text-[10px]">On behalf</Badge>}
       <Button size="sm" variant="outline" onClick={() => runPrint([job])}>
         <Printer className="h-3.5 w-3.5 mr-1" /> Print
       </Button>
+      {job.status === 'queued' && (
+        <Button size="sm" variant="ghost" onClick={() => openSend([job])} title="Send to someone to print">
+          <Send className="h-3.5 w-3.5" />
+        </Button>
+      )}
       {job.status === 'printed' && (
         <Button size="sm" variant="ghost" onClick={async () => { await requeueJob(job.id); await load(); }}>
           <RotateCcw className="h-3.5 w-3.5" />
