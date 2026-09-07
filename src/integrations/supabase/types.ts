@@ -8797,6 +8797,11 @@ export type Database = {
           format: string
           id: string
           printed_at: string | null
+          sent_at: string | null
+          sent_by_email: string | null
+          sent_by_name: string | null
+          sent_by_user_id: string | null
+          source_job_id: string | null
           status: string
           title: string
           updated_at: string
@@ -8812,6 +8817,11 @@ export type Database = {
           format?: string
           id?: string
           printed_at?: string | null
+          sent_at?: string | null
+          sent_by_email?: string | null
+          sent_by_name?: string | null
+          sent_by_user_id?: string | null
+          source_job_id?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -8827,6 +8837,11 @@ export type Database = {
           format?: string
           id?: string
           printed_at?: string | null
+          sent_at?: string | null
+          sent_by_email?: string | null
+          sent_by_name?: string | null
+          sent_by_user_id?: string | null
+          source_job_id?: string | null
           status?: string
           title?: string
           updated_at?: string
@@ -16921,6 +16936,10 @@ export type Database = {
       reverse_wallet_transfer: {
         Args: { p_admin_reason: string; p_ledger_entry_id: string }
         Returns: Json
+      }
+      send_print_jobs_to_user: {
+        Args: { p_job_ids: string[]; p_recipient_user_id: string }
+        Returns: number
       }
       sg_is_automation: { Args: never; Returns: boolean }
       sync_overdraft_outstanding_from_wallet: {

@@ -6,10 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { Printer, Trash2, RotateCcw, History, Inbox } from 'lucide-react';
+import { Printer, Trash2, RotateCcw, History, Inbox, Send } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { loadEmployeeDirectory, type DirectoryUser } from '@/lib/employeeDirectory';
 import {
   PrintJob, fetchPrintJobs, markPrinted, deleteJobs, requeueJob,
   cleanupExpiredPrintJobs, printHtmlJobs, printPdfJob, subscribePrintQueue,
+  sendPrintJobsToUser,
 } from '@/lib/printQueue';
 
 const PrintQueuePage = () => {
@@ -17,6 +21,38 @@ const PrintQueuePage = () => {
   const [jobs, setJobs] = useState<PrintJob[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sendOpen, setSendOpen] = useState(false);
+  const [sendJobs, setSendJobs] = useState<PrintJob[]>([]);
+  const [directory, setDirectory] = useState<DirectoryUser[]>([]);
+  const [search, setSearch] = useState('');
+  const [sending, setSending] = useState(false);
+
+  const openSend = async (items: PrintJob[]) => {
+    if (!items.length) return;
+    setSendJobs(items);
+    setSearch('');
+    setSendOpen(true);
+    try {
+      setDirectory(await loadEmployeeDirectory());
+    } catch {
+      setDirectory([]);
+    }
+  };
+
+  const doSend = async (user: DirectoryUser) => {
+    setSending(true);
+    try {
+      const n = await sendPrintJobsToUser(sendJobs.map(j => j.id), user.auth_user_id);
+      toast({ title: 'Queue sent', description: `${n} document(s) sent to ${user.name} to print for you. Your copies stay in your queue.` });
+      setSendOpen(false);
+      setSelected([]);
+      await load();
+    } catch (e: any) {
+      toast({ title: 'Could not send', description: e?.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSending(false);
+    }
+  };
 
   const load = useCallback(async () => {
     const all = await fetchPrintJobs();
@@ -64,12 +100,19 @@ const PrintQueuePage = () => {
         <p className="text-[11px] text-muted-foreground">
           {job.doc_type} · {format(new Date(job.created_at), 'dd MMM yyyy HH:mm')}
           {job.printed_at && ` · printed ${format(new Date(job.printed_at), 'dd MMM HH:mm')}`}
+          {job.sent_by_name && ` · sent by ${job.sent_by_name}`}
         </p>
       </div>
       <Badge variant="outline" className="text-[10px] uppercase">{job.format}</Badge>
+      {job.sent_by_name && <Badge variant="secondary" className="text-[10px]">On behalf</Badge>}
       <Button size="sm" variant="outline" onClick={() => runPrint([job])}>
         <Printer className="h-3.5 w-3.5 mr-1" /> Print
       </Button>
+      {job.status === 'queued' && (
+        <Button size="sm" variant="ghost" onClick={() => openSend([job])} title="Send to someone to print">
+          <Send className="h-3.5 w-3.5" />
+        </Button>
+      )}
       {job.status === 'printed' && (
         <Button size="sm" variant="ghost" onClick={async () => { await requeueJob(job.id); await load(); }}>
           <RotateCcw className="h-3.5 w-3.5" />
@@ -89,10 +132,14 @@ const PrintQueuePage = () => {
             <CardTitle className="text-base flex items-center gap-2">
               <Inbox className="h-4 w-4 text-primary" /> Pending ({queued.length})
             </CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button size="sm" variant="outline" disabled={!selected.length}
                 onClick={() => runPrint(queued.filter(j => selected.includes(j.id)))}>
                 Print selected ({selected.length})
+              </Button>
+              <Button size="sm" variant="outline" disabled={!queued.length}
+                onClick={() => openSend(selected.length ? queued.filter(j => selected.includes(j.id)) : queued)}>
+                <Send className="h-4 w-4 mr-1" /> Send queue
               </Button>
               <Button size="sm" disabled={!queued.length} onClick={() => runPrint(queued)}>
                 <Printer className="h-4 w-4 mr-1" /> Print all
@@ -128,6 +175,38 @@ const PrintQueuePage = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={sendOpen} onOpenChange={setSendOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send queue to someone</DialogTitle>
+            <DialogDescription>
+              {sendJobs.length} document(s) will be copied to their print queue so they can print for you.
+              Your own copies stay in your queue and the printed-by record does not change.
+            </DialogDescription>
+          </DialogHeader>
+          <Input placeholder="Search staff by name or email" value={search} onChange={e => setSearch(e.target.value)} />
+          <div className="max-h-72 overflow-y-auto space-y-1">
+            {directory
+              .filter(u => `${u.name} ${u.email}`.toLowerCase().includes(search.toLowerCase()))
+              .map(u => (
+                <button
+                  key={u.auth_user_id}
+                  disabled={sending}
+                  onClick={() => doSend(u)}
+                  className="w-full text-left border border-border/40 rounded-lg px-3 py-2 hover:bg-muted disabled:opacity-50"
+                >
+                  <p className="text-sm font-medium">{u.name || u.email}</p>
+                  <p className="text-[11px] text-muted-foreground">{u.email}{u.department ? ` · ${u.department}` : ''}</p>
+                </button>
+              ))}
+            {directory.length === 0 && <p className="text-sm text-muted-foreground">Loading staff…</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSendOpen(false)} disabled={sending}>Cancel</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
