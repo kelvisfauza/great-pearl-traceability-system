@@ -21,6 +21,38 @@ const PrintQueuePage = () => {
   const [jobs, setJobs] = useState<PrintJob[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sendOpen, setSendOpen] = useState(false);
+  const [sendJobs, setSendJobs] = useState<PrintJob[]>([]);
+  const [directory, setDirectory] = useState<DirectoryUser[]>([]);
+  const [search, setSearch] = useState('');
+  const [sending, setSending] = useState(false);
+
+  const openSend = async (items: PrintJob[]) => {
+    if (!items.length) return;
+    setSendJobs(items);
+    setSearch('');
+    setSendOpen(true);
+    try {
+      setDirectory(await loadEmployeeDirectory());
+    } catch {
+      setDirectory([]);
+    }
+  };
+
+  const doSend = async (user: DirectoryUser) => {
+    setSending(true);
+    try {
+      const n = await sendPrintJobsToUser(sendJobs.map(j => j.id), user.auth_user_id);
+      toast({ title: 'Queue sent', description: `${n} document(s) sent to ${user.name} to print for you. Your copies stay in your queue.` });
+      setSendOpen(false);
+      setSelected([]);
+      await load();
+    } catch (e: any) {
+      toast({ title: 'Could not send', description: e?.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSending(false);
+    }
+  };
 
   const load = useCallback(async () => {
     const all = await fetchPrintJobs();
