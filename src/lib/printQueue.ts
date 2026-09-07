@@ -14,7 +14,22 @@ export type PrintJob = {
   printed_at: string | null;
   created_at: string;
   expires_at: string;
+  sent_by_email?: string | null;
+  sent_by_name?: string | null;
+  sent_at?: string | null;
 };
+
+/** Send copies of your queued documents to another user so they can print for you. */
+export async function sendPrintJobsToUser(jobIds: string[], recipientAuthUserId: string): Promise<number> {
+  if (!jobIds.length) return 0;
+  const { data, error } = await (supabase as any).rpc('send_print_jobs_to_user', {
+    p_job_ids: jobIds,
+    p_recipient_user_id: recipientAuthUserId,
+  });
+  if (error) throw error;
+  notifyPrintQueueChanged();
+  return Number(data || 0);
+}
 
 const EVENT = 'print-queue-changed';
 export const notifyPrintQueueChanged = () => window.dispatchEvent(new CustomEvent(EVENT));
