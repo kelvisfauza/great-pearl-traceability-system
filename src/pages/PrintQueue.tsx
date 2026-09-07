@@ -6,10 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { Printer, Trash2, RotateCcw, History, Inbox } from 'lucide-react';
+import { Printer, Trash2, RotateCcw, History, Inbox, Send } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { loadEmployeeDirectory, type DirectoryUser } from '@/lib/employeeDirectory';
 import {
   PrintJob, fetchPrintJobs, markPrinted, deleteJobs, requeueJob,
   cleanupExpiredPrintJobs, printHtmlJobs, printPdfJob, subscribePrintQueue,
+  sendPrintJobsToUser,
 } from '@/lib/printQueue';
 
 const PrintQueuePage = () => {
