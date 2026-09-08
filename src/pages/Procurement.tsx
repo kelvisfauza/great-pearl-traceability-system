@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ComprehensiveReports from "@/components/procurement/ComprehensiveReports";
 import ProcurementActionCenter from "@/components/procurement/ProcurementActionCenter";
 import DailyProcurementReport from "@/components/procurement/DailyProcurementReport";
+import { ProcurementReviewPanel } from "@/components/procurement/ProcurementReviewPanel";
 import { 
   Package, 
   Plus, 
