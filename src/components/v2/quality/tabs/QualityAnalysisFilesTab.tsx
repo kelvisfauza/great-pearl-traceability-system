@@ -15,6 +15,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { generateVerificationCode } from '@/utils/verificationCode';
 import QualityFormScanDialog from '@/components/quality/QualityFormScanDialog';
 
+const READING_FIELDS: { key: string; label: string; text?: boolean }[] = [
+  { key: 'grams_used', label: 'Grams used' },
+  { key: 'moisture', label: 'Moisture (%)' },
+  { key: 'below_12', label: 'Below 12 (%)' },
+  { key: 'group_1', label: 'Group 1 defects (%)' },
+  { key: 'group_2', label: 'Group 2 defects (%)' },
+  { key: 'pods', label: 'Pods (%)' },
+  { key: 'husks', label: 'Husks (%)' },
+  { key: 'non_coffee', label: 'Non-coffee (%)' },
+  { key: 'outturn', label: 'Outturn (%)' },
+  { key: 'price', label: 'Price (UGX/kg)' },
+  { key: 'analysed_by', label: 'Analysed by', text: true },
+];
+
 const BUCKET = 'quality-analysis-files';
 const ALLOWED = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
 const MAX_SIZE = 10 * 1024 * 1024;
