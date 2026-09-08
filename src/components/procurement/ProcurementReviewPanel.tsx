@@ -391,6 +391,48 @@ const ProcurementReviewPanel = () => {
             })}
           </div>
         )}
+          </TabsContent>
+          <TabsContent value="history">
+            {history.length === 0 ? (
+              <div className="text-center py-8">
+                <History className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground">No reviewed requests yet. Your decisions will appear here.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {history.map((h) => (
+                  <div key={`${h.source_table}:${h.record_id}`} className="border rounded-lg p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap min-w-0">
+                        <p className="font-medium truncate">{h.title}</p>
+                        {decisionBadge(h.decision)}
+                        <Badge variant="outline">Now: {h.current_status}</Badge>
+                      </div>
+                      <p className="font-semibold whitespace-nowrap">{money(h.amount)}</p>
+                    </div>
+                    <div className="flex items-center gap-6 text-xs text-muted-foreground flex-wrap">
+                      {h.requested_by && (
+                        <span className="flex items-center gap-1"><User className="h-3 w-3" />{h.requested_by}</span>
+                      )}
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        Reviewed {h.reviewed_at ? new Date(h.reviewed_at).toLocaleString() : ''}
+                      </span>
+                    </div>
+                    <div className="text-xs bg-muted rounded p-2 space-y-1">
+                      <p><strong>Reviewed by:</strong> {h.reviewed_by}</p>
+                      {h.recommended_admin_name && <p><strong>Sent to:</strong> {h.recommended_admin_name}</p>}
+                      {h.notes && <p><strong>Observations:</strong> {h.notes}</p>}
+                      {h.edited_amount != null && (
+                        <p><strong>Amount corrected:</strong> {money(h.original_amount)} → {money(h.edited_amount)}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </CardContent>
 
       <Dialog open={dialog.open} onOpenChange={(open) => !open && setDialog({ open: false, request: null, decision: 'approved' })}>
