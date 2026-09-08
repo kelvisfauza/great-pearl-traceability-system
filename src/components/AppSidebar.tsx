@@ -61,6 +61,8 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
         { name: "Store Management", icon: Shield, path: "/store", permission: "Store Management" },
         { name: "EUDR Documentation", icon: FileText, path: "/eudr-documentation", permission: "EUDR Documentation" },
         { name: "Milling", icon: Coffee, path: "/milling", permission: "Milling" },
+        { name: "Procurement", icon: Package, path: "/procurement", permission: "Procurement" },
+        { name: "Procurement Review", icon: ClipboardCheck, path: "/procurement-review", permission: "Procurement" },
         { name: "Inventory", icon: Package, path: "/inventory", permission: "Inventory" },
         { name: "Field Operations", icon: MapPin, path: "/field-operations", permission: "Field Operations" },
       ]
