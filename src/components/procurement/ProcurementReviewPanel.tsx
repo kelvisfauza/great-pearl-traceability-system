@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle, XCircle, RefreshCw, Pencil, ClipboardCheck, User, Calendar } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CheckCircle, XCircle, RefreshCw, Pencil, ClipboardCheck, User, Calendar, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const PENDING_STATUSES = [
@@ -53,6 +54,13 @@ interface ReviewRow {
   original_amount: number | null;
 }
 
+interface HistoryRow extends ReviewRow {
+  title: string;
+  requested_by: string | null;
+  amount: number | null;
+  current_status: string;
+}
+
 const PROVIDER_LABEL: Record<string, string> = {
   meal_plan: 'Meal Plan',
   service_provider: 'Service Provider Payment',
@@ -68,6 +76,7 @@ const ProcurementReviewPanel = () => {
   const [admins, setAdmins] = useState<AdminOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [history, setHistory] = useState<HistoryRow[]>([]);
 
   const [dialog, setDialog] = useState<{
     open: boolean;
@@ -135,6 +144,51 @@ const ProcurementReviewPanel = () => {
           .filter((s) => s.disabled !== true && String(s.role || '').toLowerCase().includes('admin') && s.email)
           .map((s) => ({ name: s.name || s.email, email: String(s.email).toLowerCase() })),
       );
+
+      // Review history: decided reviews with the live status of the underlying request
+      const { data: hist } = await (supabase as any)
+        .from('procurement_reviews')
+        .select('source_table,record_id,decision,notes,reviewed_by,reviewed_at,recommended_admin_name,recommended_admin_email,edited_amount,original_amount')
+        .neq('decision', 'pending')
+        .order('reviewed_at', { ascending: false })
+        .limit(50);
+
+      const histRows = (hist || []) as ReviewRow[];
+      const approvalIds = histRows.filter((r) => r.source_table === 'approval_requests').map((r) => r.record_id);
+      const providerIds = histRows.filter((r) => r.source_table === 'provider_submission_requests').map((r) => r.record_id);
+
+      const lookup: Record<string, { title: string; requested_by: string | null; amount: number | null; status: string }> = {};
+      if (approvalIds.length) {
+        const { data } = await (supabase as any)
+          .from('approval_requests')
+          .select('id,title,requestedby_name,requestedby,amount,status')
+          .in('id', approvalIds);
+        ((data || []) as any[]).forEach((r) => {
+          lookup[r.id] = { title: r.title || 'Request', requested_by: r.requestedby_name || r.requestedby, amount: r.amount, status: r.status };
+        });
+      }
+      if (providerIds.length) {
+        const { data } = await (supabase as any)
+          .from('provider_submission_requests')
+          .select('id,request_type,provider_name,amount,status')
+          .in('id', providerIds);
+        ((data || []) as any[]).forEach((r) => {
+          lookup[r.id] = {
+            title: `${PROVIDER_LABEL[String(r.request_type)] || 'Provider Request'} — ${r.provider_name || 'Unnamed'}`,
+            requested_by: r.provider_name,
+            amount: r.amount,
+            status: r.status,
+          };
+        });
+      }
+
+      setHistory(histRows.map((r) => ({
+        ...r,
+        title: lookup[r.record_id]?.title || 'Request (removed)',
+        requested_by: lookup[r.record_id]?.requested_by || null,
+        amount: lookup[r.record_id]?.amount ?? r.edited_amount ?? r.original_amount,
+        current_status: lookup[r.record_id]?.status || 'unknown',
+      })));
     } catch (err) {
       console.error('Failed to load procurement review queue:', err);
     } finally {
@@ -253,6 +307,14 @@ const ProcurementReviewPanel = () => {
         </div>
       </CardHeader>
       <CardContent>
+        <Tabs defaultValue="queue">
+          <TabsList className="mb-4">
+            <TabsTrigger value="queue">Review queue ({pendingCount})</TabsTrigger>
+            <TabsTrigger value="history">
+              <History className="h-4 w-4 mr-1" /> Review history
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="queue">
         {loading ? (
           <div className="flex justify-center p-6">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -329,6 +391,48 @@ const ProcurementReviewPanel = () => {
             })}
           </div>
         )}
+          </TabsContent>
+          <TabsContent value="history">
+            {history.length === 0 ? (
+              <div className="text-center py-8">
+                <History className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground">No reviewed requests yet. Your decisions will appear here.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {history.map((h) => (
+                  <div key={`${h.source_table}:${h.record_id}`} className="border rounded-lg p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap min-w-0">
+                        <p className="font-medium truncate">{h.title}</p>
+                        {decisionBadge(h.decision)}
+                        <Badge variant="outline">Now: {h.current_status}</Badge>
+                      </div>
+                      <p className="font-semibold whitespace-nowrap">{money(h.amount)}</p>
+                    </div>
+                    <div className="flex items-center gap-6 text-xs text-muted-foreground flex-wrap">
+                      {h.requested_by && (
+                        <span className="flex items-center gap-1"><User className="h-3 w-3" />{h.requested_by}</span>
+                      )}
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        Reviewed {h.reviewed_at ? new Date(h.reviewed_at).toLocaleString() : ''}
+                      </span>
+                    </div>
+                    <div className="text-xs bg-muted rounded p-2 space-y-1">
+                      <p><strong>Reviewed by:</strong> {h.reviewed_by}</p>
+                      {h.recommended_admin_name && <p><strong>Sent to:</strong> {h.recommended_admin_name}</p>}
+                      {h.notes && <p><strong>Observations:</strong> {h.notes}</p>}
+                      {h.edited_amount != null && (
+                        <p><strong>Amount corrected:</strong> {money(h.original_amount)} → {money(h.edited_amount)}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </CardContent>
 
       <Dialog open={dialog.open} onOpenChange={(open) => !open && setDialog({ open: false, request: null, decision: 'approved' })}>
