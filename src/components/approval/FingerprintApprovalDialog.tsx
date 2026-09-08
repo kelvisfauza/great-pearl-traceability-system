@@ -172,6 +172,8 @@ const FingerprintApprovalDialog: React.FC<Props> = ({ target, onClose, onUseSmsC
     }
   };
 
+  if (isDesktop) return null;
+
   return (
     <Dialog open={!!target} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md">
