@@ -149,9 +149,20 @@ const QualityAnalysisFilesTab = () => {
       : manualName.trim();
 
     if (!supplierName) {
-      toast({ title: 'Missing supplier', description: 'Select a supplier or enter the offer sample name.', variant: 'destructive' });
+      toast({
+        title: sourceType === 'dispatch' ? 'Missing destination' : 'Missing supplier',
+        description: sourceType === 'dispatch'
+          ? 'Enter who the coffee is being dispatched to.'
+          : 'Select a supplier or enter the offer sample name.',
+        variant: 'destructive',
+      });
       return;
     }
+    if (sourceType === 'dispatch' && !truck.trim()) {
+      toast({ title: 'Missing truck', description: 'Enter the truck or container number.', variant: 'destructive' });
+      return;
+    }
+
     if (!file) {
       toast({ title: 'No file', description: 'Attach the scanned analysis (PDF or image).', variant: 'destructive' });
       return;
