@@ -56,6 +56,14 @@ const FingerprintApprovalDialog: React.FC<Props> = ({ target, onClose, onUseSmsC
 
   const scanUrl = email ? buildApprovalScanUrl(sessionId, email) : '';
 
+  // On a computer, fingerprint confirmation is skipped — approvals go straight through.
+  const isDesktop = React.useMemo(() => {
+    if (typeof navigator === 'undefined') return false;
+    const ua = navigator.userAgent || '';
+    const mobile = /Android|iPhone|iPad|iPod|Mobile|Windows Phone/i.test(ua);
+    return !mobile;
+  }, []);
+
   useEffect(() => {
     if (!scanUrl) return;
     QRCode.toDataURL(scanUrl, { width: 240, margin: 1 }).then(setQr).catch(() => setQr(''));
@@ -72,9 +80,23 @@ const FingerprintApprovalDialog: React.FC<Props> = ({ target, onClose, onUseSmsC
     }
   };
 
+  // Computer approvals: confirm immediately, no fingerprint step.
+  useEffect(() => {
+    if (!target || !isDesktop || confirmed) return;
+    (async () => {
+      setConfirmed(true);
+      try {
+        await targetRef.current?.onConfirmed();
+      } finally {
+        onClose();
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!target, isDesktop]);
+
   // Listen for the phone's confirmation for this approval session.
   useEffect(() => {
-    if (!target) return;
+    if (!target || isDesktop) return;
     const channel = supabase
       .channel(approvalChannelName(sessionId), { config: { broadcast: { self: false } } })
       .on('broadcast', { event: 'hello' }, ({ payload }: any) => {
@@ -149,6 +171,8 @@ const FingerprintApprovalDialog: React.FC<Props> = ({ target, onClose, onUseSmsC
       setBusy(false);
     }
   };
+
+  if (isDesktop) return null;
 
   return (
     <Dialog open={!!target} onOpenChange={(o) => !o && onClose()}>
