@@ -15,6 +15,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { generateVerificationCode } from '@/utils/verificationCode';
 import QualityFormScanDialog from '@/components/quality/QualityFormScanDialog';
 
+const READING_FIELDS: { key: string; label: string; text?: boolean }[] = [
+  { key: 'grams_used', label: 'Grams used' },
+  { key: 'moisture', label: 'Moisture (%)' },
+  { key: 'below_12', label: 'Below 12 (%)' },
+  { key: 'group_1', label: 'Group 1 defects (%)' },
+  { key: 'group_2', label: 'Group 2 defects (%)' },
+  { key: 'pods', label: 'Pods (%)' },
+  { key: 'husks', label: 'Husks (%)' },
+  { key: 'non_coffee', label: 'Non-coffee (%)' },
+  { key: 'outturn', label: 'Outturn (%)' },
+  { key: 'price', label: 'Price (UGX/kg)' },
+  { key: 'analysed_by', label: 'Analysed by', text: true },
+];
+
 const BUCKET = 'quality-analysis-files';
 const ALLOWED = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
 const MAX_SIZE = 10 * 1024 * 1024;
@@ -59,7 +73,12 @@ const QualityAnalysisFilesTab = () => {
   const [userId, setUserId] = useState<string | null>(null);
 
   // form state
-  const [sourceType, setSourceType] = useState<'supplier' | 'offer_sample'>('supplier');
+  const [sourceType, setSourceType] = useState<'supplier' | 'offer_sample' | 'dispatch'>('supplier');
+  const [readings, setReadings] = useState<Record<string, string>>({});
+  const [truck, setTruck] = useState('');
+  const [bags, setBags] = useState('');
+  const [totalWeight, setTotalWeight] = useState('');
+  const setReading = (k: string, v: string) => setReadings((p) => ({ ...p, [k]: v }));
   const [supplierId, setSupplierId] = useState('');
   const [manualName, setManualName] = useState('');
   const [analysisDate, setAnalysisDate] = useState(new Date().toISOString().slice(0, 10));
@@ -91,6 +110,7 @@ const QualityAnalysisFilesTab = () => {
     setAnalysisDate(new Date().toISOString().slice(0, 10));
     setFormNumber(''); setCoffeeType(''); setNotes(''); setFile(null);
     setScannedForm(null);
+    setReadings({}); setTruck(''); setBags(''); setTotalWeight('');
   };
 
   const loadScannedForm = async (code: string) => {
@@ -117,6 +137,13 @@ const QualityAnalysisFilesTab = () => {
       setManualName(form.source_type === 'offer_sample' ? form.supplier_name : '');
       setAnalysisDate(form.analysis_date);
       setFormNumber(form.form_number);
+      const prefill: Record<string, string> = {};
+      Object.entries(form.params || {}).forEach(([k, v]) => {
+        if (v !== null && v !== undefined && `${v}`.trim() !== '') prefill[k] = String(v);
+      });
+      if (form.analysed_by) prefill.analysed_by = form.analysed_by;
+      setReadings(prefill);
+      if (form.comments) setNotes(form.comments);
       const robusta = (form.params?.robusta || '').toString().toLowerCase();
       if (robusta === 'yes') setCoffeeType('ROBUSTA');
       else if (robusta === 'no') setCoffeeType('ARABICA');
@@ -136,9 +163,20 @@ const QualityAnalysisFilesTab = () => {
       : manualName.trim();
 
     if (!supplierName) {
-      toast({ title: 'Missing supplier', description: 'Select a supplier or enter the offer sample name.', variant: 'destructive' });
+      toast({
+        title: sourceType === 'dispatch' ? 'Missing destination' : 'Missing supplier',
+        description: sourceType === 'dispatch'
+          ? 'Enter who the coffee is being dispatched to.'
+          : 'Select a supplier or enter the offer sample name.',
+        variant: 'destructive',
+      });
       return;
     }
+    if (sourceType === 'dispatch' && !truck.trim()) {
+      toast({ title: 'Missing truck', description: 'Enter the truck or container number.', variant: 'destructive' });
+      return;
+    }
+
     if (!file) {
       toast({ title: 'No file', description: 'Attach the scanned analysis (PDF or image).', variant: 'destructive' });
       return;
@@ -165,19 +203,97 @@ const QualityAnalysisFilesTab = () => {
       });
       if (upErr) throw upErr;
 
+      // Readings typed from the paper form
+      const params: Record<string, string> = {};
+      Object.entries(readings).forEach(([k, v]) => {
+        if (`${v ?? ''}`.trim() !== '') params[k] = String(v).trim();
+      });
+      const hasReadings = Object.keys(params).length > 0;
+      const num = (k: string) => (params[k] !== undefined && params[k] !== '' ? Number(params[k]) : null);
+
+      let linkedFormId = scannedForm?.id ?? null;
+      let linkedCode = scannedForm?.verification_code || '';
+      let usedFormNumber = formNumber.trim();
+
+      if (hasReadings && sourceType !== 'dispatch') {
+        if (scannedForm?.id) {
+          await (supabase as any)
+            .from('quality_analysis_forms')
+            .update({
+              params: { ...(scannedForm.params || {}), ...params, supplier_name: supplierName, analysis_date: analysisDate },
+              analysed_by: params.analysed_by || null,
+              comments: notes.trim() || null,
+            })
+            .eq('id', scannedForm.id);
+        } else {
+          if (!usedFormNumber) {
+            const { data: nums } = await (supabase as any).rpc('issue_quality_form_numbers', {
+              p_count: 1, p_issued_by_name: null,
+            });
+            usedFormNumber = ((nums as string[]) || [])[0] || `MANUAL-${Date.now().toString().slice(-6)}`;
+          }
+          linkedCode = usedFormNumber.replace(/\s+/g, '-');
+          const { data: created, error: formErr } = await (supabase as any)
+            .from('quality_analysis_forms')
+            .insert({
+              form_number: usedFormNumber,
+              verification_code: linkedCode,
+              supplier_id: sourceType === 'supplier' ? supplierId : null,
+              supplier_name: supplierName,
+              source_type: sourceType,
+              analysis_date: analysisDate,
+              params: { ...params, supplier_name: supplierName, analysis_date: analysisDate },
+              analysed_by: params.analysed_by || null,
+              comments: notes.trim() || null,
+              status: 'attached',
+              created_by: uid,
+              created_by_email: authData?.user?.email ?? null,
+            })
+            .select('id')
+            .single();
+          if (formErr) throw formErr;
+          linkedFormId = created?.id ?? null;
+        }
+      }
+
+      if (sourceType === 'dispatch') {
+        const { error: dispErr } = await (supabase as any).from('quality_dispatch_analyses').insert({
+          truck_serial_number: truck.trim(),
+          dispatch_date: analysisDate,
+          destination_buyer: supplierName,
+          analysis_number: usedFormNumber || null,
+          coffee_type: coffeeType || null,
+          sample_weight_g: num('grams_used'),
+          moisture_content: num('moisture'),
+          below_screen_12: num('below_12'),
+          group1_defects: num('group_1'),
+          group2_defects: num('group_2'),
+          pods_husks: (num('pods') ?? 0) + (num('husks') ?? 0) || null,
+          foreign_matter: num('non_coffee'),
+          outturn: num('outturn'),
+          bags_loaded: bags ? Number(bags) : null,
+          total_weight_kg: totalWeight ? Number(totalWeight) : null,
+          analysed_by: params.analysed_by || null,
+          remarks: notes.trim() || null,
+          created_by: uid,
+          created_by_name: authData?.user?.email ?? null,
+        });
+        if (dispErr) throw dispErr;
+      }
+
       const { error: insErr } = await (supabase as any).from('quality_analysis_files').insert({
         supplier_id: sourceType === 'supplier' ? supplierId : null,
         supplier_name: supplierName,
         source_type: sourceType,
         analysis_date: analysisDate,
-        form_number: formNumber.trim() || null,
+        form_number: usedFormNumber || null,
         coffee_type: coffeeType || null,
         notes: notes.trim() || null,
         file_path: path,
         file_name: file.name,
         file_type: file.type,
-        analysis_form_id: scannedForm?.id ?? null,
-        verification_code: scannedForm?.verification_code || generateVerificationCode('assessment'),
+        analysis_form_id: linkedFormId,
+        verification_code: linkedCode || generateVerificationCode('assessment'),
         uploaded_by: uid,
         uploaded_by_email: authData?.user?.email ?? null,
       });
@@ -282,9 +398,11 @@ const QualityAnalysisFilesTab = () => {
                   <SelectContent>
                     <SelectItem value="supplier">Registered supplier</SelectItem>
                     <SelectItem value="offer_sample">Offer sample (not in system)</SelectItem>
+                    <SelectItem value="dispatch">Dispatch analysis (coffee leaving the store)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
 
               {sourceType === 'supplier' ? (
                 <div className="space-y-2">
@@ -300,10 +418,32 @@ const QualityAnalysisFilesTab = () => {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <Label>Offer sample name</Label>
-                  <Input value={manualName} onChange={(e) => setManualName(e.target.value)} placeholder="e.g. Kyondo Farmers Group" />
+                  <Label>{sourceType === 'dispatch' ? 'Dispatched to (buyer / destination)' : 'Offer sample name'}</Label>
+                  <Input
+                    value={manualName}
+                    onChange={(e) => setManualName(e.target.value)}
+                    placeholder={sourceType === 'dispatch' ? 'e.g. Dispatch to KCL' : 'e.g. Kyondo Farmers Group'}
+                  />
                 </div>
               )}
+
+              {sourceType === 'dispatch' && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-2">
+                    <Label>Truck / container no.</Label>
+                    <Input value={truck} onChange={(e) => setTruck(e.target.value)} placeholder="e.g. UBJ 123K" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Bags loaded</Label>
+                    <Input type="number" value={bags} onChange={(e) => setBags(e.target.value)} placeholder="0" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Total weight (kg)</Label>
+                    <Input type="number" value={totalWeight} onChange={(e) => setTotalWeight(e.target.value)} placeholder="0" />
+                  </div>
+                </div>
+              )}
+
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
@@ -327,8 +467,38 @@ const QualityAnalysisFilesTab = () => {
                 </Select>
               </div>
 
+              <div className="space-y-3 rounded-lg border p-3">
+                <div>
+                  <Label className="text-sm font-semibold">Analysis readings (type what is on the paper form)</Label>
+                  <p className="text-xs text-muted-foreground">Fill in whatever was written by hand — leave the rest blank.</p>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {READING_FIELDS.map((f) => (
+                    <div key={f.key} className="space-y-1">
+                      <Label className="text-xs">{f.label}</Label>
+                      <Input
+                        type={f.text ? 'text' : 'number'}
+                        step="0.01"
+                        value={readings[f.key] ?? ''}
+                        onChange={(e) => setReading(f.key, e.target.value)}
+                      />
+                    </div>
+                  ))}
+                  <div className="space-y-1">
+                    <Label className="text-xs">Robusta</Label>
+                    <Select value={readings.robusta ?? ''} onValueChange={(v) => setReading('robusta', v)}>
+                      <SelectTrigger><SelectValue placeholder="Yes / No" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Yes">Yes</SelectItem>
+                        <SelectItem value="No">No</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <Label>Notes (optional)</Label>
+                <Label>Notes / comments (optional)</Label>
                 <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="Observations on the analysis" />
               </div>
 
