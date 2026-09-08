@@ -384,9 +384,11 @@ const QualityAnalysisFilesTab = () => {
                   <SelectContent>
                     <SelectItem value="supplier">Registered supplier</SelectItem>
                     <SelectItem value="offer_sample">Offer sample (not in system)</SelectItem>
+                    <SelectItem value="dispatch">Dispatch analysis (coffee leaving the store)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
 
               {sourceType === 'supplier' ? (
                 <div className="space-y-2">
