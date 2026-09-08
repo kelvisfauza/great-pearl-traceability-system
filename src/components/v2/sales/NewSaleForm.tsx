@@ -254,10 +254,11 @@ const NewSaleForm = () => {
                   const item = inventory.find(i => i.coffee_type === type);
                   return (
                     <SelectItem key={type} value={type}>
-                      {type} ({item?.total_kilograms?.toLocaleString()} kg available)
+                      {type} ({(item?.total_kilograms || 0).toLocaleString()} kg available)
                     </SelectItem>
                   );
                 })}
+
               </SelectContent>
             </Select>
           </div>
