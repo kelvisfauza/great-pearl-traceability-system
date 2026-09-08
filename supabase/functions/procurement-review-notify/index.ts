@@ -292,12 +292,13 @@ Deno.serve(async (req) => {
       return dept.includes('procurement') || role.includes('procurement') || perms.some((p: string) => p.includes('procurement'))
     })
 
-    const rows = fresh.map((r: any) => ({
+    const rows = fresh.map((r) => ({
       title: r.title,
       type: r.type,
-      by: r.requestedby_name || r.requestedby,
+      by: r.by,
       amount: money(r.amount),
     }))
+
     const total = fresh.reduce((s: number, r: any) => s + (Number(r.amount) || 0), 0)
 
     const results: any[] = []
