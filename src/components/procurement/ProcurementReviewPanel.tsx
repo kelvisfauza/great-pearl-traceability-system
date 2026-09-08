@@ -76,6 +76,7 @@ const ProcurementReviewPanel = () => {
   const [admins, setAdmins] = useState<AdminOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [history, setHistory] = useState<HistoryRow[]>([]);
 
   const [dialog, setDialog] = useState<{
     open: boolean;
