@@ -307,6 +307,14 @@ const ProcurementReviewPanel = () => {
         </div>
       </CardHeader>
       <CardContent>
+        <Tabs defaultValue="queue">
+          <TabsList className="mb-4">
+            <TabsTrigger value="queue">Review queue ({pendingCount})</TabsTrigger>
+            <TabsTrigger value="history">
+              <History className="h-4 w-4 mr-1" /> Review history
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="queue">
         {loading ? (
           <div className="flex justify-center p-6">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
