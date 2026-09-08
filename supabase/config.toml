@@ -195,6 +195,8 @@ project_id = "pudfybkyfedeggmokhco"
     verify_jwt = false
   [functions.employee-suspension]
     verify_jwt = true
+  [functions.procurement-review-notify]
+    verify_jwt = false
 
 [inbucket]
   enabled = true
