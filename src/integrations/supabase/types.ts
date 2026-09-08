@@ -8907,6 +8907,69 @@ export type Database = {
         }
         Relationships: []
       }
+      procurement_reviews: {
+        Row: {
+          admin_notified_at: string | null
+          amount: number | null
+          created_at: string
+          decision: string
+          edited_amount: number | null
+          id: string
+          notes: string | null
+          notified_at: string | null
+          original_amount: number | null
+          recommended_admin_email: string | null
+          recommended_admin_name: string | null
+          record_id: string
+          request_title: string | null
+          requested_by: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_table: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notified_at?: string | null
+          amount?: number | null
+          created_at?: string
+          decision?: string
+          edited_amount?: number | null
+          id?: string
+          notes?: string | null
+          notified_at?: string | null
+          original_amount?: number | null
+          recommended_admin_email?: string | null
+          recommended_admin_name?: string | null
+          record_id: string
+          request_title?: string | null
+          requested_by?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_table: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notified_at?: string | null
+          amount?: number | null
+          created_at?: string
+          decision?: string
+          edited_amount?: number | null
+          id?: string
+          notes?: string | null
+          notified_at?: string | null
+          original_amount?: number | null
+          recommended_admin_email?: string | null
+          recommended_admin_name?: string | null
+          record_id?: string
+          request_title?: string | null
+          requested_by?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_table?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           address: string | null
@@ -16690,6 +16753,7 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      is_procurement_reviewer: { Args: { _user_id: string }; Returns: boolean }
       is_quality_or_admin: { Args: never; Returns: boolean }
       is_super_admin: { Args: { _uid: string }; Returns: boolean }
       is_supervisor_or_above: { Args: never; Returns: boolean }
@@ -16943,6 +17007,22 @@ export type Database = {
         Returns: number
       }
       sg_is_automation: { Args: never; Returns: boolean }
+      submit_procurement_review: {
+        Args: {
+          _amount?: number
+          _decision: string
+          _edited_amount?: number
+          _edited_description?: string
+          _notes?: string
+          _recommended_admin_email?: string
+          _recommended_admin_name?: string
+          _record_id: string
+          _request_title?: string
+          _requested_by?: string
+          _source_table: string
+        }
+        Returns: Json
+      }
       sync_overdraft_outstanding_from_wallet: {
         Args: { p_user_id: string }
         Returns: undefined

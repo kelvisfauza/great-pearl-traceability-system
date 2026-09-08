@@ -40,6 +40,7 @@ import MobileDispatchFormScanner from "./pages/MobileDispatchFormScanner";
 import Unsubscribe from "./pages/Unsubscribe";
 import OAuthConsent from "./pages/OAuthConsent";
 import Procurement from "./pages/Procurement";
+import ProcurementReview from "./pages/ProcurementReview";
 import QualityControl from "./pages/QualityControl";
 import Inventory from "./pages/Inventory";
 import Store from "./pages/Store";
