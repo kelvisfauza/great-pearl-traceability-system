@@ -96,6 +96,7 @@ const QualityAnalysisFilesTab = () => {
     setAnalysisDate(new Date().toISOString().slice(0, 10));
     setFormNumber(''); setCoffeeType(''); setNotes(''); setFile(null);
     setScannedForm(null);
+    setReadings({}); setTruck(''); setBags(''); setTotalWeight('');
   };
 
   const loadScannedForm = async (code: string) => {
