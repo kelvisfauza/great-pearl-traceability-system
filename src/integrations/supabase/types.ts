@@ -16553,6 +16553,7 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: number
       }
+      get_sunday_withdrawals_enabled: { Args: never; Returns: boolean }
       get_system_maintenance_recovery: {
         Args: never
         Returns: {
