@@ -404,10 +404,32 @@ const QualityAnalysisFilesTab = () => {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <Label>Offer sample name</Label>
-                  <Input value={manualName} onChange={(e) => setManualName(e.target.value)} placeholder="e.g. Kyondo Farmers Group" />
+                  <Label>{sourceType === 'dispatch' ? 'Dispatched to (buyer / destination)' : 'Offer sample name'}</Label>
+                  <Input
+                    value={manualName}
+                    onChange={(e) => setManualName(e.target.value)}
+                    placeholder={sourceType === 'dispatch' ? 'e.g. Dispatch to KCL' : 'e.g. Kyondo Farmers Group'}
+                  />
                 </div>
               )}
+
+              {sourceType === 'dispatch' && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-2">
+                    <Label>Truck / container no.</Label>
+                    <Input value={truck} onChange={(e) => setTruck(e.target.value)} placeholder="e.g. UBJ 123K" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Bags loaded</Label>
+                    <Input type="number" value={bags} onChange={(e) => setBags(e.target.value)} placeholder="0" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Total weight (kg)</Label>
+                    <Input type="number" value={totalWeight} onChange={(e) => setTotalWeight(e.target.value)} placeholder="0" />
+                  </div>
+                </div>
+              )}
+
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
