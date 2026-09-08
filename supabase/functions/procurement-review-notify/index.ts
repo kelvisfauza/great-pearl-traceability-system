@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
               label: 'procurement-review-decision',
               idempotency_key: idem,
               unsubscribe_token: token(),
-              cc: email === OPERATIONS_EMAIL ? [] : [OPERATIONS_EMAIL],
+              cc: r.email === OPERATIONS_EMAIL ? [] : [OPERATIONS_EMAIL],
             }, { apiKey: lovableApiKey, idempotencyKey: idem })
             results.push({ email: r.email, email_status: 'sent' })
           } catch (e: any) {
@@ -326,7 +326,7 @@ Deno.serve(async (req) => {
             label: 'procurement-review-pending',
             idempotency_key: idem,
             unsubscribe_token: token(),
-            cc: r.email === OPERATIONS_EMAIL ? [] : [OPERATIONS_EMAIL],
+            cc: email === OPERATIONS_EMAIL ? [] : [OPERATIONS_EMAIL],
           }, { apiKey: lovableApiKey, idempotencyKey: idem })
           results.push({ email, email_status: 'sent' })
         } catch (e: any) {
