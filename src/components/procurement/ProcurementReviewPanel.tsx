@@ -302,21 +302,28 @@ const ProcurementReviewPanel = () => {
                       {review.edited_amount != null && (
                         <p><strong>Amount corrected:</strong> {money(review.original_amount)} → {money(review.edited_amount)}</p>
                       )}
+                      <p><strong>Current stage:</strong> {request.status}</p>
                     </div>
                   )}
 
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => openDialog(request, 'approved')}>
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      {decision === 'pending' ? 'Approve & send to admin' : 'Update & resend'}
-                    </Button>
-                    <Button size="sm" variant="destructive" onClick={() => openDialog(request, 'rejected')}>
-                      <XCircle className="h-4 w-4 mr-2" /> Reject
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => openDialog(request, 'approved')}>
-                      <Pencil className="h-4 w-4 mr-2" /> Edit details
-                    </Button>
-                  </div>
+                  {decision === 'pending' ? (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => openDialog(request, 'approved')}>
+                        <CheckCircle className="h-4 w-4 mr-2" /> Approve &amp; send to admin
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => openDialog(request, 'rejected')}>
+                        <XCircle className="h-4 w-4 mr-2" /> Reject
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => openDialog(request, 'approved')}>
+                        <Pencil className="h-4 w-4 mr-2" /> Edit details
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Your decision is final and cannot be changed. You can only follow this request from here.
+                    </p>
+                  )}
+
                 </div>
               );
             })}
