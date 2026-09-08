@@ -14,15 +14,14 @@ export const useSundayWithdrawals = () => {
   const { data, isLoading } = useQuery({
     queryKey: ["sunday-withdrawals"],
     queryFn: async () => {
-      const { data } = await (supabase
-        .from("system_settings" as any)
-        .select("setting_value")
-        .eq("setting_key", SETTING_KEY)
-        .maybeSingle() as any);
-      const value = (data?.setting_value as any) || {};
-      return { enabled: value.enabled === true };
+      // Read via security-definer RPC so every employee can see the flag.
+      // Fail OPEN (allowed) if the read fails for any reason.
+      const { data, error } = await (supabase.rpc as any)("get_sunday_withdrawals_enabled");
+      if (error) return { enabled: true };
+      return { enabled: data !== false };
     },
   });
+
 
   const enabled = data?.enabled === true;
 
