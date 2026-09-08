@@ -453,8 +453,38 @@ const QualityAnalysisFilesTab = () => {
                 </Select>
               </div>
 
+              <div className="space-y-3 rounded-lg border p-3">
+                <div>
+                  <Label className="text-sm font-semibold">Analysis readings (type what is on the paper form)</Label>
+                  <p className="text-xs text-muted-foreground">Fill in whatever was written by hand — leave the rest blank.</p>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {READING_FIELDS.map((f) => (
+                    <div key={f.key} className="space-y-1">
+                      <Label className="text-xs">{f.label}</Label>
+                      <Input
+                        type={f.text ? 'text' : 'number'}
+                        step="0.01"
+                        value={readings[f.key] ?? ''}
+                        onChange={(e) => setReading(f.key, e.target.value)}
+                      />
+                    </div>
+                  ))}
+                  <div className="space-y-1">
+                    <Label className="text-xs">Robusta</Label>
+                    <Select value={readings.robusta ?? ''} onValueChange={(v) => setReading('robusta', v)}>
+                      <SelectTrigger><SelectValue placeholder="Yes / No" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Yes">Yes</SelectItem>
+                        <SelectItem value="No">No</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <Label>Notes (optional)</Label>
+                <Label>Notes / comments (optional)</Label>
                 <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="Observations on the analysis" />
               </div>
 
