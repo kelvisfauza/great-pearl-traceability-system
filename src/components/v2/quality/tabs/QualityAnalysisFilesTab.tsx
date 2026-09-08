@@ -59,7 +59,12 @@ const QualityAnalysisFilesTab = () => {
   const [userId, setUserId] = useState<string | null>(null);
 
   // form state
-  const [sourceType, setSourceType] = useState<'supplier' | 'offer_sample'>('supplier');
+  const [sourceType, setSourceType] = useState<'supplier' | 'offer_sample' | 'dispatch'>('supplier');
+  const [readings, setReadings] = useState<Record<string, string>>({});
+  const [truck, setTruck] = useState('');
+  const [bags, setBags] = useState('');
+  const [totalWeight, setTotalWeight] = useState('');
+  const setReading = (k: string, v: string) => setReadings((p) => ({ ...p, [k]: v }));
   const [supplierId, setSupplierId] = useState('');
   const [manualName, setManualName] = useState('');
   const [analysisDate, setAnalysisDate] = useState(new Date().toISOString().slice(0, 10));
