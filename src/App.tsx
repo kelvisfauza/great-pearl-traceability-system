@@ -347,6 +347,11 @@ const App: React.ComponentType = () => {
                     <Procurement />
                   </ProtectedRoute>
                 } />
+                <Route path="/procurement-review" element={
+                  <ProtectedRoute requiredPermissions={["Procurement"]}>
+                    <ProcurementReview />
+                  </ProtectedRoute>
+                } />
                 <Route path="/quality-control" element={
                   <ProtectedRoute requiredPermissions={["Quality Control"]}>
                     <QualityControl />
