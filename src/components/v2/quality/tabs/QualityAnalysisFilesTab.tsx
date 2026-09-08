@@ -123,6 +123,13 @@ const QualityAnalysisFilesTab = () => {
       setManualName(form.source_type === 'offer_sample' ? form.supplier_name : '');
       setAnalysisDate(form.analysis_date);
       setFormNumber(form.form_number);
+      const prefill: Record<string, string> = {};
+      Object.entries(form.params || {}).forEach(([k, v]) => {
+        if (v !== null && v !== undefined && `${v}`.trim() !== '') prefill[k] = String(v);
+      });
+      if (form.analysed_by) prefill.analysed_by = form.analysed_by;
+      setReadings(prefill);
+      if (form.comments) setNotes(form.comments);
       const robusta = (form.params?.robusta || '').toString().toLowerCase();
       if (robusta === 'yes') setCoffeeType('ROBUSTA');
       else if (robusta === 'no') setCoffeeType('ARABICA');
