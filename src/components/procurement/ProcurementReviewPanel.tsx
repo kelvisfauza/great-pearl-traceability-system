@@ -144,6 +144,51 @@ const ProcurementReviewPanel = () => {
           .filter((s) => s.disabled !== true && String(s.role || '').toLowerCase().includes('admin') && s.email)
           .map((s) => ({ name: s.name || s.email, email: String(s.email).toLowerCase() })),
       );
+
+      // Review history: decided reviews with the live status of the underlying request
+      const { data: hist } = await (supabase as any)
+        .from('procurement_reviews')
+        .select('source_table,record_id,decision,notes,reviewed_by,reviewed_at,recommended_admin_name,recommended_admin_email,edited_amount,original_amount')
+        .neq('decision', 'pending')
+        .order('reviewed_at', { ascending: false })
+        .limit(50);
+
+      const histRows = (hist || []) as ReviewRow[];
+      const approvalIds = histRows.filter((r) => r.source_table === 'approval_requests').map((r) => r.record_id);
+      const providerIds = histRows.filter((r) => r.source_table === 'provider_submission_requests').map((r) => r.record_id);
+
+      const lookup: Record<string, { title: string; requested_by: string | null; amount: number | null; status: string }> = {};
+      if (approvalIds.length) {
+        const { data } = await (supabase as any)
+          .from('approval_requests')
+          .select('id,title,requestedby_name,requestedby,amount,status')
+          .in('id', approvalIds);
+        ((data || []) as any[]).forEach((r) => {
+          lookup[r.id] = { title: r.title || 'Request', requested_by: r.requestedby_name || r.requestedby, amount: r.amount, status: r.status };
+        });
+      }
+      if (providerIds.length) {
+        const { data } = await (supabase as any)
+          .from('provider_submission_requests')
+          .select('id,request_type,provider_name,amount,status')
+          .in('id', providerIds);
+        ((data || []) as any[]).forEach((r) => {
+          lookup[r.id] = {
+            title: `${PROVIDER_LABEL[String(r.request_type)] || 'Provider Request'} — ${r.provider_name || 'Unnamed'}`,
+            requested_by: r.provider_name,
+            amount: r.amount,
+            status: r.status,
+          };
+        });
+      }
+
+      setHistory(histRows.map((r) => ({
+        ...r,
+        title: lookup[r.record_id]?.title || 'Request (removed)',
+        requested_by: lookup[r.record_id]?.requested_by || null,
+        amount: lookup[r.record_id]?.amount ?? r.edited_amount ?? r.original_amount,
+        current_status: lookup[r.record_id]?.status || 'unknown',
+      })));
     } catch (err) {
       console.error('Failed to load procurement review queue:', err);
     } finally {
