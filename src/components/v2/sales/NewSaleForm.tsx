@@ -115,13 +115,14 @@ const NewSaleForm = () => {
     const selectedInventory = inventory.find(i => i.coffee_type === formData.coffee_type);
     
     if (selectedInventory && weight > selectedInventory.total_kilograms) {
+      // Allow the sale to be saved even when stock is short; the shortfall is
+      // flagged here and reconciled later against inventory.
       toast({
-        title: "Insufficient Stock",
-        description: `Only ${selectedInventory.total_kilograms} kg available for ${formData.coffee_type}`,
-        variant: "destructive"
+        title: "Stock Shortfall",
+        description: `Only ${selectedInventory.total_kilograms} kg available for ${formData.coffee_type}. The sale will still be saved and reconciled later.`
       });
-      return;
     }
+
 
     setLoading(true);
     try {
@@ -224,7 +225,9 @@ const NewSaleForm = () => {
     }
   };
 
-  const uniqueCoffeeTypes = [...new Set(inventory.map(i => i.coffee_type))];
+  const FALLBACK_COFFEE_TYPES = ['Arabica', 'Robusta', 'Sorted', 'Screen 18', 'Screen 15', 'FAQ', 'Bugisu AA'];
+  const uniqueCoffeeTypes = [...new Set([...inventory.map(i => i.coffee_type), ...FALLBACK_COFFEE_TYPES])];
+
 
   return (
     <>
@@ -251,10 +254,11 @@ const NewSaleForm = () => {
                   const item = inventory.find(i => i.coffee_type === type);
                   return (
                     <SelectItem key={type} value={type}>
-                      {type} ({item?.total_kilograms?.toLocaleString()} kg available)
+                      {type} ({(item?.total_kilograms || 0).toLocaleString()} kg available)
                     </SelectItem>
                   );
                 })}
+
               </SelectContent>
             </Select>
           </div>
