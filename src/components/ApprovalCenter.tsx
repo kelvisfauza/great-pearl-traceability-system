@@ -17,6 +17,7 @@ import FingerprintApprovalDialog, { FingerprintApprovalTarget } from './approval
 import { requiresFingerprintApproval } from '@/utils/fingerprintApproval';
 import ApprovalCodeDialog, { ApprovalCodeTarget } from './approval/ApprovalCodeDialog';
 import { AwaitingDisbursementPanel } from './approval/AwaitingDisbursementPanel';
+import { useProcurementReviews } from '@/hooks/useProcurementReviews';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const POLLING_INTERVAL = 10000; // 10 seconds
@@ -24,6 +25,7 @@ const POLLING_INTERVAL = 10000; // 10 seconds
 const ApprovalCenter = () => {
   const { requests, loading, updateRequestStatus, fetchRequests } = useUnifiedApprovalRequests();
   const { recommendations, loading: recommendationsLoading } = useProcurementRecommendations();
+  const { reviews: procurementReviews } = useProcurementReviews(requests.map((r) => r.id));
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<UnifiedApprovalRequest | null>(null);
@@ -476,6 +478,52 @@ const ApprovalCenter = () => {
                         </div>
                       </div>
 
+
+                      {/* Procurement first-stage review */}
+                      {(() => {
+                        const review = procurementReviews[request.id];
+                        if (!review) {
+                          return (
+                            <div className="mb-4 p-3 bg-muted/60 border border-dashed rounded-lg">
+                              <p className="text-xs text-muted-foreground">
+                                Procurement review: <strong>not yet reviewed</strong> by the procurement office.
+                              </p>
+                            </div>
+                          );
+                        }
+                        const cleared = review.decision === 'approved';
+                        const rejected = review.decision === 'rejected';
+                        return (
+                          <div className={`mb-4 p-3 rounded-lg border ${
+                            cleared
+                              ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
+                              : rejected
+                                ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800'
+                                : 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800'
+                          }`}>
+                            <p className="text-sm font-medium">
+                              {cleared
+                                ? `Cleared by procurement (${review.reviewed_by || 'Procurement'})`
+                                : rejected
+                                  ? `Rejected at procurement (${review.reviewed_by || 'Procurement'})`
+                                  : 'Awaiting procurement review'}
+                            </p>
+                            {review.notes && (
+                              <p className="text-xs text-muted-foreground mt-1"><strong>Observations:</strong> {review.notes}</p>
+                            )}
+                            {review.edited_amount != null && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                <strong>Amount corrected:</strong> {formatAmount(review.original_amount || 0)} → {formatAmount(review.edited_amount)}
+                              </p>
+                            )}
+                            {review.recommended_admin_name && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                <strong>Forwarded to:</strong> {review.recommended_admin_name}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {/* Failed payout banner */}
                       {request.details?.is_failed_payout && (
