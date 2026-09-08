@@ -21,6 +21,7 @@ const PENDING_STATUSES = [
 ];
 
 interface PendingRequest {
+  source_table: string;
   id: string;
   title: string;
   type: string;
@@ -40,6 +41,7 @@ interface AdminOption {
 }
 
 interface ReviewRow {
+  source_table: string;
   record_id: string;
   decision: string;
   notes: string | null;
@@ -50,6 +52,12 @@ interface ReviewRow {
   edited_amount: number | null;
   original_amount: number | null;
 }
+
+const PROVIDER_LABEL: Record<string, string> = {
+  meal_plan: 'Meal Plan',
+  service_provider: 'Service Provider Payment',
+  support_staff_per_diem: 'Support Staff Per Diem',
+};
 
 const money = (v: unknown) => `UGX ${Number(v || 0).toLocaleString('en-UG')}`;
 
@@ -73,7 +81,7 @@ const ProcurementReviewPanel = () => {
 
   const load = useCallback(async () => {
     try {
-      const [{ data: reqs }, { data: revs }, { data: staff }] = await Promise.all([
+      const [{ data: reqs }, { data: providers }, { data: revs }, { data: staff }] = await Promise.all([
         (supabase as any)
           .from('approval_requests')
           .select('id,title,type,description,amount,requestedby,requestedby_name,department,daterequested,status,created_at')
@@ -81,21 +89,45 @@ const ProcurementReviewPanel = () => {
           .order('created_at', { ascending: false })
           .limit(200),
         (supabase as any)
+          .from('provider_submission_requests')
+          .select('id,request_type,provider_name,phone,amount,description,status,created_at')
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false })
+          .limit(200),
+        (supabase as any)
           .from('procurement_reviews')
-          .select('record_id,decision,notes,reviewed_by,reviewed_at,recommended_admin_name,recommended_admin_email,edited_amount,original_amount')
-          .eq('source_table', 'approval_requests'),
+          .select('source_table,record_id,decision,notes,reviewed_by,reviewed_at,recommended_admin_name,recommended_admin_email,edited_amount,original_amount'),
         (supabase as any)
           .from('employees')
           .select('name,email,role,disabled')
           .not('email', 'is', null),
       ]);
 
-      setRequests(((reqs || []) as PendingRequest[]).filter(
-        (r) => String(r.type || '').toLowerCase() !== 'leave',
+      const approvalRows: PendingRequest[] = ((reqs || []) as any[])
+        .filter((r) => String(r.type || '').toLowerCase() !== 'leave')
+        .map((r) => ({ ...r, source_table: 'approval_requests' }));
+
+      const providerRows: PendingRequest[] = ((providers || []) as any[]).map((r) => ({
+        source_table: 'provider_submission_requests',
+        id: r.id,
+        title: `${PROVIDER_LABEL[String(r.request_type)] || 'Provider Request'} — ${r.provider_name || 'Unnamed'}`,
+        type: PROVIDER_LABEL[String(r.request_type)] || String(r.request_type || 'Provider Request'),
+        description: r.description || null,
+        amount: r.amount,
+        requestedby: r.phone || null,
+        requestedby_name: r.provider_name || null,
+        department: 'Procurement',
+        daterequested: null,
+        status: r.status,
+        created_at: r.created_at,
+      }));
+
+      setRequests([...providerRows, ...approvalRows].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       ));
 
       const map: Record<string, ReviewRow> = {};
-      ((revs || []) as ReviewRow[]).forEach((r) => { map[r.record_id] = r; });
+      ((revs || []) as ReviewRow[]).forEach((r) => { map[`${r.source_table}:${r.record_id}`] = r; });
       setReviews(map);
 
       setAdmins(
@@ -113,12 +145,12 @@ const ProcurementReviewPanel = () => {
   useEffect(() => { load(); }, [load]);
 
   const pendingCount = useMemo(
-    () => requests.filter((r) => (reviews[r.id]?.decision || 'pending') === 'pending').length,
+    () => requests.filter((r) => (reviews[`${r.source_table}:${r.id}`]?.decision || 'pending') === 'pending').length,
     [requests, reviews],
   );
 
   const openDialog = (request: PendingRequest, decision: 'approved' | 'rejected') => {
-    const existing = reviews[request.id];
+    const existing = reviews[`${request.source_table}:${request.id}`];
     setDialog({ open: true, request, decision });
     setNotes(existing?.notes || '');
     setAmount(String(request.amount ?? ''));
@@ -135,7 +167,7 @@ const ProcurementReviewPanel = () => {
       const changedDescription = description !== (dialog.request.description || '');
 
       const { data, error } = await (supabase as any).rpc('submit_procurement_review', {
-        _source_table: 'approval_requests',
+        _source_table: dialog.request.source_table,
         _record_id: dialog.request.id,
         _decision: dialog.decision,
         _notes: notes || null,
@@ -153,7 +185,7 @@ const ProcurementReviewPanel = () => {
 
       // Notify the chosen administrator (email + SMS)
       supabase.functions.invoke('procurement-review-notify', {
-        body: { mode: 'reviewed', source_table: 'approval_requests', record_id: dialog.request.id },
+        body: { mode: 'reviewed', source_table: dialog.request.source_table, record_id: dialog.request.id },
       }).catch((e) => console.error('Admin notification failed:', e));
 
       toast({
@@ -214,7 +246,7 @@ const ProcurementReviewPanel = () => {
         ) : (
           <div className="space-y-3">
             {requests.map((request) => {
-              const review = reviews[request.id];
+              const review = reviews[`${request.source_table}:${request.id}`];
               const decision = review?.decision || 'pending';
               return (
                 <div key={request.id} className="border rounded-lg p-4 space-y-3">

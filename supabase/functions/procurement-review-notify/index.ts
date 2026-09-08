@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
               label: 'procurement-review-decision',
               idempotency_key: idem,
               unsubscribe_token: token(),
-              cc: [OPERATIONS_EMAIL],
+              cc: r.email === OPERATIONS_EMAIL ? [] : [OPERATIONS_EMAIL],
             }, { apiKey: lovableApiKey, idempotencyKey: idem })
             results.push({ email: r.email, email_status: 'sent' })
           } catch (e: any) {
@@ -208,34 +208,74 @@ Deno.serve(async (req) => {
       .order('created_at', { ascending: false })
       .limit(200)
 
-    const candidates = (pendingRequests || []).filter(
-      (r: any) => String(r.type || '').toLowerCase() !== 'leave',
-    )
+    const { data: pendingProvider } = await supabase
+      .from('provider_submission_requests')
+      .select('id,request_type,provider_name,amount,description,status,created_at')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(200)
+
+    const PROVIDER_LABEL: Record<string, string> = {
+      meal_plan: 'Meal Plan',
+      service_provider: 'Service Provider Payment',
+      support_staff_per_diem: 'Support Staff Per Diem',
+    }
+
+    type Candidate = {
+      source_table: string
+      id: string
+      title: string
+      type: string
+      amount: number
+      by: string
+    }
+
+    const candidates: Candidate[] = [
+      ...(pendingRequests || [])
+        .filter((r: any) => String(r.type || '').toLowerCase() !== 'leave')
+        .map((r: any) => ({
+          source_table: 'approval_requests',
+          id: r.id,
+          title: r.title,
+          type: r.type,
+          amount: Number(r.amount) || 0,
+          by: r.requestedby_name || r.requestedby || 'Unknown',
+        })),
+      ...(pendingProvider || []).map((r: any) => ({
+        source_table: 'provider_submission_requests',
+        id: r.id,
+        title: `${PROVIDER_LABEL[String(r.request_type)] || 'Provider Request'} — ${r.provider_name || 'Unnamed'}`,
+        type: PROVIDER_LABEL[String(r.request_type)] || String(r.request_type || 'Provider Request'),
+        amount: Number(r.amount) || 0,
+        by: r.provider_name || 'Unknown',
+      })),
+    ]
+
     if (candidates.length === 0) return json({ ok: true, message: 'Nothing pending' })
 
     const { data: existing } = await supabase
       .from('procurement_reviews')
-      .select('record_id')
-      .eq('source_table', 'approval_requests')
-      .in('record_id', candidates.map((r: any) => r.id))
+      .select('source_table,record_id')
+      .in('record_id', candidates.map((r) => r.id))
 
-    const known = new Set((existing || []).map((r: any) => r.record_id))
-    const fresh = candidates.filter((r: any) => !known.has(r.id))
+    const known = new Set((existing || []).map((r: any) => `${r.source_table}:${r.record_id}`))
+    const fresh = candidates.filter((r) => !known.has(`${r.source_table}:${r.id}`))
     if (fresh.length === 0) return json({ ok: true, message: 'No new requests to review' })
 
     // Register them as awaiting procurement review
     await supabase.from('procurement_reviews').insert(
-      fresh.map((r: any) => ({
-        source_table: 'approval_requests',
+      fresh.map((r) => ({
+        source_table: r.source_table,
         record_id: r.id,
         request_title: r.title,
-        requested_by: r.requestedby_name || r.requestedby,
-        amount: Number(r.amount) || 0,
-        original_amount: Number(r.amount) || 0,
+        requested_by: r.by,
+        amount: r.amount,
+        original_amount: r.amount,
         decision: 'pending',
         notified_at: new Date().toISOString(),
       })),
     )
+
 
     // Procurement reviewers
     const { data: staff } = await supabase
@@ -252,12 +292,13 @@ Deno.serve(async (req) => {
       return dept.includes('procurement') || role.includes('procurement') || perms.some((p: string) => p.includes('procurement'))
     })
 
-    const rows = fresh.map((r: any) => ({
+    const rows = fresh.map((r) => ({
       title: r.title,
       type: r.type,
-      by: r.requestedby_name || r.requestedby,
+      by: r.by,
       amount: money(r.amount),
     }))
+
     const total = fresh.reduce((s: number, r: any) => s + (Number(r.amount) || 0), 0)
 
     const results: any[] = []
@@ -285,7 +326,7 @@ Deno.serve(async (req) => {
             label: 'procurement-review-pending',
             idempotency_key: idem,
             unsubscribe_token: token(),
-            cc: [OPERATIONS_EMAIL],
+            cc: email === OPERATIONS_EMAIL ? [] : [OPERATIONS_EMAIL],
           }, { apiKey: lovableApiKey, idempotencyKey: idem })
           results.push({ email, email_status: 'sent' })
         } catch (e: any) {
