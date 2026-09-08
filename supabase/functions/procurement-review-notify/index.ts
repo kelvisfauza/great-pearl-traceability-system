@@ -289,6 +289,8 @@ Deno.serve(async (req) => {
       const dept = String(e.department || '').toLowerCase()
       const role = String(e.role || '').toLowerCase()
       const perms = Array.isArray(e.permissions) ? e.permissions.map((p: any) => String(p).toLowerCase()) : []
+      // Admins already get the approval alerts — don't double-notify them here
+      if (role.includes('admin') || perms.includes('*')) return false
       return dept.includes('procurement') || role.includes('procurement') || perms.some((p: string) => p.includes('procurement'))
     })
 
