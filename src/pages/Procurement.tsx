@@ -604,6 +604,10 @@ const Procurement = () => {
             <ProcurementActionCenter />
           </TabsContent>
 
+          <TabsContent value="review" className="space-y-4">
+            <ProcurementReviewPanel />
+          </TabsContent>
+
           <TabsContent value="comprehensive" className="space-y-4">
             <ComprehensiveReports />
           </TabsContent>
