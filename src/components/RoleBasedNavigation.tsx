@@ -44,6 +44,12 @@ const RoleBasedNavigation = () => {
           access: access.canViewProcurement
         },
         { 
+          name: "Procurement Review", 
+          icon: ClipboardCheck, 
+          path: "/procurement-review", 
+          access: access.canViewProcurement
+        },
+        { 
           name: "Quality Control", 
           icon: ClipboardCheck, 
           path: "/quality-control", 
