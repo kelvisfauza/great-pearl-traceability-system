@@ -56,6 +56,14 @@ const FingerprintApprovalDialog: React.FC<Props> = ({ target, onClose, onUseSmsC
 
   const scanUrl = email ? buildApprovalScanUrl(sessionId, email) : '';
 
+  // On a computer, fingerprint confirmation is skipped — approvals go straight through.
+  const isDesktop = React.useMemo(() => {
+    if (typeof navigator === 'undefined') return false;
+    const ua = navigator.userAgent || '';
+    const mobile = /Android|iPhone|iPad|iPod|Mobile|Windows Phone/i.test(ua);
+    return !mobile;
+  }, []);
+
   useEffect(() => {
     if (!scanUrl) return;
     QRCode.toDataURL(scanUrl, { width: 240, margin: 1 }).then(setQr).catch(() => setQr(''));
