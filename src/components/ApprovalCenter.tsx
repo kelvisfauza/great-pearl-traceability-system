@@ -25,6 +25,7 @@ const POLLING_INTERVAL = 10000; // 10 seconds
 const ApprovalCenter = () => {
   const { requests, loading, updateRequestStatus, fetchRequests } = useUnifiedApprovalRequests();
   const { recommendations, loading: recommendationsLoading } = useProcurementRecommendations();
+  const { reviews: procurementReviews } = useProcurementReviews(requests.map((r) => r.id));
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<UnifiedApprovalRequest | null>(null);
