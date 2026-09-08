@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ComprehensiveReports from "@/components/procurement/ComprehensiveReports";
 import ProcurementActionCenter from "@/components/procurement/ProcurementActionCenter";
 import DailyProcurementReport from "@/components/procurement/DailyProcurementReport";
+import ProcurementReviewPanel from "@/components/procurement/ProcurementReviewPanel";
 import { 
   Package, 
   Plus, 
@@ -177,6 +178,7 @@ const Procurement = () => {
               <TabsTrigger value="documents" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Docs</TabsTrigger>
               <TabsTrigger value="pricing" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Pricing</TabsTrigger>
               <TabsTrigger value="approvals" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Approvals</TabsTrigger>
+              <TabsTrigger value="review" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Review</TabsTrigger>
               <TabsTrigger value="comprehensive" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Reports Hub</TabsTrigger>
             </TabsList>
           </div>
@@ -601,6 +603,10 @@ const Procurement = () => {
           <TabsContent value="action-center" className="space-y-4">
             <DailyProcurementReport />
             <ProcurementActionCenter />
+          </TabsContent>
+
+          <TabsContent value="review" className="space-y-4">
+            <ProcurementReviewPanel />
           </TabsContent>
 
           <TabsContent value="comprehensive" className="space-y-4">
