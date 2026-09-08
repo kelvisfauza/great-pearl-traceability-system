@@ -225,7 +225,9 @@ const NewSaleForm = () => {
     }
   };
 
-  const uniqueCoffeeTypes = [...new Set(inventory.map(i => i.coffee_type))];
+  const FALLBACK_COFFEE_TYPES = ['Arabica', 'Robusta', 'Sorted', 'Screen 18', 'Screen 15', 'FAQ', 'Bugisu AA'];
+  const uniqueCoffeeTypes = [...new Set([...inventory.map(i => i.coffee_type), ...FALLBACK_COFFEE_TYPES])];
+
 
   return (
     <>
