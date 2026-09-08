@@ -54,6 +54,13 @@ interface ReviewRow {
   original_amount: number | null;
 }
 
+interface HistoryRow extends ReviewRow {
+  title: string;
+  requested_by: string | null;
+  amount: number | null;
+  current_status: string;
+}
+
 const PROVIDER_LABEL: Record<string, string> = {
   meal_plan: 'Meal Plan',
   service_provider: 'Service Provider Payment',
