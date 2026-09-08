@@ -177,6 +177,7 @@ const Procurement = () => {
               <TabsTrigger value="documents" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Docs</TabsTrigger>
               <TabsTrigger value="pricing" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Pricing</TabsTrigger>
               <TabsTrigger value="approvals" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Approvals</TabsTrigger>
+              <TabsTrigger value="review" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Review</TabsTrigger>
               <TabsTrigger value="comprehensive" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Reports Hub</TabsTrigger>
             </TabsList>
           </div>
