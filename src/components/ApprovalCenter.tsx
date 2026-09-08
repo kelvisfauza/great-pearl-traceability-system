@@ -17,6 +17,7 @@ import FingerprintApprovalDialog, { FingerprintApprovalTarget } from './approval
 import { requiresFingerprintApproval } from '@/utils/fingerprintApproval';
 import ApprovalCodeDialog, { ApprovalCodeTarget } from './approval/ApprovalCodeDialog';
 import { AwaitingDisbursementPanel } from './approval/AwaitingDisbursementPanel';
+import { useProcurementReviews } from '@/hooks/useProcurementReviews';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const POLLING_INTERVAL = 10000; // 10 seconds
