@@ -189,6 +189,84 @@ const QualityAnalysisFilesTab = () => {
       });
       if (upErr) throw upErr;
 
+      // Readings typed from the paper form
+      const params: Record<string, string> = {};
+      Object.entries(readings).forEach(([k, v]) => {
+        if (`${v ?? ''}`.trim() !== '') params[k] = String(v).trim();
+      });
+      const hasReadings = Object.keys(params).length > 0;
+      const num = (k: string) => (params[k] !== undefined && params[k] !== '' ? Number(params[k]) : null);
+
+      let linkedFormId = scannedForm?.id ?? null;
+      let linkedCode = scannedForm?.verification_code || '';
+      let usedFormNumber = formNumber.trim();
+
+      if (hasReadings && sourceType !== 'dispatch') {
+        if (scannedForm?.id) {
+          await (supabase as any)
+            .from('quality_analysis_forms')
+            .update({
+              params: { ...(scannedForm.params || {}), ...params, supplier_name: supplierName, analysis_date: analysisDate },
+              analysed_by: params.analysed_by || null,
+              comments: notes.trim() || null,
+            })
+            .eq('id', scannedForm.id);
+        } else {
+          if (!usedFormNumber) {
+            const { data: nums } = await (supabase as any).rpc('issue_quality_form_numbers', {
+              p_count: 1, p_issued_by_name: null,
+            });
+            usedFormNumber = ((nums as string[]) || [])[0] || `MANUAL-${Date.now().toString().slice(-6)}`;
+          }
+          linkedCode = usedFormNumber.replace(/\s+/g, '-');
+          const { data: created, error: formErr } = await (supabase as any)
+            .from('quality_analysis_forms')
+            .insert({
+              form_number: usedFormNumber,
+              verification_code: linkedCode,
+              supplier_id: sourceType === 'supplier' ? supplierId : null,
+              supplier_name: supplierName,
+              source_type: sourceType,
+              analysis_date: analysisDate,
+              params: { ...params, supplier_name: supplierName, analysis_date: analysisDate },
+              analysed_by: params.analysed_by || null,
+              comments: notes.trim() || null,
+              status: 'attached',
+              created_by: uid,
+              created_by_email: authData?.user?.email ?? null,
+            })
+            .select('id')
+            .single();
+          if (formErr) throw formErr;
+          linkedFormId = created?.id ?? null;
+        }
+      }
+
+      if (sourceType === 'dispatch') {
+        const { error: dispErr } = await (supabase as any).from('quality_dispatch_analyses').insert({
+          truck_serial_number: truck.trim(),
+          dispatch_date: analysisDate,
+          destination_buyer: supplierName,
+          analysis_number: usedFormNumber || null,
+          coffee_type: coffeeType || null,
+          sample_weight_g: num('grams_used'),
+          moisture_content: num('moisture'),
+          below_screen_12: num('below_12'),
+          group1_defects: num('group_1'),
+          group2_defects: num('group_2'),
+          pods_husks: (num('pods') ?? 0) + (num('husks') ?? 0) || null,
+          foreign_matter: num('non_coffee'),
+          outturn: num('outturn'),
+          bags_loaded: bags ? Number(bags) : null,
+          total_weight_kg: totalWeight ? Number(totalWeight) : null,
+          analysed_by: params.analysed_by || null,
+          remarks: notes.trim() || null,
+          created_by: uid,
+          created_by_name: authData?.user?.email ?? null,
+        });
+        if (dispErr) throw dispErr;
+      }
+
       const { error: insErr } = await (supabase as any).from('quality_analysis_files').insert({
         supplier_id: sourceType === 'supplier' ? supplierId : null,
         supplier_name: supplierName,
