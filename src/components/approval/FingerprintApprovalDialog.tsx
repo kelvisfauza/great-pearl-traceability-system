@@ -80,9 +80,23 @@ const FingerprintApprovalDialog: React.FC<Props> = ({ target, onClose, onUseSmsC
     }
   };
 
+  // Computer approvals: confirm immediately, no fingerprint step.
+  useEffect(() => {
+    if (!target || !isDesktop || confirmed) return;
+    (async () => {
+      setConfirmed(true);
+      try {
+        await targetRef.current?.onConfirmed();
+      } finally {
+        onClose();
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!target, isDesktop]);
+
   // Listen for the phone's confirmation for this approval session.
   useEffect(() => {
-    if (!target) return;
+    if (!target || isDesktop) return;
     const channel = supabase
       .channel(approvalChannelName(sessionId), { config: { broadcast: { self: false } } })
       .on('broadcast', { event: 'hello' }, ({ payload }: any) => {
