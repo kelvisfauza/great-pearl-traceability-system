@@ -10119,6 +10119,63 @@ export type Database = {
           },
         ]
       }
+      quality_sampling_orders: {
+        Row: {
+          assessed_at: string | null
+          assessed_by: string | null
+          created_at: string
+          created_by_email: string
+          created_by_name: string | null
+          delivery_time: string
+          id: string
+          notes: string | null
+          order_number: string
+          printed_at: string | null
+          sample_type: string
+          sampled_by: string
+          status: string
+          supplier_name: string
+          updated_at: string
+          verification_code: string | null
+        }
+        Insert: {
+          assessed_at?: string | null
+          assessed_by?: string | null
+          created_at?: string
+          created_by_email: string
+          created_by_name?: string | null
+          delivery_time: string
+          id?: string
+          notes?: string | null
+          order_number: string
+          printed_at?: string | null
+          sample_type: string
+          sampled_by: string
+          status?: string
+          supplier_name: string
+          updated_at?: string
+          verification_code?: string | null
+        }
+        Update: {
+          assessed_at?: string | null
+          assessed_by?: string | null
+          created_at?: string
+          created_by_email?: string
+          created_by_name?: string | null
+          delivery_time?: string
+          id?: string
+          notes?: string | null
+          order_number?: string
+          printed_at?: string | null
+          sample_type?: string
+          sampled_by?: string
+          status?: string
+          supplier_name?: string
+          updated_at?: string
+          verification_code?: string | null
+        }
+        Relationships: []
+      }
       quick_analyses: {
         Row: {
           actual_ott: number | null
