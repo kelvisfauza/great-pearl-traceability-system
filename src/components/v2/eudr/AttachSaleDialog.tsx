@@ -175,11 +175,20 @@ const AttachSaleDialog = ({ open, onOpenChange, onAttached, batch }: AttachSaleD
             ) : (
               <Select value={saleId} onValueChange={setSaleId}>
                 <SelectTrigger><SelectValue placeholder="Choose a sale..." /></SelectTrigger>
-                <SelectContent>
-                  {(!sales || sales.length === 0) && (
-                    <div className="px-3 py-2 text-sm text-muted-foreground">No sales found</div>
+                <SelectContent className="max-h-72">
+                  <div className="p-2 sticky top-0 bg-popover z-10">
+                    <Input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search customer, type or date..."
+                      className="h-8"
+                      onKeyDown={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                  {(!filteredSales || filteredSales.length === 0) && (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">No sales with room left to trace</div>
                   )}
-                  {sales?.map((s: any) => (
+                  {filteredSales?.map((s: any) => (
                     <SelectItem key={s.id} value={s.id}>
                       {s.date} — {s.customer} — {s.coffee_type} ({Number(s.remaining).toLocaleString()}kg left of {Number(s.weight).toLocaleString()}kg)
                     </SelectItem>
