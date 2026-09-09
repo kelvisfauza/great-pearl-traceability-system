@@ -66,7 +66,7 @@ const PendingPaymentsTab = () => {
     const email = auth?.user?.email?.toLowerCase() || null;
     const nowIso = new Date().toISOString();
     try {
-      await (supabase as any).from("grn_print_log").upsert(
+      const { error } = await (supabase as any).from("grn_print_log").upsert(
         items.map((l) => ({
           lot_id: l.id,
           batch_number: l.batch_number,
@@ -75,7 +75,11 @@ const PendingPaymentsTab = () => {
         })),
         { onConflict: "lot_id" }
       );
-    } catch { /* printing already happened — never block on logging */ }
+      if (error) {
+        console.error("Failed to record GRN print", error);
+        toast.error("Printed, but could not mark these GRNs as printed");
+      }
+    } catch (e) { console.error(e); }
     queryClient.invalidateQueries({ queryKey: ["finance-grn-print-log"] });
   };
 
