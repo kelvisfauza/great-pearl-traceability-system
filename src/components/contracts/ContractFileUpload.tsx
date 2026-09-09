@@ -61,7 +61,7 @@ export const ContractFileUpload = ({
           file_name: file.name,
           // Store the storage path (bucket is private — signed URLs are issued on view)
           file_url: path,
-          status: 'uploaded',
+          status: 'Draft',
           uploaded_at: new Date().toISOString(),
           buyer_contract_id: contractType === 'buyer' ? contractId : null,
           contract_type: contractType,
