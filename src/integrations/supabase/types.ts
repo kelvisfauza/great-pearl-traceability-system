@@ -8328,6 +8328,39 @@ export type Database = {
           },
         ]
       }
+      payment_receipt_prints: {
+        Row: {
+          batch_number: string | null
+          created_at: string
+          last_printed_at: string
+          payment_id: string
+          print_count: number
+          printed_by_email: string | null
+          receipt_no: string | null
+          updated_at: string
+        }
+        Insert: {
+          batch_number?: string | null
+          created_at?: string
+          last_printed_at?: string
+          payment_id: string
+          print_count?: number
+          printed_by_email?: string | null
+          receipt_no?: string | null
+          updated_at?: string
+        }
+        Update: {
+          batch_number?: string | null
+          created_at?: string
+          last_printed_at?: string
+          payment_id?: string
+          print_count?: number
+          printed_by_email?: string | null
+          receipt_no?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payment_receipts: {
         Row: {
           created_at: string | null
