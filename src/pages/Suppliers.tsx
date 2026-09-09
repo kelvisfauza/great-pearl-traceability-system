@@ -795,12 +795,25 @@ const Suppliers = () => {
                           </TableCell>
                           <TableCell>{supplier.date_registered}</TableCell>
                           <TableCell>
-                            <Button
-                              size="sm"
-                              onClick={() => setSelectedSupplier(supplier)}
-                            >
-                              View Details
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => setSelectedSupplier(supplier)}
+                              >
+                                View Details
+                              </Button>
+                              {isAdmin() && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => openDelete(supplier)}
+                                  title="Delete supplier"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
