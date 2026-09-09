@@ -4,10 +4,12 @@ import PriceTicker from "@/components/PriceTicker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   FlaskConical, RefreshCw, Settings2, BookOpen, BarChart3, LayoutGrid, FileSignature,
-  Warehouse, FileText, Lightbulb, GraduationCap, CheckSquare, Trophy, History, ShieldCheck, Paperclip, Truck
+  FlaskConical, RefreshCw, Settings2, BookOpen, BarChart3, LayoutGrid, FileSignature,
+  Warehouse, FileText, Lightbulb, GraduationCap, CheckSquare, Trophy, History, ShieldCheck, Paperclip, Truck, ClipboardList
 } from "lucide-react";
 import { useQualityRole } from "@/hooks/useQualityRole";
 import QualityApprovalsTab from "@/components/v2/quality/tabs/QualityApprovalsTab";
+import SamplingOrdersTab from "@/components/v2/quality/tabs/SamplingOrdersTab";
 import BatchAssessmentsTab from "@/components/v2/quality/tabs/BatchAssessmentsTab";
 import ReEvaluationTab from "@/components/v2/quality/tabs/ReEvaluationTab";
 import AssessmentHistoryTab from "@/components/v2/quality/tabs/AssessmentHistoryTab";
@@ -29,6 +31,7 @@ import AdminRejectedLotsReview from "@/components/admin/AdminRejectedLotsReview"
 const allTabs = [
   { id: "overview", label: "Overview", icon: LayoutGrid },
   { id: "assessments", label: "Assessments", icon: FlaskConical },
+  { id: "sampling", label: "Sampling Orders", icon: ClipboardList },
   { id: "approvals", label: "Approvals", icon: ShieldCheck, headOnly: true },
   { id: "discretion", label: "Rejected Lots", icon: FileText, headOnly: true },
   { id: "reevaluation", label: "Re-evaluation", icon: RefreshCw },
@@ -87,6 +90,7 @@ const QualityDepartment = () => {
 
               <TabsContent value="overview"><QualityOverviewTab onNavigate={setActiveTab} /></TabsContent>
               <TabsContent value="assessments"><BatchAssessmentsTab /></TabsContent>
+              <TabsContent value="sampling"><SamplingOrdersTab /></TabsContent>
               {isQualityHead && <TabsContent value="approvals"><QualityApprovalsTab /></TabsContent>}
               {isQualityHead && <TabsContent value="discretion"><AdminRejectedLotsReview /></TabsContent>}
               <TabsContent value="reevaluation"><ReEvaluationTab /></TabsContent>
