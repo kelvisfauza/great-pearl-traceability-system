@@ -4,7 +4,6 @@ import PriceTicker from "@/components/PriceTicker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   FlaskConical, RefreshCw, Settings2, BookOpen, BarChart3, LayoutGrid, FileSignature,
-  FlaskConical, RefreshCw, Settings2, BookOpen, BarChart3, LayoutGrid, FileSignature,
   Warehouse, FileText, Lightbulb, GraduationCap, CheckSquare, Trophy, History, ShieldCheck, Paperclip, Truck, ClipboardList
 } from "lucide-react";
 import { useQualityRole } from "@/hooks/useQualityRole";
