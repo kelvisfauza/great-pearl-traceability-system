@@ -13,6 +13,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ClipboardList, Printer, Loader2, CheckCircle2, Beaker } from "lucide-react";
 import { format } from "date-fns";
 import { buildPublicUrl } from "@/utils/publicUrl";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import jsPDF from "jspdf";
+import QRCode from "qrcode";
 
 const SAMPLING_EMAILS = [
   "onesmusrubambura@greatpearlcoffee.com",
@@ -34,6 +37,60 @@ const nowLocalInput = () => {
   return d.toISOString().slice(0, 16);
 };
 
+
+const buildOrderPdfBase64 = async (order: any): Promise<string | undefined> => {
+  try {
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const qrData = buildPublicUrl(`/verify/${encodeURIComponent(order.order_number)}`);
+    const qrPng = await QRCode.toDataURL(qrData, { width: 300, margin: 1 });
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.text("GREAT AGRO COFFEE", 297, 50, { align: "center" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text("Member of HELLO YEDA COFFEE COMPANY LIMITED · P.O Box 431420, Kasese, Uganda", 297, 65, { align: "center" });
+    doc.setLineWidth(1);
+    doc.line(48, 76, 547, 76);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("QUALITY SAMPLING ORDER", 297, 100, { align: "center" });
+
+    const rows: [string, string][] = [
+      ["Sampling Order No.", String(order.order_number || "")],
+      ["Supplier", String(order.supplier_name || "")],
+      ["Sample Type", typeLabel(order.sample_type)],
+      ["Delivery Time to Lab", order.delivery_time ? format(new Date(order.delivery_time), "dd MMM yyyy, HH:mm") : ""],
+      ["Sampled By", String(order.sampled_by || "")],
+      ["Created By", String(order.created_by_name || order.created_by_email || "")],
+    ];
+    if (order.notes) rows.push(["Notes", String(order.notes)]);
+
+    let y = 125;
+    doc.setFontSize(10);
+    rows.forEach(([k, v]) => {
+      doc.setDrawColor(150);
+      doc.rect(48, y, 170, 24);
+      doc.rect(218, y, 329, 24);
+      doc.setFont("helvetica", "bold");
+      doc.text(k, 54, y + 16);
+      doc.setFont("helvetica", "normal");
+      doc.text(doc.splitTextToSize(v, 315), 224, y + 16);
+      y += 24;
+    });
+
+    doc.addImage(qrPng, "PNG", 247, y + 24, 100, 100);
+    doc.setFont("courier", "bold");
+    doc.setFontSize(11);
+    doc.text(String(order.order_number || ""), 297, y + 140, { align: "center" });
+
+    const out = doc.output("datauristring");
+    return out.split(",")[1];
+  } catch {
+    return undefined;
+  }
+};
 
 const printSamplingOrder = (order: any) => {
   const qrData = buildPublicUrl(`/verify/${encodeURIComponent(order.order_number)}`);
@@ -132,6 +189,20 @@ const SamplingOrdersTab = () => {
       setForm({ supplier_name: "", sample_type: "", delivery_time: nowLocalInput(), sampled_by: (employee as any)?.name || "", notes: "" });
       queryClient.invalidateQueries({ queryKey: ["quality-sampling-orders"] });
       printSamplingOrder(order);
+      (async () => {
+        const pdf_base64 = await buildOrderPdfBase64(order);
+        const { error } = await supabase.functions.invoke("notify-sampling-order", {
+          body: {
+            order: { ...order, sample_type_label: typeLabel(order.sample_type) },
+            pdf_base64,
+          },
+        });
+        if (error) {
+          toast({ title: "Lab team not notified", description: error.message, variant: "destructive" });
+        } else {
+          toast({ title: "Lab team notified", description: "Alex, Kibaba, Morjalia and Nuwagaba received the sampling order by email." });
+        }
+      })();
     },
     onError: (e: any) => toast({ title: "Could not save", description: e.message, variant: "destructive" }),
   });
