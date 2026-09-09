@@ -32,25 +32,32 @@ const AttachSaleDialog = ({ open, onOpenChange, onAttached, batch }: AttachSaleD
   const { data: sales, isLoading, error: salesError } = useQuery({
     queryKey: ["completed-sales-for-eudr"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("sales_transactions")
-        .select("id, customer, coffee_type, weight, date, status")
-        .order("date", { ascending: false })
-        .limit(100);
-      if (error) throw error;
+      // Load every sale (paged) so older sales with room are never hidden
+      const PAGE = 1000;
+      const data: any[] = [];
+      for (let from = 0; ; from += PAGE) {
+        const { data: page, error } = await supabase
+          .from("sales_transactions")
+          .select("id, customer, coffee_type, weight, date, status")
+          .order("date", { ascending: false })
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        data.push(...(page || []));
+        if (!page || page.length < PAGE) break;
+      }
 
-      const ids = (data || []).map((s: any) => s.id);
-      let allocatedBySale: Record<string, number> = {};
-      if (ids.length) {
+      const allocatedBySale: Record<string, number> = {};
+      for (let from = 0; ; from += PAGE) {
         const { data: allocs, error: allocErr } = await supabase
           .from("eudr_batch_sales")
           .select("sale_transaction_id, kilograms_allocated")
-          .in("sale_transaction_id", ids);
+          .range(from, from + PAGE - 1);
         if (allocErr) throw allocErr;
-        allocatedBySale = (allocs || []).reduce((acc: Record<string, number>, a: any) => {
-          acc[a.sale_transaction_id] = (acc[a.sale_transaction_id] || 0) + (Number(a.kilograms_allocated) || 0);
-          return acc;
-        }, {});
+        (allocs || []).forEach((a: any) => {
+          allocatedBySale[a.sale_transaction_id] =
+            (allocatedBySale[a.sale_transaction_id] || 0) + (Number(a.kilograms_allocated) || 0);
+        });
+        if (!allocs || allocs.length < PAGE) break;
       }
 
       return (data || [])
