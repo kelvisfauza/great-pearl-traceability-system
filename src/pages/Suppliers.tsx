@@ -73,6 +73,53 @@ const Suppliers = () => {
   const [coffeeTypeFilter, setCoffeeTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
+  // Delete supplier (admins only)
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [checkingDelete, setCheckingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [blockers, setBlockers] = useState<string[]>([]);
+
+  const openDelete = async (supplier: any) => {
+    setDeleteTarget(supplier);
+    setBlockers([]);
+    setCheckingDelete(true);
+    try {
+      const [deliveries, advances, lots] = await Promise.all([
+        supabase.from('coffee_records').select('id', { count: 'exact', head: true }).eq('supplier_id', supplier.id),
+        supabase.from('supplier_advances').select('id', { count: 'exact', head: true }).eq('supplier_id', supplier.id),
+        supabase.from('finance_coffee_lots').select('id', { count: 'exact', head: true })
+          .eq('supplier_id', supplier.id).not('finance_status', 'in', '(PAID,POSTED)'),
+      ]);
+      const found: string[] = [];
+      if ((deliveries.count || 0) > 0) found.push(`${deliveries.count} delivery record(s) on file`);
+      if ((advances.count || 0) > 0) found.push(`${advances.count} advance record(s) on file`);
+      if ((lots.count || 0) > 0) found.push(`${lots.count} payment(s) still pending`);
+      setBlockers(found);
+    } catch {
+      setBlockers(['Could not verify supplier history — deletion blocked for safety']);
+    } finally {
+      setCheckingDelete(false);
+    }
+  };
+
+  const handleDeleteSupplier = async () => {
+    if (!deleteTarget || blockers.length > 0) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase.from('suppliers').delete().eq('id', deleteTarget.id);
+      if (error) throw error;
+      toast({ title: 'Supplier deleted', description: `${deleteTarget.name} has been removed` });
+      if (selectedSupplier?.id === deleteTarget.id) setSelectedSupplier(null);
+      setDeleteTarget(null);
+      await refetchSuppliers();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to delete supplier', variant: 'destructive' });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+
   const handleEditSupplier = async (supplierId: string, updates: { name: string; phone: string; origin: string; bank_name?: string; account_name?: string; account_number?: string; email?: string; alternative_phone?: string }) => {
     if (!isAdmin()) {
       toast({ title: 'Not allowed', description: 'Only admins can edit supplier information.', variant: 'destructive' });
