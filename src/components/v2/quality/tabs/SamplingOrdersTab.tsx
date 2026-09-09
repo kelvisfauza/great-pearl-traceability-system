@@ -37,7 +37,7 @@ const nowLocalInput = () => {
 
 const printSamplingOrder = (order: any) => {
   const qrData = buildPublicUrl(`/verify/${encodeURIComponent(order.order_number)}`);
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(qrData)}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrData)}`;
   const w = window.open("", "_blank", "width=800,height=1000");
   if (!w) return;
   w.document.write(`<!doctype html><html><head><title>${order.order_number}</title>
@@ -51,8 +51,8 @@ const printSamplingOrder = (order: any) => {
     td{border:1px solid #999;padding:9px 10px}
     td.k{background:#f3f3f3;font-weight:bold;width:35%}
     .qrwrap{text-align:center;margin-top:22px}
-    .qrwrap img{width:330px;height:330px}
-    .code{font-family:monospace;font-size:18px;font-weight:bold;letter-spacing:2px;margin-top:8px}
+    .qrwrap img{width:150px;height:150px}
+    .code{font-family:monospace;font-size:15px;font-weight:bold;letter-spacing:2px;margin-top:8px}
     .sign{margin-top:34px;display:flex;justify-content:space-between;font-size:12px}
     .sign div{width:45%;border-top:1px solid #111;padding-top:6px;text-align:center}
   </style></head><body>
