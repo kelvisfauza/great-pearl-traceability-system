@@ -21,8 +21,12 @@ import {
   MapPin,
   Edit,
   Download,
-  Printer
+  Printer,
+  Trash2,
+  AlertTriangle,
+  Loader2
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useState, useEffect, useMemo } from "react";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { supabase } from "@/integrations/supabase/client";
