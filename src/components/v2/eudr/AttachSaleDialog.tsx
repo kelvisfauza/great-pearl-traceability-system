@@ -154,6 +154,14 @@ const AttachSaleDialog = ({ open, onOpenChange, onAttached, batch }: AttachSaleD
   };
 
   const selectedSale = sales?.find((s: any) => s.id === saleId);
+  const q = search.trim().toLowerCase();
+  const filteredSales = !q
+    ? sales
+    : sales?.filter((s: any) =>
+        [s.customer, s.coffee_type, s.date, s.status]
+          .filter(Boolean)
+          .some((v: any) => String(v).toLowerCase().includes(q))
+      );
   const maxAllocatable = selectedSale
     ? Math.min(availableKg, Number((selectedSale as any).remaining) || 0)
     : availableKg;
