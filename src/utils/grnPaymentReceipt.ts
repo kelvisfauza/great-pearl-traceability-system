@@ -27,12 +27,7 @@ export interface GrnReceiptData {
 
 const money = (n: number) => `UGX ${Number(n || 0).toLocaleString()}`;
 
-export function printGrnPaymentReceipt(d: GrnReceiptData) {
-  const lotValue = Number(d.lotValue ?? d.amount ?? 0);
-  const previouslyPaid = Number(d.previouslyPaid ?? 0);
-  const balance = Number(d.balance ?? Math.max(lotValue - previouslyPaid - Number(d.amount || 0), 0));
-  const signer = resolveSignatureBlock(d.approvedByEmail, d.approvedBy || d.paidBy);
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Payment Receipt ${d.receiptNo}</title>
+const receiptStyles = `
   <style>
     *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;padding:18mm 14mm;font-size:12px}
