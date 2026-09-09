@@ -49,11 +49,22 @@ const PendingPaymentsTab = () => {
   const { data: printedRows } = useQuery({
     queryKey: ["finance-grn-print-log"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("grn_print_log")
-        .select("lot_id");
-      if (error) throw error;
-      return (data || []) as { lot_id: string }[];
+      // PostgREST caps a plain select at 1000 rows — page through everything
+      const all: { lot_id: string }[] = [];
+      let from = 0;
+      const pageSize = 1000;
+      while (true) {
+        const { data, error } = await (supabase as any)
+          .from("grn_print_log")
+          .select("lot_id")
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const page = (data || []) as { lot_id: string }[];
+        all.push(...page);
+        if (page.length < pageSize) break;
+        from += pageSize;
+      }
+      return all;
     },
   });
   const printedIds = useMemo(
