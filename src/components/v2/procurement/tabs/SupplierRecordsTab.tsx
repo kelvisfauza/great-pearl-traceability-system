@@ -219,6 +219,47 @@ const SupplierRecordsTab = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Supplier Dialog */}
+      <Dialog open={!!deleteSupplier} onOpenChange={() => { if (!deleting) setDeleteSupplier(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-destructive" />Delete Supplier — {deleteSupplier?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {checking ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />Checking supplier history...
+              </div>
+            ) : blockers.length > 0 ? (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2">
+                <p className="flex items-center gap-2 text-sm font-medium text-destructive">
+                  <AlertTriangle className="h-4 w-4" />This supplier cannot be deleted
+                </p>
+                <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                  {blockers.map((b, i) => <li key={i}>{b}</li>)}
+                </ul>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No deliveries, advances or pending payments found. This supplier can be permanently removed. This cannot be undone.
+              </p>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setDeleteSupplier(null)} disabled={deleting}>Cancel</Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={checking || deleting || blockers.length > 0}
+              >
+                {deleting ? 'Deleting...' : 'Delete Supplier'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
