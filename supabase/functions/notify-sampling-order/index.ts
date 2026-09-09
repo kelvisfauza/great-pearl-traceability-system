@@ -101,7 +101,54 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Explicit operations CC — clearly labelled so it cannot be missed.
+    const primaryRecipients = LAB_RECIPIENTS.map((p) => `${p.name} <${p.email}>`).join(", ");
+    const opsMessage = [
+      "This is an Operations copy of a new Sampling Order notification.",
+      "",
+      `Primary recipients: ${primaryRecipients}`,
+      "",
+      "A new sampling order has been created and the sample is on its way to the laboratory for assessment.",
+      "",
+      "Detail | Value",
+      `Sampling Order No. | ${order.order_number}`,
+      `Supplier | ${order.supplier_name || "—"}`,
+      `Sample Type | ${order.sample_type_label || order.sample_type || "—"}`,
+      `Delivery Time to Lab | ${deliveryTime}`,
+      `Sampled By | ${order.sampled_by || "—"}`,
+      `Created By | ${order.created_by_name || order.created_by_email || "—"}`,
+      order.notes ? `Notes | ${order.notes}` : "",
+      "",
+      pdfUrl
+        ? "The full sampling order (with its QR code) is attached as a PDF using the button below."
+        : "Please open the Quality module to view the full sampling order.",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    try {
+      const { data, error } = await supabase.functions.invoke("send-transactional-email", {
+        body: {
+          templateName: "general-notification",
+          recipientEmail: OPERATIONS_EMAIL,
+          idempotencyKey: `sampling-order-${order.order_number}-operations-cc`,
+          templateData: {
+            subject: `[Operations CC] Incoming Sampling Order ${order.order_number} for Assessment`,
+            title: "Incoming Sampling Order — Operations Copy",
+            recipientName: "Operations Team",
+            message: opsMessage,
+            ctaUrl: pdfUrl || undefined,
+            ctaLabel: pdfUrl ? "Download Sampling Order (PDF)" : undefined,
+          },
+        },
+      });
+      results.push({ email: OPERATIONS_EMAIL, ok: !error, error: error?.message || (data as any)?.error, cc: true });
+    } catch (e) {
+      results.push({ email: OPERATIONS_EMAIL, ok: false, error: String((e as any)?.message || e), cc: true });
+    }
+
     return json({ ok: true, pdf_url: pdfUrl, results });
+
   } catch (err) {
     return json({ ok: false, error: String((err as any)?.message || err) });
   }
