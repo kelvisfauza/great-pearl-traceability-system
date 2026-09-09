@@ -10129,7 +10129,7 @@ export type Database = {
           delivery_time: string
           id: string
           notes: string | null
-          order_number: string
+          order_number: string | null
           printed_at: string | null
           sample_type: string
           sampled_by: string
@@ -10147,7 +10147,7 @@ export type Database = {
           delivery_time: string
           id?: string
           notes?: string | null
-          order_number: string
+          order_number?: string | null
           printed_at?: string | null
           sample_type: string
           sampled_by: string
@@ -10165,7 +10165,7 @@ export type Database = {
           delivery_time?: string
           id?: string
           notes?: string | null
-          order_number?: string
+          order_number?: string | null
           printed_at?: string | null
           sample_type?: string
           sampled_by?: string
