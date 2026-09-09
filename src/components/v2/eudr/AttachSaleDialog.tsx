@@ -67,8 +67,8 @@ const AttachSaleDialog = ({ open, onOpenChange, onAttached, batch }: AttachSaleD
           const remaining = Math.max(0, (Number(s.weight) || 0) - allocated);
           return { ...s, allocated, remaining };
         })
-        // Fully allocated sales disappear from the list
-        .filter((s: any) => s.remaining > 0.0001);
+        // Fully attached sales disappear from the list
+        .filter((s: any) => s.remaining >= 1);
     },
     enabled: open,
   });
@@ -132,6 +132,7 @@ const AttachSaleDialog = ({ open, onOpenChange, onAttached, batch }: AttachSaleD
 
       toast({ title: "Sale Attached", description: `${kg}kg linked to sale` });
       queryClient.invalidateQueries({ queryKey: ["eudr-batch-trace"] });
+      queryClient.invalidateQueries({ queryKey: ["completed-sales-for-eudr"] });
       queryClient.invalidateQueries({ queryKey: ["eudr"] });
       queryClient.invalidateQueries({ queryKey: ["eudr-v2-stats"] });
       onAttached?.();
