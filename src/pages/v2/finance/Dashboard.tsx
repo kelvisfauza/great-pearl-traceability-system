@@ -14,11 +14,13 @@ import FinanceReportsTab from "@/components/v2/finance/tabs/FinanceReportsTab";
 import { PaymentHistory } from "@/components/finance/PaymentHistory";
 import GrnReferralsTab from "@/components/v2/finance/tabs/GrnReferralsTab";
 import { useIsGrnInputOnly } from "@/hooks/useGrnInputRole";
+import PaymentReceiptsTab from "@/components/v2/finance/tabs/PaymentReceiptsTab";
 
 const allTabs = [
   { id: "overview", label: "Overview", icon: Wallet },
   { id: "payments", label: "Pending Payments", icon: CreditCard },
   { id: "referrals", label: "Referrals", icon: UserCheck },
+  { id: "receipts", label: "Receipts", icon: Printer },
   { id: "history", label: "Payment History", icon: Receipt },
   { id: "reconciliation", label: "Reconciliation", icon: GitCompare },
   { id: "advances", label: "Advances", icon: ArrowDownUp },
