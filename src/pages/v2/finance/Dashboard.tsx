@@ -3,7 +3,7 @@ import V2Navigation from "@/components/v2/V2Navigation";
 import PriceTicker from "@/components/PriceTicker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Wallet, GitCompare, ArrowDownUp, Search, FileText, CreditCard, QrCode, Receipt, UserCheck } from "lucide-react";
+import { Wallet, GitCompare, ArrowDownUp, Search, FileText, CreditCard, QrCode, Receipt, UserCheck, Printer } from "lucide-react";
 import GRNScannerDialog from "@/components/finance/GRNScannerDialog";
 import FinanceOverviewTab from "@/components/v2/finance/tabs/FinanceOverviewTab";
 import PendingPaymentsTab from "@/components/v2/finance/tabs/PendingPaymentsTab";
@@ -14,11 +14,13 @@ import FinanceReportsTab from "@/components/v2/finance/tabs/FinanceReportsTab";
 import { PaymentHistory } from "@/components/finance/PaymentHistory";
 import GrnReferralsTab from "@/components/v2/finance/tabs/GrnReferralsTab";
 import { useIsGrnInputOnly } from "@/hooks/useGrnInputRole";
+import PaymentReceiptsTab from "@/components/v2/finance/tabs/PaymentReceiptsTab";
 
 const allTabs = [
   { id: "overview", label: "Overview", icon: Wallet },
   { id: "payments", label: "Pending Payments", icon: CreditCard },
   { id: "referrals", label: "Referrals", icon: UserCheck },
+  { id: "receipts", label: "Receipts", icon: Printer },
   { id: "history", label: "Payment History", icon: Receipt },
   { id: "reconciliation", label: "Reconciliation", icon: GitCompare },
   { id: "advances", label: "Advances", icon: ArrowDownUp },
@@ -27,7 +29,7 @@ const allTabs = [
 ];
 
 // Scan-only GRN input officers only get these
-const SCAN_ONLY_TABS = ["overview", "payments", "referrals"];
+const SCAN_ONLY_TABS = ["overview", "payments", "referrals", "receipts"];
 
 const FinanceDashboard = () => {
   const scanOnly = useIsGrnInputOnly();
@@ -65,6 +67,7 @@ const FinanceDashboard = () => {
               <TabsContent value="overview"><FinanceOverviewTab /></TabsContent>
               <TabsContent value="payments"><PendingPaymentsTab /></TabsContent>
               <TabsContent value="referrals"><GrnReferralsTab /></TabsContent>
+              <TabsContent value="receipts"><PaymentReceiptsTab /></TabsContent>
               {!scanOnly && (
                 <>
                   <TabsContent value="history"><PaymentHistory /></TabsContent>

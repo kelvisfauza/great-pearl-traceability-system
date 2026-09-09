@@ -27,15 +27,11 @@ export interface GrnReceiptData {
 
 const money = (n: number) => `UGX ${Number(n || 0).toLocaleString()}`;
 
-export function printGrnPaymentReceipt(d: GrnReceiptData) {
-  const lotValue = Number(d.lotValue ?? d.amount ?? 0);
-  const previouslyPaid = Number(d.previouslyPaid ?? 0);
-  const balance = Number(d.balance ?? Math.max(lotValue - previouslyPaid - Number(d.amount || 0), 0));
-  const signer = resolveSignatureBlock(d.approvedByEmail, d.approvedBy || d.paidBy);
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Payment Receipt ${d.receiptNo}</title>
-  <style>
+const RECEIPT_STYLES = `
     *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;padding:18mm 14mm;font-size:12px}
+    body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;font-size:12px}
+    .receipt{padding:18mm 14mm;page-break-after:always}
+    .receipt:last-child{page-break-after:auto}
     header{display:flex;align-items:center;gap:12px;border-bottom:2px solid #000;padding-bottom:10px}
     header img{height:56px}
     h1{margin:0;font-size:17px;color:#000}
@@ -57,7 +53,15 @@ export function printGrnPaymentReceipt(d: GrnReceiptData) {
     .signs p{margin:4px 0 0;font-size:10px;font-weight:bold}
     footer{margin-top:26px;display:flex;align-items:center;gap:14px;border-top:1px dashed #000;padding-top:10px;font-size:9.5px;color:#333}
     @page{size:A4;margin:0}
-  </style></head><body>
+`;
+
+function receiptSection(d: GrnReceiptData) {
+  const lotValue = Number(d.lotValue ?? d.amount ?? 0);
+  const previouslyPaid = Number(d.previouslyPaid ?? 0);
+  const balance = Number(d.balance ?? Math.max(lotValue - previouslyPaid - Number(d.amount || 0), 0));
+  const signer = resolveSignatureBlock(d.approvedByEmail, d.approvedBy || d.paidBy);
+
+  return `<section class="receipt">
     <header>
       <img src="${LOGO_URL}" alt="Great Agro Coffee"/>
       <div>
@@ -110,7 +114,12 @@ export function printGrnPaymentReceipt(d: GrnReceiptData) {
         System-generated receipt — Great Agro Coffee Traceability System.
       </div>
     </footer>
-  </body></html>`;
+  </section>`;
+}
+
+function printHtml(title: string, body: string) {
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${title}</title>
+  <style>${RECEIPT_STYLES}</style></head><body>${body}</body></html>`;
 
   // Print in-place using a hidden iframe (no new tab/window)
   const iframe = document.createElement('iframe');
@@ -138,7 +147,7 @@ export function printGrnPaymentReceipt(d: GrnReceiptData) {
         win.focus();
         win.print();
         cleanup();
-      }, 400);
+      }, 600);
     } catch {
       cleanup();
     }
@@ -149,4 +158,15 @@ export function printGrnPaymentReceipt(d: GrnReceiptData) {
   doc.open();
   doc.write(html);
   doc.close();
+}
+
+export function printGrnPaymentReceipt(d: GrnReceiptData) {
+  printHtml(`Payment Receipt ${d.receiptNo}`, receiptSection(d));
+}
+
+/** Print many payment receipts in one run — one receipt per page. */
+export function printGrnPaymentReceipts(list: GrnReceiptData[]) {
+  if (!list.length) return;
+  if (list.length === 1) return printGrnPaymentReceipt(list[0]);
+  printHtml(`Payment Receipts (${list.length})`, list.map(receiptSection).join(''));
 }
