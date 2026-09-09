@@ -167,6 +167,22 @@ const PREMIUM_SMS_TYPES = new Set([
   'admin_approval_code',
   // Procurement follow-up reminders to suppliers — BulkSMS.com route
   'procurement_reminder',
+  // Service provider / meal-plan notices and payouts — BulkSMS.com route
+  'service_provider_invite',
+  'service_provider_notice',
+  'service_provider_message',
+  'service_provider_payment',
+  'service_provider_request',
+  'provider_notice',
+  'provider_message',
+  'provider_payment',
+  'provider_request',
+  'provider_request_approved',
+  'provider_request_rejected',
+  'meal_plan',
+  'meal_plan_request',
+  'meal_disbursement',
+  'meal_payment',
 ]);
 
 
