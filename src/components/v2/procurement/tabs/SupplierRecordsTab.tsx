@@ -172,9 +172,16 @@ const SupplierRecordsTab = () => {
                   <TableCell className="text-xs">{s.bank_name || <span className="text-red-500">Missing</span>}</TableCell>
                   <TableCell className="text-xs font-mono">{s.account_number || <span className="text-red-500">Missing</span>}</TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="sm" onClick={() => handleEditBank(s)}>
-                      <Landmark className="h-3.5 w-3.5 mr-1" />Bank
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => handleEditBank(s)}>
+                        <Landmark className="h-3.5 w-3.5 mr-1" />Bank
+                      </Button>
+                      {canDelete && (
+                        <Button variant="ghost" size="sm" className="text-destructive" onClick={() => openDelete(s)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
