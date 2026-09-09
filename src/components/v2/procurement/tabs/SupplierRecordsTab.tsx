@@ -8,15 +8,61 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Users, Search, Phone, MapPin, Landmark, Edit } from "lucide-react";
+import { Loader2, Users, Search, Phone, MapPin, Landmark, Edit, Trash2, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 const SupplierRecordsTab = () => {
   const [search, setSearch] = useState("");
   const [editSupplier, setEditSupplier] = useState<any>(null);
   const [bankForm, setBankForm] = useState({ bank_name: '', account_name: '', account_number: '' });
+  const [deleteSupplier, setDeleteSupplier] = useState<any>(null);
+  const [checking, setChecking] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [blockers, setBlockers] = useState<string[]>([]);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { isAdmin } = useAuth();
+  const canDelete = isAdmin();
+
+  const openDelete = async (supplier: any) => {
+    setDeleteSupplier(supplier);
+    setBlockers([]);
+    setChecking(true);
+    try {
+      const [deliveries, advances, lots] = await Promise.all([
+        supabase.from('coffee_records').select('id', { count: 'exact', head: true }).eq('supplier_id', supplier.id),
+        supabase.from('supplier_advances').select('id', { count: 'exact', head: true }).eq('supplier_id', supplier.id),
+        supabase.from('finance_coffee_lots').select('id', { count: 'exact', head: true })
+          .eq('supplier_id', supplier.id).not('finance_status', 'in', '(PAID,POSTED)'),
+      ]);
+      const found: string[] = [];
+      if ((deliveries.count || 0) > 0) found.push(`${deliveries.count} delivery record(s) on file`);
+      if ((advances.count || 0) > 0) found.push(`${advances.count} advance record(s) on file`);
+      if ((lots.count || 0) > 0) found.push(`${lots.count} payment(s) still pending`);
+      setBlockers(found);
+    } catch (error: any) {
+      setBlockers(['Could not verify supplier history — deletion blocked for safety']);
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteSupplier || blockers.length > 0) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase.from('suppliers').delete().eq('id', deleteSupplier.id);
+      if (error) throw error;
+      toast({ title: "Supplier deleted", description: `${deleteSupplier.name} has been removed` });
+      setDeleteSupplier(null);
+      queryClient.invalidateQueries({ queryKey: ['procurement-suppliers'] });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to delete supplier", variant: "destructive" });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const { data: suppliers, isLoading } = useQuery({
     queryKey: ['procurement-suppliers'],
