@@ -215,6 +215,9 @@ export const useUnifiedApprovalRequests = () => {
           .from('instant_withdrawals' as any)
           .select('*')
           .eq('payout_status', 'pending_approval')
+          // Yo Payments withdrawals are sent and confirmed automatically —
+          // only GosentePay payouts need a manual release here.
+          .eq('payment_provider', 'gosente')
           .order('created_at', { ascending: false });
 
         if (!instantErr && instantWds && instantWds.length > 0) {
