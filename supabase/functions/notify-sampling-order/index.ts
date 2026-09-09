@@ -13,6 +13,9 @@ const LAB_RECIPIENTS = [
   { name: "Niwagaba Gadaffi", email: "nuwagabagadaffi@greatpearlcoffee.com" },
 ];
 
+const OPERATIONS_EMAIL = "operations@greatpearlcoffee.com";
+
+
 const json = (body: unknown) =>
   new Response(JSON.stringify(body), {
     status: 200,
