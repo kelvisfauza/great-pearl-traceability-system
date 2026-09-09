@@ -22,6 +22,7 @@ interface AttachSaleDialogProps {
 
 const AttachSaleDialog = ({ open, onOpenChange, onAttached, batch }: AttachSaleDialogProps) => {
   const [saleId, setSaleId] = useState("");
+  const [search, setSearch] = useState("");
   const [kg, setKg] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
