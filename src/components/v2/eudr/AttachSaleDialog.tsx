@@ -22,6 +22,7 @@ interface AttachSaleDialogProps {
 
 const AttachSaleDialog = ({ open, onOpenChange, onAttached, batch }: AttachSaleDialogProps) => {
   const [saleId, setSaleId] = useState("");
+  const [search, setSearch] = useState("");
   const [kg, setKg] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
@@ -32,25 +33,32 @@ const AttachSaleDialog = ({ open, onOpenChange, onAttached, batch }: AttachSaleD
   const { data: sales, isLoading, error: salesError } = useQuery({
     queryKey: ["completed-sales-for-eudr"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("sales_transactions")
-        .select("id, customer, coffee_type, weight, date, status")
-        .order("date", { ascending: false })
-        .limit(100);
-      if (error) throw error;
+      // Load every sale (paged) so older sales with room are never hidden
+      const PAGE = 1000;
+      const data: any[] = [];
+      for (let from = 0; ; from += PAGE) {
+        const { data: page, error } = await supabase
+          .from("sales_transactions")
+          .select("id, customer, coffee_type, weight, date, status")
+          .order("date", { ascending: false })
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        data.push(...(page || []));
+        if (!page || page.length < PAGE) break;
+      }
 
-      const ids = (data || []).map((s: any) => s.id);
-      let allocatedBySale: Record<string, number> = {};
-      if (ids.length) {
+      const allocatedBySale: Record<string, number> = {};
+      for (let from = 0; ; from += PAGE) {
         const { data: allocs, error: allocErr } = await supabase
           .from("eudr_batch_sales")
           .select("sale_transaction_id, kilograms_allocated")
-          .in("sale_transaction_id", ids);
+          .range(from, from + PAGE - 1);
         if (allocErr) throw allocErr;
-        allocatedBySale = (allocs || []).reduce((acc: Record<string, number>, a: any) => {
-          acc[a.sale_transaction_id] = (acc[a.sale_transaction_id] || 0) + (Number(a.kilograms_allocated) || 0);
-          return acc;
-        }, {});
+        (allocs || []).forEach((a: any) => {
+          allocatedBySale[a.sale_transaction_id] =
+            (allocatedBySale[a.sale_transaction_id] || 0) + (Number(a.kilograms_allocated) || 0);
+        });
+        if (!allocs || allocs.length < PAGE) break;
       }
 
       return (data || [])
@@ -146,6 +154,14 @@ const AttachSaleDialog = ({ open, onOpenChange, onAttached, batch }: AttachSaleD
   };
 
   const selectedSale = sales?.find((s: any) => s.id === saleId);
+  const q = search.trim().toLowerCase();
+  const filteredSales = !q
+    ? sales
+    : sales?.filter((s: any) =>
+        [s.customer, s.coffee_type, s.date, s.status]
+          .filter(Boolean)
+          .some((v: any) => String(v).toLowerCase().includes(q))
+      );
   const maxAllocatable = selectedSale
     ? Math.min(availableKg, Number((selectedSale as any).remaining) || 0)
     : availableKg;
@@ -168,11 +184,20 @@ const AttachSaleDialog = ({ open, onOpenChange, onAttached, batch }: AttachSaleD
             ) : (
               <Select value={saleId} onValueChange={setSaleId}>
                 <SelectTrigger><SelectValue placeholder="Choose a sale..." /></SelectTrigger>
-                <SelectContent>
-                  {(!sales || sales.length === 0) && (
-                    <div className="px-3 py-2 text-sm text-muted-foreground">No sales found</div>
+                <SelectContent className="max-h-72">
+                  <div className="p-2 sticky top-0 bg-popover z-10">
+                    <Input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search customer, type or date..."
+                      className="h-8"
+                      onKeyDown={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                  {(!filteredSales || filteredSales.length === 0) && (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">No sales with room left to trace</div>
                   )}
-                  {sales?.map((s: any) => (
+                  {filteredSales?.map((s: any) => (
                     <SelectItem key={s.id} value={s.id}>
                       {s.date} — {s.customer} — {s.coffee_type} ({Number(s.remaining).toLocaleString()}kg left of {Number(s.weight).toLocaleString()}kg)
                     </SelectItem>
