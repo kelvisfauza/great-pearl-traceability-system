@@ -34,12 +34,6 @@ const nowLocalInput = () => {
   return d.toISOString().slice(0, 16);
 };
 
-const buildOrderNumber = () => {
-  const d = new Date();
-  const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
-  const rand = Math.floor(1000 + Math.random() * 9000);
-  return `SO-${stamp}-${rand}`;
-};
 
 const printSamplingOrder = (order: any) => {
   const qrData = buildPublicUrl(`/verify/${encodeURIComponent(order.order_number)}`);
@@ -115,7 +109,7 @@ const SamplingOrdersTab = () => {
         throw new Error("Supplier, sample type and sampled by are required");
       }
       const payload = {
-        order_number: buildOrderNumber(),
+        
         supplier_name: form.supplier_name.trim(),
         sample_type: form.sample_type,
         delivery_time: new Date(form.delivery_time).toISOString(),

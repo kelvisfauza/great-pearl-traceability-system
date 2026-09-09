@@ -20,7 +20,7 @@ interface Props {
   /** Map the generic section keys to the host page's tab ids (V1 uses different ids) */
   tabIds?: Partial<Record<
     | "assessments" | "approvals" | "reevaluation" | "files" | "analysisForm" | "warehouse" | "checklist" | "history" | "analytics" | "performance" | "dispatch"
-    | "modifications" | "priceCalculator" | "quickAnalyses" | "training" | "recommendations" | "defects" | "reports" | "adminPricing" | "discretion",
+    | "samplingOrders" | "modifications" | "priceCalculator" | "quickAnalyses" | "training" | "recommendations" | "defects" | "reports" | "adminPricing" | "discretion",
     string
   >>;
 }
@@ -76,6 +76,7 @@ const QualityOverviewTab = ({ onNavigate, tabIds }: Props) => {
     reports: "reports",
     adminPricing: "admin-pricing",
     discretion: "discretion",
+    samplingOrders: "sampling-orders",
     ...(tabIds || {}),
   };
 
@@ -303,6 +304,14 @@ const QualityOverviewTab = ({ onNavigate, tabIds }: Props) => {
       hint: "Rapid assessment lookup",
       icon: Zap,
       chart: 13,
+    },
+    {
+      id: T.samplingOrders,
+      title: "Sampling Orders",
+      value: "—",
+      hint: "Create & track lab samples",
+      icon: Zap,
+      chart: 11,
     },
     {
       id: T.warehouse,

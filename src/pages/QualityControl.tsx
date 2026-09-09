@@ -50,6 +50,7 @@ import ArabicaPriceCalculator from "@/components/milling/ArabicaPriceCalculator"
 import QualityPriceCalculator from "@/components/quality/QualityPriceCalculator";
 import QuickAnalysesList from "@/components/quality/QuickAnalysesList";
 import QualityAnalysisFilesTab from "@/components/v2/quality/tabs/QualityAnalysisFilesTab";
+import SamplingOrdersTab from "@/components/v2/quality/tabs/SamplingOrdersTab";
 import QualityOverviewTab from "@/components/v2/quality/tabs/QualityOverviewTab";
 import ReEvaluationTab from "@/components/v2/quality/tabs/ReEvaluationTab";
 import CalibrationTab from "@/components/v2/quality/tabs/CalibrationTab";
@@ -1222,6 +1223,7 @@ const QualityControl = () => {
                 reports: "reports",
                 adminPricing: "admin-pricing",
                 discretion: "discretion",
+                samplingOrders: "sampling-orders",
               }}
             />
           </TabsContent>
@@ -1681,6 +1683,10 @@ const QualityControl = () => {
 
           <TabsContent value="quick-analyses">
             <QuickAnalysesList />
+          </TabsContent>
+
+          <TabsContent value="sampling-orders">
+            <SamplingOrdersTab />
           </TabsContent>
 
           <TabsContent value="analysis-files">
