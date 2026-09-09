@@ -14,6 +14,7 @@ import { ClipboardList, Printer, Loader2, CheckCircle2, Beaker } from "lucide-re
 import { format } from "date-fns";
 import { buildPublicUrl } from "@/utils/publicUrl";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useActivityTracker } from "@/hooks/useActivityTracker";
 import jsPDF from "jspdf";
 import QRCode from "qrcode";
 
@@ -139,6 +140,7 @@ const SamplingOrdersTab = () => {
   const email = (employee?.email || "").toLowerCase();
   const canCreate = SAMPLING_EMAILS.includes(email) || isAdmin?.();
 
+  const { trackFormSubmission } = useActivityTracker();
   const [reviewOrder, setReviewOrder] = useState<any | null>(null);
 
   const [form, setForm] = useState({
@@ -191,6 +193,11 @@ const SamplingOrdersTab = () => {
       setForm({ supplier_name: "", sample_type: "", delivery_time: nowLocalInput(), sampled_by: (employee as any)?.name || "", notes: "" });
       queryClient.invalidateQueries({ queryKey: ["quality-sampling-orders"] });
       printSamplingOrder(order);
+      try {
+        trackFormSubmission("Quality Sampling Order");
+      } catch (e) {
+        console.warn("Loyalty reward for sampling order failed (non-fatal):", e);
+      }
       (async () => {
         const pdf_base64 = await buildOrderPdfBase64(order);
         const { error } = await supabase.functions.invoke("notify-sampling-order", {
