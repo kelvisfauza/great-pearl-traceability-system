@@ -139,6 +139,8 @@ const SamplingOrdersTab = () => {
   const email = (employee?.email || "").toLowerCase();
   const canCreate = SAMPLING_EMAILS.includes(email) || isAdmin?.();
 
+  const [reviewOrder, setReviewOrder] = useState<any | null>(null);
+
   const [form, setForm] = useState({
     supplier_name: "",
     sample_type: "",
@@ -220,6 +222,7 @@ const SamplingOrdersTab = () => {
       if (error) throw error;
     },
     onSuccess: () => {
+      setReviewOrder(null);
       toast({ title: "Marked as assessed" });
       queryClient.invalidateQueries({ queryKey: ["quality-sampling-orders"] });
     },
@@ -305,8 +308,8 @@ const SamplingOrdersTab = () => {
                   <Printer className="h-4 w-4 mr-1" /> Print
                 </Button>
                 {o.status !== "assessed" && (
-                  <Button size="sm" onClick={() => markAssessed.mutate(o.id)} disabled={markAssessed.isPending}>
-                    <CheckCircle2 className="h-4 w-4 mr-1" /> Mark assessed
+                  <Button size="sm" onClick={() => setReviewOrder(o)}>
+                    <CheckCircle2 className="h-4 w-4 mr-1" /> Review &amp; mark assessed
                   </Button>
                 )}
               </div>
@@ -314,6 +317,42 @@ const SamplingOrdersTab = () => {
           ))}
         </CardContent>
       </Card>
+      <Dialog open={!!reviewOrder} onOpenChange={(open) => !open && setReviewOrder(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Review sample details</DialogTitle>
+            <DialogDescription>Check the sample against the printed order before confirming it is assessed.</DialogDescription>
+          </DialogHeader>
+          {reviewOrder && (
+            <div className="space-y-2 text-sm">
+              {[
+                ["Sampling order no.", reviewOrder.order_number],
+                ["Supplier", reviewOrder.supplier_name],
+                ["Sample type", typeLabel(reviewOrder.sample_type)],
+                ["Delivery time to lab", format(new Date(reviewOrder.delivery_time), "dd MMM yyyy, HH:mm")],
+                ["Sampled by", reviewOrder.sampled_by],
+                ["Created by", reviewOrder.created_by_name || reviewOrder.created_by_email],
+                ["Notes", reviewOrder.notes || "—"],
+              ].map(([k, v]) => (
+                <div key={k as string} className="flex justify-between gap-4 border-b pb-1">
+                  <span className="text-muted-foreground">{k}</span>
+                  <span className="text-right font-medium">{v as string}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setReviewOrder(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => reviewOrder && printSamplingOrder(reviewOrder)}>
+              <Printer className="h-4 w-4 mr-1" /> Print
+            </Button>
+            <Button onClick={() => reviewOrder && markAssessed.mutate(reviewOrder.id)} disabled={markAssessed.isPending}>
+              {markAssessed.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-1" />}
+              Confirm assessed
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
