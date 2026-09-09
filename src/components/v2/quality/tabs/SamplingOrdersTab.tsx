@@ -109,7 +109,7 @@ const SamplingOrdersTab = () => {
         throw new Error("Supplier, sample type and sampled by are required");
       }
       const payload = {
-        order_number: buildOrderNumber(),
+        
         supplier_name: form.supplier_name.trim(),
         sample_type: form.sample_type,
         delivery_time: new Date(form.delivery_time).toISOString(),
