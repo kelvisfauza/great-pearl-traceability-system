@@ -13,6 +13,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ClipboardList, Printer, Loader2, CheckCircle2, Beaker } from "lucide-react";
 import { format } from "date-fns";
 import { buildPublicUrl } from "@/utils/publicUrl";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import jsPDF from "jspdf";
+import QRCode from "qrcode";
 
 const SAMPLING_EMAILS = [
   "onesmusrubambura@greatpearlcoffee.com",
@@ -35,9 +38,63 @@ const nowLocalInput = () => {
 };
 
 
+const buildOrderPdfBase64 = async (order: any): Promise<string | undefined> => {
+  try {
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const qrData = buildPublicUrl(`/verify/${encodeURIComponent(order.order_number)}`);
+    const qrPng = await QRCode.toDataURL(qrData, { width: 300, margin: 1 });
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.text("GREAT AGRO COFFEE", 297, 50, { align: "center" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text("Member of HELLO YEDA COFFEE COMPANY LIMITED · P.O Box 431420, Kasese, Uganda", 297, 65, { align: "center" });
+    doc.setLineWidth(1);
+    doc.line(48, 76, 547, 76);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("QUALITY SAMPLING ORDER", 297, 100, { align: "center" });
+
+    const rows: [string, string][] = [
+      ["Sampling Order No.", String(order.order_number || "")],
+      ["Supplier", String(order.supplier_name || "")],
+      ["Sample Type", typeLabel(order.sample_type)],
+      ["Delivery Time to Lab", order.delivery_time ? format(new Date(order.delivery_time), "dd MMM yyyy, HH:mm") : ""],
+      ["Sampled By", String(order.sampled_by || "")],
+      ["Created By", String(order.created_by_name || order.created_by_email || "")],
+    ];
+    if (order.notes) rows.push(["Notes", String(order.notes)]);
+
+    let y = 125;
+    doc.setFontSize(10);
+    rows.forEach(([k, v]) => {
+      doc.setDrawColor(150);
+      doc.rect(48, y, 170, 24);
+      doc.rect(218, y, 329, 24);
+      doc.setFont("helvetica", "bold");
+      doc.text(k, 54, y + 16);
+      doc.setFont("helvetica", "normal");
+      doc.text(doc.splitTextToSize(v, 315), 224, y + 16);
+      y += 24;
+    });
+
+    doc.addImage(qrPng, "PNG", 247, y + 24, 100, 100);
+    doc.setFont("courier", "bold");
+    doc.setFontSize(11);
+    doc.text(String(order.order_number || ""), 297, y + 140, { align: "center" });
+
+    const out = doc.output("datauristring");
+    return out.split(",")[1];
+  } catch {
+    return undefined;
+  }
+};
+
 const printSamplingOrder = (order: any) => {
   const qrData = buildPublicUrl(`/verify/${encodeURIComponent(order.order_number)}`);
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(qrData)}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrData)}`;
   const w = window.open("", "_blank", "width=800,height=1000");
   if (!w) return;
   w.document.write(`<!doctype html><html><head><title>${order.order_number}</title>
@@ -51,8 +108,8 @@ const printSamplingOrder = (order: any) => {
     td{border:1px solid #999;padding:9px 10px}
     td.k{background:#f3f3f3;font-weight:bold;width:35%}
     .qrwrap{text-align:center;margin-top:22px}
-    .qrwrap img{width:330px;height:330px}
-    .code{font-family:monospace;font-size:18px;font-weight:bold;letter-spacing:2px;margin-top:8px}
+    .qrwrap img{width:150px;height:150px}
+    .code{font-family:monospace;font-size:15px;font-weight:bold;letter-spacing:2px;margin-top:8px}
     .sign{margin-top:34px;display:flex;justify-content:space-between;font-size:12px}
     .sign div{width:45%;border-top:1px solid #111;padding-top:6px;text-align:center}
   </style></head><body>
@@ -81,6 +138,8 @@ const SamplingOrdersTab = () => {
 
   const email = (employee?.email || "").toLowerCase();
   const canCreate = SAMPLING_EMAILS.includes(email) || isAdmin?.();
+
+  const [reviewOrder, setReviewOrder] = useState<any | null>(null);
 
   const [form, setForm] = useState({
     supplier_name: "",
@@ -132,6 +191,20 @@ const SamplingOrdersTab = () => {
       setForm({ supplier_name: "", sample_type: "", delivery_time: nowLocalInput(), sampled_by: (employee as any)?.name || "", notes: "" });
       queryClient.invalidateQueries({ queryKey: ["quality-sampling-orders"] });
       printSamplingOrder(order);
+      (async () => {
+        const pdf_base64 = await buildOrderPdfBase64(order);
+        const { error } = await supabase.functions.invoke("notify-sampling-order", {
+          body: {
+            order: { ...order, sample_type_label: typeLabel(order.sample_type) },
+            pdf_base64,
+          },
+        });
+        if (error) {
+          toast({ title: "Lab team not notified", description: error.message, variant: "destructive" });
+        } else {
+          toast({ title: "Lab team notified", description: "Alex, Kibaba, Morjalia and Nuwagaba received the sampling order by email." });
+        }
+      })();
     },
     onError: (e: any) => toast({ title: "Could not save", description: e.message, variant: "destructive" }),
   });
@@ -149,6 +222,7 @@ const SamplingOrdersTab = () => {
       if (error) throw error;
     },
     onSuccess: () => {
+      setReviewOrder(null);
       toast({ title: "Marked as assessed" });
       queryClient.invalidateQueries({ queryKey: ["quality-sampling-orders"] });
     },
@@ -234,8 +308,8 @@ const SamplingOrdersTab = () => {
                   <Printer className="h-4 w-4 mr-1" /> Print
                 </Button>
                 {o.status !== "assessed" && (
-                  <Button size="sm" onClick={() => markAssessed.mutate(o.id)} disabled={markAssessed.isPending}>
-                    <CheckCircle2 className="h-4 w-4 mr-1" /> Mark assessed
+                  <Button size="sm" onClick={() => setReviewOrder(o)}>
+                    <CheckCircle2 className="h-4 w-4 mr-1" /> Review &amp; mark assessed
                   </Button>
                 )}
               </div>
@@ -243,6 +317,42 @@ const SamplingOrdersTab = () => {
           ))}
         </CardContent>
       </Card>
+      <Dialog open={!!reviewOrder} onOpenChange={(open) => !open && setReviewOrder(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Review sample details</DialogTitle>
+            <DialogDescription>Check the sample against the printed order before confirming it is assessed.</DialogDescription>
+          </DialogHeader>
+          {reviewOrder && (
+            <div className="space-y-2 text-sm">
+              {[
+                ["Sampling order no.", reviewOrder.order_number],
+                ["Supplier", reviewOrder.supplier_name],
+                ["Sample type", typeLabel(reviewOrder.sample_type)],
+                ["Delivery time to lab", format(new Date(reviewOrder.delivery_time), "dd MMM yyyy, HH:mm")],
+                ["Sampled by", reviewOrder.sampled_by],
+                ["Created by", reviewOrder.created_by_name || reviewOrder.created_by_email],
+                ["Notes", reviewOrder.notes || "—"],
+              ].map(([k, v]) => (
+                <div key={k as string} className="flex justify-between gap-4 border-b pb-1">
+                  <span className="text-muted-foreground">{k}</span>
+                  <span className="text-right font-medium">{v as string}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setReviewOrder(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => reviewOrder && printSamplingOrder(reviewOrder)}>
+              <Printer className="h-4 w-4 mr-1" /> Print
+            </Button>
+            <Button onClick={() => reviewOrder && markAssessed.mutate(reviewOrder.id)} disabled={markAssessed.isPending}>
+              {markAssessed.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-1" />}
+              Confirm assessed
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
