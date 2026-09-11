@@ -190,7 +190,9 @@ export const sendPaymentReceipt = async (input: SendReceiptInput): Promise<SendR
               authorisedTitle: signer.title,
               pdfUrl,
             },
+            ...(pdfAttachment ? { attachments: [pdfAttachment] } : {}),
           },
+
         })
         .catch((e: any) => console.warn('Finance Manager copy failed:', e?.message)),
     );
