@@ -54,7 +54,32 @@ Deno.serve(async (req) => {
     const recipientPhone = normalizePhone(agreement.recipient_phone);
     const narrative = `Salary remittance - ${agreement.employee_name} - ${month}`;
 
+    const treasuryRef = `SAL-REM-${agreement.id}-${month}`;
+    const reserved = await treasuryReserve({
+      account: 'general',
+      amount,
+      reference: treasuryRef,
+      description: narrative,
+      email: agreement.employee_email,
+      name: agreement.recipient_name,
+      metadata: { salary_remittance_agreement_id: agreement.id, month },
+    });
+    if (!reserved.ok) {
+      return new Response(JSON.stringify({ ok: false, error: reserved.error || 'General Account cannot cover this remittance' }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const payout = await yoPayout({ phone: recipientPhone, amount, narrative });
+    if (!payout.success) {
+      await treasuryRelease({
+        account: 'general',
+        amount,
+        reference: treasuryRef,
+        description: `Salary remittance failed — funds returned (${agreement.recipient_name})`,
+      });
+    }
+
 
     await supabase.from('salary_remittance_payments').insert({
       agreement_id: agreement.id,

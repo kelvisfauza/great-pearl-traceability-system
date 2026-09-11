@@ -60,6 +60,22 @@ serve(async (req) => {
       if (lockError) { console.error("Lock failed:", lockError); continue; }
 
       const disburseAmount = Number(ar.amount || row.amount);
+      const treasuryRef = `USSD-ADV-${row.id}`;
+      const reserved = await treasuryReserve({
+        account: "loans_overdrafts",
+        amount: disburseAmount,
+        reference: treasuryRef,
+        description: `USSD salary advance for ${row.requester_name || row.phone}`,
+        name: row.requester_name || row.phone,
+        metadata: { ussd_advance_request_id: row.id },
+      });
+      if (!reserved.ok) {
+        await supabase.from("ussd_advance_requests").update({
+          disbursement_status: "failed",
+          disbursement_error: reserved.error || "Loans & Overdrafts account is empty",
+        }).eq("id", row.id);
+        continue;
+      }
       try {
         const result = await yoPayout({
           phone: row.phone,
