@@ -56,6 +56,16 @@ const loadImageAsDataUrl = async (url: string): Promise<string> => {
   });
 };
 
+/** Natural pixel size of an image data URL — used to keep signatures un-squashed */
+const getImageSize = (dataUrl: string): Promise<{ w: number; h: number }> =>
+  new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve({ w: img.naturalWidth || 1, h: img.naturalHeight || 1 });
+    img.onerror = () => resolve({ w: 1, h: 1 });
+    img.src = dataUrl;
+  });
+
+
 export const buildReceiptReference = (prefix = 'RCP'): string => {
   const now = new Date();
   const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
