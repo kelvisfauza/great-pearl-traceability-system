@@ -1,5 +1,6 @@
 import Layout from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
+import SamplingOrderMatch, { type SamplingOrderLite } from "@/components/quality/SamplingOrderMatch";
 import AssessmentHistoryTab from "@/components/v2/quality/tabs/AssessmentHistoryTab";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -196,6 +197,23 @@ const QualityControl = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingAssessmentId, setEditingAssessmentId] = useState<string | null>(null);
+  // Sampling order linked to the delivery being priced (auto-detected by supplier)
+  const [linkedSamplingOrder, setLinkedSamplingOrder] = useState<SamplingOrderLite | null>(null);
+
+  const validateSampleReadings = (): string | null => {
+    if (!linkedSamplingOrder) return null;
+    const required: [string, string][] = [
+      ['moisture', 'Moisture'], ['group1_defects', 'Group 1 defects'], ['group2_defects', 'Group 2 defects'],
+      ['below12', 'Below 12'], ['pods', 'Pods'], ['husks', 'Husks'], ['stones', 'Stones'],
+    ];
+    const missing = required
+      .filter(([k]) => String((assessmentForm as any)[k] ?? '').trim() === '')
+      .map(([, label]) => label);
+    if (missing.length) {
+      return `Sampling order ${linkedSamplingOrder.order_number} is linked — fill in all readings from the sample: ${missing.join(', ')}.`;
+    }
+    return null;
+  };
   const [selectedForBulkPrint, setSelectedForBulkPrint] = useState<string[]>([]);
   const [chainAssessment, setChainAssessment] = useState<any | null>(null);
   const [chainOpen, setChainOpen] = useState(false);
@@ -350,6 +368,7 @@ const QualityControl = () => {
       return;
     }
     setSelectedRecord(record);
+    setLinkedSamplingOrder(null);
     setAssessmentForm({
       moisture: '',
       group1_defects: '',
@@ -645,6 +664,11 @@ const QualityControl = () => {
       });
       return;
     }
+    const sampleError = validateSampleReadings();
+    if (sampleError) {
+      toast({ title: "Sample readings required", description: sampleError, variant: "destructive" });
+      return;
+    }
 
     // Prioritize manual price if entered, otherwise use calculator price
     const manualPriceValue = parseFloat(assessmentForm.manual_price);
@@ -726,6 +750,8 @@ const QualityControl = () => {
         form_number: assessmentForm.form_number?.trim() || null,
         analysis_file_id: assessmentForm.analysis_file_id || null,
         system_assessment_by: employee?.name || employee?.email || 'Quality Controller',
+        sampling_order_id: linkedSamplingOrder?.id || null,
+        sampling_order_number: linkedSamplingOrder?.order_number || null,
       } as any;
 
       console.log('Final assessment data to submit:', assessment);
@@ -791,6 +817,7 @@ const QualityControl = () => {
       });
       
       setSelectedRecord(null);
+      setLinkedSamplingOrder(null);
       setEditingAssessmentId(null);
       setAssessmentForm({
         moisture: '',
@@ -848,6 +875,11 @@ const QualityControl = () => {
       toast({ title: "Validation Error", description: "Please enter a valid moisture percentage.", variant: "destructive" });
       return;
     }
+    const sampleErr = validateSampleReadings();
+    if (sampleErr) {
+      toast({ title: "Sample readings required", description: sampleErr, variant: "destructive" });
+      return;
+    }
 
     const manualPriceValue = parseFloat(assessmentForm.manual_price);
     const calculatorPrice = assessmentForm.final_price || calculateSuggestedPrice();
@@ -894,6 +926,8 @@ const QualityControl = () => {
         form_number: assessmentForm.form_number?.trim() || null,
         analysis_file_id: assessmentForm.analysis_file_id || null,
         system_assessment_by: employee?.name || employee?.email || 'Quality Controller',
+        sampling_order_id: linkedSamplingOrder?.id || null,
+        sampling_order_number: linkedSamplingOrder?.order_number || null,
       } as any;
 
       // Use SECURITY DEFINER RPC to bypass RLS
@@ -919,6 +953,7 @@ const QualityControl = () => {
       });
 
       setSelectedRecord(null);
+      setLinkedSamplingOrder(null);
       setEditingAssessmentId(null);
       setAssessmentForm({
         moisture: '', group1_defects: '', group2_defects: '', below12: '',
@@ -1781,6 +1816,23 @@ const QualityControl = () => {
                       </div>
                     </div>
                     <div className="mt-4">
+                      <SamplingOrderMatch
+                        supplierName={(selectedRecord as any)?.supplier_name || ''}
+                        value={linkedSamplingOrder?.id || ''}
+                        onChange={(o) => {
+                          setLinkedSamplingOrder(o);
+                          if (o) {
+                            setAssessmentForm((prev: any) => ({
+                              ...prev,
+                              physical_assessment_by: prev.physical_assessment_by || o.sampled_by || '',
+                              comments: prev.comments || `Priced from sampling order ${o.order_number} (${o.sample_type}) sampled by ${o.sampled_by}.`,
+                            }));
+                          }
+                        }}
+                        disabled={readOnly}
+                      />
+                    </div>
+                    <div className="mt-4">
                       <Label className="text-base font-semibold">Stamped Analysis Form</Label>
                       <p className="text-xs text-muted-foreground mb-2">
                         Attach the signed &amp; stamped analysis already uploaded in Analysis Files.
@@ -2001,6 +2053,7 @@ const QualityControl = () => {
                       variant="outline" 
                       onClick={() => {
                         setSelectedRecord(null);
+                        setLinkedSamplingOrder(null);
                         setEditingAssessmentId(null);
                         setActiveTab("pending");
                       }}

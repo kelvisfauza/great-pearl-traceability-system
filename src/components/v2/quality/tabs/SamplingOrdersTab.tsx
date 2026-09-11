@@ -216,25 +216,58 @@ const SamplingOrdersTab = () => {
     onError: (e: any) => toast({ title: "Could not save", description: e.message, variant: "destructive" }),
   });
 
-  const markAssessed = useMutation({
+  const receiverName = (employee as any)?.name || employee?.email || "";
+  const [receipt, setReceipt] = useState({ grams: "", observation: "" });
+
+  const receiveSample = useMutation({
     mutationFn: async (id: string) => {
+      const grams = parseFloat(receipt.grams);
+      if (!grams || grams <= 0) throw new Error("Type the grams received to confirm the sample");
       const { error } = await supabase
         .from("quality_sampling_orders" as any)
         .update({
-          status: "assessed",
-          assessed_by: (employee as any)?.name || employee?.email || "",
-          assessed_at: new Date().toISOString(),
+          status: "received",
+          received_grams: grams,
+          received_at: new Date().toISOString(),
+          received_by: receiverName,
+          received_observation: receipt.observation.trim() || null,
         })
         .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       setReviewOrder(null);
+      setReceipt({ grams: "", observation: "" });
+      toast({ title: "Sample received in lab", description: `Received by ${receiverName}` });
+      queryClient.invalidateQueries({ queryKey: ["quality-sampling-orders"] });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const markAssessed = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("quality_sampling_orders" as any)
+        .update({
+          status: "assessed",
+          assessed_by: receiverName,
+          assessed_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
       toast({ title: "Marked as assessed" });
       queryClient.invalidateQueries({ queryKey: ["quality-sampling-orders"] });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
+
+  const statusBadge = (o: any) => {
+    if (o.status === "assessed") return <Badge className="bg-green-600 hover:bg-green-600">Assessed</Badge>;
+    if (o.status === "received") return <Badge className="bg-blue-600 hover:bg-blue-600">Received in lab</Badge>;
+    return <Badge variant="secondary">Pending</Badge>;
+  };
 
   return (
     <div className="space-y-6">
@@ -289,7 +322,7 @@ const SamplingOrdersTab = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Beaker className="h-5 w-5" /> Sample Orders (latest 20)</CardTitle>
-          <CardDescription>Lab team: pick a sample to work on and mark it as assessed.</CardDescription>
+          <CardDescription>Lab team: confirm the sample when it arrives (grams received), then it is marked assessed when priced.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {isLoading && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
@@ -300,23 +333,35 @@ const SamplingOrdersTab = () => {
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-mono font-semibold">{o.order_number}</span>
                   <Badge variant="outline">{typeLabel(o.sample_type)}</Badge>
-                  {o.status === "assessed"
-                    ? <Badge className="bg-green-600 hover:bg-green-600">Assessed</Badge>
-                    : <Badge variant="secondary">Pending</Badge>}
+                  {statusBadge(o)}
+                  {o.linked_batch_number && <Badge variant="outline">Batch {o.linked_batch_number}</Badge>}
                 </div>
                 <p className="text-sm">{o.supplier_name}</p>
                 <p className="text-xs text-muted-foreground">
                   To lab: {format(new Date(o.delivery_time), "dd MMM yyyy, HH:mm")} · Sampled by {o.sampled_by}
-                  {o.status === "assessed" && o.assessed_by ? ` · Assessed by ${o.assessed_by}` : ""}
                 </p>
+                {o.received_at && (
+                  <p className="text-xs text-muted-foreground">
+                    Received {o.received_grams} g by {o.received_by} at {format(new Date(o.received_at), "dd MMM, HH:mm")}
+                    {o.received_observation ? ` · ${o.received_observation}` : ""}
+                  </p>
+                )}
+                {o.status === "assessed" && o.assessed_by && (
+                  <p className="text-xs text-muted-foreground">Assessed by {o.assessed_by}{o.assessed_at ? ` at ${format(new Date(o.assessed_at), "dd MMM, HH:mm")}` : ""}</p>
+                )}
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => printSamplingOrder(o)}>
                   <Printer className="h-4 w-4 mr-1" /> Print
                 </Button>
-                {o.status !== "assessed" && (
-                  <Button size="sm" onClick={() => setReviewOrder(o)}>
-                    <CheckCircle2 className="h-4 w-4 mr-1" /> Review &amp; mark assessed
+                {o.status === "pending" && (
+                  <Button size="sm" onClick={() => { setReceipt({ grams: "", observation: "" }); setReviewOrder(o); }}>
+                    <Beaker className="h-4 w-4 mr-1" /> Receive sample
+                  </Button>
+                )}
+                {o.status === "received" && (
+                  <Button size="sm" variant="secondary" onClick={() => markAssessed.mutate(o.id)} disabled={markAssessed.isPending}>
+                    <CheckCircle2 className="h-4 w-4 mr-1" /> Mark assessed
                   </Button>
                 )}
               </div>
@@ -327,25 +372,48 @@ const SamplingOrdersTab = () => {
       <Dialog open={!!reviewOrder} onOpenChange={(open) => !open && setReviewOrder(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Review sample details</DialogTitle>
-            <DialogDescription>Check the sample against the printed order before confirming it is assessed.</DialogDescription>
+            <DialogTitle>Receive sample in the lab</DialogTitle>
+            <DialogDescription>Check the sample against the printed order, then confirm by typing the grams received.</DialogDescription>
           </DialogHeader>
           {reviewOrder && (
-            <div className="space-y-2 text-sm">
-              {[
-                ["Sampling order no.", reviewOrder.order_number],
-                ["Supplier", reviewOrder.supplier_name],
-                ["Sample type", typeLabel(reviewOrder.sample_type)],
-                ["Delivery time to lab", format(new Date(reviewOrder.delivery_time), "dd MMM yyyy, HH:mm")],
-                ["Sampled by", reviewOrder.sampled_by],
-                ["Created by", reviewOrder.created_by_name || reviewOrder.created_by_email],
-                ["Notes", reviewOrder.notes || "—"],
-              ].map(([k, v]) => (
-                <div key={k as string} className="flex justify-between gap-4 border-b pb-1">
-                  <span className="text-muted-foreground">{k}</span>
-                  <span className="text-right font-medium">{v as string}</span>
+            <div className="space-y-4">
+              <div className="space-y-2 text-sm">
+                {[
+                  ["Sampling order no.", reviewOrder.order_number],
+                  ["Supplier", reviewOrder.supplier_name],
+                  ["Sample type", typeLabel(reviewOrder.sample_type)],
+                  ["Delivery time to lab", format(new Date(reviewOrder.delivery_time), "dd MMM yyyy, HH:mm")],
+                  ["Sampled by", reviewOrder.sampled_by],
+                  ["Created by", reviewOrder.created_by_name || reviewOrder.created_by_email],
+                  ["Notes", reviewOrder.notes || "—"],
+                ].map(([k, v]) => (
+                  <div key={k as string} className="flex justify-between gap-4 border-b pb-1">
+                    <span className="text-muted-foreground">{k}</span>
+                    <span className="text-right font-medium">{v as string}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-1">
+                  <Label>Grams received <span className="text-destructive">*</span></Label>
+                  <Input type="number" min="1" step="1" inputMode="decimal" placeholder="e.g. 500" value={receipt.grams}
+                    onChange={(e) => setReceipt({ ...receipt, grams: e.target.value })} />
                 </div>
-              ))}
+                <div className="space-y-1">
+                  <Label>Received by</Label>
+                  <Input value={receiverName} disabled />
+                </div>
+                <div className="space-y-1 md:col-span-2">
+                  <Label>Time received</Label>
+                  <Input value={format(new Date(), "dd MMM yyyy, HH:mm")} disabled />
+                  <p className="text-xs text-muted-foreground">Captured automatically when you confirm.</p>
+                </div>
+                <div className="space-y-1 md:col-span-2">
+                  <Label>Observation</Label>
+                  <Textarea rows={2} placeholder="Condition of the sample, packaging, smell, moisture feel…" value={receipt.observation}
+                    onChange={(e) => setReceipt({ ...receipt, observation: e.target.value })} />
+                </div>
+              </div>
             </div>
           )}
           <DialogFooter className="gap-2">
@@ -353,9 +421,9 @@ const SamplingOrdersTab = () => {
             <Button variant="outline" onClick={() => reviewOrder && printSamplingOrder(reviewOrder)}>
               <Printer className="h-4 w-4 mr-1" /> Print
             </Button>
-            <Button onClick={() => reviewOrder && markAssessed.mutate(reviewOrder.id)} disabled={markAssessed.isPending}>
-              {markAssessed.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-1" />}
-              Confirm assessed
+            <Button onClick={() => reviewOrder && receiveSample.mutate(reviewOrder.id)} disabled={receiveSample.isPending || !receipt.grams}>
+              {receiveSample.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-1" />}
+              Confirm received
             </Button>
           </DialogFooter>
         </DialogContent>
