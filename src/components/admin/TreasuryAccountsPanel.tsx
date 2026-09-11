@@ -183,6 +183,40 @@ export default function TreasuryAccountsPanel() {
         <Card className="border-destructive bg-destructive/5"><CardContent className="p-3 text-sm text-destructive">{error}</CardContent></Card>
       )}
 
+      {/* Live provider balances — refreshed every second */}
+      {data && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <Card className="border-primary/30">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <div className="text-xs text-muted-foreground flex items-center gap-2">
+                  Yo Payments balance
+                  <span className="inline-flex items-center gap-1 text-[10px] text-green-600"><span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />LIVE</span>
+                </div>
+                <div className="text-2xl font-bold tabular-nums">{fmt(data.yo_balance)}</div>
+                <div className="text-[10px] text-muted-foreground">
+                  {data.yo_synced_at ? `Yo last checked ${new Date(data.yo_synced_at).toLocaleTimeString()}` : "not synced yet"} · re-checked with Yo every minute · screen refreshes every second
+                </div>
+              </div>
+              <RefreshCw className="h-6 w-6 text-primary/60" />
+            </CardContent>
+          </Card>
+          <Card className="border-primary/30">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <div className="text-xs text-muted-foreground flex items-center gap-2">
+                  GosentePay balance
+                  <span className="inline-flex items-center gap-1 text-[10px] text-green-600"><span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />LIVE</span>
+                </div>
+                <div className={`text-2xl font-bold tabular-nums ${Number(data.gosente_balance) < 0 ? "text-destructive" : ""}`}>{fmt(data.gosente_balance)}</div>
+                <div className="text-[10px] text-muted-foreground">updated {lastTick.toLocaleTimeString()} · refreshes every second</div>
+              </div>
+              <RefreshCw className="h-6 w-6 text-primary/60" />
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Real-money check */}
       {data && (
         <Card className={driftBad ? "border-amber-500 bg-amber-50 dark:bg-amber-950/20" : "bg-muted/30"}>
