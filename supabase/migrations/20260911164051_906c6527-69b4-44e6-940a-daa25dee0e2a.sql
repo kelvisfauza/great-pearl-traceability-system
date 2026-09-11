@@ -1,0 +1,2 @@
+REVOKE ALL ON FUNCTION public.treasury_overdraft_portion(text, numeric, boolean) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.treasury_overdraft_portion(text, numeric, boolean) TO service_role;

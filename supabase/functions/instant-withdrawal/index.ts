@@ -414,6 +414,36 @@ serve(async (req) => {
       });
     }
 
+    // Treasury guard: the overdraft-funded part (plus its access fee) is lent
+    // from the Loans & Overdrafts account. If that pot cannot cover it, block
+    // BEFORE any money leaves Yo/Gosente and alert the Super Admin.
+    if (overdraftPortion > 0) {
+      const odNeed = overdraftPortion + overdraftAccessFee;
+      const { data: lo } = await supabase
+        .from('treasury_accounts')
+        .select('balance, name')
+        .eq('code', 'loans_overdrafts')
+        .maybeSingle();
+      const loBal = Number(lo?.balance || 0);
+      if (loBal < odNeed) {
+        const alertMsg = `Overdraft withdrawal blocked: ${userEmail} needs UGX ${odNeed.toLocaleString()} from ${lo?.name || 'Loans & Overdrafts'} but it has only UGX ${loBal.toLocaleString()}.`;
+        try {
+          await supabase.rpc('treasury_raise_alert', {
+            p_account: 'loans_overdrafts',
+            p_amount: odNeed,
+            p_reference: `OD-BLOCK-${resolvedUserId}-${new Date().toISOString().slice(0, 13)}`,
+            p_message: alertMsg,
+            p_metadata: { user_email: userEmail, requested: numAmount, overdraft_portion: overdraftPortion, access_fee: overdraftAccessFee },
+          });
+        } catch (e) { console.warn('[instant-withdrawal] treasury alert failed:', (e as Error).message); }
+        return respond(false, {
+          error: `Overdraft is temporarily unavailable: the Loans & Overdrafts fund cannot cover UGX ${odNeed.toLocaleString()} right now. The Super Admin has been alerted. You can still withdraw up to your wallet balance (UGX ${walletSpendableFinal.toLocaleString()}).`,
+          code: 'TREASURY_INSUFFICIENT',
+          account: 'loans_overdrafts',
+        });
+      }
+    }
+
     // Fetch employee name early for narrative
     const { data: empData } = await supabase
       .from('employees')
