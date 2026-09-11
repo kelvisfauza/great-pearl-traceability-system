@@ -1,5 +1,6 @@
 import Layout from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
+import SamplingOrderMatch, { type SamplingOrderLite } from "@/components/quality/SamplingOrderMatch";
 import AssessmentHistoryTab from "@/components/v2/quality/tabs/AssessmentHistoryTab";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
