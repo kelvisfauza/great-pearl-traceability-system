@@ -8956,6 +8956,11 @@ export type Database = {
           record_id: string
           request_title: string | null
           requested_by: string | null
+          return_count: number
+          return_notified_at: string | null
+          return_reason: string | null
+          returned_at: string | null
+          returned_by: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           source_table: string
@@ -8976,6 +8981,11 @@ export type Database = {
           record_id: string
           request_title?: string | null
           requested_by?: string | null
+          return_count?: number
+          return_notified_at?: string | null
+          return_reason?: string | null
+          returned_at?: string | null
+          returned_by?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           source_table: string
@@ -8996,6 +9006,11 @@ export type Database = {
           record_id?: string
           request_title?: string | null
           requested_by?: string | null
+          return_count?: number
+          return_notified_at?: string | null
+          return_reason?: string | null
+          returned_at?: string | null
+          returned_by?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           source_table?: string
@@ -16238,6 +16253,17 @@ export type Database = {
       }
       admin_overdraft_unfreeze: {
         Args: { p_account_id: string; p_admin_email: string }
+        Returns: Json
+      }
+      admin_return_to_procurement: {
+        Args: {
+          _amount?: number
+          _reason: string
+          _record_id: string
+          _request_title?: string
+          _requested_by?: string
+          _source_table: string
+        }
         Returns: Json
       }
       allocate_budget_funds: {
