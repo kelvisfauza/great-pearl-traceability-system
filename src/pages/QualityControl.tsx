@@ -817,6 +817,7 @@ const QualityControl = () => {
       });
       
       setSelectedRecord(null);
+      setLinkedSamplingOrder(null);
       setEditingAssessmentId(null);
       setAssessmentForm({
         moisture: '',
@@ -874,6 +875,11 @@ const QualityControl = () => {
       toast({ title: "Validation Error", description: "Please enter a valid moisture percentage.", variant: "destructive" });
       return;
     }
+    const sampleErr = validateSampleReadings();
+    if (sampleErr) {
+      toast({ title: "Sample readings required", description: sampleErr, variant: "destructive" });
+      return;
+    }
 
     const manualPriceValue = parseFloat(assessmentForm.manual_price);
     const calculatorPrice = assessmentForm.final_price || calculateSuggestedPrice();
@@ -920,6 +926,8 @@ const QualityControl = () => {
         form_number: assessmentForm.form_number?.trim() || null,
         analysis_file_id: assessmentForm.analysis_file_id || null,
         system_assessment_by: employee?.name || employee?.email || 'Quality Controller',
+        sampling_order_id: linkedSamplingOrder?.id || null,
+        sampling_order_number: linkedSamplingOrder?.order_number || null,
       } as any;
 
       // Use SECURITY DEFINER RPC to bypass RLS
@@ -1807,6 +1815,23 @@ const QualityControl = () => {
                       </div>
                     </div>
                     <div className="mt-4">
+                      <SamplingOrderMatch
+                        supplierName={(selectedRecord as any)?.supplier_name || ''}
+                        value={linkedSamplingOrder?.id || ''}
+                        onChange={(o) => {
+                          setLinkedSamplingOrder(o);
+                          if (o) {
+                            setAssessmentForm((prev: any) => ({
+                              ...prev,
+                              physical_assessment_by: prev.physical_assessment_by || o.sampled_by || '',
+                              comments: prev.comments || `Priced from sampling order ${o.order_number} (${o.sample_type}) sampled by ${o.sampled_by}.`,
+                            }));
+                          }
+                        }}
+                        disabled={readOnly}
+                      />
+                    </div>
+                    <div className="mt-4">
                       <Label className="text-base font-semibold">Stamped Analysis Form</Label>
                       <p className="text-xs text-muted-foreground mb-2">
                         Attach the signed &amp; stamped analysis already uploaded in Analysis Files.
@@ -2027,6 +2052,7 @@ const QualityControl = () => {
                       variant="outline" 
                       onClick={() => {
                         setSelectedRecord(null);
+                        setLinkedSamplingOrder(null);
                         setEditingAssessmentId(null);
                         setActiveTab("pending");
                       }}
