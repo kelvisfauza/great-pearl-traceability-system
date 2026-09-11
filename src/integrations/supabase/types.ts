@@ -17439,6 +17439,20 @@ export type Database = {
         }
         Returns: Json
       }
+      treasury_overdraft_portion: {
+        Args: { p_amount: number; p_exclude_self?: boolean; p_user_id: string }
+        Returns: number
+      }
+      treasury_raise_alert: {
+        Args: {
+          p_account: string
+          p_amount: number
+          p_message: string
+          p_metadata?: Json
+          p_reference: string
+        }
+        Returns: undefined
+      }
       treasury_resolve_account: {
         Args: {
           p_amount: number
