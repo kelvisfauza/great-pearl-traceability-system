@@ -66,8 +66,6 @@ Deno.serve(async (req) => {
   let recipientEmail: string
   let idempotencyKey: string
   let templateData: Record<string, any> = {}
-  // Optional file attachments: [{ filename, content (base64), contentType }]
-  let attachments: Array<{ filename: string; content: string; content_type?: string }> = []
 
   try {
     const body = await req.json()
@@ -77,15 +75,6 @@ Deno.serve(async (req) => {
     const rawData = body.templateData || body.data
     if (rawData && typeof rawData === 'object') {
       templateData = rawData
-    }
-    if (Array.isArray(body.attachments)) {
-      attachments = body.attachments
-        .filter((a: any) => a && typeof a.filename === 'string' && typeof a.content === 'string')
-        .map((a: any) => ({
-          filename: a.filename,
-          content: a.content,
-          content_type: a.contentType || a.content_type || 'application/pdf',
-        }))
     }
   } catch {
     return new Response(
@@ -234,8 +223,7 @@ Deno.serve(async (req) => {
           label: templateName,
           idempotency_key: idempotencyKey,
           unsubscribe_token: unsubToken,
-          ...(attachments.length > 0 ? { attachments } : {}),
-        } as any,
+        },
         { apiKey: lovableApiKey, idempotencyKey }
       )
     })() : Promise.resolve('skipped_by_pref' as const)
