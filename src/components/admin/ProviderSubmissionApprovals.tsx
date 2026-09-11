@@ -58,6 +58,15 @@ const ProviderSubmissionApprovals: React.FC = () => {
     fingerprintVerified = false,
   ) => {
     if (!selected) return;
+    const procurementDecision = procurementReviews[selected.id]?.decision;
+    if (!procurementDecision || procurementDecision === 'pending' || procurementDecision === 'returned') {
+      toast({
+        title: 'Procurement review required',
+        description: 'Admin actions are locked until Procurement submits its decision.',
+        variant: 'destructive',
+      });
+      return;
+    }
     const finalAmount = action === 'approve'
       ? Number(overrideAmount || selected.amount)
       : Number(selected.amount);
@@ -181,7 +190,10 @@ const ProviderSubmissionApprovals: React.FC = () => {
           </p>
         ) : (
           <div className="space-y-3">
-            {submissions.map((s: any) => (
+            {submissions.map((s: any) => {
+              const procurementDecision = procurementReviews[s.id]?.decision;
+              const awaitingProcurement = !procurementDecision || procurementDecision === 'pending' || procurementDecision === 'returned';
+              return (
               <div key={s.id} className="border rounded-lg p-4 space-y-2">
                 <div className="flex items-start justify-between flex-wrap gap-2">
                   <div>
@@ -257,14 +269,16 @@ const ProviderSubmissionApprovals: React.FC = () => {
                     size="sm"
                     variant="outline"
                     onClick={() => { setSelected(s); setRejectionReason(''); setRejectOpen(true); }}
-                    disabled={processing === s.id}
+                    disabled={processing === s.id || awaitingProcurement}
+                    title={awaitingProcurement ? 'Procurement must complete its review first' : undefined}
                   >
                     <X className="w-3 h-3 mr-1" /> Reject
                   </Button>
                   <Button
                     size="sm"
                     onClick={() => { setSelected(s); setWithdrawCharge(''); setOverrideAmount(String(s.amount || '')); setPayMethod('momo'); setApproveOpen(true); }}
-                    disabled={processing === s.id}
+                    disabled={processing === s.id || awaitingProcurement}
+                    title={awaitingProcurement ? 'Procurement must complete its review first' : undefined}
                   >
                     {processing === s.id ? (
                       <Loader2 className="w-3 h-3 mr-1 animate-spin" />
@@ -275,7 +289,8 @@ const ProviderSubmissionApprovals: React.FC = () => {
                   </Button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </CardContent>

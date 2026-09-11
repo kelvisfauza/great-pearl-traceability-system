@@ -408,6 +408,13 @@ const ApprovalCenter = () => {
             <div className="space-y-4">
               {requests.map((request) => {
                 const TypeIcon = getTypeIcon(request.type, request.requestType);
+                const procurementReview = procurementReviews[request.id];
+                const requiresProcurementReview = request.type === 'general' && !/withdraw/i.test(request.requestType || '');
+                const awaitingProcurement = requiresProcurementReview && (
+                  !procurementReview?.decision
+                  || procurementReview.decision === 'pending'
+                  || procurementReview.decision === 'returned'
+                );
                 return (
                   <Card key={request.id} className="transition-all hover:shadow-md">
                     <CardHeader>
@@ -587,7 +594,8 @@ const ApprovalCenter = () => {
                           <>
                             <Button
                               onClick={() => handleApproval(request)}
-                              disabled={processingId === request.id}
+                              disabled={processingId === request.id || awaitingProcurement}
+                              title={awaitingProcurement ? 'Procurement must complete its review first' : undefined}
                               className="bg-orange-600 hover:bg-orange-700"
                             >
                               <RefreshCw className="h-4 w-4 mr-2" />
@@ -616,7 +624,8 @@ const ApprovalCenter = () => {
                             </Button>
                             <Button
                               onClick={() => handleRejection(request)}
-                              disabled={processingId === request.id}
+                              disabled={processingId === request.id || awaitingProcurement}
+                              title={awaitingProcurement ? 'Procurement must complete its review first' : undefined}
                               variant="destructive"
                             >
                               <XCircle className="h-4 w-4 mr-2" />
