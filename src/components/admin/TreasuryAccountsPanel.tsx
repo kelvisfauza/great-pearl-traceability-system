@@ -118,6 +118,31 @@ export default function TreasuryAccountsPanel() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Live balances: silently re-read the overview every second (no loading flicker),
+  // and ask Yo Payments for a fresh real balance once a minute.
+  const [lastTick, setLastTick] = useState<Date>(new Date());
+  useEffect(() => {
+    let cancelled = false;
+    let inFlight = false;
+    const tick = async () => {
+      if (inFlight || document.hidden) return;
+      inFlight = true;
+      try {
+        const { data: res } = await (supabase as any).rpc("get_treasury_accounts_overview");
+        if (!cancelled && res?.ok) {
+          setData(res as Overview);
+          setLastTick(new Date());
+        }
+      } catch { /* keep last values */ }
+      inFlight = false;
+    };
+    const fast = setInterval(tick, 1000);
+    const yoSync = setInterval(() => {
+      if (!document.hidden) supabase.functions.invoke("sync-yo-balance").catch(() => {});
+    }, 60_000);
+    return () => { cancelled = true; clearInterval(fast); clearInterval(yoSync); };
+  }, []);
+
   const accounts = data?.accounts ?? [];
   const fundable = useMemo(() => accounts.filter((a) => a.code !== "user_wallets"), [accounts]);
   const byCode = useMemo(() => Object.fromEntries(accounts.map((a) => [a.code, a])), [accounts]);
@@ -133,6 +158,37 @@ export default function TreasuryAccountsPanel() {
       .limit(100);
     setHistory((rows as Entry[]) || []);
     setHistoryLoading(false);
+  };
+
+  const printHistory = () => {
+    if (!historyCode) return;
+    const acc = byCode[historyCode];
+    const esc = (s: any) => String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));
+    const rows = history.map((e) => `<tr>
+      <td>${new Date(e.created_at).toLocaleString()}</td>
+      <td>${esc(e.description || "—")}</td>
+      <td class="mono">${esc(e.reference || "—")}</td>
+      <td>${esc(e.related_user_name || e.related_user_email || "system")}</td>
+      <td>${esc(e.counter_account ? (byCode[e.counter_account]?.name || e.counter_account) : "—")}</td>
+      <td>${esc(e.performed_by || "system")}</td>
+      <td class="r ${e.direction === "credit" ? "cr" : "dr"}">${e.direction === "credit" ? "+" : "−"}${Math.round(Number(e.amount)).toLocaleString()}</td>
+      <td class="r">${Math.round(Number(e.balance_after)).toLocaleString()}</td>
+    </tr>`).join("");
+    const w = window.open("", "_blank", "width=1200,height=800");
+    if (!w) return;
+    w.document.write(`<!doctype html><html><head><title>${esc(acc?.name)} — movements</title><style>
+      body{font-family:Arial,sans-serif;font-size:11px;color:#111;margin:18px}
+      h1{font-size:16px;margin:0} .sub{color:#555;margin:4px 0 12px}
+      table{width:100%;border-collapse:collapse} th,td{border:1px solid #ccc;padding:4px 6px;text-align:left;vertical-align:top;word-break:break-word}
+      th{background:#f1f1f1} .r{text-align:right;white-space:nowrap} .mono{font-family:monospace;font-size:10px} .cr{color:#15803d} .dr{color:#b91c1c}
+      @page{size:A4 landscape;margin:12mm}
+    </style></head><body onload="window.print()">
+      <h1>Great Agro Coffee — ${esc(acc?.name)} — last ${history.length} movements</h1>
+      <div class="sub">Current balance: UGX ${Math.round(Number(acc?.balance ?? 0)).toLocaleString()} · Printed ${new Date().toLocaleString()}</div>
+      <table><thead><tr><th>Date</th><th>Details</th><th>Reference</th><th>Who</th><th>With</th><th>Done by</th><th class="r">Amount</th><th class="r">Balance after</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+    </body></html>`);
+    w.document.close();
   };
 
   const runRpc = async (fn: string, args: Record<string, any>, success: string) => {
