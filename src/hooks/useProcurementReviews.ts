@@ -8,7 +8,7 @@ export interface ProcurementReview {
   request_title: string | null;
   requested_by: string | null;
   amount: number | null;
-  decision: 'pending' | 'approved' | 'rejected' | string;
+  decision: 'pending' | 'approved' | 'rejected' | 'returned' | string;
   notes: string | null;
   original_amount: number | null;
   edited_amount: number | null;
@@ -16,6 +16,10 @@ export interface ProcurementReview {
   recommended_admin_name: string | null;
   reviewed_by: string | null;
   reviewed_at: string | null;
+  return_reason?: string | null;
+  returned_by?: string | null;
+  returned_at?: string | null;
+  return_count?: number | null;
   created_at: string;
 }
 
