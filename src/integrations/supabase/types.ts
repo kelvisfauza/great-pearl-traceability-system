@@ -9553,6 +9553,8 @@ export type Database = {
           quality_note: string | null
           reject_final: boolean | null
           reject_outturn_price: boolean | null
+          sampling_order_id: string | null
+          sampling_order_number: string | null
           status: string
           stones: number | null
           store_record_id: string | null
@@ -9603,6 +9605,8 @@ export type Database = {
           quality_note?: string | null
           reject_final?: boolean | null
           reject_outturn_price?: boolean | null
+          sampling_order_id?: string | null
+          sampling_order_number?: string | null
           status?: string
           stones?: number | null
           store_record_id?: string | null
@@ -9653,6 +9657,8 @@ export type Database = {
           quality_note?: string | null
           reject_final?: boolean | null
           reject_outturn_price?: boolean | null
+          sampling_order_id?: string | null
+          sampling_order_number?: string | null
           status?: string
           stones?: number | null
           store_record_id?: string | null
@@ -10128,9 +10134,16 @@ export type Database = {
           created_by_name: string | null
           delivery_time: string
           id: string
+          linked_at: string | null
+          linked_batch_number: string | null
+          linked_store_record_id: string | null
           notes: string | null
           order_number: string | null
           printed_at: string | null
+          received_at: string | null
+          received_by: string | null
+          received_grams: number | null
+          received_observation: string | null
           sample_type: string
           sampled_by: string
           status: string
@@ -10146,9 +10159,16 @@ export type Database = {
           created_by_name?: string | null
           delivery_time: string
           id?: string
+          linked_at?: string | null
+          linked_batch_number?: string | null
+          linked_store_record_id?: string | null
           notes?: string | null
           order_number?: string | null
           printed_at?: string | null
+          received_at?: string | null
+          received_by?: string | null
+          received_grams?: number | null
+          received_observation?: string | null
           sample_type: string
           sampled_by: string
           status?: string
@@ -10164,9 +10184,16 @@ export type Database = {
           created_by_name?: string | null
           delivery_time?: string
           id?: string
+          linked_at?: string | null
+          linked_batch_number?: string | null
+          linked_store_record_id?: string | null
           notes?: string | null
           order_number?: string | null
           printed_at?: string | null
+          received_at?: string | null
+          received_by?: string | null
+          received_grams?: number | null
+          received_observation?: string | null
           sample_type?: string
           sampled_by?: string
           status?: string
