@@ -4,6 +4,13 @@ import { treasuryReserve, treasuryRelease } from "../_shared/treasury.ts";
 import { yoPayout, normalizePhone } from "../_shared/yo-payments.ts";
 import { gosenteWithdraw, isGosenteSuccess } from "../_shared/gosentepay.ts";
 import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
+import {
+  SIGNATURE_DENIS,
+  SIGNATURE_FAUZA,
+  SIGNATURE_WYCLIFF,
+  STAMP,
+  type ReceiptImageAsset,
+} from "../_shared/receipt-marks.ts";
 
 const formatUGX = (n: number) => `UGX ${Number(n || 0).toLocaleString("en-UG")}`;
 const formatDate = (iso: string) => {
@@ -35,8 +42,38 @@ interface ServerReceiptInput {
   processedBy: string;
   /** Approver who released the payment — signs the receipt */
   approvedBy?: string;
+  approvedByEmail?: string;
   approvedByTitle?: string;
+  paidOn?: string;
 }
+
+const resolveReceiptSigner = (email?: string, name?: string): {
+  name: string;
+  title: string;
+  signature?: ReceiptImageAsset;
+} => {
+  const normalizedEmail = (email || "").trim().toLowerCase();
+  const normalizedName = (name || "").trim().toLowerCase();
+
+  if (normalizedEmail === "bwambaledenis@greatpearlcoffee.com" || normalizedName.includes("denis")) {
+    return { name: "Bwambale Denis", title: "Trader", signature: SIGNATURE_DENIS };
+  }
+  if (normalizedEmail === "musemawyclif@greatpearlcoffee.com" || normalizedName.includes("wyclif")) {
+    return { name: "Musema Wyclif", title: "Assistant Trader & Field Officer", signature: SIGNATURE_WYCLIFF };
+  }
+  if (
+    normalizedEmail === "fauzakusa@greatpearlcoffee.com" ||
+    normalizedEmail === "kelvifauza@gmail.com" ||
+    normalizedName.includes("fauza")
+  ) {
+    return { name: "Fauza Kusa", title: "Managing Director", signature: SIGNATURE_FAUZA };
+  }
+
+  return {
+    name: name || "Authorised Approver",
+    title: "Approving Officer",
+  };
+};
 
 const generateReceiptPdfBytes = (data: ServerReceiptInput): Uint8Array => {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
@@ -88,7 +125,8 @@ const generateReceiptPdfBytes = (data: ServerReceiptInput): Uint8Array => {
   doc.setFontSize(11);
   doc.text(data.reference, metaX + 10, metaY + 26);
   doc.setFontSize(9.5);
-  doc.text(formatDate(new Date().toISOString()), metaX + 10, metaY + 50);
+  const paidOn = data.paidOn || new Date().toISOString();
+  doc.text(formatDate(paidOn), metaX + 10, metaY + 50);
 
   // Status pill
   doc.setFillColor(235, 235, 235);
@@ -195,7 +233,8 @@ const generateReceiptPdfBytes = (data: ServerReceiptInput): Uint8Array => {
   doc.text(procLines, pageW - margin - 130, y);
 
   // Authorisation
-  const sigBoxY = pageH - 130;
+  const sigBoxY = pageH - 165;
+  const signer = resolveReceiptSigner(data.approvedByEmail, data.approvedBy || data.processedBy);
   doc.setDrawColor(230, 230, 230);
   doc.setLineWidth(0.4);
   doc.line(margin, sigBoxY - 8, pageW - margin, sigBoxY - 8);
@@ -203,21 +242,59 @@ const generateReceiptPdfBytes = (data: ServerReceiptInput): Uint8Array => {
   doc.setFontSize(8.5);
   doc.setTextColor(60, 60, 60);
   doc.text("AUTHORIZED BY", margin, sigBoxY + 2);
+  doc.setFillColor(255, 255, 255);
+  doc.rect(margin, sigBoxY + 6, 230, 68, "F");
+
+  if (signer.signature) {
+    const maxW = 210;
+    const maxH = 66;
+    const scale = Math.min(maxW / signer.signature.width, maxH / signer.signature.height);
+    const drawW = signer.signature.width * scale;
+    const drawH = signer.signature.height * scale;
+    doc.addImage(
+      signer.signature.dataUrl,
+      "PNG",
+      margin + 4,
+      sigBoxY + 8 + (maxH - drawH),
+      drawW,
+      drawH,
+    );
+  }
+
   doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.6);
-  doc.line(margin, sigBoxY + 40, margin + 180, sigBoxY + 40);
+  doc.line(margin, sigBoxY + 76, margin + 230, sigBoxY + 76);
   doc.setTextColor(0, 0, 0);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  doc.text(data.approvedBy || data.processedBy || "Authorised Approver", margin, sigBoxY + 52);
+  doc.text(signer.name, margin, sigBoxY + 88);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   doc.setTextColor(60, 60, 60);
   doc.text(
-    `${data.approvedByTitle || "Approving Officer"} • Signed ${formatDate(new Date().toISOString())}`,
+    `${data.approvedByTitle || signer.title} • Signed ${formatDate(paidOn)}`,
     margin,
-    sigBoxY + 62,
+    sigBoxY + 98,
   );
+
+  const stampMaxW = 150;
+  const stampMaxH = 92;
+  const stampScale = Math.min(stampMaxW / STAMP.width, stampMaxH / STAMP.height);
+  const stampW = STAMP.width * stampScale;
+  const stampH = STAMP.height * stampScale;
+  const stampX = margin + 250;
+  const stampY = sigBoxY + 4;
+  doc.addImage(STAMP.dataUrl, "PNG", stampX, stampY, stampW, stampH);
+
+  const stamped = new Date(paidOn);
+  const stampDate = `${String(stamped.getDate()).padStart(2, "0")} ${stamped
+    .toLocaleString("en-GB", { month: "short" })
+    .toUpperCase()} ${stamped.getFullYear()}`;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(Math.max(7, stampH * 0.115));
+  doc.setTextColor(200, 30, 30);
+  doc.text(stampDate, stampX + stampW * 0.483, stampY + stampH * 0.53, { align: "center" });
+
   doc.setFont("helvetica", "italic");
   doc.setFontSize(8);
   doc.setTextColor(80, 80, 80);
@@ -225,7 +302,7 @@ const generateReceiptPdfBytes = (data: ServerReceiptInput): Uint8Array => {
     `Verify authenticity by quoting ref ${data.reference} to finance@greatpearlcoffee.com.`,
     220,
   );
-  doc.text(validLines, pageW - margin - 220, sigBoxY + 52);
+  doc.text(validLines, pageW - margin - 220, sigBoxY + 88);
 
   // Footer
   doc.setDrawColor(0, 0, 0);
@@ -692,7 +769,9 @@ serve(async (req) => {
             paymentMethod: paymentMethodLabel,
             transactionId: result.transactionRef || record.id,
             processedBy: reviewerName,
-                approvedBy: reviewerName,
+            approvedBy: reviewerName,
+            approvedByEmail: reviewer.email || undefined,
+            paidOn: new Date().toISOString(),
           });
           const year = new Date().getFullYear();
           const path = `${year}/${pdfRef}.pdf`;
