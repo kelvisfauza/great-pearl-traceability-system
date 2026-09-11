@@ -410,6 +410,7 @@ serve(async (req) => {
     // SMS GATEKEEPER: Only allow OTP/verification and account creation SMS through
     // All other notifications should use email instead to save SMS credits
     const ALLOWED_SMS_TYPES = [
+      'treasury_alert',
       'verification',
       'admin_approval_code',
       'otp',
