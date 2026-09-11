@@ -329,27 +329,45 @@ export default function TreasuryAccountsPanel() {
 
       {/* History dialog */}
       <Dialog open={!!historyCode} onOpenChange={(o) => !o && setHistoryCode(null)}>
-        <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-[96vw] w-[96vw] xl:max-w-[1400px] h-[92vh] flex flex-col p-4 sm:p-6">
+          <DialogHeader className="flex-row items-center justify-between space-y-0 pr-8">
             <DialogTitle>{historyCode ? byCode[historyCode]?.name : ""} — last 100 movements</DialogTitle>
+            <Button size="sm" variant="outline" onClick={printHistory} disabled={historyLoading || history.length === 0}>
+              <Printer className="h-4 w-4 mr-1" /> Print
+            </Button>
           </DialogHeader>
           {historyLoading ? <Skeleton className="h-40" /> : (
-            <Table>
-              <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Details</TableHead><TableHead>Who</TableHead><TableHead>With</TableHead><TableHead className="text-right">Amount</TableHead><TableHead className="text-right">Balance</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {history.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No movements yet</TableCell></TableRow>}
-                {history.map((e) => (
-                  <TableRow key={e.id}>
-                    <TableCell className="text-xs whitespace-nowrap">{new Date(e.created_at).toLocaleString()}</TableCell>
-                    <TableCell className="text-xs max-w-[260px] truncate" title={e.description || ""}>{e.description || e.reference}</TableCell>
-                    <TableCell className="text-xs">{e.related_user_name || e.related_user_email || e.performed_by || "system"}</TableCell>
-                    <TableCell className="text-xs">{e.counter_account ? (byCode[e.counter_account]?.name || e.counter_account) : "—"}</TableCell>
-                    <TableCell className={`text-xs text-right font-mono ${e.direction === "credit" ? "text-green-600" : "text-red-600"}`}>{e.direction === "credit" ? "+" : "−"}{Math.round(Number(e.amount)).toLocaleString()}</TableCell>
-                    <TableCell className="text-xs text-right font-mono">{Math.round(Number(e.balance_after)).toLocaleString()}</TableCell>
+            <div className="flex-1 min-h-0 overflow-auto rounded-md border">
+              <Table>
+                <TableHeader className="sticky top-0 bg-background z-10">
+                  <TableRow>
+                    <TableHead className="whitespace-nowrap">Date</TableHead>
+                    <TableHead>Details</TableHead>
+                    <TableHead className="whitespace-nowrap">Reference</TableHead>
+                    <TableHead className="whitespace-nowrap">Who</TableHead>
+                    <TableHead className="whitespace-nowrap">With</TableHead>
+                    <TableHead className="whitespace-nowrap">Done by</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">Amount</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">Balance after</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {history.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No movements yet</TableCell></TableRow>}
+                  {history.map((e) => (
+                    <TableRow key={e.id}>
+                      <TableCell className="text-xs whitespace-nowrap align-top">{new Date(e.created_at).toLocaleString()}</TableCell>
+                      <TableCell className="text-xs align-top whitespace-normal break-words min-w-[220px]">{e.description || "—"}</TableCell>
+                      <TableCell className="text-xs align-top font-mono break-all min-w-[160px]">{e.reference || "—"}</TableCell>
+                      <TableCell className="text-xs align-top whitespace-nowrap">{e.related_user_name || e.related_user_email || "system"}</TableCell>
+                      <TableCell className="text-xs align-top whitespace-nowrap">{e.counter_account ? (byCode[e.counter_account]?.name || e.counter_account) : "—"}</TableCell>
+                      <TableCell className="text-xs align-top whitespace-nowrap">{e.performed_by || "system"}</TableCell>
+                      <TableCell className={`text-xs text-right font-mono align-top whitespace-nowrap ${e.direction === "credit" ? "text-green-600" : "text-red-600"}`}>{e.direction === "credit" ? "+" : "−"}{Math.round(Number(e.amount)).toLocaleString()}</TableCell>
+                      <TableCell className="text-xs text-right font-mono align-top whitespace-nowrap">{Math.round(Number(e.balance_after)).toLocaleString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </DialogContent>
       </Dialog>
