@@ -41,6 +41,12 @@ const ApprovalCenter = () => {
   const [fingerprintTarget, setFingerprintTarget] = useState<FingerprintApprovalTarget | null>(null);
   const [codeTarget, setCodeTarget] = useState<ApprovalCodeTarget | null>(null);
 
+  const isAwaitingProcurement = (request: UnifiedApprovalRequest) => {
+    if (request.type !== 'general' || /withdraw/i.test(request.requestType || '')) return false;
+    const decision = procurementReviews[request.id]?.decision;
+    return !decision || decision === 'pending' || decision === 'returned';
+  };
+
   // Auto-refresh pending requests in background to prevent double approvals
   useEffect(() => {
     const interval = setInterval(() => {
@@ -59,6 +65,14 @@ const ApprovalCenter = () => {
    * (scanned on their phone) before the status is changed.
    */
   const handleApproval = async (request: UnifiedApprovalRequest, fingerprintVerified = false) => {
+    if (isAwaitingProcurement(request)) {
+      toast({
+        title: 'Procurement review required',
+        description: 'Admin approval is locked until Procurement submits its decision.',
+        variant: 'destructive',
+      });
+      return;
+    }
     if (!fingerprintVerified && requiresFingerprintApproval(request.amount, request.type)) {
       const amt = typeof request.amount === 'number' ? request.amount : parseFloat(String(request.amount)) || 0;
       setFingerprintTarget({
@@ -180,6 +194,14 @@ const ApprovalCenter = () => {
   };
 
   const handleRejection = (request: UnifiedApprovalRequest) => {
+    if (isAwaitingProcurement(request)) {
+      toast({
+        title: 'Procurement review required',
+        description: 'Admin rejection is locked until Procurement submits its decision.',
+        variant: 'destructive',
+      });
+      return;
+    }
     setSelectedRequest(request);
     setRejectionModalOpen(true);
   };
@@ -408,6 +430,13 @@ const ApprovalCenter = () => {
             <div className="space-y-4">
               {requests.map((request) => {
                 const TypeIcon = getTypeIcon(request.type, request.requestType);
+                const procurementReview = procurementReviews[request.id];
+                const requiresProcurementReview = request.type === 'general' && !/withdraw/i.test(request.requestType || '');
+                const awaitingProcurement = requiresProcurementReview && (
+                  !procurementReview?.decision
+                  || procurementReview.decision === 'pending'
+                  || procurementReview.decision === 'returned'
+                );
                 return (
                   <Card key={request.id} className="transition-all hover:shadow-md">
                     <CardHeader>
@@ -587,7 +616,8 @@ const ApprovalCenter = () => {
                           <>
                             <Button
                               onClick={() => handleApproval(request)}
-                              disabled={processingId === request.id}
+                              disabled={processingId === request.id || awaitingProcurement}
+                              title={awaitingProcurement ? 'Procurement must complete its review first' : undefined}
                               className="bg-orange-600 hover:bg-orange-700"
                             >
                               <RefreshCw className="h-4 w-4 mr-2" />
@@ -616,7 +646,8 @@ const ApprovalCenter = () => {
                             </Button>
                             <Button
                               onClick={() => handleRejection(request)}
-                              disabled={processingId === request.id}
+                              disabled={processingId === request.id || awaitingProcurement}
+                              title={awaitingProcurement ? 'Procurement must complete its review first' : undefined}
                               variant="destructive"
                             >
                               <XCircle className="h-4 w-4 mr-2" />
