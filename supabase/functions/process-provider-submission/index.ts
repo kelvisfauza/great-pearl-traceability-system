@@ -514,6 +514,25 @@ serve(async (req) => {
     let displayMessage = "Payment failed";
     let paymentMethodLabel = "Mobile Money (Yo Payments)";
 
+    // Treasury pool: every provider / meal / per-diem payout draws from Operations
+    const treasuryRef = `PSR-${record.id}`;
+    const reservedTreasury = await treasuryReserve({
+      account: "operations",
+      amount: totalAmount,
+      reference: treasuryRef,
+      description: narrative,
+      email: submission.email || null,
+      name: submission.provider_name || cleanPhone,
+      performedBy: reviewerName || "system",
+      metadata: { provider_submission_id: record.id, request_type: submission.request_type },
+    });
+    if (!reservedTreasury.ok) {
+      return new Response(
+        JSON.stringify({ ok: false, success: false, error: reservedTreasury.error || "Operations / Procurement account cannot cover this payment" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     if (paymentMode === "cash") {
       // ─── CASH PAYOUT ────────────────────────────────────────────────
       // Admin has handed cash to the provider physically. No Yo call.
