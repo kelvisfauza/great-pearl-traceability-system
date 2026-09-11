@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { yoSendAirtime, normalizePhone } from '../_shared/yo-payments.ts'
+import { treasuryReserve, treasuryRelease } from '../_shared/treasury.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
