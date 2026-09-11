@@ -71,7 +71,9 @@ const PaymentReceiptEmail = ({
         )}
 
         <Text style={text}>
-          The PDF is digitally signed by Mukobi Godwin, Finance Manager. Please retain it for your records.
+          {authorisedBy
+            ? `The PDF is digitally signed by ${authorisedBy}${authorisedTitle ? `, ${authorisedTitle}` : ''}. Please retain it for your records.`
+            : 'The PDF carries the digital signature of the approving officer. Please retain it for your records.'}
         </Text>
 
         <Hr style={hr} />

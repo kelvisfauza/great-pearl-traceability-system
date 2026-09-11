@@ -318,7 +318,7 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
     `Verify authenticity by quoting ref ${data.reference} to ${COMPANY.email}.`,
     220,
   );
-  doc.text(validLines, pageW - margin - 220, sigBoxY + 52);
+  doc.text(validLines, pageW - margin - 220, sigBoxY + 72);
 
   // ---- Footer ----
   doc.setDrawColor(0, 0, 0);
