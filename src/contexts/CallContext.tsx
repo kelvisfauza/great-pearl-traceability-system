@@ -5,6 +5,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { SignedAvatarImage } from '@/components/ui/signed-avatar-image';
 import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, PhoneIncoming, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import EscalateCallDialog from '@/components/calls/EscalateCallDialog';
@@ -28,6 +29,7 @@ interface CallRow {
 interface PeerInfo {
   name: string;
   avatarInitials: string;
+  avatarUrl?: string;
 }
 
 interface CallContextValue {
@@ -439,14 +441,18 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     });
   }, [myId]);
 
-  // Fetch peer info (name) by auth_user_id
+  // Fetch peer identity and portrait from the same secured directory used by chat.
   const fetchPeer = useCallback(async (authUserId: string): Promise<PeerInfo> => {
     try {
-      const { data } = await supabase.rpc('get_employee_display_name' as any, {
-        _auth_user_id: authUserId,
-      });
-
-      const safeName = typeof data === 'string' && data.trim() ? data.trim() : 'Unknown user';
+      const { data } = await (supabase as any).rpc('get_employee_directory');
+      const row = (Array.isArray(data) ? data : []).find((item: any) => item.auth_user_id === authUserId);
+      let safeName = typeof row?.name === 'string' && row.name.trim() ? row.name.trim() : '';
+      if (!safeName) {
+        const { data: displayName } = await supabase.rpc('get_employee_display_name' as any, {
+          _auth_user_id: authUserId,
+        });
+        safeName = typeof displayName === 'string' && displayName.trim() ? displayName.trim() : 'Unknown user';
+      }
       const initials = safeName
         .split(' ')
         .map(s => s[0])
@@ -455,7 +461,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
         .join('')
         .toUpperCase() || 'U';
 
-      return { name: safeName, avatarInitials: initials };
+      return { name: safeName, avatarInitials: initials, avatarUrl: row?.avatar_url || undefined };
     } catch {
       return { name: 'Unknown user', avatarInitials: 'U' };
     }
@@ -728,9 +734,10 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
     const row = data as CallRow;
+    const peer = await fetchPeer(calleeAuthId);
     const initials = calleeName.split(' ').map(s => s[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || 'U';
     setActive(row);
-    setActivePeer({ name: calleeName, avatarInitials: initials });
+    setActivePeer({ ...peer, name: calleeName || peer.name, avatarInitials: initials });
     setIsInitiator(true);
 
     const stream = await setupPeer(row.id, type, localStream);
@@ -848,7 +855,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
             await supabase.from('call_sessions').update({ status: 'declined', ended_at: new Date().toISOString() }).eq('id', row.id);
             return;
           }
-          let peer: PeerInfo;
+          let peer = await fetchPeer(row.caller_id);
           const embeddedName = (row as any).caller_name as string | undefined;
           if (embeddedName && embeddedName.trim()) {
             const safeName = embeddedName.trim();
@@ -859,9 +866,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
               .slice(0, 2)
               .join('')
               .toUpperCase() || 'U';
-            peer = { name: safeName, avatarInitials: initials };
-          } else {
-            peer = await fetchPeer(row.caller_id);
+            peer = { ...peer, name: safeName, avatarInitials: initials };
           }
           setIncoming(row);
           setIncomingPeer(peer);
@@ -1148,6 +1153,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
           <div className="flex flex-col items-center gap-4 py-4">
             <PhoneIncoming className="h-8 w-8 text-primary animate-pulse" />
             <Avatar className="h-20 w-20">
+              <SignedAvatarImage src={incomingPeer?.avatarUrl} alt={incomingPeer?.name || 'Caller'} />
               <AvatarFallback className="text-xl bg-primary/10 text-primary">
                 {incomingPeer?.avatarInitials || 'U'}
               </AvatarFallback>
@@ -1200,6 +1206,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
             {!(isVideo && remoteHasVideo) && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
                 <Avatar className="h-24 w-24">
+                  <SignedAvatarImage src={activePeer?.avatarUrl} alt={activePeer?.name || 'Caller'} />
                   <AvatarFallback className="text-2xl bg-primary/20 text-primary-foreground">
                     {activePeer?.avatarInitials || 'U'}
                   </AvatarFallback>
