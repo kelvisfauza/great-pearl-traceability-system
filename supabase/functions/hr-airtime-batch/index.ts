@@ -184,6 +184,7 @@ Deno.serve(async (req) => {
 
         if (!ok) {
           failed++
+          await treasuryRelease({ account: 'operations', amount: Number(item.amount), reference: treasuryRef, description: `Airtime failed — funds returned (${item.employee_name})` })
           await supabase.from('airtime_batch_items')
             .update({ payment_status: 'failed', error_message: result.errorMessage || 'Yo payment failed' })
             .eq('id', item.id)
