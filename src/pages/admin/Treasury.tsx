@@ -532,68 +532,89 @@ export default function Treasury() {
                   </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                  {investments.length === 0 ? (
-                    <div className="text-center text-muted-foreground py-8 text-sm">No investments yet.</div>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Investor</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Principal</TableHead>
-                          <TableHead className="text-right">Rate</TableHead>
-                          <TableHead className="text-right">Expected Return</TableHead>
-                          <TableHead className="text-right">Earned So Far</TableHead>
-                          <TableHead className="text-right">Cashed Out</TableHead>
-                          <TableHead>Maturity</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {investments.slice(0, 100).map((inv) => {
-                          const principal = Number(inv.amount);
-                          const rate = Number(inv.interest_rate || 25);
-                          const expectedReturn = principal * (1 + rate / 100);
-                          const isActive = inv.status === 'active';
-                          // Pro-rated earned-so-far for active
-                          const totalDays = (inv.maturity_months || 3) * 30;
-                          const daysElapsed = Math.max(0, Math.floor(
-                            (Date.now() - new Date(inv.start_date).getTime()) / (24 * 60 * 60 * 1000)
-                          ));
-                          const accruedInterest = isActive
-                            ? principal * (rate / 100) * Math.min(1, daysElapsed / totalDays)
-                            : Number(inv.earned_interest || 0);
-                          const cashedOut = isActive ? 0 : Number(inv.total_payout || 0);
-                          return (
-                            <TableRow key={inv.id}>
-                              <TableCell className="text-xs">
-                                <div className="font-medium">{inv.employee_name || inv.user_email}</div>
-                                <div className="text-[10px] text-muted-foreground">{inv.user_email}</div>
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant="outline" className={`text-[10px] ${
-                                  inv.status === 'active' ? 'bg-blue-100 text-blue-800' :
-                                  inv.status === 'matured' ? 'bg-green-100 text-green-800' :
-                                  'bg-amber-100 text-amber-800'
-                                }`}>
-                                  {inv.status === 'withdrawn_early' ? 'Early Exit' : inv.status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-right font-mono text-xs">{fmt(principal)}</TableCell>
-                              <TableCell className="text-right text-xs">{rate}%</TableCell>
-                              <TableCell className="text-right font-mono text-xs text-green-700">{fmt(expectedReturn)}</TableCell>
-                              <TableCell className="text-right font-mono text-xs text-blue-700">{fmt(accruedInterest)}</TableCell>
-                              <TableCell className="text-right font-mono text-xs text-amber-700">{cashedOut > 0 ? fmt(cashedOut) : '—'}</TableCell>
-                              <TableCell className="text-xs whitespace-nowrap">
-                                {new Date(inv.maturity_date).toLocaleDateString()}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  )}
-                </div>
+                {(() => {
+                  const closed = [...matured, ...early].sort(
+                    (a, b) => new Date(b.maturity_date).getTime() - new Date(a.maturity_date).getTime());
+                  const renderRows = (rows: InvestmentRow[]) => rows.slice(0, 100).map((inv) => {
+                    const principal = Number(inv.amount);
+                    const rate = Number(inv.interest_rate || 25);
+                    const expectedReturn = principal * (1 + rate / 100);
+                    const isActive = inv.status === 'active';
+                    const totalDays = (inv.maturity_months || 3) * 30;
+                    const daysElapsed = Math.max(0, Math.floor(
+                      (Date.now() - new Date(inv.start_date).getTime()) / (24 * 60 * 60 * 1000)
+                    ));
+                    const accruedInterest = isActive
+                      ? principal * (rate / 100) * Math.min(1, daysElapsed / totalDays)
+                      : Number(inv.earned_interest || 0);
+                    const cashedOut = isActive ? 0 : Number(inv.total_payout || 0);
+                    return (
+                      <TableRow key={inv.id}>
+                        <TableCell className="text-xs">
+                          <div className="font-medium">{inv.employee_name || inv.user_email}</div>
+                          <div className="text-[10px] text-muted-foreground">{inv.user_email}</div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={`text-[10px] ${
+                            inv.status === 'active' ? 'bg-blue-100 text-blue-800' :
+                            inv.status === 'matured' ? 'bg-green-100 text-green-800' :
+                            'bg-amber-100 text-amber-800'
+                          }`}>
+                            {inv.status === 'withdrawn_early' ? 'Early Exit' : inv.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs">{fmt(principal)}</TableCell>
+                        <TableCell className="text-right text-xs">{rate}%</TableCell>
+                        <TableCell className="text-right font-mono text-xs text-green-700">{fmt(expectedReturn)}</TableCell>
+                        <TableCell className="text-right font-mono text-xs text-blue-700">{fmt(accruedInterest)}</TableCell>
+                        <TableCell className="text-right font-mono text-xs text-amber-700">{cashedOut > 0 ? fmt(cashedOut) : '—'}</TableCell>
+                        <TableCell className="text-xs whitespace-nowrap">
+                          {new Date(inv.maturity_date).toLocaleDateString()}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  });
+                  const header = (
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Investor</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Principal</TableHead>
+                        <TableHead className="text-right">Rate</TableHead>
+                        <TableHead className="text-right">Expected Return</TableHead>
+                        <TableHead className="text-right">Earned So Far</TableHead>
+                        <TableHead className="text-right">Cashed Out</TableHead>
+                        <TableHead>Maturity</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                  );
+                  return (
+                    <>
+                      <div className="overflow-x-auto">
+                        <div className="text-xs font-semibold text-muted-foreground uppercase mb-2">
+                          Active savings ({active.length})
+                        </div>
+                        {active.length === 0 ? (
+                          <div className="text-center text-muted-foreground py-8 text-sm">No active savings.</div>
+                        ) : (
+                          <Table>{header}<TableBody>{renderRows(active)}</TableBody></Table>
+                        )}
+                      </div>
+
+                      {closed.length > 0 && (
+                        <details className="rounded-lg border bg-muted/30">
+                          <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold text-muted-foreground uppercase flex items-center gap-2">
+                            <History className="h-3.5 w-3.5" />
+                            History — matured &amp; early exits ({closed.length})
+                          </summary>
+                          <div className="overflow-x-auto px-3 pb-3">
+                            <Table>{header}<TableBody>{renderRows(closed)}</TableBody></Table>
+                          </div>
+                        </details>
+                      )}
+                    </>
+                  );
+                })()}
               </>
             );
           })()}
