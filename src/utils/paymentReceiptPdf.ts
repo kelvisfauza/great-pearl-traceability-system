@@ -260,8 +260,8 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
     cursorY += noteLines.length * 12 + 6;
   }
 
-  // ---- Authorisation block (compact signature) ----
-  const sigBoxY = pageH - 130;
+  // ---- Authorisation block (signature) ----
+  const sigBoxY = pageH - 150;
   doc.setDrawColor(230, 230, 230);
   doc.setLineWidth(0.4);
   doc.line(margin, sigBoxY - 8, pageW - margin, sigBoxY - 8);
@@ -274,7 +274,7 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
 
   // White background plate behind signature so transparent PNG prints on plain white
   doc.setFillColor(255, 255, 255);
-  doc.rect(margin, sigBoxY + 6, 150, 32, 'F');
+  doc.rect(margin, sigBoxY + 6, 190, 52, 'F');
 
   // Approver who released the payment signs the receipt
   const signer = resolveSignatureBlock(
@@ -282,27 +282,33 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
     data.approvedBy || data.processedBy,
   );
 
-  // Signature image (smaller, tucked above the name line)
+  // Signature image — scaled to fit the box while keeping its true proportions
   if (signer.signatureUrl) {
     try {
       const sig = await loadImageAsDataUrl(signer.signatureUrl);
-      doc.addImage(sig, 'PNG', margin + 4, sigBoxY + 8, 70, 28);
+      const { w, h } = await getImageSize(sig);
+      const maxW = 170;
+      const maxH = 50;
+      const scale = Math.min(maxW / w, maxH / h);
+      const drawW = w * scale;
+      const drawH = h * scale;
+      doc.addImage(sig, 'PNG', margin + 4, sigBoxY + 8 + (maxH - drawH), drawW, drawH, undefined, 'FAST');
     } catch {/* signature optional */}
   }
-
 
   // Underline & name (solid black for B&W print clarity)
   doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.6);
-  doc.line(margin, sigBoxY + 40, margin + 180, sigBoxY + 40);
+  doc.line(margin, sigBoxY + 60, margin + 190, sigBoxY + 60);
   doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
-  doc.text(signer.name, margin, sigBoxY + 52);
+  doc.text(signer.name, margin, sigBoxY + 72);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.setTextColor(60, 60, 60);
-  doc.text(`${signer.title} • Signed ${formatDate(new Date().toISOString())}`, margin, sigBoxY + 62);
+  doc.text(`${signer.title} • Signed ${formatDate(new Date().toISOString())}`, margin, sigBoxY + 82);
+
 
   // Validation note (right side, smaller)
   doc.setFont('helvetica', 'italic');
