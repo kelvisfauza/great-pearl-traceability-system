@@ -93,6 +93,7 @@ serve(async (req) => {
           processed++;
           console.log(`[USSD Advance Disburse] ✅ Sent UGX ${disburseAmount} to ${row.phone}`);
         } else {
+          await treasuryRelease({ account: "loans_overdrafts", amount: disburseAmount, reference: treasuryRef, description: `USSD advance failed — funds returned (${row.phone})` });
           await supabase.from("ussd_advance_requests").update({
             disbursement_status: "failed",
             disbursement_error: result.errorMessage || result.statusMessage || "Unknown error",
@@ -100,6 +101,7 @@ serve(async (req) => {
           console.error(`[USSD Advance Disburse] ❌ ${row.phone}:`, result.errorMessage);
         }
       } catch (e: any) {
+        await treasuryRelease({ account: "loans_overdrafts", amount: disburseAmount, reference: treasuryRef, description: `USSD advance failed — funds returned (${row.phone})` });
         await supabase.from("ussd_advance_requests").update({
           disbursement_status: "failed",
           disbursement_error: String(e?.message || e),
