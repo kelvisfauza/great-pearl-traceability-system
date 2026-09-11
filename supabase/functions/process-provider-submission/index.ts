@@ -769,7 +769,9 @@ serve(async (req) => {
             paymentMethod: paymentMethodLabel,
             transactionId: result.transactionRef || record.id,
             processedBy: reviewerName,
-                approvedBy: reviewerName,
+            approvedBy: reviewerName,
+            approvedByEmail: reviewer.email || undefined,
+            paidOn: new Date().toISOString(),
           });
           const year = new Date().getFullYear();
           const path = `${year}/${pdfRef}.pdf`;
