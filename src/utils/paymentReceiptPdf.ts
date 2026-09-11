@@ -310,22 +310,31 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
   doc.setTextColor(60, 60, 60);
   doc.text(`${signer.title} • Signed ${formatDate(new Date().toISOString())}`, margin, sigBoxY + 98);
 
-  // Company stamp — placed to the right of the signature block
+  // Company stamp — placed to the right of the signature block, dated on the day of issue
   try {
     const stamp = await loadImageAsDataUrl(stampUrl);
     const { w, h } = await getImageSize(stamp);
     const maxW = 150;
     const maxH = 92;
     const scale = Math.min(maxW / w, maxH / h);
-    doc.addImage(
-      stamp,
-      'PNG',
-      margin + 250,
-      sigBoxY + 4,
-      w * scale,
-      h * scale,
-    );
+    const drawW = w * scale;
+    const drawH = h * scale;
+    const stampX = margin + 250;
+    const stampY = sigBoxY + 4;
+    doc.addImage(stamp, 'PNG', stampX, stampY, drawW, drawH);
+
+    // Live stamp date, printed in the blank date window of the stamp
+    const stamped = new Date(data.paidOn || Date.now());
+    const stampDate = `${String(stamped.getDate()).padStart(2, '0')} ${stamped
+      .toLocaleString('en-GB', { month: 'short' })
+      .toUpperCase()} ${stamped.getFullYear()}`;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(Math.max(7, drawH * 0.115));
+    doc.setTextColor(200, 30, 30);
+    doc.text(stampDate, stampX + drawW * 0.483, stampY + drawH * 0.53, { align: 'center' });
+    doc.setTextColor(0, 0, 0);
   } catch {/* stamp optional */}
+
 
 
 
