@@ -146,6 +146,16 @@ serve(async (req) => {
       yoStatus = "pending_approval";
     }
 
+    if (yoStatus === "failed") {
+      await treasuryRelease({
+        account: "operations",
+        amount: totalAmount,
+        reference: treasuryRef,
+        description: `Meal payment failed — funds returned (${receiverName || cleanPhone})`,
+        performedBy: initiatedBy || "system",
+      });
+    }
+
     await supabase
       .from("meal_disbursements")
       .update({
