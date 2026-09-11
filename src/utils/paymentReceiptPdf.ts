@@ -261,7 +261,7 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
   }
 
   // ---- Authorisation block (signature) ----
-  const sigBoxY = pageH - 150;
+  const sigBoxY = pageH - 165;
   doc.setDrawColor(230, 230, 230);
   doc.setLineWidth(0.4);
   doc.line(margin, sigBoxY - 8, pageW - margin, sigBoxY - 8);
@@ -274,7 +274,7 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
 
   // White background plate behind signature so transparent PNG prints on plain white
   doc.setFillColor(255, 255, 255);
-  doc.rect(margin, sigBoxY + 6, 190, 52, 'F');
+  doc.rect(margin, sigBoxY + 6, 230, 68, 'F');
 
   // Approver who released the payment signs the receipt
   const signer = resolveSignatureBlock(
@@ -287,27 +287,27 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
     try {
       const sig = await loadImageAsDataUrl(signer.signatureUrl);
       const { w, h } = await getImageSize(sig);
-      const maxW = 170;
-      const maxH = 50;
+      const maxW = 210;
+      const maxH = 66;
       const scale = Math.min(maxW / w, maxH / h);
       const drawW = w * scale;
       const drawH = h * scale;
-      doc.addImage(sig, 'PNG', margin + 4, sigBoxY + 8 + (maxH - drawH), drawW, drawH, undefined, 'FAST');
+      doc.addImage(sig, 'PNG', margin + 4, sigBoxY + 8 + (maxH - drawH), drawW, drawH);
     } catch {/* signature optional */}
   }
 
   // Underline & name (solid black for B&W print clarity)
   doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.6);
-  doc.line(margin, sigBoxY + 60, margin + 190, sigBoxY + 60);
+  doc.line(margin, sigBoxY + 76, margin + 230, sigBoxY + 76);
   doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
-  doc.text(signer.name, margin, sigBoxY + 72);
+  doc.text(signer.name, margin, sigBoxY + 88);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.setTextColor(60, 60, 60);
-  doc.text(`${signer.title} • Signed ${formatDate(new Date().toISOString())}`, margin, sigBoxY + 82);
+  doc.text(`${signer.title} • Signed ${formatDate(new Date().toISOString())}`, margin, sigBoxY + 98);
 
 
   // Validation note (right side, smaller)
@@ -318,7 +318,7 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
     `Verify authenticity by quoting ref ${data.reference} to ${COMPANY.email}.`,
     220,
   );
-  doc.text(validLines, pageW - margin - 220, sigBoxY + 72);
+  doc.text(validLines, pageW - margin - 220, sigBoxY + 88);
 
   // ---- Footer ----
   doc.setDrawColor(0, 0, 0);
