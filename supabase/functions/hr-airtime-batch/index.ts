@@ -155,6 +155,24 @@ Deno.serve(async (req) => {
           continue
         }
 
+        // Treasury pool: airtime is a company expense — it draws from Operations
+        const treasuryRef = `AIRTIME-${item.id}`
+        const reserved = await treasuryReserve({
+          account: 'operations',
+          amount: Number(item.amount),
+          reference: treasuryRef,
+          description: `${batch.month_year} Airtime - ${item.employee_name}`,
+          name: item.employee_name,
+          metadata: { airtime_batch_item_id: item.id, batch_id: batchId },
+        })
+        if (!reserved.ok) {
+          failed++
+          await supabase.from('airtime_batch_items')
+            .update({ payment_status: 'failed', error_message: reserved.error || 'Operations account is empty' })
+            .eq('id', item.id)
+          continue
+        }
+
         const result = await yoSendAirtime({
           phone: cleanPhone,
           amount: Number(item.amount),
