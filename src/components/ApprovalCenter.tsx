@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import ReturnToProcurementButton from './approval/ReturnToProcurementButton';
 import { CheckCircle, XCircle, RefreshCw, Clock, User, Calendar, DollarSign, Eye, FileText, TrendingUp, AlertTriangle, Package, Settings, Banknote } from 'lucide-react';
 import { useUnifiedApprovalRequests, UnifiedApprovalRequest } from '@/hooks/useUnifiedApprovalRequests';
 import { useToast } from '@/hooks/use-toast';
@@ -25,7 +26,7 @@ const POLLING_INTERVAL = 10000; // 10 seconds
 const ApprovalCenter = () => {
   const { requests, loading, updateRequestStatus, fetchRequests } = useUnifiedApprovalRequests();
   const { recommendations, loading: recommendationsLoading } = useProcurementRecommendations();
-  const { reviews: procurementReviews } = useProcurementReviews(requests.map((r) => r.id));
+  const { reviews: procurementReviews, refresh: refreshProcurementReviews } = useProcurementReviews(requests.map((r) => r.id));
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<UnifiedApprovalRequest | null>(null);
@@ -493,6 +494,7 @@ const ApprovalCenter = () => {
                         }
                         const cleared = review.decision === 'approved';
                         const rejected = review.decision === 'rejected';
+                        const returned = review.decision === 'returned';
                         return (
                           <div className={`mb-4 p-3 rounded-lg border ${
                             cleared
@@ -506,8 +508,13 @@ const ApprovalCenter = () => {
                                 ? `Cleared by procurement (${review.reviewed_by || 'Procurement'})`
                                 : rejected
                                   ? `Rejected at procurement (${review.reviewed_by || 'Procurement'})`
-                                  : 'Awaiting procurement review'}
+                                  : returned
+                                    ? `Sent back to procurement for changes (by ${review.returned_by || 'admin'})`
+                                    : 'Awaiting procurement review'}
                             </p>
+                            {returned && review.return_reason && (
+                              <p className="text-xs text-muted-foreground mt-1"><strong>Requested change:</strong> {review.return_reason}</p>
+                            )}
                             {review.notes && (
                               <p className="text-xs text-muted-foreground mt-1"><strong>Observations:</strong> {review.notes}</p>
                             )}
@@ -615,6 +622,17 @@ const ApprovalCenter = () => {
                               <XCircle className="h-4 w-4 mr-2" />
                               Reject
                             </Button>
+                            {request.type === 'general' && !/withdraw/i.test(request.requestType || '') && (
+                              <ReturnToProcurementButton
+                                sourceTable="approval_requests"
+                                recordId={request.id}
+                                title={request.title}
+                                requestedBy={request.requestedBy}
+                                amount={request.amount}
+                                disabled={processingId === request.id}
+                                onReturned={refreshProcurementReviews}
+                              />
+                            )}
                           </>
                         )}
                         {processingId === request.id && (

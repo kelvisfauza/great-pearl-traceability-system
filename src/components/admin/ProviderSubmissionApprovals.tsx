@@ -16,6 +16,8 @@ import { printProviderAcknowledgement } from '@/utils/printProviderAcknowledgeme
 import FingerprintApprovalDialog, { FingerprintApprovalTarget } from '@/components/approval/FingerprintApprovalDialog';
 import ApprovalCodeDialog, { ApprovalCodeTarget } from '@/components/approval/ApprovalCodeDialog';
 import { requiresFingerprintApproval } from '@/utils/fingerprintApproval';
+import ReturnToProcurementButton from '@/components/approval/ReturnToProcurementButton';
+import { useProcurementReviews } from '@/hooks/useProcurementReviews';
 
 const ProviderSubmissionApprovals: React.FC = () => {
   const { toast } = useToast();
@@ -44,6 +46,9 @@ const ProviderSubmissionApprovals: React.FC = () => {
     },
     refetchInterval: 30000,
   });
+  const { reviews: procurementReviews, refresh: refreshProcurementReviews } = useProcurementReviews(
+    (submissions as any[]).map((s) => s.id),
+  );
 
   const publicLink = `${window.location.origin}/submit-request`;
 
@@ -197,6 +202,36 @@ const ProviderSubmissionApprovals: React.FC = () => {
                   </div>
                 </div>
                 <p className="text-sm bg-muted/50 p-2 rounded">{s.description}</p>
+                {(() => {
+                  const review = procurementReviews[s.id];
+                  if (!review) return (
+                    <p className="text-xs text-muted-foreground border border-dashed rounded px-2 py-1.5">
+                      Procurement review: <strong>not yet reviewed</strong>.
+                    </p>
+                  );
+                  const cls = review.decision === 'approved'
+                    ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200'
+                    : review.decision === 'rejected'
+                      ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200'
+                      : 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200';
+                  const label = review.decision === 'approved'
+                    ? `Cleared by procurement (${review.reviewed_by || 'Procurement'})`
+                    : review.decision === 'rejected'
+                      ? `Rejected at procurement (${review.reviewed_by || 'Procurement'})`
+                      : review.decision === 'returned'
+                        ? `Sent back to procurement for changes (by ${review.returned_by || 'admin'})`
+                        : 'Awaiting procurement review';
+                  return (
+                    <div className={`text-xs border rounded px-2 py-1.5 ${cls}`}>
+                      <strong>{label}</strong>
+                      {review.decision === 'returned' && review.return_reason && <div>Requested change: {review.return_reason}</div>}
+                      {review.notes && <div>Observations: {review.notes}</div>}
+                      {review.edited_amount != null && (
+                        <div>Amount corrected: UGX {Number(review.original_amount || 0).toLocaleString()} → UGX {Number(review.edited_amount).toLocaleString()}</div>
+                      )}
+                    </div>
+                  );
+                })()}
                 {s.payout_status === 'failed' && (
                   <div className="text-xs bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded px-2 py-1.5">
                     <strong>Previous payout failed.</strong>{' '}
@@ -207,7 +242,17 @@ const ProviderSubmissionApprovals: React.FC = () => {
                     </div>
                   </div>
                 )}
-                <div className="flex gap-2 justify-end">
+                <div className="flex gap-2 justify-end flex-wrap">
+                  <ReturnToProcurementButton
+                    size="sm"
+                    sourceTable="provider_submission_requests"
+                    recordId={s.id}
+                    title={`${s.request_type === 'meal_plan' ? 'Meal Plan' : 'Service Provider Payment'} — ${s.provider_name}`}
+                    requestedBy={s.provider_name}
+                    amount={s.amount}
+                    disabled={processing === s.id}
+                    onReturned={refreshProcurementReviews}
+                  />
                   <Button
                     size="sm"
                     variant="outline"
