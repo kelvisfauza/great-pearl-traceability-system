@@ -100,6 +100,94 @@ Deno.serve(async (req) => {
     const mode = String(payload.mode || 'scan')
 
     // ---------------------------------------------------------------
+    // MODE: returned — an admin sent the request back to procurement
+    // ---------------------------------------------------------------
+    if (mode === 'returned') {
+      const sourceTable = String(payload.source_table || 'approval_requests')
+      const recordId = String(payload.record_id || '')
+      if (!recordId) return json({ ok: false, error: 'record_id is required' })
+
+      const { data: review } = await supabase
+        .from('procurement_reviews')
+        .select('*')
+        .eq('source_table', sourceTable)
+        .eq('record_id', recordId)
+        .maybeSingle()
+      if (!review) return json({ ok: false, error: 'Review not found' })
+
+      const { data: staff } = await supabase
+        .from('employees')
+        .select('name,email,phone,department,role,permissions,disabled,status')
+        .not('email', 'is', null)
+
+      // Non-admin procurement staff only (admins already know — they sent it back)
+      const reviewers = (staff || []).filter((e: any) => {
+        if (e.disabled === true) return false
+        if (String(e.status || '').toLowerCase() === 'inactive') return false
+        const dept = String(e.department || '').toLowerCase()
+        const role = String(e.role || '').toLowerCase()
+        const perms = Array.isArray(e.permissions) ? e.permissions.map((p: any) => String(p).toLowerCase()) : []
+        if (role.includes('admin') || perms.includes('*')) return false
+        return dept.includes('procurement') || role.includes('procurement') || perms.some((p: string) => p.includes('procurement'))
+      })
+
+      let adminName = review.returned_by || 'Administrator'
+      if (review.returned_by) {
+        const { data: adm } = await supabase.from('employees').select('name').ilike('email', review.returned_by).maybeSingle()
+        if (adm?.name) adminName = adm.name
+      }
+
+      const body = `
+        <p style="font-size:15px;margin:0 0 14px;">Dear <strong>{{NAME}}</strong>,</p>
+        <p style="font-size:15px;line-height:1.7;margin:0 0 14px;">
+          <strong>${esc(adminName)}</strong> has <strong>sent the request below back to procurement</strong> for changes.
+          Please review the instructions, correct the amount or details, and send it back for administrator approval.
+        </p>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-size:14px;margin:8px 0 14px;">
+          <tr><td style="padding:8px 10px;border:1px solid #e5e7eb;background:#f9fafb;width:180px;">Request</td><td style="padding:8px 10px;border:1px solid #e5e7eb;">${esc(review.request_title || 'Request')}</td></tr>
+          <tr><td style="padding:8px 10px;border:1px solid #e5e7eb;background:#f9fafb;">Requested by</td><td style="padding:8px 10px;border:1px solid #e5e7eb;">${esc(review.requested_by || 'N/A')}</td></tr>
+          <tr><td style="padding:8px 10px;border:1px solid #e5e7eb;background:#f9fafb;">Current amount</td><td style="padding:8px 10px;border:1px solid #e5e7eb;font-weight:600;">${money(review.amount)}</td></tr>
+          <tr><td style="padding:8px 10px;border:1px solid #e5e7eb;background:#f9fafb;">Returned by</td><td style="padding:8px 10px;border:1px solid #e5e7eb;">${esc(adminName)}</td></tr>
+          <tr><td style="padding:8px 10px;border:1px solid #e5e7eb;background:#fef3c7;font-weight:600;">What to change</td><td style="padding:8px 10px;border:1px solid #e5e7eb;background:#fffbeb;">${esc(review.return_reason || 'See administrator instructions')}</td></tr>
+        </table>`
+
+      const results: any[] = []
+      for (const person of reviewers) {
+        const email = String(person.email).trim().toLowerCase()
+        const idem = `proc-review-returned-${review.id}-${review.return_count || 1}-${email}`
+        if (lovableApiKey) {
+          try {
+            await sendLovableEmail({
+              to: email,
+              from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+              sender_domain: SENDER_DOMAIN,
+              subject: `Sent back for changes: ${review.request_title || 'Request'} — ${money(review.amount)}`,
+              html: shell('REQUEST SENT BACK TO PROCUREMENT', body.replace('{{NAME}}', esc(person.name || 'Colleague')), 'Open Procurement Review', REVIEW_URL),
+              text: `${adminName} sent "${review.request_title}" (${money(review.amount)}) back to procurement. Change required: ${review.return_reason}. Open ${REVIEW_URL}`,
+              purpose: 'transactional',
+              label: 'procurement-review-returned',
+              idempotency_key: idem,
+              unsubscribe_token: token(),
+              cc: email === OPERATIONS_EMAIL ? [] : [OPERATIONS_EMAIL],
+            }, { apiKey: lovableApiKey, idempotencyKey: idem })
+            results.push({ email, email_status: 'sent' })
+          } catch (e: any) {
+            results.push({ email, email_status: `failed: ${e?.message}` })
+          }
+        }
+        await sendSms(
+          person.phone,
+          `SENT BACK BY ADMIN: ${review.request_title || 'Request'} ${money(review.amount)}. ${adminName} asks: ${String(review.return_reason || '').slice(0, 90)}. Edit & resubmit at ${REVIEW_URL} - Great Agro Coffee`,
+          person.name,
+          'procurement_review_returned',
+        )
+      }
+
+      await supabase.from('procurement_reviews').update({ return_notified_at: new Date().toISOString() }).eq('id', review.id)
+      return json({ ok: true, notified: reviewers.length, results })
+    }
+
+    // ---------------------------------------------------------------
     // MODE: reviewed — procurement has decided; notify the chosen admin
     // ---------------------------------------------------------------
     if (mode === 'reviewed') {
