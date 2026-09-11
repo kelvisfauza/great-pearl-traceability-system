@@ -196,6 +196,23 @@ const QualityControl = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingAssessmentId, setEditingAssessmentId] = useState<string | null>(null);
+  // Sampling order linked to the delivery being priced (auto-detected by supplier)
+  const [linkedSamplingOrder, setLinkedSamplingOrder] = useState<SamplingOrderLite | null>(null);
+
+  const validateSampleReadings = (): string | null => {
+    if (!linkedSamplingOrder) return null;
+    const required: [string, string][] = [
+      ['moisture', 'Moisture'], ['group1_defects', 'Group 1 defects'], ['group2_defects', 'Group 2 defects'],
+      ['below12', 'Below 12'], ['pods', 'Pods'], ['husks', 'Husks'], ['stones', 'Stones'],
+    ];
+    const missing = required
+      .filter(([k]) => String((assessmentForm as any)[k] ?? '').trim() === '')
+      .map(([, label]) => label);
+    if (missing.length) {
+      return `Sampling order ${linkedSamplingOrder.order_number} is linked — fill in all readings from the sample: ${missing.join(', ')}.`;
+    }
+    return null;
+  };
   const [selectedForBulkPrint, setSelectedForBulkPrint] = useState<string[]>([]);
   const [chainAssessment, setChainAssessment] = useState<any | null>(null);
   const [chainOpen, setChainOpen] = useState(false);
@@ -350,6 +367,7 @@ const QualityControl = () => {
       return;
     }
     setSelectedRecord(record);
+    setLinkedSamplingOrder(null);
     setAssessmentForm({
       moisture: '',
       group1_defects: '',
@@ -645,6 +663,11 @@ const QualityControl = () => {
       });
       return;
     }
+    const sampleError = validateSampleReadings();
+    if (sampleError) {
+      toast({ title: "Sample readings required", description: sampleError, variant: "destructive" });
+      return;
+    }
 
     // Prioritize manual price if entered, otherwise use calculator price
     const manualPriceValue = parseFloat(assessmentForm.manual_price);
@@ -726,6 +749,8 @@ const QualityControl = () => {
         form_number: assessmentForm.form_number?.trim() || null,
         analysis_file_id: assessmentForm.analysis_file_id || null,
         system_assessment_by: employee?.name || employee?.email || 'Quality Controller',
+        sampling_order_id: linkedSamplingOrder?.id || null,
+        sampling_order_number: linkedSamplingOrder?.order_number || null,
       } as any;
 
       console.log('Final assessment data to submit:', assessment);

@@ -57,7 +57,7 @@ const SamplingOrderMatch = ({ supplierName, value, onChange, disabled }: Props) 
         .order("created_at", { ascending: false })
         .limit(10);
       if (error) throw error;
-      return (data || []) as SamplingOrderLite[];
+      return ((data || []) as unknown) as SamplingOrderLite[];
     },
   });
 
