@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Landmark, Users, HandCoins, PiggyBank, TrendingUp, Gift, Truck, Percent,
-  AlertTriangle, ArrowLeftRight, Plus, History, CheckCircle2, Settings2, RefreshCw,
+  AlertTriangle, ArrowLeftRight, Plus, History, CheckCircle2, Settings2, RefreshCw, Printer,
 } from "lucide-react";
 
 interface Account {
