@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Landmark, Users, HandCoins, PiggyBank, TrendingUp, Gift, Truck, Percent,
-  AlertTriangle, ArrowLeftRight, Plus, History, CheckCircle2, Settings2, RefreshCw,
+  AlertTriangle, ArrowLeftRight, Plus, History, CheckCircle2, Settings2, RefreshCw, Printer,
 } from "lucide-react";
 
 interface Account {
@@ -118,6 +118,31 @@ export default function TreasuryAccountsPanel() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Live balances: silently re-read the overview every second (no loading flicker),
+  // and ask Yo Payments for a fresh real balance once a minute.
+  const [lastTick, setLastTick] = useState<Date>(new Date());
+  useEffect(() => {
+    let cancelled = false;
+    let inFlight = false;
+    const tick = async () => {
+      if (inFlight || document.hidden) return;
+      inFlight = true;
+      try {
+        const { data: res } = await (supabase as any).rpc("get_treasury_accounts_overview");
+        if (!cancelled && res?.ok) {
+          setData(res as Overview);
+          setLastTick(new Date());
+        }
+      } catch { /* keep last values */ }
+      inFlight = false;
+    };
+    const fast = setInterval(tick, 1000);
+    const yoSync = setInterval(() => {
+      if (!document.hidden) supabase.functions.invoke("sync-yo-balance").catch(() => {});
+    }, 60_000);
+    return () => { cancelled = true; clearInterval(fast); clearInterval(yoSync); };
+  }, []);
+
   const accounts = data?.accounts ?? [];
   const fundable = useMemo(() => accounts.filter((a) => a.code !== "user_wallets"), [accounts]);
   const byCode = useMemo(() => Object.fromEntries(accounts.map((a) => [a.code, a])), [accounts]);
@@ -133,6 +158,37 @@ export default function TreasuryAccountsPanel() {
       .limit(100);
     setHistory((rows as Entry[]) || []);
     setHistoryLoading(false);
+  };
+
+  const printHistory = () => {
+    if (!historyCode) return;
+    const acc = byCode[historyCode];
+    const esc = (s: any) => String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));
+    const rows = history.map((e) => `<tr>
+      <td>${new Date(e.created_at).toLocaleString()}</td>
+      <td>${esc(e.description || "—")}</td>
+      <td class="mono">${esc(e.reference || "—")}</td>
+      <td>${esc(e.related_user_name || e.related_user_email || "system")}</td>
+      <td>${esc(e.counter_account ? (byCode[e.counter_account]?.name || e.counter_account) : "—")}</td>
+      <td>${esc(e.performed_by || "system")}</td>
+      <td class="r ${e.direction === "credit" ? "cr" : "dr"}">${e.direction === "credit" ? "+" : "−"}${Math.round(Number(e.amount)).toLocaleString()}</td>
+      <td class="r">${Math.round(Number(e.balance_after)).toLocaleString()}</td>
+    </tr>`).join("");
+    const w = window.open("", "_blank", "width=1200,height=800");
+    if (!w) return;
+    w.document.write(`<!doctype html><html><head><title>${esc(acc?.name)} — movements</title><style>
+      body{font-family:Arial,sans-serif;font-size:11px;color:#111;margin:18px}
+      h1{font-size:16px;margin:0} .sub{color:#555;margin:4px 0 12px}
+      table{width:100%;border-collapse:collapse} th,td{border:1px solid #ccc;padding:4px 6px;text-align:left;vertical-align:top;word-break:break-word}
+      th{background:#f1f1f1} .r{text-align:right;white-space:nowrap} .mono{font-family:monospace;font-size:10px} .cr{color:#15803d} .dr{color:#b91c1c}
+      @page{size:A4 landscape;margin:12mm}
+    </style></head><body onload="window.print()">
+      <h1>Great Agro Coffee — ${esc(acc?.name)} — last ${history.length} movements</h1>
+      <div class="sub">Current balance: UGX ${Math.round(Number(acc?.balance ?? 0)).toLocaleString()} · Printed ${new Date().toLocaleString()}</div>
+      <table><thead><tr><th>Date</th><th>Details</th><th>Reference</th><th>Who</th><th>With</th><th>Done by</th><th class="r">Amount</th><th class="r">Balance after</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+    </body></html>`);
+    w.document.close();
   };
 
   const runRpc = async (fn: string, args: Record<string, any>, success: string) => {
@@ -181,6 +237,40 @@ export default function TreasuryAccountsPanel() {
 
       {error && (
         <Card className="border-destructive bg-destructive/5"><CardContent className="p-3 text-sm text-destructive">{error}</CardContent></Card>
+      )}
+
+      {/* Live provider balances — refreshed every second */}
+      {data && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <Card className="border-primary/30">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <div className="text-xs text-muted-foreground flex items-center gap-2">
+                  Yo Payments balance
+                  <span className="inline-flex items-center gap-1 text-[10px] text-green-600"><span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />LIVE</span>
+                </div>
+                <div className="text-2xl font-bold tabular-nums">{fmt(data.yo_balance)}</div>
+                <div className="text-[10px] text-muted-foreground">
+                  {data.yo_synced_at ? `Yo last checked ${new Date(data.yo_synced_at).toLocaleTimeString()}` : "not synced yet"} · re-checked with Yo every minute · screen refreshes every second
+                </div>
+              </div>
+              <RefreshCw className="h-6 w-6 text-primary/60" />
+            </CardContent>
+          </Card>
+          <Card className="border-primary/30">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <div className="text-xs text-muted-foreground flex items-center gap-2">
+                  GosentePay balance
+                  <span className="inline-flex items-center gap-1 text-[10px] text-green-600"><span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />LIVE</span>
+                </div>
+                <div className={`text-2xl font-bold tabular-nums ${Number(data.gosente_balance) < 0 ? "text-destructive" : ""}`}>{fmt(data.gosente_balance)}</div>
+                <div className="text-[10px] text-muted-foreground">updated {lastTick.toLocaleTimeString()} · refreshes every second</div>
+              </div>
+              <RefreshCw className="h-6 w-6 text-primary/60" />
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Real-money check */}
@@ -329,27 +419,45 @@ export default function TreasuryAccountsPanel() {
 
       {/* History dialog */}
       <Dialog open={!!historyCode} onOpenChange={(o) => !o && setHistoryCode(null)}>
-        <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-[96vw] w-[96vw] xl:max-w-[1400px] h-[92vh] flex flex-col p-4 sm:p-6">
+          <DialogHeader className="flex-row items-center justify-between space-y-0 pr-8">
             <DialogTitle>{historyCode ? byCode[historyCode]?.name : ""} — last 100 movements</DialogTitle>
+            <Button size="sm" variant="outline" onClick={printHistory} disabled={historyLoading || history.length === 0}>
+              <Printer className="h-4 w-4 mr-1" /> Print
+            </Button>
           </DialogHeader>
           {historyLoading ? <Skeleton className="h-40" /> : (
-            <Table>
-              <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Details</TableHead><TableHead>Who</TableHead><TableHead>With</TableHead><TableHead className="text-right">Amount</TableHead><TableHead className="text-right">Balance</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {history.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No movements yet</TableCell></TableRow>}
-                {history.map((e) => (
-                  <TableRow key={e.id}>
-                    <TableCell className="text-xs whitespace-nowrap">{new Date(e.created_at).toLocaleString()}</TableCell>
-                    <TableCell className="text-xs max-w-[260px] truncate" title={e.description || ""}>{e.description || e.reference}</TableCell>
-                    <TableCell className="text-xs">{e.related_user_name || e.related_user_email || e.performed_by || "system"}</TableCell>
-                    <TableCell className="text-xs">{e.counter_account ? (byCode[e.counter_account]?.name || e.counter_account) : "—"}</TableCell>
-                    <TableCell className={`text-xs text-right font-mono ${e.direction === "credit" ? "text-green-600" : "text-red-600"}`}>{e.direction === "credit" ? "+" : "−"}{Math.round(Number(e.amount)).toLocaleString()}</TableCell>
-                    <TableCell className="text-xs text-right font-mono">{Math.round(Number(e.balance_after)).toLocaleString()}</TableCell>
+            <div className="flex-1 min-h-0 overflow-auto rounded-md border">
+              <Table>
+                <TableHeader className="sticky top-0 bg-background z-10">
+                  <TableRow>
+                    <TableHead className="whitespace-nowrap">Date</TableHead>
+                    <TableHead>Details</TableHead>
+                    <TableHead className="whitespace-nowrap">Reference</TableHead>
+                    <TableHead className="whitespace-nowrap">Who</TableHead>
+                    <TableHead className="whitespace-nowrap">With</TableHead>
+                    <TableHead className="whitespace-nowrap">Done by</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">Amount</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">Balance after</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {history.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No movements yet</TableCell></TableRow>}
+                  {history.map((e) => (
+                    <TableRow key={e.id}>
+                      <TableCell className="text-xs whitespace-nowrap align-top">{new Date(e.created_at).toLocaleString()}</TableCell>
+                      <TableCell className="text-xs align-top whitespace-normal break-words min-w-[220px]">{e.description || "—"}</TableCell>
+                      <TableCell className="text-xs align-top font-mono break-all min-w-[160px]">{e.reference || "—"}</TableCell>
+                      <TableCell className="text-xs align-top whitespace-nowrap">{e.related_user_name || e.related_user_email || "system"}</TableCell>
+                      <TableCell className="text-xs align-top whitespace-nowrap">{e.counter_account ? (byCode[e.counter_account]?.name || e.counter_account) : "—"}</TableCell>
+                      <TableCell className="text-xs align-top whitespace-nowrap">{e.performed_by || "system"}</TableCell>
+                      <TableCell className={`text-xs text-right font-mono align-top whitespace-nowrap ${e.direction === "credit" ? "text-green-600" : "text-red-600"}`}>{e.direction === "credit" ? "+" : "−"}{Math.round(Number(e.amount)).toLocaleString()}</TableCell>
+                      <TableCell className="text-xs text-right font-mono align-top whitespace-nowrap">{Math.round(Number(e.balance_after)).toLocaleString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </DialogContent>
       </Dialog>
