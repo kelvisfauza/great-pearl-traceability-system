@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import logoUrl from '@/assets/great-agro-coffee-logo.png';
+import stampUrl from '@/assets/stamp-yeda.png';
 import { resolveSignatureBlock } from '@/utils/approverSignatures';
 
 export interface ReceiptPayload {
