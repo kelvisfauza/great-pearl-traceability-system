@@ -168,6 +168,28 @@ serve(async (req) => {
     let rawResp = "";
     let payoutRef: string | null = null;
 
+    // Treasury pool: per-diem is company money — it comes out of the General Account
+    const treasuryRef = `SPD-${record.id}`;
+    const reserved = await treasuryReserve({
+      account: "general",
+      amount: totalAmount,
+      reference: treasuryRef,
+      description: narrative,
+      name: receiverName,
+      performedBy: initiatedBy || "system",
+      metadata: { support_staff_per_diem_id: record.id },
+    });
+    if (!reserved.ok) {
+      await supabase.from("support_staff_per_diem")
+        .update({ yo_status: "failed", yo_raw_response: reserved.error ?? "Treasury blocked", updated_at: new Date().toISOString() })
+        .eq("id", record.id);
+      return new Response(
+        JSON.stringify({ success: false, error: reserved.error || "General Account cannot cover this per-diem" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+
     if (provider === "gosente") {
       const ref = `SPD-GP-${record.id}-${Date.now().toString(36)}`;
       try {

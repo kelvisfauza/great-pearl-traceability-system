@@ -86,6 +86,29 @@ serve(async (req) => {
     let rawResponseStr: string | null = null;
     let isSuccessful = false;
 
+    // Treasury pool: draw the money from Operations before sending it out
+    const treasuryRef = `SPP-${record.id}`;
+    const reserved = await treasuryReserve({
+      account: "operations",
+      amount: totalAmount,
+      reference: treasuryRef,
+      description: narrative,
+      email: providerEmail || null,
+      name: receiverName || cleanPhone,
+      performedBy: initiatedBy || "system",
+      metadata: { service_provider_payment_id: record.id },
+    });
+    if (!reserved.ok) {
+      await supabase.from("service_provider_payments")
+        .update({ yo_status: "failed", yo_raw_response: reserved.error ?? "Treasury blocked", updated_at: new Date().toISOString() })
+        .eq("id", record.id);
+      return new Response(
+        JSON.stringify({ success: false, error: reserved.error || "Operations / Procurement account cannot cover this payment" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+
     if (provider === "gosente") {
       const ref = `SP-GP-${record.id}-${Date.now().toString(36)}`;
       try {
