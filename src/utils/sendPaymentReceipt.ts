@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { generatePaymentReceiptPdf, buildReceiptReference, type ReceiptPayload } from './paymentReceiptPdf';
+import { resolveSignatureBlock } from './approverSignatures';
 
 export interface SendReceiptInput extends Omit<ReceiptPayload, 'reference'> {
   reference?: string;          // auto-generated if missing
@@ -86,6 +87,12 @@ export const sendPaymentReceipt = async (input: SendReceiptInput): Promise<SendR
 
   const formatUGX = (n: number) => `UGX ${Number(n || 0).toLocaleString('en-UG')}`;
 
+  // Approver whose signature is stamped on the PDF — named in the email too
+  const signer = resolveSignatureBlock(
+    input.approvedByEmail || input.processedByEmail,
+    input.approvedBy || input.processedBy,
+  );
+
   // Resolve Finance Manager (Mukobi Godwin) email so he always gets a copy
   let financeManagerEmail: string | undefined;
   try {
@@ -125,6 +132,8 @@ export const sendPaymentReceipt = async (input: SendReceiptInput): Promise<SendR
               paymentMethod: input.paymentMethod,
               transactionId: input.transactionId,
               processedBy: input.processedBy,
+              authorisedBy: signer.name,
+              authorisedTitle: signer.title,
               pdfUrl,
             },
           },
@@ -157,6 +166,8 @@ export const sendPaymentReceipt = async (input: SendReceiptInput): Promise<SendR
               paymentMethod: input.paymentMethod,
               transactionId: input.transactionId,
               processedBy: input.processedBy,
+              authorisedBy: signer.name,
+              authorisedTitle: signer.title,
               pdfUrl,
             },
           },
