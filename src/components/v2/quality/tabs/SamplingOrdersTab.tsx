@@ -216,25 +216,58 @@ const SamplingOrdersTab = () => {
     onError: (e: any) => toast({ title: "Could not save", description: e.message, variant: "destructive" }),
   });
 
-  const markAssessed = useMutation({
+  const receiverName = (employee as any)?.name || employee?.email || "";
+  const [receipt, setReceipt] = useState({ grams: "", observation: "" });
+
+  const receiveSample = useMutation({
     mutationFn: async (id: string) => {
+      const grams = parseFloat(receipt.grams);
+      if (!grams || grams <= 0) throw new Error("Type the grams received to confirm the sample");
       const { error } = await supabase
         .from("quality_sampling_orders" as any)
         .update({
-          status: "assessed",
-          assessed_by: (employee as any)?.name || employee?.email || "",
-          assessed_at: new Date().toISOString(),
+          status: "received",
+          received_grams: grams,
+          received_at: new Date().toISOString(),
+          received_by: receiverName,
+          received_observation: receipt.observation.trim() || null,
         })
         .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       setReviewOrder(null);
+      setReceipt({ grams: "", observation: "" });
+      toast({ title: "Sample received in lab", description: `Received by ${receiverName}` });
+      queryClient.invalidateQueries({ queryKey: ["quality-sampling-orders"] });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const markAssessed = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("quality_sampling_orders" as any)
+        .update({
+          status: "assessed",
+          assessed_by: receiverName,
+          assessed_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
       toast({ title: "Marked as assessed" });
       queryClient.invalidateQueries({ queryKey: ["quality-sampling-orders"] });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
+
+  const statusBadge = (o: any) => {
+    if (o.status === "assessed") return <Badge className="bg-green-600 hover:bg-green-600">Assessed</Badge>;
+    if (o.status === "received") return <Badge className="bg-blue-600 hover:bg-blue-600">Received in lab</Badge>;
+    return <Badge variant="secondary">Pending</Badge>;
+  };
 
   return (
     <div className="space-y-6">

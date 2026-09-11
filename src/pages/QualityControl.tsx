@@ -953,6 +953,7 @@ const QualityControl = () => {
       });
 
       setSelectedRecord(null);
+      setLinkedSamplingOrder(null);
       setEditingAssessmentId(null);
       setAssessmentForm({
         moisture: '', group1_defects: '', group2_defects: '', below12: '',
