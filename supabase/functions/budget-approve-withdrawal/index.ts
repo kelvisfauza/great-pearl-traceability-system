@@ -58,6 +58,30 @@ serve(async (req) => {
     let payoutStatus: string = "pending";
     let payoutMessage = "";
 
+    // Treasury pool: cash and mobile money leave the company directly, so they
+    // must be drawn from Operations first. Wallet transfers post via the ledger.
+    const treasuryRef = `BUDGET-${reqRow.id}`;
+    const needsTreasury = reqRow.payout_mode === "cash" || reqRow.payout_mode === "mobile_money";
+    if (needsTreasury) {
+      const reservedTreasury = await treasuryReserve({
+        account: "operations",
+        amount: Number(reqRow.amount),
+        reference: treasuryRef,
+        description: `Budget withdrawal: ${reqRow.reason}`,
+        email: emp?.email || null,
+        name: emp?.name || null,
+        performedBy: adminEmail,
+        metadata: { budget_request_id: reqRow.id },
+      });
+      if (!reservedTreasury.ok) {
+        await svcClient.from("budget_withdrawal_requests").update({
+          payout_status: "failed",
+          rejection_reason: reservedTreasury.error || "Operations account is empty",
+        }).eq("id", request_id);
+        return respond(false, { error: reservedTreasury.error || "Operations / Procurement account cannot cover this withdrawal" });
+      }
+    }
+
     try {
       if (reqRow.payout_mode === "cash") {
         payoutStatus = "cash_disbursed";
