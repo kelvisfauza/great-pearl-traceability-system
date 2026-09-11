@@ -139,6 +139,15 @@ serve(async (req) => {
       }).eq("id", request_id);
     } catch (payoutErr: any) {
       console.error("[budget-approve-withdrawal] payout error:", payoutErr);
+      if (needsTreasury) {
+        await treasuryRelease({
+          account: "operations",
+          amount: Number(reqRow.amount),
+          reference: treasuryRef,
+          description: `Budget withdrawal failed — funds returned (${emp?.name || ""})`,
+          performedBy: adminEmail,
+        });
+      }
       // Payout failed — mark request as failed but ledger already debited.
       // Admin must manually refund via reverse RPC (future work) or retry.
       await svcClient.from("budget_withdrawal_requests").update({
