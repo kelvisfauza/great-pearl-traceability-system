@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { treasuryReserve, treasuryRelease } from "../_shared/treasury.ts";
 import { yoPayout, normalizePhone } from "../_shared/yo-payments.ts";
 import { gosenteWithdraw, isGosenteSuccess } from "../_shared/gosentepay.ts";
 
@@ -85,6 +86,29 @@ serve(async (req) => {
     let rawResponseStr: string | null = null;
     let isSuccessful = false;
 
+    // Treasury pool: draw the money from Operations before sending it out
+    const treasuryRef = `SPP-${record.id}`;
+    const reserved = await treasuryReserve({
+      account: "operations",
+      amount: totalAmount,
+      reference: treasuryRef,
+      description: narrative,
+      email: providerEmail || null,
+      name: receiverName || cleanPhone,
+      performedBy: initiatedBy || "system",
+      metadata: { service_provider_payment_id: record.id },
+    });
+    if (!reserved.ok) {
+      await supabase.from("service_provider_payments")
+        .update({ yo_status: "failed", yo_raw_response: reserved.error ?? "Treasury blocked", updated_at: new Date().toISOString() })
+        .eq("id", record.id);
+      return new Response(
+        JSON.stringify({ success: false, error: reserved.error || "Operations / Procurement account cannot cover this payment" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+
     if (provider === "gosente") {
       const ref = `SP-GP-${record.id}-${Date.now().toString(36)}`;
       try {
@@ -137,6 +161,16 @@ serve(async (req) => {
       } else {
         displayMessage = result.errorMessage || "Yo payout failed";
       }
+    }
+
+    if (yoStatus === "failed") {
+      await treasuryRelease({
+        account: "operations",
+        amount: totalAmount,
+        reference: treasuryRef,
+        description: `Service provider payout failed — funds returned (${receiverName || cleanPhone})`,
+        performedBy: initiatedBy || "system",
+      });
     }
 
     await supabase

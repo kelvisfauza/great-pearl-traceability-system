@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { treasuryReserve, treasuryRelease } from "../_shared/treasury.ts";
 import { yoPayout, normalizePhone as yoNormalize } from "../_shared/yo-payments.ts";
 import { gosenteWithdraw, isGosenteSuccess, normalizePhone as gsNormalize } from "../_shared/gosentepay.ts";
 
@@ -95,6 +96,27 @@ serve(async (req) => {
     let finalRef = payoutRef;
     let errorMessage = "";
 
+    // Treasury pool: the money must come out of Operations before it is released
+    const treasuryRef = `AR-${requestId}`;
+    const reservedTreasury = await treasuryReserve({
+      account: "operations",
+      amount,
+      reference: treasuryRef,
+      description: `${reqRow.type}: ${reqRow.title}`,
+      email: reqRow.requestedby || null,
+      name: recipientName,
+      performedBy: actorEmail,
+      metadata: { approval_request_id: requestId },
+    });
+    if (!reservedTreasury.ok) {
+      await svc.from("approval_requests").update({
+        payout_status: "failed",
+        payout_error: reservedTreasury.error || "Operations account is empty",
+      }).eq("id", requestId);
+      return respond(false, { error: reservedTreasury.error || "Operations / Procurement account cannot cover this payment", payout_status: "failed" });
+    }
+
+
     if (provider === "cash") {
       success = true;
       finalRef = `CASH-${payoutRef}`;
@@ -131,6 +153,16 @@ serve(async (req) => {
       } catch (e: any) {
         errorMessage = `Yo Payments error: ${e?.message || e}`;
       }
+    }
+
+    if (!success) {
+      await treasuryRelease({
+        account: "operations",
+        amount,
+        reference: treasuryRef,
+        description: `Payout failed — funds returned (${recipientName})`,
+        performedBy: actorEmail,
+      });
     }
 
     await svc.from("approval_requests").update({

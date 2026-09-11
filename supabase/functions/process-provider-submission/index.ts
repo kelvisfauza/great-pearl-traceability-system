@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { treasuryReserve, treasuryRelease } from "../_shared/treasury.ts";
 import { yoPayout, normalizePhone } from "../_shared/yo-payments.ts";
 import { gosenteWithdraw, isGosenteSuccess } from "../_shared/gosentepay.ts";
 import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
@@ -514,6 +515,25 @@ serve(async (req) => {
     let displayMessage = "Payment failed";
     let paymentMethodLabel = "Mobile Money (Yo Payments)";
 
+    // Treasury pool: every provider / meal / per-diem payout draws from Operations
+    const treasuryRef = `PSR-${record.id}`;
+    const reservedTreasury = await treasuryReserve({
+      account: "operations",
+      amount: totalAmount,
+      reference: treasuryRef,
+      description: narrative,
+      email: submission.email || null,
+      name: submission.provider_name || cleanPhone,
+      performedBy: reviewerName || "system",
+      metadata: { provider_submission_id: record.id, request_type: submission.request_type },
+    });
+    if (!reservedTreasury.ok) {
+      return new Response(
+        JSON.stringify({ ok: false, success: false, error: reservedTreasury.error || "Operations / Procurement account cannot cover this payment" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     if (paymentMode === "cash") {
       // ─── CASH PAYOUT ────────────────────────────────────────────────
       // Admin has handed cash to the provider physically. No Yo call.
@@ -584,6 +604,16 @@ serve(async (req) => {
         yoStatus = "pending_approval";
         displayMessage = "Payment sent, pending authorization in Yo dashboard";
       }
+    }
+
+    if (yoStatus === "failed") {
+      await treasuryRelease({
+        account: "operations",
+        amount: totalAmount,
+        reference: treasuryRef,
+        description: `Payout failed — funds returned (${submission.provider_name || cleanPhone})`,
+        performedBy: reviewerName || "system",
+      });
     }
 
     await supabase

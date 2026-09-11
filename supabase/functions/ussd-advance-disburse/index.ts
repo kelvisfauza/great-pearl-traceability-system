@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { treasuryReserve, treasuryRelease } from "../_shared/treasury.ts";
 import { yoPayout } from "../_shared/yo-payments.ts";
 
 const corsHeaders = {
@@ -59,6 +60,22 @@ serve(async (req) => {
       if (lockError) { console.error("Lock failed:", lockError); continue; }
 
       const disburseAmount = Number(ar.amount || row.amount);
+      const treasuryRef = `USSD-ADV-${row.id}`;
+      const reserved = await treasuryReserve({
+        account: "loans_overdrafts",
+        amount: disburseAmount,
+        reference: treasuryRef,
+        description: `USSD salary advance for ${row.requester_name || row.phone}`,
+        name: row.requester_name || row.phone,
+        metadata: { ussd_advance_request_id: row.id },
+      });
+      if (!reserved.ok) {
+        await supabase.from("ussd_advance_requests").update({
+          disbursement_status: "failed",
+          disbursement_error: reserved.error || "Loans & Overdrafts account is empty",
+        }).eq("id", row.id);
+        continue;
+      }
       try {
         const result = await yoPayout({
           phone: row.phone,
@@ -76,6 +93,7 @@ serve(async (req) => {
           processed++;
           console.log(`[USSD Advance Disburse] ✅ Sent UGX ${disburseAmount} to ${row.phone}`);
         } else {
+          await treasuryRelease({ account: "loans_overdrafts", amount: disburseAmount, reference: treasuryRef, description: `USSD advance failed — funds returned (${row.phone})` });
           await supabase.from("ussd_advance_requests").update({
             disbursement_status: "failed",
             disbursement_error: result.errorMessage || result.statusMessage || "Unknown error",
@@ -83,6 +101,7 @@ serve(async (req) => {
           console.error(`[USSD Advance Disburse] ❌ ${row.phone}:`, result.errorMessage);
         }
       } catch (e: any) {
+        await treasuryRelease({ account: "loans_overdrafts", amount: disburseAmount, reference: treasuryRef, description: `USSD advance failed — funds returned (${row.phone})` });
         await supabase.from("ussd_advance_requests").update({
           disbursement_status: "failed",
           disbursement_error: String(e?.message || e),

@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { yoSendAirtime, normalizePhone } from '../_shared/yo-payments.ts'
+import { treasuryReserve, treasuryRelease } from '../_shared/treasury.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -155,6 +156,24 @@ Deno.serve(async (req) => {
           continue
         }
 
+        // Treasury pool: airtime is a company expense — it draws from Operations
+        const treasuryRef = `AIRTIME-${item.id}`
+        const reserved = await treasuryReserve({
+          account: 'operations',
+          amount: Number(item.amount),
+          reference: treasuryRef,
+          description: `${batch.month_year} Airtime - ${item.employee_name}`,
+          name: item.employee_name,
+          metadata: { airtime_batch_item_id: item.id, batch_id: batchId },
+        })
+        if (!reserved.ok) {
+          failed++
+          await supabase.from('airtime_batch_items')
+            .update({ payment_status: 'failed', error_message: reserved.error || 'Operations account is empty' })
+            .eq('id', item.id)
+          continue
+        }
+
         const result = await yoSendAirtime({
           phone: cleanPhone,
           amount: Number(item.amount),
@@ -166,6 +185,7 @@ Deno.serve(async (req) => {
 
         if (!ok) {
           failed++
+          await treasuryRelease({ account: 'operations', amount: Number(item.amount), reference: treasuryRef, description: `Airtime failed — funds returned (${item.employee_name})` })
           await supabase.from('airtime_batch_items')
             .update({ payment_status: 'failed', error_message: result.errorMessage || 'Yo payment failed' })
             .eq('id', item.id)
