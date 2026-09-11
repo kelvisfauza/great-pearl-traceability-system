@@ -334,21 +334,28 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    const body = await req.json();
+    const { submissionId, action, rejectionReason, withdrawCharge, amountOverride, paymentMode: rawMode } = body;
+    const paymentMode: 'cash' | 'momo' | 'gosente' =
+      rawMode === 'cash' ? 'cash' : rawMode === 'gosente' ? 'gosente' : 'momo';
+
+    const resendKey = Deno.env.get("RECEIPT_RESEND_KEY") || "";
+    const trustedResend =
+      action === "resend_receipt" &&
+      !!resendKey &&
+      (req.headers.get("x-resend-key") || body.resendKey) === resendKey;
+
     const authHeader = req.headers.get("Authorization") || "";
     const jwt = authHeader.replace("Bearer ", "");
     const { data: userData } = await supabase.auth.getUser(jwt);
     const reviewer = userData?.user;
-    if (!reviewer) {
+    if (!reviewer && !trustedResend) {
       return new Response(JSON.stringify({ ok: false, error: "Not authenticated" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const body = await req.json();
-    const { submissionId, action, rejectionReason, withdrawCharge, amountOverride, paymentMode: rawMode } = body;
-    const paymentMode: 'cash' | 'momo' | 'gosente' =
-      rawMode === 'cash' ? 'cash' : rawMode === 'gosente' ? 'gosente' : 'momo';
 
     // 🔁 Resend / regenerate an existing receipt PDF (adds signature + stamp)
     if (action === "resend_receipt") {
