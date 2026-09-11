@@ -17388,6 +17388,29 @@ export type Database = {
         }
         Returns: number
       }
+      treasury_external_payout: {
+        Args: {
+          p_account: string
+          p_amount: number
+          p_description?: string
+          p_email?: string
+          p_metadata?: Json
+          p_name?: string
+          p_performed_by?: string
+          p_reference: string
+        }
+        Returns: Json
+      }
+      treasury_external_reverse: {
+        Args: {
+          p_account: string
+          p_amount: number
+          p_description?: string
+          p_performed_by?: string
+          p_reference: string
+        }
+        Returns: Json
+      }
       treasury_fund_account: {
         Args: {
           p_account: string
