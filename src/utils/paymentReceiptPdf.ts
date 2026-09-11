@@ -309,6 +309,25 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
   doc.setTextColor(60, 60, 60);
   doc.text(`${signer.title} • Signed ${formatDate(new Date().toISOString())}`, margin, sigBoxY + 98);
 
+  // Company stamp — placed to the right of the signature block
+  try {
+    const stamp = await loadImageAsDataUrl(stampUrl);
+    const { w, h } = await getImageSize(stamp);
+    const maxW = 150;
+    const maxH = 92;
+    const scale = Math.min(maxW / w, maxH / h);
+    doc.addImage(
+      stamp,
+      'PNG',
+      margin + 250,
+      sigBoxY + 4,
+      w * scale,
+      h * scale,
+    );
+  } catch {/* stamp optional */}
+
+
+
 
   // Validation note (right side, smaller)
   doc.setFont('helvetica', 'italic');
