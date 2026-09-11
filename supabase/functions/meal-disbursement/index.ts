@@ -77,6 +77,27 @@ serve(async (req) => {
     const narrative = `Meal allowance - ${description} - ${receiverName || cleanPhone}`;
     console.log(`[Meal Disbursement] Sending UGX ${totalAmount} to ${cleanPhone} via ${chosenGateway}: ${narrative}`);
 
+    // Treasury pool: the money must come out of Operations before it is sent
+    const treasuryRef = `MEAL-${record.id}`;
+    const reserved = await treasuryReserve({
+      account: "operations",
+      amount: totalAmount,
+      reference: treasuryRef,
+      description: narrative,
+      name: receiverName || cleanPhone,
+      performedBy: initiatedBy || "system",
+      metadata: { meal_disbursement_id: record.id },
+    });
+    if (!reserved.ok) {
+      await supabase.from("meal_disbursements")
+        .update({ yo_status: "failed", yo_raw_response: reserved.error ?? "Treasury blocked", updated_at: new Date().toISOString() })
+        .eq("id", record.id);
+      return new Response(
+        JSON.stringify({ success: false, error: reserved.error || "Operations / Procurement account cannot cover this payment" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     let result: { success: boolean; transactionRef?: string | null; rawResponse?: string | null; statusMessage?: string; errorMessage?: string };
 
     if (chosenGateway === "gosente") {
