@@ -16,6 +16,8 @@ interface PaymentReceiptProps {
   paymentMethod?: string
   transactionId?: string
   processedBy?: string
+  authorisedBy?: string
+  authorisedTitle?: string
   pdfUrl?: string
 }
 
@@ -29,6 +31,7 @@ const Row = ({ label, value }: { label: string; value?: string }) =>
 const PaymentReceiptEmail = ({
   recipientName, reference, description, invoiceNumber,
   amount, charges, total, paymentMethod, transactionId, processedBy, pdfUrl,
+  authorisedBy, authorisedTitle,
 }: PaymentReceiptProps) => (
   <Html lang="en" dir="ltr">
     <Head />
@@ -57,6 +60,7 @@ const PaymentReceiptEmail = ({
           <Row label="Payment Method" value={paymentMethod} />
           <Row label="Transaction ID" value={transactionId} />
           <Row label="Processed By" value={processedBy} />
+          <Row label="Authorised By" value={authorisedBy} />
         </Section>
 
         {pdfUrl && (
@@ -98,6 +102,8 @@ export const template = {
     paymentMethod: 'Mobile Money',
     transactionId: '6fb1b5d3-fe20-4e94-b6e2-0ee8c2468806',
     processedBy: 'Musema Wyclif',
+    authorisedBy: 'Musema Wyclif',
+    authorisedTitle: 'Assistant Trader & Field Officer',
     pdfUrl: 'https://example.com/receipt.pdf',
   },
 } satisfies TemplateEntry
