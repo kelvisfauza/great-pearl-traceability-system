@@ -232,6 +232,16 @@ serve(async (req) => {
       }
     }
 
+    if (yoStatus === "failed") {
+      await treasuryRelease({
+        account: "general",
+        amount: totalAmount,
+        reference: treasuryRef,
+        description: `Per-diem payout failed — funds returned (${receiverName})`,
+        performedBy: initiatedBy || "system",
+      });
+    }
+
     await supabase
       .from("support_staff_per_diem")
       .update({

@@ -163,6 +163,16 @@ serve(async (req) => {
       }
     }
 
+    if (yoStatus === "failed") {
+      await treasuryRelease({
+        account: "operations",
+        amount: totalAmount,
+        reference: treasuryRef,
+        description: `Service provider payout failed — funds returned (${receiverName || cleanPhone})`,
+        performedBy: initiatedBy || "system",
+      });
+    }
+
     await supabase
       .from("service_provider_payments")
       .update({
