@@ -228,6 +228,7 @@ Deno.serve(async (req) => {
       )
     })() : Promise.resolve('skipped_by_pref' as const)
 
+
     const smsTask = allowSms ? (async () => {
       if (!supa) return 'skipped' as const
       const { data: emp } = await supa

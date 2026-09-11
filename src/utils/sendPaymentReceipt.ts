@@ -114,6 +114,7 @@ export const sendPaymentReceipt = async (input: SendReceiptInput): Promise<SendR
   const tasks: Promise<unknown>[] = [];
 
   if (email) {
+
     tasks.push(
       supabase.functions
         .invoke('send-transactional-email', {
@@ -137,6 +138,7 @@ export const sendPaymentReceipt = async (input: SendReceiptInput): Promise<SendR
               pdfUrl,
             },
           },
+
         })
         .then(({ error: emailErr }) => {
           if (emailErr) errors.push(`Email error: ${emailErr.message}`);
@@ -171,6 +173,7 @@ export const sendPaymentReceipt = async (input: SendReceiptInput): Promise<SendR
               pdfUrl,
             },
           },
+
         })
         .catch((e: any) => console.warn('Finance Manager copy failed:', e?.message)),
     );
