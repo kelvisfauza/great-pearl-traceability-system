@@ -27,6 +27,7 @@ import {
   COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONE,
   COMPANY_EMAIL, COMPANY_SUPPORT_EMAIL, COMPANY_WEBSITE, COMPANY_REG,
 } from "@/utils/companyBrand";
+import TreasuryAccountsPanel from "@/components/admin/TreasuryAccountsPanel";
 
 type Direction = "credit" | "debit";
 type Channel = "yo_payments" | "cash" | "bank" | "internal" | "other";
@@ -332,6 +333,9 @@ export default function Treasury() {
           {backfilling ? "Replaying..." : "Backfill from Ledger"}
         </Button>
       </div>
+
+      {/* Multi-account treasury */}
+      <TreasuryAccountsPanel />
 
       {/* Insufficient funds banner */}
       {!loading && balance && Number(balance.current_balance) <= 0 && (

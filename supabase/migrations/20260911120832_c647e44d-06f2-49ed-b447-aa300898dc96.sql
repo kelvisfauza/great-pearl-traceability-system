@@ -1,0 +1,11 @@
+ALTER FUNCTION public.treasury_resolve_account(TEXT,TEXT,TEXT,NUMERIC) SET search_path = public;
+REVOKE EXECUTE ON FUNCTION public.trg_treasury_accounts_check() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.trg_treasury_accounts_post() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.treasury_accounts_touch() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.treasury_is_super_admin() FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.treasury_fund_account(TEXT,NUMERIC,TEXT,TEXT) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.treasury_move_funds(TEXT,TEXT,NUMERIC,TEXT) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.treasury_set_threshold(TEXT,NUMERIC) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.treasury_log_insufficient(TEXT,NUMERIC,TEXT,TEXT) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.get_treasury_accounts_overview() FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.treasury_resolve_account(TEXT,TEXT,TEXT,NUMERIC) FROM PUBLIC, anon;

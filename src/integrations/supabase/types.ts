@@ -13254,6 +13254,152 @@ export type Database = {
         }
         Relationships: []
       }
+      treasury_account_entries: {
+        Row: {
+          account_code: string
+          amount: number
+          balance_after: number
+          counter_account: string | null
+          created_at: string
+          description: string | null
+          direction: string
+          id: string
+          ledger_entry_id: string | null
+          metadata: Json
+          performed_by: string | null
+          reference: string | null
+          related_user_email: string | null
+          related_user_name: string | null
+        }
+        Insert: {
+          account_code: string
+          amount: number
+          balance_after: number
+          counter_account?: string | null
+          created_at?: string
+          description?: string | null
+          direction: string
+          id?: string
+          ledger_entry_id?: string | null
+          metadata?: Json
+          performed_by?: string | null
+          reference?: string | null
+          related_user_email?: string | null
+          related_user_name?: string | null
+        }
+        Update: {
+          account_code?: string
+          amount?: number
+          balance_after?: number
+          counter_account?: string | null
+          created_at?: string
+          description?: string | null
+          direction?: string
+          id?: string
+          ledger_entry_id?: string | null
+          metadata?: Json
+          performed_by?: string | null
+          reference?: string | null
+          related_user_email?: string | null
+          related_user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treasury_account_entries_account_code_fkey"
+            columns: ["account_code"]
+            isOneToOne: false
+            referencedRelation: "treasury_accounts"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      treasury_accounts: {
+        Row: {
+          allow_negative: boolean
+          balance: number
+          code: string
+          created_at: string
+          description: string | null
+          is_active: boolean
+          kind: string
+          last_alert_at: string | null
+          low_balance_threshold: number
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          allow_negative?: boolean
+          balance?: number
+          code: string
+          created_at?: string
+          description?: string | null
+          is_active?: boolean
+          kind?: string
+          last_alert_at?: string | null
+          low_balance_threshold?: number
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          allow_negative?: boolean
+          balance?: number
+          code?: string
+          created_at?: string
+          description?: string | null
+          is_active?: boolean
+          kind?: string
+          last_alert_at?: string | null
+          low_balance_threshold?: number
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      treasury_alerts: {
+        Row: {
+          account_code: string | null
+          alert_type: string
+          amount_required: number | null
+          balance_at_alert: number | null
+          created_at: string
+          id: string
+          message: string
+          metadata: Json
+          notified_at: string | null
+          reference: string | null
+          resolved_at: string | null
+        }
+        Insert: {
+          account_code?: string | null
+          alert_type: string
+          amount_required?: number | null
+          balance_at_alert?: number | null
+          created_at?: string
+          id?: string
+          message: string
+          metadata?: Json
+          notified_at?: string | null
+          reference?: string | null
+          resolved_at?: string | null
+        }
+        Update: {
+          account_code?: string | null
+          alert_type?: string
+          amount_required?: number | null
+          balance_at_alert?: number | null
+          created_at?: string
+          id?: string
+          message?: string
+          metadata?: Json
+          notified_at?: string | null
+          reference?: string | null
+          resolved_at?: string | null
+        }
+        Relationships: []
+      }
       treasury_pool_balance: {
         Row: {
           bank_balance: number
@@ -16767,6 +16913,7 @@ export type Database = {
           recovery_pin: string
         }[]
       }
+      get_treasury_accounts_overview: { Args: never; Returns: Json }
       get_unified_user_id: { Args: { input_email: string }; Returns: string }
       get_user_balance_data: {
         Args: { user_email: string }
@@ -17223,6 +17370,63 @@ export type Database = {
           p_reference: string
           p_use_overdraft?: boolean
         }
+        Returns: Json
+      }
+      treasury_account_post: {
+        Args: {
+          p_account: string
+          p_amount: number
+          p_counter?: string
+          p_description?: string
+          p_direction: string
+          p_email?: string
+          p_ledger_id?: string
+          p_metadata?: Json
+          p_name?: string
+          p_performed_by?: string
+          p_reference?: string
+        }
+        Returns: number
+      }
+      treasury_fund_account: {
+        Args: {
+          p_account: string
+          p_amount: number
+          p_channel?: string
+          p_description?: string
+        }
+        Returns: Json
+      }
+      treasury_is_super_admin: { Args: never; Returns: boolean }
+      treasury_log_insufficient: {
+        Args: {
+          p_account: string
+          p_amount: number
+          p_context?: string
+          p_reference?: string
+        }
+        Returns: string
+      }
+      treasury_move_funds: {
+        Args: {
+          p_amount: number
+          p_description?: string
+          p_from: string
+          p_to: string
+        }
+        Returns: Json
+      }
+      treasury_resolve_account: {
+        Args: {
+          p_amount: number
+          p_entry_type: string
+          p_meta_type: string
+          p_source: string
+        }
+        Returns: string
+      }
+      treasury_set_threshold: {
+        Args: { p_account: string; p_threshold: number }
         Returns: Json
       }
       trigger_daily_salary_processing: { Args: never; Returns: Json }
