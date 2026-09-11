@@ -155,6 +155,16 @@ serve(async (req) => {
       }
     }
 
+    if (!success) {
+      await treasuryRelease({
+        account: "operations",
+        amount,
+        reference: treasuryRef,
+        description: `Payout failed — funds returned (${recipientName})`,
+        performedBy: actorEmail,
+      });
+    }
+
     await svc.from("approval_requests").update({
       payout_status: success ? (provider === "cash" ? "cash_disbursed" : "sent") : "failed",
       payout_ref: success ? finalRef : null,
