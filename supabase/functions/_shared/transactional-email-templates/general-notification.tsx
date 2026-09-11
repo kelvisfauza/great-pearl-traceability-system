@@ -182,6 +182,7 @@ const th = { color: '#ffffff', fontSize: '13px', fontWeight: 700 as const, paddi
 const tdRow = { backgroundColor: '#ffffff' }
 const tdRowAlt = { backgroundColor: '#f9fafb' }
 const td = { fontSize: '14px', color: '#1f2937', padding: '10px 12px', borderTop: '1px solid #e5e7eb', verticalAlign: 'top' as const }
+const ctaButton = { backgroundColor: '#166534', color: '#ffffff', padding: '12px 28px', borderRadius: '6px', fontSize: '15px', fontWeight: 'bold' as const, textDecoration: 'none', display: 'inline-block' }
 const hr = { borderColor: '#e5e7eb', margin: '24px 0 12px' }
 const footer = { fontSize: '13px', color: '#4b5563', margin: '0', textAlign: 'center' as const }
 const footerSmall = { fontSize: '12px', color: '#9ca3af', margin: '4px 0 0', textAlign: 'center' as const }
