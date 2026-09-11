@@ -334,26 +334,120 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    const body = await req.json();
+    const { submissionId, action, rejectionReason, withdrawCharge, amountOverride, paymentMode: rawMode } = body;
+    const paymentMode: 'cash' | 'momo' | 'gosente' =
+      rawMode === 'cash' ? 'cash' : rawMode === 'gosente' ? 'gosente' : 'momo';
+
+    const resendKey = Deno.env.get("RECEIPT_RESEND_KEY") || "";
+    const trustedResend =
+      action === "resend_receipt" &&
+      !!resendKey &&
+      (req.headers.get("x-resend-key") || body.resendKey) === resendKey;
+
     const authHeader = req.headers.get("Authorization") || "";
     const jwt = authHeader.replace("Bearer ", "");
     const { data: userData } = await supabase.auth.getUser(jwt);
-    const reviewer = userData?.user;
-    if (!reviewer) {
+    const reviewer = userData?.user as any;
+    if (!reviewer && !trustedResend) {
       return new Response(JSON.stringify({ ok: false, error: "Not authenticated" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const { submissionId, action, rejectionReason, withdrawCharge, amountOverride, paymentMode: rawMode } = await req.json();
-    const paymentMode: 'cash' | 'momo' | 'gosente' =
-      rawMode === 'cash' ? 'cash' : rawMode === 'gosente' ? 'gosente' : 'momo';
+
+    // 🔁 Resend / regenerate an existing receipt PDF (adds signature + stamp)
+    if (action === "resend_receipt") {
+      const reference = String(body.reference || "").trim();
+      if (!reference) {
+        return new Response(JSON.stringify({ ok: false, error: "Missing reference" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: rec } = await supabase
+        .from("generated_receipts")
+        .select("*")
+        .eq("reference", reference)
+        .maybeSingle();
+      if (!rec) {
+        return new Response(JSON.stringify({ ok: false, error: "Receipt not found" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const pdfBytes = generateReceiptPdfBytes({
+        reference: rec.reference,
+        paidToName: rec.recipient_name,
+        paidToPhone: rec.recipient_phone || "",
+        paidToEmail: rec.recipient_email || undefined,
+        description: rec.description || "",
+        invoiceNumber: (rec.metadata as any)?.invoice_number || undefined,
+        amount: Number(rec.amount || 0),
+        charges: Number(rec.charges || 0),
+        total: Number(rec.total || 0),
+        paymentMethod: rec.payment_method || "",
+        transactionId: rec.transaction_id || "",
+        processedBy: rec.processed_by || "",
+        approvedBy: rec.processed_by || "",
+        approvedByEmail: body.approvedByEmail || undefined,
+        paidOn: rec.created_at,
+      });
+
+      const path = rec.storage_path as string;
+      const { error: upErr } = await supabase.storage
+        .from(rec.storage_bucket || "payment-receipts")
+        .upload(path, pdfBytes, { contentType: "application/pdf", upsert: true, cacheControl: "3600" });
+      if (upErr) {
+        return new Response(JSON.stringify({ ok: false, error: upErr.message }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: signed } = await supabase.storage
+        .from(rec.storage_bucket || "payment-receipts")
+        .createSignedUrl(path, 60 * 60 * 24 * 365);
+
+      let emailed = false;
+      if (rec.recipient_email) {
+        await supabase.functions.invoke("send-transactional-email", {
+          body: {
+            templateName: "payment-receipt",
+            recipientEmail: rec.recipient_email,
+            idempotencyKey: `receipt-resend-${rec.reference}-${Date.now()}`,
+            templateData: {
+              recipientName: rec.recipient_name,
+              reference: rec.reference,
+              description: rec.description,
+              amount: `UGX ${Number(rec.amount || 0).toLocaleString()}`,
+              charges: Number(rec.charges || 0) > 0 ? `UGX ${Number(rec.charges).toLocaleString()}` : undefined,
+              total: `UGX ${Number(rec.total || 0).toLocaleString()}`,
+              paymentMethod: rec.payment_method,
+              transactionId: rec.transaction_id,
+              processedBy: rec.processed_by,
+              approvedBy: rec.processed_by,
+              pdfUrl: signed?.signedUrl,
+            },
+          },
+        });
+        emailed = true;
+      }
+
+      return new Response(
+        JSON.stringify({ ok: true, reference: rec.reference, emailed, pdfUrl: signed?.signedUrl }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     if (!submissionId || !["approve", "reject"].includes(action)) {
       return new Response(JSON.stringify({ ok: false, error: "Invalid request" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     const { data: submission, error: subErr } = await supabase
       .from("provider_submission_requests")
