@@ -223,10 +223,12 @@ Deno.serve(async (req) => {
           label: templateName,
           idempotency_key: idempotencyKey,
           unsubscribe_token: unsubToken,
-        },
+          ...(attachments.length > 0 ? { attachments } : {}),
+        } as any,
         { apiKey: lovableApiKey, idempotencyKey }
       )
     })() : Promise.resolve('skipped_by_pref' as const)
+
 
     const smsTask = allowSms ? (async () => {
       if (!supa) return 'skipped' as const
