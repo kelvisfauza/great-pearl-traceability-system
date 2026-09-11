@@ -52,7 +52,14 @@ interface ReviewRow {
   recommended_admin_email: string | null;
   edited_amount: number | null;
   original_amount: number | null;
+  return_reason?: string | null;
+  returned_by?: string | null;
+  returned_at?: string | null;
+  return_count?: number | null;
 }
+
+const REVIEW_COLS = 'source_table,record_id,decision,notes,reviewed_by,reviewed_at,recommended_admin_name,recommended_admin_email,edited_amount,original_amount,return_reason,returned_by,returned_at,return_count';
+const needsAction = (decision: string | undefined) => !decision || decision === 'pending' || decision === 'returned';
 
 interface HistoryRow extends ReviewRow {
   title: string;
@@ -105,7 +112,7 @@ const ProcurementReviewPanel = () => {
           .limit(200),
         (supabase as any)
           .from('procurement_reviews')
-          .select('source_table,record_id,decision,notes,reviewed_by,reviewed_at,recommended_admin_name,recommended_admin_email,edited_amount,original_amount'),
+          .select(REVIEW_COLS),
         (supabase as any)
           .from('employees')
           .select('name,email,role,disabled')
@@ -148,8 +155,8 @@ const ProcurementReviewPanel = () => {
       // Review history: decided reviews with the live status of the underlying request
       const { data: hist } = await (supabase as any)
         .from('procurement_reviews')
-        .select('source_table,record_id,decision,notes,reviewed_by,reviewed_at,recommended_admin_name,recommended_admin_email,edited_amount,original_amount')
-        .neq('decision', 'pending')
+        .select(REVIEW_COLS)
+        .not('decision', 'in', '("pending","returned")')
         .order('reviewed_at', { ascending: false })
         .limit(50);
 
@@ -199,7 +206,7 @@ const ProcurementReviewPanel = () => {
   useEffect(() => { load(); }, [load]);
 
   const pendingCount = useMemo(
-    () => requests.filter((r) => (reviews[`${r.source_table}:${r.id}`]?.decision || 'pending') === 'pending').length,
+    () => requests.filter((r) => needsAction(reviews[`${r.source_table}:${r.id}`]?.decision)).length,
     [requests, reviews],
   );
 
@@ -281,6 +288,7 @@ const ProcurementReviewPanel = () => {
   const decisionBadge = (decision: string) => {
     if (decision === 'approved') return <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">Cleared by procurement</Badge>;
     if (decision === 'rejected') return <Badge variant="destructive">Rejected at procurement</Badge>;
+    if (decision === 'returned') return <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300">Sent back by admin — edit &amp; resubmit</Badge>;
     return <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">Awaiting your review</Badge>;
   };
 
@@ -356,7 +364,19 @@ const ProcurementReviewPanel = () => {
                     </span>
                   </div>
 
-                  {review && decision !== 'pending' && (
+                  {review && decision === 'returned' && (
+                    <div className="text-xs rounded p-3 space-y-1 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800">
+                      <p className="font-semibold text-orange-800 dark:text-orange-200">
+                        Administrator {review.returned_by || ''} sent this back{review.returned_at ? ` on ${new Date(review.returned_at).toLocaleString()}` : ''}
+                        {Number(review.return_count || 0) > 1 ? ` (returned ${review.return_count} times)` : ''}.
+                      </p>
+                      <p><strong>What to change:</strong> {review.return_reason || 'See administrator instructions'}</p>
+                      {review.notes && <p><strong>Your earlier observations:</strong> {review.notes}</p>}
+                      <p>Use <em>Edit details</em> to correct the amount or description, then approve and send it back for admin approval.</p>
+                    </div>
+                  )}
+
+                  {review && !needsAction(decision) && (
                     <div className="text-xs bg-muted rounded p-2 space-y-1">
                       <p><strong>Reviewed by:</strong> {review.reviewed_by} · {review.reviewed_at ? new Date(review.reviewed_at).toLocaleString() : ''}</p>
                       {review.recommended_admin_name && <p><strong>Sent to:</strong> {review.recommended_admin_name}</p>}
@@ -364,11 +384,12 @@ const ProcurementReviewPanel = () => {
                       {review.edited_amount != null && (
                         <p><strong>Amount corrected:</strong> {money(review.original_amount)} → {money(review.edited_amount)}</p>
                       )}
+                      {review.return_reason && <p><strong>Last admin instruction:</strong> {review.return_reason}</p>}
                       <p><strong>Current stage:</strong> {request.status}</p>
                     </div>
                   )}
 
-                  {decision === 'pending' ? (
+                  {needsAction(decision) ? (
                     <div className="flex items-center gap-2 flex-wrap">
                       <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => openDialog(request, 'approved')}>
                         <CheckCircle className="h-4 w-4 mr-2" /> Approve &amp; send to admin
