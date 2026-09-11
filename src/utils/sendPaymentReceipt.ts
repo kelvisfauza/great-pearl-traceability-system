@@ -154,7 +154,9 @@ export const sendPaymentReceipt = async (input: SendReceiptInput): Promise<SendR
               authorisedTitle: signer.title,
               pdfUrl,
             },
+            ...(pdfAttachment ? { attachments: [pdfAttachment] } : {}),
           },
+
         })
         .then(({ error: emailErr }) => {
           if (emailErr) errors.push(`Email error: ${emailErr.message}`);
