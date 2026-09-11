@@ -120,13 +120,16 @@ const UserProfile = ({ employee }: UserProfileProps) => {
         return;
       }
 
-      // Upload to Supabase storage
+      // Upload to Supabase storage.
+      // Path MUST start with the auth.uid() folder — storage RLS enforces
+      // (storage.foldername(name))[1] = auth.uid()::text
       const fileExt = file.name.split('.').pop();
-      const fileName = `${employee.authUserId || employee.id}-${Date.now()}.${fileExt}`;
-      
+      const ownerFolder = employee.authUserId || employee.id;
+      const fileName = `${ownerFolder}/${Date.now()}.${fileExt}`;
+
       const { data, error } = await supabase.storage
         .from('profile_pictures')
-        .upload(fileName, file);
+        .upload(fileName, file, { upsert: true, contentType: file.type });
 
       if (error) {
         throw error;
