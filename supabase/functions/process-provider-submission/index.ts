@@ -348,7 +348,7 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization") || "";
     const jwt = authHeader.replace("Bearer ", "");
     const { data: userData } = await supabase.auth.getUser(jwt);
-    const reviewer = userData?.user;
+    const reviewer = userData?.user as any;
     if (!reviewer && !trustedResend) {
       return new Response(JSON.stringify({ ok: false, error: "Not authenticated" }), {
         status: 200,
