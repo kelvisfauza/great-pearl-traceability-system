@@ -605,6 +605,16 @@ serve(async (req) => {
       }
     }
 
+    if (yoStatus === "failed") {
+      await treasuryRelease({
+        account: "operations",
+        amount: totalAmount,
+        reference: treasuryRef,
+        description: `Payout failed — funds returned (${submission.provider_name || cleanPhone})`,
+        performedBy: reviewerName || "system",
+      });
+    }
+
     await supabase
       .from(targetTable)
       .update({
