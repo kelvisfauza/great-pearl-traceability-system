@@ -110,10 +110,28 @@ export const sendPaymentReceipt = async (input: SendReceiptInput): Promise<SendR
   // Fallback to a known mailbox if lookup misses
   if (!financeManagerEmail) financeManagerEmail = 'finance@greatpearlcoffee.com';
 
+  // PDF as a real email attachment (in addition to the download link)
+  let pdfAttachment: { filename: string; content: string; contentType: string } | undefined;
+  try {
+    const buf = new Uint8Array(await pdfBlob.arrayBuffer());
+    let binary = '';
+    for (let i = 0; i < buf.length; i += 8192) {
+      binary += String.fromCharCode(...buf.subarray(i, i + 8192));
+    }
+    pdfAttachment = {
+      filename: `${reference}.pdf`,
+      content: btoa(binary),
+      contentType: 'application/pdf',
+    };
+  } catch (e) {
+    console.warn('Receipt attachment encoding failed:', e);
+  }
+
   // 3 + 4) Run email and SMS in PARALLEL so the UI doesn't wait twice
   const tasks: Promise<unknown>[] = [];
 
   if (email) {
+
     tasks.push(
       supabase.functions
         .invoke('send-transactional-email', {
