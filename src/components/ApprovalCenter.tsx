@@ -41,8 +41,18 @@ const ApprovalCenter = () => {
   const [fingerprintTarget, setFingerprintTarget] = useState<FingerprintApprovalTarget | null>(null);
   const [codeTarget, setCodeTarget] = useState<ApprovalCodeTarget | null>(null);
 
+  // Only fresh money requests go through Procurement first. Staff withdrawals,
+  // failed-payout retries and already-approved items are never reviewed there.
+  const requiresProcurementGate = (request: UnifiedApprovalRequest) => {
+    if (request.type !== 'general') return false;
+    const rt = request.requestType || '';
+    if (/withdraw|failed payout|retry/i.test(rt)) return false;
+    if (/payout failed/i.test(request.status || '')) return false;
+    return true;
+  };
+
   const isAwaitingProcurement = (request: UnifiedApprovalRequest) => {
-    if (request.type !== 'general' || /withdraw/i.test(request.requestType || '')) return false;
+    if (!requiresProcurementGate(request)) return false;
     const decision = procurementReviews[request.id]?.decision;
     return !decision || decision === 'pending' || decision === 'returned';
   };
@@ -431,12 +441,8 @@ const ApprovalCenter = () => {
               {requests.map((request) => {
                 const TypeIcon = getTypeIcon(request.type, request.requestType);
                 const procurementReview = procurementReviews[request.id];
-                const requiresProcurementReview = request.type === 'general' && !/withdraw/i.test(request.requestType || '');
-                const awaitingProcurement = requiresProcurementReview && (
-                  !procurementReview?.decision
-                  || procurementReview.decision === 'pending'
-                  || procurementReview.decision === 'returned'
-                );
+                const requiresProcurementReview = requiresProcurementGate(request);
+                const awaitingProcurement = isAwaitingProcurement(request);
                 return (
                   <Card key={request.id} className="transition-all hover:shadow-md">
                     <CardHeader>
