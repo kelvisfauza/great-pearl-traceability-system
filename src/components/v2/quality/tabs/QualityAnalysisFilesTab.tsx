@@ -233,26 +233,53 @@ const QualityAnalysisFilesTab = () => {
             usedFormNumber = ((nums as string[]) || [])[0] || `MANUAL-${Date.now().toString().slice(-6)}`;
           }
           linkedCode = usedFormNumber.replace(/\s+/g, '-');
-          const { data: created, error: formErr } = await (supabase as any)
+          // A typed form number may belong to a form already printed by the system —
+          // reuse that row instead of tripping the unique verification_code index.
+          const { data: existing } = await (supabase as any)
             .from('quality_analysis_forms')
-            .insert({
-              form_number: usedFormNumber,
-              verification_code: linkedCode,
-              supplier_id: sourceType === 'supplier' ? supplierId : null,
-              supplier_name: supplierName,
-              source_type: sourceType,
-              analysis_date: analysisDate,
-              params: { ...params, supplier_name: supplierName, analysis_date: analysisDate },
-              analysed_by: params.analysed_by || null,
-              comments: notes.trim() || null,
-              status: 'attached',
-              created_by: uid,
-              created_by_email: authData?.user?.email ?? null,
-            })
-            .select('id')
-            .single();
-          if (formErr) throw formErr;
-          linkedFormId = created?.id ?? null;
+            .select('id, verification_code, params')
+            .or(`verification_code.eq.${linkedCode},form_number.eq.${usedFormNumber},form_number.eq.${linkedCode}`)
+            .limit(1)
+            .maybeSingle();
+          if (existing?.id) {
+            const { error: updErr } = await (supabase as any)
+              .from('quality_analysis_forms')
+              .update({
+                params: { ...(existing.params || {}), ...params, supplier_name: supplierName, analysis_date: analysisDate },
+                supplier_id: sourceType === 'supplier' ? supplierId : null,
+                supplier_name: supplierName,
+                source_type: sourceType,
+                analysis_date: analysisDate,
+                analysed_by: params.analysed_by || null,
+                comments: notes.trim() || null,
+                status: 'attached',
+              })
+              .eq('id', existing.id);
+            if (updErr) throw updErr;
+            linkedFormId = existing.id;
+            linkedCode = existing.verification_code || linkedCode;
+          } else {
+            const { data: created, error: formErr } = await (supabase as any)
+              .from('quality_analysis_forms')
+              .insert({
+                form_number: usedFormNumber,
+                verification_code: linkedCode,
+                supplier_id: sourceType === 'supplier' ? supplierId : null,
+                supplier_name: supplierName,
+                source_type: sourceType,
+                analysis_date: analysisDate,
+                params: { ...params, supplier_name: supplierName, analysis_date: analysisDate },
+                analysed_by: params.analysed_by || null,
+                comments: notes.trim() || null,
+                status: 'attached',
+                created_by: uid,
+                created_by_email: authData?.user?.email ?? null,
+              })
+              .select('id')
+              .single();
+            if (formErr) throw formErr;
+            linkedFormId = created?.id ?? null;
+          }
         }
       }
 
