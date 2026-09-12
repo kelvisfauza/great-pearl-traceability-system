@@ -89,6 +89,7 @@ Deno.serve(async (req) => {
         },
       })
       out.sms_status = smsErr ? 'failed' : ((smsRes as any)?.success === false ? 'failed' : 'sent')
+      if (out.sms_status === 'failed') out.sms_detail = smsErr ? (await (smsErr as any)?.context?.text?.().catch(() => smsErr.message) ?? smsErr.message) : smsRes
     }
     return out
   }
