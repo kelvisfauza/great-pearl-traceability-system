@@ -167,15 +167,7 @@ Deno.serve(async (req) => {
     })
     if (feeErr) return { overdraft_portion: overdraftPortion, access_fee: fee, fee_status: 'failed', fee_error: feeErr.message }
 
-    // 3) Treasury profit.
-    await supabase.rpc('post_treasury_profit', {
-      p_amount: fee,
-      p_description: `Overdraft access fee (2.75%) — ${emp.name} undertime charge ${day}`,
-      p_reference: `PROFIT-${feeRef}`,
-      p_user_email: emp.email,
-      p_user_name: emp.name,
-      p_metadata: { source: 'undertime_charge', profit_type: 'overdraft_access_fee', fee_amount: fee, draw_amount: overdraftPortion },
-    })
+    // 3) Treasury: the ledger trigger books the fee (Loans & Overdrafts -> Profits) automatically.
 
     // 4) Tell the employee.
     if (channels.includes('sms') && emp.phone) {
