@@ -87,12 +87,28 @@ Deno.serve(async (req) => {
       const walletBalance = Number(walletBalanceValue) || 0;
       const outstanding = Math.max(Number(a.outstanding_balance) || 0, Math.max(0, -walletBalance));
       if (outstanding <= 0) { skipped.push(`${a.employee_email}:settled`); continue; }
-      const todayPenalty = Math.round(outstanding * 0.10);
+
+      // Actual penalty posted by overdraft_daily_maintenance (03:30 Kampala) today, if any
+      const dayKey = today.toISOString().slice(0, 10);
+      const penRef = `OD-PEN-${a.id}-${dayKey.replace(/-/g, "")}`;
+      const { data: penRow } = await admin
+        .from("ledger_entries")
+        .select("amount, created_at")
+        .eq("user_id", String(a.user_id))
+        .eq("reference", penRef)
+        .maybeSingle();
+      const deducted = penRow ? Math.abs(Number(penRow.amount) || 0) : 0;
+      const deductedAt = penRow
+        ? new Date(penRow.created_at).toLocaleString("en-GB", { timeZone: "Africa/Kampala", dateStyle: "medium", timeStyle: "short" })
+        : "";
+
+      // Projection base = balance excluding today's already-posted penalty
+      const base = Math.max(0, outstanding - deducted);
+      const todayPenalty = deducted || Math.round(base * 0.10);
       let bal = outstanding;
       for (let i = 0; i < 3; i++) bal = bal + Math.round(bal * 0.10);
       const in3Days = bal - outstanding;
 
-      const dayKey = today.toISOString().slice(0, 10);
       const idem = `od-penalty-warning-${a.id}-${dayKey}`;
 
       const { error } = await admin.functions.invoke("send-transactional-email", {
@@ -104,9 +120,14 @@ Deno.serve(async (req) => {
           templateData: {
             employeeName: a.employee_name || "there",
             outstanding: fmt(outstanding),
-            daysOutstanding: "6",
+            daysOutstanding: String(days),
             projectedPenaltyToday: fmt(todayPenalty),
             projectedIn3Days: fmt(in3Days),
+            deductedToday: deducted ? fmt(deducted) : "",
+            deductedAt,
+            deductedReference: deducted ? penRef : "",
+            walletAfter: deducted ? fmt(walletBalance) : "",
+            nextChargeAt: "tomorrow at 03:30 (Kampala)",
             isTest: false,
           },
         },
