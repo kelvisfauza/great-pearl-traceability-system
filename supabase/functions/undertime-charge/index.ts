@@ -6,6 +6,7 @@ const corsHeaders = {
 }
 
 const AMOUNT = 10000
+const OD_FEE_RATE = 0.0275
 // Staff on leave / excused for this run.
 const EXCLUDED_EMAILS = new Set([
   'bwambaledenis@greatpearlcoffee.com',
@@ -30,6 +31,8 @@ Deno.serve(async (req) => {
   const initiatedBy = String(body?.initiated_by || 'Fauzakusa@greatpearlcoffee.com')
   // notify_only=true: re-send notifications for already-posted charges (no new debits).
   const notifyOnly = body?.notify_only === true
+  // fix_overdraft_fees=true: apply the missing 2.75% overdraft access fee to charges already posted.
+  const fixOverdraftFees = body?.fix_overdraft_fees === true
   const channels: string[] = Array.isArray(body?.channels) ? body.channels : ['email', 'sms']
 
   const { data: employees, error: empErr } = await supabase
