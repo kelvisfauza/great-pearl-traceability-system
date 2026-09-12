@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.close_grn_allocation_on_lot_paid() FROM PUBLIC, anon, authenticated;
