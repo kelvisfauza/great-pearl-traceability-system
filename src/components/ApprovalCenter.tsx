@@ -643,7 +643,8 @@ const ApprovalCenter = () => {
                           <>
                             <Button
                               onClick={() => handleApproval(request)}
-                              disabled={processingId === request.id}
+                              disabled={processingId === request.id || awaitingProcurement}
+                              title={awaitingProcurement ? 'Procurement must complete its review first' : undefined}
                               className="bg-green-600 hover:bg-green-700"
                             >
                               <CheckCircle className="h-4 w-4 mr-2" />
