@@ -66,6 +66,9 @@ Deno.serve(async (req) => {
         metadata: {
           type: 'undertime_charge',
           charge_type: 'Undertime',
+          // Ledger-only wallet charge (no cash leaves the system) — skip the legacy
+          // Yo float pre-check; the Treasury accounts trigger still posts it to Fees Income.
+          bypass_treasury_check: true,
           employee_name: emp.name,
           employee_email: emp.email,
           date: day,
