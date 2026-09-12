@@ -79,6 +79,7 @@ Deno.serve(async (req) => {
     }
     if (channels.includes('sms') && emp.phone) {
       const { data: smsRes, error: smsErr } = await supabase.functions.invoke('send-sms', {
+        headers: { Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` },
         body: {
           phone: emp.phone,
           message: `Dear ${emp.name}, an undertime charge of UGX ${AMOUNT.toLocaleString()} has been deducted from your wallet for late arrival on ${day}. Ref ${reference}. Please keep to the official reporting time. - Great Agro Coffee`,
