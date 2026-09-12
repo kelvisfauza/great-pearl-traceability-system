@@ -64,14 +64,31 @@ const OverdraftPenaltyWarning = ({
             <Text style={rowText}>Penalty rate: <strong>10% per day</strong> (compounding)</Text>
           </Section>
 
+          {deductedToday ? (
+            <Section style={penaltyCard}>
+              <Text style={cardTitlePenalty}>DEDUCTED FROM YOUR WALLET TODAY</Text>
+              <Hr style={cardDividerPenalty} />
+              <Text style={rowText}>Penalty deducted: <strong>UGX {deductedToday}</strong></Text>
+              {deductedAt && <Text style={rowText}>Time: <strong>{deductedAt}</strong></Text>}
+              {deductedReference && <Text style={rowText}>Reference: <strong>{deductedReference}</strong></Text>}
+              {walletAfter && <Text style={rowText}>Wallet balance after: <strong>UGX {walletAfter}</strong></Text>}
+            </Section>
+          ) : (
+            <Section style={penaltyCard}>
+              <Text style={cardTitlePenalty}>TODAY'S PENALTY</Text>
+              <Hr style={cardDividerPenalty} />
+              <Text style={rowText}>Not yet deducted. Expected penalty: <strong>UGX {projectedPenaltyToday}</strong></Text>
+            </Section>
+          )}
+
           <Section style={penaltyCard}>
             <Text style={cardTitlePenalty}>PROJECTED COST IF NOT CLEARED</Text>
             <Hr style={cardDividerPenalty} />
-            <Text style={rowText}>Penalty added today: <strong>UGX {projectedPenaltyToday}</strong></Text>
             <Text style={rowText}>Total added over next 3 days: <strong>UGX {projectedIn3Days}</strong></Text>
             <Text style={smallNote}>
-              Penalty interest is deducted from your wallet daily and added to your outstanding balance.
-              If still unpaid by day 30, the overdraft is automatically frozen.
+              The penalty is deducted from your wallet automatically every day at 03:30 (Kampala) and added to
+              your outstanding balance. Next deduction: {nextChargeAt}. If still unpaid by day 30, the overdraft
+              is automatically frozen.
             </Text>
           </Section>
 
