@@ -11,6 +11,12 @@ interface Props {
   daysOutstanding?: string
   projectedPenaltyToday?: string
   projectedIn3Days?: string
+  /** Actual penalty already posted to the wallet today (blank if none yet) */
+  deductedToday?: string
+  deductedAt?: string
+  deductedReference?: string
+  walletAfter?: string
+  nextChargeAt?: string
   isTest?: boolean
 }
 
@@ -20,6 +26,11 @@ const OverdraftPenaltyWarning = ({
   daysOutstanding = '6',
   projectedPenaltyToday = '0',
   projectedIn3Days = '0',
+  deductedToday = '',
+  deductedAt = '',
+  deductedReference = '',
+  walletAfter = '',
+  nextChargeAt = 'tomorrow at 03:30 (Kampala)',
   isTest = false,
 }: Props) => (
   <Html lang="en" dir="ltr">
