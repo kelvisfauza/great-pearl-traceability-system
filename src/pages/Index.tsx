@@ -14,6 +14,7 @@ import FeatureTour from '@/components/tour/FeatureTour';
 import NotificationPanel from '@/components/notifications/NotificationPanel';
 import BuyingRecommendationsCard from '@/components/admin/BuyingRecommendationsCard';
 import UpcomingBookingsWidget from '@/components/admin/UpcomingBookingsWidget';
+import ChargeEmployeeCard from '@/components/admin/ChargeEmployeeCard';
 import StoreRealTimeTracker from '@/components/v2/admin/StoreRealTimeTracker';
 import HolidayBanner from '@/components/HolidayBanner';
 import WorkSummaryPanel from '@/components/dashboard/WorkSummaryPanel';
@@ -134,6 +135,7 @@ const Index = () => {
         {isAdmin && (
           <div className="space-y-4">
             <UpcomingBookingsWidget />
+            <ChargeEmployeeCard />
             <Card className="border-border/30 overflow-hidden">
               <div className="h-0.5 bg-gradient-to-r from-primary via-chart-4 to-chart-2" />
               <CardHeader className="pb-3 border-b border-border/20 pt-4 px-4">
