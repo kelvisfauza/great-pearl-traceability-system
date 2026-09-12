@@ -28,6 +28,9 @@ Deno.serve(async (req) => {
     : new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Kampala' })
   const reason = String(body?.reason || 'Late arrival (undertime)')
   const initiatedBy = String(body?.initiated_by || 'Fauzakusa@greatpearlcoffee.com')
+  // notify_only=true: re-send notifications for already-posted charges (no new debits).
+  const notifyOnly = body?.notify_only === true
+  const channels: string[] = Array.isArray(body?.channels) ? body.channels : ['email', 'sms']
 
   const { data: employees, error: empErr } = await supabase
     .from('employees')
@@ -46,6 +49,50 @@ Deno.serve(async (req) => {
 
   const results: Record<string, unknown>[] = []
 
+  const notify = async (emp: any, reference: string) => {
+    const out: Record<string, unknown> = {}
+    if (channels.includes('email')) {
+      const { data: mailRes, error: mailErr } = await supabase.functions.invoke('send-transactional-email', {
+        body: {
+          templateName: 'general-notification',
+          recipientEmail: emp.email,
+          idempotencyKey: `undertime-charge-${day}-${emp.id}`,
+          templateData: {
+            subject: `Undertime Charge of UGX ${AMOUNT.toLocaleString()} Applied`,
+            title: 'Undertime Charge Applied',
+            recipientName: emp.name,
+            message: [
+              `An undertime charge of UGX ${AMOUNT.toLocaleString()} has been deducted from your wallet for ${reason.toLowerCase()} on ${day}.`,
+              '',
+              'Detail | Value',
+              `Charge | Undertime`,
+              `Amount | UGX ${AMOUNT.toLocaleString()}`,
+              `Date | ${day}`,
+              `Reference | ${reference}`,
+              '',
+              'Please observe the official reporting time going forward. If you believe this was applied in error, contact HR or Administration.',
+            ].join('\n'),
+          },
+        },
+      })
+      out.email_status = mailErr ? 'failed' : (mailRes as any)?.email_status || 'sent'
+    }
+    if (channels.includes('sms') && emp.phone) {
+      const { data: smsRes, error: smsErr } = await supabase.functions.invoke('send-sms', {
+        body: {
+          phone: emp.phone,
+          message: `Dear ${emp.name}, an undertime charge of UGX ${AMOUNT.toLocaleString()} has been deducted from your wallet for late arrival on ${day}. Ref ${reference}. Please keep to the official reporting time. - Great Agro Coffee`,
+          userName: emp.name,
+          messageType: 'wallet_debit',
+          recipientEmail: emp.email,
+          idempotency_key: `undertime-sms-${day}-${emp.id}`,
+        },
+      })
+      out.sms_status = smsErr ? 'failed' : ((smsRes as any)?.success === false ? 'failed' : 'sent')
+    }
+    return out
+  }
+
   for (const emp of targets) {
     try {
       const { data: userId } = await supabase.rpc('get_unified_user_id', { input_email: emp.email })
@@ -54,7 +101,16 @@ Deno.serve(async (req) => {
       const reference = `UNDERTIME-${day}-${String(userId).slice(0, 8)}`
       const { data: existing } = await supabase
         .from('ledger_entries').select('id').eq('reference', reference).maybeSingle()
-      if (existing) { results.push({ email: emp.email, status: 'already_charged' }); continue }
+
+      if (existing) {
+        if (notifyOnly) {
+          results.push({ email: emp.email, name: emp.name, status: 'notified', ...(await notify(emp, reference)) })
+        } else {
+          results.push({ email: emp.email, status: 'already_charged' })
+        }
+        continue
+      }
+      if (notifyOnly) { results.push({ email: emp.email, status: 'skipped', reason: 'no charge to notify' }); continue }
 
       // Debit as a CHARGE: source FEE routes the money to Fees & Charges Income in the Treasury.
       const { error: ledgerErr } = await supabase.from('ledger_entries').insert({
@@ -80,36 +136,7 @@ Deno.serve(async (req) => {
       })
       if (ledgerErr) { results.push({ email: emp.email, status: 'failed', reason: ledgerErr.message }); continue }
 
-      // Email + parallel SMS (send-transactional-email mirrors to the phone on file).
-      const { data: mailRes, error: mailErr } = await supabase.functions.invoke('send-transactional-email', {
-        body: {
-          templateName: 'general-notification',
-          recipientEmail: emp.email,
-          idempotencyKey: `undertime-charge-${day}-${emp.id}`,
-          templateData: {
-            subject: `Undertime Charge of UGX ${AMOUNT.toLocaleString()} Applied`,
-            title: 'Undertime Charge Applied',
-            recipientName: emp.name,
-            message: [
-              `An undertime charge of UGX ${AMOUNT.toLocaleString()} has been deducted from your wallet for ${reason.toLowerCase()} on ${day}.`,
-              '',
-              'Detail | Value',
-              `Charge | Undertime`,
-              `Amount | UGX ${AMOUNT.toLocaleString()}`,
-              `Date | ${day}`,
-              `Reference | ${reference}`,
-              '',
-              'Please observe the official reporting time going forward. If you believe this was applied in error, contact HR or Administration.',
-            ].join('\n'),
-          },
-        },
-      })
-
-      results.push({
-        email: emp.email, name: emp.name, status: 'charged', reference,
-        email_status: mailErr ? 'failed' : (mailRes as any)?.email_status || 'sent',
-        sms_status: (mailRes as any)?.sms_status || (mailErr ? 'failed' : 'unknown'),
-      })
+      results.push({ email: emp.email, name: emp.name, status: 'charged', reference, ...(await notify(emp, reference)) })
     } catch (e) {
       results.push({ email: emp.email, status: 'error', reason: String(e) })
     }
