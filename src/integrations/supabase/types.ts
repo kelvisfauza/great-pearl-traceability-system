@@ -16944,6 +16944,10 @@ export type Database = {
             Returns: Database["public"]["Enums"]["app_role"]
           }
       get_wallet_balance: { Args: { user_uuid: string }; Returns: number }
+      get_wallet_balance_before: {
+        Args: { p_before: string; p_user_id: string }
+        Returns: number
+      }
       get_wallet_balance_safe: { Args: { user_uuid: string }; Returns: number }
       get_wallet_balance_text: { Args: { user_uuid: string }; Returns: number }
       get_wallet_ledger_balance: {
