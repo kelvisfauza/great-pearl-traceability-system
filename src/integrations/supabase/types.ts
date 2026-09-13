@@ -16455,11 +16455,19 @@ export type Database = {
         Args: { activity_name: string; context?: Json; user_uuid: string }
         Returns: Json
       }
+      award_activity_reward_impl: {
+        Args: { activity_name: string; context?: Json; user_uuid: string }
+        Returns: Json
+      }
       award_all_meeting_attendance_bonuses: {
         Args: { _call_id: string }
         Returns: Json
       }
       award_approval_reward: {
+        Args: { approval_role: string; request_id: string; user_uuid: string }
+        Returns: Json
+      }
+      award_approval_reward_impl: {
         Args: { approval_role?: string; request_id?: string; user_uuid: string }
         Returns: Json
       }
@@ -17129,6 +17137,7 @@ export type Database = {
         }
         Returns: string
       }
+      loyalty_awards_suspended: { Args: never; Returns: boolean }
       mark_meeting_no_shows: { Args: { _meeting_id: string }; Returns: number }
       mark_messages_delivered: {
         Args: { p_conversation_id: string }
