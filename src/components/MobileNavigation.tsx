@@ -6,6 +6,7 @@ import {
   Banknote, FileCheck
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { isTraineeRole, isTraineeRouteAllowed } from "@/lib/trainee";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -62,6 +63,15 @@ const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
 
   const getFilteredNavigationItems = () => {
     if (!employee) return [];
+
+    if (isTraineeRole(employee.role)) {
+      return navigationItems.map(section => ({
+        ...section,
+        items: section.items.filter((item: any) =>
+          !item.requiresAdmin && isTraineeRouteAllowed(item.path) && item.path !== '/procurement-review'
+        )
+      })).filter(section => section.items.length > 0);
+    }
     
     return navigationItems.map(section => ({
       ...section,
