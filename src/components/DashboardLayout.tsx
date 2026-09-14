@@ -21,6 +21,8 @@ import MobileNavigation from "./MobileNavigation";
 import AttendanceReminder from "./attendance/AttendanceReminder";
 import { Menu } from "lucide-react";
 import { Button } from "./ui/button";
+import { TrainingGuideButton } from "./trainee/TrainingGuideButton";
+import { isTraineeRole } from "@/lib/trainee";
 
 const COMPANY_DOMAIN = "@greatagrocoffee.com";
 
@@ -39,6 +41,7 @@ const DashboardLayout = ({ children, title, subtitle, showMessageButton = true }
   const messagesData = useMessages();
   const { unreadCount: notificationUnreadCount } = useNotifications();
   const { user, employee } = useAuth();
+  const isTrainee = isTraineeRole(employee?.role);
   const isMobile = useIsMobile();
   usePresence(user?.id);
   useLoginTracker(user?.id || null, employee?.name, employee?.email, employee?.id);
@@ -81,7 +84,7 @@ const DashboardLayout = ({ children, title, subtitle, showMessageButton = true }
               </Button>
             )}
             {title && (
-              <div className="min-w-0">
+              <div className="min-w-0" data-tour="page-title">
                 <h1 className="text-lg md:text-xl font-semibold text-foreground truncate">{title}</h1>
                 {subtitle && !isMobile && (
                   <p className="text-sm text-muted-foreground truncate">{subtitle}</p>
@@ -91,19 +94,22 @@ const DashboardLayout = ({ children, title, subtitle, showMessageButton = true }
           </div>
           
           <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 min-w-0">
-            {!isMobile && <GlobalSearch />}
-            {showMessageButton && !isMobile && (
+            <TrainingGuideButton compact={isMobile} />
+            {!isMobile && !isTrainee && <GlobalSearch />}
+            {showMessageButton && !isMobile && !isTrainee && (
               <ChatButton
                 onClick={toggleMessaging}
                 unreadCount={messagesData.unreadCount}
               />
             )}
-            <NotificationButton
-              onToggle={toggleNotifications}
-              unreadCount={notificationUnreadCount}
-            />
+            {!isTrainee && (
+              <NotificationButton
+                onToggle={toggleNotifications}
+                unreadCount={notificationUnreadCount}
+              />
+            )}
             <ThemeToggle />
-            {!isMobile && <AccountButton />}
+            {!isMobile && !isTrainee && <AccountButton />}
           </div>
         </header>
 
