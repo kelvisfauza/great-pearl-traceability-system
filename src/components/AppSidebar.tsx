@@ -155,7 +155,7 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
   };
 
   return (
-    <aside 
+    <aside data-sidebar="true"
       className={cn(
         "h-screen bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300 ease-in-out",
         isCollapsed ? "w-16" : "w-64"
