@@ -5,3 +5,4 @@
 
 ## Memories
 - [Loyalty Suspension](mem://rewards/loyalty-system/suspension) — How automatic loyalty awards are switched off and how to resume
+- [Trainee Role](mem://access-control/trainee-role) — View-only intern account: masked money, restricted menus, guided tour, HR progress card
