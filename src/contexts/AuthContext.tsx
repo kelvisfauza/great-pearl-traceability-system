@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { securityService } from '@/services/securityService';
 import { checkDeviceTrust, sendNewDeviceAlertEmail, trustFirstDevice } from '@/utils/deviceDetection';
+import { isTraineeRole } from '@/lib/trainee';
 
 interface Employee {
   id: string;
