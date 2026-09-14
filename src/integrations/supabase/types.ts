@@ -13128,6 +13128,45 @@ export type Database = {
           },
         ]
       }
+      trainee_progress: {
+        Row: {
+          completed_at: string | null
+          completed_steps: number[]
+          created_at: string
+          current_step: number
+          employee_email: string | null
+          employee_id: string
+          id: string
+          started_at: string
+          total_steps: number
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_steps?: number[]
+          created_at?: string
+          current_step?: number
+          employee_email?: string | null
+          employee_id: string
+          id?: string
+          started_at?: string
+          total_steps?: number
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_steps?: number[]
+          created_at?: string
+          current_step?: number
+          employee_email?: string | null
+          employee_id?: string
+          id?: string
+          started_at?: string
+          total_steps?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       training_simulations: {
         Row: {
           batch_number: string
