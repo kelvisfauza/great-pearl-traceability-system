@@ -78,7 +78,11 @@ Deno.serve(async (req) => {
       .join("\n");
 
     const results: any[] = [];
+    const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    let first = true;
     for (const person of LAB_RECIPIENTS) {
+      if (!first) await pause(1200); // stay under the email provider rate limit
+      first = false;
       try {
         const { data, error } = await supabase.functions.invoke("send-transactional-email", {
           body: {
@@ -100,6 +104,8 @@ Deno.serve(async (req) => {
         results.push({ email: person.email, ok: false, error: String((e as any)?.message || e) });
       }
     }
+    await pause(1200);
+
 
     // Explicit operations CC — clearly labelled so it cannot be missed.
     const primaryRecipients = LAB_RECIPIENTS.map((p) => `${p.name} <${p.email}>`).join(", ");
