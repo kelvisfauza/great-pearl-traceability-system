@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { isTraineeRole, isTraineeRouteAllowed } from '@/lib/trainee';
 import { useLeaveEnforcement } from '@/contexts/LeaveEnforcementContext';
 import LeaveEnforcementBanner from '@/components/LeaveEnforcementBanner';
 import { Loader2 } from 'lucide-react';
@@ -23,6 +24,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { user, employee, loading, hasPermission, hasRole } = useAuth();
   const { activeLeave, isOnLeave } = useLeaveEnforcement();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -42,6 +44,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // If we have a user but no employee data, create a basic employee or show error
   if (!employee) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // Trainee (intern) accounts may only open the training departments
+  if (isTraineeRole(employee.role) && !isTraineeRouteAllowed(location.pathname)) {
+    return <Navigate to="/" replace />;
   }
 
   // Check if user has required permissions (only if permissions are specified)
