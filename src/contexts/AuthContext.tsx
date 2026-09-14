@@ -49,6 +49,7 @@ interface AuthContextType {
   isManager: () => boolean;
   isSupervisor: () => boolean;
   isUser: () => boolean;
+  isTrainee: () => boolean;
   canPerformAction: (action: 'view' | 'create' | 'edit' | 'delete' | 'approve' | 'print' | 'export') => boolean;
   fetchEmployeeData: (userId?: string) => Promise<Employee | null>;
   changePassword: (newPassword: string) => Promise<void>;
@@ -669,6 +670,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return hasRole('User');
   };
 
+  // Trainee = intern training account, view-only with masked figures
+  const isTrainee = (): boolean => {
+    return isTraineeRole(employee?.role);
+  };
+
   // Legacy isAdmin for backwards compatibility - checks if Super Admin or Administrator
   const isAdmin = (): boolean => {
     return isSuperAdmin() || isAdministrator();
@@ -680,6 +686,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     
     const role = employee.role;
     
+    // Trainee (intern) accounts are strictly view-only, regardless of permissions
+    if (isTraineeRole(role)) return action === 'view';
+
     // Super Admin can do everything
     if (role === 'Super Admin') return true;
     
@@ -754,6 +763,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     isManager,
     isSupervisor,
     isUser,
+    isTrainee,
     canPerformAction,
     fetchEmployeeData,
     changePassword
