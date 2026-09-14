@@ -155,8 +155,8 @@ const DashboardLayout = ({ children, title, subtitle, showMessageButton = true }
       />
       
       <FeatureAnnouncementModal onOpenAnnouncement={handleOpenAnnouncement} />
-      <TrainingTour />
-      <AttendanceReminder />
+      {!isTrainee && <TrainingTour />}
+      {!isTrainee && <AttendanceReminder />}
     </div>
   );
 };
