@@ -35,7 +35,7 @@ const availablePermissions = [
 
 const departments = [
   "Human Resources", "Finance", "Operations", "Quality Control",
-  "Sales", "Procurement", "Administration", "Field Operations", "Milling"
+  "Sales", "Procurement", "Administration", "Field Operations", "Milling", "Training"
 ];
 
 export default function UserCreationForm() {
