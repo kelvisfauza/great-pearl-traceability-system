@@ -36,18 +36,23 @@ async function sendLovableEmailWithRetry(
 ) {
   let lastError: unknown
 
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  // Bursts (e.g. one notification fanned out to 5-6 people) trip the
+  // provider's workspace rate limit. Back off generously with jitter.
+  const delays = [1500, 4000, 9000, 18000, 30000]
+
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
     try {
       return await sendLovableEmail(payload, options)
     } catch (error) {
       lastError = error
-      if (!isRateLimitedError(error) || attempt === 3) break
-      await sleep(attempt * 1250)
+      if (!isRateLimitedError(error) || attempt === delays.length) break
+      await sleep(delays[attempt] + Math.floor(Math.random() * 800))
     }
   }
 
   throw lastError
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
