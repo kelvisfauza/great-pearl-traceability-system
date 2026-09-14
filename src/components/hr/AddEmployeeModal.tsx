@@ -35,7 +35,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, employee }: AddEmplo
     password: ""
   });
 
-  const departments = ["Operations", "Quality Control", "Production", "Administration", "Finance", "Sales & Marketing", "HR", "Milling"];
+  const departments = ["Operations", "Quality Control", "Production", "Administration", "Finance", "Sales & Marketing", "HR", "Milling", "Training"];
   const roles = ["Administrator", "Manager", "Supervisor", "User", "Guest", TRAINEE_ROLE];
   const systemPermissions = [
     "Procurement Access", "Quality Control", "Processing", "Inventory Management",
