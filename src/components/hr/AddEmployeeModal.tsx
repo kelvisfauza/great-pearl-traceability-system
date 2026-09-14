@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { TRAINEE_ROLE, TRAINEE_DEPARTMENT, TRAINEE_PERMISSIONS } from "@/lib/trainee";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -34,8 +35,8 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, employee }: AddEmplo
     password: ""
   });
 
-  const departments = ["Operations", "Quality Control", "Production", "Administration", "Finance", "Sales & Marketing", "HR", "Milling"];
-  const roles = ["Administrator", "Manager", "Supervisor", "User", "Guest"];
+  const departments = ["Operations", "Quality Control", "Production", "Administration", "Finance", "Sales & Marketing", "HR", "Milling", "Training"];
+  const roles = ["Administrator", "Manager", "Supervisor", "User", "Guest", TRAINEE_ROLE];
   const systemPermissions = [
     "Procurement Access", "Quality Control", "Processing", "Inventory Management",
     "Store Management", "Sales & Marketing", "Finance", "Field Operations",
@@ -71,7 +72,8 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, employee }: AddEmplo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.email || !formData.department || !formData.position) {
+    const isTraineeSel = formData.role === TRAINEE_ROLE;
+    if (!formData.name || !formData.email || (!isTraineeSel && !formData.department) || !formData.position) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields",
@@ -91,6 +93,8 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, employee }: AddEmplo
 
     const employeeData = {
       ...formData,
+      department: isTraineeSel ? TRAINEE_DEPARTMENT : formData.department,
+      permissions: isTraineeSel ? [...TRAINEE_PERMISSIONS] : formData.permissions,
       salary: parseInt(formData.salary) || 0,
       status: employee?.status || "Active",
       join_date: formData.join_date || new Date().toISOString()

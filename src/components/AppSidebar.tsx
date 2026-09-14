@@ -28,6 +28,7 @@ import {
   HardDrive
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { isTraineeRole, isTraineeRouteAllowed } from "@/lib/trainee";
 import { useRoleBasedData } from "@/hooks/useRoleBasedData";
 import { useUnifiedApprovalRequests } from "@/hooks/useUnifiedApprovalRequests";
 import { Button } from "@/components/ui/button";
@@ -109,6 +110,16 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
       }];
     }
     
+    // Trainee (intern) accounts only see the seven training departments
+    if (isTraineeRole(employee?.role)) {
+      return navigationItems.map(section => ({
+        ...section,
+        items: section.items.filter((item: any) =>
+          !item.requiresAdmin && isTraineeRouteAllowed(item.path) && item.path !== '/procurement-review'
+        )
+      })).filter(section => section.items.length > 0);
+    }
+
     return navigationItems.map(section => ({
       ...section,
       items: section.items.filter((item: any) => {
@@ -144,7 +155,7 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
   };
 
   return (
-    <aside 
+    <aside data-sidebar="true"
       className={cn(
         "h-screen bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300 ease-in-out",
         isCollapsed ? "w-16" : "w-64"

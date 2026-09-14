@@ -48,6 +48,7 @@ import TimeDeductionManager from '@/components/hr/TimeDeductionManager';
 import EmployeeContractsManager from '@/components/hr/EmployeeContractsManager';
 import MonthlyOvertimeReview from '@/components/hr/MonthlyOvertimeReview';
 import EmployeeQRCodes from '@/components/employees/EmployeeQRCodes';
+import TraineeProgressCard from '@/components/hr/TraineeProgressCard';
 
 const HumanResources = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -318,6 +319,7 @@ const HumanResources = () => {
           <TabsContent value="create">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <UserCreationForm />
+              <TraineeProgressCard />
             </div>
           </TabsContent>
 

@@ -154,6 +154,10 @@ import { DailyReportReminder } from "./components/reports/DailyReportReminder";
 import { MonthlyReportReminder } from "./components/reports/MonthlyReportReminder";
 import { GlobalActivityTracker } from "./components/GlobalActivityTracker";
 import { ITReadOnlyEnforcer } from "./components/ITReadOnlyEnforcer";
+import { TraineeEnforcer } from "./components/trainee/TraineeEnforcer";
+import { TraineeMasker } from "./components/trainee/TraineeMasker";
+import { TraineeTour } from "./components/trainee/TraineeTour";
+import { NonTraineeOnly } from "./components/trainee/NonTraineeOnly";
 import { ITReadOnlyBanner } from "./components/ITReadOnlyBanner";
 import { OvertimeNotification } from "./components/OvertimeNotification";
 import RoleNotificationHandler from "./components/RoleNotificationHandler";
@@ -234,24 +238,31 @@ const App: React.ComponentType = () => {
               <LocationPermissionGate>
               <GlobalActivityTracker />
               <ITReadOnlyEnforcer />
-              {/* Global notifications and reminders */}
-              <OvertimeNotification />
-              <DailyReportReminder />
-              <MonthlyReportReminder />
-              <ProfileCompletionModal />
-              <BirthdayNotification />
-              <ContractRenewalGate />
-              <MeetingRewardsTeaserPopup />
-              
-              <SeasonalAdvisoryModal />
+              {/* Trainee (intern) accounts: view-only guard, figure masking, guided tour */}
+              <TraineeEnforcer />
+              <TraineeMasker />
+              <TraineeTour />
+              {/* Global notifications and reminders (hidden for trainees) */}
+              <NonTraineeOnly>
+                <OvertimeNotification />
+                <DailyReportReminder />
+                <MonthlyReportReminder />
+                <ProfileCompletionModal />
+                <BirthdayNotification />
+                <ContractRenewalGate />
+                <MeetingRewardsTeaserPopup />
+                <SeasonalAdvisoryModal />
+              </NonTraineeOnly>
               
               {/* <RoleNotificationHandler /> - Disabled due to performance issues */}
               
               <MarqueeBanner />
               <div className="px-4 pt-2"><ITReadOnlyBanner /></div>
               <GlobalHighlightBridge />
-              <V2WalletDock />
-              <GrnPairingListener />
+              <NonTraineeOnly>
+                <V2WalletDock />
+                <GrnPairingListener />
+              </NonTraineeOnly>
               <Routes>
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/careers" element={<Careers />} />

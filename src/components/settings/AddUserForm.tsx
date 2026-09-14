@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { TRAINEE_ROLE, TRAINEE_DEPARTMENT, TRAINEE_PERMISSIONS } from "@/lib/trainee";
 import * as z from "zod";
 import { Key, Eye, EyeOff } from "lucide-react";
 
@@ -17,7 +18,7 @@ const userFormSchema = z.object({
   phone: z.string().optional(),
   position: z.string().min(2, "Position is required"),
   department: z.string().min(2, "Department is required"),
-  role: z.enum(["Administrator", "Manager", "Supervisor", "User", "Guest"]),
+  role: z.enum(["Administrator", "Manager", "Supervisor", "User", "Guest", "Trainee"]),
   salary: z.number().min(0, "Salary must be positive"),
   permissions: z.array(z.string()).optional(),
 });
@@ -32,7 +33,7 @@ const availablePermissions = [
 
 const departments = [
   "Human Resources", "Finance", "Operations", "Quality Control",
-  "Sales", "Procurement", "Administration", "Field Operations", "Milling"
+  "Sales", "Procurement", "Administration", "Field Operations", "Milling", "Training"
 ];
 
 interface AddUserFormProps {
@@ -71,10 +72,10 @@ export default function AddUserForm({ onSubmit }: AddUserFormProps) {
         password: values.password,
         phone: values.phone?.trim() || "",
         position: values.position.trim(),
-        department: values.department.trim(),
+        department: values.role === TRAINEE_ROLE ? TRAINEE_DEPARTMENT : values.department.trim(),
         role: values.role,
         salary: Number(values.salary),
-        permissions: Array.isArray(values.permissions) ? values.permissions : [],
+        permissions: values.role === TRAINEE_ROLE ? [...TRAINEE_PERMISSIONS] : (Array.isArray(values.permissions) ? values.permissions : []),
         status: 'Active',
         join_date: new Date().toISOString(),
         isOneTimePassword: false,
@@ -224,6 +225,7 @@ export default function AddUserForm({ onSubmit }: AddUserFormProps) {
                     <SelectItem value="Supervisor">Supervisor</SelectItem>
                     <SelectItem value="User">User</SelectItem>
                     <SelectItem value="Guest">Guest</SelectItem>
+                    <SelectItem value="Trainee">Trainee (view-only intern)</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
