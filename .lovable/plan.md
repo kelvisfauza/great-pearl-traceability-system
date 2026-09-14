@@ -1,69 +1,69 @@
-## Goal
+# Trainee (Intern) Account with Guided Walkthrough
 
-Replace the current "OD draws a positive credit into the wallet" model with a true overdraft: the wallet itself goes negative when a transfer exceeds the balance. Daily interest accrues on the negative amount. Every incoming credit is fully absorbed until the wallet returns to zero.
+A new **Trainee** role for interns: read-only everywhere, sensitive figures hidden, and an automatic step-by-step tour that walks them through the real screens, department by department (Store → Quality → Procurement → Finance → Inventory → Sales → EUDR).
 
-## How it will behave
+## What the trainee experiences
 
-1. **Sending more than you have**
-   - User has 1,935,905, sends 2,080,000.
-   - Wallet posts a single `−2,080,000` WITHDRAWAL → running balance becomes `−144,095`.
-   - System checks active overdraft account, verifies `144,095` is within available limit.
-   - System posts a one-time **2.75% access fee** = `−3,963` as a FEE ledger entry → wallet now `−148,058`.
-   - `overdraft_accounts.outstanding_balance` is set to the absolute value of the negative wallet balance so admin views still reflect the debt.
-   - Confirmation email: "Overdraft used UGX 144,095, access fee UGX 3,963, current debt UGX 148,058."
+1. **First login** — a welcome card appears and the tour starts automatically. Each step highlights a real part of the screen (a menu, a tab, a table) with a short explanation and Next / Back / Skip buttons and a progress bar ("Step 4 of 28 · Quality").
+2. **Moving between departments** — the tour opens the next department page by itself; the intern just reads and clicks Next.
+3. **Resume anywhere** — progress is saved per intern. If they log out mid-way, the tour picks up where they stopped. A "Training Guide" button in the header lets them restart or jump to any department.
+4. **Finish** — a completion screen summarises what they covered; after that the tour no longer auto-starts but stays available from the button.
 
-2. **Trying to send while already negative or with no OD facility**
-   - Blocked at the edge function with a clear error. No phantom draw entries.
+## What a trainee can and cannot do
 
-3. **Daily interest (0.6%)**
-   - Cron runs once a day at 00:05 Africa/Kampala.
-   - For every wallet whose computed balance is `< 0`, post an INTEREST ledger entry of `round(abs(balance) * 0.006)` with `source_category = 'OVERDRAFT_INTEREST'`.
-   - Logs to `overdraft_transactions` as `type='interest'` for the admin trail.
+Allowed: browse the seven training departments, use search and filters, open records, see weights/kilograms, dates, suppliers' names, grades, moisture, statuses, batch codes.
 
-4. **Auto-absorb on credits**
-   - A trigger on `ledger_entries` fires on every positive entry (deposits, loyalty, refunds, salary, etc.) **except** those tagged `OVERDRAFT_INTEREST` / `OVERDRAFT_FEE` / `OVERDRAFT_ABSORB`.
-   - If the wallet's running balance is still `< 0` after the credit posts, the trigger leaves the credit alone — the negative simply moves toward zero naturally (since balance = sum of entries).
-   - The trigger updates `overdraft_accounts.outstanding_balance = greatest(0, -wallet_balance)` and, when the balance crosses back to `≥ 0`, marks the OD draw as `recovered` and emails the user: "Overdraft cleared."
-   - No separate "absorb" entry is needed — the math already works because the wallet is a true ledger sum.
+Blocked (with a polite "Training account is view-only" notice):
+- Adding, editing, deleting, approving, saving, uploading, submitting any form
+- Typing into any input field (search/filter boxes stay usable)
+- Printing, exporting, downloading, sharing, copying data (including Ctrl+P / Ctrl+S)
+- Opening Reports, Settings (other than viewing their own profile), Approvals, Treasury, HR, Wallet/Loans, IT
 
-5. **Withdrawal / transfer guard**
-   - `validate_withdrawal_balance` is updated: allowed amount = `wallet_balance + available_overdraft` (where `available_overdraft = approved_limit - outstanding_balance`).
-   - UI `availableToRequest` shows `max(0, wallet_balance) + available_overdraft` so users see what they can actually send.
+Hidden figures (shown as "UGX ••••"):
+- Paid price and price per kg, GRN payment amounts, advances, contract values
+- Suggested/final quality prices and the pricing calculator results
+- Sales prices and revenue, customer invoice totals
+- Salaries, wallet balances, loyalty points, treasury balances
+- Bank account numbers and mobile-money numbers
 
-## Backend changes
+Suggested extra items to hide (included unless you say otherwise):
+- Supplier and customer **phone numbers** (shown as 07•• ••• •••)
+- Employee personal details (national ID, date of birth, home address)
+- The wallet dock and money-related pop-ups (deposits, withdrawals, loans, invest & earn)
+- Announcements marked confidential / management-only
 
-- **Migration**
-  - Add `source_category` values used by triggers: `OVERDRAFT_FEE`, `OVERDRAFT_INTEREST` (string-tagged, no enum change required).
-  - Add column `overdraft_accounts.daily_interest_rate numeric not null default 0.006`.
-  - Add column `overdraft_accounts.last_interest_accrued_on date`.
-  - Create function `public.apply_overdraft_to_transfer(p_user_id uuid, p_shortfall numeric)` — posts the 2.75% fee entry, updates `outstanding_balance`, inserts `overdraft_transactions` rows, returns the fee amount.
-  - Create function `public.accrue_overdraft_interest()` — loops negative-balance wallets with active OD accounts, posts interest entry, updates `last_interest_accrued_on`.
-  - Create trigger `public.tg_overdraft_recovery_sync()` on `ledger_entries AFTER INSERT` — recomputes `outstanding_balance` from the live wallet sum; if it crossed to zero, marks draw recovered + emits a notification row.
-  - Rewrite `public.validate_withdrawal_balance(p_user_id, p_amount)` to include available OD headroom.
-  - Backfill: zero out any orphaned `OVERDRAFT_DRAW` positive entries from the old model (replace with adjusting entry) so balances reconcile.
+## Creating trainee accounts (admins)
 
-- **Edge functions**
-  - `send-money` / `wallet-transfer` (whichever performs user-to-user transfers): before posting the withdrawal, if `amount > wallet_balance`, call `apply_overdraft_to_transfer` with the shortfall. If the OD limit can't cover, return error. Then post the full `−amount` withdrawal as one entry.
-  - **Delete** `overdraft-draw` (no longer needed) — or keep it as admin-only manual draw that just posts a negative `OVERDRAFT_MANUAL` and the fee.
-  - Add scheduled function `overdraft-accrue-interest` (calls the SQL function above). Wire a daily cron via `cron.schedule`.
+- "Trainee" appears in the role picker when adding or editing an employee (HR Add Employee, Settings Add/Edit User, Permission Manager).
+- Choosing Trainee automatically sets the department to "Training" and the view-only module list; admins cannot grant extra permissions to a trainee.
+- A small **Trainee Progress** card on the HR page lists each intern, their current step and completion date.
 
-- **Cron job**
-  - `0 5 * * *` UTC → `overdraft-accrue-interest`.
+## Technical details
 
-## Frontend changes
+**Role & permissions**
+- `employees.role = 'Trainee'`; permissions fixed to the seven training modules (`Store Management`, `Quality Control`, `Procurement`, `Finance`, `Inventory`, `Sales Marketing`, `EUDR Documentation`).
+- `AuthContext.canPerformAction`: Trainee → only `view`. New `isTrainee()` helper. `useRolePermissions` / `useRoleBasedAccess` derive from it, so existing hide/show buttons follow.
+- `ProtectedRoute`: trainees redirected to `/` for any route outside the training whitelist (Reports, Settings sub-tabs, Approvals, HR, admin, wallet, loans, IT).
+- Sidebar (`AppSidebar`, `MobileNavigation`): trainee-specific menu with only the seven departments plus "Training Guide".
 
-- `useUserWallet.ts`: `availableToRequest = max(0, balance) + available_overdraft_headroom` (fetched from `overdraft_accounts`). Show a small "Overdraft available: X" badge.
-- Wallet statement renderer: keep chronological order, show interest entries with a distinct icon/label, show running negative balance in red.
-- Transfer confirmation modal: if amount > balance, surface "This will use UGX X from your overdraft (2.75% fee = Y, daily interest 0.6%)." before submit.
-- Admin OD page (`pages/admin/OverdraftAdmin.tsx`): add a per-user "Days negative" and "Interest accrued this period" column.
+**Enforcement** — new `src/hooks/useTraineeMode.ts` + `src/components/trainee/TraineeEnforcer.tsx` (mounted next to `ITReadOnlyEnforcer` in `App.tsx`), modelled on the IT read-only enforcer but active on every route:
+- Capture-phase click interception for mutating/output buttons and menu items; form `submit` blocked; `beforeinput`/paste blocked on inputs unless the field is a search/filter (`type=search`, placeholder/aria-label containing search/filter, or `data-trainee-allow`).
+- `window.print`, `navigator.share`, clipboard copy and Ctrl/Cmd+P/S intercepted.
+- Hides `V2WalletDock`, money modals and announcement popups when trainee.
 
-## Data cleanup for the existing case
+**Sensitive-data masking** — `src/components/trainee/TraineeMasker.tsx`:
+- A `MutationObserver` over `document.body` that rewrites text nodes matching currency patterns (`UGX`, `USh`, `Shs`, `/kg` amounts) and labelled money fields (price, amount, total, paid, balance, salary, cost, value) to `UGX ••••`; phone patterns (`07xx…`, `+256…`) to masked form; national-ID/DOB cells via `data-sensitive` attributes added to the relevant table cells.
+- Processed nodes are tagged to avoid re-processing loops; charts with money axes are covered with a "Hidden for training" overlay via `data-sensitive="chart"`.
+- Server side: trainees are not given Finance/HR write policies (RLS already scopes writes to roles/permissions); no new tables exposed.
 
-The current statement has the phantom `+144,095 OVERDRAFT_DRAW` from the old flow. The migration will:
-- Find paired `(OVERDRAFT_DRAW positive, WITHDRAWAL negative same minute)` entries from before the cutover.
-- Replace the pair with a single negative entry equal to the original shortfall, plus a fee entry, so the historical statement reads correctly.
+**Guided tour** — no external library (none installed); lightweight custom implementation:
+- `src/components/trainee/TraineeTour.tsx`: spotlight overlay (SVG mask around the target's bounding box), floating step card, keyboard navigation, auto-scroll to target, route change via `useNavigate` when a step lives on another page, graceful centred card when a target is not found.
+- `src/components/trainee/curriculum.ts`: ordered steps grouped by department, each with `route`, `target` (CSS selector, mostly new `data-tour="..."` attributes added to headers, tabs and tables on `/store`, `/quality-control`, `/procurement`, `/finance`, `/inventory`, `/sales-marketing`, `/eudr-documentation`), `title`, `body`. Roughly 4–6 steps per department covering: what the department does, how a coffee delivery is received and weighed, how quality grades it, how procurement/finance handle payment (without figures), how stock batches form and deplete on sale, and how EUDR batches are documented and traced.
+- Header button "Training Guide" (trainees only) to restart / jump to a department.
 
-## Out of scope
+**Progress tracking** — new table `public.trainee_progress` (`employee_id`, `current_step`, `completed_steps int[]`, `started_at`, `completed_at`, `updated_at`) with grants, RLS (trainee reads/updates own row via `get_unified_user_id`; admins/HR read all), plus `localStorage` cache for instant resume. Hook `useTraineeProgress.ts`.
 
-- No change to GRNs or any non-wallet flows.
-- No change to loyalty, salary, or bonus crediting paths beyond the trigger automatically handling absorption.
+**Account creation**
+- Add `Trainee` to role enums/pickers in `AddEmployeeModal`, `UserCreationForm`, `AddUserForm`, `EditUserForm`, `EmployeeDetailsModal`, `UnifiedPermissionManager`; picking it locks department to "Training" and permissions to the training set.
+- Existing `create-user-account` edge function is reused unchanged.
+- Memory file `mem/access-control/trainee-role.md` documenting the rules.
