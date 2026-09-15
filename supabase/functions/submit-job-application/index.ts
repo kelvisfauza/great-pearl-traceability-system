@@ -85,27 +85,44 @@ Deno.serve(async (req) => {
       .select("*", { count: "exact", head: true });
     const refCode = `GPCJA${String((count || 0) + 1).padStart(3, "0")}`;
 
-    // Optional CV upload
+    // Optional CV upload — multipart file preferred, base64 kept for older clients
     let cvUrl: string | null = null;
     let cvName: string | null = null;
-    if (cv_base64 && cv_filename) {
+    let bytes: Uint8Array | null = null;
+    let originalName = "";
+
+    if (cvFile) {
+      bytes = new Uint8Array(await cvFile.arrayBuffer());
+      originalName = cvFile.name || "cv.pdf";
+    } else if (cv_base64 && cv_filename) {
       try {
         const b64 = String(cv_base64).split(",").pop() || "";
-        const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-        if (bytes.byteLength > MAX_CV_BYTES) return json({ ok: false, error: "CV file is larger than 5MB" });
-        const safe = String(cv_filename).replace(/[^a-zA-Z0-9._-]/g, "_").slice(-80);
-        const path = `${refCode}/${Date.now()}-${safe}`;
-        const { error: upErr } = await admin.storage.from("job-applications").upload(path, bytes, {
-          contentType: safe.toLowerCase().endsWith(".pdf") ? "application/pdf" : "application/octet-stream",
-          upsert: false,
-        });
-        if (upErr) throw upErr;
-        const { data: signed } = await admin.storage.from("job-applications").createSignedUrl(path, 60 * 60 * 24 * 365);
-        cvUrl = signed?.signedUrl || null;
-        cvName = safe;
+        const bin = atob(b64);
+        const out = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+        bytes = out;
+        originalName = String(cv_filename);
       } catch (e) {
-        console.error("CV upload failed:", e);
+        console.error("CV decode failed:", e);
+        return json({ ok: false, error: "We could not read that CV file. Please try a PDF under 8MB." });
       }
+    }
+
+    if (bytes) {
+      if (bytes.byteLength > MAX_CV_BYTES) return json({ ok: false, error: "CV file is larger than 8MB" });
+      const safe = originalName.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-80) || "cv.pdf";
+      const path = `${refCode}/${Date.now()}-${safe}`;
+      const { error: upErr } = await admin.storage.from("job-applications").upload(path, bytes, {
+        contentType: contentTypeFor(safe),
+        upsert: false,
+      });
+      if (upErr) {
+        console.error("CV upload failed:", upErr);
+        return json({ ok: false, error: `We could not upload your CV (${upErr.message}). Please try again.` });
+      }
+      const { data: signed } = await admin.storage.from("job-applications").createSignedUrl(path, 60 * 60 * 24 * 365);
+      cvUrl = signed?.signedUrl || null;
+      cvName = safe;
     }
 
     const { data: app, error } = await admin
