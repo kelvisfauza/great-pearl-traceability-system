@@ -154,9 +154,19 @@ const MealDisbursementSection = () => {
     }
   };
 
+  // A payment that never left "Processing" is stuck — allow a retry after 5 minutes
+  const isStuckProcessing = (d: any) =>
+    d.yo_status === 'pending' && (Date.now() - new Date(d.created_at).getTime()) / 60000 >= 5;
+
+  const canRetry = (d: any) => {
+    const ageHours = (Date.now() - new Date(d.created_at).getTime()) / (1000 * 60 * 60);
+    if (isStuckProcessing(d)) return true;
+    return (d.yo_status === 'failed' || d.yo_status === 'pending_approval') && ageHours <= 2;
+  };
+
   const openRetry = (payment: any) => {
     const ageHours = (Date.now() - new Date(payment.created_at).getTime()) / (1000 * 60 * 60);
-    if (ageHours > 2) {
+    if (!isStuckProcessing(payment) && ageHours > 2) {
       toast({
         title: 'Retry not allowed',
         description: 'This transaction is older than 2 hours and is considered permanently failed. Use Mark Paid if it was settled outside the system.',
