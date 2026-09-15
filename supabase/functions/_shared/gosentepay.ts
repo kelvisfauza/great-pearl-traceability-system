@@ -108,14 +108,31 @@ export interface GosenteWithdrawInput {
   ref: string;
 }
 
+/** GosentePay rejects withdrawals with HTTP 400 when the reason has newlines/
+ *  control characters or is too long, or when the ref is too long. */
+function sanitizeReason(reason: string): string {
+  const clean = String(reason || "")
+    .replace(/[\r\n\t]+/g, " ")
+    // deno-lint-ignore no-control-regex
+    .replace(/[\x00-\x1f\x7f]/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  return clean.slice(0, 90);
+}
+
+function sanitizeRef(ref: string): string {
+  const clean = String(ref || "").replace(/[^A-Za-z0-9-]/g, "");
+  return clean.slice(0, 30) || `GSP${Date.now()}`;
+}
+
 export async function gosenteWithdraw(input: GosenteWithdrawInput) {
   return authedPost("/withdraw", {
     secret_key: secretKey(),
     phone: normalizePhone(input.phone),
     amount: input.amount,
     email: input.email,
-    reason: input.reason,
-    ref: input.ref,
+    reason: sanitizeReason(input.reason),
+    ref: sanitizeRef(input.ref),
   });
 }
 
