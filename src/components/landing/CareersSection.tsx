@@ -104,11 +104,14 @@ export default function CareersSection() {
         opening_id: selected?.id || null,
         terms_accepted: true,
       };
+      let invokeBody: unknown = body;
       if (cv) {
-        body.cv_base64 = await fileToBase64(cv);
-        body.cv_filename = cv.name;
+        const fd = new FormData();
+        fd.append("payload", JSON.stringify(body));
+        fd.append("cv", cv, cv.name);
+        invokeBody = fd;
       }
-      const { data, error } = await supabase.functions.invoke("submit-job-application", { body });
+      const { data, error } = await supabase.functions.invoke("submit-job-application", { body: invokeBody as any });
       if (error) throw error;
       const payload = data as { ok: boolean; ref_code?: string; error?: string };
       if (!payload?.ok) throw new Error(payload?.error || "Submission failed");
