@@ -702,7 +702,7 @@ const MealDisbursementSection = () => {
                       <div className="flex gap-1 flex-wrap">
                         {d.yo_status !== 'success' && d.yo_status !== 'paid' && (
                           <>
-                            {(d.yo_status === 'failed' || d.yo_status === 'pending_approval') && ((Date.now() - new Date(d.created_at).getTime()) / (1000 * 60 * 60) <= 2) && (
+                            {canRetry(d) && (
                               <Button
                                 variant="outline"
                                 size="sm"
