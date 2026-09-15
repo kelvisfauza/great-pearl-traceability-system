@@ -75,16 +75,34 @@ serve(async (req) => {
       )
     }
 
-    const { data: { users }, error: getUserError } = await supabaseAdmin.auth.admin.listUsers()
-    
-    if (getUserError) {
-      console.error('Error listing users:', getUserError)
-      throw getUserError
+    const normalizedEmail = String(email).trim().toLowerCase()
+
+    // Primary lookup: the employees table already stores the auth user id.
+    let userId: string | null = null
+    const { data: empRow } = await supabaseAdmin
+      .from('employees')
+      .select('auth_user_id')
+      .ilike('email', normalizedEmail)
+      .maybeSingle()
+
+    if (empRow?.auth_user_id) {
+      userId = empRow.auth_user_id
+    } else {
+      // Fallback: paginated search (listUsers without pagination can fail on large projects)
+      for (let page = 1; page <= 20 && !userId; page++) {
+        const { data, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 200 })
+        if (listError) {
+          console.error('Error listing users (page ' + page + '):', listError)
+          break
+        }
+        const users = data?.users ?? []
+        const match = users.find((u: any) => (u.email || '').toLowerCase() === normalizedEmail)
+        if (match) userId = match.id
+        if (users.length < 200) break
+      }
     }
 
-    const user = users.find(u => u.email === email)
-
-    if (!user) {
+    if (!userId) {
       return new Response(
         JSON.stringify({ error: 'User not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -92,7 +110,7 @@ serve(async (req) => {
     }
 
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-      user.id,
+      userId,
       { password: newPassword }
     )
 
