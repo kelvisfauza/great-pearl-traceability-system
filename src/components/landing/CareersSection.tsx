@@ -339,8 +339,8 @@ export default function CareersSection() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="cv" className="inline-flex items-center gap-2"><Upload className="h-4 w-4" />Attach your CV (PDF or Word, max 5MB)</Label>
-                  <Input id="cv" type="file" accept=".pdf,.doc,.docx" onChange={(e) => setCv(e.target.files?.[0] || null)} />
+                  <Label htmlFor="cv" className="inline-flex items-center gap-2"><Upload className="h-4 w-4" />Attach your CV (PDF, Word or a clear photo, max 8MB)</Label>
+                  <Input id="cv" type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" onChange={(e) => setCv(e.target.files?.[0] || null)} />
                   {cv && <p className="text-xs text-muted-foreground">{cv.name} · {(cv.size / 1024 / 1024).toFixed(2)}MB</p>}
                 </div>
 
