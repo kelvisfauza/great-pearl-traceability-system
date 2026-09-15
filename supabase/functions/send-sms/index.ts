@@ -186,6 +186,8 @@ const PREMIUM_SMS_TYPES = new Set([
   // Trainee / intern price broadcasts — BulkSMS.com route
   'price_update_intern',
   'price_correction_intern',
+  // Company-wide communications to staff and suppliers — BulkSMS.com route
+  'company_broadcast',
 ]);
 
 
