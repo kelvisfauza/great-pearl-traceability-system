@@ -103,7 +103,20 @@ export default function PrintLoginDetails({ employees }: PrintLoginDetailsProps)
         body: { email: employee.email, newPassword: password },
       });
 
-      if (reset.error || (reset.data && reset.data.error)) {
+      const resetFailed = Boolean(reset.error || (reset.data && reset.data.error));
+      const notFound =
+        resetFailed &&
+        String(reset.data?.error || reset.error?.message || '').toLowerCase().includes('not found');
+
+      if (resetFailed && !notFound) {
+        throw new Error(
+          reset.data?.error ||
+            reset.error?.message ||
+            'The password could not be saved. Ask an administrator to set it.'
+        );
+      }
+
+      if (resetFailed) {
         // No login yet — create one and link it to the existing staff record.
         const create = await supabase.functions.invoke('create-user', {
           body: {
@@ -123,6 +136,11 @@ export default function PrintLoginDetails({ employees }: PrintLoginDetailsProps)
         });
         if (create.error) throw new Error(create.error.message);
         if (create.data && create.data.success === false) throw new Error(create.data.error || 'Could not create the login');
+        if (create.data?.alreadyLinked) {
+          throw new Error(
+            'This person already has a login, but the new password was not saved. Ask an administrator to set it.'
+          );
+        }
       }
 
       toast({ title: 'Login ready', description: `${employee.name} can now sign in with ${employee.email}.` });
