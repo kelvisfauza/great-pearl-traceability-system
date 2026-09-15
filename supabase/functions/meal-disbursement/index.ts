@@ -119,7 +119,10 @@ serve(async (req) => {
           phone: cleanPhone,
           amount: totalAmount,
           email: initiatedBy || "operations@greatpearlcoffee.com",
-          reason: narrative,
+          // Gosente rejects otherwise valid withdrawals when meal details make
+          // the payment narration too long. The full description remains on
+          // the meal_disbursements record for audit and display purposes.
+          reason: `Meal allowance - ${receiverName || cleanPhone}`,
           ref,
         });
         const ok = isGosenteSuccess(gs.status, gs.body);
