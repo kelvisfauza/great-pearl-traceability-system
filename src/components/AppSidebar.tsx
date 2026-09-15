@@ -15,6 +15,7 @@ import {
   LineChart,
   LogOut,
   UserCheck,
+  Megaphone,
   ArrowRight,
   FileCheck,
   ChevronDown,
