@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.block_reward_entries_when_suspended() FROM PUBLIC, anon, authenticated;
