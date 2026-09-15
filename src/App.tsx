@@ -48,6 +48,7 @@ import SalesMarketing from "./pages/SalesMarketing";
 import Finance from "./pages/Finance";
 import HumanResources from "./pages/HumanResources";
 import Reports from "./pages/Reports";
+import Communications from "./pages/Communications";
 import Settings from "./pages/Settings";
 import Logistics from "./pages/Logistics";
 import DataAnalyst from "./pages/DataAnalyst";
@@ -406,6 +407,11 @@ const App: React.ComponentType = () => {
                 <Route path="/reports" element={
                   <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
                     <Reports />
+                  </ProtectedRoute>
+                } />
+                <Route path="/communications" element={
+                  <ProtectedRoute requiredRoles={['Administrator', 'Super Admin', 'Managing Director']}>
+                    <Communications />
                   </ProtectedRoute>
                 } />
                 <Route path="/logistics" element={

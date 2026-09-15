@@ -1177,6 +1177,63 @@ export type Database = {
         }
         Relationships: []
       }
+      broadcast_communications: {
+        Row: {
+          audience: string
+          channels: string[]
+          created_at: string
+          created_by_email: string | null
+          created_by_name: string | null
+          email_recipients: number
+          emails_failed: number
+          emails_sent: number
+          id: string
+          message: string
+          sms_failed: number
+          sms_recipients: number
+          sms_sent: number
+          status: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          audience: string
+          channels?: string[]
+          created_at?: string
+          created_by_email?: string | null
+          created_by_name?: string | null
+          email_recipients?: number
+          emails_failed?: number
+          emails_sent?: number
+          id?: string
+          message: string
+          sms_failed?: number
+          sms_recipients?: number
+          sms_sent?: number
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          audience?: string
+          channels?: string[]
+          created_at?: string
+          created_by_email?: string | null
+          created_by_name?: string | null
+          email_recipients?: number
+          emails_failed?: number
+          emails_sent?: number
+          id?: string
+          message?: string
+          sms_failed?: number
+          sms_recipients?: number
+          sms_sent?: number
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       budget_allocations: {
         Row: {
           allocated_amount: number
