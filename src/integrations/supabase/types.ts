@@ -3319,6 +3319,7 @@ export type Database = {
           account_name: string | null
           account_number: string | null
           address: string | null
+          alt_phone: string | null
           alternative_bank: string | null
           auth_user_id: string | null
           avatar_url: string | null
@@ -3377,6 +3378,7 @@ export type Database = {
           account_name?: string | null
           account_number?: string | null
           address?: string | null
+          alt_phone?: string | null
           alternative_bank?: string | null
           auth_user_id?: string | null
           avatar_url?: string | null
@@ -3435,6 +3437,7 @@ export type Database = {
           account_name?: string | null
           account_number?: string | null
           address?: string | null
+          alt_phone?: string | null
           alternative_bank?: string | null
           auth_user_id?: string | null
           avatar_url?: string | null
@@ -16366,6 +16369,7 @@ export type Database = {
           account_name: string | null
           account_number: string | null
           address: string | null
+          alt_phone: string | null
           alternative_bank: string | null
           auth_user_id: string | null
           avatar_url: string | null
@@ -16714,6 +16718,7 @@ export type Database = {
           account_name: string | null
           account_number: string | null
           address: string | null
+          alt_phone: string | null
           alternative_bank: string | null
           auth_user_id: string | null
           avatar_url: string | null
