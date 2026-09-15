@@ -74,9 +74,9 @@ Deno.serve(async (req) => {
       .eq("email", mail.toLowerCase())
       .eq("job_applied_for", position)
       .gte("created_at", since)
-      .maybeSingle();
-    if (dupe) {
-      return json({ ok: false, error: `You already applied for this position (Ref: ${dupe.ref_code}). We will contact you.` });
+      .limit(1);
+    if (dupe && dupe.length > 0) {
+      return json({ ok: false, error: `You already applied for this position (Ref: ${dupe[0].ref_code}). We will contact you.` });
     }
 
     // Reference code
