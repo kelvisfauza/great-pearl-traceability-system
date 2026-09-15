@@ -136,6 +136,11 @@ export default function PrintLoginDetails({ employees }: PrintLoginDetailsProps)
         });
         if (create.error) throw new Error(create.error.message);
         if (create.data && create.data.success === false) throw new Error(create.data.error || 'Could not create the login');
+        if (create.data?.alreadyLinked) {
+          throw new Error(
+            'This person already has a login, but the new password was not saved. Ask an administrator to set it.'
+          );
+        }
       }
 
       toast({ title: 'Login ready', description: `${employee.name} can now sign in with ${employee.email}.` });
