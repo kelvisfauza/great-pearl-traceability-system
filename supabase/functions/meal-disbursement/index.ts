@@ -80,15 +80,21 @@ serve(async (req) => {
 
     // Treasury pool: the money must come out of Operations before it is sent
     const treasuryRef = `MEAL-${record.id}`;
-    const reserved = await treasuryReserve({
-      account: "operations",
-      amount: totalAmount,
-      reference: treasuryRef,
-      description: narrative,
-      name: receiverName || cleanPhone,
-      performedBy: initiatedBy || "system",
-      metadata: { meal_disbursement_id: record.id },
-    });
+    let reserved: { ok: boolean; error?: string };
+    try {
+      reserved = await treasuryReserve({
+        account: "operations",
+        amount: totalAmount,
+        reference: treasuryRef,
+        description: narrative,
+        name: receiverName || cleanPhone,
+        performedBy: initiatedBy || "system",
+        metadata: { meal_disbursement_id: record.id },
+      });
+    } catch (reserveErr) {
+      // Never leave the record stuck on "pending" — mark it failed so it can be retried
+      reserved = { ok: false, error: reserveErr instanceof Error ? reserveErr.message : "Treasury check failed" };
+    }
     if (!reserved.ok) {
       await supabase.from("meal_disbursements")
         .update({ yo_status: "failed", yo_raw_response: reserved.error ?? "Treasury blocked", updated_at: new Date().toISOString() })
