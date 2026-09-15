@@ -196,6 +196,13 @@ const MealDisbursementSection = () => {
         },
       });
       if (error) throw error;
+      // Close off the stuck entry so it doesn't sit in "Processing" forever
+      if (payment.yo_status === 'pending') {
+        await supabase
+          .from('meal_disbursements')
+          .update({ yo_status: 'failed', yo_raw_response: 'Retried — replaced by a new attempt', updated_at: new Date().toISOString() } as any)
+          .eq('id', payment.id);
+      }
       toast({ title: data?.success ? 'Retry sent' : 'Retry issue', description: data?.message || 'Check status', variant: data?.success ? 'default' : 'destructive' });
       queryClient.invalidateQueries({ queryKey: ['meal-disbursements'] });
       setRetryTarget(null);
