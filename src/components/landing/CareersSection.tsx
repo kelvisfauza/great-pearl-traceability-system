@@ -75,13 +75,6 @@ export default function CareersSection() {
     setDialogOpen(true);
   };
 
-  const fileToBase64 = (file: File) =>
-    new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,8 +87,8 @@ export default function CareersSection() {
       toast({ title: "Terms not accepted", description: "Please accept the terms and conditions.", variant: "destructive" });
       return;
     }
-    if (cv && cv.size > 5 * 1024 * 1024) {
-      toast({ title: "CV too large", description: "Maximum CV size is 5MB.", variant: "destructive" });
+    if (cv && cv.size > 8 * 1024 * 1024) {
+      toast({ title: "CV too large", description: "Maximum CV size is 8MB.", variant: "destructive" });
       return;
     }
 
@@ -111,11 +104,14 @@ export default function CareersSection() {
         opening_id: selected?.id || null,
         terms_accepted: true,
       };
+      let invokeBody: unknown = body;
       if (cv) {
-        body.cv_base64 = await fileToBase64(cv);
-        body.cv_filename = cv.name;
+        const fd = new FormData();
+        fd.append("payload", JSON.stringify(body));
+        fd.append("cv", cv, cv.name);
+        invokeBody = fd;
       }
-      const { data, error } = await supabase.functions.invoke("submit-job-application", { body });
+      const { data, error } = await supabase.functions.invoke("submit-job-application", { body: invokeBody as any });
       if (error) throw error;
       const payload = data as { ok: boolean; ref_code?: string; error?: string };
       if (!payload?.ok) throw new Error(payload?.error || "Submission failed");
@@ -343,8 +339,8 @@ export default function CareersSection() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="cv" className="inline-flex items-center gap-2"><Upload className="h-4 w-4" />Attach your CV (PDF or Word, max 5MB)</Label>
-                  <Input id="cv" type="file" accept=".pdf,.doc,.docx" onChange={(e) => setCv(e.target.files?.[0] || null)} />
+                  <Label htmlFor="cv" className="inline-flex items-center gap-2"><Upload className="h-4 w-4" />Attach your CV (PDF, Word or a clear photo, max 8MB)</Label>
+                  <Input id="cv" type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" onChange={(e) => setCv(e.target.files?.[0] || null)} />
                   {cv && <p className="text-xs text-muted-foreground">{cv.name} · {(cv.size / 1024 / 1024).toFixed(2)}MB</p>}
                 </div>
 

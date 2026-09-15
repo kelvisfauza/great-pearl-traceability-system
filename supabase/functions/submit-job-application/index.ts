@@ -11,13 +11,35 @@ const json = (body: unknown) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-const MAX_CV_BYTES = 5 * 1024 * 1024; // 5MB
+const MAX_CV_BYTES = 8 * 1024 * 1024; // 8MB
+
+const contentTypeFor = (filename: string) => {
+  const n = filename.toLowerCase();
+  if (n.endsWith(".pdf")) return "application/pdf";
+  if (n.endsWith(".doc")) return "application/msword";
+  if (n.endsWith(".docx")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (n.endsWith(".png")) return "image/png";
+  if (n.endsWith(".jpg") || n.endsWith(".jpeg")) return "image/jpeg";
+  return "application/octet-stream";
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const payload = await req.json();
+    let payload: any = {};
+    let cvFile: File | null = null;
+    const ct = req.headers.get("content-type") || "";
+    if (ct.includes("multipart/form-data")) {
+      const form = await req.formData();
+      const raw = form.get("payload");
+      payload = raw ? JSON.parse(String(raw)) : {};
+      const f = form.get("cv");
+      if (f instanceof File && f.size > 0) cvFile = f;
+    } else {
+      payload = await req.json();
+    }
+
     const {
       applicant_name, phone, email, job_applied_for, opening_id,
       gender, date_of_birth, national_id, address,
@@ -52,9 +74,9 @@ Deno.serve(async (req) => {
       .eq("email", mail.toLowerCase())
       .eq("job_applied_for", position)
       .gte("created_at", since)
-      .maybeSingle();
-    if (dupe) {
-      return json({ ok: false, error: `You already applied for this position (Ref: ${dupe.ref_code}). We will contact you.` });
+      .limit(1);
+    if (dupe && dupe.length > 0) {
+      return json({ ok: false, error: `You already applied for this position (Ref: ${dupe[0].ref_code}). We will contact you.` });
     }
 
     // Reference code
@@ -63,27 +85,44 @@ Deno.serve(async (req) => {
       .select("*", { count: "exact", head: true });
     const refCode = `GPCJA${String((count || 0) + 1).padStart(3, "0")}`;
 
-    // Optional CV upload
+    // Optional CV upload — multipart file preferred, base64 kept for older clients
     let cvUrl: string | null = null;
     let cvName: string | null = null;
-    if (cv_base64 && cv_filename) {
+    let bytes: Uint8Array | null = null;
+    let originalName = "";
+
+    if (cvFile) {
+      bytes = new Uint8Array(await cvFile.arrayBuffer());
+      originalName = cvFile.name || "cv.pdf";
+    } else if (cv_base64 && cv_filename) {
       try {
         const b64 = String(cv_base64).split(",").pop() || "";
-        const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-        if (bytes.byteLength > MAX_CV_BYTES) return json({ ok: false, error: "CV file is larger than 5MB" });
-        const safe = String(cv_filename).replace(/[^a-zA-Z0-9._-]/g, "_").slice(-80);
-        const path = `${refCode}/${Date.now()}-${safe}`;
-        const { error: upErr } = await admin.storage.from("job-applications").upload(path, bytes, {
-          contentType: safe.toLowerCase().endsWith(".pdf") ? "application/pdf" : "application/octet-stream",
-          upsert: false,
-        });
-        if (upErr) throw upErr;
-        const { data: signed } = await admin.storage.from("job-applications").createSignedUrl(path, 60 * 60 * 24 * 365);
-        cvUrl = signed?.signedUrl || null;
-        cvName = safe;
+        const bin = atob(b64);
+        const out = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+        bytes = out;
+        originalName = String(cv_filename);
       } catch (e) {
-        console.error("CV upload failed:", e);
+        console.error("CV decode failed:", e);
+        return json({ ok: false, error: "We could not read that CV file. Please try a PDF under 8MB." });
       }
+    }
+
+    if (bytes) {
+      if (bytes.byteLength > MAX_CV_BYTES) return json({ ok: false, error: "CV file is larger than 8MB" });
+      const safe = originalName.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-80) || "cv.pdf";
+      const path = `${refCode}/${Date.now()}-${safe}`;
+      const { error: upErr } = await admin.storage.from("job-applications").upload(path, bytes, {
+        contentType: contentTypeFor(safe),
+        upsert: false,
+      });
+      if (upErr) {
+        console.error("CV upload failed:", upErr);
+        return json({ ok: false, error: `We could not upload your CV (${upErr.message}). Please try again.` });
+      }
+      const { data: signed } = await admin.storage.from("job-applications").createSignedUrl(path, 60 * 60 * 24 * 365);
+      cvUrl = signed?.signedUrl || null;
+      cvName = safe;
     }
 
     const { data: app, error } = await admin
