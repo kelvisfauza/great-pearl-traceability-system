@@ -215,7 +215,8 @@ await savePrices({
       const sendSmsWithDelay = async (
         phone: string,
         message: string,
-        delayMs: number
+        delayMs: number,
+        messageTypeOverride?: string
       ) => {
         await new Promise(resolve => setTimeout(resolve, delayMs));
         try {
@@ -228,7 +229,7 @@ await savePrices({
             body: JSON.stringify({
               phone,
               message,
-              messageType: request.is_correction ? 'price_correction' : 'price_update'
+              messageType: messageTypeOverride || (request.is_correction ? 'price_correction' : 'price_update')
             })
           });
           return response.ok;
@@ -240,12 +241,23 @@ await savePrices({
       // Fetch all recipients
       const { data: employees } = await supabase
         .from('employees')
-        .select('phone, name')
+        .select('phone, alt_phone, name, role')
         .eq('status', 'Active')
-        .not('phone', 'is', null);
+        .not('disabled', 'is', true);
 
-      const staffList = employees?.filter(e => e.phone) || [];
-      
+      const isTrainee = (r?: string | null) => !!r && /trainee|intern/i.test(r);
+
+      // Trainees / interns: every number they registered, routed via BulkSMS.com
+      const traineePhones = dedupePhones(
+        (employees || [])
+          .filter(e => isTrainee(e.role))
+          .flatMap(e => [e.phone, (e as any).alt_phone])
+          .filter(Boolean) as string[]
+      );
+      const traineeSet = new Set(traineePhones);
+
+      const staffList = (employees || []).filter(e => e.phone && !isTrainee(e.role));
+
       // External contacts
       const additionalRecipients = [
         '0772272455', '0777510755', '0791052941', '0779637836', '0791832118', '0778970844', '0777676992'
@@ -254,7 +266,7 @@ await savePrices({
       const allPhones = dedupePhones([
         ...staffList.map(e => e.phone!),
         ...additionalRecipients
-      ]);
+      ]).filter(p => !traineeSet.has(p));
 
       const date = new Date().toLocaleDateString('en-GB');
       
