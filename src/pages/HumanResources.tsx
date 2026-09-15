@@ -36,6 +36,7 @@ import SalaryPaymentRequestsManager from '@/components/hr/SalaryPaymentRequestsM
 import MySalaryRequests from '@/components/MySalaryRequests';
 import UserCreationForm from '@/components/hr/UserCreationForm';
 import PrintUserDetails from '@/components/hr/PrintUserDetails';
+import PrintLoginDetails from '@/components/hr/PrintLoginDetails';
 import RoleManagement from '@/components/hr/RoleManagement';
 import AccountStatusManager from '@/components/admin/AccountStatusManager';
 import CompanyEmployeesList from '@/components/hr/CompanyEmployeesList';
@@ -324,7 +325,10 @@ const HumanResources = () => {
           </TabsContent>
 
           <TabsContent value="print-details">
-            <PrintUserDetails employees={employees} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <PrintUserDetails employees={employees} />
+              <PrintLoginDetails employees={employees} />
+            </div>
           </TabsContent>
 
           <TabsContent value="job-applications">
