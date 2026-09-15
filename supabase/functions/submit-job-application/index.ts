@@ -11,13 +11,35 @@ const json = (body: unknown) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-const MAX_CV_BYTES = 5 * 1024 * 1024; // 5MB
+const MAX_CV_BYTES = 8 * 1024 * 1024; // 8MB
+
+const contentTypeFor = (filename: string) => {
+  const n = filename.toLowerCase();
+  if (n.endsWith(".pdf")) return "application/pdf";
+  if (n.endsWith(".doc")) return "application/msword";
+  if (n.endsWith(".docx")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (n.endsWith(".png")) return "image/png";
+  if (n.endsWith(".jpg") || n.endsWith(".jpeg")) return "image/jpeg";
+  return "application/octet-stream";
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const payload = await req.json();
+    let payload: any = {};
+    let cvFile: File | null = null;
+    const ct = req.headers.get("content-type") || "";
+    if (ct.includes("multipart/form-data")) {
+      const form = await req.formData();
+      const raw = form.get("payload");
+      payload = raw ? JSON.parse(String(raw)) : {};
+      const f = form.get("cv");
+      if (f instanceof File && f.size > 0) cvFile = f;
+    } else {
+      payload = await req.json();
+    }
+
     const {
       applicant_name, phone, email, job_applied_for, opening_id,
       gender, date_of_birth, national_id, address,
