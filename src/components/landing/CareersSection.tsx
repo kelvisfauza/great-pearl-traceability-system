@@ -75,13 +75,6 @@ export default function CareersSection() {
     setDialogOpen(true);
   };
 
-  const fileToBase64 = (file: File) =>
-    new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,8 +87,8 @@ export default function CareersSection() {
       toast({ title: "Terms not accepted", description: "Please accept the terms and conditions.", variant: "destructive" });
       return;
     }
-    if (cv && cv.size > 5 * 1024 * 1024) {
-      toast({ title: "CV too large", description: "Maximum CV size is 5MB.", variant: "destructive" });
+    if (cv && cv.size > 8 * 1024 * 1024) {
+      toast({ title: "CV too large", description: "Maximum CV size is 8MB.", variant: "destructive" });
       return;
     }
 
