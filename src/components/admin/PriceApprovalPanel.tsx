@@ -288,6 +288,16 @@ await savePrices({
         await sendSmsWithDelay(allPhones[i], message, i === 0 ? 0 : 500);
       }
 
+      // Trainees / interns — BulkSMS.com route, all registered numbers
+      for (let i = 0; i < traineePhones.length; i++) {
+        await sendSmsWithDelay(
+          traineePhones[i],
+          message,
+          500,
+          request.is_correction ? 'price_correction_intern' : 'price_update_intern'
+        );
+      }
+
       // Always send price SMS to suppliers (main registry + field operations records)
       const [
         { data: suppliers },
