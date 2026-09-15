@@ -41,28 +41,45 @@ export interface TreasuryReserveArgs {
 export async function treasuryReserve(
   args: TreasuryReserveArgs,
 ): Promise<{ ok: boolean; error?: string }> {
-  try {
-    const { data, error } = await svc().rpc("treasury_external_payout", {
-      p_account: args.account,
-      p_amount: args.amount,
-      p_reference: args.reference,
-      p_description: args.description ?? null,
-      p_email: args.email ?? null,
-      p_name: args.name ?? null,
-      p_performed_by: args.performedBy ?? "system",
-      p_metadata: args.metadata ?? {},
-    });
-    if (error) {
+  const params = {
+    p_account: args.account,
+    p_amount: args.amount,
+    p_reference: args.reference,
+    p_description: args.description ?? null,
+    p_email: args.email ?? null,
+    p_name: args.name ?? null,
+    p_performed_by: args.performedBy ?? "system",
+    p_metadata: args.metadata ?? {},
+  };
+
+  // The RPC is idempotent by reference, so transient gateway resets can be
+  // retried without debiting the treasury account twice.
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const { data, error } = await svc().rpc("treasury_external_payout", params);
+      if (!error) return { ok: !!(data as any)?.ok };
+
       const msg = String(error.message || error);
-      console.error("[treasury] reserve failed:", msg);
-      return { ok: false, error: msg.replace(/^.*TREASURY_INSUFFICIENT:\s*/, "") };
+      const isTransient = /upstream connect|disconnect|connection reset|connection termination|fetch failed|timeout|temporarily unavailable/i.test(msg);
+      if (!isTransient || attempt === 3) {
+        console.error("[treasury] reserve failed:", msg);
+        return { ok: false, error: msg.replace(/^.*TREASURY_INSUFFICIENT:\s*/, "") };
+      }
+      console.warn(`[treasury] transient reserve failure; retrying (${attempt}/3):`, msg);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      const isTransient = /upstream connect|disconnect|connection reset|connection termination|fetch failed|timeout|temporarily unavailable/i.test(msg);
+      if (!isTransient || attempt === 3) {
+        console.error("[treasury] reserve error:", msg);
+        return { ok: false, error: msg };
+      }
+      console.warn(`[treasury] transient reserve error; retrying (${attempt}/3):`, msg);
     }
-    return { ok: !!(data as any)?.ok };
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error("[treasury] reserve error:", msg);
-    return { ok: false, error: msg };
+
+    await new Promise((resolve) => setTimeout(resolve, attempt * 500));
   }
+
+  return { ok: false, error: "Treasury connection failed after retries" };
 }
 
 /** Put the money back when the payout did not go through. */
