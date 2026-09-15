@@ -48,6 +48,7 @@ import SalesMarketing from "./pages/SalesMarketing";
 import Finance from "./pages/Finance";
 import HumanResources from "./pages/HumanResources";
 import Reports from "./pages/Reports";
+import Communications from "./pages/Communications";
 import Settings from "./pages/Settings";
 import Logistics from "./pages/Logistics";
 import DataAnalyst from "./pages/DataAnalyst";
