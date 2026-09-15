@@ -183,6 +183,9 @@ const PREMIUM_SMS_TYPES = new Set([
   'meal_plan_request',
   'meal_disbursement',
   'meal_payment',
+  // Trainee / intern price broadcasts — BulkSMS.com route
+  'price_update_intern',
+  'price_correction_intern',
 ]);
 
 
