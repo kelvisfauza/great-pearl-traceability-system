@@ -23,7 +23,7 @@ async function verifyAdminCaller(req: Request, supabaseAdmin: any): Promise<{ is
 
   const { data: employee, error: empError } = await supabaseAdmin
     .from('employees')
-    .select('role, email')
+    .select('role, email, permissions, status')
     .eq('auth_user_id', user.id)
     .single()
 
@@ -32,8 +32,9 @@ async function verifyAdminCaller(req: Request, supabaseAdmin: any): Promise<{ is
   }
 
   const adminRoles = ['Super Admin', 'Administrator']
-  if (!adminRoles.includes(employee.role)) {
-    return { isAdmin: false, error: 'Insufficient permissions - admin role required' }
+  const isHR = Array.isArray(employee.permissions) && employee.permissions.includes('Human Resources')
+  if (employee.status !== 'Active' || (!adminRoles.includes(employee.role) && !isHR)) {
+    return { isAdmin: false, error: 'Insufficient permissions - admin or HR role required' }
   }
 
   return { isAdmin: true, callerEmail: employee.email }
