@@ -409,6 +409,11 @@ const App: React.ComponentType = () => {
                     <Reports />
                   </ProtectedRoute>
                 } />
+                <Route path="/communications" element={
+                  <ProtectedRoute requiredRoles={['Administrator', 'Super Admin', 'Managing Director']}>
+                    <Communications />
+                  </ProtectedRoute>
+                } />
                 <Route path="/logistics" element={
                   <ProtectedRoute requiredPermissions={["Logistics"]}>
                     <Logistics />
