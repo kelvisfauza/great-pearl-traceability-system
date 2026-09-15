@@ -10,3 +10,5 @@ Management suspended automatic loyalty-point awards with immediate effect (13 Se
 - Existing loyalty balances, ledger entries and history are preserved — never delete them.
 - Salaries, allowances, reimbursements, bonuses and other authorised wallet transactions are unaffected.
 - To resume: set `suspended` to false in that setting (no code change needed).
+
+Hard block (15 Sep 2026): trigger `trg_block_reward_entries_when_suspended` on `ledger_entries` silently drops any INSERT of `LOYALTY_REWARD`, `MEETING_ATTENDANCE_BONUS` or `HOST_MEETING_BONUS` while suspended — covers meeting-bonus RPCs that bypassed the wrappers.
