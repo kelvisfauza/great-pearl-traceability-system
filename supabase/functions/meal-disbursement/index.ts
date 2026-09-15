@@ -100,7 +100,12 @@ serve(async (req) => {
         .update({ yo_status: "failed", yo_raw_response: reserved.error ?? "Treasury blocked", updated_at: new Date().toISOString() })
         .eq("id", record.id);
       return new Response(
-        JSON.stringify({ success: false, error: reserved.error || "Operations / Procurement account cannot cover this payment" }),
+        JSON.stringify({
+          success: false,
+          status: "failed",
+          message: reserved.error || "Operations / Procurement account cannot cover this payment",
+          error: reserved.error || "Operations / Procurement account cannot cover this payment",
+        }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
