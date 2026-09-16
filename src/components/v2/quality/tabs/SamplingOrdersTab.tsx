@@ -347,6 +347,7 @@ const SamplingOrdersTab = () => {
                 {o.received_at && (
                   <p className="text-xs text-muted-foreground">
                     Received {o.received_grams} g by {o.received_by} at {format(new Date(o.received_at), "dd MMM, HH:mm")}
+                    {o.moisture_percent != null ? ` · Moisture ${o.moisture_percent}%` : ""}
                     {o.received_observation ? ` · ${o.received_observation}` : ""}
                   </p>
                 )}
