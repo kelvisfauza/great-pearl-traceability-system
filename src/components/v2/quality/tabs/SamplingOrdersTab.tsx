@@ -217,17 +217,21 @@ const SamplingOrdersTab = () => {
   });
 
   const receiverName = (employee as any)?.name || employee?.email || "";
-  const [receipt, setReceipt] = useState({ grams: "", observation: "" });
+  const [receipt, setReceipt] = useState({ grams: "", observation: "", moisture: "" });
 
   const receiveSample = useMutation({
     mutationFn: async (id: string) => {
       const grams = parseFloat(receipt.grams);
       if (!grams || grams <= 0) throw new Error("Type the grams received to confirm the sample");
+      const moisture = receipt.moisture === "" ? null : parseFloat(receipt.moisture);
+      if (moisture === null || isNaN(moisture)) throw new Error("Type the moisture reading to confirm the sample");
+      if (moisture < 0 || moisture > 100) throw new Error("Moisture must be between 0 and 100%");
       const { error } = await supabase
         .from("quality_sampling_orders" as any)
         .update({
           status: "received",
           received_grams: grams,
+          moisture_percent: moisture,
           received_at: new Date().toISOString(),
           received_by: receiverName,
           received_observation: receipt.observation.trim() || null,
@@ -237,7 +241,7 @@ const SamplingOrdersTab = () => {
     },
     onSuccess: () => {
       setReviewOrder(null);
-      setReceipt({ grams: "", observation: "" });
+      setReceipt({ grams: "", observation: "", moisture: "" });
       toast({ title: "Sample received in lab", description: `Received by ${receiverName}` });
       queryClient.invalidateQueries({ queryKey: ["quality-sampling-orders"] });
     },
@@ -343,6 +347,7 @@ const SamplingOrdersTab = () => {
                 {o.received_at && (
                   <p className="text-xs text-muted-foreground">
                     Received {o.received_grams} g by {o.received_by} at {format(new Date(o.received_at), "dd MMM, HH:mm")}
+                    {o.moisture_percent != null ? ` · Moisture ${o.moisture_percent}%` : ""}
                     {o.received_observation ? ` · ${o.received_observation}` : ""}
                   </p>
                 )}
@@ -355,7 +360,7 @@ const SamplingOrdersTab = () => {
                   <Printer className="h-4 w-4 mr-1" /> Print
                 </Button>
                 {o.status === "pending" && (
-                  <Button size="sm" onClick={() => { setReceipt({ grams: "", observation: "" }); setReviewOrder(o); }}>
+                  <Button size="sm" onClick={() => { setReceipt({ grams: "", observation: "", moisture: "" }); setReviewOrder(o); }}>
                     <Beaker className="h-4 w-4 mr-1" /> Receive sample
                   </Button>
                 )}
@@ -400,6 +405,11 @@ const SamplingOrdersTab = () => {
                     onChange={(e) => setReceipt({ ...receipt, grams: e.target.value })} />
                 </div>
                 <div className="space-y-1">
+                  <Label>Moisture reading (%) <span className="text-destructive">*</span></Label>
+                  <Input type="number" min="0" max="100" step="0.1" inputMode="decimal" placeholder="e.g. 12.5" value={receipt.moisture}
+                    onChange={(e) => setReceipt({ ...receipt, moisture: e.target.value })} />
+                </div>
+                <div className="space-y-1">
                   <Label>Received by</Label>
                   <Input value={receiverName} disabled />
                 </div>
@@ -421,7 +431,7 @@ const SamplingOrdersTab = () => {
             <Button variant="outline" onClick={() => reviewOrder && printSamplingOrder(reviewOrder)}>
               <Printer className="h-4 w-4 mr-1" /> Print
             </Button>
-            <Button onClick={() => reviewOrder && receiveSample.mutate(reviewOrder.id)} disabled={receiveSample.isPending || !receipt.grams}>
+            <Button onClick={() => reviewOrder && receiveSample.mutate(reviewOrder.id)} disabled={receiveSample.isPending || !receipt.grams || !receipt.moisture}>
               {receiveSample.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-1" />}
               Confirm received
             </Button>

@@ -1,0 +1,1 @@
+ALTER TABLE public.quality_sampling_orders ADD COLUMN IF NOT EXISTS moisture_percent numeric;
