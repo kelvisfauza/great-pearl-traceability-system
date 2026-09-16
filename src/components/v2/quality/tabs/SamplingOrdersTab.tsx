@@ -359,7 +359,7 @@ const SamplingOrdersTab = () => {
                   <Printer className="h-4 w-4 mr-1" /> Print
                 </Button>
                 {o.status === "pending" && (
-                  <Button size="sm" onClick={() => { setReceipt({ grams: "", observation: "" }); setReviewOrder(o); }}>
+                  <Button size="sm" onClick={() => { setReceipt({ grams: "", observation: "", moisture: "" }); setReviewOrder(o); }}>
                     <Beaker className="h-4 w-4 mr-1" /> Receive sample
                   </Button>
                 )}
