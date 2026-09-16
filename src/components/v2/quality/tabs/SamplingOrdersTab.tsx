@@ -217,17 +217,21 @@ const SamplingOrdersTab = () => {
   });
 
   const receiverName = (employee as any)?.name || employee?.email || "";
-  const [receipt, setReceipt] = useState({ grams: "", observation: "" });
+  const [receipt, setReceipt] = useState({ grams: "", observation: "", moisture: "" });
 
   const receiveSample = useMutation({
     mutationFn: async (id: string) => {
       const grams = parseFloat(receipt.grams);
       if (!grams || grams <= 0) throw new Error("Type the grams received to confirm the sample");
+      const moisture = receipt.moisture === "" ? null : parseFloat(receipt.moisture);
+      if (moisture === null || isNaN(moisture)) throw new Error("Type the moisture reading to confirm the sample");
+      if (moisture < 0 || moisture > 100) throw new Error("Moisture must be between 0 and 100%");
       const { error } = await supabase
         .from("quality_sampling_orders" as any)
         .update({
           status: "received",
           received_grams: grams,
+          moisture_percent: moisture,
           received_at: new Date().toISOString(),
           received_by: receiverName,
           received_observation: receipt.observation.trim() || null,
@@ -237,7 +241,7 @@ const SamplingOrdersTab = () => {
     },
     onSuccess: () => {
       setReviewOrder(null);
-      setReceipt({ grams: "", observation: "" });
+      setReceipt({ grams: "", observation: "", moisture: "" });
       toast({ title: "Sample received in lab", description: `Received by ${receiverName}` });
       queryClient.invalidateQueries({ queryKey: ["quality-sampling-orders"] });
     },
