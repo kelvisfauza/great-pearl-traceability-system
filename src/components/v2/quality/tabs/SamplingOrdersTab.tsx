@@ -404,6 +404,11 @@ const SamplingOrdersTab = () => {
                     onChange={(e) => setReceipt({ ...receipt, grams: e.target.value })} />
                 </div>
                 <div className="space-y-1">
+                  <Label>Moisture reading (%) <span className="text-destructive">*</span></Label>
+                  <Input type="number" min="0" max="100" step="0.1" inputMode="decimal" placeholder="e.g. 12.5" value={receipt.moisture}
+                    onChange={(e) => setReceipt({ ...receipt, moisture: e.target.value })} />
+                </div>
+                <div className="space-y-1">
                   <Label>Received by</Label>
                   <Input value={receiverName} disabled />
                 </div>
