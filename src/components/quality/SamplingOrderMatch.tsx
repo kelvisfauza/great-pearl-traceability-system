@@ -27,6 +27,7 @@ export interface SamplingOrderLite {
   received_at: string | null;
   received_by: string | null;
   received_observation: string | null;
+  moisture_percent: number | null;
   linked_batch_number: string | null;
 }
 
