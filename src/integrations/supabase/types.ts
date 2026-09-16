@@ -10212,6 +10212,7 @@ export type Database = {
           linked_at: string | null
           linked_batch_number: string | null
           linked_store_record_id: string | null
+          moisture_percent: number | null
           notes: string | null
           order_number: string | null
           printed_at: string | null
@@ -10237,6 +10238,7 @@ export type Database = {
           linked_at?: string | null
           linked_batch_number?: string | null
           linked_store_record_id?: string | null
+          moisture_percent?: number | null
           notes?: string | null
           order_number?: string | null
           printed_at?: string | null
@@ -10262,6 +10264,7 @@ export type Database = {
           linked_at?: string | null
           linked_batch_number?: string | null
           linked_store_record_id?: string | null
+          moisture_percent?: number | null
           notes?: string | null
           order_number?: string | null
           printed_at?: string | null
