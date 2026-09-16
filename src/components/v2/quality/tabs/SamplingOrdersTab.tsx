@@ -431,7 +431,7 @@ const SamplingOrdersTab = () => {
             <Button variant="outline" onClick={() => reviewOrder && printSamplingOrder(reviewOrder)}>
               <Printer className="h-4 w-4 mr-1" /> Print
             </Button>
-            <Button onClick={() => reviewOrder && receiveSample.mutate(reviewOrder.id)} disabled={receiveSample.isPending || !receipt.grams}>
+            <Button onClick={() => reviewOrder && receiveSample.mutate(reviewOrder.id)} disabled={receiveSample.isPending || !receipt.grams || !receipt.moisture}>
               {receiveSample.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-1" />}
               Confirm received
             </Button>
