@@ -129,6 +129,7 @@ const SamplingOrderMatch = ({ supplierName, value, onChange, disabled }: Props) 
                 : <Badge variant="secondary">Not yet received</Badge>}
             </div></div>
             <div><span className="text-muted-foreground">Grams received</span><div className="font-medium">{selected.received_grams ? `${selected.received_grams} g` : "—"}</div></div>
+            <div><span className="text-muted-foreground">Moisture reading</span><div className="font-medium">{selected.moisture_percent != null ? `${selected.moisture_percent}%` : "—"}</div></div>
             <div><span className="text-muted-foreground">Received by</span><div className="font-medium">{selected.received_by || "—"}</div></div>
             <div><span className="text-muted-foreground">Received at</span><div className="font-medium">{selected.received_at ? format(new Date(selected.received_at), "dd MMM, HH:mm") : "—"}</div></div>
             {selected.received_observation && (
