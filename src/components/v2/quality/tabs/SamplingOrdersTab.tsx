@@ -123,6 +123,7 @@ const printSamplingOrder = (order: any) => {
     <tr><td class="k">Delivery Time to Lab</td><td>${format(new Date(order.delivery_time), "dd MMM yyyy, HH:mm")}</td></tr>
     <tr><td class="k">Sampled By</td><td>${order.sampled_by}</td></tr>
     <tr><td class="k">Created By</td><td>${order.created_by_name || order.created_by_email}</td></tr>
+    ${order.moisture_percent != null ? `<tr><td class="k">Moisture Reading</td><td><strong>${order.moisture_percent}%</strong></td></tr>` : ""}
     ${order.notes ? `<tr><td class="k">Notes</td><td>${order.notes}</td></tr>` : ""}
   </table>
   <div class="qrwrap"><img src="${qrUrl}" alt="QR" /><div class="code">${order.order_number}</div></div>
