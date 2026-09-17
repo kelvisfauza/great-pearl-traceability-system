@@ -272,6 +272,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     const normalizedEmail = email.toLowerCase().trim();
 
+    // Allow login with either the primary email or an alternate email stored on the employee record.
+    // Supabase Auth only knows the primary email, so we resolve the alternate to the primary before signing in.
+    let signInEmail = normalizedEmail;
+    try {
+      const { data: resolvedEmail, error: resolveError } = await supabase
+        .rpc('resolve_login_email', { p_email: normalizedEmail });
+      if (!resolveError && resolvedEmail && typeof resolvedEmail === 'string') {
+        signInEmail = resolvedEmail.toLowerCase().trim();
+        if (signInEmail !== normalizedEmail) {
+          console.log('📧 Resolved alternate login email to primary:', signInEmail);
+        }
+      }
+    } catch (resolveErr) {
+      console.warn('⚠️ Could not resolve login email (non-blocking):', resolveErr);
+    }
+
     const isRetryableAuthTimeout = (err: any): boolean => {
       const message = String(err?.message || '').toLowerCase();
       return (
@@ -305,7 +321,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(true);
 
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: normalizedEmail,
+        email: signInEmail,
         password: password
       });
 
@@ -347,7 +363,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { data: employeeData, error: empError } = await supabase
         .from('employees')
         .select('disabled, status, name, department, role')
-        .eq('email', normalizedEmail)
+        .eq('email', signInEmail)
         .maybeSingle();
 
       if (empError) {
@@ -375,7 +391,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       // Successful login - could log this as well for audit trail
-      console.log('✅ Successful login for:', normalizedEmail);
+      console.log('✅ Successful login for:', normalizedEmail, signInEmail !== normalizedEmail ? `(resolved to ${signInEmail})` : '');
 
       // --- New Device Detection ---
       try {
@@ -383,21 +399,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const { data: existingDevices } = await supabase
           .from('device_sessions')
           .select('id')
-          .eq('user_email', normalizedEmail)
+          .eq('user_email', signInEmail)
           .limit(1);
 
         if (!existingDevices || existingDevices.length === 0) {
           // First ever login — auto-trust this device
-          await trustFirstDevice(normalizedEmail, data.user.id);
-          console.log('🔐 First device auto-trusted for:', normalizedEmail);
+          await trustFirstDevice(signInEmail, data.user.id);
+          console.log('🔐 First device auto-trusted for:', signInEmail);
         } else {
           // Check if current device is trusted
-          const deviceCheck = await checkDeviceTrust(normalizedEmail, data.user.id);
+          const deviceCheck = await checkDeviceTrust(signInEmail, data.user.id);
           if (!deviceCheck.trusted && deviceCheck.token) {
             // New device detected — send alert email and sign out
             await sendNewDeviceAlertEmail(
-              normalizedEmail,
-              employeeData?.name || normalizedEmail.split('@')[0],
+              signInEmail,
+              employeeData?.name || signInEmail.split('@')[0],
               deviceCheck.token
             );
 
@@ -435,6 +451,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           metadata: {
             event: 'LOGIN_SUCCESS',
             email: normalizedEmail,
+            resolved_email: signInEmail !== normalizedEmail ? signInEmail : undefined,
             role: employeeData?.role || null
           }
         });
