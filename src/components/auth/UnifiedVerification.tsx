@@ -257,18 +257,22 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
         {/* EMAIL METHOD */}
         {method === 'email' && (
           <>
-            <Input
-              type="text"
-              inputMode="numeric"
-              placeholder="Enter 4-digit code"
-              value={code}
-              onChange={handleCodeChange}
-              onKeyDown={(e) => e.key === 'Enter' && code.length === 4 && verifyEmailCode()}
-              disabled={isVerifying}
-              className="text-center text-2xl tracking-widest"
+            <InputOTP
               maxLength={4}
+              value={code}
+              onChange={(v) => { setCode(v.replace(/\D/g, '')); setError(''); }}
+              onComplete={() => { if (!isVerifying) verifyEmailCode(); }}
+              disabled={isVerifying}
+              containerClassName="justify-center gap-3"
               autoFocus
-            />
+            >
+              <InputOTPGroup className="gap-3">
+                <InputOTPSlot index={0} />
+                <InputOTPSlot index={1} />
+                <InputOTPSlot index={2} />
+                <InputOTPSlot index={3} />
+              </InputOTPGroup>
+            </InputOTP>
             <Button onClick={verifyEmailCode} disabled={isVerifying || code.length !== 4} className="w-full">
               {isVerifying ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Verifying...</> : <><CheckCircle2 className="mr-2 h-4 w-4" />Verify</>}
             </Button>
