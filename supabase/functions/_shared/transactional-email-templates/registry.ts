@@ -78,6 +78,7 @@ import { template as labourDayClosureEmployees } from './labour-day-closure-empl
 import { template as labourDayClosureSuppliers } from './labour-day-closure-suppliers.tsx'
 import { template as investmentMatured } from './investment-matured.tsx'
 import { template as governmentCleaningDelay } from './government-cleaning-delay.tsx'
+import { template as loyaltyDailyCredit } from './loyalty-daily-credit.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'verification-code': verificationCode,
@@ -149,4 +150,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'labour-day-closure-employees': labourDayClosureEmployees,
   'labour-day-closure-suppliers': labourDayClosureSuppliers,
   'government-cleaning-delay': governmentCleaningDelay,
+  'loyalty-daily-credit': loyaltyDailyCredit,
 }
