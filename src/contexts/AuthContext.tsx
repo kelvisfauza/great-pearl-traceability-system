@@ -321,7 +321,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(true);
 
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: normalizedEmail,
+        email: signInEmail,
         password: password
       });
 
@@ -363,7 +363,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { data: employeeData, error: empError } = await supabase
         .from('employees')
         .select('disabled, status, name, department, role')
-        .eq('email', normalizedEmail)
+        .eq('email', signInEmail)
         .maybeSingle();
 
       if (empError) {
