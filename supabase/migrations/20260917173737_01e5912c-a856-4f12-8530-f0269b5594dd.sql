@@ -1,0 +1,1 @@
+UPDATE public.employees SET permissions = ARRAY['Store Management'], department = 'Store', updated_at = now() WHERE id = 'd3322fa5-a1d8-417f-b14b-005b0e3753c3';
