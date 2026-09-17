@@ -148,6 +148,7 @@ const PREMIUM_SMS_TYPES = new Set([
   'application_status',
   'interview_invite',
   'hr_notification',
+  'loyalty_daily_credit',
   'overtime_reward',
   'overtime_award',
   'per_diem_award',

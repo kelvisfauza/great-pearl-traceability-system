@@ -183,6 +183,7 @@ Deno.serve(async (req) => {
       'price-correction',
       'supplier-price-notice',
       'lab-rules-announcement',
+      'loyalty-daily-credit',
     ])
     if (NO_SMS_MIRROR_TEMPLATES.has(templateName)) {
       allowSms = false
