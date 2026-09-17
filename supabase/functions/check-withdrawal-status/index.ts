@@ -29,17 +29,16 @@ serve(async (req) => {
       });
     }
 
-    // Fetch pending_approval instant withdrawals — EXCLUDE GosentePay.
-    // GosentePay withdrawals stay in 'pending_approval' until an admin
-    // approves/rejects them in the Approvals page; they are NOT held at Yo,
-    // so polling Yo for their status always returns "failed" and would
-    // wrongly refund the user and hide the request from admins.
+    // Fetch ALL pending_approval instant withdrawals.
+    // GosentePay withdrawals are NOT held at Yo, so we never poll Yo for them
+    // (that would return "failed" and wrongly refund). They are still subject
+    // to the 24-hour auto-expiry refund rule below if no admin acts on them.
     const { data: pendingWds, error: fetchErr } = await supabase
       .from("instant_withdrawals")
       .select("*")
       .eq("payout_status", "pending_approval")
-      .neq("payment_provider", "gosente")
       .order("created_at", { ascending: true });
+
 
     if (fetchErr) {
       console.error("[WD Poller] Fetch error:", fetchErr);
