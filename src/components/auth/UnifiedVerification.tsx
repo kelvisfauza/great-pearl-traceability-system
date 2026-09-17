@@ -7,6 +7,8 @@ import { Mail, Loader2, AlertCircle, CheckCircle2, Fingerprint, Calendar, Messag
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { FaceCapture } from '@/components/auth/FaceCapture';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { DobInput } from '@/components/ui/dob-input';
 
 type VerificationMethod = 'email' | 'sms' | 'biometric' | 'dob';
 
