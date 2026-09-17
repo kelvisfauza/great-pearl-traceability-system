@@ -63,12 +63,18 @@ serve(async (req) => {
     let completed = 0;
 
     for (const wd of pendingWds) {
+      const isGosente = String(wd.payment_provider || "").toLowerCase() === "gosente";
       const references = [wd.payout_ref, wd.ledger_reference];
 
-      const result = await resolveYoTransactionStatus(username, password, references);
-      console.log(`[WD Poller] ${wd.id} (${wd.payout_ref}): ${result.resolvedStatus}`);
+      // GosentePay payouts are awaiting an admin decision in the app, not at Yo.
+      // Never poll Yo for them — they only fall through to the 24h expiry rule.
+      const result = isGosente
+        ? { resolvedStatus: "pending" as const, statusMessage: "Awaiting admin approval (GosentePay)", checkedReference: null }
+        : await resolveYoTransactionStatus(username, password, references);
+      console.log(`[WD Poller] ${wd.id} (${wd.payout_ref}): ${result.resolvedStatus}${isGosente ? " [gosente]" : ""}`);
 
       if (result.resolvedStatus === "completed") {
+
         // Only mark success if still pending (optimistic lock)
         const { data: updated } = await supabase
           .from("instant_withdrawals")
