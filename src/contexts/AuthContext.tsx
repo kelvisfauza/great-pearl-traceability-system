@@ -451,6 +451,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           metadata: {
             event: 'LOGIN_SUCCESS',
             email: normalizedEmail,
+            resolved_email: signInEmail !== normalizedEmail ? signInEmail : undefined,
             role: employeeData?.role || null
           }
         });
