@@ -6716,6 +6716,51 @@ export type Database = {
         }
         Relationships: []
       }
+      loyalty_daily_accruals: {
+        Row: {
+          accrual_date: string
+          activity_type: string | null
+          amount: number
+          created_at: string
+          credited: boolean
+          credited_at: string | null
+          form_name: string | null
+          id: string
+          ledger_reference: string | null
+          metadata: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accrual_date?: string
+          activity_type?: string | null
+          amount?: number
+          created_at?: string
+          credited?: boolean
+          credited_at?: string | null
+          form_name?: string | null
+          id?: string
+          ledger_reference?: string | null
+          metadata?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accrual_date?: string
+          activity_type?: string | null
+          amount?: number
+          created_at?: string
+          credited?: boolean
+          credited_at?: string | null
+          form_name?: string | null
+          id?: string
+          ledger_reference?: string | null
+          metadata?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       market_data: {
         Row: {
           change_percentage: number | null
@@ -16265,6 +16310,16 @@ export type Database = {
         }
         Relationships: []
       }
+      loyalty_award_events: {
+        Row: {
+          activity_type: string | null
+          amount: number | null
+          created_at: string | null
+          form_name: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       monthly_payment_summary: {
         Row: {
           average_payment: number | null
@@ -16684,6 +16739,14 @@ export type Database = {
           p_withdrawal_request_id: string
         }
         Returns: Json
+      }
+      credit_daily_loyalty: {
+        Args: { p_date?: string }
+        Returns: {
+          items: number
+          total: number
+          user_id: string
+        }[]
       }
       current_user_email: { Args: never; Returns: string }
       decline_my_admin_withdrawal: { Args: { _id: string }; Returns: Json }
@@ -17241,6 +17304,7 @@ export type Database = {
         }
         Returns: string
       }
+      loyalty_award_mode: { Args: never; Returns: string }
       loyalty_awards_suspended: { Args: never; Returns: boolean }
       mark_meeting_no_shows: { Args: { _meeting_id: string }; Returns: number }
       mark_messages_delivered: {
