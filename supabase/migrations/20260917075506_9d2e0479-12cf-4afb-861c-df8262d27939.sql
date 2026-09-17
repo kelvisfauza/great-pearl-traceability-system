@@ -1,0 +1,1 @@
+ALTER VIEW public.loyalty_award_events SET (security_invoker = true);
