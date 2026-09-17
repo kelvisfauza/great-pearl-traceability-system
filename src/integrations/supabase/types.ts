@@ -3376,6 +3376,7 @@ export type Database = {
           account_name: string | null
           account_number: string | null
           address: string | null
+          alt_email: string | null
           alt_phone: string | null
           alternative_bank: string | null
           auth_user_id: string | null
@@ -3435,6 +3436,7 @@ export type Database = {
           account_name?: string | null
           account_number?: string | null
           address?: string | null
+          alt_email?: string | null
           alt_phone?: string | null
           alternative_bank?: string | null
           auth_user_id?: string | null
@@ -3494,6 +3496,7 @@ export type Database = {
           account_name?: string | null
           account_number?: string | null
           address?: string | null
+          alt_email?: string | null
           alt_phone?: string | null
           alternative_bank?: string | null
           auth_user_id?: string | null
@@ -16484,6 +16487,7 @@ export type Database = {
           account_name: string | null
           account_number: string | null
           address: string | null
+          alt_email: string | null
           alt_phone: string | null
           alternative_bank: string | null
           auth_user_id: string | null
@@ -16841,6 +16845,7 @@ export type Database = {
           account_name: string | null
           account_number: string | null
           address: string | null
+          alt_email: string | null
           alt_phone: string | null
           alternative_bank: string | null
           auth_user_id: string | null
@@ -17458,6 +17463,7 @@ export type Database = {
         }
         Returns: Json
       }
+      resolve_login_email: { Args: { p_email: string }; Returns: string }
       reverse_treasury_profit: {
         Args: {
           p_amount: number
