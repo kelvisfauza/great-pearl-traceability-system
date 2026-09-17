@@ -391,7 +391,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       // Successful login - could log this as well for audit trail
-      console.log('✅ Successful login for:', normalizedEmail);
+      console.log('✅ Successful login for:', normalizedEmail, signInEmail !== normalizedEmail ? `(resolved to ${signInEmail})` : '');
 
       // --- New Device Detection ---
       try {
@@ -399,21 +399,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const { data: existingDevices } = await supabase
           .from('device_sessions')
           .select('id')
-          .eq('user_email', normalizedEmail)
+          .eq('user_email', signInEmail)
           .limit(1);
 
         if (!existingDevices || existingDevices.length === 0) {
           // First ever login — auto-trust this device
-          await trustFirstDevice(normalizedEmail, data.user.id);
-          console.log('🔐 First device auto-trusted for:', normalizedEmail);
+          await trustFirstDevice(signInEmail, data.user.id);
+          console.log('🔐 First device auto-trusted for:', signInEmail);
         } else {
           // Check if current device is trusted
-          const deviceCheck = await checkDeviceTrust(normalizedEmail, data.user.id);
+          const deviceCheck = await checkDeviceTrust(signInEmail, data.user.id);
           if (!deviceCheck.trusted && deviceCheck.token) {
             // New device detected — send alert email and sign out
             await sendNewDeviceAlertEmail(
-              normalizedEmail,
-              employeeData?.name || normalizedEmail.split('@')[0],
+              signInEmail,
+              employeeData?.name || signInEmail.split('@')[0],
               deviceCheck.token
             );
 
