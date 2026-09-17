@@ -272,6 +272,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     const normalizedEmail = email.toLowerCase().trim();
 
+    // Allow login with either the primary email or an alternate email stored on the employee record.
+    // Supabase Auth only knows the primary email, so we resolve the alternate to the primary before signing in.
+    let signInEmail = normalizedEmail;
+    try {
+      const { data: resolvedEmail, error: resolveError } = await supabase
+        .rpc('resolve_login_email', { p_email: normalizedEmail });
+      if (!resolveError && resolvedEmail && typeof resolvedEmail === 'string') {
+        signInEmail = resolvedEmail.toLowerCase().trim();
+        if (signInEmail !== normalizedEmail) {
+          console.log('📧 Resolved alternate login email to primary:', signInEmail);
+        }
+      }
+    } catch (resolveErr) {
+      console.warn('⚠️ Could not resolve login email (non-blocking):', resolveErr);
+    }
+
     const isRetryableAuthTimeout = (err: any): boolean => {
       const message = String(err?.message || '').toLowerCase();
       return (
