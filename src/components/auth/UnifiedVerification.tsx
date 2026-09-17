@@ -297,12 +297,10 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
         {/* DOB METHOD */}
         {method === 'dob' && (
           <>
-            <Input
-              type="date"
+            <DobInput
               value={dobInput}
-              onChange={(e) => { setDobInput(e.target.value); setError(''); }}
+              onChange={(v) => { setDobInput(v); setError(''); }}
               disabled={isVerifying}
-              className="text-center"
               autoFocus
             />
             <Button onClick={verifyDob} disabled={isVerifying || !dobInput} className="w-full">
