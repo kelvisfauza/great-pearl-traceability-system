@@ -29,17 +29,16 @@ serve(async (req) => {
       });
     }
 
-    // Fetch pending_approval instant withdrawals — EXCLUDE GosentePay.
-    // GosentePay withdrawals stay in 'pending_approval' until an admin
-    // approves/rejects them in the Approvals page; they are NOT held at Yo,
-    // so polling Yo for their status always returns "failed" and would
-    // wrongly refund the user and hide the request from admins.
+    // Fetch ALL pending_approval instant withdrawals.
+    // GosentePay withdrawals are NOT held at Yo, so we never poll Yo for them
+    // (that would return "failed" and wrongly refund). They are still subject
+    // to the 24-hour auto-expiry refund rule below if no admin acts on them.
     const { data: pendingWds, error: fetchErr } = await supabase
       .from("instant_withdrawals")
       .select("*")
       .eq("payout_status", "pending_approval")
-      .neq("payment_provider", "gosente")
       .order("created_at", { ascending: true });
+
 
     if (fetchErr) {
       console.error("[WD Poller] Fetch error:", fetchErr);
@@ -64,12 +63,18 @@ serve(async (req) => {
     let completed = 0;
 
     for (const wd of pendingWds) {
+      const isGosente = String(wd.payment_provider || "").toLowerCase() === "gosente";
       const references = [wd.payout_ref, wd.ledger_reference];
 
-      const result = await resolveYoTransactionStatus(username, password, references);
-      console.log(`[WD Poller] ${wd.id} (${wd.payout_ref}): ${result.resolvedStatus}`);
+      // GosentePay payouts are awaiting an admin decision in the app, not at Yo.
+      // Never poll Yo for them — they only fall through to the 24h expiry rule.
+      const result = isGosente
+        ? { resolvedStatus: "pending" as const, statusMessage: "Awaiting admin approval (GosentePay)", checkedReference: null }
+        : await resolveYoTransactionStatus(username, password, references);
+      console.log(`[WD Poller] ${wd.id} (${wd.payout_ref}): ${result.resolvedStatus}${isGosente ? " [gosente]" : ""}`);
 
       if (result.resolvedStatus === "completed") {
+
         // Only mark success if still pending (optimistic lock)
         const { data: updated } = await supabase
           .from("instant_withdrawals")
