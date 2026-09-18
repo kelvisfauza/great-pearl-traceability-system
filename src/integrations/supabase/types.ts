@@ -9644,6 +9644,11 @@ export type Database = {
           assessment_ref: string | null
           batch_number: string
           below12: number | null
+          calculator_captured_at: string | null
+          calculator_inputs: Json | null
+          calculator_note: string | null
+          calculator_price: number | null
+          calculator_ref_price: number | null
           clean_d14: number | null
           client_op_id: string | null
           comments: string | null
@@ -9696,6 +9701,11 @@ export type Database = {
           assessment_ref?: string | null
           batch_number: string
           below12?: number | null
+          calculator_captured_at?: string | null
+          calculator_inputs?: Json | null
+          calculator_note?: string | null
+          calculator_price?: number | null
+          calculator_ref_price?: number | null
           clean_d14?: number | null
           client_op_id?: string | null
           comments?: string | null
@@ -9748,6 +9758,11 @@ export type Database = {
           assessment_ref?: string | null
           batch_number?: string
           below12?: number | null
+          calculator_captured_at?: string | null
+          calculator_inputs?: Json | null
+          calculator_note?: string | null
+          calculator_price?: number | null
+          calculator_ref_price?: number | null
           clean_d14?: number | null
           client_op_id?: string | null
           comments?: string | null
