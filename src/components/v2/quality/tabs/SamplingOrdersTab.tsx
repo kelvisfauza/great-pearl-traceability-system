@@ -156,6 +156,22 @@ const SamplingOrdersTab = () => {
     notes: "",
   });
 
+  const [showBackfill, setShowBackfill] = useState(false);
+  const [past, setPast] = useState({
+    sample_date: "",
+    supplier_name: "",
+    sample_type: "",
+    sampled_by: "",
+    received_by: "",
+    assessed_by: "",
+    grams: "",
+    moisture: "",
+    linked_batch_number: "",
+    observation: "",
+    notes: "",
+  });
+
+
   const { data: orders, isLoading } = useQuery({
     queryKey: ["quality-sampling-orders"],
     queryFn: async () => {
