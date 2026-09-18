@@ -100,7 +100,8 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
     }
   };
 
-  const verifyEmailCode = async () => {
+  const verifyEmailCode = async (codeOverride?: string) => {
+    const code = (codeOverride ?? codeState).replace(/\D/g, '');
     if (!code || code.length !== 4) { setError('Enter a 4-digit code'); return; }
     setIsVerifying(true);
     setError('');
