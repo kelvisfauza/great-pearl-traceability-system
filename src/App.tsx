@@ -464,14 +464,23 @@ const App: React.ComponentType = () => {
                     <Suppliers />
                   </ProtectedRoute>
                 } />
+                <Route path="/vault" element={
+                  <ProtectedRoute>
+                    <Vault />
+                  </ProtectedRoute>
+                } />
                 <Route path="/quick-loans" element={
                   <ProtectedRoute>
-                    <QuickLoans />
+                    <VaultGate title="Loans & Salary Advances">
+                      <QuickLoans />
+                    </VaultGate>
                   </ProtectedRoute>
                 } />
                 <Route path="/overdraft" element={
                   <ProtectedRoute>
-                    <Overdraft />
+                    <VaultGate title="Overdraft">
+                      <Overdraft />
+                    </VaultGate>
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/overdraft" element={
