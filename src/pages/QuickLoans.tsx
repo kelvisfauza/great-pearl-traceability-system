@@ -3033,6 +3033,34 @@ const QuickLoans = () => {
             </Card>
           ))}
 
+          {/* Revised Terms — signature required */}
+          {myLoans.filter(l => l.status === 'revision_pending_signature').map(loan => (
+            <Card key={loan.id} className="border-primary bg-primary/5">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <FileSignature className="h-6 w-6 text-primary mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-foreground">Revised loan terms — your signature is required</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Management revised your loan to <span className="font-bold text-primary">UGX {Number(loan.revision_amount || 0).toLocaleString()}</span> over {loan.revision_duration_months} month(s).
+                      Total repayable UGX {Number(loan.revision_total_repayable || 0).toLocaleString()} ({loan.revision_frequency} installments of UGX {Number(loan.revision_installment || 0).toLocaleString()}).
+                      {loan.revision_note && <span className="block mt-1 italic">"{loan.revision_note}"</span>}
+                    </p>
+                    <div className="flex gap-2 mt-3 flex-wrap">
+                      <Button size="sm" onClick={() => setRevisionLoan(loan)}>
+                        <Eye className="mr-1 h-4 w-4" /> Review & Sign Revised Terms
+                      </Button>
+                      <Button size="sm" variant="outline" disabled={submitting} onClick={() => handleDeclineRevision(loan)}>
+                        Decline changes
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+
           {/* Guarantor Declined Banner */}
           {myLoans.filter(l => l.status === 'guarantor_declined').map(loan => (
             <Card key={loan.id} className="border-destructive/50 bg-destructive/5">
