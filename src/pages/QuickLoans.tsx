@@ -3667,6 +3667,48 @@ const QuickLoans = () => {
             setSubmitting(false);
           }
         }}
+        onReviseTerms={async (loanId, revision) => {
+          if (!employee) return;
+          setSubmitting(true);
+          try {
+            const loan = loans.find(l => l.id === loanId);
+            if (!loan) return;
+
+            const { error } = await supabase.from('loans').update({
+              status: 'revision_pending_signature',
+              revision_amount: revision.amount,
+              revision_duration_months: revision.months,
+              revision_frequency: revision.frequency,
+              revision_total_repayable: revision.totalRepayable,
+              revision_installment: revision.installment,
+              revision_note: revision.note,
+              revision_by: employee.name,
+              revision_at: new Date().toISOString(),
+              revision_signed_at: null,
+              revision_signature: null,
+              revision_declined_reason: null,
+            } as any).eq('id', loanId);
+            if (error) throw error;
+
+            await supabase.functions.invoke('send-sms', {
+              body: {
+                phone: loan.employee_phone,
+                message: `Dear ${loan.employee_name}, management has revised your loan terms to UGX ${revision.amount.toLocaleString()} over ${revision.months} month(s), total repayable UGX ${revision.totalRepayable.toLocaleString()} (${revision.numInstallments} x UGX ${revision.installment.toLocaleString()}). Reason: ${revision.note}. Log in to review and sign the revised agreement. - Great Agro Coffee`,
+                userName: loan.employee_name,
+                messageType: 'loan_counter_offer'
+              }
+            });
+
+            toast({ title: 'Revised terms sent', description: `${loan.employee_name} must sign the revised agreement before final approval` });
+            setReviewLoan(null);
+            fetchLoans();
+          } catch (err: any) {
+            toast({ title: 'Error', description: err.message, variant: 'destructive' });
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+
         submitting={submitting}
       />
       <LoanRepaymentSlip
