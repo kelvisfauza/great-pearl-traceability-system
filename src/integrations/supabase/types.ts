@@ -6424,6 +6424,18 @@ export type Database = {
           penalty_amount: number | null
           remaining_balance: number
           repayment_frequency: string
+          revision_amount: number | null
+          revision_at: string | null
+          revision_by: string | null
+          revision_declined_reason: string | null
+          revision_duration_months: number | null
+          revision_frequency: string | null
+          revision_installment: number | null
+          revision_note: string | null
+          revision_signature: string | null
+          revision_signed_at: string | null
+          revision_terms_version: string | null
+          revision_total_repayable: number | null
           start_date: string | null
           status: string
           terms_accepted: boolean
@@ -6487,6 +6499,18 @@ export type Database = {
           penalty_amount?: number | null
           remaining_balance: number
           repayment_frequency?: string
+          revision_amount?: number | null
+          revision_at?: string | null
+          revision_by?: string | null
+          revision_declined_reason?: string | null
+          revision_duration_months?: number | null
+          revision_frequency?: string | null
+          revision_installment?: number | null
+          revision_note?: string | null
+          revision_signature?: string | null
+          revision_signed_at?: string | null
+          revision_terms_version?: string | null
+          revision_total_repayable?: number | null
           start_date?: string | null
           status?: string
           terms_accepted?: boolean
@@ -6550,6 +6574,18 @@ export type Database = {
           penalty_amount?: number | null
           remaining_balance?: number
           repayment_frequency?: string
+          revision_amount?: number | null
+          revision_at?: string | null
+          revision_by?: string | null
+          revision_declined_reason?: string | null
+          revision_duration_months?: number | null
+          revision_frequency?: string | null
+          revision_installment?: number | null
+          revision_note?: string | null
+          revision_signature?: string | null
+          revision_signed_at?: string | null
+          revision_terms_version?: string | null
+          revision_total_repayable?: number | null
           start_date?: string | null
           status?: string
           terms_accepted?: boolean
