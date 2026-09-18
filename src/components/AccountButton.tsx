@@ -15,6 +15,7 @@ import { useUserAccount } from '@/hooks/useUserAccount';
 import { useLoyaltyStats } from '@/hooks/useLoyaltyStats';
 import { useBonusBalance } from '@/hooks/useBonusBalance';
 import { useWithdrawalControl } from '@/hooks/useWithdrawalControl';
+import { useBalanceReveal } from '@/hooks/useBalanceReveal';
 import { MoneyRequestModal } from './MoneyRequestModal';
 import { WithdrawalModal } from './WithdrawalModal';
 import { DepositModal } from './DepositModal';
@@ -58,9 +59,8 @@ export const AccountButton = () => {
   const [showSendMoney, setShowSendMoney] = useState(false);
   const [showStatement, setShowStatement] = useState(false);
   const [showInvestment, setShowInvestment] = useState(false);
-  const [balanceHidden, setBalanceHidden] = useState(() => {
-    return localStorage.getItem('balanceHidden') === 'true';
-  });
+  const { revealed, reveal, hide: hideBalance, busy: revealBusy, status: checkStatus } = useBalanceReveal();
+  const balanceHidden = !revealed;
   const [activeLoanTotal, setActiveLoanTotal] = useState(0);
   const [activeLoanCount, setActiveLoanCount] = useState(0);
   const [overdraft, setOverdraft] = useState<{ status: string; limit: number; outstanding: number; available: number } | null>(null);
@@ -360,15 +360,34 @@ export const AccountButton = () => {
             {/* Balance Card */}
             <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Wallet className="h-4 w-4 text-green-600" />
-                  {effectiveWalletBalance < 0 ? 'Overdraft Balance (Owed)' : 'Wallet Balance'}
+                <CardTitle className="text-sm font-medium flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-2">
+                    <Wallet className="h-4 w-4 text-green-600" />
+                    {effectiveWalletBalance < 0 ? 'Overdraft Balance (Owed)' : 'Wallet Balance'}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    disabled={revealBusy}
+                    onClick={() => (balanceHidden ? reveal() : hideBalance())}
+                  >
+                    {balanceHidden ? <Eye className="h-3.5 w-3.5 mr-1" /> : <EyeOff className="h-3.5 w-3.5 mr-1" />}
+                    {balanceHidden ? 'Show balance' : 'Hide'}
+                  </Button>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className={`text-3xl font-bold ${effectiveWalletBalance < 0 ? 'text-red-600' : 'text-green-700'}`}>
                   {balanceHidden ? '••••••' : formatCurrency(effectiveWalletBalance)}
                 </div>
+                {balanceHidden && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {checkStatus && checkStatus.next_fee > 0
+                      ? `Another look costs UGX ${checkStatus.next_fee.toLocaleString()} (UGX ${checkStatus.fees_today.toLocaleString()} of UGX 1,000 used today).`
+                      : 'Your first balance check today is free. Each extra check costs UGX 200, up to UGX 1,000 a day.'}
+                  </p>
+                )}
                 {effectiveWalletBalance < 0 ? (
                   <div className="mt-1 text-xs text-muted-foreground space-y-0.5">
                     <div className="text-red-600">
