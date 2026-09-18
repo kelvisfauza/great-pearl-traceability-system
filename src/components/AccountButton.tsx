@@ -359,9 +359,7 @@ export const AccountButton = () => {
   const availableForWithdrawal = netOwnFunds + overdraftHeadroom;
 
   const panelContent = (
-
-
-          <div className="mt-6 space-y-5">
+          <div className="mt-2 space-y-5">
             {/* Balance Card */}
             <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
               <CardHeader className="pb-2">
