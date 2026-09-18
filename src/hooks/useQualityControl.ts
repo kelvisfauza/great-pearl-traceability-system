@@ -150,14 +150,21 @@ export const useQualityControl = () => {
     try {
       console.log('Loading quality assessments from Supabase...');
       
-      const { data: supabaseQualityData, error: qualityError } = await supabase
-        .from('quality_assessments')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(200);
-
-      if (qualityError) {
-        console.error('Error fetching quality assessments from Supabase:', qualityError);
+      const QA_PAGE = 1000;
+      const QA_MAX_PAGES = 10;
+      const supabaseQualityData: any[] = [];
+      for (let page = 0; page < QA_MAX_PAGES; page++) {
+        const { data: chunk, error: qualityError } = await supabase
+          .from('quality_assessments')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .range(page * QA_PAGE, page * QA_PAGE + QA_PAGE - 1);
+        if (qualityError) {
+          console.error('Error fetching quality assessments from Supabase:', qualityError);
+          break;
+        }
+        supabaseQualityData.push(...(chunk || []));
+        if (!chunk || chunk.length < QA_PAGE) break;
       }
 
       let enrichedSupabaseData = [];
