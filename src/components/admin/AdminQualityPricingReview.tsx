@@ -148,7 +148,7 @@ const AdminQualityPricingReview = () => {
     setFinalPrice(assessment.suggested_price);
     setAdminComments('');
     setCalculatorPrice(null);
-    setCalculatorInputs(buildCalculatorInputs(assessment, startingCalculatorPrice));
+    setCalculatorInputs(buildAdminCalculatorInputs(assessment, startingCalculatorPrice));
     setReviewModalOpen(true);
     if (assessment.coffee_record?.coffee_type) {
       fetchCalculatorPrice(assessment.coffee_record.coffee_type);
@@ -176,8 +176,9 @@ const AdminQualityPricingReview = () => {
         .update({
           final_price: finalPrice,
           status: 'approved',
-          quality_note: adminComments || null
-        })
+          quality_note: adminComments || null,
+          ...buildCalculatorSnapshot(calculatorInputs, adminCalculation),
+        } as any)
         .eq('id', selectedAssessment.id);
       if (updateError) throw updateError;
 
