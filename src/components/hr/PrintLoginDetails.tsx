@@ -104,16 +104,18 @@ export default function PrintLoginDetails({ employees }: PrintLoginDetailsProps)
       });
 
       const resetFailed = Boolean(reset.error || (reset.data && reset.data.error));
-      const notFound =
-        resetFailed &&
-        String(reset.data?.error || reset.error?.message || '').toLowerCase().includes('not found');
 
-      if (resetFailed && !notFound) {
-        throw new Error(
-          reset.data?.error ||
-            reset.error?.message ||
-            'The password could not be saved. Ask an administrator to set it.'
-        );
+      // On a non-2xx response supabase-js hides the JSON body inside error.context,
+      // so read it before deciding whether this person simply has no login yet.
+      let serverError = String(reset.data?.error || '');
+      if (!serverError && reset.error) {
+        try {
+          const ctx = (reset.error as any).context;
+          if (ctx && typeof ctx.json === 'function') {
+            const body = await ctx.clone().json();
+            serverError = String(body?.error || '');
+          }
+        } catch { /* body not JSON — fall back to the generic message */ }
       }
 
       if (resetFailed) {

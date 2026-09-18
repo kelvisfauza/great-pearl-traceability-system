@@ -58,7 +58,8 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ open, onPassw
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+      {/* data-trainee-allow: required sign-in step must stay usable for Trainee accounts */}
+      <DialogContent className="sm:max-w-md" data-trainee-allow="true" onPointerDownOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Lock className="h-5 w-5" />
