@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { ClipboardList, Printer, Loader2, CheckCircle2, Beaker } from "lucide-react";
+import { ClipboardList, Printer, Loader2, CheckCircle2, Beaker, History as HistoryIcon } from "lucide-react";
 import { format } from "date-fns";
 import { buildPublicUrl } from "@/utils/publicUrl";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
