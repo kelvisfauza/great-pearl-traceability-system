@@ -171,14 +171,19 @@ export const useQualityControl = () => {
       if (supabaseQualityData && supabaseQualityData.length > 0) {
         const storeRecordIds = [...new Set(supabaseQualityData.map(qa => qa.store_record_id).filter(Boolean))];
 
-        // Fetch coffee records only by store_record_id (single query, indexed lookup)
-        let coffeeRecords: any[] = [];
-        if (storeRecordIds.length > 0) {
-          const { data: recordsById } = await supabase
+        // Fetch coffee records in chunks (a single .in() with thousands of IDs exceeds PostgREST's URL limit and fails silently)
+        const coffeeRecords: any[] = [];
+        const CR_CHUNK = 200;
+        for (let i = 0; i < storeRecordIds.length; i += CR_CHUNK) {
+          const { data: recordsById, error: crError } = await supabase
             .from('coffee_records')
             .select('id, supplier_id, supplier_name, coffee_type, kilograms, batch_number')
-            .in('id', storeRecordIds);
-          coffeeRecords = recordsById || [];
+            .in('id', storeRecordIds.slice(i, i + CR_CHUNK));
+          if (crError) {
+            console.error('Error fetching coffee records chunk:', crError);
+            continue;
+          }
+          coffeeRecords.push(...(recordsById || []));
         }
 
         // Resolve suppliers for these coffee records
