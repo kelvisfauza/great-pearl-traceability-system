@@ -265,7 +265,7 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
               maxLength={4}
               value={code}
               onChange={(v) => { setCode(v.replace(/\D/g, '')); setError(''); }}
-              onComplete={() => { if (!isVerifying) verifyEmailCode(); }}
+              onComplete={(v) => { if (!isVerifying) verifyEmailCode(v); }}
               disabled={isVerifying}
               containerClassName="justify-center gap-3"
               autoFocus
@@ -277,7 +277,7 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
                 <InputOTPSlot index={3} />
               </InputOTPGroup>
             </InputOTP>
-            <Button onClick={verifyEmailCode} disabled={isVerifying || code.length !== 4} className="w-full">
+            <Button onClick={() => verifyEmailCode()} disabled={isVerifying || code.length !== 4} className="w-full">
               {isVerifying ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Verifying...</> : <><CheckCircle2 className="mr-2 h-4 w-4" />Verify</>}
             </Button>
             <Button variant="outline" onClick={sendEmailCode} disabled={!canResend || isSending} className="w-full text-xs">
