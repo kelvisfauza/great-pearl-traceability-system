@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Banknote, Clock, Shield, Users, AlertTriangle, CheckCircle, XCircle, CreditCard, Download, Printer, Phone, Loader2, FileText, Eye, ShieldOff, Wallet, HandCoins, ArrowUpCircle, Edit, Scale } from 'lucide-react';
+import { Banknote, Clock, Shield, Users, AlertTriangle, CheckCircle, XCircle, CreditCard, Download, Printer, Phone, Loader2, FileText, Eye, ShieldOff, Wallet, HandCoins, ArrowUpCircle, Edit, Scale, FileSignature } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import AdminLoanTracker from '@/components/loans/AdminLoanTracker';
 import LoanAppealsPage from '@/pages/admin/LoanAppeals';
@@ -28,40 +28,18 @@ import { generateLoanAgreementPdf } from '@/utils/loanAgreementPdf';
 import LoanAppealDialog from '@/components/loans/LoanAppealDialog';
 import LoanTermsDialog, { LOAN_TERMS_VERSION, type LoanTermsApplication } from '@/components/loans/LoanTermsDialog';
 
-// Loan types with their monthly interest rates
-type LoanType = 'quick' | 'long_term' | 'pure_salary' | 'business';
-type RepaymentFrequency = 'weekly' | 'monthly' | 'bullet';
+// Loan types, rates and shared maths live in src/lib/loanMath.ts
+import {
+  LOAN_TYPE_CONFIG,
+  getGuarantorsRequired,
+  getDailyRate,
+  getLoanSchedule,
+  getCappedInterest,
+  computeLoanTerms,
+  type LoanType,
+  type RepaymentFrequency,
+} from '@/lib/loanMath';
 
-const LOAN_TYPE_CONFIG: Record<LoanType, { label: string; monthlyRate: number; maxRate: number; description: string; frequencies: RepaymentFrequency[]; maxMonths?: number; requiresGuarantor?: boolean; guarantorsRequired?: number; minAmount?: number }> = {
-  quick: { label: 'Quick Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Short-term, weekly repayments (total interest cap 35%)', frequencies: ['weekly'], maxMonths: 6, requiresGuarantor: true, guarantorsRequired: 1 },
-  long_term: { label: 'Long-Term Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Flexible repayment, monthly or bullet (total interest cap 35%)', frequencies: ['monthly', 'bullet'], maxMonths: 6, requiresGuarantor: true, guarantorsRequired: 1 },
-  pure_salary: { label: 'Pure Salary Loan', monthlyRate: 15, maxRate: 45, description: '15%/month – Repaid by 50% of monthly salary (no guarantor, max 3 months)', frequencies: ['monthly'], maxMonths: 3, requiresGuarantor: false },
-  business: { label: 'Employee Business Loan', monthlyRate: 4, maxRate: 30, description: '4%/month – Low-rate business capital, minimum UGX 500,000, flexible monthly repayment up to 8 months, 2 guarantors required (total interest cap 30%)', frequencies: ['monthly'], maxMonths: 8, requiresGuarantor: true, guarantorsRequired: 2, minAmount: 500000 },
-};
-
-
-const getGuarantorsRequired = (t: LoanType) =>
-  LOAN_TYPE_CONFIG[t].requiresGuarantor === false ? 0 : (LOAN_TYPE_CONFIG[t].guarantorsRequired ?? 1);
-
-// Helper: calculate daily interest rate from monthly rate
-const getDailyRate = (loanType: LoanType) => {
-  const monthlyRate = LOAN_TYPE_CONFIG[loanType].monthlyRate;
-  return monthlyRate / 30;
-};
-
-// Helper: calculate total days and weeks for a duration
-const getLoanSchedule = (months: number) => {
-  const totalDays = months * 30;
-  const totalWeeks = months * 4; // 4 weeks per month
-  return { totalDays, totalWeeks };
-};
-
-// Helper: get total interest capped at maxRate
-const getCappedInterest = (principal: number, monthlyRate: number, months: number, maxRate: number) => {
-  const rawInterest = principal * (monthlyRate / 100) * months;
-  const maxInterest = principal * (maxRate / 100);
-  return Math.min(rawInterest, maxInterest);
-};
 
 const getFirstRepaymentDate = (startDateInput: Date | string, frequency: RepaymentFrequency) => {
   const startDate = new Date(startDateInput);
@@ -481,7 +459,7 @@ const QuickLoans = () => {
     }
 
     // Block new loans only if user has a pending (not yet active) application
-    const pendingLoans = myLoans.filter(l => ['pending_guarantor', 'pending_admin', 'approved', 'disbursed', 'counter_offered'].includes(l.status));
+    const pendingLoans = myLoans.filter(l => ['pending_guarantor', 'pending_admin', 'approved', 'disbursed', 'counter_offered', 'revision_pending_signature'].includes(l.status));
     if (pendingLoans.length > 0) {
       toast({ title: "Blocked", description: "You have a pending loan application. Wait for it to be processed before requesting a new one.", variant: "destructive" });
       return;
@@ -1757,7 +1735,7 @@ const QuickLoans = () => {
     }
 
     // Check for pending loans
-    const pendingLoans = myLoans.filter(l => ['pending_guarantor', 'pending_admin', 'approved', 'disbursed', 'counter_offered'].includes(l.status));
+    const pendingLoans = myLoans.filter(l => ['pending_guarantor', 'pending_admin', 'approved', 'disbursed', 'counter_offered', 'revision_pending_signature'].includes(l.status));
     if (pendingLoans.length > 0) {
       toast({ title: "Blocked", description: "You have a pending loan application. Wait for it to be processed first.", variant: "destructive" });
       return;
@@ -1931,6 +1909,131 @@ const QuickLoans = () => {
       setSubmitting(false);
     }
   };
+
+  // ===== Admin-revised terms: applicant signs before final approval =====
+  const [revisionLoan, setRevisionLoan] = useState<any>(null);
+
+  const revisionApplication: LoanTermsApplication | null = React.useMemo(() => {
+    const loan = revisionLoan;
+    if (!loan) return null;
+    const lType = (loan.loan_type || 'quick') as LoanType;
+    const cfg = LOAN_TYPE_CONFIG[lType] || LOAN_TYPE_CONFIG.quick;
+    const freq = (loan.revision_frequency || loan.repayment_frequency || 'monthly') as RepaymentFrequency;
+    const months = Number(loan.revision_duration_months || loan.duration_months || 1);
+    const principal = Number(loan.revision_amount || loan.loan_amount || 0);
+    const total = Number(loan.revision_total_repayable || loan.total_repayable || 0);
+    const installment = Number(loan.revision_installment || 0);
+    const numInstallments = installment > 0 ? Math.max(1, Math.ceil(total / installment)) : months;
+    const guarantors: { name: string; email?: string; phone?: string }[] = [];
+    if (loan.guarantor_name) guarantors.push({ name: loan.guarantor_name, email: loan.guarantor_email, phone: loan.guarantor_phone });
+    if (loan.guarantor2_name) guarantors.push({ name: loan.guarantor2_name, email: loan.guarantor2_email, phone: loan.guarantor2_phone });
+    return {
+      loanTypeLabel: cfg.label,
+      loanType: lType,
+      requestedAmount: Number(loan.original_loan_amount || loan.loan_amount || 0),
+      evaluationFee: 0,
+      principal,
+      monthlyRate: cfg.monthlyRate,
+      dailyRate: getDailyRate(lType),
+      maxRate: cfg.maxRate,
+      durationMonths: months,
+      frequency: freq,
+      numInstallments,
+      installmentAmount: installment,
+      totalInterest: Math.max(0, total - principal),
+      totalRepayable: total,
+      firstRepaymentDate: getFirstRepaymentDate(new Date(), freq).toLocaleDateString(),
+      borrowerName: loan.employee_name,
+      borrowerEmail: loan.employee_email,
+      borrowerPhone: loan.employee_phone,
+      borrowerPosition: employee?.position,
+      borrowerDepartment: employee?.department,
+      borrowerSalary: employee?.salary,
+      guarantors,
+      purpose: loan.purpose,
+    };
+  }, [revisionLoan, employee]);
+
+  const handleSignRevision = async (meta: { version: string; signature: string; acceptedAt: string }) => {
+    const loan = revisionLoan;
+    if (!loan) return;
+    setSubmitting(true);
+    try {
+      const freq = (loan.revision_frequency || loan.repayment_frequency || 'monthly') as RepaymentFrequency;
+      const total = Number(loan.revision_total_repayable || 0);
+      const installment = Number(loan.revision_installment || 0);
+
+      const { error } = await supabase.from('loans').update({
+        loan_amount: Number(loan.revision_amount || loan.loan_amount),
+        original_loan_amount: loan.original_loan_amount || loan.loan_amount,
+        duration_months: Number(loan.revision_duration_months || loan.duration_months),
+        repayment_frequency: freq,
+        total_weeks: freq === 'weekly' ? getLoanSchedule(Number(loan.revision_duration_months || loan.duration_months)).totalWeeks : loan.total_weeks,
+        total_repayable: total,
+        remaining_balance: total,
+        monthly_installment: freq === 'weekly' ? null : installment,
+        weekly_installment: freq === 'weekly' ? installment : null,
+        status: 'pending_admin',
+        revision_signed_at: meta.acceptedAt,
+        revision_signature: meta.signature,
+        revision_terms_version: meta.version,
+        terms_version: meta.version,
+        terms_signature: meta.signature,
+        terms_accepted_at: meta.acceptedAt,
+      } as any).eq('id', loan.id);
+      if (error) throw error;
+
+      const { data: admins } = await supabase
+        .from('employees')
+        .select('name, phone')
+        .in('role', ['Administrator', 'Super Admin'])
+        .eq('status', 'Active')
+        .not('phone', 'is', null);
+      for (const admin of (admins || [])) {
+        if (admin.phone) {
+          await supabase.functions.invoke('send-sms', {
+            body: {
+              phone: admin.phone,
+              message: `Dear ${admin.name}, ${loan.employee_name} has signed the revised loan terms (UGX ${Number(loan.revision_amount || 0).toLocaleString()} over ${loan.revision_duration_months} month(s)). The loan awaits your final approval.`,
+              userName: admin.name,
+              messageType: 'loan_counter_accepted'
+            }
+          });
+        }
+      }
+
+      toast({ title: 'Revised terms signed', description: 'Your loan now awaits final approval by management' });
+      setRevisionLoan(null);
+      fetchLoans();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeclineRevision = async (loan: any) => {
+    const reason = window.prompt('Why are you declining the revised terms?') || '';
+    if (!reason.trim()) return;
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from('loans').update({
+        status: 'pending_admin',
+        revision_declined_reason: reason.trim(),
+        revision_signed_at: null,
+        revision_signature: null,
+      } as any).eq('id', loan.id);
+      if (error) throw error;
+      toast({ title: 'Revision declined', description: 'Management has been notified to review again' });
+      setRevisionLoan(null);
+      fetchLoans();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
 
   const printLoanStatement = async (loan: any) => {
     // Fetch repayment installments for this loan
@@ -2125,6 +2228,7 @@ const QuickLoans = () => {
       defaulted: { variant: 'destructive', label: 'Defaulted' },
       guarantor_declined: { variant: 'destructive', label: 'Guarantor Declined' },
       counter_offered: { variant: 'secondary', label: 'Counter Offer' },
+      revision_pending_signature: { variant: 'secondary', label: 'Awaiting Applicant Signature' },
       topped_up: { variant: 'outline', label: 'Topped Up' },
     };
     const s = map[status] || { variant: 'outline' as const, label: status };
@@ -2930,6 +3034,34 @@ const QuickLoans = () => {
             </Card>
           ))}
 
+          {/* Revised Terms — signature required */}
+          {myLoans.filter(l => l.status === 'revision_pending_signature').map(loan => (
+            <Card key={loan.id} className="border-primary bg-primary/5">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <FileSignature className="h-6 w-6 text-primary mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-foreground">Revised loan terms — your signature is required</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Management revised your loan to <span className="font-bold text-primary">UGX {Number(loan.revision_amount || 0).toLocaleString()}</span> over {loan.revision_duration_months} month(s).
+                      Total repayable UGX {Number(loan.revision_total_repayable || 0).toLocaleString()} ({loan.revision_frequency} installments of UGX {Number(loan.revision_installment || 0).toLocaleString()}).
+                      {loan.revision_note && <span className="block mt-1 italic">"{loan.revision_note}"</span>}
+                    </p>
+                    <div className="flex gap-2 mt-3 flex-wrap">
+                      <Button size="sm" onClick={() => setRevisionLoan(loan)}>
+                        <Eye className="mr-1 h-4 w-4" /> Review & Sign Revised Terms
+                      </Button>
+                      <Button size="sm" variant="outline" disabled={submitting} onClick={() => handleDeclineRevision(loan)}>
+                        Decline changes
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+
           {/* Guarantor Declined Banner */}
           {myLoans.filter(l => l.status === 'guarantor_declined').map(loan => (
             <Card key={loan.id} className="border-destructive/50 bg-destructive/5">
@@ -3472,6 +3604,7 @@ const QuickLoans = () => {
                             ? (!loan.guarantor_approved ? `${loan.guarantor_name || 'Guarantor 1'} (G1)` : needsG2 && !loan.guarantor2_approved ? `${loan.guarantor2_name || 'Guarantor 2'} (G2)` : 'Guarantor')
                             : loan.status === 'pending_admin' ? 'Administrator'
                             : loan.status === 'counter_offered' ? `${loan.employee_name} (borrower)`
+                            : loan.status === 'revision_pending_signature' ? `${loan.employee_name} (signing revised terms)`
                             : '—';
                           return (
                           <TableRow key={loan.id}>
@@ -3689,9 +3822,62 @@ const QuickLoans = () => {
             setSubmitting(false);
           }
         }}
+        onReviseTerms={async (loanId, revision) => {
+          if (!employee) return;
+          setSubmitting(true);
+          try {
+            const loan = loans.find(l => l.id === loanId);
+            if (!loan) return;
+
+            const { error } = await supabase.from('loans').update({
+              status: 'revision_pending_signature',
+              revision_amount: revision.amount,
+              revision_duration_months: revision.months,
+              revision_frequency: revision.frequency,
+              revision_total_repayable: revision.totalRepayable,
+              revision_installment: revision.installment,
+              revision_note: revision.note,
+              revision_by: employee.name,
+              revision_at: new Date().toISOString(),
+              revision_signed_at: null,
+              revision_signature: null,
+              revision_declined_reason: null,
+            } as any).eq('id', loanId);
+            if (error) throw error;
+
+            await supabase.functions.invoke('send-sms', {
+              body: {
+                phone: loan.employee_phone,
+                message: `Dear ${loan.employee_name}, management has revised your loan terms to UGX ${revision.amount.toLocaleString()} over ${revision.months} month(s), total repayable UGX ${revision.totalRepayable.toLocaleString()} (${revision.numInstallments} x UGX ${revision.installment.toLocaleString()}). Reason: ${revision.note}. Log in to review and sign the revised agreement. - Great Agro Coffee`,
+                userName: loan.employee_name,
+                messageType: 'loan_counter_offer'
+              }
+            });
+
+            toast({ title: 'Revised terms sent', description: `${loan.employee_name} must sign the revised agreement before final approval` });
+            setReviewLoan(null);
+            fetchLoans();
+          } catch (err: any) {
+            toast({ title: 'Error', description: err.message, variant: 'destructive' });
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+
         submitting={submitting}
       />
+      <LoanTermsDialog
+        open={!!revisionLoan}
+        onOpenChange={(o) => { if (!o) setRevisionLoan(null); }}
+        application={revisionApplication}
+        submitting={submitting}
+        title="Revised Loan Agreement — Signature Required"
+        acceptLabel="Accept & Sign Revised Terms"
+        notice={revisionLoan ? `Management revised your loan terms${revisionLoan.revision_by ? ` (${revisionLoan.revision_by})` : ''}. Reason: ${revisionLoan.revision_note || '—'}. Signing below replaces the terms of your original application.` : undefined}
+        onAccept={(meta) => handleSignRevision(meta)}
+      />
       <LoanRepaymentSlip
+
         open={showRepaymentSlip}
         onClose={() => setShowRepaymentSlip(false)}
         loanData={repaymentSlipData}

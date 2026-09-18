@@ -293,9 +293,25 @@ const LoanDetailsDialog = ({ loan, open, onClose }: Props) => {
                     <Row label="Approved on" value={dayTime(loan.admin_approved_at || loan.approved_at)} />
                     <Row label="Paid to date" value={money(loan.paid_amount || totalPaid)} />
                     {loan.penalty_amount ? <Row label="Penalties" value={money(loan.penalty_amount)} /> : null}
+                    {loan.revision_amount ? (
+                      <>
+                        <Row
+                          label="Terms revised by admin"
+                          value={`${money(loan.revision_amount)} • ${loan.revision_duration_months} month(s)${loan.revision_by ? ` • ${loan.revision_by}` : ''}`}
+                        />
+                        <Row
+                          label="Revision signed"
+                          value={loan.revision_signed_at ? `${loan.revision_signature} • ${dayTime(loan.revision_signed_at)}` : 'Awaiting applicant signature'}
+                        />
+                      </>
+                    ) : null}
                     {loan.counter_offer_comments && (
                       <p className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap">Admin note: {loan.counter_offer_comments}</p>
                     )}
+                    {loan.revision_note && (
+                      <p className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap">Revision reason: {loan.revision_note}</p>
+                    )}
+
                   </CardContent>
                 </Card>
               </div>
