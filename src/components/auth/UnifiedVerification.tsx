@@ -231,7 +231,7 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
   };
 
   return (
-    {/* data-trainee-allow: sign-in verification must stay usable for Trainee accounts */}
+    // data-trainee-allow keeps sign-in usable for Trainee (view-only) accounts
     <Card className="w-full max-w-md mx-auto" data-trainee-allow="true">
       <CardHeader className="space-y-1">
         <div className="flex items-center justify-center mb-4">
