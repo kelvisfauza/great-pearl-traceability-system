@@ -40,6 +40,21 @@ Deno.serve(async (req) => {
     const createdBy: string = caller.email || body.createdBy || 'System';
     const createdByEmail: string = caller.email || userData.user.email || '';
 
+    const payrollDate = new Date(`${month} 1`);
+    if (Number.isNaN(payrollDate.getTime())) throw new Error(`Invalid payroll month: ${month}`);
+    const payrollDateKey = payrollDate.toISOString().slice(0, 10);
+    const { data: salaryAdjustments, error: adjustmentError } = await supabase
+      .from('salary_adjustments')
+      .select('id, employee_email, pay_percentage, reason, start_date, end_date')
+      .eq('status', 'active')
+      .lte('start_date', payrollDateKey)
+      .gte('end_date', payrollDateKey);
+    if (adjustmentError) throw adjustmentError;
+    const adjustmentMap = new Map<string, any>();
+    for (const adjustment of salaryAdjustments || []) {
+      adjustmentMap.set(String(adjustment.employee_email).toLowerCase(), adjustment);
+    }
+
     const { data: employees, error } = await supabase
       .from('employees')
       .select('id, employee_id, name, email, salary, phone, department, auth_user_id')
@@ -60,7 +75,12 @@ Deno.serve(async (req) => {
       if (!emp.salary || emp.salary <= 0) continue;
       if (emp.email === 'operations@greatpearlcoffee.com') continue;
       const profile = profileMap.get(String(emp.id)) || profileMap.get(String(emp.employee_id)) || {};
-      const calc = calculatePayroll(emp.salary, { nssfExempt: !!profile.nssf_exempt, payeExempt: !!profile.paye_exempt });
+      const baseGross = Number(emp.salary);
+      const salaryAdjustment = adjustmentMap.get(String(emp.email).toLowerCase()) || null;
+      const salaryAdjustmentPercentage = salaryAdjustment ? Number(salaryAdjustment.pay_percentage) : 100;
+      const adjustedGross = Math.round(baseGross * salaryAdjustmentPercentage / 100);
+      const salaryAdjustmentAmount = Math.max(0, baseGross - adjustedGross);
+      const calc = calculatePayroll(adjustedGross, { nssfExempt: !!profile.nssf_exempt, payeExempt: !!profile.paye_exempt });
       preview.push({
         employee_id: emp.employee_id || emp.id,
         employee_uuid: emp.id,
@@ -70,6 +90,11 @@ Deno.serve(async (req) => {
         department: emp.department,
         tin: profile.tin || null,
         nssf_number: profile.nssf_number || null,
+        baseGross,
+        salaryAdjustmentId: salaryAdjustment?.id || null,
+        salaryAdjustmentPercentage,
+        salaryAdjustmentAmount,
+        salaryAdjustmentReason: salaryAdjustment?.reason || null,
         ...calc,
       });
       totG += calc.gross; totNE += calc.nssfEmployee; totNR += calc.nssfEmployer; totP += calc.paye; totN += calc.net;

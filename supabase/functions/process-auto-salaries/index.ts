@@ -31,6 +31,23 @@ Deno.serve(async (req) => {
     const profileMap = new Map<string, any>();
     for (const p of taxProfiles || []) profileMap.set(String(p.employee_id), p);
 
+    // Load any temporary salary adjustments effective for this payroll month.
+    // Base salaries remain unchanged on the employee record.
+    const payrollDate = new Date(`${currentMonth} 1`);
+    if (Number.isNaN(payrollDate.getTime())) throw new Error(`Invalid payroll month: ${currentMonth}`);
+    const payrollDateKey = payrollDate.toISOString().slice(0, 10);
+    const { data: salaryAdjustments, error: adjustmentError } = await supabase
+      .from('salary_adjustments')
+      .select('id, employee_email, pay_percentage, reason, start_date, end_date')
+      .eq('status', 'active')
+      .lte('start_date', payrollDateKey)
+      .gte('end_date', payrollDateKey);
+    if (adjustmentError) throw new Error(`Failed to load salary adjustments: ${adjustmentError.message}`);
+    const adjustmentMap = new Map<string, any>();
+    for (const adjustment of salaryAdjustments || []) {
+      adjustmentMap.set(String(adjustment.employee_email).toLowerCase(), adjustment);
+    }
+
     // 1. Get all active employees
     const { data: employees, error: empError } = await supabase
       .from('employees')
@@ -74,7 +91,11 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const grossSalary = emp.salary || 0;
+        const baseSalary = Number(emp.salary) || 0;
+        const salaryAdjustment = adjustmentMap.get(String(emp.email).toLowerCase()) || null;
+        const payPercentage = salaryAdjustment ? Number(salaryAdjustment.pay_percentage) : 100;
+        const grossSalary = Math.round(baseSalary * payPercentage / 100);
+        const salaryAdjustmentAmount = Math.max(0, baseSalary - grossSalary);
         if (grossSalary <= 0) {
           console.log(`⏭️ No salary configured for ${emp.name}`);
           results.push({ employee: emp.name, status: 'skipped', reason: 'No salary' });
@@ -323,6 +344,9 @@ Deno.serve(async (req) => {
             ? `Loan installment recovery: UGX ${totalLoanDeduction.toLocaleString()} (${loanDetails.map((d: any) => `loan ${String(d.loan_id).slice(0, 8)} – UGX ${Number(d.deduction).toLocaleString()}, balance left UGX ${Number(d.remaining_after).toLocaleString()}`).join('; ')})`
             : null,
           remittanceAmount > 0 ? `Salary remittance: UGX ${remittanceAmount.toLocaleString()}` : null,
+          salaryAdjustmentAmount > 0
+            ? `Temporary salary adjustment: ${payPercentage}% payable; UGX ${salaryAdjustmentAmount.toLocaleString()} withheld (${salaryAdjustment.reason})`
+            : null,
         ].filter(Boolean).join(' | ') || null;
 
         // 3. Create salary payment record
@@ -414,7 +438,11 @@ Deno.serve(async (req) => {
                 reference_type: 'salary_payment',
                 reference_id: paymentRecord.id,
                 performed_by: 'Auto-Salary System',
+                base_salary: baseSalary,
                 gross_salary: grossSalary,
+                salary_adjustment_id: salaryAdjustment?.id || null,
+                salary_adjustment_percentage: payPercentage,
+                salary_adjustment_amount: salaryAdjustmentAmount,
                 advance_deduction: totalAdvanceDeduction,
                 net_salary: netSalary,
                 remittance_amount: remittanceAmount,
@@ -535,7 +563,10 @@ Deno.serve(async (req) => {
         results.push({
           employee: emp.name,
           status: 'processed',
+          baseGross: baseSalary,
           gross: grossSalary,
+          salaryAdjustmentPercentage: payPercentage,
+          salaryAdjustmentAmount,
           nssfEmployee: stat.nssfEmployee,
           nssfEmployer: stat.nssfEmployer,
           paye: stat.paye,
