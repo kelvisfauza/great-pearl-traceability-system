@@ -3,7 +3,7 @@ import AppSidebar from "./AppSidebar";
 import MessagingPanel from "./messaging/MessagingPanel";
 import ChatButton from "./messaging/ChatButton";
 import NotificationButton from "./notifications/NotificationButton";
-import { AccountButton } from "./AccountButton";
+import VaultButton from "./vault/VaultButton";
 import NotificationPanel from "./notifications/NotificationPanel";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { ThemeToggle } from "./ThemeToggle";
@@ -109,7 +109,7 @@ const DashboardLayout = ({ children, title, subtitle, showMessageButton = true }
               />
             )}
             <ThemeToggle />
-            {!isMobile && !isTrainee && <AccountButton />}
+            {!isMobile && !isTrainee && <VaultButton />}
           </div>
         </header>
 
@@ -124,7 +124,7 @@ const DashboardLayout = ({ children, title, subtitle, showMessageButton = true }
         {isMobile && (
           <div className="fixed bottom-0 left-0 right-0 z-30 bg-background border-t border-border print:hidden">
             <div className="flex items-center justify-around px-4 py-3">
-              <AccountButton />
+              {!isTrainee && <VaultButton />}
               {showMessageButton && (
                 <ChatButton
                   onClick={toggleMessaging}

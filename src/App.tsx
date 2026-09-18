@@ -166,6 +166,8 @@ import MaintenanceGuard from "./components/MaintenanceGuard";
 import LocationPermissionGate from "./components/LocationPermissionGate";
 import MaintenanceRecovery from "./pages/MaintenanceRecovery";
 import QuickLoans from "./pages/QuickLoans";
+import Vault from "./pages/Vault";
+import VaultGate from "./components/vault/VaultGate";
 import Overdraft from "./pages/Overdraft";
 import OverdraftAdmin from "./pages/admin/OverdraftAdmin";
 import OverdraftAnalytics from "./pages/admin/OverdraftAnalytics";
@@ -464,14 +466,23 @@ const App: React.ComponentType = () => {
                     <Suppliers />
                   </ProtectedRoute>
                 } />
+                <Route path="/vault" element={
+                  <ProtectedRoute>
+                    <Vault />
+                  </ProtectedRoute>
+                } />
                 <Route path="/quick-loans" element={
                   <ProtectedRoute>
-                    <QuickLoans />
+                    <VaultGate title="Loans & Salary Advances">
+                      <QuickLoans />
+                    </VaultGate>
                   </ProtectedRoute>
                 } />
                 <Route path="/overdraft" element={
                   <ProtectedRoute>
-                    <Overdraft />
+                    <VaultGate title="Overdraft">
+                      <Overdraft />
+                    </VaultGate>
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/overdraft" element={

@@ -3,9 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { 
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger 
-} from '@/components/ui/sheet';
-import { 
   Wallet, DollarSign, TrendingUp, Plus, Smartphone, Printer, Send,
   Clock, CheckCircle, XCircle, AlertCircle, Star, Zap, Award, Gift, FileText,
   Landmark, Eye, EyeOff, Ban, CreditCard
@@ -334,10 +331,10 @@ export const AccountButton = () => {
 
   if (loading) {
     return (
-      <Button variant="outline" size="sm" disabled>
-        <Wallet className="h-4 w-4 mr-2" />
-        Loading...
-      </Button>
+      <div className="flex items-center gap-2 py-10 justify-center text-muted-foreground">
+        <Wallet className="h-4 w-4" />
+        Loading your wallet...
+      </div>
     );
   }
 
@@ -358,43 +355,8 @@ export const AccountButton = () => {
   const netOwnFunds = Math.max(0, walletBalance - pendingAmount);
   const availableForWithdrawal = netOwnFunds + overdraftHeadroom;
 
-  return (
-    <>
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button variant="outline" size="sm" className="relative gap-1.5 max-w-full px-2 sm:px-3 sm:gap-2">
-            <Wallet className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">
-              {balanceHidden ? '••••' : (
-                <>
-                  <span className="sm:hidden">{formatCompact(effectiveWalletBalance)}</span>
-                  <span className="hidden sm:inline">{formatCurrency(effectiveWalletBalance)}</span>
-                </>
-              )}
-            </span>
-            {!balanceHidden && stats && stats.todayEarnings > 0 && (
-              <Badge variant="secondary" className="ml-0.5 text-[10px] sm:text-xs bg-green-100 text-green-700 px-1 py-0 flex-shrink-0">
-                +{stats.todayEarnings >= 1000 ? `${Math.round(stats.todayEarnings / 1000)}K` : stats.todayEarnings.toLocaleString()}
-              </Badge>
-            )}
-            <span
-              role="button"
-              className="ml-0.5 cursor-pointer text-muted-foreground hover:text-foreground flex-shrink-0"
-              onClick={(e) => { e.stopPropagation(); setBalanceHidden(h => { const next = !h; localStorage.setItem('balanceHidden', String(next)); return next; }); }}
-            >
-              {balanceHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-            </span>
-          </Button>
-        </SheetTrigger>
-        <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
-              <Wallet className="h-5 w-5" />
-              My Account & Loyalty
-            </SheetTitle>
-          </SheetHeader>
-
-          <div className="mt-6 space-y-5">
+  const panelContent = (
+          <div className="mt-2 space-y-5">
             {/* Balance Card */}
             <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
               <CardHeader className="pb-2">
@@ -780,9 +742,11 @@ export const AccountButton = () => {
             <TransactionStatement open={showStatement} onOpenChange={setShowStatement} currentBalance={walletBalance} spendableBalance={availableLoyalty} balanceBroughtForward={breakdown.balanceBroughtForward} thisMonthEarnings={breakdown.thisMonthNet} />
 
           </div>
-        </SheetContent>
-      </Sheet>
+  );
 
+  return (
+    <>
+      {panelContent}
       <MoneyRequestModal open={showMoneyRequest} onOpenChange={setShowMoneyRequest} />
       <WithdrawalModal 
         open={showWithdrawal} 

@@ -15503,6 +15503,36 @@ export type Database = {
         }
         Relationships: []
       }
+      vault_reset_codes: {
+        Row: {
+          code_hash: string
+          created_at: string
+          expires_at: string
+          id: string
+          used: boolean
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          code_hash: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          used?: boolean
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          code_hash?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          used?: boolean
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       vehicle_trips: {
         Row: {
           arrival_time: string | null
@@ -15737,6 +15767,36 @@ export type Database = {
           updated_at?: string | null
           valid_until?: string | null
           workstation?: string | null
+        }
+        Relationships: []
+      }
+      wallet_vault_pins: {
+        Row: {
+          created_at: string
+          failed_attempts: number
+          last_unlocked_at: string | null
+          locked_until: string | null
+          pin_hash: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          failed_attempts?: number
+          last_unlocked_at?: string | null
+          locked_until?: string | null
+          pin_hash: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          failed_attempts?: number
+          last_unlocked_at?: string | null
+          locked_until?: string | null
+          pin_hash?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -17202,6 +17262,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      hash_vault_reset_code: { Args: { p_code: string }; Returns: string }
       identify_face_descriptor: {
         Args: { p_descriptor: Json }
         Returns: {
@@ -17824,6 +17885,12 @@ export type Database = {
         Args: { p_amount: number; p_user_id: string }
         Returns: boolean
       }
+      vault_pin_status: { Args: never; Returns: Json }
+      vault_set_pin: {
+        Args: { p_current_pin?: string; p_pin: string; p_reset_code?: string }
+        Returns: Json
+      }
+      vault_verify_pin: { Args: { p_pin: string }; Returns: Json }
       verify_2fa_code: {
         Args: { _code: string; _email: string; _phone: string }
         Returns: Json
