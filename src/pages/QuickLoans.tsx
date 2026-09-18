@@ -1942,7 +1942,7 @@ const QuickLoans = () => {
       installmentAmount: installment,
       totalInterest: Math.max(0, total - principal),
       totalRepayable: total,
-      firstRepaymentDate: getFirstRepaymentDate(new Date(), freq),
+      firstRepaymentDate: getFirstRepaymentDate(new Date(), freq).toLocaleDateString(),
       borrowerName: loan.employee_name,
       borrowerEmail: loan.employee_email,
       borrowerPhone: loan.employee_phone,
