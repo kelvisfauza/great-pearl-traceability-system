@@ -277,13 +277,14 @@ const SamplingOrdersTab = () => {
       return data as any;
     },
     onSuccess: (order) => {
-      toast({ title: "Past sampling order recorded", description: `${order.order_number} · marked received & assessed` });
+      toast({ title: "Past sampling order recorded", description: `${order.order_number} · marked received & assessed · no lab email sent` });
       setPast({
         sample_date: "", supplier_name: "", sample_type: "", sampled_by: "", received_by: "",
         assessed_by: "", grams: "", moisture: "", linked_batch_number: "", observation: "", notes: "",
       });
       queryClient.invalidateQueries({ queryKey: ["quality-sampling-orders"] });
       printSamplingOrder(order);
+      // Backdated / past samples are intentionally silent — no notify-sampling-order call.
     },
     onError: (e: any) => toast({ title: "Could not save", description: e.message, variant: "destructive" }),
   });
@@ -403,6 +404,7 @@ const SamplingOrdersTab = () => {
                 <CardTitle className="flex items-center gap-2"><HistoryIcon className="h-5 w-5" /> Past Samples (no sampling order)</CardTitle>
                 <CardDescription>
                   Record samples that were already analysed and priced. They are saved as received in the lab and assessed, then printed with a QR code.
+                  <span className="ml-1 text-destructive">No email notification is sent for backdated records.</span>
                 </CardDescription>
               </div>
               <Button variant="outline" size="sm" onClick={() => setShowBackfill((s) => !s)}>
