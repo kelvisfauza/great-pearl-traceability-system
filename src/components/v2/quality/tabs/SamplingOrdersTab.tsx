@@ -400,7 +400,7 @@ const SamplingOrdersTab = () => {
           <CardHeader>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <CardTitle className="flex items-center gap-2"><History className="h-5 w-5" /> Past Samples (no sampling order)</CardTitle>
+                <CardTitle className="flex items-center gap-2"><HistoryIcon className="h-5 w-5" /> Past Samples (no sampling order)</CardTitle>
                 <CardDescription>
                   Record samples that were already analysed and priced. They are saved as received in the lab and assessed, then printed with a QR code.
                 </CardDescription>
