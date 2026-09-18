@@ -26,6 +26,8 @@ import QualityOverviewTab from "@/components/v2/quality/tabs/QualityOverviewTab"
 import DispatchMonitoringTab from "@/components/v2/quality/tabs/DispatchMonitoringTab";
 import QualityAnalysisFormDownload from "@/components/expenses/QualityAnalysisFormDownload";
 import AdminRejectedLotsReview from "@/components/admin/AdminRejectedLotsReview";
+import PriceComparisonTab from "@/components/v2/quality/tabs/PriceComparisonTab";
+import { Scale } from "lucide-react";
 
 const allTabs = [
   { id: "overview", label: "Overview", icon: LayoutGrid },
@@ -42,6 +44,7 @@ const allTabs = [
   { id: "defects", label: "Defect Library", icon: BookOpen },
   { id: "analytics", label: "Analytics", icon: BarChart3, headOnly: true },
   { id: "warehouse", label: "Warehouse", icon: Warehouse },
+  { id: "price-comparison", label: "Price Comparison", icon: Scale, headOnly: true },
   { id: "reports", label: "Reports", icon: FileText, headOnly: true },
   { id: "recommendations", label: "Recommendations", icon: Lightbulb, headOnly: true },
   { id: "training", label: "Training", icon: GraduationCap },
@@ -101,6 +104,7 @@ const QualityDepartment = () => {
               <TabsContent value="defects"><DefectLibraryTab /></TabsContent>
               {isQualityHead && <TabsContent value="analytics"><SupplierAnalyticsTab /></TabsContent>}
               <TabsContent value="warehouse"><WarehouseMonitoringTab /></TabsContent>
+              {isQualityHead && <TabsContent value="price-comparison"><PriceComparisonTab /></TabsContent>}
               {isQualityHead && <TabsContent value="reports"><ReportsTab /></TabsContent>}
               {isQualityHead && <TabsContent value="recommendations"><RecommendationsTab /></TabsContent>}
               <TabsContent value="training"><TrainingTab /></TabsContent>
