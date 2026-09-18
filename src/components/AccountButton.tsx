@@ -358,41 +358,8 @@ export const AccountButton = () => {
   const netOwnFunds = Math.max(0, walletBalance - pendingAmount);
   const availableForWithdrawal = netOwnFunds + overdraftHeadroom;
 
-  return (
-    <>
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button variant="outline" size="sm" className="relative gap-1.5 max-w-full px-2 sm:px-3 sm:gap-2">
-            <Wallet className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">
-              {balanceHidden ? '••••' : (
-                <>
-                  <span className="sm:hidden">{formatCompact(effectiveWalletBalance)}</span>
-                  <span className="hidden sm:inline">{formatCurrency(effectiveWalletBalance)}</span>
-                </>
-              )}
-            </span>
-            {!balanceHidden && stats && stats.todayEarnings > 0 && (
-              <Badge variant="secondary" className="ml-0.5 text-[10px] sm:text-xs bg-green-100 text-green-700 px-1 py-0 flex-shrink-0">
-                +{stats.todayEarnings >= 1000 ? `${Math.round(stats.todayEarnings / 1000)}K` : stats.todayEarnings.toLocaleString()}
-              </Badge>
-            )}
-            <span
-              role="button"
-              className="ml-0.5 cursor-pointer text-muted-foreground hover:text-foreground flex-shrink-0"
-              onClick={(e) => { e.stopPropagation(); setBalanceHidden(h => { const next = !h; localStorage.setItem('balanceHidden', String(next)); return next; }); }}
-            >
-              {balanceHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-            </span>
-          </Button>
-        </SheetTrigger>
-        <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
-              <Wallet className="h-5 w-5" />
-              My Account & Loyalty
-            </SheetTitle>
-          </SheetHeader>
+  const panelContent = (
+
 
           <div className="mt-6 space-y-5">
             {/* Balance Card */}
