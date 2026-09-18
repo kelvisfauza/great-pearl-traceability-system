@@ -167,12 +167,16 @@ const LoanTermsDialog: React.FC<Props> = ({ open, onOpenChange, application, sub
       <DialogContent className="max-w-3xl max-h-[92vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-primary" /> Loan Application Form & Terms
+            <ShieldCheck className="h-5 w-5 text-primary" /> {title || 'Loan Application Form & Terms'}
           </DialogTitle>
         </DialogHeader>
 
         <ScrollArea className="flex-1 pr-3">
           <div className="space-y-4 text-sm">
+            {notice && (
+              <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 text-xs">{notice}</div>
+            )}
+
             <div className="rounded-lg border p-3">
               <div className="font-semibold mb-2">A. Applicant</div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
