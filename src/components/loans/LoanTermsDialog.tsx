@@ -96,9 +96,16 @@ interface Props {
   application: LoanTermsApplication | null;
   submitting?: boolean;
   onAccept: (meta: { version: string; signature: string; acceptedAt: string }) => void;
+  /** Optional header title, e.g. for signing revised terms */
+  title?: string;
+  /** Optional accept button label */
+  acceptLabel?: string;
+  /** Optional banner shown above the form (e.g. the admin's reason for revision) */
+  notice?: string;
 }
 
-const LoanTermsDialog: React.FC<Props> = ({ open, onOpenChange, application, submitting, onAccept }) => {
+const LoanTermsDialog: React.FC<Props> = ({ open, onOpenChange, application, submitting, onAccept, title, acceptLabel, notice }) => {
+
   const [agreed, setAgreed] = useState(false);
   const [deductionOk, setDeductionOk] = useState(false);
   const [truthful, setTruthful] = useState(false);
