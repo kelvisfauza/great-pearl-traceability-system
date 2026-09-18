@@ -124,6 +124,10 @@ const printSamplingOrder = (order: any) => {
     <tr><td class="k">Sampled By</td><td>${order.sampled_by}</td></tr>
     <tr><td class="k">Created By</td><td>${order.created_by_name || order.created_by_email}</td></tr>
     ${order.moisture_percent != null ? `<tr><td class="k">Moisture Reading</td><td><strong>${order.moisture_percent}%</strong></td></tr>` : ""}
+    ${order.received_grams != null ? `<tr><td class="k">Grams Received</td><td>${order.received_grams} g</td></tr>` : ""}
+    ${order.received_by ? `<tr><td class="k">Received In Lab By</td><td>${order.received_by}${order.received_at ? ` on ${format(new Date(order.received_at), "dd MMM yyyy, HH:mm")}` : ""}</td></tr>` : ""}
+    ${order.assessed_by ? `<tr><td class="k">Assessed By</td><td>${order.assessed_by}${order.assessed_at ? ` on ${format(new Date(order.assessed_at), "dd MMM yyyy, HH:mm")}` : ""}</td></tr>` : ""}
+    ${order.linked_batch_number ? `<tr><td class="k">Batch / Lot</td><td>${order.linked_batch_number}</td></tr>` : ""}
     ${order.notes ? `<tr><td class="k">Notes</td><td>${order.notes}</td></tr>` : ""}
   </table>
   <div class="qrwrap"><img src="${qrUrl}" alt="QR" /><div class="code">${order.order_number}</div></div>
