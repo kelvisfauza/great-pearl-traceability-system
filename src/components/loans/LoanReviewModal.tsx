@@ -11,6 +11,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { CheckCircle, XCircle, User, Wallet, Shield, Calendar, AlertTriangle, TrendingUp, Banknote, Printer, HandCoins, Brain } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
+export interface LoanTermsRevision {
+  amount: number;
+  months: number;
+  frequency: RepaymentFrequency;
+  totalRepayable: number;
+  installment: number;
+  numInstallments: number;
+  note: string;
+}
+
 interface LoanReviewModalProps {
   loan: any;
   open: boolean;
@@ -18,14 +28,20 @@ interface LoanReviewModalProps {
   onApprove: (loanId: string) => void;
   onReject: (loanId: string, reason: string) => void;
   onCounterOffer?: (loanId: string, amount: number, comments: string) => void;
+  onReviseTerms?: (loanId: string, revision: LoanTermsRevision) => void;
   submitting: boolean;
 }
 
-const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOffer, submitting }: LoanReviewModalProps) => {
+const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOffer, onReviseTerms, submitting }: LoanReviewModalProps) => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [counterOfferAmount, setCounterOfferAmount] = useState('');
   const [counterOfferComments, setCounterOfferComments] = useState('');
   const [showCounterOffer, setShowCounterOffer] = useState(false);
+  const [showRevise, setShowRevise] = useState(false);
+  const [revAmount, setRevAmount] = useState('');
+  const [revMonths, setRevMonths] = useState('');
+  const [revFreq, setRevFreq] = useState<RepaymentFrequency>('monthly');
+  const [revNote, setRevNote] = useState('');
   const [borrowerDetails, setBorrowerDetails] = useState<any>(null);
   const [guarantorDetails, setGuarantorDetails] = useState<any>(null);
   const [borrowerLoans, setBorrowerLoans] = useState<any[]>([]);
@@ -39,8 +55,14 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
   useEffect(() => {
     if (open && loan) {
       fetchReviewData();
+      setShowRevise(false);
+      setRevAmount(String(loan.loan_amount ?? ''));
+      setRevMonths(String(loan.duration_months ?? ''));
+      setRevFreq((loan.repayment_frequency || 'monthly') as RepaymentFrequency);
+      setRevNote('');
     }
   }, [open, loan]);
+
 
   const fetchReviewData = async () => {
     if (!loan) return;
