@@ -28,40 +28,18 @@ import { generateLoanAgreementPdf } from '@/utils/loanAgreementPdf';
 import LoanAppealDialog from '@/components/loans/LoanAppealDialog';
 import LoanTermsDialog, { LOAN_TERMS_VERSION, type LoanTermsApplication } from '@/components/loans/LoanTermsDialog';
 
-// Loan types with their monthly interest rates
-type LoanType = 'quick' | 'long_term' | 'pure_salary' | 'business';
-type RepaymentFrequency = 'weekly' | 'monthly' | 'bullet';
+// Loan types, rates and shared maths live in src/lib/loanMath.ts
+import {
+  LOAN_TYPE_CONFIG,
+  getGuarantorsRequired,
+  getDailyRate,
+  getLoanSchedule,
+  getCappedInterest,
+  computeLoanTerms,
+  type LoanType,
+  type RepaymentFrequency,
+} from '@/lib/loanMath';
 
-const LOAN_TYPE_CONFIG: Record<LoanType, { label: string; monthlyRate: number; maxRate: number; description: string; frequencies: RepaymentFrequency[]; maxMonths?: number; requiresGuarantor?: boolean; guarantorsRequired?: number; minAmount?: number }> = {
-  quick: { label: 'Quick Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Short-term, weekly repayments (total interest cap 35%)', frequencies: ['weekly'], maxMonths: 6, requiresGuarantor: true, guarantorsRequired: 1 },
-  long_term: { label: 'Long-Term Loan', monthlyRate: 10, maxRate: 35, description: '10%/month base – Flexible repayment, monthly or bullet (total interest cap 35%)', frequencies: ['monthly', 'bullet'], maxMonths: 6, requiresGuarantor: true, guarantorsRequired: 1 },
-  pure_salary: { label: 'Pure Salary Loan', monthlyRate: 15, maxRate: 45, description: '15%/month – Repaid by 50% of monthly salary (no guarantor, max 3 months)', frequencies: ['monthly'], maxMonths: 3, requiresGuarantor: false },
-  business: { label: 'Employee Business Loan', monthlyRate: 4, maxRate: 30, description: '4%/month – Low-rate business capital, minimum UGX 500,000, flexible monthly repayment up to 8 months, 2 guarantors required (total interest cap 30%)', frequencies: ['monthly'], maxMonths: 8, requiresGuarantor: true, guarantorsRequired: 2, minAmount: 500000 },
-};
-
-
-const getGuarantorsRequired = (t: LoanType) =>
-  LOAN_TYPE_CONFIG[t].requiresGuarantor === false ? 0 : (LOAN_TYPE_CONFIG[t].guarantorsRequired ?? 1);
-
-// Helper: calculate daily interest rate from monthly rate
-const getDailyRate = (loanType: LoanType) => {
-  const monthlyRate = LOAN_TYPE_CONFIG[loanType].monthlyRate;
-  return monthlyRate / 30;
-};
-
-// Helper: calculate total days and weeks for a duration
-const getLoanSchedule = (months: number) => {
-  const totalDays = months * 30;
-  const totalWeeks = months * 4; // 4 weeks per month
-  return { totalDays, totalWeeks };
-};
-
-// Helper: get total interest capped at maxRate
-const getCappedInterest = (principal: number, monthlyRate: number, months: number, maxRate: number) => {
-  const rawInterest = principal * (monthlyRate / 100) * months;
-  const maxInterest = principal * (maxRate / 100);
-  return Math.min(rawInterest, maxInterest);
-};
 
 const getFirstRepaymentDate = (startDateInput: Date | string, frequency: RepaymentFrequency) => {
   const startDate = new Date(startDateInput);
