@@ -395,6 +395,84 @@ const SamplingOrdersTab = () => {
         </Card>
       )}
 
+      {canCreate && (
+        <Card>
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <CardTitle className="flex items-center gap-2"><History className="h-5 w-5" /> Past Samples (no sampling order)</CardTitle>
+                <CardDescription>
+                  Record samples that were already analysed and priced. They are saved as received in the lab and assessed, then printed with a QR code.
+                </CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setShowBackfill((s) => !s)}>
+                {showBackfill ? "Hide" : "Add past sample"}
+              </Button>
+            </div>
+          </CardHeader>
+          {showBackfill && (
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Date &amp; time the sample was taken <span className="text-destructive">*</span></Label>
+                <Input type="datetime-local" value={past.sample_date} onChange={(e) => setPast({ ...past, sample_date: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Supplier name <span className="text-destructive">*</span></Label>
+                <Input value={past.supplier_name} onChange={(e) => setPast({ ...past, supplier_name: e.target.value })} placeholder="Supplier / seller name" />
+              </div>
+              <div className="space-y-2">
+                <Label>Sample type <span className="text-destructive">*</span></Label>
+                <Select value={past.sample_type} onValueChange={(v) => setPast({ ...past, sample_type: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select sample type" /></SelectTrigger>
+                  <SelectContent>
+                    {SAMPLE_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Sampled by <span className="text-destructive">*</span></Label>
+                <Input value={past.sampled_by} onChange={(e) => setPast({ ...past, sampled_by: e.target.value })} placeholder="Who took the sample" />
+              </div>
+              <div className="space-y-2">
+                <Label>Received in lab by</Label>
+                <Input value={past.received_by} onChange={(e) => setPast({ ...past, received_by: e.target.value })} placeholder="Leave blank to use the assessor" />
+              </div>
+              <div className="space-y-2">
+                <Label>Assessment made by <span className="text-destructive">*</span></Label>
+                <Input value={past.assessed_by} onChange={(e) => setPast({ ...past, assessed_by: e.target.value })} placeholder="Who analysed / priced the sample" />
+              </div>
+              <div className="space-y-2">
+                <Label>Grams received</Label>
+                <Input type="number" min="1" step="1" inputMode="decimal" value={past.grams} onChange={(e) => setPast({ ...past, grams: e.target.value })} placeholder="e.g. 500" />
+              </div>
+              <div className="space-y-2">
+                <Label>Moisture reading (%)</Label>
+                <Input type="number" min="0" max="100" step="0.1" inputMode="decimal" value={past.moisture} onChange={(e) => setPast({ ...past, moisture: e.target.value })} placeholder="e.g. 12.5" />
+              </div>
+              <div className="space-y-2">
+                <Label>Batch / lot number (optional)</Label>
+                <Input value={past.linked_batch_number} onChange={(e) => setPast({ ...past, linked_batch_number: e.target.value })} placeholder="e.g. 20260202002" />
+              </div>
+              <div className="space-y-2">
+                <Label>Observation (optional)</Label>
+                <Input value={past.observation} onChange={(e) => setPast({ ...past, observation: e.target.value })} placeholder="Condition of the sample" />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label>Notes (optional)</Label>
+                <Textarea rows={2} value={past.notes} onChange={(e) => setPast({ ...past, notes: e.target.value })} />
+              </div>
+              <div className="md:col-span-2">
+                <Button onClick={() => backfillOrder.mutate()} disabled={backfillOrder.isPending}>
+                  {backfillOrder.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Printer className="h-4 w-4 mr-2" />}
+                  Save as assessed &amp; Print
+                </Button>
+              </div>
+            </CardContent>
+          )}
+        </Card>
+      )}
+
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Beaker className="h-5 w-5" /> Sample Orders (latest 20)</CardTitle>
