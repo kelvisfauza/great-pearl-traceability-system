@@ -15,6 +15,7 @@ import { useUserAccount } from '@/hooks/useUserAccount';
 import { useLoyaltyStats } from '@/hooks/useLoyaltyStats';
 import { useBonusBalance } from '@/hooks/useBonusBalance';
 import { useWithdrawalControl } from '@/hooks/useWithdrawalControl';
+import { useBalanceReveal } from '@/hooks/useBalanceReveal';
 import { MoneyRequestModal } from './MoneyRequestModal';
 import { WithdrawalModal } from './WithdrawalModal';
 import { DepositModal } from './DepositModal';
