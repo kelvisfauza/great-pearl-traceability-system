@@ -21,6 +21,7 @@ interface UnifiedVerificationProps {
 export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }: UnifiedVerificationProps) => {
   const [method, setMethod] = useState<VerificationMethod>('email');
   const [code, setCode] = useState('');
+  const codeState = code;
   const [dobInput, setDobInput] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSending, setIsSending] = useState(false);
