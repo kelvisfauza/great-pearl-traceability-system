@@ -459,7 +459,7 @@ const QuickLoans = () => {
     }
 
     // Block new loans only if user has a pending (not yet active) application
-    const pendingLoans = myLoans.filter(l => ['pending_guarantor', 'pending_admin', 'approved', 'disbursed', 'counter_offered'].includes(l.status));
+    const pendingLoans = myLoans.filter(l => ['pending_guarantor', 'pending_admin', 'approved', 'disbursed', 'counter_offered', 'revision_pending_signature'].includes(l.status));
     if (pendingLoans.length > 0) {
       toast({ title: "Blocked", description: "You have a pending loan application. Wait for it to be processed before requesting a new one.", variant: "destructive" });
       return;
@@ -1735,7 +1735,7 @@ const QuickLoans = () => {
     }
 
     // Check for pending loans
-    const pendingLoans = myLoans.filter(l => ['pending_guarantor', 'pending_admin', 'approved', 'disbursed', 'counter_offered'].includes(l.status));
+    const pendingLoans = myLoans.filter(l => ['pending_guarantor', 'pending_admin', 'approved', 'disbursed', 'counter_offered', 'revision_pending_signature'].includes(l.status));
     if (pendingLoans.length > 0) {
       toast({ title: "Blocked", description: "You have a pending loan application. Wait for it to be processed first.", variant: "destructive" });
       return;
@@ -2228,6 +2228,7 @@ const QuickLoans = () => {
       defaulted: { variant: 'destructive', label: 'Defaulted' },
       guarantor_declined: { variant: 'destructive', label: 'Guarantor Declined' },
       counter_offered: { variant: 'secondary', label: 'Counter Offer' },
+      revision_pending_signature: { variant: 'secondary', label: 'Awaiting Applicant Signature' },
       topped_up: { variant: 'outline', label: 'Topped Up' },
     };
     const s = map[status] || { variant: 'outline' as const, label: status };
@@ -3603,6 +3604,7 @@ const QuickLoans = () => {
                             ? (!loan.guarantor_approved ? `${loan.guarantor_name || 'Guarantor 1'} (G1)` : needsG2 && !loan.guarantor2_approved ? `${loan.guarantor2_name || 'Guarantor 2'} (G2)` : 'Guarantor')
                             : loan.status === 'pending_admin' ? 'Administrator'
                             : loan.status === 'counter_offered' ? `${loan.employee_name} (borrower)`
+                            : loan.status === 'revision_pending_signature' ? `${loan.employee_name} (signing revised terms)`
                             : '—';
                           return (
                           <TableRow key={loan.id}>
