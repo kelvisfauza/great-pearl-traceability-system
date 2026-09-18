@@ -3866,7 +3866,18 @@ const QuickLoans = () => {
 
         submitting={submitting}
       />
+      <LoanTermsDialog
+        open={!!revisionLoan}
+        onOpenChange={(o) => { if (!o) setRevisionLoan(null); }}
+        application={revisionApplication}
+        submitting={submitting}
+        title="Revised Loan Agreement — Signature Required"
+        acceptLabel="Accept & Sign Revised Terms"
+        notice={revisionLoan ? `Management revised your loan terms${revisionLoan.revision_by ? ` (${revisionLoan.revision_by})` : ''}. Reason: ${revisionLoan.revision_note || '—'}. Signing below replaces the terms of your original application.` : undefined}
+        onAccept={(meta) => handleSignRevision(meta)}
+      />
       <LoanRepaymentSlip
+
         open={showRepaymentSlip}
         onClose={() => setShowRepaymentSlip(false)}
         loanData={repaymentSlipData}
