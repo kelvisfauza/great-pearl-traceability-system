@@ -104,6 +104,7 @@ const QualityDepartment = () => {
               <TabsContent value="defects"><DefectLibraryTab /></TabsContent>
               {isQualityHead && <TabsContent value="analytics"><SupplierAnalyticsTab /></TabsContent>}
               <TabsContent value="warehouse"><WarehouseMonitoringTab /></TabsContent>
+              {isQualityHead && <TabsContent value="price-comparison"><PriceComparisonTab /></TabsContent>}
               {isQualityHead && <TabsContent value="reports"><ReportsTab /></TabsContent>}
               {isQualityHead && <TabsContent value="recommendations"><RecommendationsTab /></TabsContent>}
               <TabsContent value="training"><TrainingTab /></TabsContent>
