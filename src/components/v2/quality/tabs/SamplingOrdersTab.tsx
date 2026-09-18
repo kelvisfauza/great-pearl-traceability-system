@@ -237,6 +237,57 @@ const SamplingOrdersTab = () => {
     onError: (e: any) => toast({ title: "Could not save", description: e.message, variant: "destructive" }),
   });
 
+  const backfillOrder = useMutation({
+    mutationFn: async () => {
+      if (!past.sample_date) throw new Error("Pick the date the sample was taken");
+      if (!past.supplier_name.trim() || !past.sample_type || !past.sampled_by.trim()) {
+        throw new Error("Supplier, sample type and sampled by are required");
+      }
+      if (!past.assessed_by.trim()) throw new Error("Type who made the assessment");
+      const grams = past.grams === "" ? null : parseFloat(past.grams);
+      const moisture = past.moisture === "" ? null : parseFloat(past.moisture);
+      if (moisture !== null && (isNaN(moisture) || moisture < 0 || moisture > 100)) {
+        throw new Error("Moisture must be between 0 and 100%");
+      }
+      const when = new Date(past.sample_date).toISOString();
+      const payload = {
+        supplier_name: past.supplier_name.trim(),
+        sample_type: past.sample_type,
+        delivery_time: when,
+        sampled_by: past.sampled_by.trim(),
+        notes: past.notes.trim() || null,
+        created_by_email: employee?.email || "",
+        created_by_name: (employee as any)?.name || null,
+        status: "assessed",
+        received_grams: grams,
+        moisture_percent: moisture,
+        received_at: when,
+        received_by: past.received_by.trim() || past.assessed_by.trim(),
+        received_observation: past.observation.trim() || null,
+        assessed_by: past.assessed_by.trim(),
+        assessed_at: when,
+        linked_batch_number: past.linked_batch_number.trim() || null,
+      };
+      const { data, error } = await supabase
+        .from("quality_sampling_orders" as any)
+        .insert(payload)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as any;
+    },
+    onSuccess: (order) => {
+      toast({ title: "Past sampling order recorded", description: `${order.order_number} · marked received & assessed` });
+      setPast({
+        sample_date: "", supplier_name: "", sample_type: "", sampled_by: "", received_by: "",
+        assessed_by: "", grams: "", moisture: "", linked_batch_number: "", observation: "", notes: "",
+      });
+      queryClient.invalidateQueries({ queryKey: ["quality-sampling-orders"] });
+      printSamplingOrder(order);
+    },
+    onError: (e: any) => toast({ title: "Could not save", description: e.message, variant: "destructive" }),
+  });
+
   const receiverName = (employee as any)?.name || employee?.email || "";
   const [receipt, setReceipt] = useState({ grams: "", observation: "", moisture: "" });
 
