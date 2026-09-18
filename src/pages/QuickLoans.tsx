@@ -27,6 +27,7 @@ import LoanRepaymentSlip from '@/components/loans/LoanRepaymentSlip';
 import { generateLoanAgreementPdf } from '@/utils/loanAgreementPdf';
 import LoanAppealDialog from '@/components/loans/LoanAppealDialog';
 import LoanTermsDialog, { LOAN_TERMS_VERSION, type LoanTermsApplication } from '@/components/loans/LoanTermsDialog';
+import { printLoanRevisionAgreement } from '@/utils/loanRevisionAgreement';
 
 // Loan types, rates and shared maths live in src/lib/loanMath.ts
 import {
@@ -1912,6 +1913,7 @@ const QuickLoans = () => {
 
   // ===== Admin-revised terms: applicant signs before final approval =====
   const [revisionLoan, setRevisionLoan] = useState<any>(null);
+  const [revisionPrintLoan, setRevisionPrintLoan] = useState<any>(null);
 
   const revisionApplication: LoanTermsApplication | null = React.useMemo(() => {
     const loan = revisionLoan;
@@ -3600,6 +3602,7 @@ const QuickLoans = () => {
                             approved ? <Badge variant="default" className="text-xs">Approved</Badge>
                               : declined ? <Badge variant="destructive" className="text-xs">Declined</Badge>
                               : <Badge variant="outline" className="text-xs">Pending</Badge>;
+                          const pendingRevision = !!loan.revision_amount && !loan.revision_signed_at;
                           const awaiting = loan.status === 'pending_guarantor'
                             ? (!loan.guarantor_approved ? `${loan.guarantor_name || 'Guarantor 1'} (G1)` : needsG2 && !loan.guarantor2_approved ? `${loan.guarantor2_name || 'Guarantor 2'} (G2)` : 'Guarantor')
                             : loan.status === 'pending_admin' ? 'Administrator'
@@ -3621,9 +3624,22 @@ const QuickLoans = () => {
                             <TableCell>
                               UGX {loan.loan_amount?.toLocaleString()}
                               {loan.is_topup && <Badge variant="outline" className="ml-1 text-[10px] border-primary text-primary">Top-Up</Badge>}
+                              {pendingRevision && (
+                                <div className="text-[10px] text-primary font-medium">Revised: UGX {Number(loan.revision_amount).toLocaleString()}</div>
+                              )}
                             </TableCell>
-                            <TableCell>{loan.duration_months}mo {loan.repayment_frequency === 'weekly' ? `(${loan.total_weeks || '?'}wks, ${(loan.daily_interest_rate || 0).toFixed(2)}%/day)` : `(${loan.interest_rate}%)`}</TableCell>
-                            <TableCell>UGX {loan.total_repayable?.toLocaleString()}</TableCell>
+                            <TableCell>
+                              {loan.duration_months}mo {loan.repayment_frequency === 'weekly' ? `(${loan.total_weeks || '?'}wks, ${(loan.daily_interest_rate || 0).toFixed(2)}%/day)` : `(${loan.interest_rate}%)`}
+                              {pendingRevision && (
+                                <div className="text-[10px] text-primary font-medium">Revised: {loan.revision_duration_months}mo ({loan.revision_frequency})</div>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              UGX {loan.total_repayable?.toLocaleString()}
+                              {pendingRevision && (
+                                <div className="text-[10px] text-primary font-medium">Revised: UGX {Number(loan.revision_total_repayable || 0).toLocaleString()}</div>
+                              )}
+                            </TableCell>
                             <TableCell className="text-xs font-medium text-green-600">UGX {limit.availableLimit.toLocaleString()}</TableCell>
                             <TableCell>
                               <div className="space-y-1">
@@ -3649,6 +3665,11 @@ const QuickLoans = () => {
                                 {loan.status === 'pending_admin' && (
                                   <Button size="sm" variant="outline" onClick={() => setReviewLoan(loan)} disabled={submitting}>
                                     <Shield className="mr-1 h-3 w-3" /> Review
+                                  </Button>
+                                )}
+                                {loan.status === 'revision_pending_signature' && (
+                                  <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => printLoanRevisionAgreement(loan)}>
+                                    <Printer className="mr-1 h-3 w-3" /> Print revision
                                   </Button>
                                 )}
                               </div>
@@ -3856,6 +3877,17 @@ const QuickLoans = () => {
 
             toast({ title: 'Revised terms sent', description: `${loan.employee_name} must sign the revised agreement before final approval` });
             setReviewLoan(null);
+            setRevisionPrintLoan({
+              ...loan,
+              revision_amount: revision.amount,
+              revision_duration_months: revision.months,
+              revision_frequency: revision.frequency,
+              revision_total_repayable: revision.totalRepayable,
+              revision_installment: revision.installment,
+              revision_note: revision.note,
+              revision_by: employee.name,
+              revision_at: new Date().toISOString(),
+            });
             fetchLoans();
           } catch (err: any) {
             toast({ title: 'Error', description: err.message, variant: 'destructive' });
@@ -3876,6 +3908,33 @@ const QuickLoans = () => {
         notice={revisionLoan ? `Management revised your loan terms${revisionLoan.revision_by ? ` (${revisionLoan.revision_by})` : ''}. Reason: ${revisionLoan.revision_note || '—'}. Signing below replaces the terms of your original application.` : undefined}
         onAccept={(meta) => handleSignRevision(meta)}
       />
+      <Dialog open={!!revisionPrintLoan} onOpenChange={(o) => { if (!o) setRevisionPrintLoan(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Revised terms sent</DialogTitle>
+          </DialogHeader>
+          {revisionPrintLoan && (
+            <div className="space-y-3 text-sm">
+              <p className="text-muted-foreground">
+                {revisionPrintLoan.employee_name} has been notified by SMS and must sign the revised agreement in the app before
+                you can give final approval. Print the acceptance form for a signed paper copy.
+              </p>
+              <div className="rounded-lg border p-3 text-xs space-y-1">
+                <div className="flex justify-between"><span className="text-muted-foreground">Revised amount</span><span className="font-semibold">UGX {Number(revisionPrintLoan.revision_amount || 0).toLocaleString()}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Duration</span><span className="font-semibold">{revisionPrintLoan.revision_duration_months} month(s) • {revisionPrintLoan.revision_frequency}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Installment</span><span className="font-semibold">UGX {Number(revisionPrintLoan.revision_installment || 0).toLocaleString()}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Total repayable</span><span className="font-semibold">UGX {Number(revisionPrintLoan.revision_total_repayable || 0).toLocaleString()}</span></div>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setRevisionPrintLoan(null)}>Close</Button>
+                <Button className="flex-1" onClick={() => printLoanRevisionAgreement(revisionPrintLoan)}>
+                  <Printer className="mr-2 h-4 w-4" /> Print for signing
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
       <LoanRepaymentSlip
 
         open={showRepaymentSlip}
