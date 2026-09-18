@@ -11,6 +11,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { CheckCircle, XCircle, Calculator, Loader2, Coffee, Package, User, Beaker } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import GRNPrintModal from '@/components/quality/GRNPrintModal';
+import {
+  QualityCalculatorInputs,
+  buildCalculatorInputs,
+  buildCalculatorSnapshot,
+  calculateQualityPrice,
+  defaultCalculatorInputs,
+} from '@/lib/qualityPriceCalculator';
 
 interface PendingAssessment {
   id: string;
