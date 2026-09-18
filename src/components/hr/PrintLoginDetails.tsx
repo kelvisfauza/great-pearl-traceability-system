@@ -118,6 +118,10 @@ export default function PrintLoginDetails({ employees }: PrintLoginDetailsProps)
         } catch { /* body not JSON — fall back to the generic message */ }
       }
 
+      if (resetFailed && /permission|authoriz|token|admin/i.test(serverError)) {
+        throw new Error(serverError || 'The password could not be saved. Ask an administrator to set it.');
+      }
+
       if (resetFailed) {
         // No login yet — create one and link it to the existing staff record.
         const create = await supabase.functions.invoke('create-user', {
