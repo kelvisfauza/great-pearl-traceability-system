@@ -277,13 +277,14 @@ const SamplingOrdersTab = () => {
       return data as any;
     },
     onSuccess: (order) => {
-      toast({ title: "Past sampling order recorded", description: `${order.order_number} · marked received & assessed` });
+      toast({ title: "Past sampling order recorded", description: `${order.order_number} · marked received & assessed · no lab email sent` });
       setPast({
         sample_date: "", supplier_name: "", sample_type: "", sampled_by: "", received_by: "",
         assessed_by: "", grams: "", moisture: "", linked_batch_number: "", observation: "", notes: "",
       });
       queryClient.invalidateQueries({ queryKey: ["quality-sampling-orders"] });
       printSamplingOrder(order);
+      // Backdated / past samples are intentionally silent — no notify-sampling-order call.
     },
     onError: (e: any) => toast({ title: "Could not save", description: e.message, variant: "destructive" }),
   });
