@@ -564,12 +564,12 @@ export const AccountButton = () => {
                         <div>
                           <div className="text-xs text-muted-foreground">Available</div>
                           <div className="text-2xl font-bold text-purple-700">
-                            {balanceHidden ? '••••••' : formatCurrency(overdraft.available)}
+                            {formatCurrency(overdraft.available)}
                           </div>
                         </div>
                         <div className="text-right">
                           <div className="text-xs text-muted-foreground">Limit</div>
-                          <div className="text-sm font-semibold">{money(overdraft.limit)}</div>
+                          <div className="text-sm font-semibold">{formatCurrency(overdraft.limit)}</div>
                         </div>
                       </div>
                       {overdraft.outstanding > 0 && (
