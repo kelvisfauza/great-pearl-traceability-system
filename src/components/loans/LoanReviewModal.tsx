@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { CheckCircle, XCircle, User, Wallet, Shield, Calendar, AlertTriangle, TrendingUp, Banknote, Printer, HandCoins, Brain } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { computeLoanTerms, LOAN_TYPE_CONFIG, type LoanType, type RepaymentFrequency } from '@/lib/loanMath';
+
 
 export interface LoanTermsRevision {
   amount: number;
