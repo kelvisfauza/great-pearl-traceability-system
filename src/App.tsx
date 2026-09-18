@@ -166,6 +166,8 @@ import MaintenanceGuard from "./components/MaintenanceGuard";
 import LocationPermissionGate from "./components/LocationPermissionGate";
 import MaintenanceRecovery from "./pages/MaintenanceRecovery";
 import QuickLoans from "./pages/QuickLoans";
+import Vault from "./pages/Vault";
+import VaultGate from "./components/vault/VaultGate";
 import Overdraft from "./pages/Overdraft";
 import OverdraftAdmin from "./pages/admin/OverdraftAdmin";
 import OverdraftAnalytics from "./pages/admin/OverdraftAnalytics";
