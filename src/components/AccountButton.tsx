@@ -747,9 +747,11 @@ export const AccountButton = () => {
             <TransactionStatement open={showStatement} onOpenChange={setShowStatement} currentBalance={walletBalance} spendableBalance={availableLoyalty} balanceBroughtForward={breakdown.balanceBroughtForward} thisMonthEarnings={breakdown.thisMonthNet} />
 
           </div>
-        </SheetContent>
-      </Sheet>
+  );
 
+  return (
+    <>
+      {panelContent}
       <MoneyRequestModal open={showMoneyRequest} onOpenChange={setShowMoneyRequest} />
       <WithdrawalModal 
         open={showWithdrawal} 
