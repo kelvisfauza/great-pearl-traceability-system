@@ -3,9 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { 
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger 
-} from '@/components/ui/sheet';
-import { 
   Wallet, DollarSign, TrendingUp, Plus, Smartphone, Printer, Send,
   Clock, CheckCircle, XCircle, AlertCircle, Star, Zap, Award, Gift, FileText,
   Landmark, Eye, EyeOff, Ban, CreditCard
@@ -334,10 +331,10 @@ export const AccountButton = () => {
 
   if (loading) {
     return (
-      <Button variant="outline" size="sm" disabled>
-        <Wallet className="h-4 w-4 mr-2" />
-        Loading...
-      </Button>
+      <div className="flex items-center gap-2 py-10 justify-center text-muted-foreground">
+        <Wallet className="h-4 w-4" />
+        Loading your wallet...
+      </div>
     );
   }
 
