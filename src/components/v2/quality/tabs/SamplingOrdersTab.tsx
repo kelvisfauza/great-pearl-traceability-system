@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { ClipboardList, Printer, Loader2, CheckCircle2, Beaker } from "lucide-react";
+import { ClipboardList, Printer, Loader2, CheckCircle2, Beaker, History as HistoryIcon } from "lucide-react";
 import { format } from "date-fns";
 import { buildPublicUrl } from "@/utils/publicUrl";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -124,6 +124,10 @@ const printSamplingOrder = (order: any) => {
     <tr><td class="k">Sampled By</td><td>${order.sampled_by}</td></tr>
     <tr><td class="k">Created By</td><td>${order.created_by_name || order.created_by_email}</td></tr>
     ${order.moisture_percent != null ? `<tr><td class="k">Moisture Reading</td><td><strong>${order.moisture_percent}%</strong></td></tr>` : ""}
+    ${order.received_grams != null ? `<tr><td class="k">Grams Received</td><td>${order.received_grams} g</td></tr>` : ""}
+    ${order.received_by ? `<tr><td class="k">Received In Lab By</td><td>${order.received_by}${order.received_at ? ` on ${format(new Date(order.received_at), "dd MMM yyyy, HH:mm")}` : ""}</td></tr>` : ""}
+    ${order.assessed_by ? `<tr><td class="k">Assessed By</td><td>${order.assessed_by}${order.assessed_at ? ` on ${format(new Date(order.assessed_at), "dd MMM yyyy, HH:mm")}` : ""}</td></tr>` : ""}
+    ${order.linked_batch_number ? `<tr><td class="k">Batch / Lot</td><td>${order.linked_batch_number}</td></tr>` : ""}
     ${order.notes ? `<tr><td class="k">Notes</td><td>${order.notes}</td></tr>` : ""}
   </table>
   <div class="qrwrap"><img src="${qrUrl}" alt="QR" /><div class="code">${order.order_number}</div></div>
@@ -151,6 +155,22 @@ const SamplingOrdersTab = () => {
     sampled_by: (employee as any)?.name || "",
     notes: "",
   });
+
+  const [showBackfill, setShowBackfill] = useState(false);
+  const [past, setPast] = useState({
+    sample_date: "",
+    supplier_name: "",
+    sample_type: "",
+    sampled_by: "",
+    received_by: "",
+    assessed_by: "",
+    grams: "",
+    moisture: "",
+    linked_batch_number: "",
+    observation: "",
+    notes: "",
+  });
+
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ["quality-sampling-orders"],
@@ -213,6 +233,57 @@ const SamplingOrdersTab = () => {
           toast({ title: "Lab team notified", description: "Alex, Kibaba, Morjalia and Nuwagaba received the sampling order by email." });
         }
       })();
+    },
+    onError: (e: any) => toast({ title: "Could not save", description: e.message, variant: "destructive" }),
+  });
+
+  const backfillOrder = useMutation({
+    mutationFn: async () => {
+      if (!past.sample_date) throw new Error("Pick the date the sample was taken");
+      if (!past.supplier_name.trim() || !past.sample_type || !past.sampled_by.trim()) {
+        throw new Error("Supplier, sample type and sampled by are required");
+      }
+      if (!past.assessed_by.trim()) throw new Error("Type who made the assessment");
+      const grams = past.grams === "" ? null : parseFloat(past.grams);
+      const moisture = past.moisture === "" ? null : parseFloat(past.moisture);
+      if (moisture !== null && (isNaN(moisture) || moisture < 0 || moisture > 100)) {
+        throw new Error("Moisture must be between 0 and 100%");
+      }
+      const when = new Date(past.sample_date).toISOString();
+      const payload = {
+        supplier_name: past.supplier_name.trim(),
+        sample_type: past.sample_type,
+        delivery_time: when,
+        sampled_by: past.sampled_by.trim(),
+        notes: past.notes.trim() || null,
+        created_by_email: employee?.email || "",
+        created_by_name: (employee as any)?.name || null,
+        status: "assessed",
+        received_grams: grams,
+        moisture_percent: moisture,
+        received_at: when,
+        received_by: past.received_by.trim() || past.assessed_by.trim(),
+        received_observation: past.observation.trim() || null,
+        assessed_by: past.assessed_by.trim(),
+        assessed_at: when,
+        linked_batch_number: past.linked_batch_number.trim() || null,
+      };
+      const { data, error } = await supabase
+        .from("quality_sampling_orders" as any)
+        .insert(payload)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as any;
+    },
+    onSuccess: (order) => {
+      toast({ title: "Past sampling order recorded", description: `${order.order_number} · marked received & assessed` });
+      setPast({
+        sample_date: "", supplier_name: "", sample_type: "", sampled_by: "", received_by: "",
+        assessed_by: "", grams: "", moisture: "", linked_batch_number: "", observation: "", notes: "",
+      });
+      queryClient.invalidateQueries({ queryKey: ["quality-sampling-orders"] });
+      printSamplingOrder(order);
     },
     onError: (e: any) => toast({ title: "Could not save", description: e.message, variant: "destructive" }),
   });
@@ -323,6 +394,84 @@ const SamplingOrdersTab = () => {
           </CardContent>
         </Card>
       )}
+
+      {canCreate && (
+        <Card>
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <CardTitle className="flex items-center gap-2"><HistoryIcon className="h-5 w-5" /> Past Samples (no sampling order)</CardTitle>
+                <CardDescription>
+                  Record samples that were already analysed and priced. They are saved as received in the lab and assessed, then printed with a QR code.
+                </CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setShowBackfill((s) => !s)}>
+                {showBackfill ? "Hide" : "Add past sample"}
+              </Button>
+            </div>
+          </CardHeader>
+          {showBackfill && (
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Date &amp; time the sample was taken <span className="text-destructive">*</span></Label>
+                <Input type="datetime-local" value={past.sample_date} onChange={(e) => setPast({ ...past, sample_date: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Supplier name <span className="text-destructive">*</span></Label>
+                <Input value={past.supplier_name} onChange={(e) => setPast({ ...past, supplier_name: e.target.value })} placeholder="Supplier / seller name" />
+              </div>
+              <div className="space-y-2">
+                <Label>Sample type <span className="text-destructive">*</span></Label>
+                <Select value={past.sample_type} onValueChange={(v) => setPast({ ...past, sample_type: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select sample type" /></SelectTrigger>
+                  <SelectContent>
+                    {SAMPLE_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Sampled by <span className="text-destructive">*</span></Label>
+                <Input value={past.sampled_by} onChange={(e) => setPast({ ...past, sampled_by: e.target.value })} placeholder="Who took the sample" />
+              </div>
+              <div className="space-y-2">
+                <Label>Received in lab by</Label>
+                <Input value={past.received_by} onChange={(e) => setPast({ ...past, received_by: e.target.value })} placeholder="Leave blank to use the assessor" />
+              </div>
+              <div className="space-y-2">
+                <Label>Assessment made by <span className="text-destructive">*</span></Label>
+                <Input value={past.assessed_by} onChange={(e) => setPast({ ...past, assessed_by: e.target.value })} placeholder="Who analysed / priced the sample" />
+              </div>
+              <div className="space-y-2">
+                <Label>Grams received</Label>
+                <Input type="number" min="1" step="1" inputMode="decimal" value={past.grams} onChange={(e) => setPast({ ...past, grams: e.target.value })} placeholder="e.g. 500" />
+              </div>
+              <div className="space-y-2">
+                <Label>Moisture reading (%)</Label>
+                <Input type="number" min="0" max="100" step="0.1" inputMode="decimal" value={past.moisture} onChange={(e) => setPast({ ...past, moisture: e.target.value })} placeholder="e.g. 12.5" />
+              </div>
+              <div className="space-y-2">
+                <Label>Batch / lot number (optional)</Label>
+                <Input value={past.linked_batch_number} onChange={(e) => setPast({ ...past, linked_batch_number: e.target.value })} placeholder="e.g. 20260202002" />
+              </div>
+              <div className="space-y-2">
+                <Label>Observation (optional)</Label>
+                <Input value={past.observation} onChange={(e) => setPast({ ...past, observation: e.target.value })} placeholder="Condition of the sample" />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label>Notes (optional)</Label>
+                <Textarea rows={2} value={past.notes} onChange={(e) => setPast({ ...past, notes: e.target.value })} />
+              </div>
+              <div className="md:col-span-2">
+                <Button onClick={() => backfillOrder.mutate()} disabled={backfillOrder.isPending}>
+                  {backfillOrder.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Printer className="h-4 w-4 mr-2" />}
+                  Save as assessed &amp; Print
+                </Button>
+              </div>
+            </CardContent>
+          )}
+        </Card>
+      )}
+
 
       <Card>
         <CardHeader>
