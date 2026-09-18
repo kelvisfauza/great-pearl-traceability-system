@@ -17262,6 +17262,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      hash_vault_reset_code: { Args: { p_code: string }; Returns: string }
       identify_face_descriptor: {
         Args: { p_descriptor: Json }
         Returns: {

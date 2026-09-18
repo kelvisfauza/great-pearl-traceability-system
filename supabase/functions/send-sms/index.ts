@@ -204,6 +204,7 @@ const NON_PREMIUM_SMS_TYPES = new Set([
   '2fa',
   'withdrawal_otp',
   'email_verification',
+  'vault_reset_code',
   // Loan repayment reminders must go through YoolaSMS (not BulkSMS Premium)
   'loan_reminder',
 ]);
