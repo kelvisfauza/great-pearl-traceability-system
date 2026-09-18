@@ -404,6 +404,7 @@ const SamplingOrdersTab = () => {
                 <CardTitle className="flex items-center gap-2"><HistoryIcon className="h-5 w-5" /> Past Samples (no sampling order)</CardTitle>
                 <CardDescription>
                   Record samples that were already analysed and priced. They are saved as received in the lab and assessed, then printed with a QR code.
+                  <span className="ml-1 text-destructive">No email notification is sent for backdated records.</span>
                 </CardDescription>
               </div>
               <Button variant="outline" size="sm" onClick={() => setShowBackfill((s) => !s)}>
