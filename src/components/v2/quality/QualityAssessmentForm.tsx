@@ -177,9 +177,19 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
 
       // Create a quality assessment record with rejection — include all quality data and suggested price
       // Rejections skip the Quality Manager and go straight to the Admin rejected-lots queue
+      const rejectSnapshot = await snapshotFromReadings({
+        moisture: data.moisture_content,
+        group1_defects: data.group1_percentage,
+        group2_defects: data.group2_percentage,
+        pods: data.pods_percentage,
+        husks: data.husks_percentage,
+        fm: data.fm_percentage,
+        robusta_in_arabica: data.robusta_in_arabica_percentage,
+      }, lot.coffee_type);
       const { data: assessment } = await supabase
         .from('quality_assessments')
         .insert({
+          ...(rejectSnapshot || {}),
           store_record_id: lot.id,
           batch_number: lot.batch_number,
           assessed_by: employee?.email || '',
