@@ -973,6 +973,17 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
 
               <Separator />
 
+              {loan.status === 'revision_pending_signature' && (
+                <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm">
+                  <p className="font-semibold flex items-center gap-2"><Calendar className="h-4 w-4 text-primary" /> Revised terms sent to the applicant</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    UGX {Number(loan.revision_amount || 0).toLocaleString()} over {loan.revision_duration_months} month(s) —
+                    total repayable UGX {Number(loan.revision_total_repayable || 0).toLocaleString()}.
+                    Final approval unlocks once {loan.employee_name} signs the revised agreement.
+                  </p>
+                </div>
+              )}
+
               {/* Decision Section */}
               {loan.status === 'pending_admin' && (
                 <div className="space-y-4">
