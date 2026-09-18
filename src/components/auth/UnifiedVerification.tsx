@@ -21,6 +21,7 @@ interface UnifiedVerificationProps {
 export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }: UnifiedVerificationProps) => {
   const [method, setMethod] = useState<VerificationMethod>('email');
   const [code, setCode] = useState('');
+  const codeState = code;
   const [dobInput, setDobInput] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -100,7 +101,8 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
     }
   };
 
-  const verifyEmailCode = async () => {
+  const verifyEmailCode = async (codeOverride?: string) => {
+    const code = (codeOverride ?? codeState).replace(/\D/g, '');
     if (!code || code.length !== 4) { setError('Enter a 4-digit code'); return; }
     setIsVerifying(true);
     setError('');
@@ -229,7 +231,7 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
+    <Card className="w-full max-w-md mx-auto" data-trainee-allow="true">
       <CardHeader className="space-y-1">
         <div className="flex items-center justify-center mb-4">
           <div className="rounded-full bg-primary/10 p-3">
@@ -263,7 +265,7 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
               maxLength={4}
               value={code}
               onChange={(v) => { setCode(v.replace(/\D/g, '')); setError(''); }}
-              onComplete={() => { if (!isVerifying) verifyEmailCode(); }}
+              onComplete={(v) => { if (!isVerifying) verifyEmailCode(v); }}
               disabled={isVerifying}
               containerClassName="justify-center gap-3"
               autoFocus
@@ -275,7 +277,7 @@ export const UnifiedVerification = ({ email, onVerificationComplete, onCancel }:
                 <InputOTPSlot index={3} />
               </InputOTPGroup>
             </InputOTP>
-            <Button onClick={verifyEmailCode} disabled={isVerifying || code.length !== 4} className="w-full">
+            <Button onClick={() => verifyEmailCode()} disabled={isVerifying || code.length !== 4} className="w-full">
               {isVerifying ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Verifying...</> : <><CheckCircle2 className="mr-2 h-4 w-4" />Verify</>}
             </Button>
             <Button variant="outline" onClick={sendEmailCode} disabled={!canResend || isSending} className="w-full text-xs">

@@ -42,13 +42,15 @@ export const DobInput: React.FC<DobInputProps> = ({
     year: null,
   });
 
+  // Only adopt a complete external value (e.g. prefilled date). An empty value
+  // means "incomplete" — which is usually the echo of our own onChange while the
+  // user is editing, so the typed digits must be preserved.
   React.useEffect(() => {
+    if (!value) return;
     const next = parse(value);
-    if (value === "") {
-      setParts((p) => (p.day || p.month || p.year ? { year: "", month: "", day: "" } : p));
-    } else {
-      setParts(next);
-    }
+    setParts((p) =>
+      p.day === next.day && p.month === next.month && p.year === next.year ? p : next
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
