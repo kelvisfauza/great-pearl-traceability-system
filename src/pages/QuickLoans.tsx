@@ -1910,6 +1910,131 @@ const QuickLoans = () => {
     }
   };
 
+  // ===== Admin-revised terms: applicant signs before final approval =====
+  const [revisionLoan, setRevisionLoan] = useState<any>(null);
+
+  const revisionApplication: LoanTermsApplication | null = React.useMemo(() => {
+    const loan = revisionLoan;
+    if (!loan) return null;
+    const lType = (loan.loan_type || 'quick') as LoanType;
+    const cfg = LOAN_TYPE_CONFIG[lType] || LOAN_TYPE_CONFIG.quick;
+    const freq = (loan.revision_frequency || loan.repayment_frequency || 'monthly') as RepaymentFrequency;
+    const months = Number(loan.revision_duration_months || loan.duration_months || 1);
+    const principal = Number(loan.revision_amount || loan.loan_amount || 0);
+    const total = Number(loan.revision_total_repayable || loan.total_repayable || 0);
+    const installment = Number(loan.revision_installment || 0);
+    const numInstallments = installment > 0 ? Math.max(1, Math.ceil(total / installment)) : months;
+    const guarantors: { name: string; email?: string; phone?: string }[] = [];
+    if (loan.guarantor_name) guarantors.push({ name: loan.guarantor_name, email: loan.guarantor_email, phone: loan.guarantor_phone });
+    if (loan.guarantor2_name) guarantors.push({ name: loan.guarantor2_name, email: loan.guarantor2_email, phone: loan.guarantor2_phone });
+    return {
+      loanTypeLabel: cfg.label,
+      loanType: lType,
+      requestedAmount: Number(loan.original_loan_amount || loan.loan_amount || 0),
+      evaluationFee: 0,
+      principal,
+      monthlyRate: cfg.monthlyRate,
+      dailyRate: getDailyRate(lType),
+      maxRate: cfg.maxRate,
+      durationMonths: months,
+      frequency: freq,
+      numInstallments,
+      installmentAmount: installment,
+      totalInterest: Math.max(0, total - principal),
+      totalRepayable: total,
+      firstRepaymentDate: getFirstRepaymentDate(new Date(), freq),
+      borrowerName: loan.employee_name,
+      borrowerEmail: loan.employee_email,
+      borrowerPhone: loan.employee_phone,
+      borrowerPosition: employee?.position,
+      borrowerDepartment: employee?.department,
+      borrowerSalary: employee?.salary,
+      guarantors,
+      purpose: loan.purpose,
+    };
+  }, [revisionLoan, employee]);
+
+  const handleSignRevision = async (meta: { version: string; signature: string; acceptedAt: string }) => {
+    const loan = revisionLoan;
+    if (!loan) return;
+    setSubmitting(true);
+    try {
+      const freq = (loan.revision_frequency || loan.repayment_frequency || 'monthly') as RepaymentFrequency;
+      const total = Number(loan.revision_total_repayable || 0);
+      const installment = Number(loan.revision_installment || 0);
+
+      const { error } = await supabase.from('loans').update({
+        loan_amount: Number(loan.revision_amount || loan.loan_amount),
+        original_loan_amount: loan.original_loan_amount || loan.loan_amount,
+        duration_months: Number(loan.revision_duration_months || loan.duration_months),
+        repayment_frequency: freq,
+        total_weeks: freq === 'weekly' ? getLoanSchedule(Number(loan.revision_duration_months || loan.duration_months)).totalWeeks : loan.total_weeks,
+        total_repayable: total,
+        remaining_balance: total,
+        monthly_installment: freq === 'weekly' ? null : installment,
+        weekly_installment: freq === 'weekly' ? installment : null,
+        status: 'pending_admin',
+        revision_signed_at: meta.acceptedAt,
+        revision_signature: meta.signature,
+        revision_terms_version: meta.version,
+        terms_version: meta.version,
+        terms_signature: meta.signature,
+        terms_accepted_at: meta.acceptedAt,
+      } as any).eq('id', loan.id);
+      if (error) throw error;
+
+      const { data: admins } = await supabase
+        .from('employees')
+        .select('name, phone')
+        .in('role', ['Administrator', 'Super Admin'])
+        .eq('status', 'Active')
+        .not('phone', 'is', null);
+      for (const admin of (admins || [])) {
+        if (admin.phone) {
+          await supabase.functions.invoke('send-sms', {
+            body: {
+              phone: admin.phone,
+              message: `Dear ${admin.name}, ${loan.employee_name} has signed the revised loan terms (UGX ${Number(loan.revision_amount || 0).toLocaleString()} over ${loan.revision_duration_months} month(s)). The loan awaits your final approval.`,
+              userName: admin.name,
+              messageType: 'loan_counter_accepted'
+            }
+          });
+        }
+      }
+
+      toast({ title: 'Revised terms signed', description: 'Your loan now awaits final approval by management' });
+      setRevisionLoan(null);
+      fetchLoans();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeclineRevision = async (loan: any) => {
+    const reason = window.prompt('Why are you declining the revised terms?') || '';
+    if (!reason.trim()) return;
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from('loans').update({
+        status: 'pending_admin',
+        revision_declined_reason: reason.trim(),
+        revision_signed_at: null,
+        revision_signature: null,
+      } as any).eq('id', loan.id);
+      if (error) throw error;
+      toast({ title: 'Revision declined', description: 'Management has been notified to review again' });
+      setRevisionLoan(null);
+      fetchLoans();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+
   const printLoanStatement = async (loan: any) => {
     // Fetch repayment installments for this loan
     const { data: repayments } = await supabase
