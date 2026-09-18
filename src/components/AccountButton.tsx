@@ -354,6 +354,7 @@ export const AccountButton = () => {
   // sits in the wallet as a negative posting, so we just clamp at zero).
   const netOwnFunds = Math.max(0, walletBalance - pendingAmount);
   const availableForWithdrawal = netOwnFunds + overdraftHeadroom;
+  const money = (n: number) => (balanceHidden ? '••••••' : formatCurrency(n));
 
   const panelContent = (
           <div className="mt-2 space-y-5">
@@ -388,7 +389,7 @@ export const AccountButton = () => {
                       : 'Your first balance check today is free. Each extra check costs UGX 200, up to UGX 1,000 a day.'}
                   </p>
                 )}
-                {effectiveWalletBalance < 0 ? (
+                {!balanceHidden && (effectiveWalletBalance < 0 ? (
                   <div className="mt-1 text-xs text-muted-foreground space-y-0.5">
                     <div className="text-red-600">
                       You currently owe UGX {Math.abs(effectiveWalletBalance).toLocaleString()} (overdraft in use).
@@ -404,8 +405,9 @@ export const AccountButton = () => {
                       <span className="ml-1">(incl. UGX {overdraftHeadroom.toLocaleString()} overdraft headroom)</span>
                     )}
                   </div>
-                )}
-                
+                ))}
+
+                {!balanceHidden && (
                 <div className="mt-3 space-y-1 text-xs">
                   {/* Last month section */}
                   <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide pt-1">Balance from previous months</div>
@@ -501,8 +503,9 @@ export const AccountButton = () => {
                     <span className="text-green-700">{formatCurrency(availableLoyalty)}</span>
                   </div>
                 </div>
+                )}
 
-                {pendingAmount > 0 && (
+                {!balanceHidden && pendingAmount > 0 && (
                   <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
                     <Clock className="h-3 w-3" />
                     <span>UGX {pendingAmount.toLocaleString()} frozen (pending approval)</span>
@@ -566,13 +569,13 @@ export const AccountButton = () => {
                         </div>
                         <div className="text-right">
                           <div className="text-xs text-muted-foreground">Limit</div>
-                          <div className="text-sm font-semibold">{formatCurrency(overdraft.limit)}</div>
+                          <div className="text-sm font-semibold">{money(overdraft.limit)}</div>
                         </div>
                       </div>
                       {overdraft.outstanding > 0 && (
                         <div className="mt-2 flex justify-between text-xs">
                           <span className="text-muted-foreground">Outstanding (auto-recovers)</span>
-                          <span className="font-medium text-red-600">-{formatCurrency(overdraft.outstanding)}</span>
+                          <span className="font-medium text-red-600">-{money(overdraft.outstanding)}</span>
                         </div>
                       )}
                       <Button
@@ -678,7 +681,7 @@ export const AccountButton = () => {
                     <span className="text-xs text-muted-foreground">Pending</span>
                   </div>
                   <div className="text-lg font-bold text-orange-600">
-                    {formatCurrency(pendingAmount)}
+                    {money(pendingAmount)}
                   </div>
                 </CardContent>
               </Card>
@@ -689,12 +692,12 @@ export const AccountButton = () => {
                     <span className="text-xs text-muted-foreground">Available</span>
                   </div>
                   <div className="text-lg font-bold text-blue-600">
-                    {formatCurrency(availableForWithdrawal)}
+                    {money(availableForWithdrawal)}
                   </div>
                   {overdraftHeadroom > 0 && (
                     <div className="space-y-0.5 mt-1 text-[10px] text-muted-foreground">
-                      <div>Wallet: {formatCurrency(availableLoyalty)}</div>
-                      <div>+{formatCurrency(overdraftHeadroom)} overdraft</div>
+                      <div>Wallet: {money(availableLoyalty)}</div>
+                      <div>+{money(overdraftHeadroom)} overdraft</div>
                     </div>
                   )}
                 </CardContent>
