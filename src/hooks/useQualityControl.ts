@@ -71,14 +71,21 @@ export const useQualityControl = () => {
     try {
       console.log('Loading coffee records from Supabase...');
       
-      const { data: allRecords, error } = await supabase
-        .from('coffee_records')
-        .select('id, date, kilograms, bags, supplier_id, supplier_name, coffee_type, batch_number, status, created_at, updated_at')
-        .not('status', 'in', '("sales","inventory")')
-        .order('created_at', { ascending: false })
-        .limit(200);
-
-      if (error) throw error;
+      // Page through all records (PostgREST caps each request at 1000 rows)
+      const PAGE = 1000;
+      const MAX_PAGES = 10;
+      const allRecords: any[] = [];
+      for (let page = 0; page < MAX_PAGES; page++) {
+        const { data: chunk, error } = await supabase
+          .from('coffee_records')
+          .select('id, date, kilograms, bags, supplier_id, supplier_name, coffee_type, batch_number, status, created_at, updated_at')
+          .not('status', 'in', '("sales","inventory")')
+          .order('created_at', { ascending: false })
+          .range(page * PAGE, page * PAGE + PAGE - 1);
+        if (error) throw error;
+        allRecords.push(...(chunk || []));
+        if (!chunk || chunk.length < PAGE) break;
+      }
 
       // Deduplicate by batch_number - keep the most recent one
       const batchMap = new Map();
