@@ -961,6 +961,36 @@ export type Database = {
         }
         Relationships: []
       }
+      balance_check_log: {
+        Row: {
+          check_date: string
+          created_at: string
+          fee_charged: number
+          id: string
+          reference: string | null
+          user_email: string | null
+          user_id: string
+        }
+        Insert: {
+          check_date?: string
+          created_at?: string
+          fee_charged?: number
+          id?: string
+          reference?: string | null
+          user_email?: string | null
+          user_id: string
+        }
+        Update: {
+          check_date?: string
+          created_at?: string
+          fee_charged?: number
+          id?: string
+          reference?: string | null
+          user_email?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       bank_deposit_requests: {
         Row: {
           account_name: string
@@ -16720,6 +16750,7 @@ export type Database = {
       }
       backfill_missing_inventory_batch_sources: { Args: never; Returns: Json }
       backfill_treasury_from_ledger: { Args: never; Returns: Json }
+      balance_check_status: { Args: never; Returns: Json }
       bulk_deduct_unprocessed_sales: {
         Args: { p_coffee_type?: string }
         Returns: {
@@ -16769,6 +16800,7 @@ export type Database = {
         Args: { _topic: string; _uid: string }
         Returns: boolean
       }
+      charge_balance_check: { Args: never; Returns: Json }
       charge_statement_fee: {
         Args: { p_period_from: string; p_period_to: string; p_user_id: string }
         Returns: Json
