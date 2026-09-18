@@ -278,8 +278,9 @@ const AdminQualityPricingReview = () => {
           status: 'rejected',
           quality_note: adminComments,
           reject_final: true,
-          final_price: effectivePrice > 0 ? effectivePrice : undefined
-        })
+          final_price: effectivePrice > 0 ? effectivePrice : undefined,
+          ...buildCalculatorSnapshot(calculatorInputs, adminCalculation),
+        } as any)
         .eq('id', selectedAssessment.id);
       if (updateError) throw updateError;
 
