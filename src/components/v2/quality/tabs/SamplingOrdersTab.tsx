@@ -153,6 +153,7 @@ const SamplingOrdersTab = () => {
     sample_type: "",
     delivery_time: nowLocalInput(),
     sampled_by: (employee as any)?.name || "",
+    moisture: "",
     notes: "",
   });
 
@@ -190,8 +191,12 @@ const SamplingOrdersTab = () => {
       if (!form.supplier_name.trim() || !form.sample_type || !form.sampled_by.trim()) {
         throw new Error("Supplier, sample type and sampled by are required");
       }
+      const moisture = form.moisture === "" ? null : parseFloat(form.moisture);
+      if (moisture !== null && (isNaN(moisture) || moisture < 0 || moisture > 100)) {
+        throw new Error("Moisture must be between 0 and 100%");
+      }
       const payload = {
-        
+        moisture_percent: moisture,
         supplier_name: form.supplier_name.trim(),
         sample_type: form.sample_type,
         delivery_time: new Date(form.delivery_time).toISOString(),
@@ -211,7 +216,7 @@ const SamplingOrdersTab = () => {
     },
     onSuccess: (order) => {
       toast({ title: "Sampling order saved", description: order.order_number });
-      setForm({ supplier_name: "", sample_type: "", delivery_time: nowLocalInput(), sampled_by: (employee as any)?.name || "", notes: "" });
+      setForm({ supplier_name: "", sample_type: "", delivery_time: nowLocalInput(), sampled_by: (employee as any)?.name || "", moisture: "", notes: "" });
       queryClient.invalidateQueries({ queryKey: ["quality-sampling-orders"] });
       printSamplingOrder(order);
       try {
@@ -375,6 +380,10 @@ const SamplingOrdersTab = () => {
             <div className="space-y-2">
               <Label>Sampled by</Label>
               <Input value={form.sampled_by} onChange={(e) => setForm({ ...form, sampled_by: e.target.value })} placeholder="Name of the person who sampled" />
+            </div>
+            <div className="space-y-2">
+              <Label>Moisture reading (%) <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Input type="number" min="0" max="100" step="0.1" inputMode="decimal" value={form.moisture} onChange={(e) => setForm({ ...form, moisture: e.target.value })} placeholder="e.g. 12.5" />
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label>Notes (optional)</Label>
