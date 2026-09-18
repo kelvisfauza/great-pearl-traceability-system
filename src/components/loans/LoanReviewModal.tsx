@@ -976,7 +976,26 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
               {/* Decision Section */}
               {loan.status === 'pending_admin' && (
                 <div className="space-y-4">
-                  {!showCounterOffer ? (
+                  {loan.revision_signed_at && (
+                    <div className="rounded-lg border border-green-500/40 bg-green-500/10 p-3 text-sm">
+                      <p className="font-semibold text-green-700 dark:text-green-400 flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4" /> Revised terms signed by the applicant
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Signed as "{loan.revision_signature}" on {new Date(loan.revision_signed_at).toLocaleString()}.
+                        The figures shown above are the revised terms.
+                      </p>
+                    </div>
+                  )}
+                  {loan.revision_declined_reason && !loan.revision_signed_at && (
+                    <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm">
+                      <p className="font-semibold text-destructive flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4" /> Applicant declined the revised terms
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">{loan.revision_declined_reason}</p>
+                    </div>
+                  )}
+                  {!showCounterOffer && !showRevise ? (
                     <>
                       <Label className="text-sm font-semibold">Rejection Reason (if declining)</Label>
                       <Textarea
@@ -994,6 +1013,23 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
                           <CheckCircle className="mr-2 h-4 w-4" />
                           Approve & Disburse
                         </Button>
+                        {onReviseTerms && (
+                          <Button
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => {
+                              setShowRevise(true);
+                              setRevAmount(String(loan.loan_amount ?? ''));
+                              setRevMonths(String(loan.duration_months ?? ''));
+                              setRevFreq((loan.repayment_frequency || 'monthly') as RepaymentFrequency);
+                              setRevNote('');
+                            }}
+                            disabled={submitting}
+                          >
+                            <Calendar className="mr-2 h-4 w-4" />
+                            Adjust Terms
+                          </Button>
+                        )}
                         <Button
                           variant="secondary"
                           className="flex-1"
@@ -1018,7 +1054,101 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
                         </Button>
                       </div>
                     </>
+                  ) : showRevise ? (
+                    <Card className="border-primary/30">
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-semibold flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-primary" /> Adjust Loan Terms
+                          </Label>
+                          <Button variant="ghost" size="sm" onClick={() => setShowRevise(false)}>Cancel</Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Change the amount, duration or repayment plan. Interest and installments are recalculated
+                          automatically. The applicant must sign the revised agreement before you can fully approve.
+                        </p>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <Label className="text-xs">Amount (UGX)</Label>
+                            <Input type="number" value={revAmount} onChange={(e) => setRevAmount(e.target.value)} className="mt-1" />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Duration (months, max {loanTypeCfg.maxMonths ?? 12})</Label>
+                            <Input type="number" value={revMonths} onChange={(e) => setRevMonths(e.target.value)} className="mt-1" />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Repayment</Label>
+                            <select
+                              value={revFreq}
+                              onChange={(e) => setRevFreq(e.target.value as RepaymentFrequency)}
+                              className="mt-1 w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                            >
+                              {loanTypeCfg.frequencies.map(f => (
+                                <option key={f} value={f}>{f === 'bullet' ? 'Bullet (one payment)' : f === 'weekly' ? 'Weekly' : 'Monthly'}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div className="rounded-lg border p-3">
+                            <p className="text-xs text-muted-foreground mb-1">Current terms</p>
+                            <p>Amount: UGX {Number(loan.loan_amount || 0).toLocaleString()}</p>
+                            <p>Duration: {loan.duration_months} month(s)</p>
+                            <p>Interest: UGX {Number((loan.total_repayable || 0) - (loan.loan_amount || 0)).toLocaleString()}</p>
+                            <p>Total repayable: UGX {Number(loan.total_repayable || 0).toLocaleString()}</p>
+                            <p>Installment: UGX {Number(installmentAmount || 0).toLocaleString()} × {numInstallments}</p>
+                          </div>
+                          <div className="rounded-lg border border-primary/40 bg-primary/5 p-3">
+                            <p className="text-xs text-primary mb-1 font-semibold">Revised terms</p>
+                            <p>Amount: UGX {revisedTerms.principal.toLocaleString()}</p>
+                            <p>Duration: {revisedTerms.months} month(s)</p>
+                            <p>Interest ({revisedTerms.monthlyRate}%/mo, cap {revisedTerms.maxRate}%): UGX {revisedTerms.interest.toLocaleString()}</p>
+                            <p className="font-semibold">Total repayable: UGX {revisedTerms.totalRepayable.toLocaleString()}</p>
+                            <p>Installment: UGX {revisedTerms.installment.toLocaleString()} × {revisedTerms.numInstallments}</p>
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label className="text-xs">Reason for the change (shown to the applicant)</Label>
+                          <Textarea
+                            value={revNote}
+                            onChange={(e) => setRevNote(e.target.value)}
+                            placeholder="e.g. Duration extended to 4 months to keep installments affordable"
+                            rows={2}
+                            className="mt-1 text-sm"
+                          />
+                        </div>
+
+                        {!revisionChanged && (
+                          <p className="text-xs text-muted-foreground">Change at least one figure to send a revision.</p>
+                        )}
+
+                        <Button
+                          className="w-full"
+                          disabled={submitting || !revisionValid}
+                          onClick={() => {
+                            if (!onReviseTerms || !revisionValid) return;
+                            onReviseTerms(loan.id, {
+                              amount: revisedTerms.principal,
+                              months: revisedTerms.months,
+                              frequency: revisedTerms.frequency,
+                              totalRepayable: revisedTerms.totalRepayable,
+                              installment: revisedTerms.installment,
+                              numInstallments: revisedTerms.numInstallments,
+                              note: revNote.trim(),
+                            });
+                            setShowRevise(false);
+                          }}
+                        >
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Send to applicant for signing
+                        </Button>
+                      </CardContent>
+                    </Card>
                   ) : (
+
                     <Card className="border-primary/30">
                       <CardContent className="p-4 space-y-3">
                         <div className="flex items-center justify-between">
