@@ -254,7 +254,7 @@ const LoanTermsDialog: React.FC<Props> = ({ open, onOpenChange, application, sub
               disabled={!canAccept}
               onClick={() => onAccept({ version: LOAN_TERMS_VERSION, signature: signature.trim(), acceptedAt: new Date().toISOString() })}
             >
-              {submitting ? 'Submitting...' : 'Accept & Submit Application'}
+              {submitting ? 'Submitting...' : (acceptLabel || 'Accept & Submit Application')}
             </Button>
           </div>
         </div>
