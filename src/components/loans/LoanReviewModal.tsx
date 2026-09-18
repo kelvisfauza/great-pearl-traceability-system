@@ -183,7 +183,29 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
     .filter(l => l.status === 'active')
     .reduce((sum, l) => sum + (l.monthly_installment || 0), 0);
 
+  // Live recomputation of revised terms (admin "Adjust terms" panel)
+  const loanTypeKey = (loan.loan_type || 'quick') as LoanType;
+  const loanTypeCfg = LOAN_TYPE_CONFIG[loanTypeKey] || LOAN_TYPE_CONFIG.quick;
+  const revisedTerms = computeLoanTerms(
+    Number(revAmount) || 0,
+    loanTypeKey,
+    Number(revMonths) || 0,
+    revFreq,
+    borrowerDetails?.salary || 0,
+  );
+  const revisionChanged =
+    Number(revAmount) !== Number(loan.loan_amount) ||
+    Number(revMonths) !== Number(loan.duration_months) ||
+    revFreq !== (loan.repayment_frequency || 'monthly');
+  const revisionValid =
+    revisionChanged &&
+    Number(revAmount) > 0 &&
+    Number(revMonths) > 0 &&
+    Number(revMonths) <= (loanTypeCfg.maxMonths ?? 12) &&
+    revNote.trim().length >= 5;
+
   const isWeekly = loan.repayment_frequency === 'weekly';
+
   const isBullet = loan.repayment_frequency === 'bullet';
   const numInstallments = isWeekly 
     ? (loan.total_weeks || Math.ceil((loan.duration_months * 30) / 7))
