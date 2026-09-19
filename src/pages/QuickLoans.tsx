@@ -3895,6 +3895,58 @@ const QuickLoans = () => {
             setSubmitting(false);
           }
         }}
+        onRecordPaperSignature={async (loanId) => {
+          if (!employee) return;
+          setSubmitting(true);
+          try {
+            const loan = loans.find(l => l.id === loanId);
+            if (!loan) return;
+            const now = new Date().toISOString();
+            const freq = (loan.revision_frequency || loan.repayment_frequency || 'monthly') as RepaymentFrequency;
+            const total = Number(loan.revision_total_repayable || 0);
+            const installment = Number(loan.revision_installment || 0);
+            const signature = `Signed on printed form (recorded by ${employee.name})`;
+
+            const { error } = await supabase.from('loans').update({
+              loan_amount: Number(loan.revision_amount || loan.loan_amount),
+              original_loan_amount: loan.original_loan_amount || loan.loan_amount,
+              duration_months: Number(loan.revision_duration_months || loan.duration_months),
+              repayment_frequency: freq,
+              total_weeks: freq === 'weekly' ? getLoanSchedule(Number(loan.revision_duration_months || loan.duration_months)).totalWeeks : loan.total_weeks,
+              total_repayable: total,
+              remaining_balance: total,
+              monthly_installment: freq === 'weekly' ? null : installment,
+              weekly_installment: freq === 'weekly' ? installment : null,
+              status: 'pending_admin',
+              revision_signed_at: now,
+              revision_signature: signature,
+              revision_terms_version: 'v2026.08-paper',
+              terms_version: 'v2026.08-paper',
+              terms_signature: signature,
+              terms_accepted_at: now,
+            } as any).eq('id', loanId);
+            if (error) throw error;
+
+            if (loan.employee_phone) {
+              await supabase.functions.invoke('send-sms', {
+                body: {
+                  phone: loan.employee_phone,
+                  message: `Dear ${loan.employee_name}, your signed acceptance of the revised loan terms (UGX ${Number(loan.revision_amount || 0).toLocaleString()} over ${loan.revision_duration_months} month(s)) has been recorded. The loan awaits final approval. - Great Agro Coffee`,
+                  userName: loan.employee_name,
+                  messageType: 'loan_counter_accepted'
+                }
+              });
+            }
+
+            toast({ title: 'Paper signature recorded', description: 'The loan is back in your queue — you can now approve & disburse' });
+            setReviewLoan(null);
+            fetchLoans();
+          } catch (err: any) {
+            toast({ title: 'Error', description: err.message, variant: 'destructive' });
+          } finally {
+            setSubmitting(false);
+          }
+        }}
 
         submitting={submitting}
       />
