@@ -31,6 +31,7 @@ interface LoanReviewModalProps {
   onReject: (loanId: string, reason: string) => void;
   onCounterOffer?: (loanId: string, amount: number, comments: string) => void;
   onReviseTerms?: (loanId: string, revision: LoanTermsRevision) => void;
+  onRecordPaperSignature?: (loanId: string) => void;
   submitting: boolean;
 }
 
@@ -974,13 +975,26 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOf
               <Separator />
 
               {loan.status === 'revision_pending_signature' && (
-                <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm">
+                <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm space-y-2">
                   <p className="font-semibold flex items-center gap-2"><Calendar className="h-4 w-4 text-primary" /> Revised terms sent to the applicant</p>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-xs text-muted-foreground">
                     UGX {Number(loan.revision_amount || 0).toLocaleString()} over {loan.revision_duration_months} month(s) —
                     total repayable UGX {Number(loan.revision_total_repayable || 0).toLocaleString()}.
-                    Final approval unlocks once {loan.employee_name} signs the revised agreement.
+                    Final approval unlocks once {loan.employee_name} signs the revised agreement (in the app or on the printed form).
                   </p>
+                  {onRecordPaperSignature && (
+                    <div className="flex gap-2 flex-wrap">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onRecordPaperSignature(loan.id)}
+                        disabled={submitting}
+                      >
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        {loan.employee_name} signed the printed form — record it
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
 
