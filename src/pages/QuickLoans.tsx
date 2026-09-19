@@ -3662,7 +3662,7 @@ const QuickLoans = () => {
                                 <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setDetailsLoan(loan)}>
                                   <FileText className="mr-1 h-3 w-3" /> Details
                                 </Button>
-                                {loan.status === 'pending_admin' && (
+                                {(loan.status === 'pending_admin' || loan.status === 'revision_pending_signature') && (
                                   <Button size="sm" variant="outline" onClick={() => setReviewLoan(loan)} disabled={submitting}>
                                     <Shield className="mr-1 h-3 w-3" /> Review
                                   </Button>
