@@ -1,9 +1,10 @@
 import { useLocation } from "react-router-dom";
-import { AccountButton } from "@/components/AccountButton";
+import VaultButton from "@/components/vault/VaultButton";
 
 /**
- * Shows the user's wallet (AccountButton) on every V2 workspace route,
+ * Shows a small "My Vault" button on every V2 workspace route,
  * since V2 pages don't use the V1 DashboardLayout header.
+ * It only navigates to /vault — the wallet panel itself never renders here.
  */
 const V2WalletDock = () => {
   const { pathname } = useLocation();
@@ -11,7 +12,7 @@ const V2WalletDock = () => {
 
   return (
     <div className="fixed top-3 right-3 z-50">
-      <AccountButton />
+      <VaultButton />
     </div>
   );
 };
