@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.is_current_user_admin_by_role() TO anon, authenticated, service_role;
