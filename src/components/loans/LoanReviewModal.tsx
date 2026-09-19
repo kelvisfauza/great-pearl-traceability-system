@@ -35,7 +35,7 @@ interface LoanReviewModalProps {
   submitting: boolean;
 }
 
-const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOffer, onReviseTerms, submitting }: LoanReviewModalProps) => {
+const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, onCounterOffer, onReviseTerms, onRecordPaperSignature, submitting }: LoanReviewModalProps) => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [counterOfferAmount, setCounterOfferAmount] = useState('');
   const [counterOfferComments, setCounterOfferComments] = useState('');
