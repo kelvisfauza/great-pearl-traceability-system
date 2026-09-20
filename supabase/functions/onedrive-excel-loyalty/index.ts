@@ -136,7 +136,21 @@ Deno.serve(async (req) => {
       const editor = findPerson(editorEmail) || findPerson(editorName)
       let fileNew = 0, fileAwarded = 0
 
+      // Preload every key already recorded for this file (cheap, one pass)
+      const seenKeys = new Set<string>()
+      for (let page = 0; page < 20; page++) {
+        const { data: known } = await supabase
+          .from('excel_loyalty_rows')
+          .select('row_key')
+          .eq('file_id', file.id)
+          .range(page * 1000, page * 1000 + 999)
+        for (const k of known || []) seenKeys.add(k.row_key as string)
+        if (!known || known.length < 1000) break
+      }
+      const pendingRows: Record<string, unknown>[] = []
+
       let sheets: any[] = []
+
       try {
         const ws = await graph(`/me/drive/items/${file.id}/workbook/worksheets?$select=id,name`)
         sheets = ws.value || []
