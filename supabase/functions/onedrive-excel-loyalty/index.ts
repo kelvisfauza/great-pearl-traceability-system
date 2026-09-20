@@ -72,13 +72,14 @@ Deno.serve(async (req) => {
 
     const cfg = (settingRow?.setting_value ?? {}) as Record<string, any>
     const folderPath = String((body.folderPath as string) ?? cfg.folder_path ?? '').replace(/^\/+|\/+$/g, '')
+    const includeShared = (body.includeShared as boolean) ?? cfg.include_shared === true
     const amountPerRow = Number(cfg.amount_per_row ?? 1000)
     const dailyCap = Number(cfg.daily_cap_per_user ?? 20000)
     const manual = body.manual === true
     const dryRun = body.dryRun === true
 
     if (!cfg.enabled && !manual) return json({ ok: false, error: 'Excel loyalty tracking is switched off.' })
-    if (!folderPath) return json({ ok: false, error: 'No OneDrive folder has been set.' })
+    if (!folderPath && !includeShared) return json({ ok: false, error: 'No OneDrive folder has been set.' })
 
     const { data: scan } = await supabase
       .from('excel_loyalty_scans')
