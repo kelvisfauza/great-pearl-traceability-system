@@ -338,11 +338,11 @@ Deno.serve(async (req) => {
         rows_new: rowsNew,
         rows_awarded: rowsAwarded,
         amount_total: amountTotal,
-        details: { folderPath, manual, dryRun, files: perFile },
+        details: { folderPath, manual, dryRun, timedOut, files: perFile },
       }).eq('id', scanId)
     }
 
-    return json({ ok: true, filesScanned: files.length, rowsSeen, rowsNew, rowsAwarded, amountTotal, files: perFile })
+    return json({ ok: true, filesScanned: files.length, rowsSeen, rowsNew, rowsAwarded, amountTotal, timedOut, files: perFile })
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     console.error('onedrive-excel-loyalty failed:', message)
