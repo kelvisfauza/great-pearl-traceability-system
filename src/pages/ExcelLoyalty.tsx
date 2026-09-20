@@ -14,6 +14,7 @@ interface Settings {
   folder_path: string;
   amount_per_row: number;
   daily_cap_per_user: number;
+  include_shared: boolean;
 }
 
 interface ScanRow {
@@ -40,7 +41,7 @@ interface AwardRow {
   created_at: string;
 }
 
-const DEFAULTS: Settings = { enabled: false, folder_path: '', amount_per_row: 1000, daily_cap_per_user: 20000 };
+const DEFAULTS: Settings = { enabled: false, folder_path: '', amount_per_row: 1000, daily_cap_per_user: 20000, include_shared: true };
 
 export default function ExcelLoyalty() {
   const { toast } = useToast();
@@ -134,6 +135,16 @@ export default function ExcelLoyalty() {
               placeholder="e.g. GAC-System-Reports or Reports/Daily Entry"
             />
             <p className="text-xs text-muted-foreground">Folder name exactly as it appears in OneDrive. Sub-folder paths use a slash.</p>
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <p className="font-medium">Also watch shared workbooks</p>
+              <p className="text-sm text-muted-foreground">
+                Includes Excel files shared with this account — e.g. the YEDA workbooks in Timothy's, Alex's or Nuwagaba's OneDrive.
+              </p>
+            </div>
+            <Switch checked={settings.include_shared} onCheckedChange={(v) => setSettings({ ...settings, include_shared: v })} />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">

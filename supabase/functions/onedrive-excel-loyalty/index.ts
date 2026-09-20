@@ -72,13 +72,14 @@ Deno.serve(async (req) => {
 
     const cfg = (settingRow?.setting_value ?? {}) as Record<string, any>
     const folderPath = String((body.folderPath as string) ?? cfg.folder_path ?? '').replace(/^\/+|\/+$/g, '')
+    const includeShared = (body.includeShared as boolean) ?? cfg.include_shared === true
     const amountPerRow = Number(cfg.amount_per_row ?? 1000)
     const dailyCap = Number(cfg.daily_cap_per_user ?? 20000)
     const manual = body.manual === true
     const dryRun = body.dryRun === true
 
     if (!cfg.enabled && !manual) return json({ ok: false, error: 'Excel loyalty tracking is switched off.' })
-    if (!folderPath) return json({ ok: false, error: 'No OneDrive folder has been set.' })
+    if (!folderPath && !includeShared) return json({ ok: false, error: 'No OneDrive folder has been set.' })
 
     const { data: scan } = await supabase
       .from('excel_loyalty_scans')
@@ -124,17 +125,41 @@ Deno.serve(async (req) => {
       earnedToday.set(a.user_id, (earnedToday.get(a.user_id) || 0) + Number(a.amount || 0))
     }
 
-    const children = await graph(`/me/drive/root:/${encodeURI(folderPath)}:/children?$top=200&$select=id,name,file,lastModifiedBy,lastModifiedDateTime`)
-    const files = (children.value || []).filter((f: any) => /\.xlsx?$/i.test(f.name || '') && f.file)
+    let sharedListError: string | null = null
+    // Files from the watched folder (own drive)
+    let files: any[] = []
+    if (folderPath) {
+      const children = await graph(`/me/drive/root:/${encodeURI(folderPath)}:/children?$top=200&$select=id,name,file,lastModifiedBy,lastModifiedDateTime`)
+      files = (children.value || []).filter((f: any) => /\.xlsx?$/i.test(f.name || '') && f.file)
+    }
+
+    // Workbooks shared with the connected account (live in other users' drives)
+    if (includeShared) {
+      try {
+        const shared = await graph(`/me/drive/sharedWithMe?$top=200`)
+        for (const s of shared.value || []) {
+          const item = s?.remoteItem
+          if (!item?.file || !/\.xlsx?$/i.test(item.name || '')) continue
+          const driveId = item?.parentReference?.driveId
+          if (!driveId || !item.id) continue
+          if (files.some((f) => f.id === item.id)) continue
+          files.push({ id: item.id, name: item.name, lastModifiedBy: item.lastModifiedBy, driveId })
+        }
+      } catch (e) {
+        sharedListError = `Could not list shared files: ${String(e)}`
+      }
+    }
 
     let rowsSeen = 0, rowsNew = 0, rowsAwarded = 0, amountTotal = 0
     const perFile: Record<string, unknown>[] = []
+    if (sharedListError) perFile.push({ shared: true, error: sharedListError })
 
     for (const file of files) {
       const editorEmail = String(file?.lastModifiedBy?.user?.email || '').toLowerCase()
       const editorName = String(file?.lastModifiedBy?.user?.displayName || '')
       const editor = findPerson(editorEmail) || findPerson(editorName)
       let fileNew = 0, fileAwarded = 0
+      const itemBase = file.driveId ? `/drives/${file.driveId}/items/${file.id}` : `/me/drive/items/${file.id}`
 
       // Preload every key already recorded for this file (cheap, one pass)
       const seenKeys = new Set<string>()
@@ -155,7 +180,7 @@ Deno.serve(async (req) => {
       let sheets: any[] = []
 
       try {
-        const ws = await graph(`/me/drive/items/${file.id}/workbook/worksheets?$select=id,name`)
+        const ws = await graph(`${itemBase}/workbook/worksheets?$select=id,name`)
         sheets = ws.value || []
       } catch (e) {
         perFile.push({ file: file.name, error: String(e) })
@@ -165,7 +190,7 @@ Deno.serve(async (req) => {
       for (const sheet of sheets) {
         try {
           const bounds = await graph(
-            `/me/drive/items/${file.id}/workbook/worksheets/${encodeURIComponent(sheet.name)}/usedRange(valuesOnly=true)?$select=address,rowCount,columnCount`,
+            `${itemBase}/workbook/worksheets/${encodeURIComponent(sheet.name)}/usedRange(valuesOnly=true)?$select=address,rowCount,columnCount`,
           )
           const rowCount = Number(bounds.rowCount || 0)
           const colCount = Number(bounds.columnCount || 0)
@@ -179,7 +204,7 @@ Deno.serve(async (req) => {
           for (let start = 1; start <= rowCount; start += PAGE) {
             const end = Math.min(start + PAGE - 1, rowCount)
             const range = await graph(
-              `/me/drive/items/${file.id}/workbook/worksheets/${encodeURIComponent(sheet.name)}/range(address='A${start}:${lastCol}${end}')?$select=values`,
+              `${itemBase}/workbook/worksheets/${encodeURIComponent(sheet.name)}/range(address='A${start}:${lastCol}${end}')?$select=values`,
             )
             const values: unknown[][] = range.values || []
 
