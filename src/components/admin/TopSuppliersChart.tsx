@@ -12,25 +12,34 @@ const TopSuppliersChart = () => {
   useEffect(() => {
     const fetchSupplierData = async () => {
       try {
-        // Fetch from Supabase coffee_records
-        const { data: coffeeRecords, error } = await supabase
-          .from('coffee_records')
-          .select('supplier_name, kilograms');
+        // Page through every record — PostgREST caps a single request at 1,000 rows
+        const PAGE = 1000;
+        const MAX_PAGES = 20;
+        const coffeeRecords: any[] = [];
 
-        if (error) {
-          console.error('Error fetching coffee records:', error);
-          setLoading(false);
-          return;
+        for (let page = 0; page < MAX_PAGES; page++) {
+          const { data, error } = await supabase
+            .from('coffee_records')
+            .select('supplier_name, kilograms')
+            .order('date', { ascending: false })
+            .range(page * PAGE, page * PAGE + PAGE - 1);
+
+          if (error) {
+            console.error('Error fetching coffee records:', error);
+            break;
+          }
+          coffeeRecords.push(...(data || []));
+          if (!data || data.length < PAGE) break;
         }
 
         // Aggregate by supplier
         const supplierMap = new Map<string, number>();
 
-        coffeeRecords?.forEach((record) => {
+        coffeeRecords.forEach((record) => {
           const raw = stripLegacySupplierSuffix(record.supplier_name || 'Unknown');
-          const supplierName = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+          const supplierName = raw.trim().charAt(0).toUpperCase() + raw.trim().slice(1).toLowerCase();
           const kgs = Number(record.kilograms || 0);
-          
+
           supplierMap.set(supplierName, (supplierMap.get(supplierName) || 0) + kgs);
         });
 
