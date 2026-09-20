@@ -154,7 +154,12 @@ Deno.serve(async (req) => {
     const perFile: Record<string, unknown>[] = []
     if (sharedListError) perFile.push({ shared: true, error: sharedListError })
 
+    // Edge functions have a hard wall-clock limit; leave margin to save results
+    const deadline = Date.now() + 100000
+    let timedOut = false
+
     for (const file of files) {
+      if (Date.now() > deadline) { timedOut = true; break }
       const editorEmail = String(file?.lastModifiedBy?.user?.email || '').toLowerCase()
       const editorName = String(file?.lastModifiedBy?.user?.displayName || '')
       const editor = findPerson(editorEmail) || findPerson(editorName)
@@ -163,19 +168,19 @@ Deno.serve(async (req) => {
 
       // Preload every key already recorded for this file (cheap, one pass)
       const seenKeys = new Set<string>()
+      const seenSheets = new Set<string>()
       for (let page = 0; page < 20; page++) {
         const { data: known } = await supabase
           .from('excel_loyalty_rows')
-          .select('row_key')
+          .select('row_key, sheet_name')
           .eq('file_id', file.id)
           .range(page * 1000, page * 1000 + 999)
-        for (const k of known || []) seenKeys.add(k.row_key as string)
+        for (const k of known || []) {
+          seenKeys.add(k.row_key as string)
+          if (k.sheet_name) seenSheets.add(k.sheet_name as string)
+        }
         if (!known || known.length < 1000) break
       }
-      const pendingRows: Record<string, unknown>[] = []
-      const accrueByPerson = new Map<string, { amount: number; count: number; name: string | null; matchedBy: string | null }>()
-      // First time we see a workbook, its existing rows are only recorded, never rewarded
-      const isBaseline = seenKeys.size === 0
 
       let sheets: any[] = []
 
@@ -188,6 +193,11 @@ Deno.serve(async (req) => {
       }
 
       for (const sheet of sheets) {
+        if (Date.now() > deadline) { timedOut = true; break }
+        // First time we see a sheet, its existing rows are only recorded, never rewarded
+        const isBaseline = !seenSheets.has(sheet.name)
+        const pendingRows: Record<string, unknown>[] = []
+        const accrueByPerson = new Map<string, { amount: number; count: number; name: string | null; matchedBy: string | null }>()
         try {
           const bounds = await graph(
             `${itemBase}/workbook/worksheets/${encodeURIComponent(sheet.name)}/usedRange(valuesOnly=true)?$select=address,rowCount,columnCount`,
@@ -202,6 +212,7 @@ Deno.serve(async (req) => {
           let personCol = -1
 
           for (let start = 1; start <= rowCount; start += PAGE) {
+            if (Date.now() > deadline) { timedOut = true; break }
             const end = Math.min(start + PAGE - 1, rowCount)
             const range = await graph(
               `${itemBase}/workbook/worksheets/${encodeURIComponent(sheet.name)}/range(address='A${start}:${lastCol}${end}')?$select=values`,
@@ -287,33 +298,35 @@ Deno.serve(async (req) => {
                 amountTotal += amount
               }
             }
+            if (timedOut) break
+          }
+
+          // Save progress after every sheet so a time-out never loses work
+          if (!dryRun) {
+            for (const [walletId, acc] of accrueByPerson) {
+              if (acc.amount <= 0) continue
+              const { error: accErr } = await supabase.from('loyalty_daily_accruals').insert({
+                user_id: walletId,
+                activity_type: 'excel_data_entry',
+                form_name: file.name,
+                amount: acc.amount,
+                accrual_date: today,
+                metadata: { source: 'onedrive_excel', file_id: file.id, file_name: file.name, sheet: sheet.name, rows: acc.count, matched_by: acc.matchedBy },
+              })
+              if (accErr) perFile.push({ file: file.name, sheet: sheet.name, awardError: accErr.message, person: acc.name })
+            }
+            for (let i = 0; i < pendingRows.length; i += 500) {
+              const { error: rowErr } = await supabase.from('excel_loyalty_rows').insert(pendingRows.slice(i, i + 500))
+              if (rowErr) perFile.push({ file: file.name, sheet: sheet.name, recordError: rowErr.message })
+            }
           }
         } catch (e) {
           perFile.push({ file: file.name, sheet: sheet.name, error: String(e) })
         }
       }
 
-      if (!dryRun) {
-        // One loyalty accrual per person per workbook, then record the rows
-        for (const [walletId, acc] of accrueByPerson) {
-          if (acc.amount <= 0) continue
-          const { error: accErr } = await supabase.from('loyalty_daily_accruals').insert({
-            user_id: walletId,
-            activity_type: 'excel_data_entry',
-            form_name: file.name,
-            amount: acc.amount,
-            accrual_date: today,
-            metadata: { source: 'onedrive_excel', file_id: file.id, file_name: file.name, rows: acc.count, matched_by: acc.matchedBy },
-          })
-          if (accErr) perFile.push({ file: file.name, awardError: accErr.message, person: acc.name })
-        }
-        for (let i = 0; i < pendingRows.length; i += 500) {
-          const { error: rowErr } = await supabase.from('excel_loyalty_rows').insert(pendingRows.slice(i, i + 500))
-          if (rowErr) perFile.push({ file: file.name, recordError: rowErr.message })
-        }
-      }
-
-      perFile.push({ file: file.name, newRows: fileNew, awarded: fileAwarded, editor: editor?.name ?? editorName ?? null })
+      perFile.push({ file: file.name, newRows: fileNew, awarded: fileAwarded, editor: editor?.name ?? editorName ?? null, shared: !!file.driveId })
+      if (timedOut) break
     }
 
     if (scanId) {
@@ -325,11 +338,11 @@ Deno.serve(async (req) => {
         rows_new: rowsNew,
         rows_awarded: rowsAwarded,
         amount_total: amountTotal,
-        details: { folderPath, manual, dryRun, files: perFile },
+        details: { folderPath, manual, dryRun, timedOut, files: perFile },
       }).eq('id', scanId)
     }
 
-    return json({ ok: true, filesScanned: files.length, rowsSeen, rowsNew, rowsAwarded, amountTotal, files: perFile })
+    return json({ ok: true, filesScanned: files.length, rowsSeen, rowsNew, rowsAwarded, amountTotal, timedOut, files: perFile })
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     console.error('onedrive-excel-loyalty failed:', message)
