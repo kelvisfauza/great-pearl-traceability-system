@@ -172,6 +172,9 @@ Deno.serve(async (req) => {
       const editorName = String(file?.lastModifiedBy?.user?.displayName || '')
       const editor = findPerson(editorEmail) || findPerson(editorName)
       let fileNew = 0, fileAwarded = 0
+      // A single huge workbook must not starve the rest
+      const fileDeadline = Math.min(deadline, Date.now() + 40000)
+      let fileTimedOut = false
       const itemBase = file.driveId ? `/drives/${file.driveId}/items/${file.id}` : `/me/drive/items/${file.id}`
 
       // Preload every key already recorded for this file (cheap, one pass)
@@ -201,7 +204,8 @@ Deno.serve(async (req) => {
       }
 
       for (const sheet of sheets) {
-        if (Date.now() > deadline) { timedOut = true; break }
+        if (Date.now() > deadline) { timedOut = true; fileTimedOut = true; break }
+        if (Date.now() > fileDeadline) { fileTimedOut = true; break }
         // First time we see a sheet, its existing rows are only recorded, never rewarded
         const isBaseline = !seenSheets.has(sheet.name)
         const pendingRows: Record<string, unknown>[] = []
@@ -220,7 +224,8 @@ Deno.serve(async (req) => {
           let personCol = -1
 
           for (let start = 1; start <= rowCount; start += PAGE) {
-            if (Date.now() > deadline) { timedOut = true; break }
+            if (Date.now() > deadline) { timedOut = true; fileTimedOut = true; break }
+            if (Date.now() > fileDeadline) { fileTimedOut = true; break }
             const end = Math.min(start + PAGE - 1, rowCount)
             const range = await graph(
               `${itemBase}/workbook/worksheets/${encodeURIComponent(sheet.name)}/range(address='A${start}:${lastCol}${end}')?$select=values`,
@@ -333,8 +338,9 @@ Deno.serve(async (req) => {
         }
       }
 
-      perFile.push({ file: file.name, newRows: fileNew, awarded: fileAwarded, editor: editor?.name ?? editorName ?? null, shared: !!file.driveId })
-      if (mtime) newMtimes[file.id] = mtime
+      perFile.push({ file: file.name, newRows: fileNew, awarded: fileAwarded, editor: editor?.name ?? editorName ?? null, shared: !!file.driveId, partial: fileTimedOut || undefined })
+      // Only stamp a fully-read file; partial files get another turn next run
+      if (mtime && !fileTimedOut) newMtimes[file.id] = mtime
       if (timedOut) break
     }
 
