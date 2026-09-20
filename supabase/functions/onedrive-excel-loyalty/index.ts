@@ -167,11 +167,7 @@ Deno.serve(async (req) => {
     for (const file of files) {
       if (Date.now() > deadline) { timedOut = true; break }
       const mtime = String(file.lastModifiedDateTime || '')
-      if (mtime && knownMtimes[file.id] === mtime) {
-        newMtimes[file.id] = mtime
-        continue
-      }
-      newMtimes[file.id] = mtime
+      if (mtime && knownMtimes[file.id] === mtime) continue
       const editorEmail = String(file?.lastModifiedBy?.user?.email || '').toLowerCase()
       const editorName = String(file?.lastModifiedBy?.user?.displayName || '')
       const editor = findPerson(editorEmail) || findPerson(editorName)
@@ -338,6 +334,7 @@ Deno.serve(async (req) => {
       }
 
       perFile.push({ file: file.name, newRows: fileNew, awarded: fileAwarded, editor: editor?.name ?? editorName ?? null, shared: !!file.driveId })
+      if (mtime) newMtimes[file.id] = mtime
       if (timedOut) break
     }
 
