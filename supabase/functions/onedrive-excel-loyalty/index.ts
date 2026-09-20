@@ -152,6 +152,7 @@ Deno.serve(async (req) => {
 
     let rowsSeen = 0, rowsNew = 0, rowsAwarded = 0, amountTotal = 0
     const perFile: Record<string, unknown>[] = []
+    if (sharedListError) perFile.push({ shared: true, error: sharedListError })
 
     for (const file of files) {
       const editorEmail = String(file?.lastModifiedBy?.user?.email || '').toLowerCase()
