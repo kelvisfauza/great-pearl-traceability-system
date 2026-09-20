@@ -194,14 +194,9 @@ Deno.serve(async (req) => {
               rowsSeen++
 
               const rowKey = await sha(`${sheet.name}|${cells.join('\u0001')}`)
-              const { data: existing } = await supabase
-                .from('excel_loyalty_rows')
-                .select('id')
-                .eq('file_id', file.id)
-                .eq('sheet_name', sheet.name)
-                .eq('row_key', rowKey)
-                .maybeSingle()
-              if (existing) continue
+              if (seenKeys.has(rowKey)) continue
+              seenKeys.add(rowKey)
+
 
               rowsNew++
               fileNew++
