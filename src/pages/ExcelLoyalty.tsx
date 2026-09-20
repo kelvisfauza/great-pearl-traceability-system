@@ -137,6 +137,16 @@ export default function ExcelLoyalty() {
             <p className="text-xs text-muted-foreground">Folder name exactly as it appears in OneDrive. Sub-folder paths use a slash.</p>
           </div>
 
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <p className="font-medium">Also watch shared workbooks</p>
+              <p className="text-sm text-muted-foreground">
+                Includes Excel files shared with this account — e.g. the YEDA workbooks in Timothy's, Alex's or Nuwagaba's OneDrive.
+              </p>
+            </div>
+            <Switch checked={settings.include_shared} onCheckedChange={(v) => setSettings({ ...settings, include_shared: v })} />
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Reward per new row (UGX)</Label>
