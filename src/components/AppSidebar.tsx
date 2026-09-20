@@ -80,6 +80,7 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
         { name: "Coffee Bookings", icon: BookMarked, path: "/coffee-bookings", permission: null, requiresAdmin: true },
         { name: "Suppliers", icon: UserCheck, path: "/suppliers", permission: null },
         { name: "Communications", icon: Megaphone, path: "/communications", permission: null, requiresAdmin: true },
+        { name: "Excel Work Rewards", icon: FileText, path: "/excel-loyalty", permission: null, requiresAdmin: true },
         { name: "Sales & Marketing", icon: TrendingUp, path: "/sales-marketing", permission: "Sales Marketing" },
        { name: "Finance", icon: Banknote, path: "/finance", permission: "Finance" },
         { name: "Company Forms", icon: DollarSign, path: "/my-expenses", permission: null },
