@@ -148,6 +148,7 @@ Deno.serve(async (req) => {
         if (!known || known.length < 1000) break
       }
       const pendingRows: Record<string, unknown>[] = []
+      const accrueByPerson = new Map<string, { amount: number; count: number; name: string | null; matchedBy: string | null }>
 
       let sheets: any[] = []
 
