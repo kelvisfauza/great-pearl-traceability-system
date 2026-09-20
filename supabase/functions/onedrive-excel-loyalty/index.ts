@@ -212,7 +212,10 @@ Deno.serve(async (req) => {
               let amount = 0
               let walletId: string | null = null
 
-              if (!person) {
+              if (isBaseline) {
+                skipReason = 'Existing work recorded before tracking started'
+                walletId = person ? (person.auth_user_id || person.id) : null
+              } else if (!person) {
                 skipReason = 'No matching staff member'
               } else {
                 walletId = person.auth_user_id || person.id
