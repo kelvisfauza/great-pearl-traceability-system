@@ -159,6 +159,7 @@ Deno.serve(async (req) => {
       const editorName = String(file?.lastModifiedBy?.user?.displayName || '')
       const editor = findPerson(editorEmail) || findPerson(editorName)
       let fileNew = 0, fileAwarded = 0
+      const itemBase = file.driveId ? `/drives/${file.driveId}/items/${file.id}` : `/me/drive/items/${file.id}`
 
       // Preload every key already recorded for this file (cheap, one pass)
       const seenKeys = new Set<string>()
