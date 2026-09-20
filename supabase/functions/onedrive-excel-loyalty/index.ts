@@ -158,8 +158,20 @@ Deno.serve(async (req) => {
     const deadline = Date.now() + 100000
     let timedOut = false
 
+    // Skip files that have not changed since the previous scan
+    const knownMtimes: Record<string, string> = { ...((cfg.file_mtimes as Record<string, string>) ?? {}) }
+    const newMtimes: Record<string, string> = { ...knownMtimes }
+    // Most recently edited first, so active workbooks are never starved
+    files.sort((a, b) => String(b.lastModifiedDateTime || '').localeCompare(String(a.lastModifiedDateTime || '')))
+
     for (const file of files) {
       if (Date.now() > deadline) { timedOut = true; break }
+      const mtime = String(file.lastModifiedDateTime || '')
+      if (mtime && knownMtimes[file.id] === mtime) {
+        newMtimes[file.id] = mtime
+        continue
+      }
+      newMtimes[file.id] = mtime
       const editorEmail = String(file?.lastModifiedBy?.user?.email || '').toLowerCase()
       const editorName = String(file?.lastModifiedBy?.user?.displayName || '')
       const editor = findPerson(editorEmail) || findPerson(editorName)
