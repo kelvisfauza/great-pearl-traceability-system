@@ -14,6 +14,7 @@ interface Settings {
   folder_path: string;
   amount_per_row: number;
   daily_cap_per_user: number;
+  include_shared: boolean;
 }
 
 interface ScanRow {
@@ -40,7 +41,7 @@ interface AwardRow {
   created_at: string;
 }
 
-const DEFAULTS: Settings = { enabled: false, folder_path: '', amount_per_row: 1000, daily_cap_per_user: 20000 };
+const DEFAULTS: Settings = { enabled: false, folder_path: '', amount_per_row: 1000, daily_cap_per_user: 20000, include_shared: true };
 
 export default function ExcelLoyalty() {
   const { toast } = useToast();
