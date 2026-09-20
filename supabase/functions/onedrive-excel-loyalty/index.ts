@@ -193,6 +193,11 @@ Deno.serve(async (req) => {
       }
 
       for (const sheet of sheets) {
+        if (Date.now() > deadline) { timedOut = true; break }
+        // First time we see a sheet, its existing rows are only recorded, never rewarded
+        const isBaseline = !seenSheets.has(sheet.name)
+        const pendingRows: Record<string, unknown>[] = []
+        const accrueByPerson = new Map<string, { amount: number; count: number; name: string | null; matchedBy: string | null }>()
         try {
           const bounds = await graph(
             `${itemBase}/workbook/worksheets/${encodeURIComponent(sheet.name)}/usedRange(valuesOnly=true)?$select=address,rowCount,columnCount`,
