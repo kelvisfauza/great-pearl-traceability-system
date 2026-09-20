@@ -49,6 +49,7 @@ import Finance from "./pages/Finance";
 import HumanResources from "./pages/HumanResources";
 import Reports from "./pages/Reports";
 import Communications from "./pages/Communications";
+import ExcelLoyalty from "./pages/ExcelLoyalty";
 import Settings from "./pages/Settings";
 import Logistics from "./pages/Logistics";
 import DataAnalyst from "./pages/DataAnalyst";
@@ -414,6 +415,11 @@ const App: React.ComponentType = () => {
                 <Route path="/communications" element={
                   <ProtectedRoute requiredRoles={['Administrator', 'Super Admin', 'Managing Director']}>
                     <Communications />
+                  </ProtectedRoute>
+                } />
+                <Route path="/excel-loyalty" element={
+                  <ProtectedRoute requiredRoles={['Administrator', 'Super Admin', 'Managing Director']}>
+                    <ExcelLoyalty />
                   </ProtectedRoute>
                 } />
                 <Route path="/logistics" element={
