@@ -3867,6 +3867,99 @@ export type Database = {
           },
         ]
       }
+      excel_loyalty_rows: {
+        Row: {
+          amount: number
+          awarded: boolean
+          awarded_employee_id: string | null
+          awarded_name: string | null
+          awarded_user_id: string | null
+          created_at: string
+          file_id: string
+          file_name: string
+          id: string
+          matched_by: string | null
+          row_key: string
+          row_preview: string | null
+          sheet_name: string
+          skip_reason: string | null
+        }
+        Insert: {
+          amount?: number
+          awarded?: boolean
+          awarded_employee_id?: string | null
+          awarded_name?: string | null
+          awarded_user_id?: string | null
+          created_at?: string
+          file_id: string
+          file_name: string
+          id?: string
+          matched_by?: string | null
+          row_key: string
+          row_preview?: string | null
+          sheet_name: string
+          skip_reason?: string | null
+        }
+        Update: {
+          amount?: number
+          awarded?: boolean
+          awarded_employee_id?: string | null
+          awarded_name?: string | null
+          awarded_user_id?: string | null
+          created_at?: string
+          file_id?: string
+          file_name?: string
+          id?: string
+          matched_by?: string | null
+          row_key?: string
+          row_preview?: string | null
+          sheet_name?: string
+          skip_reason?: string | null
+        }
+        Relationships: []
+      }
+      excel_loyalty_scans: {
+        Row: {
+          amount_total: number
+          details: Json
+          error: string | null
+          files_scanned: number
+          finished_at: string | null
+          id: string
+          rows_awarded: number
+          rows_new: number
+          rows_seen: number
+          started_at: string
+          status: string
+        }
+        Insert: {
+          amount_total?: number
+          details?: Json
+          error?: string | null
+          files_scanned?: number
+          finished_at?: string | null
+          id?: string
+          rows_awarded?: number
+          rows_new?: number
+          rows_seen?: number
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          amount_total?: number
+          details?: Json
+          error?: string | null
+          files_scanned?: number
+          finished_at?: string | null
+          id?: string
+          rows_awarded?: number
+          rows_new?: number
+          rows_seen?: number
+          started_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
       expense_categories: {
         Row: {
           cost_centre: string | null
