@@ -263,6 +263,26 @@ Deno.serve(async (req) => {
         }
       }
 
+      if (!dryRun) {
+        // One loyalty accrual per person per workbook, then record the rows
+        for (const [walletId, acc] of accrueByPerson) {
+          if (acc.amount <= 0) continue
+          const { error: accErr } = await supabase.from('loyalty_daily_accruals').insert({
+            user_id: walletId,
+            activity_type: 'excel_data_entry',
+            form_name: file.name,
+            amount: acc.amount,
+            accrual_date: today,
+            metadata: { source: 'onedrive_excel', file_id: file.id, file_name: file.name, rows: acc.count, matched_by: acc.matchedBy },
+          })
+          if (accErr) perFile.push({ file: file.name, awardError: accErr.message, person: acc.name })
+        }
+        for (let i = 0; i < pendingRows.length; i += 500) {
+          const { error: rowErr } = await supabase.from('excel_loyalty_rows').insert(pendingRows.slice(i, i + 500))
+          if (rowErr) perFile.push({ file: file.name, recordError: rowErr.message })
+        }
+      }
+
       perFile.push({ file: file.name, newRows: fileNew, awarded: fileAwarded, editor: editor?.name ?? editorName ?? null })
     }
 
