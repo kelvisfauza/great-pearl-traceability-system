@@ -154,7 +154,12 @@ Deno.serve(async (req) => {
     const perFile: Record<string, unknown>[] = []
     if (sharedListError) perFile.push({ shared: true, error: sharedListError })
 
+    // Edge functions have a hard wall-clock limit; leave margin to save results
+    const deadline = Date.now() + 100000
+    let timedOut = false
+
     for (const file of files) {
+      if (Date.now() > deadline) { timedOut = true; break }
       const editorEmail = String(file?.lastModifiedBy?.user?.email || '').toLowerCase()
       const editorName = String(file?.lastModifiedBy?.user?.displayName || '')
       const editor = findPerson(editorEmail) || findPerson(editorName)
@@ -163,19 +168,19 @@ Deno.serve(async (req) => {
 
       // Preload every key already recorded for this file (cheap, one pass)
       const seenKeys = new Set<string>()
+      const seenSheets = new Set<string>()
       for (let page = 0; page < 20; page++) {
         const { data: known } = await supabase
           .from('excel_loyalty_rows')
-          .select('row_key')
+          .select('row_key, sheet_name')
           .eq('file_id', file.id)
           .range(page * 1000, page * 1000 + 999)
-        for (const k of known || []) seenKeys.add(k.row_key as string)
+        for (const k of known || []) {
+          seenKeys.add(k.row_key as string)
+          if (k.sheet_name) seenSheets.add(k.sheet_name as string)
+        }
         if (!known || known.length < 1000) break
       }
-      const pendingRows: Record<string, unknown>[] = []
-      const accrueByPerson = new Map<string, { amount: number; count: number; name: string | null; matchedBy: string | null }>()
-      // First time we see a workbook, its existing rows are only recorded, never rewarded
-      const isBaseline = seenKeys.size === 0
 
       let sheets: any[] = []
 
