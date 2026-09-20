@@ -159,7 +159,7 @@ Deno.serve(async (req) => {
       const editorName = String(file?.lastModifiedBy?.user?.displayName || '')
       const editor = findPerson(editorEmail) || findPerson(editorName)
       let fileNew = 0, fileAwarded = 0
-      const itemBase = file.driveId ? `/drives/${file.driveId}/items/${file.id}` : `/me/drive/items/${file.id}`
+      const itemBase = file.driveId ? `/drives/${file.driveId}/items/${file.id}` : `${itemBase}`
 
       // Preload every key already recorded for this file (cheap, one pass)
       const seenKeys = new Set<string>()
@@ -180,7 +180,7 @@ Deno.serve(async (req) => {
       let sheets: any[] = []
 
       try {
-        const ws = await graph(`/me/drive/items/${file.id}/workbook/worksheets?$select=id,name`)
+        const ws = await graph(`${itemBase}/workbook/worksheets?$select=id,name`)
         sheets = ws.value || []
       } catch (e) {
         perFile.push({ file: file.name, error: String(e) })
@@ -190,7 +190,7 @@ Deno.serve(async (req) => {
       for (const sheet of sheets) {
         try {
           const bounds = await graph(
-            `/me/drive/items/${file.id}/workbook/worksheets/${encodeURIComponent(sheet.name)}/usedRange(valuesOnly=true)?$select=address,rowCount,columnCount`,
+            `${itemBase}/workbook/worksheets/${encodeURIComponent(sheet.name)}/usedRange(valuesOnly=true)?$select=address,rowCount,columnCount`,
           )
           const rowCount = Number(bounds.rowCount || 0)
           const colCount = Number(bounds.columnCount || 0)
@@ -204,7 +204,7 @@ Deno.serve(async (req) => {
           for (let start = 1; start <= rowCount; start += PAGE) {
             const end = Math.min(start + PAGE - 1, rowCount)
             const range = await graph(
-              `/me/drive/items/${file.id}/workbook/worksheets/${encodeURIComponent(sheet.name)}/range(address='A${start}:${lastCol}${end}')?$select=values`,
+              `${itemBase}/workbook/worksheets/${encodeURIComponent(sheet.name)}/range(address='A${start}:${lastCol}${end}')?$select=values`,
             )
             const values: unknown[][] = range.values || []
 
