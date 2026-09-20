@@ -125,6 +125,7 @@ Deno.serve(async (req) => {
       earnedToday.set(a.user_id, (earnedToday.get(a.user_id) || 0) + Number(a.amount || 0))
     }
 
+    let sharedListError: string | null = null
     // Files from the watched folder (own drive)
     let files: any[] = []
     if (folderPath) {
@@ -145,7 +146,7 @@ Deno.serve(async (req) => {
           files.push({ id: item.id, name: item.name, lastModifiedBy: item.lastModifiedBy, driveId })
         }
       } catch (e) {
-        perFile.push({ shared: true, error: `Could not list shared files: ${String(e)}` })
+        sharedListError = `Could not list shared files: ${String(e)}`
       }
     }
 
