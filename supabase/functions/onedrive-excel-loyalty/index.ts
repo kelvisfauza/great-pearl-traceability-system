@@ -224,26 +224,16 @@ Deno.serve(async (req) => {
                 }
               }
 
-              if (!dryRun) {
-                if (awarded && walletId) {
-                  const { error: accErr } = await supabase.from('loyalty_daily_accruals').insert({
-                    user_id: walletId,
-                    activity_type: 'excel_data_entry',
-                    form_name: `${file.name} · ${sheet.name}`,
-                    amount,
-                    accrual_date: today,
-                    metadata: { source: 'onedrive_excel', file_id: file.id, file_name: file.name, sheet: sheet.name, matched_by: matchedBy },
-                  })
-                  if (accErr) {
-                    awarded = false
-                    amount = 0
-                    skipReason = `Award failed: ${accErr.message}`
-                  } else {
-                    earnedToday.set(walletId, (earnedToday.get(walletId) || 0) + amount)
-                  }
-                }
+              if (awarded && walletId) {
+                earnedToday.set(walletId, (earnedToday.get(walletId) || 0) + amount)
+                const acc = accrueByPerson.get(walletId) || { amount: 0, count: 0, name: person?.name ?? null, matchedBy }
+                acc.amount += amount
+                acc.count += 1
+                accrueByPerson.set(walletId, acc)
+              }
 
-                await supabase.from('excel_loyalty_rows').insert({
+              if (!dryRun) {
+                pendingRows.push({
                   file_id: file.id,
                   file_name: file.name,
                   sheet_name: sheet.name,
@@ -258,6 +248,7 @@ Deno.serve(async (req) => {
                   skip_reason: skipReason,
                 })
               }
+
 
               if (awarded) {
                 rowsAwarded++
