@@ -143,7 +143,7 @@ Deno.serve(async (req) => {
           const driveId = item?.parentReference?.driveId
           if (!driveId || !item.id) continue
           if (files.some((f) => f.id === item.id)) continue
-          files.push({ id: item.id, name: item.name, lastModifiedBy: item.lastModifiedBy, driveId })
+          files.push({ id: item.id, name: item.name, lastModifiedBy: item.lastModifiedBy, lastModifiedDateTime: item.lastModifiedDateTime, driveId })
         }
       } catch (e) {
         sharedListError = `Could not list shared files: ${String(e)}`
@@ -339,6 +339,12 @@ Deno.serve(async (req) => {
 
       perFile.push({ file: file.name, newRows: fileNew, awarded: fileAwarded, editor: editor?.name ?? editorName ?? null, shared: !!file.driveId })
       if (timedOut) break
+    }
+
+    if (!dryRun) {
+      await supabase.from('system_settings')
+        .update({ setting_value: { ...cfg, file_mtimes: newMtimes } })
+        .eq('setting_key', 'excel_loyalty')
     }
 
     if (scanId) {
