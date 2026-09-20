@@ -125,8 +125,29 @@ Deno.serve(async (req) => {
       earnedToday.set(a.user_id, (earnedToday.get(a.user_id) || 0) + Number(a.amount || 0))
     }
 
-    const children = await graph(`/me/drive/root:/${encodeURI(folderPath)}:/children?$top=200&$select=id,name,file,lastModifiedBy,lastModifiedDateTime`)
-    const files = (children.value || []).filter((f: any) => /\.xlsx?$/i.test(f.name || '') && f.file)
+    // Files from the watched folder (own drive)
+    let files: any[] = []
+    if (folderPath) {
+      const children = await graph(`/me/drive/root:/${encodeURI(folderPath)}:/children?$top=200&$select=id,name,file,lastModifiedBy,lastModifiedDateTime`)
+      files = (children.value || []).filter((f: any) => /\.xlsx?$/i.test(f.name || '') && f.file)
+    }
+
+    // Workbooks shared with the connected account (live in other users' drives)
+    if (includeShared) {
+      try {
+        const shared = await graph(`/me/drive/sharedWithMe?$top=200`)
+        for (const s of shared.value || []) {
+          const item = s?.remoteItem
+          if (!item?.file || !/\.xlsx?$/i.test(item.name || '')) continue
+          const driveId = item?.parentReference?.driveId
+          if (!driveId || !item.id) continue
+          if (files.some((f) => f.id === item.id)) continue
+          files.push({ id: item.id, name: item.name, lastModifiedBy: item.lastModifiedBy, driveId })
+        }
+      } catch (e) {
+        perFile.push({ shared: true, error: `Could not list shared files: ${String(e)}` })
+      }
+    }
 
     let rowsSeen = 0, rowsNew = 0, rowsAwarded = 0, amountTotal = 0
     const perFile: Record<string, unknown>[] = []
