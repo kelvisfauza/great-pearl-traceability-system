@@ -79,7 +79,6 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
         { name: "User Statement", icon: FileText, path: "/admin/user-statement", permission: null, requiresAdmin: true },
         { name: "Coffee Bookings", icon: BookMarked, path: "/coffee-bookings", permission: null, requiresAdmin: true },
         { name: "Suppliers", icon: UserCheck, path: "/suppliers", permission: null },
-        { name: "Quotations", icon: FileText, path: "/quotations", permission: null },
         { name: "Communications", icon: Megaphone, path: "/communications", permission: null, requiresAdmin: true },
         { name: "Excel Work Rewards", icon: FileText, path: "/excel-loyalty", permission: null, requiresAdmin: true },
         { name: "Sales & Marketing", icon: TrendingUp, path: "/sales-marketing", permission: "Sales Marketing" },
