@@ -11,6 +11,7 @@ import ProviderSubmissionApprovals from '@/components/admin/ProviderSubmissionAp
 import SupportStaffPerDiemSection from '@/components/admin/SupportStaffPerDiemSection';
 import AdminWalletOperations from '@/components/admin/AdminWalletOperations';
 import BankDepositApprovals from '@/components/admin/BankDepositApprovals';
+import QuotationApprovals from '@/components/quotations/QuotationApprovals';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRoleBasedData } from '@/hooks/useRoleBasedData';
 import { Shield, ClipboardCheck, DollarSign } from 'lucide-react';
@@ -70,6 +71,9 @@ const Approvals = () => {
             </div>
           </div>
         </div>
+
+        {/* Quotations recommended by procurement */}
+        <QuotationApprovals />
 
         {/* Quality Assessments Pending Pricing */}
         <AdminQualityPricingReview />

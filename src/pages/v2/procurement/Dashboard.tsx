@@ -18,10 +18,12 @@ import BuyingPriceAnalysisTab from "@/components/v2/procurement/tabs/BuyingPrice
 import ComprehensiveReports from "@/components/procurement/ComprehensiveReports";
 import ProcurementActionCenter from "@/components/procurement/ProcurementActionCenter";
 import DailyProcurementReport from "@/components/procurement/DailyProcurementReport";
+import QuotationReviewPanel from "@/components/quotations/QuotationReviewPanel";
 
 const tabs = [
   { id: "overview", label: "Overview", icon: ShoppingBag },
   { id: "action-center", label: "Action Center", icon: AlertTriangle },
+  { id: "quotations", label: "Quotations", icon: FileText },
   { id: "sales-contracts", label: "Sales Contracts", icon: FileText },
   { id: "supplier-contracts", label: "Supplier Contracts", icon: Handshake },
   { id: "suppliers", label: "Suppliers", icon: Users },
@@ -65,6 +67,7 @@ const ProcurementDashboard = () => {
                 <DailyProcurementReport />
                 <ProcurementActionCenter />
               </TabsContent>
+              <TabsContent value="quotations"><QuotationReviewPanel /></TabsContent>
               <TabsContent value="sales-contracts"><BuyerContractsTab /></TabsContent>
               <TabsContent value="supplier-contracts"><SupplierContractsTab /></TabsContent>
               <TabsContent value="suppliers"><SupplierRecordsTab /></TabsContent>
