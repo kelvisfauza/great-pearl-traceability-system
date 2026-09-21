@@ -227,6 +227,22 @@ const PrintQueuePage = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setSendOpen(false)} disabled={sending}>Cancel</Button>
           </DialogFooter>
+    </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmOpen} onOpenChange={(o) => { if (!o) void confirmNotPrinted(); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Did it print?</DialogTitle>
+            <DialogDescription>
+              {confirmJobs.length} document(s) were sent to the printer. Confirm only if the pages actually came out —
+              otherwise they stay in the queue so you can try again.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => void confirmNotPrinted()}>No, keep them waiting</Button>
+            <Button onClick={() => void confirmPrinted()}>Yes, it printed</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </DashboardLayout>
