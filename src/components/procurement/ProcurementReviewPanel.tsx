@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CheckCircle, XCircle, RefreshCw, Pencil, ClipboardCheck, User, Calendar, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import QuotationReviewPanel from '@/components/quotations/QuotationReviewPanel';
 
 const PENDING_STATUSES = [
   'Pending',
@@ -318,6 +319,7 @@ const ProcurementReviewPanel = () => {
         <Tabs defaultValue="queue">
           <TabsList className="mb-4">
             <TabsTrigger value="queue">Review queue ({pendingCount})</TabsTrigger>
+            <TabsTrigger value="quotations">Quotations</TabsTrigger>
             <TabsTrigger value="history">
               <History className="h-4 w-4 mr-1" /> Review history
             </TabsTrigger>
@@ -412,6 +414,9 @@ const ProcurementReviewPanel = () => {
             })}
           </div>
         )}
+          </TabsContent>
+          <TabsContent value="quotations">
+            <QuotationReviewPanel />
           </TabsContent>
           <TabsContent value="history">
             {history.length === 0 ? (
