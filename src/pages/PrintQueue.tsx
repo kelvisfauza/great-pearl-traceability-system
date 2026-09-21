@@ -84,10 +84,30 @@ const PrintQueuePage = () => {
       toast({ title: 'Pop-up blocked', description: 'Allow pop-ups for this site to print.', variant: 'destructive' });
       return;
     }
+    setConfirmJobs(items);
+    setConfirmOpen(true);
+  };
+
+  const confirmPrinted = async () => {
+    const items = confirmJobs;
+    setConfirmOpen(false);
+    setConfirmJobs([]);
+    if (!items.length) return;
     await markPrinted(items.map(j => j.id));
     setSelected([]);
     await load();
-    toast({ title: 'Sent to printer', description: `${items.length} document(s) printed and cleared from the queue.` });
+    toast({ title: 'Marked as printed', description: `${items.length} document(s) cleared from the queue.` });
+  };
+
+  const confirmNotPrinted = async () => {
+    const items = confirmJobs;
+    setConfirmOpen(false);
+    setConfirmJobs([]);
+    if (items.some(j => j.status === 'printed')) {
+      await Promise.all(items.filter(j => j.status === 'printed').map(j => requeueJob(j.id)));
+    }
+    await load();
+    toast({ title: 'Kept in the queue', description: 'Nothing was cleared — you can try printing again.' });
   };
 
   const JobRow = ({ job, showCheckbox }: { job: PrintJob; showCheckbox: boolean }) => (
