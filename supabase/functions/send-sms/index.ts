@@ -189,6 +189,8 @@ const PREMIUM_SMS_TYPES = new Set([
   'price_correction_intern',
   // Company-wide communications to staff and suppliers — BulkSMS.com route
   'company_broadcast',
+  // Replies to companies about their quotations — BulkSMS.com route
+  'quotation_reply',
 ]);
 
 
