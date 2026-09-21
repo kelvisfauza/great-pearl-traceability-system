@@ -26,6 +26,8 @@ const PrintQueuePage = () => {
   const [directory, setDirectory] = useState<DirectoryUser[]>([]);
   const [search, setSearch] = useState('');
   const [sending, setSending] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmJobs, setConfirmJobs] = useState<PrintJob[]>([]);
 
   const openSend = async (items: PrintJob[]) => {
     if (!items.length) return;
@@ -84,10 +86,30 @@ const PrintQueuePage = () => {
       toast({ title: 'Pop-up blocked', description: 'Allow pop-ups for this site to print.', variant: 'destructive' });
       return;
     }
+    setConfirmJobs(items);
+    setConfirmOpen(true);
+  };
+
+  const confirmPrinted = async () => {
+    const items = confirmJobs;
+    setConfirmOpen(false);
+    setConfirmJobs([]);
+    if (!items.length) return;
     await markPrinted(items.map(j => j.id));
     setSelected([]);
     await load();
-    toast({ title: 'Sent to printer', description: `${items.length} document(s) printed and cleared from the queue.` });
+    toast({ title: 'Marked as printed', description: `${items.length} document(s) cleared from the queue.` });
+  };
+
+  const confirmNotPrinted = async () => {
+    const items = confirmJobs;
+    setConfirmOpen(false);
+    setConfirmJobs([]);
+    if (items.some(j => j.status === 'printed')) {
+      await Promise.all(items.filter(j => j.status === 'printed').map(j => requeueJob(j.id)));
+    }
+    await load();
+    toast({ title: 'Kept in the queue', description: 'Nothing was cleared — you can try printing again.' });
   };
 
   const JobRow = ({ job, showCheckbox }: { job: PrintJob; showCheckbox: boolean }) => (
@@ -204,6 +226,22 @@ const PrintQueuePage = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSendOpen(false)} disabled={sending}>Cancel</Button>
+          </DialogFooter>
+    </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmOpen} onOpenChange={(o) => { if (!o) void confirmNotPrinted(); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Did it print?</DialogTitle>
+            <DialogDescription>
+              {confirmJobs.length} document(s) were sent to the printer. Confirm only if the pages actually came out —
+              otherwise they stay in the queue so you can try again.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => void confirmNotPrinted()}>No, keep them waiting</Button>
+            <Button onClick={() => void confirmPrinted()}>Yes, it printed</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
