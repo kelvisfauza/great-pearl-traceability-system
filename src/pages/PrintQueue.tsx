@@ -26,6 +26,8 @@ const PrintQueuePage = () => {
   const [directory, setDirectory] = useState<DirectoryUser[]>([]);
   const [search, setSearch] = useState('');
   const [sending, setSending] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmJobs, setConfirmJobs] = useState<PrintJob[]>([]);
 
   const openSend = async (items: PrintJob[]) => {
     if (!items.length) return;
