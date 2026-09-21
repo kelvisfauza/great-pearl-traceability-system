@@ -49,6 +49,7 @@ import Finance from "./pages/Finance";
 import HumanResources from "./pages/HumanResources";
 import Reports from "./pages/Reports";
 import Communications from "./pages/Communications";
+import Quotations from "./pages/Quotations";
 import ExcelLoyalty from "./pages/ExcelLoyalty";
 import Settings from "./pages/Settings";
 import Logistics from "./pages/Logistics";
@@ -410,6 +411,11 @@ const App: React.ComponentType = () => {
                 <Route path="/reports" element={
                   <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
                     <Reports />
+                  </ProtectedRoute>
+                } />
+                <Route path="/quotations" element={
+                  <ProtectedRoute>
+                    <Quotations />
                   </ProtectedRoute>
                 } />
                 <Route path="/communications" element={
