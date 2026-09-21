@@ -10581,6 +10581,137 @@ export type Database = {
         }
         Relationships: []
       }
+      quotation_messages: {
+        Row: {
+          body: string
+          channel: string
+          created_at: string
+          direction: string
+          error: string | null
+          id: string
+          quotation_id: string
+          recipient: string | null
+          sent_by: string | null
+          status: string
+          subject: string | null
+        }
+        Insert: {
+          body: string
+          channel: string
+          created_at?: string
+          direction?: string
+          error?: string | null
+          id?: string
+          quotation_id: string
+          recipient?: string | null
+          sent_by?: string | null
+          status?: string
+          subject?: string | null
+        }
+        Update: {
+          body?: string
+          channel?: string
+          created_at?: string
+          direction?: string
+          error?: string | null
+          id?: string
+          quotation_id?: string
+          recipient?: string | null
+          sent_by?: string | null
+          status?: string
+          subject?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotation_messages_quotation_id_fkey"
+            columns: ["quotation_id"]
+            isOneToOne: false
+            referencedRelation: "quotations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotations: {
+        Row: {
+          amount: number | null
+          approval_at: string | null
+          approval_by: string | null
+          approval_decision: string | null
+          approval_notes: string | null
+          company_name: string
+          contact_name: string | null
+          created_at: string
+          currency: string
+          email: string | null
+          file_name: string | null
+          file_path: string | null
+          id: string
+          notes: string | null
+          phone: string | null
+          procurement_at: string | null
+          procurement_by: string | null
+          procurement_decision: string | null
+          procurement_notes: string | null
+          status: string
+          subject: string
+          submitted_by: string | null
+          submitted_by_email: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number | null
+          approval_at?: string | null
+          approval_by?: string | null
+          approval_decision?: string | null
+          approval_notes?: string | null
+          company_name: string
+          contact_name?: string | null
+          created_at?: string
+          currency?: string
+          email?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          procurement_at?: string | null
+          procurement_by?: string | null
+          procurement_decision?: string | null
+          procurement_notes?: string | null
+          status?: string
+          subject: string
+          submitted_by?: string | null
+          submitted_by_email?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number | null
+          approval_at?: string | null
+          approval_by?: string | null
+          approval_decision?: string | null
+          approval_notes?: string | null
+          company_name?: string
+          contact_name?: string | null
+          created_at?: string
+          currency?: string
+          email?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          procurement_at?: string | null
+          procurement_by?: string | null
+          procurement_decision?: string | null
+          procurement_notes?: string | null
+          status?: string
+          subject?: string
+          submitted_by?: string | null
+          submitted_by_email?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       receipts: {
         Row: {
           created_at: string
@@ -17444,6 +17575,7 @@ export type Database = {
         Args: { p_request_id: string }
         Returns: undefined
       }
+      is_active_staff: { Args: never; Returns: boolean }
       is_admin_hr_or_finance: { Args: never; Returns: boolean }
       is_admin_or_hr: { Args: never; Returns: boolean }
       is_conversation_member: { Args: { conv_id: string }; Returns: boolean }
@@ -17466,6 +17598,7 @@ export type Database = {
       }
       is_procurement_reviewer: { Args: { _user_id: string }; Returns: boolean }
       is_quality_or_admin: { Args: never; Returns: boolean }
+      is_quotation_approver: { Args: never; Returns: boolean }
       is_super_admin: { Args: { _uid: string }; Returns: boolean }
       is_supervisor_or_above: { Args: never; Returns: boolean }
       is_user_role: { Args: never; Returns: boolean }
