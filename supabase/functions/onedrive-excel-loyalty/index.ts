@@ -169,7 +169,11 @@ Deno.serve(async (req) => {
     for (const file of files) {
       if (Date.now() > deadline) { timedOut = true; break }
       const mtime = String(file.lastModifiedDateTime || '')
-      if (mtime && knownMtimes[file.id] === mtime) continue
+      if (!force && mtime && knownMtimes[file.id] === mtime) {
+        // Record the skip so an empty scan is explainable instead of silent
+        perFile.push({ file: file.name, skipped: 'unchanged since last scan', lastModified: mtime })
+        continue
+      }
       const editorEmail = String(file?.lastModifiedBy?.user?.email || '').toLowerCase()
       const editorName = String(file?.lastModifiedBy?.user?.displayName || '')
       const editor = findPerson(editorEmail) || findPerson(editorName)
