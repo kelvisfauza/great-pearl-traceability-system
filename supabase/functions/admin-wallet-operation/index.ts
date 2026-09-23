@@ -264,6 +264,86 @@ async function recordOverdraftUsage(supabase: any, args: {
   }
 }
 
+/**
+ * Reverses every wallet debit already posted for an operation (principal,
+ * service fee, overdraft access fee) and undoes the overdraft usage.
+ * Idempotent: a debit that already has a `-REV` counter-entry is skipped.
+ * Used when a payout gateway rejects the transfer after the wallet was
+ * debited, and when an admin rejects an operation that had already debited.
+ */
+async function reverseOperationLedger(supabase: any, opId: string, note: string): Promise<number> {
+  let reversed = 0;
+  try {
+    const { data: debits } = await supabase
+      .from("ledger_entries")
+      .select("id, user_id, amount, reference, source_category, metadata")
+      .eq("entry_type", "WITHDRAWAL")
+      .eq("metadata->>admin_wallet_operation_id", opId);
+
+    if (!debits || debits.length === 0) return 0;
+
+    const refs = debits.map((d: any) => `${d.reference}-REV`);
+    const { data: existing } = await supabase
+      .from("ledger_entries")
+      .select("reference")
+      .in("reference", refs);
+    const done = new Set((existing || []).map((r: any) => r.reference));
+
+    let odTotal = 0;
+    for (const d of debits) {
+      const revRef = `${d.reference}-REV`;
+      if (done.has(revRef)) continue;
+      const amt = Math.abs(Number(d.amount) || 0);
+      if (!(amt > 0)) continue;
+      const { error } = await supabase.from("ledger_entries").insert({
+        user_id: d.user_id,
+        entry_type: "DEPOSIT",
+        amount: amt,
+        reference: revRef,
+        source_category: "REVERSAL",
+        metadata: {
+          description: `Reversal — ${note}`,
+          admin_wallet_operation_id: opId,
+          reverses_reference: d.reference,
+          bypass_treasury_check: true,
+        },
+      });
+      if (!error) {
+        reversed += amt;
+        odTotal += amt;
+      }
+    }
+
+    // Undo the overdraft usage recorded for this operation
+    if (odTotal > 0) {
+      const userId = debits[0].user_id;
+      const { data: account } = await supabase
+        .from("overdraft_accounts")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("status", "active")
+        .maybeSingle();
+      if (account && Number(account.outstanding_balance || 0) > 0) {
+        const { data: odTx } = await supabase
+          .from("overdraft_transactions")
+          .select("amount, transaction_type")
+          .eq("account_id", account.id)
+          .like("reference", `%${opId.slice(0, 8)}%`);
+        const drawn = (odTx || []).reduce((s: number, t: any) => s + (Number(t.amount) || 0), 0);
+        const undo = Math.min(Number(account.outstanding_balance), drawn || 0);
+        if (undo > 0) {
+          await supabase.from("overdraft_accounts").update({
+            outstanding_balance: Number(account.outstanding_balance) - undo,
+          }).eq("id", account.id);
+        }
+      }
+    }
+  } catch (e) {
+    console.error("[admin-wallet-op] reversal failed:", (e as Error).message);
+  }
+  return reversed;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
