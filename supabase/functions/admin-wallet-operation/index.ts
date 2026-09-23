@@ -938,6 +938,10 @@ serve(async (req) => {
       } catch (execErr) {
         const errMsg = (execErr as Error).message || "Execution failed";
         console.error("[admin-wallet-op] execution error:", errMsg);
+        // The wallet may already have been debited before the payout failed.
+        // Always return that money immediately — never leave a failed payout
+        // with the user's balance reduced.
+        const refundedOnFail = await reverseOperationLedger(supabase, op.id, `failed ${op.operation_type}: ${errMsg.slice(0, 80)}`);
         // Roll the operation back to pending so a second admin can retry.
         // Keep the approval audit fields so we know who tried last.
         await supabase.from("admin_wallet_operations").update({
@@ -947,6 +951,7 @@ serve(async (req) => {
           approved_by_email: null,
           approved_by_name: null,
           approved_at: null,
+          metadata: { ...(op.metadata || {}), refunded_on_failure: refundedOnFail },
         }).eq("id", op.id);
         // Always tell the user, even when the operation failed.
         try {
