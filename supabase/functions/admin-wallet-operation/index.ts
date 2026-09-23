@@ -528,6 +528,14 @@ serve(async (req) => {
       if (!op) return respond(false, { error: "Operation not found" });
       if (op.status !== "pending") return respond(false, { error: `Cannot reject a ${op.status} operation` });
 
+      // If a previous attempt already debited the wallet (payout then failed),
+      // return that money before closing the operation.
+      const refunded = await reverseOperationLedger(
+        supabase,
+        operation_id,
+        `admin wallet ${op.operation_type} rejected`,
+      );
+
       await supabase.from("admin_wallet_operations").update({
         status: "rejected",
         approved_by: actorId,
@@ -535,9 +543,29 @@ serve(async (req) => {
         approved_by_name: actorEmp?.name || actorEmail,
         approved_at: new Date().toISOString(),
         rejected_reason: rejected_reason || null,
+        metadata: { ...(op.metadata || {}), refunded_on_reject: refunded },
       }).eq("id", operation_id);
 
-      return respond(true, { message: "Operation rejected" });
+      if (refunded > 0) {
+        try {
+          const bal = await getLedgerBalance(supabase, op.target_user_id);
+          await notifyWalletOperation(supabase, {
+            authHeader,
+            email: op.target_email,
+            phone: op.target_phone,
+            name: op.target_name,
+            title: `Wallet Refund — ${ugx(refunded)}`,
+            smsText: `Dear ${op.target_name || "User"}, a failed wallet ${op.operation_type} of ${ugx(refunded)} was cancelled and the money returned to your wallet. New balance: ${ugx(bal)}.`,
+            lines: [
+              ["Operation", "Refund of a failed withdrawal"],
+              ["Amount returned", ugx(refunded)],
+              ["New wallet balance", ugx(bal)],
+            ],
+          });
+        } catch (_) { /* best effort */ }
+      }
+
+      return respond(true, { message: refunded > 0 ? `Operation rejected — ${ugx(refunded)} returned to the wallet` : "Operation rejected", refunded });
     }
 
     // ---------------------------------------------------------------- APPROVE
