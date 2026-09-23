@@ -963,11 +963,12 @@ serve(async (req) => {
             name: op.target_name,
             failed: true,
             title: `Wallet Operation Failed — ${ugx(amount)}`,
-            smsText: `Dear ${op.target_name || "User"}, an admin wallet ${op.operation_type} of ${ugx(amount)} FAILED and was not completed. Current balance: ${ugx(failBal)}. Ref ${ref}.`,
+            smsText: `Dear ${op.target_name || "User"}, an admin wallet ${op.operation_type} of ${ugx(amount)} FAILED and was not completed.${refundedOnFail > 0 ? ` ${ugx(refundedOnFail)} has been returned to your wallet.` : ""} Current balance: ${ugx(failBal)}. Ref ${ref}.`,
             lines: [
               ["Operation", String(op.operation_type || "-")],
               ["Amount", ugx(amount)],
               ["Status", "Failed — not completed"],
+              ...(refundedOnFail > 0 ? [["Returned to your wallet", ugx(refundedOnFail)] as [string, string]] : []),
               ["Reason given", String(op.reason || "-")],
               ["Failure detail", errMsg.slice(0, 200)],
               ["Current wallet balance", ugx(failBal)],
@@ -975,7 +976,7 @@ serve(async (req) => {
             ],
           });
         } catch (_) { /* notification best-effort */ }
-        return respond(false, { error: errMsg, retryable: true });
+        return respond(false, { error: errMsg, retryable: true, refunded: refundedOnFail });
       }
 
     }
