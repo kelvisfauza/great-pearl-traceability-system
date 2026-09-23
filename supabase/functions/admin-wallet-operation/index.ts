@@ -264,6 +264,86 @@ async function recordOverdraftUsage(supabase: any, args: {
   }
 }
 
+/**
+ * Reverses every wallet debit already posted for an operation (principal,
+ * service fee, overdraft access fee) and undoes the overdraft usage.
+ * Idempotent: a debit that already has a `-REV` counter-entry is skipped.
+ * Used when a payout gateway rejects the transfer after the wallet was
+ * debited, and when an admin rejects an operation that had already debited.
+ */
+async function reverseOperationLedger(supabase: any, opId: string, note: string): Promise<number> {
+  let reversed = 0;
+  try {
+    const { data: debits } = await supabase
+      .from("ledger_entries")
+      .select("id, user_id, amount, reference, source_category, metadata")
+      .eq("entry_type", "WITHDRAWAL")
+      .eq("metadata->>admin_wallet_operation_id", opId);
+
+    if (!debits || debits.length === 0) return 0;
+
+    const refs = debits.map((d: any) => `${d.reference}-REV`);
+    const { data: existing } = await supabase
+      .from("ledger_entries")
+      .select("reference")
+      .in("reference", refs);
+    const done = new Set((existing || []).map((r: any) => r.reference));
+
+    let odTotal = 0;
+    for (const d of debits) {
+      const revRef = `${d.reference}-REV`;
+      if (done.has(revRef)) continue;
+      const amt = Math.abs(Number(d.amount) || 0);
+      if (!(amt > 0)) continue;
+      const { error } = await supabase.from("ledger_entries").insert({
+        user_id: d.user_id,
+        entry_type: "DEPOSIT",
+        amount: amt,
+        reference: revRef,
+        source_category: "REVERSAL",
+        metadata: {
+          description: `Reversal — ${note}`,
+          admin_wallet_operation_id: opId,
+          reverses_reference: d.reference,
+          bypass_treasury_check: true,
+        },
+      });
+      if (!error) {
+        reversed += amt;
+        odTotal += amt;
+      }
+    }
+
+    // Undo the overdraft usage recorded for this operation
+    if (odTotal > 0) {
+      const userId = debits[0].user_id;
+      const { data: account } = await supabase
+        .from("overdraft_accounts")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("status", "active")
+        .maybeSingle();
+      if (account && Number(account.outstanding_balance || 0) > 0) {
+        const { data: odTx } = await supabase
+          .from("overdraft_transactions")
+          .select("amount, transaction_type")
+          .eq("account_id", account.id)
+          .like("reference", `%${opId.slice(0, 8)}%`);
+        const drawn = (odTx || []).reduce((s: number, t: any) => s + (Number(t.amount) || 0), 0);
+        const undo = Math.min(Number(account.outstanding_balance), drawn || 0);
+        if (undo > 0) {
+          await supabase.from("overdraft_accounts").update({
+            outstanding_balance: Number(account.outstanding_balance) - undo,
+          }).eq("id", account.id);
+        }
+      }
+    }
+  } catch (e) {
+    console.error("[admin-wallet-op] reversal failed:", (e as Error).message);
+  }
+  return reversed;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -448,6 +528,14 @@ serve(async (req) => {
       if (!op) return respond(false, { error: "Operation not found" });
       if (op.status !== "pending") return respond(false, { error: `Cannot reject a ${op.status} operation` });
 
+      // If a previous attempt already debited the wallet (payout then failed),
+      // return that money before closing the operation.
+      const refunded = await reverseOperationLedger(
+        supabase,
+        operation_id,
+        `admin wallet ${op.operation_type} rejected`,
+      );
+
       await supabase.from("admin_wallet_operations").update({
         status: "rejected",
         approved_by: actorId,
@@ -455,9 +543,29 @@ serve(async (req) => {
         approved_by_name: actorEmp?.name || actorEmail,
         approved_at: new Date().toISOString(),
         rejected_reason: rejected_reason || null,
+        metadata: { ...(op.metadata || {}), refunded_on_reject: refunded },
       }).eq("id", operation_id);
 
-      return respond(true, { message: "Operation rejected" });
+      if (refunded > 0) {
+        try {
+          const bal = await getLedgerBalance(supabase, op.target_user_id);
+          await notifyWalletOperation(supabase, {
+            authHeader,
+            email: op.target_email,
+            phone: op.target_phone,
+            name: op.target_name,
+            title: `Wallet Refund — ${ugx(refunded)}`,
+            smsText: `Dear ${op.target_name || "User"}, a failed wallet ${op.operation_type} of ${ugx(refunded)} was cancelled and the money returned to your wallet. New balance: ${ugx(bal)}.`,
+            lines: [
+              ["Operation", "Refund of a failed withdrawal"],
+              ["Amount returned", ugx(refunded)],
+              ["New wallet balance", ugx(bal)],
+            ],
+          });
+        } catch (_) { /* best effort */ }
+      }
+
+      return respond(true, { message: refunded > 0 ? `Operation rejected — ${ugx(refunded)} returned to the wallet` : "Operation rejected", refunded });
     }
 
     // ---------------------------------------------------------------- APPROVE
@@ -830,6 +938,10 @@ serve(async (req) => {
       } catch (execErr) {
         const errMsg = (execErr as Error).message || "Execution failed";
         console.error("[admin-wallet-op] execution error:", errMsg);
+        // The wallet may already have been debited before the payout failed.
+        // Always return that money immediately — never leave a failed payout
+        // with the user's balance reduced.
+        const refundedOnFail = await reverseOperationLedger(supabase, op.id, `failed ${op.operation_type}: ${errMsg.slice(0, 80)}`);
         // Roll the operation back to pending so a second admin can retry.
         // Keep the approval audit fields so we know who tried last.
         await supabase.from("admin_wallet_operations").update({
@@ -839,6 +951,7 @@ serve(async (req) => {
           approved_by_email: null,
           approved_by_name: null,
           approved_at: null,
+          metadata: { ...(op.metadata || {}), refunded_on_failure: refundedOnFail },
         }).eq("id", op.id);
         // Always tell the user, even when the operation failed.
         try {
@@ -850,11 +963,12 @@ serve(async (req) => {
             name: op.target_name,
             failed: true,
             title: `Wallet Operation Failed — ${ugx(amount)}`,
-            smsText: `Dear ${op.target_name || "User"}, an admin wallet ${op.operation_type} of ${ugx(amount)} FAILED and was not completed. Current balance: ${ugx(failBal)}. Ref ${ref}.`,
+            smsText: `Dear ${op.target_name || "User"}, an admin wallet ${op.operation_type} of ${ugx(amount)} FAILED and was not completed.${refundedOnFail > 0 ? ` ${ugx(refundedOnFail)} has been returned to your wallet.` : ""} Current balance: ${ugx(failBal)}. Ref ${ref}.`,
             lines: [
               ["Operation", String(op.operation_type || "-")],
               ["Amount", ugx(amount)],
               ["Status", "Failed — not completed"],
+              ...(refundedOnFail > 0 ? [["Returned to your wallet", ugx(refundedOnFail)] as [string, string]] : []),
               ["Reason given", String(op.reason || "-")],
               ["Failure detail", errMsg.slice(0, 200)],
               ["Current wallet balance", ugx(failBal)],
@@ -862,7 +976,7 @@ serve(async (req) => {
             ],
           });
         } catch (_) { /* notification best-effort */ }
-        return respond(false, { error: errMsg, retryable: true });
+        return respond(false, { error: errMsg, retryable: true, refunded: refundedOnFail });
       }
 
     }
