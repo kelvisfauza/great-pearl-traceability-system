@@ -300,7 +300,7 @@ async function reverseOperationLedger(supabase: any, opId: string, note: string)
         entry_type: "DEPOSIT",
         amount: amt,
         reference: revRef,
-        source_category: "REVERSAL",
+        source_category: "REFUND",
         metadata: {
           description: `Reversal — ${note}`,
           admin_wallet_operation_id: opId,
