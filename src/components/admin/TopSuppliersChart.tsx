@@ -21,7 +21,10 @@ const TopSuppliersChart = () => {
           const { data, error } = await supabase
             .from('coffee_records')
             .select('supplier_name, kilograms')
+            // `date` is not unique — add `id` as a tiebreaker so paging is
+            // stable and rows are never repeated or skipped across pages.
             .order('date', { ascending: false })
+            .order('id', { ascending: false })
             .range(page * PAGE, page * PAGE + PAGE - 1);
 
           if (error) {
