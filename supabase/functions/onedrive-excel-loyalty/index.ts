@@ -77,6 +77,8 @@ Deno.serve(async (req) => {
     const dailyCap = Number(cfg.daily_cap_per_user ?? 20000)
     const manual = body.manual === true
     const dryRun = body.dryRun === true
+    // Re-read every workbook even when OneDrive reports it unchanged
+    const force = body.force === true
 
     if (!cfg.enabled && !manual) return json({ ok: false, error: 'Excel loyalty tracking is switched off.' })
     if (!folderPath && !includeShared) return json({ ok: false, error: 'No OneDrive folder has been set.' })
