@@ -175,6 +175,7 @@ import OverdraftAnalytics from "./pages/admin/OverdraftAnalytics";
 import LoanAppeals from "./pages/admin/LoanAppeals";
 import ProfileCompletionModal from "./components/ProfileCompletionModal";
 import BirthdayNotification from "./components/BirthdayNotification";
+import BirthdaySplash from "./components/BirthdaySplash";
 import ContractRenewalGate from "./components/ContractRenewalGate";
 import MeetingRewardsTeaserPopup from "./components/MeetingRewardsTeaserPopup";
 
@@ -252,6 +253,7 @@ const App: React.ComponentType = () => {
                 <DailyReportReminder />
                 <MonthlyReportReminder />
                 <ProfileCompletionModal />
+                <BirthdaySplash />
                 <BirthdayNotification />
                 <ContractRenewalGate />
                 <MeetingRewardsTeaserPopup />
