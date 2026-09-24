@@ -20,6 +20,37 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 
+// Percentage change chip: green for up, red for down, neutral when unchanged
+const ChangePill = ({ current, next, suffix = '' }: { current: number; next: number | null | undefined; suffix?: string }) => {
+  if (next === null || next === undefined) return null;
+  const changed = Number(next) !== Number(current);
+  if (!changed) {
+    return <span className="text-xs text-muted-foreground">No change</span>;
+  }
+  const diff = next - current;
+  const pct = current !== 0 ? (diff / current) * 100 : 0;
+  const up = diff > 0;
+  return (
+    <span className={`text-xs font-medium ${up ? 'text-green-600' : 'text-red-600'}`}>
+      {up ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}%{suffix}
+      <span className="text-muted-foreground font-normal ml-1">
+        (was {current.toLocaleString()})
+      </span>
+    </span>
+  );
+};
+
+// One row of the market comparison grid
+const CompareItem = ({ label, current, next, unit }: { label: string; current: number; next: number | null | undefined; unit?: string }) => (
+  <div className="p-2 bg-background/60 rounded border">
+    <div className="text-xs text-muted-foreground">{label}</div>
+    <div className="font-semibold text-sm">
+      {next === null || next === undefined ? '—' : next.toLocaleString()}{unit ? ` ${unit}` : ''}
+    </div>
+    <ChangePill current={current} next={next} />
+  </div>
+);
+
 // Reference market levels appended to internal (staff) price SMS only
 const buildReferenceBlock = (r: {
   iceArabica?: number | null;
