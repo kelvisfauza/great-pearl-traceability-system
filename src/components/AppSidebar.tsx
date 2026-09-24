@@ -26,7 +26,8 @@ import {
   Banknote,
   Wallet,
   TrendingDown,
-  HardDrive
+  HardDrive,
+  CalendarDays
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { isTraineeRole, isTraineeRouteAllowed } from "@/lib/trainee";
@@ -75,6 +76,7 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
       title: "Management",
       items: [
         { name: "Approvals", icon: CheckSquare, path: "/approvals", permission: null, requiresAdmin: true },
+        { name: "Leave Requests", icon: CalendarDays, path: "/admin/leave-requests", permission: null, requiresAdmin: true },
         { name: "Treasury Pool", icon: Wallet, path: "/admin/treasury", permission: null, requiresAdmin: true },
         { name: "User Statement", icon: FileText, path: "/admin/user-statement", permission: null, requiresAdmin: true },
         { name: "Coffee Bookings", icon: BookMarked, path: "/coffee-bookings", permission: null, requiresAdmin: true },
