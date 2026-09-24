@@ -20,6 +20,37 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 
+// Percentage change chip: green for up, red for down, neutral when unchanged
+const ChangePill = ({ current, next, suffix = '' }: { current: number; next: number | null | undefined; suffix?: string }) => {
+  if (next === null || next === undefined) return null;
+  const changed = Number(next) !== Number(current);
+  if (!changed) {
+    return <span className="text-xs text-muted-foreground">No change</span>;
+  }
+  const diff = next - current;
+  const pct = current !== 0 ? (diff / current) * 100 : 0;
+  const up = diff > 0;
+  return (
+    <span className={`text-xs font-medium ${up ? 'text-green-600' : 'text-red-600'}`}>
+      {up ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}%{suffix}
+      <span className="text-muted-foreground font-normal ml-1">
+        (was {current.toLocaleString()})
+      </span>
+    </span>
+  );
+};
+
+// One row of the market comparison grid
+const CompareItem = ({ label, current, next, unit }: { label: string; current: number; next: number | null | undefined; unit?: string }) => (
+  <div className="p-2 bg-background/60 rounded border">
+    <div className="text-xs text-muted-foreground">{label}</div>
+    <div className="font-semibold text-sm">
+      {next === null || next === undefined ? '—' : next.toLocaleString()}{unit ? ` ${unit}` : ''}
+    </div>
+    <ChangePill current={current} next={next} />
+  </div>
+);
+
 // Reference market levels appended to internal (staff) price SMS only
 const buildReferenceBlock = (r: {
   iceArabica?: number | null;
@@ -603,6 +634,22 @@ await savePrices({
                     )}
                   </div>
                 </div>
+
+                {/* Market indicators & local prices — show % change vs current on every submitted value */}
+                {(request.ice_arabica !== null || request.robusta !== null || request.exchange_rate !== null ||
+                  request.drugar_local !== null || request.wugar_local !== null || request.robusta_faq_local !== null) && (
+                  <div className="mb-4">
+                    <p className="text-xs font-semibold text-muted-foreground mb-2">MARKET & LOCAL PRICE CHANGES</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+                      <CompareItem label="ICE Arabica" current={currentPrices.iceArabica} next={request.ice_arabica} unit="¢/lb" />
+                      <CompareItem label="Robusta (ICE)" current={currentPrices.robusta} next={request.robusta} unit="$/MT" />
+                      <CompareItem label="USD/UGX" current={currentPrices.exchangeRate} next={request.exchange_rate} />
+                      <CompareItem label="Drugar" current={currentPrices.drugarLocal} next={request.drugar_local} unit="UGX" />
+                      <CompareItem label="Wugar" current={currentPrices.wugarLocal} next={request.wugar_local} unit="UGX" />
+                      <CompareItem label="Robusta FAQ" current={currentPrices.robustaFaqLocal} next={request.robusta_faq_local} unit="UGX" />
+                    </div>
+                  </div>
+                )}
 
                 {/* Notify Suppliers Badge */}
                 {request.notify_suppliers && (
