@@ -1162,6 +1162,82 @@ export type Database = {
         }
         Relationships: []
       }
+      birthday_wishes: {
+        Row: {
+          birthday_year: number
+          created_at: string
+          id: string
+          recipient_employee_id: string
+          seen_at: string | null
+          sender_employee_id: string
+          sender_name: string
+          updated_at: string
+        }
+        Insert: {
+          birthday_year: number
+          created_at?: string
+          id?: string
+          recipient_employee_id: string
+          seen_at?: string | null
+          sender_employee_id: string
+          sender_name: string
+          updated_at?: string
+        }
+        Update: {
+          birthday_year?: number
+          created_at?: string
+          id?: string
+          recipient_employee_id?: string
+          seen_at?: string | null
+          sender_employee_id?: string
+          sender_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "birthday_wishes_recipient_employee_id_fkey"
+            columns: ["recipient_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "birthday_wishes_recipient_employee_id_fkey"
+            columns: ["recipient_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_payroll_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "birthday_wishes_recipient_employee_id_fkey"
+            columns: ["recipient_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_payroll_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "birthday_wishes_sender_employee_id_fkey"
+            columns: ["sender_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "birthday_wishes_sender_employee_id_fkey"
+            columns: ["sender_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_payroll_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "birthday_wishes_sender_employee_id_fkey"
+            columns: ["sender_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_payroll_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bonuses: {
         Row: {
           allocated_at: string
@@ -17380,6 +17456,14 @@ export type Database = {
           status: string
         }[]
       }
+      get_my_unseen_birthday_wishes: {
+        Args: never
+        Returns: {
+          created_at: string
+          sender_name: string
+          wish_id: string
+        }[]
+      }
       get_or_create_grn_pay_code: {
         Args: { p_batch_number: string }
         Returns: string
@@ -17458,6 +17542,17 @@ export type Database = {
         Returns: {
           recovery_key: string
           recovery_pin: string
+        }[]
+      }
+      get_today_birthday_colleagues: {
+        Args: never
+        Returns: {
+          already_wished: boolean
+          avatar_url: string
+          department: string
+          employee_id: string
+          employee_position: string
+          name: string
         }[]
       }
       get_treasury_accounts_overview: { Args: never; Returns: Json }
@@ -17690,6 +17785,10 @@ export type Database = {
         Args: { p_conversation_id: string }
         Returns: undefined
       }
+      mark_my_birthday_wishes_seen: {
+        Args: { p_wish_ids: string[] }
+        Returns: number
+      }
       migrate_approved_assessments_to_finance: { Args: never; Returns: number }
       migrate_batch_numbers_to_new_format: { Args: never; Returns: Json }
       milling_unremitted_total: { Args: never; Returns: number }
@@ -17847,6 +17946,10 @@ export type Database = {
       }
       reverse_wallet_transfer: {
         Args: { p_admin_reason: string; p_ledger_entry_id: string }
+        Returns: Json
+      }
+      send_birthday_wish: {
+        Args: { p_recipient_employee_id: string }
         Returns: Json
       }
       send_print_jobs_to_user: {
