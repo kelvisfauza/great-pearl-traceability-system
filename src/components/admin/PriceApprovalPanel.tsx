@@ -635,6 +635,22 @@ await savePrices({
                   </div>
                 </div>
 
+                {/* Market indicators & local prices — show % change vs current on every submitted value */}
+                {(request.ice_arabica !== null || request.robusta !== null || request.exchange_rate !== null ||
+                  request.drugar_local !== null || request.wugar_local !== null || request.robusta_faq_local !== null) && (
+                  <div className="mb-4">
+                    <p className="text-xs font-semibold text-muted-foreground mb-2">MARKET & LOCAL PRICE CHANGES</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+                      <CompareItem label="ICE Arabica" current={currentPrices.iceArabica} next={request.ice_arabica} unit="¢/lb" />
+                      <CompareItem label="Robusta (ICE)" current={currentPrices.robusta} next={request.robusta} unit="$/MT" />
+                      <CompareItem label="USD/UGX" current={currentPrices.exchangeRate} next={request.exchange_rate} />
+                      <CompareItem label="Drugar" current={currentPrices.drugarLocal} next={request.drugar_local} unit="UGX" />
+                      <CompareItem label="Wugar" current={currentPrices.wugarLocal} next={request.wugar_local} unit="UGX" />
+                      <CompareItem label="Robusta FAQ" current={currentPrices.robustaFaqLocal} next={request.robusta_faq_local} unit="UGX" />
+                    </div>
+                  </div>
+                )}
+
                 {/* Notify Suppliers Badge */}
                 {request.notify_suppliers && (
                   <Badge variant="outline" className="mb-3">
