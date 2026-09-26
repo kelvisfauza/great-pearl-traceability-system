@@ -13544,6 +13544,27 @@ export type Database = {
         }
         Relationships: []
       }
+      teams_leave_processed: {
+        Row: {
+          created_at: string
+          message_id: string
+          note: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          message_id: string
+          note?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          message_id?: string
+          note?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       time_deductions: {
         Row: {
           created_at: string
