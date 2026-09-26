@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { CalendarDays, Check, Mail, Pencil, X } from "lucide-react";
@@ -249,6 +249,11 @@ const LeaveRequests = () => {
                     <span className="font-medium">{d.leave_type || "Leave"}</span>
                     <span className="text-muted-foreground">{fmt(d.start_date)} → {fmt(d.end_date)} · {d.days ?? "?"} day(s)</span>
                   </div>
+                  {balances[row.requestedby] && (
+                    <p className="text-xs text-muted-foreground">
+                      Annual leave balance {new Date().getFullYear()}: <span className="font-medium text-foreground">{balances[row.requestedby].left} of {ANNUAL_ENTITLEMENT} days left</span> ({balances[row.requestedby].used} used)
+                    </p>
+                  )}
                   {d.reason && <p className="text-sm text-muted-foreground whitespace-pre-line line-clamp-4">{d.reason}</p>}
                   {d.approval_note && <p className="text-sm"><span className="font-medium">Note:</span> {d.approval_note}</p>}
                   <div className="flex flex-wrap gap-2">
