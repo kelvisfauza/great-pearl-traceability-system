@@ -658,6 +658,8 @@ serve(async (req) => {
       let overdraftAccessFee = 0;
       let odPortion = 0;
 
+      let externalEffectDone = false;
+      let externalGatewayRef: string | null = null;
       try {
         if (op.operation_type === "credit") {
           await postLedger(supabase, {
@@ -784,6 +786,7 @@ serve(async (req) => {
               source_email: op.target_email,
             },
           });
+          externalEffectDone = true;
           const srcBal = await getLedgerBalance(supabase, op.target_user_id);
           const dstBal = await getLedgerBalance(supabase, op.destination_user_id!);
           const { data: destEmp } = await supabase.from("employees").select("phone, email").eq("email", op.destination_email).maybeSingle();
@@ -898,6 +901,8 @@ serve(async (req) => {
           } else {
             gatewayRef = `CASH-${Date.now()}`;
           }
+          externalEffectDone = true;
+          externalGatewayRef = gatewayRef;
 
           const newBal = await getLedgerBalance(supabase, op.target_user_id);
           await notifyWalletOperation(supabase, {
@@ -938,9 +943,22 @@ serve(async (req) => {
       } catch (execErr) {
         const errMsg = (execErr as Error).message || "Execution failed";
         console.error("[admin-wallet-op] execution error:", errMsg);
-        // The wallet may already have been debited before the payout failed.
-        // Always return that money immediately — never leave a failed payout
-        // with the user's balance reduced.
+        // If money already left (payout accepted by the gateway, or the
+        // destination wallet was credited), NEVER refund or reopen — that
+        // would duplicate funds. Record it as completed with a warning.
+        if (externalEffectDone) {
+          await supabase.from("admin_wallet_operations").update({
+            status: "completed",
+            executed_at: new Date().toISOString(),
+            ledger_reference: ref,
+            gateway_reference: externalGatewayRef,
+            overdraft_access_fee: overdraftAccessFee,
+            execution_error: `Post-payout step failed (funds already sent, not refunded): ${errMsg}`.slice(0, 500),
+            metadata: { ...(op.metadata || {}), overdraft_portion: odPortion, post_payout_error: errMsg, needs_review: true },
+          }).eq("id", op.id);
+          return respond(true, { message: "Operation executed; a follow-up step failed and was logged for review.", reference: ref, warning: errMsg });
+        }
+        // Nothing left the system yet — safe to return the debited money.
         const refundedOnFail = await reverseOperationLedger(supabase, op.id, `failed ${op.operation_type}: ${errMsg.slice(0, 80)}`);
         // Roll the operation back to pending so a second admin can retry.
         // Keep the approval audit fields so we know who tried last.

@@ -1,0 +1,12 @@
+ALTER FUNCTION public.get_today_birthday_colleagues() SECURITY DEFINER;
+ALTER FUNCTION public.send_birthday_wish(uuid) SECURITY DEFINER;
+ALTER FUNCTION public.get_my_unseen_birthday_wishes() SECURITY DEFINER;
+ALTER FUNCTION public.mark_my_birthday_wishes_seen(uuid[]) SECURITY DEFINER;
+REVOKE EXECUTE ON FUNCTION public.get_today_birthday_colleagues() FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.send_birthday_wish(uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.get_my_unseen_birthday_wishes() FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.mark_my_birthday_wishes_seen(uuid[]) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_today_birthday_colleagues() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.send_birthday_wish(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_my_unseen_birthday_wishes() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.mark_my_birthday_wishes_seen(uuid[]) TO authenticated;
