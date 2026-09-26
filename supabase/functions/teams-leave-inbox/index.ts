@@ -160,7 +160,7 @@ Deno.serve(async (req) => {
 
   try {
     const listRes = await fetch(
-      `${GATEWAY}/teams/${HR.teamId}/channels/${encodeURIComponent(HR.channelId)}/messages?$top=50&$orderby=createdDateTime desc`,
+      `${GATEWAY}/teams/${HR.teamId}/channels/${encodeURIComponent(HR.channelId)}/messages?$top=50`,
       {
         headers: {
           Authorization: `Bearer ${lovableKey}`,
