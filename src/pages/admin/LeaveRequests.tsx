@@ -54,6 +54,8 @@ const LeaveRequests = () => {
   const [form, setForm] = useState({ start: "", end: "", days: 0, type: "", note: "" });
   const [busy, setBusy] = useState(false);
 
+  const ANNUAL_ENTITLEMENT = 21; // days per year
+
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["admin-leave-requests"],
     queryFn: async () => {
@@ -64,9 +66,50 @@ const LeaveRequests = () => {
         .order("created_at", { ascending: false })
         .limit(500);
       if (error) throw error;
-      return (data || []).map((r: any) => ({ ...r, details: parseDetails(r.details) })) as LeaveRow[];
+      const parsed = (data || []).map((r: any) => ({ ...r, details: parseDetails(r.details) })) as LeaveRow[];
+      // Auto-expire pending requests whose leave dates have already passed
+      const today = format(new Date(), "yyyy-MM-dd");
+      const stale = parsed.filter((r) => statusKey(r.status) === "pending" && r.details?.end_date && r.details.end_date < today);
+      for (const r of stale) {
+        const details = { ...r.details, expired_auto: true, expired_at: new Date().toISOString() };
+        await supabase.from("approval_requests").update({ status: "expired", details, updated_at: new Date().toISOString() } as any).eq("id", r.id);
+        r.status = "expired";
+        r.details = details;
+        // Best-effort email to the employee
+        try {
+          await supabase.functions.invoke("send-transactional-email", {
+            body: {
+              templateName: "general-notification",
+              recipientEmail: r.requestedby,
+              idempotencyKey: `leave-expired-${r.id}`,
+              templateData: {
+                title: "Leave Request Expired",
+                recipientName: "there",
+                message: `Your ${details.leave_type || "leave"} request (${fmt(details.start_date)} to ${fmt(details.end_date)}) was not approved in time and has been marked as an expired request.\n\nIf you still need this leave, please submit a new request or contact management.`,
+              },
+            },
+          });
+        } catch { /* email is best-effort */ }
+      }
+      return parsed;
     },
   });
+
+  // Annual leave balance per employee: 21 days entitlement minus approved Annual Leave days this year
+  const balances = useMemo(() => {
+    const year = new Date().getFullYear();
+    const used: Record<string, number> = {};
+    rows.forEach((r) => {
+      const d = r.details;
+      if (statusKey(r.status) !== "approved") return;
+      if ((d.leave_type || "").toLowerCase() !== "annual leave") return;
+      if (!d.start_date || !d.start_date.startsWith(String(year))) return;
+      used[r.requestedby] = (used[r.requestedby] || 0) + (Number(d.days) || 0);
+    });
+    const map: Record<string, { used: number; left: number }> = {};
+    Object.entries(used).forEach(([email, u]) => (map[email] = { used: u, left: Math.max(0, ANNUAL_ENTITLEMENT - u) }));
+    return map;
+  }, [rows]);
 
   const { data: names = {} } = useQuery({
     queryKey: ["leave-employee-names", rows.map((r) => r.requestedby).join(",")],
