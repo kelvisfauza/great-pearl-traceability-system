@@ -99,6 +99,25 @@ function parseLeaveMessage(text: string): Parsed | null {
       out.to = out.from;
     }
   }
+  if (!out.from && !out.to) {
+    // single-line format: "LEAVE: Sick, 30/9/2026 to 1/10/2026, malaria"
+    const inline = text.match(/^\s*leave\s*[:\-]\s*(.+)$/im);
+    if (inline) {
+      const rest = inline[1];
+      const typeMatch = rest.match(/\b(annual|sick|maternity|paternity|compassionate|study|unpaid)\b/i);
+      if (typeMatch && !out.type) {
+        out.type = typeMatch[1][0].toUpperCase() + typeMatch[1].slice(1).toLowerCase();
+      }
+      const D = String.raw`\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{4}|\d{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]{3,9}(?:[\s,]+\d{4})?|[A-Za-z]{3,9}\.?\s+\d{1,2}(?:st|nd|rd|th)?(?:[\s,]+\d{4})?`;
+      const range = rest.match(new RegExp(`(${D})\\s*(?:to|through|until|-|–)\\s*(${D})`, 'i'));
+      if (range) {
+        out.from = parseDate(range[1], fallbackYear);
+        out.to = parseDate(range[2], fallbackYear);
+        const after = rest.slice((range.index ?? 0) + range[0].length).replace(/^[\s,;:\-]+/, '').replace(/[,;.]$/, '');
+        if (after && !out.reason) out.reason = after;
+      }
+    }
+  }
   if (!out.from && !out.to) return null;
   if (!out.type) out.type = 'Annual';
   return out;
