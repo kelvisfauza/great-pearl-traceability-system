@@ -138,7 +138,7 @@ const LeaveRequests = () => {
     }
     setBusy(true);
     const details = { ...row.details, approval_note: form.note || row.details.approval_note, decided_by: employee?.email, decided_at: new Date().toISOString(), confirmation_email_sent: false };
-    const update: any = { status: action, details, updated_at: new Date().toISOString() };
+    const update: any = { status: action === "rejected" ? "expired" : action, details, updated_at: new Date().toISOString() };
     if (action === "approved") { update.admin_approved = true; update.finance_approved = true; }
     const { error } = await supabase.from("approval_requests").update(update).eq("id", row.id);
     if (error) { setBusy(false); return toast({ title: "Could not update", description: error.message, variant: "destructive" }); }
@@ -195,7 +195,7 @@ const LeaveRequests = () => {
                     </div>
                     <div className="flex flex-wrap gap-1">
                       <Badge variant="outline">{sourceLabel(d)}</Badge>
-                      <Badge variant={s === "approved" ? "default" : s === "rejected" ? "destructive" : "secondary"}>{s}</Badge>
+                      <Badge variant={s === "approved" ? "default" : s === "rejected" ? "destructive" : "secondary"}>{s === "rejected" ? "expired request" : s}</Badge>
                       {s !== "pending" && (
                         <Badge variant="outline">{d.confirmation_email_sent ? "Email sent" : "Email not sent"}</Badge>
                       )}
