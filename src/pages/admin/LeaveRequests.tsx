@@ -133,6 +133,9 @@ const LeaveRequests = () => {
   const decide = async () => {
     if (!acting) return;
     const { row, action } = acting;
+    if (action === "rejected" && !form.note.trim()) {
+      return toast({ title: "Reason required", description: "Please give a reason for rejecting this leave request.", variant: "destructive" });
+    }
     setBusy(true);
     const details = { ...row.details, approval_note: form.note || row.details.approval_note, decided_by: employee?.email, decided_at: new Date().toISOString(), confirmation_email_sent: false };
     const update: any = { status: action, details, updated_at: new Date().toISOString() };
@@ -252,7 +255,7 @@ const LeaveRequests = () => {
           <div><Label>{acting?.action === "approved" ? "Note (optional)" : "Reason"}</Label><Textarea value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} /></div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setActing(null)}>Cancel</Button>
-            <Button variant={acting?.action === "approved" ? "default" : "destructive"} onClick={decide} disabled={busy}>
+            <Button variant={acting?.action === "approved" ? "default" : "destructive"} onClick={decide} disabled={busy || (acting?.action === "rejected" && !form.note.trim())}>
               {busy ? "Working…" : acting?.action === "approved" ? "Approve & email" : "Reject & email"}
             </Button>
           </DialogFooter>
