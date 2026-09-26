@@ -25,7 +25,7 @@ type LeaveRow = {
 const statusKey = (s: string) => {
   const v = (s || "").toLowerCase();
   if (v === "approved") return "approved";
-  if (v === "rejected") return "rejected";
+  if (v === "rejected" || v === "expired") return "rejected";
   return "pending";
 };
 
@@ -106,7 +106,7 @@ const LeaveRequests = () => {
     const approved = status === "approved";
     const message = approved
       ? `Your ${d.leave_type || "leave"} request has been approved for ${d.days} day${d.days === 1 ? "" : "s"}:\n\n- From: ${fmt(d.start_date)}\n- To: ${fmt(d.end_date)}${d.approval_note ? `\n\nNote: ${d.approval_note}` : ""}\n\nWhile on leave the system will be in read-only mode for your account.`
-      : `Your ${d.leave_type || "leave"} request (${fmt(d.start_date)} to ${fmt(d.end_date)}) was not approved.${d.approval_note ? `\n\nReason: ${d.approval_note}` : ""}\n\nPlease contact management if you have questions.`;
+      : `Your ${d.leave_type || "leave"} request (${fmt(d.start_date)} to ${fmt(d.end_date)}) was not approved and has been marked as an expired request.${d.approval_note ? `\n\nReason: ${d.approval_note}` : ""}\n\nIf you still need this leave, please submit a new request or contact management.`;
     const { data, error } = await supabase.functions.invoke("send-transactional-email", {
       body: {
         templateName: "general-notification",
