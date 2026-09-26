@@ -25,7 +25,7 @@ type LeaveRow = {
 const statusKey = (s: string) => {
   const v = (s || "").toLowerCase();
   if (v === "approved") return "approved";
-  if (v === "rejected") return "rejected";
+  if (v === "rejected" || v === "expired") return "rejected";
   return "pending";
 };
 
@@ -106,7 +106,7 @@ const LeaveRequests = () => {
     const approved = status === "approved";
     const message = approved
       ? `Your ${d.leave_type || "leave"} request has been approved for ${d.days} day${d.days === 1 ? "" : "s"}:\n\n- From: ${fmt(d.start_date)}\n- To: ${fmt(d.end_date)}${d.approval_note ? `\n\nNote: ${d.approval_note}` : ""}\n\nWhile on leave the system will be in read-only mode for your account.`
-      : `Your ${d.leave_type || "leave"} request (${fmt(d.start_date)} to ${fmt(d.end_date)}) was not approved.${d.approval_note ? `\n\nReason: ${d.approval_note}` : ""}\n\nPlease contact management if you have questions.`;
+      : `Your ${d.leave_type || "leave"} request (${fmt(d.start_date)} to ${fmt(d.end_date)}) was not approved and has been marked as an expired request.${d.approval_note ? `\n\nReason: ${d.approval_note}` : ""}\n\nIf you still need this leave, please submit a new request or contact management.`;
     const { data, error } = await supabase.functions.invoke("send-transactional-email", {
       body: {
         templateName: "general-notification",
@@ -138,7 +138,7 @@ const LeaveRequests = () => {
     }
     setBusy(true);
     const details = { ...row.details, approval_note: form.note || row.details.approval_note, decided_by: employee?.email, decided_at: new Date().toISOString(), confirmation_email_sent: false };
-    const update: any = { status: action, details, updated_at: new Date().toISOString() };
+    const update: any = { status: action === "rejected" ? "expired" : action, details, updated_at: new Date().toISOString() };
     if (action === "approved") { update.admin_approved = true; update.finance_approved = true; }
     const { error } = await supabase.from("approval_requests").update(update).eq("id", row.id);
     if (error) { setBusy(false); return toast({ title: "Could not update", description: error.message, variant: "destructive" }); }
@@ -195,7 +195,7 @@ const LeaveRequests = () => {
                     </div>
                     <div className="flex flex-wrap gap-1">
                       <Badge variant="outline">{sourceLabel(d)}</Badge>
-                      <Badge variant={s === "approved" ? "default" : s === "rejected" ? "destructive" : "secondary"}>{s}</Badge>
+                      <Badge variant={s === "approved" ? "default" : s === "rejected" ? "destructive" : "secondary"}>{s === "rejected" ? "expired request" : s}</Badge>
                       {s !== "pending" && (
                         <Badge variant="outline">{d.confirmation_email_sent ? "Email sent" : "Email not sent"}</Badge>
                       )}
