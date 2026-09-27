@@ -49,7 +49,7 @@ export const usePayrollRuns = () => {
       body: { month, createdBy, createdByEmail },
     });
     if (error) throw error;
-    if (data?.ok === false) throw new Error(data.error || 'Failed to generate preview');
+    if (data?.ok === false) throw new Error(typeof data.error === 'string' ? data.error : (data.error?.message || 'Failed to generate preview'));
     await fetchRuns();
     return data.run as PayrollRun;
   };

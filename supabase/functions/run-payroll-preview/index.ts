@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
       .eq('status', 'active')
       .lte('start_date', payrollDateKey)
       .gte('end_date', payrollDateKey);
-    if (adjustmentError) throw adjustmentError;
+    if (adjustmentError) console.warn('salary_adjustments unavailable, skipping:', adjustmentError.message);
     const adjustmentMap = new Map<string, any>();
     for (const adjustment of salaryAdjustments || []) {
       adjustmentMap.set(String(adjustment.employee_email).toLowerCase(), adjustment);
@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
     });
   } catch (e) {
     console.error('payroll-preview error:', e);
-    return new Response(JSON.stringify({ ok: false, error: String(e) }), {
+    return new Response(JSON.stringify({ ok: false, error: (e as any)?.message || String(e) }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
