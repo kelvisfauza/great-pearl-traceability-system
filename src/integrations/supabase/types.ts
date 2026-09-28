@@ -3273,6 +3273,7 @@ export type Database = {
           advance_id: string | null
           approved_at: string | null
           approved_by: string | null
+          base_salary: number | null
           completed_at: string | null
           completed_by: string | null
           created_at: string
@@ -3295,6 +3296,9 @@ export type Database = {
           payroll_run_id: string | null
           processed_by: string
           processed_by_email: string
+          salary_adjustment_amount: number
+          salary_adjustment_id: string | null
+          salary_adjustment_percentage: number | null
           salary_amount: number
           sms_sent: boolean | null
           status: string
@@ -3309,6 +3313,7 @@ export type Database = {
           advance_id?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          base_salary?: number | null
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string
@@ -3331,6 +3336,9 @@ export type Database = {
           payroll_run_id?: string | null
           processed_by: string
           processed_by_email: string
+          salary_adjustment_amount?: number
+          salary_adjustment_id?: string | null
+          salary_adjustment_percentage?: number | null
           salary_amount?: number
           sms_sent?: boolean | null
           status?: string
@@ -3345,6 +3353,7 @@ export type Database = {
           advance_id?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          base_salary?: number | null
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string
@@ -3367,6 +3376,9 @@ export type Database = {
           payroll_run_id?: string | null
           processed_by?: string
           processed_by_email?: string
+          salary_adjustment_amount?: number
+          salary_adjustment_id?: string | null
+          salary_adjustment_percentage?: number | null
           salary_amount?: number
           sms_sent?: boolean | null
           status?: string
@@ -3376,7 +3388,15 @@ export type Database = {
           transaction_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "employee_salary_payments_salary_adjustment_id_fkey"
+            columns: ["salary_adjustment_id"]
+            isOneToOne: false
+            referencedRelation: "salary_adjustments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       employee_suspensions: {
         Row: {
@@ -11276,6 +11296,48 @@ export type Database = {
           raw_old?: Json | null
           target_user_id?: string | null
           was_blocked?: boolean
+        }
+        Relationships: []
+      }
+      salary_adjustments: {
+        Row: {
+          agreement_reference: string | null
+          created_at: string
+          created_by: string
+          employee_email: string
+          end_date: string
+          id: string
+          pay_percentage: number
+          reason: string
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          agreement_reference?: string | null
+          created_at?: string
+          created_by?: string
+          employee_email: string
+          end_date: string
+          id?: string
+          pay_percentage: number
+          reason: string
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          agreement_reference?: string | null
+          created_at?: string
+          created_by?: string
+          employee_email?: string
+          end_date?: string
+          id?: string
+          pay_percentage?: number
+          reason?: string
+          start_date?: string
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
