@@ -18365,6 +18365,7 @@ export type Database = {
         Args: { p_amount: number; p_user_id: string }
         Returns: boolean
       }
+      vault_paid_pin_recovery: { Args: never; Returns: Json }
       vault_pin_status: { Args: never; Returns: Json }
       vault_set_pin: {
         Args: { p_current_pin?: string; p_pin: string; p_reset_code?: string }
