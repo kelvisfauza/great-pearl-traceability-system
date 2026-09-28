@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, ShieldCheck, Lock, KeyRound } from 'lucide-react';
 
 type Status = { has_pin: boolean; locked_until: string | null } | null;
-type Mode = 'loading' | 'setup' | 'unlock' | 'reset';
+type Mode = 'loading' | 'setup' | 'unlock' | 'reset' | 'confirmFee' | 'revealed' | 'change';
 
 const Digits = ({ value, onChange, onComplete, disabled }: {
   value: string; onChange: (v: string) => void; onComplete?: (v: string) => void; disabled?: boolean;
@@ -35,6 +35,7 @@ const VaultGate: React.FC<{ children: React.ReactNode; title?: string }> = ({ ch
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [resetCode, setResetCode] = useState('');
+  const [revealedPin, setRevealedPin] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,6 +76,7 @@ const VaultGate: React.FC<{ children: React.ReactNode; title?: string }> = ({ ch
     setBusy(true); setError(null);
     const payload: Record<string, string> = { p_pin: pin };
     if (mode === 'reset') payload.p_reset_code = resetCode;
+    if (mode === 'change') payload.p_current_pin = revealedPin;
     const { data, error: rpcError } = await supabase.rpc('vault_set_pin' as never, payload as never);
     setBusy(false);
     const res = data as unknown as { ok: boolean; message?: string };
@@ -83,9 +85,23 @@ const VaultGate: React.FC<{ children: React.ReactNode; title?: string }> = ({ ch
       return;
     }
     toast({ title: 'Vault PIN saved', description: 'Keep it private — it protects your money.' });
-    setPin(''); setConfirmPin(''); setResetCode('');
+    setPin(''); setConfirmPin(''); setResetCode(''); setRevealedPin('');
     markVaultUnlocked();
     await loadStatus();
+  };
+
+  const payRecovery = async () => {
+    setBusy(true); setError(null);
+    const { data, error: fnError } = await supabase.functions.invoke('vault-pin-reset', { body: { mode: 'paid_recover' } });
+    setBusy(false);
+    const res = data as { ok: boolean; message?: string; pin?: string; smsSent?: number; emailSent?: number } | null;
+    if (fnError || !res?.ok || !res.pin) {
+      setError(res?.message || 'Could not recover your PIN. You were not charged if this failed before payment.');
+      return;
+    }
+    setRevealedPin(res.pin);
+    setMode('revealed');
+    toast({ title: 'UGX 1,000 charged', description: `PIN also sent by text (${res.smsSent || 0}) and email (${res.emailSent || 0}).` });
   };
 
   const requestResetCode = async () => {
@@ -122,7 +138,7 @@ const VaultGate: React.FC<{ children: React.ReactNode; title?: string }> = ({ ch
             {mode === 'setup' ? <ShieldCheck className="w-7 h-7 text-primary" /> : <Lock className="w-7 h-7 text-primary" />}
           </div>
           <CardTitle>
-            {mode === 'setup' ? 'Create your vault PIN' : mode === 'reset' ? 'Set a new vault PIN' : title}
+            {mode === 'setup' ? 'Create your vault PIN' : mode === 'confirmFee' ? 'Recover your vault PIN' : mode === 'revealed' ? 'PIN recovered' : mode === 'change' ? 'Choose a new PIN' : mode === 'reset' ? 'Set a new vault PIN' : title}
           </CardTitle>
           <CardDescription>
             {mode === 'setup'
@@ -154,13 +170,44 @@ const VaultGate: React.FC<{ children: React.ReactNode; title?: string }> = ({ ch
                 {busy ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Lock className="h-4 w-4 mr-2" />}
                 Open vault
               </Button>
-              <Button variant="ghost" className="w-full text-sm" onClick={requestResetCode} disabled={busy}>
-                <KeyRound className="h-4 w-4 mr-2" /> Forgot your PIN? Send me a code
+              <Button variant="ghost" className="w-full text-sm" onClick={() => { setError(null); setMode('confirmFee'); }} disabled={busy}>
+                <KeyRound className="h-4 w-4 mr-2" /> Forgot your PIN?
               </Button>
             </>
           )}
 
-          {(mode === 'setup' || mode === 'reset') && (
+          {mode === 'confirmFee' && (
+            <>
+              <Alert>
+                <AlertDescription>
+                  Recovering a forgotten vault PIN costs <strong>UGX 1,000</strong>, taken from your wallet. Your PIN will be shown here and sent to your phone and email.
+                </AlertDescription>
+              </Alert>
+              <Button className="w-full" onClick={payRecovery} disabled={busy}>
+                {busy ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <KeyRound className="h-4 w-4 mr-2" />}
+                Confirm — deduct UGX 1,000
+              </Button>
+              <Button variant="ghost" className="w-full text-sm" onClick={() => setMode('unlock')} disabled={busy}>Cancel</Button>
+            </>
+          )}
+
+          {mode === 'revealed' && (
+            <>
+              <div className="text-center space-y-2">
+                <p className="text-sm text-muted-foreground">Your vault PIN</p>
+                <p className="text-4xl font-bold tracking-[0.4em] text-foreground">{revealedPin}</p>
+                <p className="text-xs text-muted-foreground">Also sent by text and email. Keep it private.</p>
+              </div>
+              <Button className="w-full" onClick={() => { setRevealedPin(''); markVaultUnlocked(); }}>
+                <Lock className="h-4 w-4 mr-2" /> Proceed to vault
+              </Button>
+              <Button variant="outline" className="w-full" onClick={() => { setPin(''); setConfirmPin(''); setMode('change'); }}>
+                <ShieldCheck className="h-4 w-4 mr-2" /> Change PIN
+              </Button>
+            </>
+          )}
+
+          {(mode === 'setup' || mode === 'reset' || mode === 'change') && (
             <>
               {mode === 'reset' && (
                 <div className="space-y-2">
