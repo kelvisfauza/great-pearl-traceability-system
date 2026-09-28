@@ -28,6 +28,19 @@ Deno.serve(async (req) => {
     const user = userData?.user
     if (userErr || !user) return json({ ok: false, error: 'NOT_AUTHENTICATED' })
 
+    const body = await req.json().catch(() => ({}))
+    const paid = body?.mode === 'paid_recover'
+    let recoveredPin = ''
+    if (paid) {
+      const userClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      })
+      const { data: r, error: rErr } = await userClient.rpc('vault_paid_pin_recovery')
+      if (rErr) return json({ ok: false, error: 'RECOVERY_FAILED', message: rErr.message })
+      if (!r?.ok) return json(r)
+      recoveredPin = r.pin
+    }
+
     // --- Rate limit: max 3 codes per 15 minutes ---
     const since = new Date(Date.now() - 15 * 60 * 1000).toISOString()
     const { count } = await admin
@@ -36,7 +49,7 @@ Deno.serve(async (req) => {
       .eq('user_id', user.id)
       .gte('created_at', since)
 
-    if ((count || 0) >= 3) {
+    if (!paid && (count || 0) >= 3) {
       return json({ ok: false, error: 'RATE_LIMITED', message: 'Too many reset codes requested. Please wait 15 minutes.' })
     }
 
@@ -50,6 +63,44 @@ Deno.serve(async (req) => {
       .maybeSingle()
 
     if (emp?.disabled) return json({ ok: false, error: 'ACCOUNT_DISABLED', message: 'This account is disabled.' })
+
+    if (paid) {
+      const name = emp?.name || email.split('@')[0]
+      const smsText = `Great Agro Coffee: UGX 1,000 vault recovery fee charged. Your vault PIN is now ${recoveredPin}. Do not share it.`
+      let smsSent = 0
+      for (const phone of [emp?.phone, emp?.alt_phone].filter(Boolean) as string[]) {
+        try {
+          const res = await fetch(`${supabaseUrl}/functions/v1/send-sms`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone, message: smsText, userName: name, messageType: 'vault_pin_recovery', recipientEmail: email, triggeredBy: email }),
+          })
+          if (res.ok) smsSent++
+        } catch (e) { console.error('SMS failed', e) }
+      }
+      let emailSent = 0
+      for (const addr of [...new Set([email, emp?.alt_email].filter(Boolean) as string[])]) {
+        try {
+          const res = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              templateName: 'general-notification',
+              recipientEmail: addr,
+              idempotencyKey: `vault-recover-${user.id}-${Date.now()}`,
+              templateData: {
+                title: 'Vault PIN Recovered',
+                subject: 'Your wallet vault PIN',
+                recipientName: name,
+                message: `A UGX 1,000 recovery fee was charged to your wallet.\n\nYour vault PIN is now: ${recoveredPin}\n\nYou can keep using it or change it from the vault screen. If you did not request this, tell management immediately.`,
+              },
+            }),
+          })
+          if (res.ok) emailSent++
+        } catch (e) { console.error('Email failed', e) }
+      }
+      return json({ ok: true, pin: recoveredPin, fee: 1000, smsSent, emailSent })
+    }
 
     const code = String(Math.floor(100000 + Math.random() * 900000))
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
