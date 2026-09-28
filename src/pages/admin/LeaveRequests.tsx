@@ -95,13 +95,27 @@ const LeaveRequests = () => {
     },
   });
 
+  // All approved Annual Leave this year (separate query so the 500-row page window can't understate usage)
+  const year = new Date().getFullYear();
+  const { data: approvedAnnual = [] } = useQuery({
+    queryKey: ["leave-annual-used", year],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("approval_requests")
+        .select("requestedby, status, details")
+        .ilike("type", "leave")
+        .in("status", ["Approved", "approved"])
+        .limit(2000);
+      if (error) throw error;
+      return (data || []).map((r: any) => ({ ...r, details: parseDetails(r.details) }));
+    },
+  });
+
   // Annual leave balance per employee: 21 days entitlement minus approved Annual Leave days this year
   const balances = useMemo(() => {
-    const year = new Date().getFullYear();
     const used: Record<string, number> = {};
-    rows.forEach((r) => {
+    approvedAnnual.forEach((r: any) => {
       const d = r.details;
-      if (statusKey(r.status) !== "approved") return;
       if ((d.leave_type || "").toLowerCase() !== "annual leave") return;
       if (!d.start_date || !d.start_date.startsWith(String(year))) return;
       used[r.requestedby] = (used[r.requestedby] || 0) + (Number(d.days) || 0);
@@ -109,7 +123,7 @@ const LeaveRequests = () => {
     const map: Record<string, { used: number; left: number }> = {};
     Object.entries(used).forEach(([email, u]) => (map[email] = { used: u, left: Math.max(0, ANNUAL_ENTITLEMENT - u) }));
     return map;
-  }, [rows]);
+  }, [approvedAnnual, year]);
 
   const { data: names = {} } = useQuery({
     queryKey: ["leave-employee-names", rows.map((r) => r.requestedby).join(",")],
@@ -249,11 +263,14 @@ const LeaveRequests = () => {
                     <span className="font-medium">{d.leave_type || "Leave"}</span>
                     <span className="text-muted-foreground">{fmt(d.start_date)} → {fmt(d.end_date)} · {d.days ?? "?"} day(s)</span>
                   </div>
-                  {balances[row.requestedby] && (
-                    <p className="text-xs text-muted-foreground">
-                      Annual leave balance {new Date().getFullYear()}: <span className="font-medium text-foreground">{balances[row.requestedby].left} of {ANNUAL_ENTITLEMENT} days left</span> ({balances[row.requestedby].used} used)
-                    </p>
-                  )}
+                  {(() => {
+                    const b = balances[row.requestedby] || { used: 0, left: ANNUAL_ENTITLEMENT };
+                    return (
+                      <p className="text-xs text-muted-foreground">
+                        Annual leave balance {year}: <span className="font-medium text-foreground">{b.left} of {ANNUAL_ENTITLEMENT} days left</span> ({b.used} used)
+                      </p>
+                    );
+                  })()}
                   {d.reason && <p className="text-sm text-muted-foreground whitespace-pre-line line-clamp-4">{d.reason}</p>}
                   {d.approval_note && <p className="text-sm"><span className="font-medium">Note:</span> {d.approval_note}</p>}
                   <div className="flex flex-wrap gap-2">
