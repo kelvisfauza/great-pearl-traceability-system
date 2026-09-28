@@ -431,6 +431,7 @@ Deno.serve(async (req) => {
             .insert({
               user_id: ledgerUserId,
               entry_type: 'DEPOSIT',
+              source_category: 'SALARY',
               amount: walletCredit,
               reference: `SAL-${paymentRecord.id}`,
               metadata: {
