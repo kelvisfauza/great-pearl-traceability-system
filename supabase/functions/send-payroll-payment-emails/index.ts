@@ -47,7 +47,10 @@ Deno.serve(async (req) => {
         continue
       }
 
-      const idempotencyKey = `salary-paid-${payment.employee_email}-${payment.payment_month || month}-${payment.id}`
+      const baseKey = `salary-paid-${payment.employee_email}-${payment.payment_month || month}-${payment.id}`
+      // A resend needs a fresh key, otherwise the mail provider drops it as a duplicate
+      const idempotencyKey = resend ? `${baseKey}-r${Date.now()}` : baseKey
+      if (sent.length + failed.length > 0) await new Promise((r) => setTimeout(r, 1500))
       if (!resend) {
         const { data: existing } = await supabase
           .from('sent_emails_log')
