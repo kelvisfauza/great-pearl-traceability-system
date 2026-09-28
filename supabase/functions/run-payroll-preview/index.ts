@@ -49,7 +49,8 @@ Deno.serve(async (req) => {
       .eq('status', 'active')
       .lte('start_date', payrollDateKey)
       .gte('end_date', payrollDateKey);
-    if (adjustmentError) console.warn('salary_adjustments unavailable, skipping:', adjustmentError.message);
+    // Fail loudly: silently skipping adjustments could pay half-pay staff in full
+    if (adjustmentError) throw new Error(`Salary adjustments could not be loaded — payroll preview stopped to avoid overpaying staff: ${adjustmentError.message}`);
     const adjustmentMap = new Map<string, any>();
     for (const adjustment of salaryAdjustments || []) {
       adjustmentMap.set(String(adjustment.employee_email).toLowerCase(), adjustment);
