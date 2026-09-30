@@ -13,6 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Loader2, CheckCircle2, CreditCard, Printer, ArrowLeft, History, FlaskConical, QrCode, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { printGrnPaymentReceipt } from '@/utils/grnPaymentReceipt';
+import { getGRNPrintDocumentHTML } from '@/utils/grnPrintTemplate';
+import { enrichGRNListWithSuppliers } from '@/utils/enrichGRNSupplier';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
 import GRNScannerDialog from '@/components/finance/GRNScannerDialog';
 import {
@@ -373,6 +375,32 @@ export default function GRNScanPay() {
     });
   };
 
+  const [printPromptOpen, setPrintPromptOpen] = useState(false);
+  const printPaymentOrder = async () => {
+    if (!lot) return;
+    const w = window.open('', '', 'width=1000,height=1200');
+    if (!w) return;
+    w.document.write('<html><body style="font-family:Arial;padding:24px">Preparing payment order…</body></html>');
+    const base: any = {
+      grnNumber: `GRN-${lot.batch_number || batch}`,
+      supplierId: lot.supplier_id,
+      supplierName: entry?.supplierName || 'Unknown Supplier',
+      coffeeType: entryRecord?.coffee_type || quality?.coffee_type || '',
+      numberOfBags: Number(entryRecord?.bags || 0),
+      totalKgs: Number(lot.quantity_kg || 0),
+      unitPrice: Number(lot.unit_price_ugx || 0),
+      totalAmount: Number(lot.total_amount_ugx || 0),
+      assessedBy: lot.assessed_by || quality?.assessed_by || '',
+      createdAt: lot.assessed_at || lot.created_at,
+      moisture: quality?.moisture ?? undefined,
+      printedBy: employee?.name || user?.email || 'Finance',
+    };
+    const [data] = await enrichGRNListWithSuppliers([base]);
+    w.document.open();
+    w.document.write(getGRNPrintDocumentHTML([data || base], `Payment Order - ${base.grnNumber}`, { paymentOrderOnly: true }));
+    w.document.close();
+  };
+
   const handlePay = async () => {
     if (!lot) return;
     setProcessing(true);
@@ -453,7 +481,7 @@ export default function GRNScanPay() {
       await qc.invalidateQueries({ queryKey: ['grn-scan-lot', batch] });
       qc.invalidateQueries({ queryKey: ['finance-pending-payments'] });
       qc.invalidateQueries({ queryKey: ['grn-referrals'] });
-      setTimeout(receipt, 300);
+      setPrintPromptOpen(true);
     } catch (e: any) {
       toast.error('Payment failed: ' + (e.message || 'Unknown error'));
     } finally {
@@ -1095,6 +1123,19 @@ export default function GRNScanPay() {
       <GRNScannerDialog open={scanOpen} onOpenChange={setScanOpen} />
 
 
+      <Dialog open={printPromptOpen} onOpenChange={setPrintPromptOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Paid — print documents</DialogTitle>
+            <DialogDescription>This purchase is now marked as paid. Print the Payment Order and the payment receipt.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2">
+            <Button onClick={printPaymentOrder}><Printer className="mr-2 h-4 w-4" />Print Payment Order</Button>
+            <Button variant="secondary" onClick={receipt}><Printer className="mr-2 h-4 w-4" />Print payment receipt</Button>
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setPrintPromptOpen(false)}>Done</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
