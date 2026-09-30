@@ -41,7 +41,7 @@ serve(async (req) => {
 
     const { data: employee, error: employeeError } = await supabase
       .from("employees")
-      .select("name, email, role, status")
+      .select("name, email, role, status, permissions")
       .eq("auth_user_id", callerData.user.id)
       .maybeSingle();
 
@@ -49,7 +49,7 @@ serve(async (req) => {
       throw employeeError;
     }
 
-    if (!employee || employee.status !== "Active" || !ALLOWED_ROLES.has(employee.role)) {
+    if (!employee || employee.status !== "Active" || !(ALLOWED_ROLES.has(employee.role) || employee.role === "Finance" || (Array.isArray((employee as any).permissions) && ((employee as any).permissions.includes("Finance:approve") || (employee as any).permissions.includes("Finance:process"))))) {
       return new Response(
         JSON.stringify({
           ok: false,
