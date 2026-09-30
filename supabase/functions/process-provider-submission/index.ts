@@ -745,7 +745,7 @@ serve(async (req) => {
     // ✅ APPROVAL NOTIFICATION — sent immediately, before the Yo payout result.
     // Only sent the first time (not on retry of a previously failed payout).
     const isRetry = (submission as any).payout_status === "failed";
-    if (!isRetry) {
+    if (!isRetry && !isFinanceRelease) {
       try {
         const approvalSms = `Dear ${submission.provider_name}, your request to Great Agro Coffee for UGX ${numAmount.toLocaleString()} (${submission.description}) has been APPROVED by ${reviewerName}. Disbursement is being processed and you will receive a confirmation message shortly.`;
         await supabase.functions.invoke("send-sms", {
@@ -922,7 +922,9 @@ serve(async (req) => {
     // 🔁 If Yo failed (e.g. account not funded), keep submission as 'pending'
     // so it stays in the approval list and admin can re-click Approve & Pay
     // once the Yo wallet is funded. The existing payout record is reused on retry.
-    const submissionStatus = yoStatus === "failed" ? "pending" : "paid";
+    const submissionStatus = yoStatus === "failed"
+      ? (isFinanceRelease ? "awaiting_finance" : "pending")
+      : "paid";
     await supabase
       .from("provider_submission_requests")
       .update({
@@ -933,6 +935,7 @@ serve(async (req) => {
         payout_record_id: record.id,
         payout_status: yoStatus,
         payout_message: displayMessage,
+        ...(isFinanceRelease ? { finance_released_by_name: reviewerName } : {}),
       })
       .eq("id", submissionId);
 
