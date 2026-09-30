@@ -9,6 +9,7 @@ import { FinanceStats } from '@/components/finance/FinanceStats';
 import { PendingCashDeposits } from '@/components/finance/PendingCashDeposits';
 
 // Lazy load heavy components
+import { AwaitingDisbursementPanel } from '@/components/approval/AwaitingDisbursementPanel';
 const PendingApprovalRequests = lazy(() => import('@/components/finance/PendingApprovalRequests'));
 const PendingCoffeePayments = lazy(() => import('@/components/finance/PendingCoffeePayments').then(m => ({ default: m.PendingCoffeePayments })));
 const CompletedTransactions = lazy(() => import('@/components/finance/CompletedTransactions').then(m => ({ default: m.CompletedTransactions })));
@@ -113,7 +114,10 @@ const Finance = () => {
                     label: <><span className="hidden sm:inline">Pending Approvals</span><span className="sm:hidden">Approvals</span></>,
                     content: (
                       <Suspense fallback={<LoadingSpinner />}>
-                        <PendingApprovalRequests />
+                        <div className="space-y-6">
+                          <AwaitingDisbursementPanel />
+                          <PendingApprovalRequests />
+                        </div>
                       </Suspense>
                     )
                   },
