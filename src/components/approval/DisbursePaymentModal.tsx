@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Banknote, Send, Smartphone } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { ReleaseReceiptDialog } from '@/components/finance/ReleaseReceiptDialog';
+import type { ReleaseReceiptData } from '@/utils/financeReleaseReceipt';
 
 export type DisburseTarget = {
   requestId: string;
@@ -27,6 +29,7 @@ export const DisbursePaymentModal: React.FC<Props> = ({ target, onClose, onDone 
   const [provider, setProvider] = useState<'yo' | 'gosente' | 'cash'>('gosente');
   const [phone, setPhone] = useState('');
   const [sending, setSending] = useState(false);
+  const [receipt, setReceipt] = useState<ReleaseReceiptData | null>(null);
 
   useEffect(() => {
     if (target) {
@@ -59,6 +62,19 @@ export const DisbursePaymentModal: React.FC<Props> = ({ target, onClose, onDone 
           title: provider === 'cash' ? 'Marked as Cash' : 'Money Released',
           description: `UGX ${Number(target.amount).toLocaleString()} — ${provider === 'cash' ? 'cash prepared' : 'sent'}. Recipient notified by SMS. Ref: ${data.payout_ref}`,
         });
+        const { data: ar } = await supabase.from('approval_requests').select('admin_approved_1_by,admin_approved_1_at,admin_approved_2_by,admin_approved_2_at,admin_final_approval_by,admin_final_approval_at').eq('id', target.requestId).maybeSingle();
+        const a: any = ar || {};
+        setReceipt({
+          reference: data.payout_ref || `REL-${target.requestId.slice(0, 8).toUpperCase()}`,
+          title: target.title, amount: Number(target.amount), recipientName: target.recipientName,
+          phone: provider === 'cash' ? undefined : phone.trim(), channel: provider,
+          releasedBy: actorEmail, requestId: target.requestId,
+          approvals: [
+            { label: 'Admin 1', by: a.admin_approved_1_by, at: a.admin_approved_1_at },
+            { label: 'Admin 2', by: a.admin_approved_2_by, at: a.admin_approved_2_at },
+            { label: 'Admin final', by: a.admin_approved_1_by ? null : a.admin_final_approval_by, at: a.admin_final_approval_at },
+          ],
+        });
         onDone?.();
         onClose();
       }
@@ -70,6 +86,7 @@ export const DisbursePaymentModal: React.FC<Props> = ({ target, onClose, onDone 
   };
 
   return (
+    <>
     <Dialog open={!!target} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
@@ -141,6 +158,8 @@ export const DisbursePaymentModal: React.FC<Props> = ({ target, onClose, onDone 
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    <ReleaseReceiptDialog data={receipt} onClose={() => setReceipt(null)} />
+    </>
   );
 };
 
