@@ -522,7 +522,7 @@ serve(async (req) => {
     // Get reviewer name
     const { data: emp } = await supabase
       .from("employees")
-      .select("name")
+      .select("name, role, permissions")
       .eq("email", reviewer.email)
       .maybeSingle();
     const reviewerName = emp?.name || reviewer.email || "Admin";
@@ -648,8 +648,13 @@ serve(async (req) => {
       amountOverride !== null &&
       Number(amountOverride) > 0 &&
       Number(amountOverride) !== originalAmount;
-    const numAmount = overridden ? Number(amountOverride) : originalAmount;
-    const numCharge = Number(withdrawCharge || 0);
+    let numAmount = overridden ? Number(amountOverride) : originalAmount;
+    let numCharge = Number(withdrawCharge || 0);
+    if (isFinanceRelease) {
+      // Finance releases exactly what the admin approved.
+      numAmount = Number((submission as any).admin_approved_amount) || numAmount;
+      numCharge = Number((submission as any).admin_approved_charge) || 0;
+    }
     const totalAmount = numAmount + numCharge;
 
     if (!Number.isFinite(numAmount) || numAmount < 500) {
