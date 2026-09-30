@@ -285,7 +285,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
                     ) : (
                       <Check className="w-3 h-3 mr-1" />
                     )}
-                    {s.payout_status === 'failed' ? 'Retry Payout' : 'Approve & Pay'}
+                    {s.payout_status === 'failed' ? 'Retry Payout' : 'Approve'}
                   </Button>
                 </div>
               </div>
