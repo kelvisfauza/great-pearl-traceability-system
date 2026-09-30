@@ -746,7 +746,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <Wallet className="h-5 w-5" />
-            Pending Withdrawal Requests ({requests.length})
+            Waiting for Finance Release ({requests.length})
           </h2>
           <Button variant="outline" size="sm" onClick={fetchRequests}>
             <RefreshCw className="h-4 w-4 mr-2" />
