@@ -41,7 +41,19 @@ serve(async (req) => {
     const isFinance = role === "Finance" || perms.includes("Finance:approve") || perms.includes("Finance:process");
 
     const { instant_withdrawal_id, action } = await req.json();
-    if (!instant_withdrawal_id) return respond(false, { error: "Missing instant_withdrawal_id" });
+
+    if (action === "finance_list") {
+      if (!isFinance && !isAdmin) return respond(false, { error: "Not allowed" });
+      const { data: rows } = await supabase.from("instant_withdrawals").select("*")
+        .eq("payout_status", "pending_finance").order("created_at", { ascending: true });
+      const out = [];
+      for (const r of rows || []) {
+        const { data: e } = await supabase.from("employees").select("name, email").or(`auth_user_id.eq.${r.user_id},id.eq.${r.user_id}`).maybeSingle();
+        out.push({ ...r, employee_name: e?.name || r.user_id, employee_email: e?.email || null });
+      }
+      return respond(true, { withdrawals: out });
+    }
+    if (!instant_withdrawal_id || instant_withdrawal_id === "x") return respond(false, { error: "Missing instant_withdrawal_id" });
 
     // Step 1 — admin approval only moves it to Finance; no money moves.
     if (action === "admin_approve") {
@@ -54,6 +66,14 @@ serve(async (req) => {
       }).eq("id", instant_withdrawal_id).eq("payout_status", "pending_approval").select("id");
       if (!upd?.length) return respond(false, { error: "Already processed" });
       return respond(true, { awaiting_finance: true });
+    }
+
+    if (action === "send_back") {
+      if (!isFinance) return respond(false, { error: "Only Finance can send back" });
+      const { data: upd } = await supabase.from("instant_withdrawals").update({ payout_status: "pending_approval", admin_approved_by: null, admin_approved_at: null })
+        .eq("id", instant_withdrawal_id).eq("payout_status", "pending_finance").select("id");
+      if (!upd?.length) return respond(false, { error: "Already processed" });
+      return respond(true, {});
     }
 
     // Step 2 — Finance releases the money.
