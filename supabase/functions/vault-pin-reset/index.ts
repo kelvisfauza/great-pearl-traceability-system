@@ -31,6 +31,8 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}))
     const paid = body?.mode === 'paid_recover'
     let recoveredPin = ''
+    let recoveredFee = 1000
+    let recoveredOverdraft = false
     if (paid) {
       const userClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
         global: { headers: { Authorization: `Bearer ${token}` } },
@@ -39,6 +41,8 @@ Deno.serve(async (req) => {
       if (rErr) return json({ ok: false, error: 'RECOVERY_FAILED', message: rErr.message })
       if (!r?.ok) return json(r)
       recoveredPin = r.pin
+      recoveredFee = Number(r.fee) || 1000
+      recoveredOverdraft = r.overdraft === true
     }
 
     // --- Rate limit: max 3 codes per 15 minutes ---
