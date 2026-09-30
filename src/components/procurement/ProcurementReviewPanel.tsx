@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CheckCircle, XCircle, RefreshCw, Pencil, ClipboardCheck, User, Calendar, History } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, Pencil, ClipboardCheck, User, Calendar, History, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import QuotationReviewPanel from '@/components/quotations/QuotationReviewPanel';
 
@@ -86,6 +86,7 @@ const ProcurementReviewPanel = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [history, setHistory] = useState<HistoryRow[]>([]);
+  const [detailRow, setDetailRow] = useState<HistoryRow | null>(null);
 
   const [dialog, setDialog] = useState<{
     open: boolean;
