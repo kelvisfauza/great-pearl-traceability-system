@@ -5679,10 +5679,15 @@ export type Database = {
       }
       instant_withdrawals: {
         Row: {
+          admin_approved_at: string | null
+          admin_approved_by: string | null
           amount: number
           completed_at: string | null
           created_at: string | null
+          finance_released_at: string | null
+          finance_released_by: string | null
           id: string
+          last_error: string | null
           ledger_reference: string | null
           payment_provider: string | null
           payout_ref: string | null
@@ -5691,10 +5696,15 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          admin_approved_at?: string | null
+          admin_approved_by?: string | null
           amount: number
           completed_at?: string | null
           created_at?: string | null
+          finance_released_at?: string | null
+          finance_released_by?: string | null
           id?: string
+          last_error?: string | null
           ledger_reference?: string | null
           payment_provider?: string | null
           payout_ref?: string | null
@@ -5703,10 +5713,15 @@ export type Database = {
           user_id: string
         }
         Update: {
+          admin_approved_at?: string | null
+          admin_approved_by?: string | null
           amount?: number
           completed_at?: string | null
           created_at?: string | null
+          finance_released_at?: string | null
+          finance_released_by?: string | null
           id?: string
+          last_error?: string | null
           ledger_reference?: string | null
           payment_provider?: string | null
           payout_ref?: string | null

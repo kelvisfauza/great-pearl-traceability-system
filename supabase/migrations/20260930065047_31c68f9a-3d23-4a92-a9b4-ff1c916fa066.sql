@@ -1,0 +1,1 @@
+ALTER TABLE public.instant_withdrawals ADD COLUMN IF NOT EXISTS admin_approved_by text, ADD COLUMN IF NOT EXISTS admin_approved_at timestamptz, ADD COLUMN IF NOT EXISTS finance_released_by text, ADD COLUMN IF NOT EXISTS finance_released_at timestamptz, ADD COLUMN IF NOT EXISTS last_error text;

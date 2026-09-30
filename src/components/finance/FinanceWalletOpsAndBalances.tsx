@@ -19,15 +19,18 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
   const [busy, setBusy] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [reason, setReason] = useState('');
+  const [iws, setIws] = useState<any[]>([]);
   const [receipt, setReceipt] = useState<ReleaseReceiptData | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     supabase.functions.invoke('sync-yo-balance').catch(() => {});
-    const [{ data: o }, { data: l }] = await Promise.all([
+    const [{ data: o }, { data: l }, { data: iw }] = await Promise.all([
       (supabase as any).rpc('get_treasury_accounts_overview'),
       supabase.functions.invoke('admin-wallet-operation', { body: { action: 'finance_list' } }),
+      supabase.functions.invoke('dispatch-gosente-instant', { body: { action: 'finance_list', instant_withdrawal_id: 'x' } }),
     ]);
+    setIws(iw?.ok ? iw.withdrawals : []);
     setOv(o?.ok ? o : null);
     setOps(l?.ok ? l.operations : []);
     setLoading(false);
@@ -48,6 +51,27 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
       approvals: [{ label: 'Created by', by: op.initiated_by_name }, { label: 'Admin approval', by: op.approved_by_name, at: op.approved_at }],
     });
     load();
+  };
+  const releaseIw = async (w: any) => {
+    setBusy(w.id);
+    const { data, error } = await supabase.functions.invoke('dispatch-gosente-instant', { body: { instant_withdrawal_id: w.id } });
+    setBusy(null);
+    if (error || !data?.ok) { toast.error(data?.error || error?.message || 'Payout failed — still waiting, you can retry'); load(); return; }
+    const { data: s } = await supabase.auth.getSession();
+    setReceipt({
+      reference: data.ref || w.payout_ref, title: 'Instant withdrawal (GosentePay)', amount: Number(w.amount),
+      recipientName: w.employee_name, phone: w.phone_number, channel: 'gosente',
+      releasedBy: s?.session?.user?.email || 'Finance', requestId: w.id,
+      approvals: [{ label: 'Admin approval', by: w.admin_approved_by, at: w.admin_approved_at }],
+    });
+    load();
+  };
+  const sendBackIw = async (w: any) => {
+    setBusy(w.id);
+    const { data, error } = await supabase.functions.invoke('dispatch-gosente-instant', { body: { instant_withdrawal_id: w.id, action: 'send_back' } });
+    setBusy(null);
+    if (error || !data?.ok) { toast.error(data?.error || error?.message || 'Failed'); return; }
+    toast.success('Sent back to admin'); load();
   };
   const reject = async (id: string) => {
     if (!reason.trim()) { toast.error('Give a reason'); return; }
@@ -91,6 +115,29 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
               </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Send className="h-5 w-5 text-primary" /> Instant withdrawals — awaiting Finance ({iws.length})</CardTitle>
+          <CardDescription>Approved by admin. Money is sent by GosentePay only when Finance releases.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {iws.length === 0 && <p className="text-sm text-muted-foreground">Nothing waiting.</p>}
+          {iws.map(w => (
+            <div key={w.id} className="p-3 border rounded-lg flex flex-wrap justify-between gap-2">
+              <div>
+                <p className="font-medium">{w.employee_name} — {fmt(w.amount)}</p>
+                <p className="text-sm text-muted-foreground">GosentePay • {w.phone_number} • Approved by {w.admin_approved_by || 'admin'}</p>
+                {w.last_error && <p className="text-xs text-destructive">Last attempt failed: {w.last_error}</p>}
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" disabled={busy === w.id} onClick={() => releaseIw(w)}>Release</Button>
+                <Button size="sm" variant="outline" disabled={busy === w.id} onClick={() => sendBackIw(w)}>Send back</Button>
+              </div>
+            </div>
+          ))}
         </CardContent>
       </Card>
 

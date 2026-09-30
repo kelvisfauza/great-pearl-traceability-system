@@ -34,14 +34,50 @@ serve(async (req) => {
 
     // Verify admin role
     const { data: adminEmp } = await supabase
-      .from("employees").select("name, role").eq("email", adminEmail).maybeSingle();
+      .from("employees").select("name, role, permissions").eq("email", adminEmail).maybeSingle();
     const role = (adminEmp?.role || "").toString();
-    if (!["Administrator", "Super Admin"].includes(role)) {
-      return respond(false, { error: "Only administrators can approve GosentePay payouts" });
+    const perms: string[] = Array.isArray((adminEmp as any)?.permissions) ? (adminEmp as any).permissions : [];
+    const isAdmin = ["Administrator", "Super Admin"].includes(role);
+    const isFinance = role === "Finance" || perms.includes("Finance:approve") || perms.includes("Finance:process");
+
+    const { instant_withdrawal_id, action } = await req.json();
+
+    if (action === "finance_list") {
+      if (!isFinance && !isAdmin) return respond(false, { error: "Not allowed" });
+      const { data: rows } = await supabase.from("instant_withdrawals").select("*")
+        .eq("payout_status", "pending_finance").order("created_at", { ascending: true });
+      const out = [];
+      for (const r of rows || []) {
+        const { data: e } = await supabase.from("employees").select("name, email").or(`auth_user_id.eq.${r.user_id},id.eq.${r.user_id}`).maybeSingle();
+        out.push({ ...r, employee_name: e?.name || r.user_id, employee_email: e?.email || null });
+      }
+      return respond(true, { withdrawals: out });
+    }
+    if (!instant_withdrawal_id || instant_withdrawal_id === "x") return respond(false, { error: "Missing instant_withdrawal_id" });
+
+    // Step 1 — admin approval only moves it to Finance; no money moves.
+    if (action === "admin_approve") {
+      if (!isAdmin) return respond(false, { error: "Only administrators can approve" });
+      const { data: row } = await supabase.from("instant_withdrawals").select("user_id").eq("id", instant_withdrawal_id).maybeSingle();
+      const { data: owner } = await supabase.from("employees").select("email").or(`auth_user_id.eq.${row?.user_id},id.eq.${row?.user_id}`).maybeSingle();
+      if (owner?.email && owner.email === adminEmail) return respond(false, { error: "You cannot approve your own withdrawal" });
+      const { data: upd } = await supabase.from("instant_withdrawals").update({
+        payout_status: "pending_finance", admin_approved_by: adminEmp?.name || adminEmail, admin_approved_at: new Date().toISOString(),
+      }).eq("id", instant_withdrawal_id).eq("payout_status", "pending_approval").select("id");
+      if (!upd?.length) return respond(false, { error: "Already processed" });
+      return respond(true, { awaiting_finance: true });
     }
 
-    const { instant_withdrawal_id } = await req.json();
-    if (!instant_withdrawal_id) return respond(false, { error: "Missing instant_withdrawal_id" });
+    if (action === "send_back") {
+      if (!isFinance) return respond(false, { error: "Only Finance can send back" });
+      const { data: upd } = await supabase.from("instant_withdrawals").update({ payout_status: "pending_approval", admin_approved_by: null, admin_approved_at: null })
+        .eq("id", instant_withdrawal_id).eq("payout_status", "pending_finance").select("id");
+      if (!upd?.length) return respond(false, { error: "Already processed" });
+      return respond(true, {});
+    }
+
+    // Step 2 — Finance releases the money.
+    if (!isFinance) return respond(false, { error: "Only Finance can release this payout" });
 
     // Atomic claim: only proceed if still pending_approval
     const { data: iw, error: fetchErr } = await supabase
@@ -50,7 +86,7 @@ serve(async (req) => {
       .eq("id", instant_withdrawal_id)
       .maybeSingle();
     if (fetchErr || !iw) return respond(false, { error: "Record not found" });
-    if (iw.payout_status !== "pending_approval") {
+    if (iw.payout_status !== "pending_finance") {
       return respond(false, { error: "Already processed" });
     }
     if (iw.payment_provider !== "gosente") {
@@ -65,7 +101,10 @@ serve(async (req) => {
 
     // Self-approval guard
     if (reqEmp?.email && reqEmp.email === adminEmail) {
-      return respond(false, { error: "You cannot approve your own withdrawal" });
+      return respond(false, { error: "You cannot release your own withdrawal" });
+    }
+    if (iw.admin_approved_by && [adminEmp?.name, adminEmail].includes(iw.admin_approved_by)) {
+      return respond(false, { error: "You approved this as admin — another Finance officer must release it" });
     }
 
     const ref = iw.payout_ref || `INSTANT-WD-${iw.id}`;
@@ -90,7 +129,10 @@ serve(async (req) => {
         payout_status: "success",
         payout_ref: providerRef,
         completed_at: new Date().toISOString(),
-      }).eq("id", iw.id).eq("payout_status", "pending_approval");
+        finance_released_by: adminEmp?.name || adminEmail,
+        finance_released_at: new Date().toISOString(),
+        last_error: null,
+      }).eq("id", iw.id).eq("payout_status", "pending_finance");
 
       // Notify requester
       if (reqEmp?.email) {
@@ -114,6 +156,7 @@ serve(async (req) => {
     }
 
     // Failure — keep pending_approval so admin can retry, log the error
+    await supabase.from("instant_withdrawals").update({ last_error: String(displayMsg).slice(0, 300) }).eq("id", iw.id);
     console.warn(`[dispatch-gosente-instant] Gosente failure status=${status} body=${JSON.stringify(body)}`);
     return respond(false, { error: `GosentePay payout failed: ${displayMsg}`, providerStatus: status });
   } catch (e) {

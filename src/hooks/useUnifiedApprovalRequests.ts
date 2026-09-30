@@ -431,11 +431,18 @@ export const useUnifiedApprovalRequests = () => {
         if (status === 'Approved' && isGosente) {
           const { data: dispatched, error: dispatchErr } = await supabase.functions.invoke(
             'dispatch-gosente-instant',
-            { body: { instant_withdrawal_id: iwId } }
+            { body: { instant_withdrawal_id: iwId, action: 'admin_approve' } }
           );
           if (dispatchErr || !dispatched?.ok) {
-            return { blocked: true, reason: dispatched?.error || dispatchErr?.message || 'GosentePay payout failed. The request remains pending — you can retry.' };
+            return { blocked: true, reason: dispatched?.error || dispatchErr?.message || 'Could not send to Finance. Please retry.' };
           }
+          try {
+            const { data: emp } = await supabase.from('employees').select('phone, name').eq('email', request.details.requester_email).maybeSingle();
+            if (emp?.phone) {
+              await supabase.functions.invoke('send-sms', { body: { phone: emp.phone, userName: emp.name, messageType: 'withdrawal_approval',
+                message: `Dear ${emp.name}, your instant withdrawal of UGX ${Number((currentIW as any).amount).toLocaleString()} has been APPROVED by Admin and is awaiting Finance to release the funds. Great Agro Coffee.` } });
+            }
+          } catch (e) { console.error('SMS error (non-blocking):', e); }
           // dispatch fn already updated record → refresh & exit
           await fetchAllRequests();
           return true;
