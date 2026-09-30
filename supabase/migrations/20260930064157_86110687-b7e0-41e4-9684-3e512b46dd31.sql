@@ -1,0 +1,3 @@
+ALTER TABLE public.admin_wallet_operations DROP CONSTRAINT admin_wallet_operations_status_check;
+ALTER TABLE public.admin_wallet_operations ADD CONSTRAINT admin_wallet_operations_status_check CHECK (status = ANY (ARRAY['pending','awaiting_finance','approved','rejected','completed','failed','cancelled']));
+ALTER TABLE public.admin_wallet_operations ADD COLUMN IF NOT EXISTS finance_released_by_email text, ADD COLUMN IF NOT EXISTS finance_released_by_name text, ADD COLUMN IF NOT EXISTS finance_released_at timestamptz;
