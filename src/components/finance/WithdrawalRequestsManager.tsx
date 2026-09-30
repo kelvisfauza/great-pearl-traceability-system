@@ -883,7 +883,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-green-600" />
-              Approve Withdrawal
+              Release Payment
             </DialogTitle>
           </DialogHeader>
           
@@ -949,7 +949,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
               disabled={processing !== null}
               className="bg-emerald-600 hover:bg-emerald-700"
             >
-              {processing ? 'Processing...' : 'Confirm & Approve'}
+              {processing ? 'Processing...' : 'Confirm & Release'}
             </Button>
           </DialogFooter>
         </DialogContent>
