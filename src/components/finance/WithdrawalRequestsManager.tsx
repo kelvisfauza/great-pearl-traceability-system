@@ -24,6 +24,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
+import { ReleaseReceiptDialog } from '@/components/finance/ReleaseReceiptDialog';
+import type { ReleaseReceiptData } from '@/utils/financeReleaseReceipt';
 import { 
   Wallet, 
   Phone, 
@@ -368,6 +370,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
     }
   };
 
+  const [receipt, setReceipt] = useState<ReleaseReceiptData | null>(null);
   const handleApprove = async () => {
     if (!selectedRequest) return;
     
@@ -421,6 +424,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
       if (error) throw error;
 
       let releaseNote = isCash ? 'Cash ready for collection.' : 'Marked as paid.';
+      let receiptRef = (updateData as any).payout_ref || `REL-${String(selectedRequest.id).slice(0, 8).toUpperCase()}`;
       if (isMoMo) {
         const result = await attemptPayout(selectedRequest);
         await supabase.from('approval_requests' as any).update(
@@ -428,6 +432,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
             ? { payout_status: 'sent', payout_ref: result.ref, payout_error: null, payout_attempted_at: new Date().toISOString() }
             : { payout_status: 'failed', payout_error: result.error || 'Transfer failed', payout_attempted_at: new Date().toISOString() }
         ).eq('id', selectedRequest.id);
+        if (result.success && result.ref) receiptRef = result.ref;
         releaseNote = result.success
           ? `Sent to Mobile Money. Ref: ${result.ref}`
           : `Payout failed: ${result.error}. Retry it from Failed Payouts below.`;
@@ -445,7 +450,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
       }
 
       if (smsPhone) {
-        const message = `Dear ${selectedRequest.employee_name}, your withdrawal of UGX ${selectedRequest.amount.toLocaleString()} has been approved by Finance and is now pending final Admin approval. Ref: ${selectedRequest.request_ref}. Great Agro Coffee.`;
+        const message = `Dear ${selectedRequest.employee_name}, your withdrawal of UGX ${selectedRequest.amount.toLocaleString()} has been released by Finance. Ref: ${selectedRequest.request_ref}. Great Agro Coffee.`;
         try {
           await supabase.functions.invoke('send-sms', {
             body: { phone: smsPhone, message }
@@ -460,6 +465,17 @@ export const WithdrawalRequestsManager: React.FC = () => {
         description: `UGX ${selectedRequest.amount.toLocaleString()} released by Finance. ${releaseNote}`,
       });
 
+      const sr: any = selectedRequest;
+      setReceipt({
+        reference: receiptRef, title: `Withdrawal ${sr.request_ref || ''}`.trim(), amount: Number(sr.amount),
+        recipientName: sr.employee_name, phone: isCash ? undefined : (sr.phone_number || sr.employee_phone),
+        channel: isCash ? 'cash' : channel === 'BANK' ? 'bank' : String(channel || 'mobile money').toLowerCase(),
+        releasedBy: financeName, requestId: String(sr.id),
+        approvals: [
+          { label: 'Admin 1', by: sr.admin_approved_1_by }, { label: 'Admin 2', by: sr.admin_approved_2_by },
+          { label: 'Admin final', by: sr.admin_final_approval_by },
+        ],
+      });
       setShowApproveDialog(false);
       setPaymentVoucher('');
       fetchRequests();
@@ -644,6 +660,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <ReleaseReceiptDialog data={receipt} onClose={() => setReceipt(null)} />
       {/* Failed Payouts Section - Show prominently at top */}
       {failedPayouts.length > 0 && (
         <div className="space-y-3">
