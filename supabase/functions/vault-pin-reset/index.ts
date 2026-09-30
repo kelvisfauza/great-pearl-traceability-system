@@ -99,14 +99,14 @@ Deno.serve(async (req) => {
                 title: 'Vault PIN Recovered',
                 subject: 'Your wallet vault PIN',
                 recipientName: name,
-                message: `A UGX 1,000 recovery fee was charged to your wallet.\n\nYour vault PIN is now: ${recoveredPin}\n\nYou can keep using it or change it from the vault screen. If you did not request this, tell management immediately.`,
+                message: `${feeText}\n\nYour vault PIN is now: ${recoveredPin}\n\nYou can keep using it or change it from the vault screen. If you did not request this, tell management immediately.`,
               },
             }),
           })
           if (res.ok) emailSent++
         } catch (e) { console.error('Email failed', e) }
       }
-      return json({ ok: true, pin: recoveredPin, fee: 1000, smsSent, emailSent })
+      return json({ ok: true, pin: recoveredPin, fee: recoveredFee, overdraft: recoveredOverdraft, smsSent, emailSent })
     }
 
     const code = String(Math.floor(100000 + Math.random() * 900000))

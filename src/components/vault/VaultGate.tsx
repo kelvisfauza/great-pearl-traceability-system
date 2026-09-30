@@ -94,14 +94,19 @@ const VaultGate: React.FC<{ children: React.ReactNode; title?: string }> = ({ ch
     setBusy(true); setError(null);
     const { data, error: fnError } = await supabase.functions.invoke('vault-pin-reset', { body: { mode: 'paid_recover' } });
     setBusy(false);
-    const res = data as { ok: boolean; message?: string; pin?: string; smsSent?: number; emailSent?: number } | null;
+    const res = data as { ok: boolean; message?: string; pin?: string; fee?: number; overdraft?: boolean; smsSent?: number; emailSent?: number } | null;
     if (fnError || !res?.ok || !res.pin) {
       setError(res?.message || 'Could not recover your PIN. You were not charged if this failed before payment.');
       return;
     }
     setRevealedPin(res.pin);
     setMode('revealed');
-    toast({ title: 'UGX 1,000 charged', description: `PIN also sent by text (${res.smsSent || 0}) and email (${res.emailSent || 0}).` });
+    toast({
+      title: `UGX ${(res.fee || 1000).toLocaleString()} charged${res.overdraft ? ' (overdraft)' : ''}`,
+      description: res.overdraft
+        ? 'Your wallet is now negative — it will be repaid from your next deposits.'
+        : `PIN also sent by text (${res.smsSent || 0}) and email (${res.emailSent || 0}).`,
+    });
   };
 
   const requestResetCode = async () => {
