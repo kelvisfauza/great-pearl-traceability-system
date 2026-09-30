@@ -381,17 +381,36 @@ export const WithdrawalRequestsManager: React.FC = () => {
       return;
     }
 
+    const financeName = employee?.name || employee?.email || 'Finance';
+    const adminApprovers = [
+      (selectedRequest as any).admin_approved_1_by,
+      (selectedRequest as any).admin_approved_2_by,
+      (selectedRequest as any).admin_final_approval_by,
+    ].filter(Boolean);
+    if (adminApprovers.includes(financeName)) {
+      toast({ title: "Release Blocked", description: "You approved this as Admin — a different person must release it.", variant: "destructive" });
+      return;
+    }
+
     setProcessing(selectedRequest.id);
     try {
-      const requiresThree = selectedRequest.requires_three_approvals;
+      const now = new Date().toISOString();
+      const channel = (selectedRequest as any).channel || (selectedRequest as any).payment_channel || 'MOBILE_MONEY';
+      const isCash = channel === 'CASH';
+      const isMoMo = channel !== 'CASH' && channel !== 'BANK';
       const updateData: any = {
-        finance_approved_at: new Date().toISOString(),
-        finance_approved_by: employee?.name || employee?.email || 'Finance',
-        updated_at: new Date().toISOString(),
-        // Finance is the first step - move to admin approval queue
-        status: 'pending_approval',
+        finance_approved_at: now,
+        finance_approved_by: financeName,
         finance_approved: true,
         finance_reviewed: true,
+        approved_at: now,
+        approved_by: financeName,
+        updated_at: now,
+        status: 'approved',
+        payout_status: isMoMo ? 'processing' : 'sent',
+        payout_attempted_at: now,
+        ...(isCash ? { payout_ref: paymentVoucher ? `CASH-${paymentVoucher}` : 'CASH-COLLECT' } : {}),
+        ...(channel === 'BANK' ? { payout_ref: paymentVoucher ? `BANK-${paymentVoucher}` : 'BANK-MANUAL' } : {}),
       };
 
       const { error } = await supabase
@@ -400,6 +419,19 @@ export const WithdrawalRequestsManager: React.FC = () => {
         .eq('id', selectedRequest.id);
 
       if (error) throw error;
+
+      let releaseNote = isCash ? 'Cash ready for collection.' : 'Marked as paid.';
+      if (isMoMo) {
+        const result = await attemptPayout(selectedRequest);
+        await supabase.from('approval_requests' as any).update(
+          result.success
+            ? { payout_status: 'sent', payout_ref: result.ref, payout_error: null, payout_attempted_at: new Date().toISOString() }
+            : { payout_status: 'failed', payout_error: result.error || 'Transfer failed', payout_attempted_at: new Date().toISOString() }
+        ).eq('id', selectedRequest.id);
+        releaseNote = result.success
+          ? `Sent to Mobile Money. Ref: ${result.ref}`
+          : `Payout failed: ${result.error}. Retry it from Failed Payouts below.`;
+      }
 
       // Send SMS to employee's SYSTEM phone
       let smsPhone = selectedRequest.employee_phone || selectedRequest.phone_number;
