@@ -409,34 +409,46 @@ const ProviderSubmissionApprovals: React.FC = () => {
               disabled={!!processing}
               onClick={() => {
                 if (!selected) return;
+                const isRetry = selected.payout_status === 'failed';
                 const amt = Number(overrideAmount || selected.amount) + Number(withdrawCharge || 0);
                 setCodeTarget({
                   targetType: 'provider_submission',
                   targetId: selected.id,
-                  label: `payout to ${selected.provider_name}`,
+                  label: isRetry ? `payout to ${selected.provider_name}` : `approval of ${selected.provider_name}'s request`,
                   amount: amt,
-                  onVerified: () => handleAction('approve', payMethod, true),
+                  onVerified: () => handleAction(isRetry ? 'approve' : 'send_to_finance', payMethod, true),
                 });
               }}
             >
               <ShieldCheck className="w-4 h-4 mr-2" /> Approve by Code
             </Button>
-            <Button onClick={() => handleAction('approve', payMethod)} disabled={!!processing}>
-              {processing ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : payMethod === 'cash' ? (
-                <Banknote className="w-4 h-4 mr-2" />
-              ) : payMethod === 'gosente' ? (
-                <Wallet className="w-4 h-4 mr-2" />
-              ) : (
-                <Smartphone className="w-4 h-4 mr-2" />
-              )}
-              {payMethod === 'cash'
-                ? 'Confirm Cash Payout'
-                : payMethod === 'gosente'
-                  ? 'Send via GosentePay'
-                  : 'Send via Yo Payments'}
-            </Button>
+            {selected?.payout_status === 'failed' ? (
+              <Button onClick={() => handleAction('approve', payMethod)} disabled={!!processing}>
+                {processing ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : payMethod === 'cash' ? (
+                  <Banknote className="w-4 h-4 mr-2" />
+                ) : payMethod === 'gosente' ? (
+                  <Wallet className="w-4 h-4 mr-2" />
+                ) : (
+                  <Smartphone className="w-4 h-4 mr-2" />
+                )}
+                {payMethod === 'cash'
+                  ? 'Confirm Cash Payout'
+                  : payMethod === 'gosente'
+                    ? 'Send via GosentePay'
+                    : 'Send via Yo Payments'}
+              </Button>
+            ) : (
+              <Button onClick={() => handleAction('send_to_finance')} disabled={!!processing}>
+                {processing ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Check className="w-4 h-4 mr-2" />
+                )}
+                Approve & Send to Finance
+              </Button>
+            )}
           </DialogFooter>
 
         </DialogContent>
