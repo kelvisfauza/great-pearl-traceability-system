@@ -14,7 +14,7 @@ import FinanceReportsTab from "@/components/v2/finance/tabs/FinanceReportsTab";
 import { PaymentHistory } from "@/components/finance/PaymentHistory";
 import GrnReferralsTab from "@/components/v2/finance/tabs/GrnReferralsTab";
 import { useIsGrnInputOnly } from "@/hooks/useGrnInputRole";
-import WithdrawalRequestsManager from "@/components/finance/WithdrawalRequestsManager";
+import { WithdrawalRequestsManager } from "@/components/finance/WithdrawalRequestsManager";
 import PaymentReceiptsTab from "@/components/v2/finance/tabs/PaymentReceiptsTab";
 
 const allTabs = [
