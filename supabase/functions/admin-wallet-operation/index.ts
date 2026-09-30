@@ -368,12 +368,16 @@ serve(async (req) => {
     // Verify actor is an administrator
     const { data: actorEmp } = await supabase
       .from("employees")
-      .select("role, name")
+      .select("role, name, permissions, department")
       .eq("email", actorEmail)
       .maybeSingle();
     const actorRole = actorEmp?.role || "";
+    const perms: string[] = Array.isArray((actorEmp as any)?.permissions) ? (actorEmp as any).permissions : [];
+    const isFinance = actorRole === "Finance" || perms.includes("Finance:approve") || perms.includes("Finance:process");
     const isAdmin = actorRole === "Administrator" || actorRole === "Super Admin";
-    if (!isAdmin) return respond(false, { error: "Forbidden: administrators only" });
+    const peekBody = await req.clone().json().catch(() => ({}));
+    const isFinanceAction = peekBody?.action === "finance_release" || peekBody?.action === "finance_list";
+    if (!isAdmin && !(isFinanceAction && isFinance)) return respond(false, { error: "Forbidden: administrators only" });
 
     // Super administrators may execute wallet operations instantly (no co-signer).
     const SUPER_ADMIN_EMAILS = [
@@ -569,14 +573,31 @@ serve(async (req) => {
     }
 
     // ---------------------------------------------------------------- APPROVE
-    if (action === "approve" || action === "confirm_otp") {
+    if (action === "approve" || action === "confirm_otp" || action === "finance_release") {
       const { operation_id, otp_code } = body;
       if (!operation_id) return respond(false, { error: "operation_id required" });
 
       let op: any = null;
       let opErr: any = null;
 
-      if (action === "approve") {
+      if (action === "finance_release") {
+        if (!isFinance && !isSuperAdmin) return respond(false, { error: "Only Finance can release this operation" });
+        const { data: cand } = await supabase.from("admin_wallet_operations").select("*").eq("id", operation_id).maybeSingle();
+        if (!cand) return respond(false, { error: "Operation not found" });
+        if (cand.status !== "awaiting_finance") return respond(false, { error: `Cannot release a ${cand.status} operation` });
+        if (cand.initiated_by === actorId || (cand.approved_by_email || "").toLowerCase() === actorEmail.toLowerCase()) {
+          return respond(false, { error: "Separation of duties: you created or approved this operation, so another Finance officer must release it." });
+        }
+        const res = await supabase.from("admin_wallet_operations").update({
+          status: "approved",
+          finance_released_by_email: actorEmail,
+          finance_released_by_name: actorEmp?.name || actorEmail,
+          finance_released_at: new Date().toISOString(),
+        }).eq("id", operation_id).eq("status", "awaiting_finance").select("*").maybeSingle();
+        op = res.data; opErr = res.error;
+        if (opErr) return respond(false, { error: opErr.message });
+        if (!op) return respond(false, { error: "Request status changed; refresh and retry." });
+      } else if (action === "approve") {
         // Atomic claim: pending -> approved.
         // Normal flow requires a *different* admin (second_admin). Super admins can
         // self-execute operations they created with confirmation_method = 'instant'.
@@ -650,6 +671,14 @@ serve(async (req) => {
         op = res.data; opErr = res.error;
         if (opErr) return respond(false, { error: opErr.message });
         if (!op) return respond(false, { error: "Request status changed; refresh and retry." });
+      }
+
+      // Only a super admin's own "Execute now" runs without Finance. Everything
+      // else waits for Finance to release the money.
+      const superInstant = action === "approve" && isSuperAdmin && op.confirmation_method === "instant";
+      if (action !== "finance_release" && !superInstant) {
+        await supabase.from("admin_wallet_operations").update({ status: "awaiting_finance" }).eq("id", op.id);
+        return respond(true, { message: "Approved by admin. Awaiting Finance to release.", awaiting_finance: true });
       }
 
       // ------------------------------------------------------------ EXECUTE
@@ -963,12 +992,9 @@ serve(async (req) => {
         // Roll the operation back to pending so a second admin can retry.
         // Keep the approval audit fields so we know who tried last.
         await supabase.from("admin_wallet_operations").update({
-          status: "pending",
+          status: op.finance_released_at ? "awaiting_finance" : "pending",
           execution_error: errMsg,
-          approved_by: null,
-          approved_by_email: null,
-          approved_by_name: null,
-          approved_at: null,
+          ...(op.finance_released_at ? { finance_released_at: null, finance_released_by_email: null, finance_released_by_name: null } : { approved_by: null, approved_by_email: null, approved_by_name: null, approved_at: null }),
           metadata: { ...(op.metadata || {}), refunded_on_failure: refundedOnFail },
         }).eq("id", op.id);
         // Always tell the user, even when the operation failed.
