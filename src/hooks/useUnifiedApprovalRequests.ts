@@ -956,7 +956,7 @@ export const useUnifiedApprovalRequests = () => {
               updateData.admin_final_approval_at = new Date().toISOString();
               updateData.admin_final_approval_by = adminName;
               // Monthly Allowance Prepayment / Requisitions are finalised after 2 admin approvals
-              if (request.requestType === 'Monthly Allowance Prepayment' || isRequisitionReq) {
+              if (request.requestType === 'Monthly Allowance Prepayment') {
 
                 updateData.status = 'Approved';
                 updateData.approval_stage = 'approved';
@@ -978,12 +978,12 @@ export const useUnifiedApprovalRequests = () => {
             updateData.admin_final_approval = true;
             updateData.admin_final_approval_at = new Date().toISOString();
             updateData.admin_final_approval_by = adminName;
-            if (isSalaryAdvanceReq || isRequisitionReq) {
+            if (isSalaryAdvanceReq) {
               // One admin approval fully approves; payout channel is chosen at release
               updateData.status = 'Approved';
               updateData.approval_stage = 'approved';
               updateData.finance_approved = true;
-              updateData.finance_approved_by = isSalaryAdvanceReq ? 'AUTO (Salary Advance)' : 'AUTO (Requisition)';
+              updateData.finance_approved_by = 'AUTO (Salary Advance)';
               updateData.finance_approved_at = new Date().toISOString();
               console.log('✅ Fully approved by single admin');
 
