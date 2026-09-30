@@ -487,6 +487,42 @@ const ProcurementReviewPanel = () => {
         </Tabs>
       </CardContent>
 
+      <Dialog open={!!detailRow} onOpenChange={(open) => !open && setDetailRow(null)}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{detailRow?.title || 'Request details'}</DialogTitle>
+          </DialogHeader>
+          {detailRow && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                {decisionBadge(detailRow.decision)}
+                <Badge variant="outline">Now: {detailRow.current_status}</Badge>
+                <span className="font-semibold">{money(detailRow.amount)}</span>
+              </div>
+              <div className="border rounded-lg divide-y text-sm">
+                {Object.entries(detailRow.details).map(([label, value]) => (
+                  <div key={label} className="grid grid-cols-3 gap-2 px-3 py-2">
+                    <span className="text-muted-foreground">{label}</span>
+                    <span className="col-span-2 break-words">{value}</span>
+                  </div>
+                ))}
+                {Object.keys(detailRow.details).length === 0 && (
+                  <p className="px-3 py-4 text-muted-foreground">No extra details were recorded for this request.</p>
+                )}
+              </div>
+              <div className="text-xs bg-muted rounded p-2 space-y-1">
+                <p><strong>Reviewed by:</strong> {detailRow.reviewed_by} · {detailRow.reviewed_at ? new Date(detailRow.reviewed_at).toLocaleString() : ''}</p>
+                {detailRow.recommended_admin_name && <p><strong>Sent to:</strong> {detailRow.recommended_admin_name}</p>}
+                {detailRow.notes && <p><strong>Observations:</strong> {detailRow.notes}</p>}
+                {detailRow.edited_amount != null && (
+                  <p><strong>Amount corrected:</strong> {money(detailRow.original_amount)} → {money(detailRow.edited_amount)}</p>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={dialog.open} onOpenChange={(open) => !open && setDialog({ open: false, request: null, decision: 'approved' })}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
