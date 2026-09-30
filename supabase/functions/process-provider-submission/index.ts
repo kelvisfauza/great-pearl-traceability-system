@@ -441,12 +441,27 @@ serve(async (req) => {
       );
     }
 
-    if (!submissionId || !["approve", "reject"].includes(action)) {
+    // 📋 Finance: list submissions awaiting finance release
+    if (action === "finance_list") {
+      const { data: rows } = await supabase
+        .from("provider_submission_requests")
+        .select("*")
+        .eq("status", "awaiting_finance")
+        .order("created_at", { ascending: false });
+      return new Response(JSON.stringify({ ok: true, submissions: rows || [] }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!submissionId || !["approve", "reject", "send_to_finance", "finance_release"].includes(action)) {
       return new Response(JSON.stringify({ ok: false, error: "Invalid request" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const isFinanceRelease = action === "finance_release";
 
 
     const { data: submission, error: subErr } = await supabase
@@ -463,6 +478,10 @@ serve(async (req) => {
     }
 
     if (submission.status !== "pending") {
+      // Finance release operates on rows the admin already approved.
+      if (isFinanceRelease && submission.status === "awaiting_finance") {
+        // allowed — fall through
+      } else {
       // Allow retry if a previous attempt got stuck in `processing` for >90s
       // (payout call crashed before it could reset the row). Everything else
       // (paid / rejected) is terminal.
@@ -477,17 +496,19 @@ serve(async (req) => {
         );
       }
       console.warn(`[process-provider-submission] Recovering stale processing row ${submissionId}`);
+      }
     }
 
     // 🔒 ATOMIC CLAIM — prevent double-send when admin double-clicks or two
     // approvals race. Only the first caller flips 'pending' -> 'processing';
     // any concurrent call gets 0 rows and exits without triggering a payout.
-    if (action === "approve") {
+    if (action === "approve" || isFinanceRelease) {
+      const fromStatuses = isFinanceRelease ? ["awaiting_finance"] : ["pending", "processing"];
       const { data: claimed, error: claimErr } = await supabase
         .from("provider_submission_requests")
         .update({ status: "processing" })
         .eq("id", submissionId)
-        .in("status", ["pending", "processing"])
+        .in("status", fromStatuses)
         .select("id")
         .maybeSingle();
       if (claimErr || !claimed) {
@@ -501,10 +522,105 @@ serve(async (req) => {
     // Get reviewer name
     const { data: emp } = await supabase
       .from("employees")
-      .select("name")
+      .select("name, role, permissions")
       .eq("email", reviewer.email)
       .maybeSingle();
     const reviewerName = emp?.name || reviewer.email || "Admin";
+
+    // 🏦 ADMIN APPROVE → SEND TO FINANCE (no money moves here)
+    if (action === "send_to_finance") {
+      const amt = amountOverride !== undefined && amountOverride !== null && Number(amountOverride) > 0
+        ? Number(amountOverride)
+        : Number(submission.amount);
+      const chg = Number(withdrawCharge || 0);
+      if (!Number.isFinite(amt) || amt < 500) {
+        return new Response(JSON.stringify({ ok: false, error: "Amount must be at least 500 UGX" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: claimed } = await supabase
+        .from("provider_submission_requests")
+        .update({
+          status: "awaiting_finance",
+          admin_approved_amount: amt,
+          admin_approved_charge: chg,
+          admin_approved_by_name: reviewerName,
+          reviewed_by: reviewer.id,
+          reviewed_by_name: reviewerName,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq("id", submissionId)
+        .eq("status", "pending")
+        .select("id")
+        .maybeSingle();
+      if (!claimed) {
+        return new Response(
+          JSON.stringify({ ok: false, error: "Request is already being processed. Please refresh." }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      try {
+        await supabase.functions.invoke("send-sms", {
+          body: {
+            phone: normalizePhone(submission.phone),
+            message: `Dear ${submission.provider_name}, your request to Great Agro Coffee for UGX ${amt.toLocaleString()} (${submission.description}) has been APPROVED by Admin (${reviewerName}) and is now awaiting Finance to release the funds.`,
+            userName: submission.provider_name,
+            messageType: "payout_confirmation",
+            recipientEmail: submission.email || undefined,
+            department: "Admin",
+            triggeredBy: reviewer.id,
+          },
+        });
+      } catch (e) {
+        console.error("send_to_finance SMS error:", e);
+      }
+      if (submission.email) {
+        try {
+          await supabase.functions.invoke("send-transactional-email", {
+            body: {
+              templateName: "payment-receipt",
+              recipientEmail: submission.email,
+              idempotencyKey: `provider-submission-admin-approval-${submissionId}`,
+              templateData: {
+                recipientName: submission.provider_name,
+                reference: submissionId.slice(-8).toUpperCase(),
+                description: `APPROVED by Admin — ${submission.description}. The request is now awaiting Finance to release the funds; you will receive a confirmation once the money is sent.`,
+                invoiceNumber: submission.invoice_number || undefined,
+                amount: `UGX ${amt.toLocaleString()}`,
+                charges: chg > 0 ? `UGX ${chg.toLocaleString()}` : undefined,
+                total: `UGX ${(amt + chg).toLocaleString()}`,
+                paymentMethod: "Awaiting Finance release",
+                transactionId: submissionId,
+                processedBy: reviewerName,
+                approvedBy: reviewerName,
+              },
+            },
+          });
+        } catch (e) {
+          console.error("send_to_finance email error:", e);
+        }
+      }
+      return new Response(
+        JSON.stringify({ ok: true, status: "awaiting_finance", message: "Approved — sent to Finance to release the funds" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 🏦 FINANCE RELEASE — only Finance role may release the money
+    if (isFinanceRelease) {
+      const perms = JSON.stringify((emp as any)?.permissions || "");
+      const isFinance =
+        ((emp as any)?.role || "").toLowerCase() === "finance" ||
+        perms.includes("Finance:approve") ||
+        perms.includes("Finance:process");
+      if (!isFinance) {
+        return new Response(JSON.stringify({ ok: false, error: "Only Finance can release funds" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     if (action === "reject") {
       await supabase
@@ -532,8 +648,13 @@ serve(async (req) => {
       amountOverride !== null &&
       Number(amountOverride) > 0 &&
       Number(amountOverride) !== originalAmount;
-    const numAmount = overridden ? Number(amountOverride) : originalAmount;
-    const numCharge = Number(withdrawCharge || 0);
+    let numAmount = overridden ? Number(amountOverride) : originalAmount;
+    let numCharge = Number(withdrawCharge || 0);
+    if (isFinanceRelease) {
+      // Finance releases exactly what the admin approved.
+      numAmount = Number((submission as any).admin_approved_amount) || numAmount;
+      numCharge = Number((submission as any).admin_approved_charge) || 0;
+    }
     const totalAmount = numAmount + numCharge;
 
     if (!Number.isFinite(numAmount) || numAmount < 500) {
@@ -624,7 +745,7 @@ serve(async (req) => {
     // ✅ APPROVAL NOTIFICATION — sent immediately, before the Yo payout result.
     // Only sent the first time (not on retry of a previously failed payout).
     const isRetry = (submission as any).payout_status === "failed";
-    if (!isRetry) {
+    if (!isRetry && !isFinanceRelease) {
       try {
         const approvalSms = `Dear ${submission.provider_name}, your request to Great Agro Coffee for UGX ${numAmount.toLocaleString()} (${submission.description}) has been APPROVED by ${reviewerName}. Disbursement is being processed and you will receive a confirmation message shortly.`;
         await supabase.functions.invoke("send-sms", {
@@ -801,7 +922,9 @@ serve(async (req) => {
     // 🔁 If Yo failed (e.g. account not funded), keep submission as 'pending'
     // so it stays in the approval list and admin can re-click Approve & Pay
     // once the Yo wallet is funded. The existing payout record is reused on retry.
-    const submissionStatus = yoStatus === "failed" ? "pending" : "paid";
+    const submissionStatus = yoStatus === "failed"
+      ? (isFinanceRelease ? "awaiting_finance" : "pending")
+      : "paid";
     await supabase
       .from("provider_submission_requests")
       .update({
@@ -812,6 +935,7 @@ serve(async (req) => {
         payout_record_id: record.id,
         payout_status: yoStatus,
         payout_message: displayMessage,
+        ...(isFinanceRelease ? { finance_released_by_name: reviewerName } : {}),
       })
       .eq("id", submissionId);
 
@@ -975,13 +1099,13 @@ serve(async (req) => {
     // on "Already processing".
     try {
       const body = await req.clone().json().catch(() => ({} as any));
-      if (body?.submissionId && body?.action === "approve") {
+      if (body?.submissionId && (body?.action === "approve" || body?.action === "finance_release")) {
         const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
         const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
         const admin = createClient(supabaseUrl, serviceKey);
         await admin
           .from("provider_submission_requests")
-          .update({ status: "pending" })
+          .update({ status: body.action === "finance_release" ? "awaiting_finance" : "pending" })
           .eq("id", body.submissionId)
           .eq("status", "processing");
       }

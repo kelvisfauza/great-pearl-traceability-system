@@ -53,7 +53,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
   const publicLink = `${window.location.origin}/submit-request`;
 
   const handleAction = async (
-    action: 'approve' | 'reject',
+    action: 'approve' | 'reject' | 'send_to_finance',
     paymentMode: 'momo' | 'cash' | 'gosente' = 'momo',
     fingerprintVerified = false,
   ) => {
@@ -67,10 +67,10 @@ const ProviderSubmissionApprovals: React.FC = () => {
       });
       return;
     }
-    const finalAmount = action === 'approve'
+    const finalAmount = action === 'approve' || action === 'send_to_finance'
       ? Number(overrideAmount || selected.amount)
       : Number(selected.amount);
-    if (action === 'approve' && (!finalAmount || finalAmount < 500)) {
+    if ((action === 'approve' || action === 'send_to_finance') && (!finalAmount || finalAmount < 500)) {
       toast({ title: 'Invalid amount', description: 'Amount must be at least 500 UGX', variant: 'destructive' });
       return;
     }
@@ -93,8 +93,8 @@ const ProviderSubmissionApprovals: React.FC = () => {
           submissionId: selected.id,
           action,
           rejectionReason: action === 'reject' ? rejectionReason : undefined,
-          withdrawCharge: action === 'approve' ? Number(withdrawCharge || 0) : undefined,
-          amountOverride: action === 'approve' && Number(overrideAmount) > 0 && Number(overrideAmount) !== Number(selected.amount)
+          withdrawCharge: action !== 'reject' ? Number(withdrawCharge || 0) : undefined,
+          amountOverride: action !== 'reject' && Number(overrideAmount) > 0 && Number(overrideAmount) !== Number(selected.amount)
             ? Number(overrideAmount)
             : undefined,
           paymentMode: action === 'approve' ? paymentMode : undefined,
@@ -285,7 +285,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
                     ) : (
                       <Check className="w-3 h-3 mr-1" />
                     )}
-                    {s.payout_status === 'failed' ? 'Retry Payout' : 'Approve & Pay'}
+                    {s.payout_status === 'failed' ? 'Retry Payout' : 'Approve'}
                   </Button>
                 </div>
               </div>
@@ -299,9 +299,11 @@ const ProviderSubmissionApprovals: React.FC = () => {
       <Dialog open={approveOpen} onOpenChange={setApproveOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Approve & Disburse</DialogTitle>
+            <DialogTitle>{selected?.payout_status === 'failed' ? 'Retry Payout' : 'Approve & Send to Finance'}</DialogTitle>
             <DialogDescription>
-              {selected && `Review the request, pick a payment method, then confirm.`}
+              {selected?.payout_status === 'failed'
+                ? 'Review the request, pick a payment method, then confirm.'
+                : 'Review the request and confirm the amount. Finance will choose how to pay (Yo, GosentePay or Cash) and release the money.'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -345,6 +347,14 @@ const ProviderSubmissionApprovals: React.FC = () => {
               </div>
             </div>
 
+            {selected?.payout_status !== 'failed' && (
+              <div className="text-xs bg-primary/5 border border-primary/20 rounded-md px-3 py-2">
+                After your approval, this request goes to <strong>Finance</strong>. Finance picks the
+                payment method (Yo Payments, GosentePay or Cash) and releases the money. No funds move at this step.
+              </div>
+            )}
+
+            {selected?.payout_status === 'failed' && (
             <div>
               <Label className="text-xs mb-1.5 block">Payment Method</Label>
               <div className="grid grid-cols-3 gap-2">
@@ -375,6 +385,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
                 })}
               </div>
             </div>
+            )}
 
             <div className="bg-muted/50 rounded-md p-3 text-sm space-y-1">
               <div className="flex justify-between">
@@ -398,34 +409,46 @@ const ProviderSubmissionApprovals: React.FC = () => {
               disabled={!!processing}
               onClick={() => {
                 if (!selected) return;
+                const isRetry = selected.payout_status === 'failed';
                 const amt = Number(overrideAmount || selected.amount) + Number(withdrawCharge || 0);
                 setCodeTarget({
                   targetType: 'provider_submission',
                   targetId: selected.id,
-                  label: `payout to ${selected.provider_name}`,
+                  label: isRetry ? `payout to ${selected.provider_name}` : `approval of ${selected.provider_name}'s request`,
                   amount: amt,
-                  onVerified: () => handleAction('approve', payMethod, true),
+                  onVerified: () => handleAction(isRetry ? 'approve' : 'send_to_finance', payMethod, true),
                 });
               }}
             >
               <ShieldCheck className="w-4 h-4 mr-2" /> Approve by Code
             </Button>
-            <Button onClick={() => handleAction('approve', payMethod)} disabled={!!processing}>
-              {processing ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : payMethod === 'cash' ? (
-                <Banknote className="w-4 h-4 mr-2" />
-              ) : payMethod === 'gosente' ? (
-                <Wallet className="w-4 h-4 mr-2" />
-              ) : (
-                <Smartphone className="w-4 h-4 mr-2" />
-              )}
-              {payMethod === 'cash'
-                ? 'Confirm Cash Payout'
-                : payMethod === 'gosente'
-                  ? 'Send via GosentePay'
-                  : 'Send via Yo Payments'}
-            </Button>
+            {selected?.payout_status === 'failed' ? (
+              <Button onClick={() => handleAction('approve', payMethod)} disabled={!!processing}>
+                {processing ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : payMethod === 'cash' ? (
+                  <Banknote className="w-4 h-4 mr-2" />
+                ) : payMethod === 'gosente' ? (
+                  <Wallet className="w-4 h-4 mr-2" />
+                ) : (
+                  <Smartphone className="w-4 h-4 mr-2" />
+                )}
+                {payMethod === 'cash'
+                  ? 'Confirm Cash Payout'
+                  : payMethod === 'gosente'
+                    ? 'Send via GosentePay'
+                    : 'Send via Yo Payments'}
+              </Button>
+            ) : (
+              <Button onClick={() => handleAction('send_to_finance')} disabled={!!processing}>
+                {processing ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Check className="w-4 h-4 mr-2" />
+                )}
+                Approve & Send to Finance
+              </Button>
+            )}
           </DialogFooter>
 
         </DialogContent>
