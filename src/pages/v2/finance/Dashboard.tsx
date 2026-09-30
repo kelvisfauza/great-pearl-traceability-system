@@ -14,7 +14,8 @@ import FinanceReportsTab from "@/components/v2/finance/tabs/FinanceReportsTab";
 import { PaymentHistory } from "@/components/finance/PaymentHistory";
 import GrnReferralsTab from "@/components/v2/finance/tabs/GrnReferralsTab";
 import { useIsGrnInputOnly } from "@/hooks/useGrnInputRole";
-import { WithdrawalRequestsManager } from "@/components/finance/WithdrawalRequestsManager";
+import PendingApprovalRequests from "@/components/finance/PendingApprovalRequests";
+import { AwaitingDisbursementPanel } from "@/components/approval/AwaitingDisbursementPanel";
 import PaymentReceiptsTab from "@/components/v2/finance/tabs/PaymentReceiptsTab";
 
 const allTabs = [
@@ -72,7 +73,7 @@ const FinanceDashboard = () => {
               <TabsContent value="receipts"><PaymentReceiptsTab /></TabsContent>
               {!scanOnly && (
                 <>
-                  <TabsContent value="release"><WithdrawalRequestsManager /></TabsContent>
+                  <TabsContent value="release"><div className="space-y-6"><AwaitingDisbursementPanel /><PendingApprovalRequests /></div></TabsContent>
                   <TabsContent value="history"><PaymentHistory /></TabsContent>
                   <TabsContent value="reconciliation"><TransactionReconciliationTab /></TabsContent>
                   <TabsContent value="advances"><AdvancesRecoveriesTab /></TabsContent>

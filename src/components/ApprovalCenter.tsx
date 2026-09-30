@@ -420,7 +420,7 @@ const ApprovalCenter = () => {
       </Card>
 
       {/* All Approval Requests Section */}
-      <AwaitingDisbursementPanel />
+      {/* Money release moved to Finance (V1 + V2 Release Payments) */}
 
       <Card>
         <CardHeader>
