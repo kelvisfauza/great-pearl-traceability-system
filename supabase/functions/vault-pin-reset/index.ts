@@ -31,6 +31,8 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}))
     const paid = body?.mode === 'paid_recover'
     let recoveredPin = ''
+    let recoveredFee = 1000
+    let recoveredOverdraft = false
     if (paid) {
       const userClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
         global: { headers: { Authorization: `Bearer ${token}` } },
@@ -39,6 +41,8 @@ Deno.serve(async (req) => {
       if (rErr) return json({ ok: false, error: 'RECOVERY_FAILED', message: rErr.message })
       if (!r?.ok) return json(r)
       recoveredPin = r.pin
+      recoveredFee = Number(r.fee) || 1000
+      recoveredOverdraft = r.overdraft === true
     }
 
     // --- Rate limit: max 3 codes per 15 minutes ---
@@ -66,7 +70,10 @@ Deno.serve(async (req) => {
 
     if (paid) {
       const name = emp?.name || email.split('@')[0]
-      const smsText = `Great Agro Coffee: UGX 1,000 vault recovery fee charged. Your vault PIN is now ${recoveredPin}. Do not share it.`
+      const feeText = recoveredOverdraft
+        ? `UGX ${recoveredFee.toLocaleString()} charged (UGX 1,000 recovery + UGX 500 access fee) as an overdraft — your wallet is now negative and it will be repaid from your next deposits.`
+        : `UGX ${recoveredFee.toLocaleString()} vault recovery fee charged.`
+      const smsText = `Great Agro Coffee: ${feeText} Your vault PIN is now ${recoveredPin}. Do not share it.`
       let smsSent = 0
       for (const phone of [emp?.phone, emp?.alt_phone].filter(Boolean) as string[]) {
         try {
@@ -92,14 +99,14 @@ Deno.serve(async (req) => {
                 title: 'Vault PIN Recovered',
                 subject: 'Your wallet vault PIN',
                 recipientName: name,
-                message: `A UGX 1,000 recovery fee was charged to your wallet.\n\nYour vault PIN is now: ${recoveredPin}\n\nYou can keep using it or change it from the vault screen. If you did not request this, tell management immediately.`,
+                message: `${feeText}\n\nYour vault PIN is now: ${recoveredPin}\n\nYou can keep using it or change it from the vault screen. If you did not request this, tell management immediately.`,
               },
             }),
           })
           if (res.ok) emailSent++
         } catch (e) { console.error('Email failed', e) }
       }
-      return json({ ok: true, pin: recoveredPin, fee: 1000, smsSent, emailSent })
+      return json({ ok: true, pin: recoveredPin, fee: recoveredFee, overdraft: recoveredOverdraft, smsSent, emailSent })
     }
 
     const code = String(Math.floor(100000 + Math.random() * 900000))

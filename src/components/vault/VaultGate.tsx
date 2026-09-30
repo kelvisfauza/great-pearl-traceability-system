@@ -94,14 +94,19 @@ const VaultGate: React.FC<{ children: React.ReactNode; title?: string }> = ({ ch
     setBusy(true); setError(null);
     const { data, error: fnError } = await supabase.functions.invoke('vault-pin-reset', { body: { mode: 'paid_recover' } });
     setBusy(false);
-    const res = data as { ok: boolean; message?: string; pin?: string; smsSent?: number; emailSent?: number } | null;
+    const res = data as { ok: boolean; message?: string; pin?: string; fee?: number; overdraft?: boolean; smsSent?: number; emailSent?: number } | null;
     if (fnError || !res?.ok || !res.pin) {
       setError(res?.message || 'Could not recover your PIN. You were not charged if this failed before payment.');
       return;
     }
     setRevealedPin(res.pin);
     setMode('revealed');
-    toast({ title: 'UGX 1,000 charged', description: `PIN also sent by text (${res.smsSent || 0}) and email (${res.emailSent || 0}).` });
+    toast({
+      title: `UGX ${(res.fee || 1000).toLocaleString()} charged${res.overdraft ? ' (overdraft)' : ''}`,
+      description: res.overdraft
+        ? 'Your wallet is now negative — it will be repaid from your next deposits.'
+        : `PIN also sent by text (${res.smsSent || 0}) and email (${res.emailSent || 0}).`,
+    });
   };
 
   const requestResetCode = async () => {
@@ -180,15 +185,15 @@ const VaultGate: React.FC<{ children: React.ReactNode; title?: string }> = ({ ch
             <>
               <Alert>
                 <AlertDescription>
-                  Recovering a forgotten vault PIN costs <strong>UGX 1,000</strong>, taken from your wallet. Your PIN will be shown here and sent to your phone and email.
+                  Recovering a forgotten vault PIN costs <strong>UGX 1,000</strong>, taken from your wallet. If your wallet doesn't have enough, recovery still works as an <strong>overdraft</strong>: UGX 1,000 + a UGX 500 access fee, and your wallet goes negative until your next deposits repay it. Your PIN will be shown here and sent to your phone and email.
                 </AlertDescription>
               </Alert>
               <Button className="w-full" onClick={payRecovery} disabled={busy}>
                 {busy ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <KeyRound className="h-4 w-4 mr-2" />}
-                Confirm — deduct UGX 1,000
+                Confirm — deduct UGX 1,000 (or UGX 1,500 overdraft)
               </Button>
               <Button variant="ghost" className="w-full text-sm" onClick={requestResetCode} disabled={busy}>
-                Don't have UGX 1,000? Send me a free reset code instead
+                Prefer no charge? Send me a free reset code instead
               </Button>
               <Button variant="ghost" className="w-full text-sm" onClick={() => setMode('unlock')} disabled={busy}>Cancel</Button>
             </>
