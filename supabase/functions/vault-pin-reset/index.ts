@@ -70,7 +70,10 @@ Deno.serve(async (req) => {
 
     if (paid) {
       const name = emp?.name || email.split('@')[0]
-      const smsText = `Great Agro Coffee: UGX 1,000 vault recovery fee charged. Your vault PIN is now ${recoveredPin}. Do not share it.`
+      const feeText = recoveredOverdraft
+        ? `UGX ${recoveredFee.toLocaleString()} charged (UGX 1,000 recovery + UGX 500 access fee) as an overdraft — your wallet is now negative and it will be repaid from your next deposits.`
+        : `UGX ${recoveredFee.toLocaleString()} vault recovery fee charged.`
+      const smsText = `Great Agro Coffee: ${feeText} Your vault PIN is now ${recoveredPin}. Do not share it.`
       let smsSent = 0
       for (const phone of [emp?.phone, emp?.alt_phone].filter(Boolean) as string[]) {
         try {
