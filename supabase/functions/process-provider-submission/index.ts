@@ -496,6 +496,7 @@ serve(async (req) => {
         );
       }
       console.warn(`[process-provider-submission] Recovering stale processing row ${submissionId}`);
+      }
     }
 
     // 🔒 ATOMIC CLAIM — prevent double-send when admin double-clicks or two
