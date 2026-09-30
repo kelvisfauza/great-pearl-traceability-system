@@ -187,6 +187,9 @@ const VaultGate: React.FC<{ children: React.ReactNode; title?: string }> = ({ ch
                 {busy ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <KeyRound className="h-4 w-4 mr-2" />}
                 Confirm — deduct UGX 1,000
               </Button>
+              <Button variant="ghost" className="w-full text-sm" onClick={requestResetCode} disabled={busy}>
+                Don't have UGX 1,000? Send me a free reset code instead
+              </Button>
               <Button variant="ghost" className="w-full text-sm" onClick={() => setMode('unlock')} disabled={busy}>Cancel</Button>
             </>
           )}
