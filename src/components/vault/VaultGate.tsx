@@ -185,15 +185,15 @@ const VaultGate: React.FC<{ children: React.ReactNode; title?: string }> = ({ ch
             <>
               <Alert>
                 <AlertDescription>
-                  Recovering a forgotten vault PIN costs <strong>UGX 1,000</strong>, taken from your wallet. Your PIN will be shown here and sent to your phone and email.
+                  Recovering a forgotten vault PIN costs <strong>UGX 1,000</strong>, taken from your wallet. If your wallet doesn't have enough, recovery still works as an <strong>overdraft</strong>: UGX 1,000 + a UGX 500 access fee, and your wallet goes negative until your next deposits repay it. Your PIN will be shown here and sent to your phone and email.
                 </AlertDescription>
               </Alert>
               <Button className="w-full" onClick={payRecovery} disabled={busy}>
                 {busy ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <KeyRound className="h-4 w-4 mr-2" />}
-                Confirm — deduct UGX 1,000
+                Confirm — deduct UGX 1,000 (or UGX 1,500 overdraft)
               </Button>
               <Button variant="ghost" className="w-full text-sm" onClick={requestResetCode} disabled={busy}>
-                Don't have UGX 1,000? Send me a free reset code instead
+                Prefer no charge? Send me a free reset code instead
               </Button>
               <Button variant="ghost" className="w-full text-sm" onClick={() => setMode('unlock')} disabled={busy}>Cancel</Button>
             </>
