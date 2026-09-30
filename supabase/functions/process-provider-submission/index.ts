@@ -478,6 +478,10 @@ serve(async (req) => {
     }
 
     if (submission.status !== "pending") {
+      // Finance release operates on rows the admin already approved.
+      if (isFinanceRelease && submission.status === "awaiting_finance") {
+        // allowed — fall through
+      } else {
       // Allow retry if a previous attempt got stuck in `processing` for >90s
       // (payout call crashed before it could reset the row). Everything else
       // (paid / rejected) is terminal.
