@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CheckCircle, XCircle, RefreshCw, Pencil, ClipboardCheck, User, Calendar, History, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import QuotationReviewPanel from '@/components/quotations/QuotationReviewPanel';
+import ProviderReplyDialog from '@/components/procurement/ProviderReplyDialog';
 
 const PENDING_STATUSES = [
   'Pending',
@@ -423,6 +424,9 @@ const ProcurementReviewPanel = () => {
                       <Button size="sm" variant="outline" onClick={() => openDialog(request, 'approved')}>
                         <Pencil className="h-4 w-4 mr-2" /> Edit details
                       </Button>
+                      {request.source_table === 'provider_submission_requests' && (
+                        <ProviderReplyDialog submissionId={request.id} title={request.title} />
+                      )}
                     </div>
                   ) : (
                     <p className="text-xs text-muted-foreground">
