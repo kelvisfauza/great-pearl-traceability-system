@@ -14,11 +14,13 @@ import FinanceReportsTab from "@/components/v2/finance/tabs/FinanceReportsTab";
 import { PaymentHistory } from "@/components/finance/PaymentHistory";
 import GrnReferralsTab from "@/components/v2/finance/tabs/GrnReferralsTab";
 import { useIsGrnInputOnly } from "@/hooks/useGrnInputRole";
+import WithdrawalRequestsManager from "@/components/finance/WithdrawalRequestsManager";
 import PaymentReceiptsTab from "@/components/v2/finance/tabs/PaymentReceiptsTab";
 
 const allTabs = [
   { id: "overview", label: "Overview", icon: Wallet },
   { id: "payments", label: "Pending Payments", icon: CreditCard },
+  { id: "release", label: "Release Payments", icon: Wallet },
   { id: "referrals", label: "Referrals", icon: UserCheck },
   { id: "receipts", label: "Receipts", icon: Printer },
   { id: "history", label: "Payment History", icon: Receipt },
@@ -70,6 +72,7 @@ const FinanceDashboard = () => {
               <TabsContent value="receipts"><PaymentReceiptsTab /></TabsContent>
               {!scanOnly && (
                 <>
+                  <TabsContent value="release"><WithdrawalRequestsManager /></TabsContent>
                   <TabsContent value="history"><PaymentHistory /></TabsContent>
                   <TabsContent value="reconciliation"><TransactionReconciliationTab /></TabsContent>
                   <TabsContent value="advances"><AdvancesRecoveriesTab /></TabsContent>
