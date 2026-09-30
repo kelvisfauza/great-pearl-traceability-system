@@ -155,7 +155,7 @@ export default function AdminWalletOperations() {
       });
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.error || "Failed");
-      toast({ title: "Approved & executed", description: `Reference: ${data.reference || "-"}` });
+      toast(data.awaiting_finance ? { title: "Approved — awaiting Finance", description: "Finance will release the money." } : { title: "Approved & executed", description: `Reference: ${data.reference || "-"}` });
       loadData();
     } catch (e: any) {
       toast({ title: "Approval failed", description: e.message, variant: "destructive" });
@@ -194,7 +194,7 @@ export default function AdminWalletOperations() {
       });
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.error || "Failed");
-      toast({ title: "Confirmed & executed", description: `Reference: ${data.reference || "-"}` });
+      toast(data.awaiting_finance ? { title: "Confirmed — awaiting Finance", description: "Finance will release the money." } : { title: "Confirmed & executed", description: `Reference: ${data.reference || "-"}` });
       setOtpDrafts(d => { const n = { ...d }; delete n[op.id]; return n; });
       loadData();
     } catch (e: any) {
@@ -316,7 +316,7 @@ export default function AdminWalletOperations() {
                       ? "Executes immediately with your super-admin authority. Fully logged in the audit trail."
                       : confirmMethod === "user_otp"
                       ? "A 6-digit code will be SMS-sent to the wallet owner. Enter it here to execute (valid 15 min)."
-                      : "A different administrator must approve the request before it executes."}
+                      : "A different administrator approves it, then Finance releases the money."}
                   </p>
                 </div>
               </div>
@@ -413,7 +413,7 @@ export default function AdminWalletOperations() {
                 op.status === "completed" ? "default" :
                 op.status === "failed" ? "destructive" :
                 op.status === "rejected" ? "secondary" : "outline"
-              }>{op.status}</Badge>
+              }>{op.status === "awaiting_finance" ? "awaiting finance" : op.status}</Badge>
               <span className="text-xs text-muted-foreground">{new Date(op.created_at).toLocaleString()}</span>
             </div>
           ))}
