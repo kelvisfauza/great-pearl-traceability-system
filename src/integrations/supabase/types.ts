@@ -10562,6 +10562,9 @@ export type Database = {
           created_by_email: string
           created_by_name: string | null
           delivery_time: string
+          finance_grn_attached_at: string | null
+          finance_grn_attached_by: string | null
+          finance_grn_number: string | null
           id: string
           linked_at: string | null
           linked_batch_number: string | null
@@ -10588,6 +10591,9 @@ export type Database = {
           created_by_email: string
           created_by_name?: string | null
           delivery_time: string
+          finance_grn_attached_at?: string | null
+          finance_grn_attached_by?: string | null
+          finance_grn_number?: string | null
           id?: string
           linked_at?: string | null
           linked_batch_number?: string | null
@@ -10614,6 +10620,9 @@ export type Database = {
           created_by_email?: string
           created_by_name?: string | null
           delivery_time?: string
+          finance_grn_attached_at?: string | null
+          finance_grn_attached_by?: string | null
+          finance_grn_number?: string | null
           id?: string
           linked_at?: string | null
           linked_batch_number?: string | null
@@ -17171,6 +17180,10 @@ export type Database = {
       }
       approve_transfer_reversal: {
         Args: { p_notes?: string; p_request_id: string }
+        Returns: Json
+      }
+      attach_sampling_order_grn: {
+        Args: { p_code: string; p_order_id: string }
         Returns: Json
       }
       award_activity_reward: {

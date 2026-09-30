@@ -22,7 +22,7 @@ interface GRNPrintModalProps {
   hideFinanceCopy?: boolean;
 }
 
-const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, onPrinted, hideFinanceCopy = false }) => {
+const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, onPrinted, hideFinanceCopy = true }) => {
   const { createVerification } = useDocumentVerification();
   const [verificationCode, setVerificationCode] = useState<string | null>(null);
   const [supplierInfo, setSupplierInfo] = useState<{

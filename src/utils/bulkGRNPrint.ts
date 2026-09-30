@@ -12,7 +12,7 @@ export async function openBulkGRNPrintWindow(grnDataList: GRNData[]): Promise<vo
   if (!printWindow) return;
 
   printWindow.document.write(
-    `<!DOCTYPE html><html><body style="font-family:Arial;padding:24px;color:#333;">Preparing payment orders…</body></html>`,
+    `<!DOCTYPE html><html><body style="font-family:Arial;padding:24px;color:#333;">Preparing GRNs…</body></html>`,
   );
 
   const enriched = await enrichGRNListWithSuppliers(grnDataList);
