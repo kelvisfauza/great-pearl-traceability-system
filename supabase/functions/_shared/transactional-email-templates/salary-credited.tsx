@@ -39,8 +39,8 @@ const SalaryCreditedEmail = ({
   hasRemittance = false, remittanceAmount = '0', remittanceRecipient = '',
   remittancePhone = '', remittancePercentage = 0, walletCredited = '0',
   nssfEmployee = '0', nssfEmployer = '0', paye = '0', totalDeductions = '0',
-  signatureUrl = 'https://great-pearl-traceability-system.lovable.app/finance-signature.png',
-  signedByName = 'Mukobi Godwin',
+  signatureUrl = '',
+  signedByName = 'Kibaba Nicholus',
   signedByTitle = 'Finance Officer',
 }: Props) => (
   <Html lang="en" dir="ltr">
@@ -131,7 +131,9 @@ const SalaryCreditedEmail = ({
 
           <Section style={signatureBlock}>
             <Text style={signatureLabel}>Authorized & Approved by:</Text>
-            <img src={signatureUrl} alt={`${signedByName} signature`} width="220" height="80" style={signatureImage} />
+            {signatureUrl ? (
+              <img src={signatureUrl} alt={`${signedByName} signature`} width="220" height="80" style={signatureImage} />
+            ) : null}
             <Text style={signedByNameStyle}>{signedByName}</Text>
             <Text style={signedByTitleStyle}>{signedByTitle} — {SITE_NAME}</Text>
           </Section>
