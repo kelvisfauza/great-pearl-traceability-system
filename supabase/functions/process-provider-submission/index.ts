@@ -1099,13 +1099,13 @@ serve(async (req) => {
     // on "Already processing".
     try {
       const body = await req.clone().json().catch(() => ({} as any));
-      if (body?.submissionId && body?.action === "approve") {
+      if (body?.submissionId && (body?.action === "approve" || body?.action === "finance_release")) {
         const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
         const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
         const admin = createClient(supabaseUrl, serviceKey);
         await admin
           .from("provider_submission_requests")
-          .update({ status: "pending" })
+          .update({ status: body.action === "finance_release" ? "awaiting_finance" : "pending" })
           .eq("id", body.submissionId)
           .eq("status", "processing");
       }
