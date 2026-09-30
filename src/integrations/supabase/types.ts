@@ -195,6 +195,9 @@ export type Database = {
           destination_user_id: string | null
           executed_at: string | null
           execution_error: string | null
+          finance_released_at: string | null
+          finance_released_by_email: string | null
+          finance_released_by_name: string | null
           gateway_reference: string | null
           id: string
           initiated_by: string
@@ -235,6 +238,9 @@ export type Database = {
           destination_user_id?: string | null
           executed_at?: string | null
           execution_error?: string | null
+          finance_released_at?: string | null
+          finance_released_by_email?: string | null
+          finance_released_by_name?: string | null
           gateway_reference?: string | null
           id?: string
           initiated_by: string
@@ -275,6 +281,9 @@ export type Database = {
           destination_user_id?: string | null
           executed_at?: string | null
           execution_error?: string | null
+          finance_released_at?: string | null
+          finance_released_by_email?: string | null
+          finance_released_by_name?: string | null
           gateway_reference?: string | null
           id?: string
           initiated_by?: string

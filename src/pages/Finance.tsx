@@ -1,3 +1,4 @@
+import { FinanceWalletOpsAndBalances } from '@/components/finance/FinanceWalletOpsAndBalances';
 import React, { useState, lazy, Suspense } from 'react';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -115,6 +116,7 @@ const Finance = () => {
                     content: (
                       <Suspense fallback={<LoadingSpinner />}>
                         <div className="space-y-6">
+                          <FinanceWalletOpsAndBalances />
                           <AwaitingDisbursementPanel />
                           <PendingApprovalRequests />
                         </div>

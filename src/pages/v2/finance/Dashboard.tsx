@@ -1,3 +1,4 @@
+import { FinanceWalletOpsAndBalances } from '@/components/finance/FinanceWalletOpsAndBalances';
 import { useState } from "react";
 import V2Navigation from "@/components/v2/V2Navigation";
 import PriceTicker from "@/components/PriceTicker";
@@ -73,7 +74,7 @@ const FinanceDashboard = () => {
               <TabsContent value="receipts"><PaymentReceiptsTab /></TabsContent>
               {!scanOnly && (
                 <>
-                  <TabsContent value="release"><div className="space-y-6"><AwaitingDisbursementPanel /><PendingApprovalRequests /></div></TabsContent>
+                  <TabsContent value="release"><div className="space-y-6"><FinanceWalletOpsAndBalances /><AwaitingDisbursementPanel /><PendingApprovalRequests /></div></TabsContent>
                   <TabsContent value="history"><PaymentHistory /></TabsContent>
                   <TabsContent value="reconciliation"><TransactionReconciliationTab /></TabsContent>
                   <TabsContent value="advances"><AdvancesRecoveriesTab /></TabsContent>

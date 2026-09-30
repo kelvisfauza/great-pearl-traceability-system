@@ -1048,7 +1048,12 @@ export const useUnifiedApprovalRequests = () => {
               if (isSalaryAdvance && beneficiaryName) {
                 message = `Dear ${requesterEmployee.name}, the Salary Advance of UGX ${typeof request.amount === 'number' ? request.amount.toLocaleString() : request.amount} for ${beneficiaryName} has been FULLY APPROVED by ${adminName} and disbursed to their wallet. Great Agro Coffee.`;
               } else {
-                message = `Dear ${requesterEmployee.name}, your ${request.requestType} request for UGX ${typeof request.amount === 'number' ? request.amount.toLocaleString() : request.amount} has been FULLY APPROVED by ${adminName}. Great Agro Coffee.`;
+                const amt = typeof request.amount === 'number' ? request.amount.toLocaleString() : request.amount;
+                message = updateData.status === 'Approved'
+                  ? `Dear ${requesterEmployee.name}, your ${request.requestType} request for UGX ${amt} has been FULLY APPROVED by ${adminName}. Great Agro Coffee.`
+                  : updateData.status === 'Pending Finance'
+                    ? `Dear ${requesterEmployee.name}, your ${request.requestType} request for UGX ${amt} has been APPROVED by Admin (${adminName}) and is awaiting Finance to release the funds. You will be notified once released. Great Agro Coffee.`
+                    : `Dear ${requesterEmployee.name}, your ${request.requestType} request for UGX ${amt} has received Admin approval from ${adminName} and awaits a second admin, then Finance release. Great Agro Coffee.`;
               }
             } else {
               if (isSalaryAdvance && beneficiaryName) {

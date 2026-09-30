@@ -176,8 +176,8 @@ serve(async (req) => {
     if (phone) {
       const msg = success
         ? provider === "cash"
-          ? `Dear ${recipientName}, your ${reqRow.type} of UGX ${amount.toLocaleString()} has been approved and prepared as CASH. Please collect it from the office. Ref: ${finalRef}. YEDA Coffee Company Limited.`
-          : `Dear ${recipientName}, your ${reqRow.type} of UGX ${amount.toLocaleString()} has been approved and sent to your Mobile Money ${phone} via ${provider === "gosente" ? "GosentePay" : "Yo Payments"}. Ref: ${finalRef}. YEDA Coffee Company Limited.`
+          ? `Dear ${recipientName}, your ${reqRow.type} of UGX ${amount.toLocaleString()} has been released by Finance as CASH. Please collect it from the office. Ref: ${finalRef}. YEDA Coffee Company Limited.`
+          : `Dear ${recipientName}, your ${reqRow.type} of UGX ${amount.toLocaleString()} has been released by Finance to your Mobile Money ${phone} via ${provider === "gosente" ? "GosentePay" : "Yo Payments"}. Ref: ${finalRef}. YEDA Coffee Company Limited.`
         : `Dear ${recipientName}, your approved ${reqRow.type} of UGX ${amount.toLocaleString()} could not be sent (${errorMessage.slice(0, 60)}). Finance will retry shortly. YEDA Coffee Company Limited.`;
       try {
         await svc.functions.invoke("send-sms", {
