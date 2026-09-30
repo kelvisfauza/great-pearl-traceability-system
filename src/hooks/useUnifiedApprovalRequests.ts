@@ -712,8 +712,17 @@ export const useUnifiedApprovalRequests = () => {
           wUpdateData.approved_by = adminName;
         }
 
-        // Lock for payout immediately if this is the final approval
-        const isFinalApproval = wUpdateData.status === 'approved';
+        // Admin approval no longer releases money: the request goes to Finance,
+        // who releases it from the Finance release queue (V1 + V2).
+        const sentToFinance = wUpdateData.status === 'approved';
+        if (sentToFinance) {
+          wUpdateData.status = 'pending_finance';
+          delete wUpdateData.payout_status;
+          wUpdateData.admin_final_approval = true;
+          wUpdateData.admin_final_approval_at = new Date().toISOString();
+          wUpdateData.admin_final_approval_by = adminName;
+        }
+        const isFinalApproval = false;
         // channel may be null on money_requests — fallback to payment_channel
         const effectiveChannel = currentWithdrawal.payment_channel || currentWithdrawal.channel || 'MOBILE_MONEY';
         const isCash = effectiveChannel === 'CASH';
@@ -872,6 +881,8 @@ export const useUnifiedApprovalRequests = () => {
                 msg = `Dear ${recipientEmp.name}, your withdrawal of UGX ${currentWithdrawal.amount.toLocaleString()} has been APPROVED and sent to your Mobile Money. Ref: ${payoutRef}. Great Agro Coffee.`;
               } else if (isFinalApproval) {
                 msg = `Dear ${recipientEmp.name}, your withdrawal of UGX ${currentWithdrawal.amount.toLocaleString()} has been APPROVED by ${adminName}. Your funds will be disbursed shortly. Ref: ${refDisplay}. Great Agro Coffee.`;
+              } else if (sentToFinance) {
+                msg = `Dear ${recipientEmp.name}, your withdrawal of UGX ${currentWithdrawal.amount.toLocaleString()} has been approved by Admin. Finance will release your payment. Ref: ${refDisplay}. Great Agro Coffee.`;
               } else {
                 msg = `Dear ${recipientEmp.name}, your withdrawal of UGX ${currentWithdrawal.amount.toLocaleString()} received approval from ${adminName}. Awaiting final approval. Ref: ${refDisplay}. Great Agro Coffee.`;
               }
