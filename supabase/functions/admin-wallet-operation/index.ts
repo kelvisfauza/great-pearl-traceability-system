@@ -376,7 +376,7 @@ serve(async (req) => {
     const isFinance = actorRole === "Finance" || perms.includes("Finance:approve") || perms.includes("Finance:process");
     const isAdmin = actorRole === "Administrator" || actorRole === "Super Admin";
     const peekBody = await req.clone().json().catch(() => ({}));
-    const isFinanceAction = peekBody?.action === "finance_release" || peekBody?.action === "finance_list";
+    const isFinanceAction = ["finance_release", "finance_list", "reject"].includes(peekBody?.action);
     if (!isAdmin && !(isFinanceAction && isFinance)) return respond(false, { error: "Forbidden: administrators only" });
 
     // Super administrators may execute wallet operations instantly (no co-signer).
@@ -523,6 +523,18 @@ serve(async (req) => {
       });
     }
 
+    // ----------------------------------------------------------- FINANCE LIST
+    if (action === "finance_list") {
+      const { data: rows, error } = await supabase
+        .from("admin_wallet_operations")
+        .select("id, operation_type, amount, reason, target_email, target_name, destination_email, destination_phone, payout_provider, status, initiated_by_name, initiated_by_email, approved_by_name, approved_at, finance_released_by_name, finance_released_at, executed_at, ledger_reference, gateway_reference, execution_error, created_at")
+        .in("status", ["awaiting_finance", "completed", "failed", "rejected"])
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) return respond(false, { error: error.message });
+      return respond(true, { operations: rows || [] });
+    }
+
     // ---------------------------------------------------------------- REJECT
     if (action === "reject") {
       const { operation_id, rejected_reason } = body;
@@ -530,7 +542,8 @@ serve(async (req) => {
       const { data: op } = await supabase
         .from("admin_wallet_operations").select("*").eq("id", operation_id).maybeSingle();
       if (!op) return respond(false, { error: "Operation not found" });
-      if (op.status !== "pending") return respond(false, { error: `Cannot reject a ${op.status} operation` });
+      if (!isAdmin && op.status !== "awaiting_finance") return respond(false, { error: "Finance can only reject operations awaiting release" });
+      if (!["pending", "awaiting_finance"].includes(op.status)) return respond(false, { error: `Cannot reject a ${op.status} operation` });
 
       // If a previous attempt already debited the wallet (payout then failed),
       // return that money before closing the operation.
