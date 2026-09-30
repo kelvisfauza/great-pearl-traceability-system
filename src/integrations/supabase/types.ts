@@ -9443,11 +9443,15 @@ export type Database = {
       }
       provider_submission_requests: {
         Row: {
+          admin_approved_amount: number | null
+          admin_approved_by_name: string | null
+          admin_approved_charge: number | null
           amount: number
           attachment_url: string | null
           created_at: string
           description: string
           email: string | null
+          finance_released_by_name: string | null
           id: string
           invoice_number: string | null
           national_id: string | null
@@ -9466,11 +9470,15 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          admin_approved_amount?: number | null
+          admin_approved_by_name?: string | null
+          admin_approved_charge?: number | null
           amount: number
           attachment_url?: string | null
           created_at?: string
           description: string
           email?: string | null
+          finance_released_by_name?: string | null
           id?: string
           invoice_number?: string | null
           national_id?: string | null
@@ -9489,11 +9497,15 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          admin_approved_amount?: number | null
+          admin_approved_by_name?: string | null
+          admin_approved_charge?: number | null
           amount?: number
           attachment_url?: string | null
           created_at?: string
           description?: string
           email?: string | null
+          finance_released_by_name?: string | null
           id?: string
           invoice_number?: string | null
           national_id?: string | null
