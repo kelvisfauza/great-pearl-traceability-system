@@ -67,6 +67,7 @@ interface HistoryRow extends ReviewRow {
   requested_by: string | null;
   amount: number | null;
   current_status: string;
+  details: Record<string, string>;
 }
 
 const PROVIDER_LABEL: Record<string, string> = {
