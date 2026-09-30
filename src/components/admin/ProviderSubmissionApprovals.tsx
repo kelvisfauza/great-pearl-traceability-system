@@ -53,7 +53,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
   const publicLink = `${window.location.origin}/submit-request`;
 
   const handleAction = async (
-    action: 'approve' | 'reject',
+    action: 'approve' | 'reject' | 'send_to_finance',
     paymentMode: 'momo' | 'cash' | 'gosente' = 'momo',
     fingerprintVerified = false,
   ) => {
@@ -67,10 +67,10 @@ const ProviderSubmissionApprovals: React.FC = () => {
       });
       return;
     }
-    const finalAmount = action === 'approve'
+    const finalAmount = action === 'approve' || action === 'send_to_finance'
       ? Number(overrideAmount || selected.amount)
       : Number(selected.amount);
-    if (action === 'approve' && (!finalAmount || finalAmount < 500)) {
+    if ((action === 'approve' || action === 'send_to_finance') && (!finalAmount || finalAmount < 500)) {
       toast({ title: 'Invalid amount', description: 'Amount must be at least 500 UGX', variant: 'destructive' });
       return;
     }
