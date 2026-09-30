@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CheckCircle, XCircle, RefreshCw, Pencil, ClipboardCheck, User, Calendar, History } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, Pencil, ClipboardCheck, User, Calendar, History, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import QuotationReviewPanel from '@/components/quotations/QuotationReviewPanel';
 
@@ -67,6 +67,7 @@ interface HistoryRow extends ReviewRow {
   requested_by: string | null;
   amount: number | null;
   current_status: string;
+  details: Record<string, string>;
 }
 
 const PROVIDER_LABEL: Record<string, string> = {
@@ -85,6 +86,7 @@ const ProcurementReviewPanel = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [history, setHistory] = useState<HistoryRow[]>([]);
+  const [detailRow, setDetailRow] = useState<HistoryRow | null>(null);
 
   const [dialog, setDialog] = useState<{
     open: boolean;
@@ -165,20 +167,37 @@ const ProcurementReviewPanel = () => {
       const approvalIds = histRows.filter((r) => r.source_table === 'approval_requests').map((r) => r.record_id);
       const providerIds = histRows.filter((r) => r.source_table === 'provider_submission_requests').map((r) => r.record_id);
 
-      const lookup: Record<string, { title: string; requested_by: string | null; amount: number | null; status: string }> = {};
+      const lookup: Record<string, { title: string; requested_by: string | null; amount: number | null; status: string; details: Record<string, string> }> = {};
+
+      // Turn a raw DB row into labelled, human-readable detail lines (skip internal/empty fields)
+      const SKIP_FIELDS = new Set(['id', 'created_at', 'updated_at', 'reviewed_by', 'reviewed_at', 'recommended_admin_name', 'recommended_admin_email']);
+      const toLabel = (k: string) => k.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+      const buildDetails = (row: Record<string, any>): Record<string, string> => {
+        const out: Record<string, string> = {};
+        Object.entries(row).forEach(([k, v]) => {
+          if (SKIP_FIELDS.has(k) || v === null || v === undefined || v === '') return;
+          if (typeof v === 'object') return;
+          let val = String(v);
+          if (k.includes('amount') || k === 'total' || k.endsWith('_cost') || k.endsWith('_price')) val = money(v);
+          else if (k.includes('date') || k.endsWith('_at')) { const d = new Date(val); if (!isNaN(d.getTime())) val = d.toLocaleString(); }
+          out[toLabel(k)] = val;
+        });
+        return out;
+      };
+
       if (approvalIds.length) {
         const { data } = await (supabase as any)
           .from('approval_requests')
-          .select('id,title,requestedby_name,requestedby,amount,status')
+          .select('*')
           .in('id', approvalIds);
         ((data || []) as any[]).forEach((r) => {
-          lookup[r.id] = { title: r.title || 'Request', requested_by: r.requestedby_name || r.requestedby, amount: r.amount, status: r.status };
+          lookup[r.id] = { title: r.title || 'Request', requested_by: r.requestedby_name || r.requestedby, amount: r.amount, status: r.status, details: buildDetails(r) };
         });
       }
       if (providerIds.length) {
         const { data } = await (supabase as any)
           .from('provider_submission_requests')
-          .select('id,request_type,provider_name,amount,status')
+          .select('*')
           .in('id', providerIds);
         ((data || []) as any[]).forEach((r) => {
           lookup[r.id] = {
@@ -186,6 +205,7 @@ const ProcurementReviewPanel = () => {
             requested_by: r.provider_name,
             amount: r.amount,
             status: r.status,
+            details: buildDetails(r),
           };
         });
       }
@@ -196,6 +216,7 @@ const ProcurementReviewPanel = () => {
         requested_by: lookup[r.record_id]?.requested_by || null,
         amount: lookup[r.record_id]?.amount ?? r.edited_amount ?? r.original_amount,
         current_status: lookup[r.record_id]?.status || 'unknown',
+        details: lookup[r.record_id]?.details || {},
       })));
     } catch (err) {
       console.error('Failed to load procurement review queue:', err);
@@ -453,6 +474,11 @@ const ProcurementReviewPanel = () => {
                         <p><strong>Amount corrected:</strong> {money(h.original_amount)} → {money(h.edited_amount)}</p>
                       )}
                     </div>
+                    <div>
+                      <Button size="sm" variant="outline" onClick={() => setDetailRow(h)}>
+                        <Eye className="h-4 w-4 mr-2" /> View full details
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -460,6 +486,42 @@ const ProcurementReviewPanel = () => {
           </TabsContent>
         </Tabs>
       </CardContent>
+
+      <Dialog open={!!detailRow} onOpenChange={(open) => !open && setDetailRow(null)}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{detailRow?.title || 'Request details'}</DialogTitle>
+          </DialogHeader>
+          {detailRow && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                {decisionBadge(detailRow.decision)}
+                <Badge variant="outline">Now: {detailRow.current_status}</Badge>
+                <span className="font-semibold">{money(detailRow.amount)}</span>
+              </div>
+              <div className="border rounded-lg divide-y text-sm">
+                {Object.entries(detailRow.details).map(([label, value]) => (
+                  <div key={label} className="grid grid-cols-3 gap-2 px-3 py-2">
+                    <span className="text-muted-foreground">{label}</span>
+                    <span className="col-span-2 break-words">{value}</span>
+                  </div>
+                ))}
+                {Object.keys(detailRow.details).length === 0 && (
+                  <p className="px-3 py-4 text-muted-foreground">No extra details were recorded for this request.</p>
+                )}
+              </div>
+              <div className="text-xs bg-muted rounded p-2 space-y-1">
+                <p><strong>Reviewed by:</strong> {detailRow.reviewed_by} · {detailRow.reviewed_at ? new Date(detailRow.reviewed_at).toLocaleString() : ''}</p>
+                {detailRow.recommended_admin_name && <p><strong>Sent to:</strong> {detailRow.recommended_admin_name}</p>}
+                {detailRow.notes && <p><strong>Observations:</strong> {detailRow.notes}</p>}
+                {detailRow.edited_amount != null && (
+                  <p><strong>Amount corrected:</strong> {money(detailRow.original_amount)} → {money(detailRow.edited_amount)}</p>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialog.open} onOpenChange={(open) => !open && setDialog({ open: false, request: null, decision: 'approved' })}>
         <DialogContent className="max-w-lg">
