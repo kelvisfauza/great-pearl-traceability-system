@@ -6,9 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Paperclip, CreditCard, QrCode, ClipboardList } from "lucide-react";
+import { Loader2, Paperclip, CreditCard, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
-import GRNScannerDialog from "@/components/finance/GRNScannerDialog";
 
 const money = (n?: number | null) => `UGX ${Number(n || 0).toLocaleString()}`;
 
@@ -21,7 +20,6 @@ export default function FinanceSamplingOrderPayments() {
   const qc = useQueryClient();
   const [codes, setCodes] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
-  const [scanFor, setScanFor] = useState<string | null>(null);
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["finance-sampling-orders"],
@@ -101,13 +99,10 @@ export default function FinanceSamplingOrderPayments() {
                 <div className="flex flex-wrap gap-2">
                   <Input
                     className="max-w-xs"
-                    placeholder="GRN number or pay code"
+                    placeholder="Scan or type GRN number / pay code"
                     value={codes[order.id] || ""}
                     onChange={(e) => setCodes({ ...codes, [order.id]: e.target.value })}
                   />
-                  <Button size="sm" variant="outline" onClick={() => setScanFor(order.id)}>
-                    <QrCode className="mr-1 h-4 w-4" /> Scan
-                  </Button>
                   <Button size="sm" disabled={busy === order.id} onClick={() => attach(order.id, codes[order.id] || "")}>
                     {busy === order.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="mr-1 h-4 w-4" />} Attach GRN
                   </Button>
@@ -117,17 +112,6 @@ export default function FinanceSamplingOrderPayments() {
           ))
         )}
       </CardContent>
-      {scanFor && (
-        <GRNScannerDialog
-          {...({
-            open: !!scanFor,
-            onOpenChange: (o: boolean) => !o && setScanFor(null),
-            onClose: () => setScanFor(null),
-            onScan: (code: string) => { const id = scanFor; setScanFor(null); attach(id!, code); },
-            onDetected: (code: string) => { const id = scanFor; setScanFor(null); attach(id!, code); },
-          } as any)}
-        />
-      )}
     </Card>
   );
 }
