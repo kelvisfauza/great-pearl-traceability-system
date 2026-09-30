@@ -146,6 +146,7 @@ import SystemTransactions from "./pages/admin/SystemTransactions";
 import AdminInitiateWithdrawal from "./pages/admin/AdminInitiateWithdrawal";
 import Treasury from "./pages/admin/Treasury";
 import LeaveRequests from "./pages/admin/LeaveRequests";
+import ExcelReports from "./pages/admin/ExcelReports";
 import UserStatement from "./pages/admin/UserStatement";
 import BackfillTrace from "./pages/admin/BackfillTrace";
 import WalletAudit from "./pages/admin/WalletAudit";
@@ -638,6 +639,11 @@ const App: React.ComponentType = () => {
                 <Route path="/admin/leave-requests" element={
                   <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
                     <LeaveRequests />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/excel-reports" element={
+                  <ProtectedRoute requiredRoles={['Administrator', 'Super Admin', 'Manager']}>
+                    <ExcelReports />
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/treasury" element={
