@@ -895,7 +895,7 @@ export function getGRNDocumentMarkup(data: GRNDocumentData, copyType: "supplier"
 }
 
 export function getGRNPreviewHTML(data: GRNDocumentData, options?: { includeFinanceCopy?: boolean }): string {
-  const includeFinance = options?.includeFinanceCopy !== false;
+  const includeFinance = options?.includeFinanceCopy === true;
   return `${getGRNDocumentStyles()}<div class="gac-grn-preview-shell">${getGRNDocumentMarkup(data, "supplier")}${includeFinance ? getPaymentOrderMarkup(data) : ""}</div>`;
 }
 
@@ -932,8 +932,8 @@ export function getGRNFitScript(): string {
   `;
 }
 
-export function getGRNPrintDocumentHTML(data: GRNDocumentData[], title: string, options?: { includeFinanceCopy?: boolean }): string {
-  const includeFinance = options?.includeFinanceCopy !== false;
+export function getGRNPrintDocumentHTML(data: GRNDocumentData[], title: string, options?: { includeFinanceCopy?: boolean; paymentOrderOnly?: boolean }): string {
+  const includeFinance = options?.includeFinanceCopy === true;
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -945,7 +945,7 @@ export function getGRNPrintDocumentHTML(data: GRNDocumentData[], title: string, 
       </head>
       <body>
         <div class="gac-grn-preview-shell">
-          ${data.map((item) => `${getGRNDocumentMarkup(item, "supplier")}${includeFinance ? getPaymentOrderMarkup(item) : ""}`).join("")}
+          ${data.map((item) => options?.paymentOrderOnly ? getPaymentOrderMarkup(item) : `${getGRNDocumentMarkup(item, "supplier")}${includeFinance ? getPaymentOrderMarkup(item) : ""}`).join("")}
         </div>
         <script>
           ${getGRNFitScript()}
