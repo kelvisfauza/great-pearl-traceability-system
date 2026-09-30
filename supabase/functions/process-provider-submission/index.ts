@@ -441,12 +441,27 @@ serve(async (req) => {
       );
     }
 
-    if (!submissionId || !["approve", "reject"].includes(action)) {
+    // 📋 Finance: list submissions awaiting finance release
+    if (action === "finance_list") {
+      const { data: rows } = await supabase
+        .from("provider_submission_requests")
+        .select("*")
+        .eq("status", "awaiting_finance")
+        .order("created_at", { ascending: false });
+      return new Response(JSON.stringify({ ok: true, submissions: rows || [] }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!submissionId || !["approve", "reject", "send_to_finance", "finance_release"].includes(action)) {
       return new Response(JSON.stringify({ ok: false, error: "Invalid request" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const isFinanceRelease = action === "finance_release";
 
 
     const { data: submission, error: subErr } = await supabase
