@@ -166,20 +166,37 @@ const ProcurementReviewPanel = () => {
       const approvalIds = histRows.filter((r) => r.source_table === 'approval_requests').map((r) => r.record_id);
       const providerIds = histRows.filter((r) => r.source_table === 'provider_submission_requests').map((r) => r.record_id);
 
-      const lookup: Record<string, { title: string; requested_by: string | null; amount: number | null; status: string }> = {};
+      const lookup: Record<string, { title: string; requested_by: string | null; amount: number | null; status: string; details: Record<string, string> }> = {};
+
+      // Turn a raw DB row into labelled, human-readable detail lines (skip internal/empty fields)
+      const SKIP_FIELDS = new Set(['id', 'created_at', 'updated_at', 'reviewed_by', 'reviewed_at', 'recommended_admin_name', 'recommended_admin_email']);
+      const toLabel = (k: string) => k.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+      const buildDetails = (row: Record<string, any>): Record<string, string> => {
+        const out: Record<string, string> = {};
+        Object.entries(row).forEach(([k, v]) => {
+          if (SKIP_FIELDS.has(k) || v === null || v === undefined || v === '') return;
+          if (typeof v === 'object') return;
+          let val = String(v);
+          if (k.includes('amount') || k === 'total' || k.endsWith('_cost') || k.endsWith('_price')) val = money(v);
+          else if (k.includes('date') || k.endsWith('_at')) { const d = new Date(val); if (!isNaN(d.getTime())) val = d.toLocaleString(); }
+          out[toLabel(k)] = val;
+        });
+        return out;
+      };
+
       if (approvalIds.length) {
         const { data } = await (supabase as any)
           .from('approval_requests')
-          .select('id,title,requestedby_name,requestedby,amount,status')
+          .select('*')
           .in('id', approvalIds);
         ((data || []) as any[]).forEach((r) => {
-          lookup[r.id] = { title: r.title || 'Request', requested_by: r.requestedby_name || r.requestedby, amount: r.amount, status: r.status };
+          lookup[r.id] = { title: r.title || 'Request', requested_by: r.requestedby_name || r.requestedby, amount: r.amount, status: r.status, details: buildDetails(r) };
         });
       }
       if (providerIds.length) {
         const { data } = await (supabase as any)
           .from('provider_submission_requests')
-          .select('id,request_type,provider_name,amount,status')
+          .select('*')
           .in('id', providerIds);
         ((data || []) as any[]).forEach((r) => {
           lookup[r.id] = {
@@ -187,6 +204,7 @@ const ProcurementReviewPanel = () => {
             requested_by: r.provider_name,
             amount: r.amount,
             status: r.status,
+            details: buildDetails(r),
           };
         });
       }
@@ -197,6 +215,7 @@ const ProcurementReviewPanel = () => {
         requested_by: lookup[r.record_id]?.requested_by || null,
         amount: lookup[r.record_id]?.amount ?? r.edited_amount ?? r.original_amount,
         current_status: lookup[r.record_id]?.status || 'unknown',
+        details: lookup[r.record_id]?.details || {},
       })));
     } catch (err) {
       console.error('Failed to load procurement review queue:', err);
