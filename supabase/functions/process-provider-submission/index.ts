@@ -502,12 +502,13 @@ serve(async (req) => {
     // 🔒 ATOMIC CLAIM — prevent double-send when admin double-clicks or two
     // approvals race. Only the first caller flips 'pending' -> 'processing';
     // any concurrent call gets 0 rows and exits without triggering a payout.
-    if (action === "approve") {
+    if (action === "approve" || isFinanceRelease) {
+      const fromStatuses = isFinanceRelease ? ["awaiting_finance"] : ["pending", "processing"];
       const { data: claimed, error: claimErr } = await supabase
         .from("provider_submission_requests")
         .update({ status: "processing" })
         .eq("id", submissionId)
-        .in("status", ["pending", "processing"])
+        .in("status", fromStatuses)
         .select("id")
         .maybeSingle();
       if (claimErr || !claimed) {
