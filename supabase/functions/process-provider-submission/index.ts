@@ -527,6 +527,101 @@ serve(async (req) => {
       .maybeSingle();
     const reviewerName = emp?.name || reviewer.email || "Admin";
 
+    // 🏦 ADMIN APPROVE → SEND TO FINANCE (no money moves here)
+    if (action === "send_to_finance") {
+      const amt = amountOverride !== undefined && amountOverride !== null && Number(amountOverride) > 0
+        ? Number(amountOverride)
+        : Number(submission.amount);
+      const chg = Number(withdrawCharge || 0);
+      if (!Number.isFinite(amt) || amt < 500) {
+        return new Response(JSON.stringify({ ok: false, error: "Amount must be at least 500 UGX" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: claimed } = await supabase
+        .from("provider_submission_requests")
+        .update({
+          status: "awaiting_finance",
+          admin_approved_amount: amt,
+          admin_approved_charge: chg,
+          admin_approved_by_name: reviewerName,
+          reviewed_by: reviewer.id,
+          reviewed_by_name: reviewerName,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq("id", submissionId)
+        .eq("status", "pending")
+        .select("id")
+        .maybeSingle();
+      if (!claimed) {
+        return new Response(
+          JSON.stringify({ ok: false, error: "Request is already being processed. Please refresh." }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      try {
+        await supabase.functions.invoke("send-sms", {
+          body: {
+            phone: normalizePhone(submission.phone),
+            message: `Dear ${submission.provider_name}, your request to Great Agro Coffee for UGX ${amt.toLocaleString()} (${submission.description}) has been APPROVED by Admin (${reviewerName}) and is now awaiting Finance to release the funds.`,
+            userName: submission.provider_name,
+            messageType: "payout_confirmation",
+            recipientEmail: submission.email || undefined,
+            department: "Admin",
+            triggeredBy: reviewer.id,
+          },
+        });
+      } catch (e) {
+        console.error("send_to_finance SMS error:", e);
+      }
+      if (submission.email) {
+        try {
+          await supabase.functions.invoke("send-transactional-email", {
+            body: {
+              templateName: "payment-receipt",
+              recipientEmail: submission.email,
+              idempotencyKey: `provider-submission-admin-approval-${submissionId}`,
+              templateData: {
+                recipientName: submission.provider_name,
+                reference: submissionId.slice(-8).toUpperCase(),
+                description: `APPROVED by Admin — ${submission.description}. The request is now awaiting Finance to release the funds; you will receive a confirmation once the money is sent.`,
+                invoiceNumber: submission.invoice_number || undefined,
+                amount: `UGX ${amt.toLocaleString()}`,
+                charges: chg > 0 ? `UGX ${chg.toLocaleString()}` : undefined,
+                total: `UGX ${(amt + chg).toLocaleString()}`,
+                paymentMethod: "Awaiting Finance release",
+                transactionId: submissionId,
+                processedBy: reviewerName,
+                approvedBy: reviewerName,
+              },
+            },
+          });
+        } catch (e) {
+          console.error("send_to_finance email error:", e);
+        }
+      }
+      return new Response(
+        JSON.stringify({ ok: true, status: "awaiting_finance", message: "Approved — sent to Finance to release the funds" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 🏦 FINANCE RELEASE — only Finance role may release the money
+    if (isFinanceRelease) {
+      const perms = JSON.stringify((emp as any)?.permissions || "");
+      const isFinance =
+        ((emp as any)?.role || "").toLowerCase() === "finance" ||
+        perms.includes("Finance:approve") ||
+        perms.includes("Finance:process");
+      if (!isFinance) {
+        return new Response(JSON.stringify({ ok: false, error: "Only Finance can release funds" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     if (action === "reject") {
       await supabase
         .from("provider_submission_requests")
