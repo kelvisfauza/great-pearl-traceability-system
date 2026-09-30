@@ -299,9 +299,11 @@ const ProviderSubmissionApprovals: React.FC = () => {
       <Dialog open={approveOpen} onOpenChange={setApproveOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Approve & Disburse</DialogTitle>
+            <DialogTitle>{selected?.payout_status === 'failed' ? 'Retry Payout' : 'Approve & Send to Finance'}</DialogTitle>
             <DialogDescription>
-              {selected && `Review the request, pick a payment method, then confirm.`}
+              {selected?.payout_status === 'failed'
+                ? 'Review the request, pick a payment method, then confirm.'
+                : 'Review the request and confirm the amount. Finance will choose how to pay (Yo, GosentePay or Cash) and release the money.'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -345,6 +347,14 @@ const ProviderSubmissionApprovals: React.FC = () => {
               </div>
             </div>
 
+            {selected?.payout_status !== 'failed' && (
+              <div className="text-xs bg-primary/5 border border-primary/20 rounded-md px-3 py-2">
+                After your approval, this request goes to <strong>Finance</strong>. Finance picks the
+                payment method (Yo Payments, GosentePay or Cash) and releases the money. No funds move at this step.
+              </div>
+            )}
+
+            {selected?.payout_status === 'failed' && (
             <div>
               <Label className="text-xs mb-1.5 block">Payment Method</Label>
               <div className="grid grid-cols-3 gap-2">
