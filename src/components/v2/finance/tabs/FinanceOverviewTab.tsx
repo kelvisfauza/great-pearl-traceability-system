@@ -12,7 +12,7 @@ const FinanceOverviewTab = () => {
     queryFn: async () => {
       const [readyPayment, pendingApprovals, cashBalance, totalPayments] = await Promise.all([
         supabase.from("finance_coffee_lots").select("*", { count: "exact", head: true }).eq("finance_status", "READY_FOR_FINANCE"),
-        supabase.from("approval_requests").select("*", { count: "exact", head: true }).eq("status", "Pending Finance"),
+        supabase.from("approval_requests").select("*", { count: "exact", head: true }).in("status", ["Pending Finance", "pending_finance"]),
         supabase.from("finance_cash_balance").select("current_balance").single(),
         supabase.from("supplier_payments").select("amount_paid_ugx"),
       ]);

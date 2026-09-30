@@ -712,8 +712,17 @@ export const useUnifiedApprovalRequests = () => {
           wUpdateData.approved_by = adminName;
         }
 
-        // Lock for payout immediately if this is the final approval
-        const isFinalApproval = wUpdateData.status === 'approved';
+        // Admin approval no longer releases money: the request goes to Finance,
+        // who releases it from the Finance release queue (V1 + V2).
+        const sentToFinance = wUpdateData.status === 'approved';
+        if (sentToFinance) {
+          wUpdateData.status = 'pending_finance';
+          delete wUpdateData.payout_status;
+          wUpdateData.admin_final_approval = true;
+          wUpdateData.admin_final_approval_at = new Date().toISOString();
+          wUpdateData.admin_final_approval_by = adminName;
+        }
+        const isFinalApproval = false;
         // channel may be null on money_requests — fallback to payment_channel
         const effectiveChannel = currentWithdrawal.payment_channel || currentWithdrawal.channel || 'MOBILE_MONEY';
         const isCash = effectiveChannel === 'CASH';
@@ -872,6 +881,8 @@ export const useUnifiedApprovalRequests = () => {
                 msg = `Dear ${recipientEmp.name}, your withdrawal of UGX ${currentWithdrawal.amount.toLocaleString()} has been APPROVED and sent to your Mobile Money. Ref: ${payoutRef}. Great Agro Coffee.`;
               } else if (isFinalApproval) {
                 msg = `Dear ${recipientEmp.name}, your withdrawal of UGX ${currentWithdrawal.amount.toLocaleString()} has been APPROVED by ${adminName}. Your funds will be disbursed shortly. Ref: ${refDisplay}. Great Agro Coffee.`;
+              } else if (sentToFinance) {
+                msg = `Dear ${recipientEmp.name}, your withdrawal of UGX ${currentWithdrawal.amount.toLocaleString()} has been approved by Admin. Finance will release your payment. Ref: ${refDisplay}. Great Agro Coffee.`;
               } else {
                 msg = `Dear ${recipientEmp.name}, your withdrawal of UGX ${currentWithdrawal.amount.toLocaleString()} received approval from ${adminName}. Awaiting final approval. Ref: ${refDisplay}. Great Agro Coffee.`;
               }
@@ -945,7 +956,7 @@ export const useUnifiedApprovalRequests = () => {
               updateData.admin_final_approval_at = new Date().toISOString();
               updateData.admin_final_approval_by = adminName;
               // Monthly Allowance Prepayment / Requisitions are finalised after 2 admin approvals
-              if (request.requestType === 'Monthly Allowance Prepayment' || isRequisitionReq) {
+              if (request.requestType === 'Monthly Allowance Prepayment') {
 
                 updateData.status = 'Approved';
                 updateData.approval_stage = 'approved';
@@ -967,12 +978,12 @@ export const useUnifiedApprovalRequests = () => {
             updateData.admin_final_approval = true;
             updateData.admin_final_approval_at = new Date().toISOString();
             updateData.admin_final_approval_by = adminName;
-            if (isSalaryAdvanceReq || isRequisitionReq) {
+            if (isSalaryAdvanceReq) {
               // One admin approval fully approves; payout channel is chosen at release
               updateData.status = 'Approved';
               updateData.approval_stage = 'approved';
               updateData.finance_approved = true;
-              updateData.finance_approved_by = isSalaryAdvanceReq ? 'AUTO (Salary Advance)' : 'AUTO (Requisition)';
+              updateData.finance_approved_by = 'AUTO (Salary Advance)';
               updateData.finance_approved_at = new Date().toISOString();
               console.log('✅ Fully approved by single admin');
 
