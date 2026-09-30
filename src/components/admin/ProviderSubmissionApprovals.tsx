@@ -93,8 +93,8 @@ const ProviderSubmissionApprovals: React.FC = () => {
           submissionId: selected.id,
           action,
           rejectionReason: action === 'reject' ? rejectionReason : undefined,
-          withdrawCharge: action === 'approve' ? Number(withdrawCharge || 0) : undefined,
-          amountOverride: action === 'approve' && Number(overrideAmount) > 0 && Number(overrideAmount) !== Number(selected.amount)
+          withdrawCharge: action !== 'reject' ? Number(withdrawCharge || 0) : undefined,
+          amountOverride: action !== 'reject' && Number(overrideAmount) > 0 && Number(overrideAmount) !== Number(selected.amount)
             ? Number(overrideAmount)
             : undefined,
           paymentMode: action === 'approve' ? paymentMode : undefined,
