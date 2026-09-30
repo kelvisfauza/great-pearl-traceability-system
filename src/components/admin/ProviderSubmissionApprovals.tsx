@@ -385,6 +385,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
                 })}
               </div>
             </div>
+            )}
 
             <div className="bg-muted/50 rounded-md p-3 text-sm space-y-1">
               <div className="flex justify-between">
