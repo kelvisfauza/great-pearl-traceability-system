@@ -93,13 +93,13 @@ export const sendPaymentReceipt = async (input: SendReceiptInput): Promise<SendR
     input.approvedBy || input.processedBy,
   );
 
-  // Resolve Finance Manager (Mukobi Godwin) email so he always gets a copy
+  // Resolve Finance Manager (Kibaba Nicholus) email so he always gets a copy
   let financeManagerEmail: string | undefined;
   try {
     const { data: fm } = await supabase
       .from('employees')
       .select('email')
-      .or('name.ilike.%mukobi godwin%,name.ilike.%godwin mukobi%')
+      .or('name.ilike.%kibaba nicholus%,name.ilike.%nicholus kibaba%')
       .not('email', 'is', null)
       .limit(1)
       .maybeSingle();
@@ -148,7 +148,7 @@ export const sendPaymentReceipt = async (input: SendReceiptInput): Promise<SendR
     );
   }
 
-  // Always send a copy to the Finance Manager (Mukobi Godwin) — unless he is the recipient
+  // Always send a copy to the Finance Manager (Kibaba Nicholus) — unless he is the recipient
   if (financeManagerEmail && financeManagerEmail.toLowerCase() !== (email || '').toLowerCase()) {
     tasks.push(
       supabase.functions
