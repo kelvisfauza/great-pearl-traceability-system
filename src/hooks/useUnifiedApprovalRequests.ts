@@ -956,7 +956,8 @@ export const useUnifiedApprovalRequests = () => {
               updateData.admin_final_approval_at = new Date().toISOString();
               updateData.admin_final_approval_by = adminName;
               // Monthly Allowance Prepayment / Requisitions are finalised after 2 admin approvals
-              if (request.requestType === 'Monthly Allowance Prepayment') {
+              // All money now awaits Finance as final release — no admin auto-finalisation.
+              if (false as boolean) {
 
                 updateData.status = 'Approved';
                 updateData.approval_stage = 'approved';
