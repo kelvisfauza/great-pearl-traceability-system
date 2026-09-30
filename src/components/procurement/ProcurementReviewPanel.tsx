@@ -474,6 +474,11 @@ const ProcurementReviewPanel = () => {
                         <p><strong>Amount corrected:</strong> {money(h.original_amount)} → {money(h.edited_amount)}</p>
                       )}
                     </div>
+                    <div>
+                      <Button size="sm" variant="outline" onClick={() => setDetailRow(h)}>
+                        <Eye className="h-4 w-4 mr-2" /> View full details
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
