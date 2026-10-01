@@ -167,7 +167,12 @@ serve(async (req) => {
             templateName: 'general-notification',
             recipientEmail: addr,
             idempotencyKey: `broadcast-${logId}-${addr}`,
-            templateData: { title: subject, subject, message, recipientName: name },
+            templateData: {
+              title: subject, subject, message, recipientName: name,
+              ...(audience === 'employees' && subject === 'Happy International Coffee Day — September reports'
+                ? { imageUrl: 'https://greatpearlcoffeesystem.site/__l5e/assets-v1/af5671ac-d575-4efd-9b16-d46b2379c1ce/international-coffee-day-2026.jpg' }
+                : {}),
+            },
           }),
         });
         if (res.ok) emailsSent++; else emailsFailed++;

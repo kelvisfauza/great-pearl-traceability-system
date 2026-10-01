@@ -20,6 +20,13 @@ import { formatDistanceToNow } from "date-fns";
 
 const QUICK_TEMPLATES = [
   {
+    label: "Coffee Day + September reports",
+    audience: "employees",
+    subject: "Happy International Coffee Day — September reports",
+    message:
+      "Happy International Coffee Day and welcome to October! Thank you for the care and dedication you bring to Great Agro Coffee every day, from farm to cup.\n\nPlease file your September 2026 end-of-month report in My Reports. Select September 2026 and choose New Monthly Report. Kindly submit it by 3 October. If your role is in Data Analysis, continue submitting your daily reports as usual.\n\nWishing you a wonderful Coffee Day and a productive new month.\nGreat Agro Coffee",
+  },
+  {
     label: "Pause coffee purchases",
     audience: "suppliers",
     subject: "Temporary pause on coffee purchases",
@@ -101,6 +108,10 @@ const Communications = () => {
     setAudience(t.audience);
     setSubject(t.subject);
     setMessage(t.message);
+    if (t.label === "Coffee Day + September reports") {
+      setSendSms(false);
+      setSendEmail(true);
+    }
   };
 
   const invokeSend = async (test: boolean) => {
