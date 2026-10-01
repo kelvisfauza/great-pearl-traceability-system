@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Create International Coffee Day greeting poster and prepare September month-end report submission and reminder
+- [ ] Send greeting and report reminder by email/SMS to employees — blocked until an administrator signs in to authorize the broadcast
 - [x] Supplier Advance Agreement template in Company Forms (terms, recovery, legal action, crop year, amount, ref, issue date)
 - [ ] John Masereka: loan refund not visible on statement; wallet shows UGX 23k — verify ledger entries
 

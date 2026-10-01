@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Notification } from "@/hooks/useNotifications";
+import coffeeDayPoster from "@/assets/international-coffee-day-2026.jpg";
 
 interface NotificationDetailModalProps {
   notification: Notification | null;
@@ -122,6 +123,16 @@ const NotificationDetailModal = ({
         <Separator className="my-4" />
 
         <div className="space-y-6">
+          {notification.type === 'announcement' && notification.title === 'International Coffee Day 2026' && (
+            <img
+              src={coffeeDayPoster}
+              alt="International Coffee Day greeting from Great Agro Coffee with a September report reminder"
+              loading="lazy"
+              width={1024}
+              height={1536}
+              className="mx-auto w-full max-w-sm h-auto border border-border"
+            />
+          )}
           {/* Message Content */}
           <div>
             <h3 className="font-semibold text-lg mb-3">Message</h3>

@@ -5,7 +5,7 @@ import { MonthlyReportForm } from './MonthlyReportForm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Calendar, FileText } from 'lucide-react';
-import { format, endOfMonth, isAfter, startOfMonth, subMonths } from 'date-fns';
+import { format, endOfMonth, startOfMonth, subMonths } from 'date-fns';
 
 export const MonthlyReportReminder = () => {
   const { employee } = useAuth();
@@ -18,17 +18,16 @@ export const MonthlyReportReminder = () => {
   const isDataAnalyst = employee?.department?.toLowerCase().includes('data') || 
                         employee?.position?.toLowerCase().includes('analyst');
 
-  const isEndOfMonth = () => {
+  const isReportingWindow = () => {
     const now = new Date();
     const endOfCurrentMonth = endOfMonth(now);
     const daysUntilEndOfMonth = endOfCurrentMonth.getDate() - now.getDate();
-    // Show reminder in the last 3 days of the month
-    return daysUntilEndOfMonth <= 2;
+    return daysUntilEndOfMonth <= 2 || now.getDate() <= 3;
   };
 
-  const getCurrentMonthKey = () => format(new Date(), 'yyyy-MM');
-  
-  const getPreviousMonthKey = () => format(subMonths(new Date(), 1), 'yyyy-MM');
+  const getReportMonthKey = () => new Date().getDate() <= 3
+    ? format(subMonths(new Date(), 1), 'yyyy-MM')
+    : format(new Date(), 'yyyy-MM');
 
   const checkMonthlyReport = useCallback(async (monthKey: string) => {
     if (!employee) return true;
@@ -59,13 +58,12 @@ export const MonthlyReportReminder = () => {
       return;
     }
 
-    // Check if it's end of month
-    if (!isEndOfMonth()) {
+    if (!isReportingWindow()) {
       setLoading(false);
       return;
     }
 
-    const currentMonth = getCurrentMonthKey();
+    const currentMonth = getReportMonthKey();
     const dismissedKey = `monthly_report_dismissed_${employee.id}_${currentMonth}`;
 
     // Check if already dismissed
@@ -128,7 +126,7 @@ export const MonthlyReportReminder = () => {
 
   const handleDismissReminder = () => {
     if (employee) {
-      localStorage.setItem(`monthly_report_dismissed_${employee.id}_${getCurrentMonthKey()}`, 'true');
+      localStorage.setItem(`monthly_report_dismissed_${employee.id}_${getReportMonthKey()}`, 'true');
     }
     setShowReminder(false);
   };
@@ -159,7 +157,7 @@ export const MonthlyReportReminder = () => {
               Monthly Report Due
             </DialogTitle>
             <DialogDescription>
-              It's the end of the month. Please submit your monthly summary report for {monthName}.
+              Please submit your monthly summary report for {monthName}.
             </DialogDescription>
           </DialogHeader>
 

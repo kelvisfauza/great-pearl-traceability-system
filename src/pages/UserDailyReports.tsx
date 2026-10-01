@@ -38,6 +38,7 @@ const UserDailyReports = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewReportForm, setShowNewReportForm] = useState(false);
   const [showMonthlyReportForm, setShowMonthlyReportForm] = useState(false);
+  const [selectedReportMonth, setSelectedReportMonth] = useState(() => format(subDays(startOfMonth(new Date()), 1), 'yyyy-MM'));
   const [selectedReport, setSelectedReport] = useState<DailyReport | null>(null);
   const [activeTab, setActiveTab] = useState('my-reports');
   
@@ -235,10 +236,22 @@ const UserDailyReports = () => {
                 New Daily Report
               </Button>
             ) : (
-              <Button onClick={() => setShowMonthlyReportForm(true)}>
-                <CalendarDays className="h-4 w-4 mr-2" />
-                New Monthly Report
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Select value={selectedReportMonth} onValueChange={setSelectedReportMonth}>
+                  <SelectTrigger className="w-44" aria-label="Report month"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 12 }, (_, index) => {
+                      const month = new Date(new Date().getFullYear(), new Date().getMonth() - index, 1);
+                      const key = format(month, 'yyyy-MM');
+                      return <SelectItem key={key} value={key}>{format(month, 'MMMM yyyy')}</SelectItem>;
+                    })}
+                  </SelectContent>
+                </Select>
+                <Button onClick={() => setShowMonthlyReportForm(true)}>
+                  <CalendarDays className="h-4 w-4 mr-2" />
+                  New Monthly Report
+                </Button>
+              </div>
             )}
           </div>
         </div>
@@ -352,6 +365,7 @@ const UserDailyReports = () => {
         <MonthlyReportForm
           open={showMonthlyReportForm}
           onOpenChange={setShowMonthlyReportForm}
+          reportMonth={selectedReportMonth}
           onSuccess={() => {
             fetchMyReports();
             fetchAllReports();
