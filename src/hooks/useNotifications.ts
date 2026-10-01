@@ -44,7 +44,7 @@ export const useNotifications = () => {
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .or(`target_user_id.eq.${employee.id},target_department.eq.${employee.department},and(target_user_id.is.null,target_department.is.null,type.eq.announcement)`)
+        .or(`target_user_id.eq.${employee.id},target_department.eq.${employee.department}`)
         .order('created_at', { ascending: false })
         .limit(50);
 
