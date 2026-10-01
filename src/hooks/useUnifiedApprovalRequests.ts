@@ -1222,6 +1222,15 @@ export const useUnifiedApprovalRequests = () => {
 
   useEffect(() => {
     fetchAllRequests();
+    // Keep the admin queue fresh so new requests (e.g. instant withdrawals)
+    // appear without a manual page reload.
+    const interval = setInterval(() => fetchAllRequests(true), 30_000);
+    const onFocus = () => fetchAllRequests(true);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
   }, []);
 
   return {
