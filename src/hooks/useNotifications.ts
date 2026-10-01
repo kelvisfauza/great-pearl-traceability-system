@@ -44,7 +44,7 @@ export const useNotifications = () => {
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .or(`target_user_id.eq.${employee.id},target_department.eq.${employee.department}`)
+        .or(`target_user_id.eq.${employee.authUserId || employee.id},target_department.eq.${employee.department}`)
         .order('created_at', { ascending: false })
         .limit(50);
 
@@ -74,7 +74,7 @@ export const useNotifications = () => {
     } finally {
       setLoading(false);
     }
-  }, [employee?.id, employee?.department]);
+  }, [employee?.id, employee?.authUserId, employee?.department]);
 
   // Create notification for approval requests
   const createApprovalNotification = async (
