@@ -165,119 +165,88 @@ Deno.serve(async (req) => {
         .eq("is_active", true);
     }
 
-    // 1. Get attendance scores: present days count (legacy table, may be empty)
-    const { data: attendanceData } = await supabase
-      .from("attendance")
-      .select("employee_id, employee_name, employee_email, status")
-      .gte("date", monthStart)
-      .lt("date", monthEnd);
+    // Attendance data is unreliable (records keyed by staff codes, only one
+    // person matched by email), so ranking uses IT activity + daily reports:
+    //  - login days (employee_login_tracker)
+    //  - active days seen by location/presence monitor (location_tracking_logs)
+    //  - daily reports + end-of-month report (employee_daily_reports)
+    //  - completed daily tasks
+    const lastDay = new Date(new Date(monthEnd).getTime() - 86400000).toISOString().slice(0, 10);
+    // Monthly reports for the month may be filed in the first 3 days of the next month
+    const reportGrace = new Date(new Date(monthEnd).getTime() + 2 * 86400000).toISOString().slice(0, 10);
 
-    // 2. Get task counts
-    const { data: taskData } = await supabase
-      .from("daily_tasks")
-      .select("completed_by, id")
-      .gte("date", monthStart)
-      .lt("date", monthEnd);
+    const [{ data: activeEmployees }, { data: loginData }, { data: locationData }, { data: reportData }, { data: taskData }] =
+      await Promise.all([
+        supabase.from("employees").select("id, name, email, avatar_url, department, position, role, status").eq("status", "Active"),
+        supabase.from("employee_login_tracker").select("employee_email, login_date").gte("login_date", monthStart).lte("login_date", lastDay).limit(20000),
+        supabase.from("location_tracking_logs").select("employee_email, tracking_date").gte("tracking_date", monthStart).lte("tracking_date", lastDay).limit(50000),
+        supabase.from("employee_daily_reports").select("employee_email, report_date, report_data").gte("report_date", monthStart).lte("report_date", reportGrace).limit(5000),
+        supabase.from("daily_tasks").select("completed_by, id").gte("date", monthStart).lt("date", monthEnd).limit(10000),
+      ]);
 
-    // 3. Get overtime/late data (primary source of truth for presence)
-    const { data: timeData } = await supabase
-      .from("attendance_time_records")
-      .select("employee_id, employee_email, overtime_minutes, late_minutes, record_date")
-      .gte("record_date", monthStart)
-      .lt("record_date", monthEnd);
-
-    // Build canonical email set from every source, then resolve to real employees
-    const allEmails = new Set<string>();
-    for (const r of attendanceData || []) if (r.employee_email) allEmails.add(String(r.employee_email).toLowerCase());
-    for (const r of timeData || []) if (r.employee_email) allEmails.add(String(r.employee_email).toLowerCase());
-    const { data: canonicalEmployees } = allEmails.size
-      ? await supabase
-          .from("employees")
-          .select("id, name, email, avatar_url, department, position, status")
-          .in("email", Array.from(allEmails))
-      : { data: [] as any[] } as any;
+    const EXCLUDED_ROLES = ["administrator", "super admin"];
     const empByEmail: Record<string, any> = {};
-    for (const e of canonicalEmployees || []) {
-      if (e.email) empByEmail[String(e.email).toLowerCase()] = e;
+    for (const e of activeEmployees || []) {
+      if (!e.email) continue;
+      if (EXCLUDED_ROLES.includes(String(e.role || "").toLowerCase())) continue;
+      empByEmail[String(e.email).toLowerCase()] = e;
     }
 
-    // Build scores per employee, keyed by canonical email (avoids id-format mismatches)
-    const scores: Record<string, {
-      employee_id: string;
-      employee_name: string;
-      employee_email: string;
-      presentDays: number;
-      tasks: number;
-      overtimeMinutes: number;
-      lateMinutes: number;
-      totalScore: number;
-    }> = {};
-
-    const keyFor = (email?: string | null) => (email ? String(email).toLowerCase() : "");
-    const ensureScore = (email?: string | null, fallbackName?: string) => {
-      const key = keyFor(email);
-      if (!key) return null;
-      const canon = empByEmail[key];
-      if (!canon) return null; // ignore unknown emails / non-active identities
-      if (!scores[key]) {
-        scores[key] = {
-          employee_id: canon.id,
-          employee_name: canon.name || fallbackName || "",
-          employee_email: canon.email,
-          presentDays: 0,
-          tasks: 0,
-          overtimeMinutes: 0,
-          lateMinutes: 0,
-          totalScore: 0,
-        };
-      }
-      return scores[key];
+    type Score = {
+      employee_id: string; employee_name: string; employee_email: string;
+      loginDays: number; activeDays: number; dailyReports: number; monthlyReport: boolean;
+      tasks: number; totalScore: number;
     };
-
-    // Process attendance
-    for (const row of attendanceData || []) {
-      const s = ensureScore(row.employee_email, row.employee_name);
-      if (!s) continue;
-      if (String(row.status || "").toLowerCase() === "present") s.presentDays++;
+    const scores: Record<string, Score> = {};
+    for (const [key, e] of Object.entries(empByEmail)) {
+      scores[key] = {
+        employee_id: e.id, employee_name: e.name || "", employee_email: e.email,
+        loginDays: 0, activeDays: 0, dailyReports: 0, monthlyReport: false, tasks: 0, totalScore: 0,
+      };
     }
+    const keyFor = (email?: string | null) => (email ? String(email).toLowerCase() : "");
 
-    // Process tasks (matched by email in completed_by)
+    const distinctDays = (rows: any[] | null, dateCol: string) => {
+      const m: Record<string, Set<string>> = {};
+      for (const r of rows || []) {
+        const k = keyFor(r.employee_email);
+        if (!scores[k]) continue;
+        (m[k] ||= new Set()).add(String(r[dateCol]));
+      }
+      return m;
+    };
+    for (const [k, s] of Object.entries(distinctDays(loginData, "login_date"))) scores[k].loginDays = s.size;
+    for (const [k, s] of Object.entries(distinctDays(locationData, "tracking_date"))) scores[k].activeDays = s.size;
+
+    const reportDays: Record<string, Set<string>> = {};
+    for (const r of reportData || []) {
+      const k = keyFor(r.employee_email);
+      if (!scores[k]) continue;
+      const isMonthly = r.report_data?.is_monthly_report === true || r.report_data?.is_monthly_report === "true";
+      if (isMonthly) scores[k].monthlyReport = true;
+      else if (String(r.report_date) <= lastDay) (reportDays[k] ||= new Set()).add(String(r.report_date));
+    }
+    for (const [k, s] of Object.entries(reportDays)) scores[k].dailyReports = s.size;
+
     for (const row of taskData || []) {
+      const by = String(row.completed_by || "").toLowerCase();
       const match = Object.values(scores).find(
-        (s) => s.employee_email === row.completed_by || s.employee_name === row.completed_by
+        (s) => s.employee_email.toLowerCase() === by || s.employee_name.toLowerCase() === by,
       );
       if (match) match.tasks++;
     }
 
-    // Process time records — primary source of presence
-    const presentDaysSet: Record<string, Set<string>> = {};
-    for (const row of timeData || []) {
-      const s = ensureScore(row.employee_email);
-      if (!s) continue;
-      s.overtimeMinutes += Number(row.overtime_minutes || 0);
-      s.lateMinutes += Number(row.late_minutes || 0);
-      const key = keyFor(row.employee_email);
-      if (!presentDaysSet[key]) presentDaysSet[key] = new Set();
-      presentDaysSet[key].add(String(row.record_date));
-    }
-    for (const key of Object.keys(scores)) {
-      if (scores[key].presentDays === 0 && presentDaysSet[key]) {
-        scores[key].presentDays = presentDaysSet[key].size;
-      }
-    }
-
-    // Calculate total score: attendance weight + tasks + overtime - lateness
     for (const emp of Object.values(scores)) {
       emp.totalScore =
-        emp.presentDays * 10 +
-        emp.tasks * 2 +
-        Math.floor(emp.overtimeMinutes / 60) * 5 -
-        Math.floor(emp.lateMinutes / 60) * 3;
+        emp.loginDays * 5 +
+        emp.activeDays * 3 +
+        emp.dailyReports * 8 +
+        (emp.monthlyReport ? 30 : 0) +
+        emp.tasks * 2;
     }
 
-    // Rank and pick top 2
     const ranked = Object.values(scores)
-      .filter((e) => e.presentDays > 0)
+      .filter((e) => e.loginDays > 0 || e.dailyReports > 0)
       .sort((a, b) => b.totalScore - a.totalScore)
       .slice(0, 2);
 
@@ -324,8 +293,8 @@ Deno.serve(async (req) => {
 
       const reason =
         rank === 1
-          ? `Top performer: ${emp.presentDays} present days, ${emp.tasks} tasks, ${Math.round(emp.overtimeMinutes / 60)}hrs overtime.`
-          : `Strong performance: ${emp.presentDays} present days, ${emp.tasks} tasks, reliable attendance.`;
+          ? `Top performer: active on the system ${emp.loginDays} days, ${emp.dailyReports} daily reports${emp.monthlyReport ? ", end-of-month report filed" : ""}, ${emp.tasks} tasks.`
+          : `Strong performance: active on the system ${emp.loginDays} days, ${emp.dailyReports} daily reports${emp.monthlyReport ? ", end-of-month report filed" : ""}, ${emp.tasks} tasks.`;
 
       // Insert EOTM record
       const { error: eotmErr } = await supabase
