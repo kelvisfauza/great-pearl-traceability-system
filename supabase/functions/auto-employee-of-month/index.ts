@@ -171,6 +171,16 @@ Deno.serve(async (req) => {
     //  - active days seen by location/presence monitor (location_tracking_logs)
     //  - daily reports + end-of-month report (employee_daily_reports)
     //  - completed daily tasks
+    const fetchAll = async (q: (from: number, to: number) => any) => {
+      const rows: any[] = [];
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await q(from, from + 999);
+        if (error || !data?.length) break;
+        rows.push(...data);
+        if (data.length < 1000) break;
+      }
+      return { data: rows };
+    };
     const lastDay = new Date(new Date(monthEnd).getTime() - 86400000).toISOString().slice(0, 10);
     // Monthly reports for the month may be filed in the first 3 days of the next month
     const reportGrace = new Date(new Date(monthEnd).getTime() + 2 * 86400000).toISOString().slice(0, 10);
@@ -178,8 +188,8 @@ Deno.serve(async (req) => {
     const [{ data: activeEmployees }, { data: loginData }, { data: locationData }, { data: reportData }, { data: taskData }] =
       await Promise.all([
         supabase.from("employees").select("id, name, email, avatar_url, department, position, role, status").eq("status", "Active"),
-        supabase.from("employee_login_tracker").select("employee_email, login_date").gte("login_date", monthStart).lte("login_date", lastDay).limit(20000),
-        supabase.from("location_tracking_logs").select("employee_email, tracking_date").gte("tracking_date", monthStart).lte("tracking_date", lastDay).limit(50000),
+        fetchAll((from, to) => supabase.from("employee_login_tracker").select("employee_email, login_date").gte("login_date", monthStart).lte("login_date", lastDay).order("id").range(from, to)),
+        fetchAll((from, to) => supabase.from("location_tracking_logs").select("employee_email, tracking_date").gte("tracking_date", monthStart).lte("tracking_date", lastDay).order("id").range(from, to)),
         supabase.from("employee_daily_reports").select("employee_email, report_date, report_data").gte("report_date", monthStart).lte("report_date", reportGrace).limit(5000),
         supabase.from("daily_tasks").select("completed_by, id").gte("date", monthStart).lt("date", monthEnd).limit(10000),
       ]);
