@@ -1,0 +1,2 @@
+ALTER TABLE public.provider_submission_requests DROP CONSTRAINT provider_submission_requests_status_check;
+ALTER TABLE public.provider_submission_requests ADD CONSTRAINT provider_submission_requests_status_check CHECK (status = ANY (ARRAY['pending','processing','awaiting_finance','approved','rejected','paid','failed']));
