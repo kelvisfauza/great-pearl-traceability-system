@@ -293,8 +293,8 @@ Deno.serve(async (req) => {
 
       const reason =
         rank === 1
-          ? `Top performer: ${emp.presentDays} present days, ${emp.tasks} tasks, ${Math.round(emp.overtimeMinutes / 60)}hrs overtime.`
-          : `Strong performance: ${emp.presentDays} present days, ${emp.tasks} tasks, reliable attendance.`;
+          ? `Top performer: active on the system ${emp.loginDays} days, ${emp.dailyReports} daily reports${emp.monthlyReport ? ", end-of-month report filed" : ""}, ${emp.tasks} tasks.`
+          : `Strong performance: active on the system ${emp.loginDays} days, ${emp.dailyReports} daily reports${emp.monthlyReport ? ", end-of-month report filed" : ""}, ${emp.tasks} tasks.`;
 
       // Insert EOTM record
       const { error: eotmErr } = await supabase
