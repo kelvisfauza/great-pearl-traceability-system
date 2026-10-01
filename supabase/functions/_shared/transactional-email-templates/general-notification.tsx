@@ -15,6 +15,7 @@ interface GeneralNotificationProps {
   recipientName?: string
   ctaUrl?: string
   ctaLabel?: string
+  imageUrl?: string
 }
 
 type Block =
@@ -96,7 +97,7 @@ const DataTable = ({ rows }: { rows: string[][] }) => {
   )
 }
 
-const GeneralNotificationEmail = ({ title, message, recipientName, ctaUrl, ctaLabel }: GeneralNotificationProps) => {
+const GeneralNotificationEmail = ({ title, message, recipientName, ctaUrl, ctaLabel, imageUrl }: GeneralNotificationProps) => {
   const blocks = parseBlocks(message || '')
   return (
     <Html lang="en" dir="ltr">
@@ -121,6 +122,7 @@ const GeneralNotificationEmail = ({ title, message, recipientName, ctaUrl, ctaLa
           <Section style={card}>
             <Heading style={h1}>{title || 'System Notification'}</Heading>
             {recipientName && <Text style={text}>Dear {recipientName},</Text>}
+            {imageUrl && <Img src={imageUrl} width="500" alt="International Coffee Day — Great Agro Coffee" style={{ width: '100%', height: 'auto', margin: '18px 0' }} />}
 
             {blocks.map((b, i) => {
               if (b.kind === 'table') return <DataTable key={i} rows={b.rows} />
