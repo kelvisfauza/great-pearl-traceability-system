@@ -168,31 +168,46 @@ const UserDailyReports = () => {
   );
 
   const renderReportDetail = (report: DailyReport) => {
-    const questions = getQuestionsForDepartment(report.department);
-    
+    const data = report.report_data || {};
+    const isMonthly = data.is_monthly_report === true || data.is_monthly_report === 'true';
+    const deptQuestions = getQuestionsForDepartment(report.department);
+    const known = new Set(deptQuestions.map((q) => q.id));
+    const prettify = (k: string) =>
+      k.replace(/^monthly_/, '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    const items: { id: string; label: string; value: any }[] = isMonthly
+      ? Object.entries(data)
+          .filter(([k]) => k !== 'is_monthly_report')
+          .map(([k, v]) => ({ id: k, label: prettify(k), value: v }))
+      : [
+          ...deptQuestions.map((q) => ({ id: q.id, label: q.label, value: data[q.id] })),
+          ...Object.entries(data).filter(([k]) => !known.has(k)).map(([k, v]) => ({ id: k, label: prettify(k), value: v })),
+        ];
+    const show = (v: any) =>
+      Array.isArray(v) ? v.join(', ') : typeof v === 'object' && v !== null ? JSON.stringify(v) : String(v);
+
     return (
       <Dialog open={!!selectedReport} onOpenChange={() => setSelectedReport(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-primary" />
-              Daily Report - {report.department}
+              {isMonthly ? 'Monthly Report' : 'Daily Report'} - {report.department}
             </DialogTitle>
             <DialogDescription>
-              {report.employee_name} • {format(parseISO(report.report_date), 'MMMM d, yyyy')}
+              {report.employee_name} • {isMonthly && data.report_month
+                ? format(parseISO(`${data.report_month}-01`), 'MMMM yyyy')
+                : format(parseISO(report.report_date), 'MMMM d, yyyy')}
             </DialogDescription>
           </DialogHeader>
 
           <ScrollArea className="max-h-[60vh] pr-4">
             <div className="space-y-4">
-              {questions.map((question) => {
-                const value = report.report_data[question.id];
-                if (value === undefined || value === '' || value === null) return null;
-
+              {items.map(({ id, label, value }) => {
+                if (value === undefined || value === '' || value === null || (Array.isArray(value) && !value.length)) return null;
                 return (
-                  <div key={question.id} className="border-b pb-3">
-                    <p className="text-sm font-medium text-muted-foreground">{question.label}</p>
-                    <p className="mt-1">{value}</p>
+                  <div key={id} className="border-b pb-3">
+                    <p className="text-sm font-medium text-muted-foreground">{label}</p>
+                    <p className="mt-1 whitespace-pre-wrap">{show(value)}</p>
                   </div>
                 );
               })}
