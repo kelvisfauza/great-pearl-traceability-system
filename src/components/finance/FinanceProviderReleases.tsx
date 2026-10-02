@@ -69,7 +69,10 @@ const FinanceProviderReleases: React.FC = () => {
     }
   };
 
-  if (!isLoading && submissions.length === 0) return null;
+  // Keep the receipt prompt mounted even after the last item leaves the list.
+  if (!isLoading && submissions.length === 0) {
+    return receipt ? <ReleaseReceiptDialog data={receipt} onClose={() => setReceipt(null)} /> : null;
+  }
 
   return (
     <Card>
