@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.5'
+import { sendWhatsAppOtp } from '../_shared/whatsapp.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -343,6 +344,15 @@ LINK: ${loginLink}
       }
 
       console.log('✅ Verification code sent successfully');
+
+      // Parallel WhatsApp delivery (best-effort; SMS stays the primary channel)
+      try {
+        const waSent = await sendWhatsAppOtp(phone, verificationCode);
+        if (waSent) console.log('📲 Verification code also delivered via WhatsApp');
+      } catch (waError) {
+        console.warn('WhatsApp OTP channel skipped:', waError);
+      }
+
 
       return new Response(
         JSON.stringify({
