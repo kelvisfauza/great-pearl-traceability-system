@@ -297,7 +297,7 @@ const V2Navigation = () => {
 
     const permissionSections = Object.values(DEPARTMENT_NAV_CONFIG).flatMap((sections) =>
       sections.flatMap((section) => {
-        const permittedItems = section.items.filter((item) => hasPermission(item.permission));
+        const permittedItems = section.items.filter((item) => item.permission && hasPermission(item.permission));
         return permittedItems.length > 0
           ? [{ section: section.section, items: permittedItems }]
           : [];
