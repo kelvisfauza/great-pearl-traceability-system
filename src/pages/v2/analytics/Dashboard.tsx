@@ -23,7 +23,7 @@ const AnalyticsDashboard = () => {
       <div className="container mx-auto p-4 sm:p-6">
         <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Data Analytics</h1>
+            <h1 className="text-3xl font-bold text-foreground">Trade</h1>
             <p className="text-muted-foreground mt-1">Market intelligence, supplier analysis & recommendations</p>
           </div>
           <PriceTicker />

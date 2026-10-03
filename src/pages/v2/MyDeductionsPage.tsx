@@ -1,7 +1,6 @@
-import { AlertTriangle, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import MyDeductions from "@/components/attendance/MyDeductions";
 
 const MyDeductionsPage = () => {
   const navigate = useNavigate();
@@ -14,13 +13,9 @@ const MyDeductionsPage = () => {
             <ArrowLeft className="h-4 w-4" />
             Back
           </Button>
-          <div className="flex items-center gap-3 mb-2">
-            <AlertTriangle className="h-8 w-8 text-orange-600" />
-            <h1 className="text-4xl font-bold text-foreground">My Deductions</h1>
-          </div>
-          <p className="text-muted-foreground text-lg">View your absence deductions and submit appeals</p>
+          <h1 className="text-3xl font-bold text-foreground">My Deductions</h1>
+          <p className="text-muted-foreground mt-2">This page is temporarily unavailable.</p>
         </div>
-        <MyDeductions />
       </div>
     </div>
   );

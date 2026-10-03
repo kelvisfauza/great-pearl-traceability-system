@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
+import { useState } from "react";
 import { 
   Package, 
   FlaskConical, 
@@ -30,6 +31,7 @@ import {
   CalendarDays,
   FileSpreadsheet,
   BookMarked,
+  ChevronDown,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -159,6 +161,11 @@ const DEPARTMENT_NAV_CONFIG: Record<string, {
         { icon: ShoppingBag, label: "Procurement", path: "/v2/procurement", permission: "Procurement", children: [{ icon: FileText, label: "Procurement Review", path: "/procurement-review" }] },
       ]
     }
+  ],
+  'Reports': [
+    { section: "Reports", items: [
+      { icon: FileText, label: "Reports", path: "/reports", permission: "Reports", children: [{ icon: FileSpreadsheet, label: "Excel Reports", path: "/admin/excel-reports", adminOnly: true }] },
+    ] },
   ],
   'IT': [
     {
