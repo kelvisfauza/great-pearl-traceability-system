@@ -243,6 +243,16 @@ const MonthlyAirtimeManager = () => {
                     {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
                     Send via Yo Payments
                   </Button>
+                  {markable && (
+                    <Button
+                      variant="outline"
+                      onClick={markPaid}
+                      disabled={busy || markIds.size === 0}
+                    >
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Mark {markIds.size > 0 ? `${markIds.size} ` : ''}as paid
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
