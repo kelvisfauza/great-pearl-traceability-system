@@ -54,8 +54,9 @@ serve(async (req) => {
       policy = (polRow as any)?.setting_value || {};
     } catch (_e) { policy = {}; }
 
-    const BUSINESS_FLOOR = Number(policy.business_floor ?? 2_000_000);   // minimum entitlement for a qualifying business loan
+    const BUSINESS_FLOOR = Number(policy.business_floor ?? 0);           // no courtesy lift — entitlement is real capacity only
     const BUSINESS_ABS_CAP = Number(policy.business_max ?? 15_000_000);  // absolute product ceiling (admin-set)
+    const BUSINESS_SALARY_CAP = Number(policy.business_salary_cap ?? 6); // borrower salary multiple ceiling for business loans
     const HIGH_VALUE_THRESHOLD = Number(policy.high_value_threshold ?? 5_000_000);
     const HIGH_VALUE_COVERAGE = Number(policy.high_value_coverage ?? 1); // guarantor cover multiple required above threshold
     let maxLimit = isBusinessLoan ? BUSINESS_FLOOR : salary * 3;
@@ -246,8 +247,8 @@ serve(async (req) => {
 
       // Capacity = N× salary + half of positive wallet, minus their own debt
       // and half of what they already guarantee. Business loans lean harder on
-      // guarantors (6× salary) since there is no borrower salary cap.
-      const gMultiple = isBusinessLoan ? 6 : 2;
+      // guarantors (4× salary) since there is no borrower salary cap.
+      const gMultiple = isBusinessLoan ? 4 : 2;
       let capacity = Math.round(gSalary * gMultiple + Math.max(0, gWallet) * 0.5 - gOwnOutstanding * 0.5 - gExposure * 0.5);
       const notes: string[] = [];
       // A guarantor sitting in overdraft (negative wallet) carries that debt fully.
