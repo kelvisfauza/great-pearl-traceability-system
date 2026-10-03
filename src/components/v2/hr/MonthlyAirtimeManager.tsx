@@ -74,9 +74,12 @@ const MonthlyAirtimeManager = () => {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [newMonth, setNewMonth] = useState(currentMonth());
+  const [markIds, setMarkIds] = useState<Set<string>>(new Set());
 
   const selected = useMemo(() => batches.find((b) => b.id === selectedId) || null, [batches, selectedId]);
   const editable = selected?.status === 'draft';
+  const markable = !!selected && ['approved', 'processing', 'partial'].includes(selected.status);
+  const unpaidItems = useMemo(() => items.filter((i) => i.included && !['paid', 'sent', 'skipped'].includes(i.payment_status)), [items]);
 
   const includedItems = useMemo(() => items.filter((i) => i.included), [items]);
   const total = useMemo(() => includedItems.reduce((s, i) => s + Number(i.amount || 0), 0), [includedItems]);
