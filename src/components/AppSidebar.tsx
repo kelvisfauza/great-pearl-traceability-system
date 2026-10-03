@@ -122,7 +122,7 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
     if (!employee) {
       return [{
         title: "Operations",
-        items: [{ name: "Dashboard", icon: BarChart3, path: "/", permission: null }]
+        items: [{ name: "Dashboard", icon: BarChart3, path: "/", permission: null, children: [] as any[] }]
       }];
     }
     
