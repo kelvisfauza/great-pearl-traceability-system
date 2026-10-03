@@ -263,7 +263,11 @@ const MonthlyAirtimeManager = () => {
           <CardHeader>
             <CardTitle>Recipients</CardTitle>
             <CardDescription>
-              {editable ? 'Untick anyone who should not receive airtime and adjust amounts.' : 'This batch is locked — amounts can only be edited while in draft.'}
+              {editable
+                ? 'Untick anyone who should not receive airtime and adjust amounts.'
+                : markable
+                  ? 'Tick anyone you have already paid, then tap "Mark as paid" — they will get an email and SMS confirmation.'
+                  : 'This batch is locked — amounts can only be edited while in draft.'}
             </CardDescription>
           </CardHeader>
           <CardContent>
