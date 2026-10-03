@@ -3,7 +3,7 @@ import {
   Coffee, Users, Package, TrendingUp, Shield, FileText, Settings,
   Truck, BarChart3, DollarSign, ClipboardCheck, MapPin, LineChart,
   Receipt, UserCheck, Home, X, ArrowRight, CheckSquare, BookMarked,
-  Banknote, FileCheck
+  Banknote, FileCheck, CalendarDays, FileSpreadsheet, Wallet, ChevronDown
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { isTraineeRole, isTraineeRouteAllowed } from "@/lib/trainee";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useState } from "react";
 
 interface MobileNavigationProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ interface MobileNavigationProps {
 const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
   const location = useLocation();
   const { signOut, employee, hasPermission, hasRole, isAdmin } = useAuth();
+  const [openGroups, setOpenGroups] = useState<string[]>(["/procurement", "/human-resources", "/reports", "/data-analyst"]);
 
   const navigationItems = [
     {
@@ -30,6 +32,9 @@ const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
         { name: "Store Management", icon: Shield, path: "/store", permission: "Store Management" },
         { name: "EUDR Documentation", icon: FileText, path: "/eudr-documentation", permission: "EUDR Documentation" },
         { name: "Milling", icon: Coffee, path: "/milling", permission: "Milling" },
+        { name: "Procurement", icon: Package, path: "/procurement", permission: "Procurement", children: [
+          { name: "Procurement Review", icon: ClipboardCheck, path: "/procurement-review" },
+        ] },
         { name: "Inventory", icon: Package, path: "/inventory", permission: "Inventory" },
         { name: "Field Operations", icon: MapPin, path: "/field-operations", permission: "Field Operations" },
       ]
@@ -38,25 +43,36 @@ const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
       title: "Management",
       items: [
         { name: "Approvals", icon: CheckSquare, path: "/approvals", permission: null, requiresAdmin: true },
-        { name: "Coffee Bookings", icon: BookMarked, path: "/coffee-bookings", permission: null, requiresAdmin: true },
         { name: "Suppliers", icon: UserCheck, path: "/suppliers", permission: null },
         { name: "Sales & Marketing", icon: TrendingUp, path: "/sales-marketing", permission: "Sales Marketing" },
         { name: "Company Forms", icon: DollarSign, path: "/my-expenses", permission: null },
-        { name: "Budget Wallet", icon: DollarSign, path: "/budget-wallet", permission: null },
         { name: "Quick Loans", icon: Banknote, path: "/quick-loans", permission: null, requiresAdmin: true },
-        { name: "Human Resources", icon: Users, path: "/human-resources", permission: "Human Resources" },
-        { name: "Data Analyst", icon: LineChart, path: "/data-analyst", permission: "Data Analysis" },
+        { name: "Human Resources", icon: Users, path: "/human-resources", permission: "Human Resources", children: [
+          { name: "Leave Requests", icon: CalendarDays, path: "/admin/leave-requests", requiresAdmin: true },
+        ] },
+        { name: "Trade", icon: LineChart, path: "/data-analyst", permission: "Data Analysis", children: [
+          { name: "Coffee Bookings", icon: BookMarked, path: "/coffee-bookings", requiresAdmin: true },
+        ] },
         { name: "IT Department", icon: Settings, path: "/it-department", permission: "IT Management" },
       ]
     },
     {
       title: "System",
       items: [
-        { name: "My Deductions", icon: Shield, path: "/my-deductions", permission: null },
         { name: "My Daily Reports", icon: FileCheck, path: "/user-daily-reports", permission: null },
-        { name: "Reports", icon: FileText, path: "/reports", permission: "Reports" },
+        { name: "Reports", icon: FileText, path: "/reports", permission: "Reports", children: [
+          { name: "Excel Reports", icon: FileSpreadsheet, path: "/admin/excel-reports", requiresAdmin: true },
+        ] },
         { name: "Settings", icon: Settings, path: "/settings", permission: null },
         { name: "Logistics", icon: Truck, path: "/logistics", permission: "Logistics" },
+      ]
+    },
+    {
+      title: "Admin",
+      items: [
+        { name: "Excel Work Rewards", icon: FileText, path: "/excel-loyalty", permission: null, requiresAdmin: true },
+        { name: "Budget Wallet", icon: Wallet, path: "/budget-wallet", permission: null },
+        { name: "Budget Management", icon: Wallet, path: "/admin/budget-management", permission: null, requiresAdmin: true },
       ]
     }
   ];
@@ -68,8 +84,10 @@ const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
       return navigationItems.map(section => ({
         ...section,
         items: section.items.filter((item: any) =>
-          !item.requiresAdmin && isTraineeRouteAllowed(item.path) && item.path !== '/procurement-review'
-        )
+          !item.requiresAdmin && isTraineeRouteAllowed(item.path)
+        ).map((item: any) => ({ ...item, children: item.children?.filter((child: any) =>
+          !child.requiresAdmin && isTraineeRouteAllowed(child.path) && child.path !== '/procurement-review'
+        ) }))
       })).filter(section => section.items.length > 0);
     }
     
@@ -81,7 +99,9 @@ const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
         if (section.title === 'Reports') return true;
         if (isAdmin()) return true;
         return hasPermission(item.permission);
-      })
+      }).map((item: any) => ({ ...item, children: item.children?.filter((child: any) =>
+        !child.requiresAdmin || isAdmin()
+      ) }))
     })).filter(section => section.items.length > 0);
   };
 
@@ -135,11 +155,12 @@ const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
                       const isActive = location.pathname === item.path;
                       
                       return (
+                        <div key={item.path}>
+                        <div className="flex items-center">
                         <Link
-                          key={item.path}
                           to={item.path}
                           onClick={onClose}
-                          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                          className={`flex flex-1 min-w-0 items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
                             isActive
                               ? 'bg-primary text-primary-foreground'
                               : 'text-foreground hover:bg-accent'
@@ -148,6 +169,12 @@ const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
                           <Icon className="h-5 w-5 flex-shrink-0" />
                           <span className="text-sm font-medium">{item.name}</span>
                         </Link>
+                        {item.children?.length > 0 && <Button variant="ghost" size="icon" aria-label={`Toggle ${item.name} links`} aria-expanded={openGroups.includes(item.path)} onClick={() => setOpenGroups(prev => prev.includes(item.path) ? prev.filter(path => path !== item.path) : [...prev, item.path])}><ChevronDown className="h-4 w-4" /></Button>}
+                        </div>
+                        {openGroups.includes(item.path) && item.children?.map((child: any) => (
+                          <Link key={child.path} to={child.path} onClick={onClose} className={`flex items-center gap-3 ml-6 px-3 py-2 rounded-md text-sm ${location.pathname === child.path ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-accent'}`}><child.icon className="h-4 w-4 shrink-0" />{child.name}</Link>
+                        ))}
+                        </div>
                       );
                     })}
                   </div>
