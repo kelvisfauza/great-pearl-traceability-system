@@ -308,6 +308,19 @@ const MonthlyAirtimeManager = () => {
                             onCheckedChange={(v) => updateItem(item.id, { included: !!v })}
                           />
                         </TableCell>
+                        {markable && (
+                          <TableCell>
+                            {item.included && !['paid', 'sent', 'skipped'].includes(item.payment_status) ? (
+                              <Checkbox
+                                checked={markIds.has(item.id)}
+                                onCheckedChange={(v) => toggleMark(item.id, !!v)}
+                                aria-label={`Mark ${item.employee_name} as paid`}
+                              />
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                        )}
                         <TableCell>
                           <div className="font-medium">{item.employee_name}</div>
                           <div className="text-xs text-muted-foreground">{item.department || '—'}</div>
