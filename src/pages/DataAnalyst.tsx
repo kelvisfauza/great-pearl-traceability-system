@@ -25,7 +25,7 @@ const DataAnalyst = () => {
   };
 
   return (
-    <Layout title="Data Analytics" subtitle="Market analysis & price management">
+    <Layout title="Trade" subtitle="Market analysis & price management">
       <PriceGateOverlay onNavigateToSetPrices={handleNavigateToSetPrices}>
         {/* Daily reminders for data analyst */}
         <AnalystDailyReminders 

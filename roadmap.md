@@ -1,5 +1,6 @@
 # Roadmap
 
+- [x] Reorganize V1 and V2 navigation: Procurement Review, Leave Requests, Excel Reports, Trade/Bookings, Admin tools; temporarily freeze My Deductions
 - [x] Create International Coffee Day greeting poster and prepare September month-end report submission and reminder
 - [ ] Send Coffee Day greeting and September report reminder by email to employees — ready in Communications with the poster; administrator must sign in and confirm Send to everyone
 - [x] Supplier Advance Agreement template in Company Forms (terms, recovery, legal action, crop year, amount, ref, issue date)
