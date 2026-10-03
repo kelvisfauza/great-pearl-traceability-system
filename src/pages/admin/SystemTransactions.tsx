@@ -203,7 +203,7 @@ const SystemTransactions = () => {
     if ((entry.entry_type === 'WITHDRAWAL' || entry.entry_type === 'ADJUSTMENT') && meta?.loan_id) {
       return '🏦 Loan Recovery';
     }
-    return ENTRY_LABELS[entry.entry_type]?.label || entry.entry_type;
+    return getSpecificWithdrawalLabel(entry as any) || ENTRY_LABELS[entry.entry_type]?.label || entry.entry_type;
   };
 
   const getTransferDetails = (entry: SystemLedgerEntry) => {

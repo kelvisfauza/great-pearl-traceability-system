@@ -759,7 +759,7 @@ const UserStatement = () => {
                                 <TableCell className="text-xs whitespace-nowrap">{new Date(e.created_at).toLocaleString()}</TableCell>
                                 <TableCell>
                                   <Badge className={TYPE_COLORS[e.entry_type] || "bg-muted text-foreground"} variant="secondary">
-                                    {e.entry_type}
+                                    {getSpecificWithdrawalLabel(e as any) || e.entry_type}
                                   </Badge>
                                 </TableCell>
                                 <TableCell className="text-xs max-w-[320px] min-w-[180px]">

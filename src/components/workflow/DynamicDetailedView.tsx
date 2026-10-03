@@ -761,7 +761,7 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
                           LOYALTY_REWARD: 'Loyalty Reward',
                           BONUS: 'Bonus',
                           DEPOSIT: getDepositLabel() || 'Deposit',
-                          WITHDRAWAL: (meta?.type === 'wallet_transfer' && Number(entry.amount) < 0) ? '📤 Sent Money' : 'Withdrawal',
+                          WITHDRAWAL: (meta?.type === 'wallet_transfer' && Number(entry.amount) < 0) ? '📤 Sent Money' : (getSpecificWithdrawalLabel(entry) || 'Withdrawal'),
                           ADJUSTMENT: 'Adjustment',
                         };
                         const sourceLabel = meta?.allowance_type 
