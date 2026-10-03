@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getSpecificWithdrawalLabel } from '@/lib/transactionLabel';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import jsPDF from 'jspdf';
