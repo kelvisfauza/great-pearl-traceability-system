@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { getSpecificWithdrawalLabel } from '@/lib/transactionLabel';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -761,7 +762,7 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
                           LOYALTY_REWARD: 'Loyalty Reward',
                           BONUS: 'Bonus',
                           DEPOSIT: getDepositLabel() || 'Deposit',
-                          WITHDRAWAL: (meta?.type === 'wallet_transfer' && Number(entry.amount) < 0) ? '📤 Sent Money' : 'Withdrawal',
+                          WITHDRAWAL: (meta?.type === 'wallet_transfer' && Number(entry.amount) < 0) ? '📤 Sent Money' : (getSpecificWithdrawalLabel(entry) || 'Withdrawal'),
                           ADJUSTMENT: 'Adjustment',
                         };
                         const sourceLabel = meta?.allowance_type 

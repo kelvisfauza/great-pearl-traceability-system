@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { getSpecificWithdrawalLabel } from '@/lib/transactionLabel';
 import Layout from '@/components/Layout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -203,7 +204,7 @@ const SystemTransactions = () => {
     if ((entry.entry_type === 'WITHDRAWAL' || entry.entry_type === 'ADJUSTMENT') && meta?.loan_id) {
       return '🏦 Loan Recovery';
     }
-    return ENTRY_LABELS[entry.entry_type]?.label || entry.entry_type;
+    return getSpecificWithdrawalLabel(entry as any) || ENTRY_LABELS[entry.entry_type]?.label || entry.entry_type;
   };
 
   const getTransferDetails = (entry: SystemLedgerEntry) => {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getSpecificWithdrawalLabel } from '@/lib/transactionLabel';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import jsPDF from 'jspdf';
@@ -845,7 +846,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     }
     // Statement fee shows as "Transaction Charge" not "Withdrawal"
     if (entry.entry_type === 'WITHDRAWAL' && meta?.source === 'statement_fee') return '📄 Transaction Charge';
-    return config.label;
+    return getSpecificWithdrawalLabel(entry) || config.label;
   };
 
   if (!open) return null;
