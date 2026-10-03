@@ -320,7 +320,11 @@ serve(async (req) => {
           }
         }
       }
+      // Business loans are also capped by the borrower's own salary so the
+      // cheapest product cannot dwarf what their paycheck can service.
+      if (salary > 0) maxLimit = Math.min(maxLimit, salary * BUSINESS_SALARY_CAP);
       if (guarantorBlocked) maxLimit = 0;
+      if (businessDenyReason) maxLimit = 0;
     } else if (guarantorAssessments.length > 0) {
       maxLimit = Math.max(0, Math.min(maxLimit, guarantorCapacityTotal));
     }
