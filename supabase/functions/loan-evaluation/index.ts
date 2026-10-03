@@ -280,6 +280,17 @@ serve(async (req) => {
     const totalDebtObligations = outstanding + salaryAdvanceOutstanding + overdraftOutstanding;
     const debtToSalaryRatio = salary > 0 ? totalDebtObligations / salary : 999;
 
+    // ── BUSINESS LOAN ELIGIBILITY GATES ───────────────────────────────
+    // The 4% business product is reserved for proven borrowers so it does
+    // not undercut the other loan products for everyone.
+    let businessDenyReason: string | null = null;
+    if (isBusinessLoan) {
+      if (tenureMonths < 6) businessDenyReason = `Tenure ${tenureMonths} month(s) — business loans require at least 6 months of employment`;
+      else if (completed < 1) businessDenyReason = "No completed loan on record — must successfully finish a smaller loan first";
+      else if (defaulted > 0) businessDenyReason = "Prior default on record";
+      else if (debtToSalaryRatio >= 2) businessDenyReason = `Debt-to-salary ratio ${debtToSalaryRatio.toFixed(2)}× — too leveraged for a business facility`;
+    }
+
     // Guarantor capacity drives the entitlement for guarantor-backed products.
     if (isBusinessLoan) {
       if (guarantorAssessments.length > 0) {
