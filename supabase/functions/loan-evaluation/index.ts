@@ -54,8 +54,9 @@ serve(async (req) => {
       policy = (polRow as any)?.setting_value || {};
     } catch (_e) { policy = {}; }
 
-    const BUSINESS_FLOOR = Number(policy.business_floor ?? 2_000_000);   // minimum entitlement for a qualifying business loan
+    const BUSINESS_FLOOR = Number(policy.business_floor ?? 0);           // no courtesy lift — entitlement is real capacity only
     const BUSINESS_ABS_CAP = Number(policy.business_max ?? 15_000_000);  // absolute product ceiling (admin-set)
+    const BUSINESS_SALARY_CAP = Number(policy.business_salary_cap ?? 6); // borrower salary multiple ceiling for business loans
     const HIGH_VALUE_THRESHOLD = Number(policy.high_value_threshold ?? 5_000_000);
     const HIGH_VALUE_COVERAGE = Number(policy.high_value_coverage ?? 1); // guarantor cover multiple required above threshold
     let maxLimit = isBusinessLoan ? BUSINESS_FLOOR : salary * 3;
@@ -246,8 +247,8 @@ serve(async (req) => {
 
       // Capacity = N× salary + half of positive wallet, minus their own debt
       // and half of what they already guarantee. Business loans lean harder on
-      // guarantors (6× salary) since there is no borrower salary cap.
-      const gMultiple = isBusinessLoan ? 6 : 2;
+      // guarantors (4× salary) since there is no borrower salary cap.
+      const gMultiple = isBusinessLoan ? 4 : 2;
       let capacity = Math.round(gSalary * gMultiple + Math.max(0, gWallet) * 0.5 - gOwnOutstanding * 0.5 - gExposure * 0.5);
       const notes: string[] = [];
       // A guarantor sitting in overdraft (negative wallet) carries that debt fully.
@@ -279,6 +280,17 @@ serve(async (req) => {
     const totalDebtObligations = outstanding + salaryAdvanceOutstanding + overdraftOutstanding;
     const debtToSalaryRatio = salary > 0 ? totalDebtObligations / salary : 999;
 
+    // ── BUSINESS LOAN ELIGIBILITY GATES ───────────────────────────────
+    // The 4% business product is reserved for proven borrowers so it does
+    // not undercut the other loan products for everyone.
+    let businessDenyReason: string | null = null;
+    if (isBusinessLoan) {
+      if (tenureMonths < 6) businessDenyReason = `Tenure ${tenureMonths} month(s) — business loans require at least 6 months of employment`;
+      else if (completed < 1) businessDenyReason = "No completed loan on record — must successfully finish a smaller loan first";
+      else if (defaulted > 0) businessDenyReason = "Prior default on record";
+      else if (debtToSalaryRatio >= 2) businessDenyReason = `Debt-to-salary ratio ${debtToSalaryRatio.toFixed(2)}× — too leveraged for a business facility`;
+    }
+
     // Guarantor capacity drives the entitlement for guarantor-backed products.
     if (isBusinessLoan) {
       if (guarantorAssessments.length > 0) {
@@ -308,7 +320,11 @@ serve(async (req) => {
           }
         }
       }
+      // Business loans are also capped by the borrower's own salary so the
+      // cheapest product cannot dwarf what their paycheck can service.
+      if (salary > 0) maxLimit = Math.min(maxLimit, salary * BUSINESS_SALARY_CAP);
       if (guarantorBlocked) maxLimit = 0;
+      if (businessDenyReason) maxLimit = 0;
     } else if (guarantorAssessments.length > 0) {
       maxLimit = Math.max(0, Math.min(maxLimit, guarantorCapacityTotal));
     }
@@ -324,6 +340,10 @@ serve(async (req) => {
       fallbackDecision = "deny";
       fallbackAmount = 0;
       fallbackFactors.push(`${defaulted} prior default(s)`);
+    } else if (businessDenyReason) {
+      fallbackDecision = "deny";
+      fallbackAmount = 0;
+      fallbackFactors.push(businessDenyReason);
     } else if (salary <= 0 && !isBusinessLoan) {
       fallbackDecision = "deny";
       fallbackAmount = 0;
@@ -558,7 +578,7 @@ ${guarantorAssessments.length
   ? guarantorAssessments.map((g: any) => `- ${g.name} (${g.email}): salary UGX ${g.salary}, wallet UGX ${g.wallet_balance}, already guaranteeing UGX ${g.active_guarantee_exposure}, own outstanding UGX ${g.own_outstanding}, own defaults ${g.own_defaults}, own overdue loans ${g.own_overdue}, guaranteed defaults ${g.guaranteed_defaults}, times debited as guarantor ${g.guarantor_recovery_hits} → assessed capacity UGX ${g.capacity}${g.notes?.length ? ` [${g.notes.join('; ')}]` : ''}`).join("\n")
   : "- none supplied"}
 - Combined guarantor capacity (UGX): ${guarantorCapacityTotal}
-${isBusinessLoan ? `- This is an EMPLOYEE BUSINESS LOAN: 4%/month flat (total interest capped at 30%), up to 8 months, requires 2 guarantors whose wallets can be debited. It is NOT capped by the borrower's salary — the business is expected to generate repayment capacity. The ceiling is the combined guarantor capacity (UGX ${guarantorCapacityTotal}), capped at UGX 15,000,000 → effective limit UGX ${maxLimit}. The UGX 2,000,000 floor applies ONLY when BOTH guarantors are clean (no defaults, no overdue loans, no prior guarantor recoveries, non-negative wallet); with weak or bad-debt guarantors the limit is the raw combined capacity and may be far below the floor. Do not reduce for salary size, debt-to-salary ratio or short tenure alone. Deny if fewer than 2 guarantors qualify or any guarantor capacity is 0.` : ""}
+${isBusinessLoan ? `- This is an EMPLOYEE BUSINESS LOAN: 4%/month flat (total interest capped at 30%), up to 8 months, requires 2 guarantors whose wallets can be debited. It is a PRIVILEGED product, not a general cheap loan. Eligibility gates (already enforced — if a gate failed the limit is 0 and you MUST deny): at least 6 months tenure, at least 1 successfully completed loan, no defaults, debt-to-salary below 2×. The ceiling is the LOWER of combined guarantor capacity (UGX ${guarantorCapacityTotal}), 6× the borrower's salary, and UGX 15,000,000 → effective limit UGX ${maxLimit}. There is no courtesy floor — weak guarantors mean a small or zero limit. DO reduce the offer for salary size, short tenure, high debt-to-salary ratio, thin repayment history, or any sign the "business" is really consumption. Deny if fewer than 2 guarantors qualify or any guarantor capacity is 0.` : ""}
 
 RULES (be fair — approve when reasonable; only deny on clear red flags)
 - IMPORTANT: recommended_amount = the user's ENTITLEMENT/LIMIT, NOT the requested amount.
@@ -652,9 +672,10 @@ Return only JSON via the tool call.`;
     if (isBusinessLoan) {
       recommendedType = "business";
       recommendedDuration = Math.min(8, Math.max(1, Number(recommendedDuration) || Number(requested_duration) || 3));
-      if (guarantorAssessments.length < 2 || guarantorBlocked) {
+      if (guarantorAssessments.length < 2 || guarantorBlocked || businessDenyReason) {
         decision = "deny";
         recommendedAmount = 0;
+        if (businessDenyReason) factors = [businessDenyReason, ...factors].filter(Boolean).slice(0, 6);
       }
       recommendedAmount = Math.min(recommendedAmount, guarantorCapacityTotal);
     }
