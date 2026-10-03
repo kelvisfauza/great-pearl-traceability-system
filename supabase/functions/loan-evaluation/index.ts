@@ -578,7 +578,7 @@ ${guarantorAssessments.length
   ? guarantorAssessments.map((g: any) => `- ${g.name} (${g.email}): salary UGX ${g.salary}, wallet UGX ${g.wallet_balance}, already guaranteeing UGX ${g.active_guarantee_exposure}, own outstanding UGX ${g.own_outstanding}, own defaults ${g.own_defaults}, own overdue loans ${g.own_overdue}, guaranteed defaults ${g.guaranteed_defaults}, times debited as guarantor ${g.guarantor_recovery_hits} → assessed capacity UGX ${g.capacity}${g.notes?.length ? ` [${g.notes.join('; ')}]` : ''}`).join("\n")
   : "- none supplied"}
 - Combined guarantor capacity (UGX): ${guarantorCapacityTotal}
-${isBusinessLoan ? `- This is an EMPLOYEE BUSINESS LOAN: 4%/month flat (total interest capped at 30%), up to 8 months, requires 2 guarantors whose wallets can be debited. It is NOT capped by the borrower's salary — the business is expected to generate repayment capacity. The ceiling is the combined guarantor capacity (UGX ${guarantorCapacityTotal}), capped at UGX 15,000,000 → effective limit UGX ${maxLimit}. The UGX 2,000,000 floor applies ONLY when BOTH guarantors are clean (no defaults, no overdue loans, no prior guarantor recoveries, non-negative wallet); with weak or bad-debt guarantors the limit is the raw combined capacity and may be far below the floor. Do not reduce for salary size, debt-to-salary ratio or short tenure alone. Deny if fewer than 2 guarantors qualify or any guarantor capacity is 0.` : ""}
+${isBusinessLoan ? `- This is an EMPLOYEE BUSINESS LOAN: 4%/month flat (total interest capped at 30%), up to 8 months, requires 2 guarantors whose wallets can be debited. It is a PRIVILEGED product, not a general cheap loan. Eligibility gates (already enforced — if a gate failed the limit is 0 and you MUST deny): at least 6 months tenure, at least 1 successfully completed loan, no defaults, debt-to-salary below 2×. The ceiling is the LOWER of combined guarantor capacity (UGX ${guarantorCapacityTotal}), 6× the borrower's salary, and UGX 15,000,000 → effective limit UGX ${maxLimit}. There is no courtesy floor — weak guarantors mean a small or zero limit. DO reduce the offer for salary size, short tenure, high debt-to-salary ratio, thin repayment history, or any sign the "business" is really consumption. Deny if fewer than 2 guarantors qualify or any guarantor capacity is 0.` : ""}
 
 RULES (be fair — approve when reasonable; only deny on clear red flags)
 - IMPORTANT: recommended_amount = the user's ENTITLEMENT/LIMIT, NOT the requested amount.
@@ -672,9 +672,10 @@ Return only JSON via the tool call.`;
     if (isBusinessLoan) {
       recommendedType = "business";
       recommendedDuration = Math.min(8, Math.max(1, Number(recommendedDuration) || Number(requested_duration) || 3));
-      if (guarantorAssessments.length < 2 || guarantorBlocked) {
+      if (guarantorAssessments.length < 2 || guarantorBlocked || businessDenyReason) {
         decision = "deny";
         recommendedAmount = 0;
+        if (businessDenyReason) factors = [businessDenyReason, ...factors].filter(Boolean).slice(0, 6);
       }
       recommendedAmount = Math.min(recommendedAmount, guarantorCapacityTotal);
     }
