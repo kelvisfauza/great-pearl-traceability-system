@@ -277,7 +277,7 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
             </CollapsibleContent>
 
             {/* Show icons only when collapsed */}
-            {isCollapsed && section.items.map((item) => {
+            {isCollapsed && section.items.flatMap((item: any) => [item, ...(item.children || [])]).map((item) => {
               const isActive = location.pathname === item.path;
               const isApprovals = item.name === "Approvals";
               const approvalCount = pendingApprovals?.length || 0;

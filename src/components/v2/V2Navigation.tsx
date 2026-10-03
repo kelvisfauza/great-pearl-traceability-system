@@ -304,7 +304,10 @@ const V2Navigation = () => {
       })
     );
 
-    return mergeNavigationSections([...departmentSections, ...permissionSections]);
+    return mergeNavigationSections([...departmentSections, ...permissionSections, {
+      section: "Admin",
+      items: [{ icon: Wallet, label: "Budget Wallet", path: "/budget-wallet" }],
+    }]);
   };
 
   const navItems = getNavItems();
