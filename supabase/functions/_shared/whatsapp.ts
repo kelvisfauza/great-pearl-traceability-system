@@ -37,17 +37,14 @@ export async function sendWhatsAppOtp(phone: string, code: string): Promise<bool
         'X-Connection-Api-Key': WHATSAPP_API_KEY,
         'Content-Type': 'application/json',
       },
+      // Meta Direct Send: no pre-approved template; category drives template matching.
       body: JSON.stringify({
         messaging_product: 'whatsapp',
+        recipient_type: 'individual',
         to,
-        type: 'template',
-        template: {
-          name: 'otp_verification_code',
-          language: { code: 'en_US' },
-          components: [
-            { type: 'body', parameters: [{ type: 'text', text: code }] },
-          ],
-        },
+        type: 'text',
+        text: { body: `Great Agro Coffee: your verification code is ${code}. It expires in 5 minutes. Do not share it.` },
+        category: 'authentication',
       }),
     });
 
