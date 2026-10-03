@@ -281,6 +281,15 @@ const MonthlyAirtimeManager = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-12">Pay</TableHead>
+                      {markable && (
+                        <TableHead className="w-12">
+                          <Checkbox
+                            checked={unpaidItems.length > 0 && unpaidItems.every((i) => markIds.has(i.id))}
+                            onCheckedChange={(v) => setMarkIds(v ? new Set(unpaidItems.map((i) => i.id)) : new Set())}
+                            aria-label="Select all unpaid"
+                          />
+                        </TableHead>
+                      )}
                       <TableHead>Employee</TableHead>
                       <TableHead>Phone</TableHead>
                       <TableHead>Tier</TableHead>
