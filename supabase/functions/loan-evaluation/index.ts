@@ -340,6 +340,10 @@ serve(async (req) => {
       fallbackDecision = "deny";
       fallbackAmount = 0;
       fallbackFactors.push(`${defaulted} prior default(s)`);
+    } else if (businessDenyReason) {
+      fallbackDecision = "deny";
+      fallbackAmount = 0;
+      fallbackFactors.push(businessDenyReason);
     } else if (salary <= 0 && !isBusinessLoan) {
       fallbackDecision = "deny";
       fallbackAmount = 0;
