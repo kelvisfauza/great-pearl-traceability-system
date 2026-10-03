@@ -263,6 +263,109 @@ Deno.serve(async (req) => {
       return json({ ok: true, sent, failed, status: finalStatus })
     }
 
+    // ---- Manually mark selected items as paid (admin) ----------------------
+    if (action === 'mark_paid') {
+      const batchId = String(body?.batchId || '')
+      const actor = String(body?.actor || 'admin')
+      const itemIds: string[] = Array.isArray(body?.itemIds) ? body.itemIds.map(String) : []
+      if (!batchId || itemIds.length === 0) return json({ ok: false, error: 'batchId and itemIds required' })
+
+      const { data: batch } = await supabase
+        .from('airtime_batches')
+        .select('*')
+        .eq('id', batchId)
+        .maybeSingle()
+      if (!batch) return json({ ok: false, error: 'Batch not found' })
+      if (batch.status === 'draft') return json({ ok: false, error: 'Approve the batch before marking items as paid' })
+
+      const { data: items } = await supabase
+        .from('airtime_batch_items')
+        .select('*')
+        .eq('batch_id', batchId)
+        .in('id', itemIds)
+
+      let marked = 0
+      for (const item of items || []) {
+        if (item.payment_status === 'paid' || item.payment_status === 'sent') continue
+        await supabase.from('airtime_batch_items').update({
+          payment_status: 'paid',
+          paid_at: new Date().toISOString(),
+          error_message: null,
+          yo_reference: item.yo_reference || `MANUAL-${actor}`,
+        }).eq('id', item.id)
+        marked++
+
+        // Ledger PAYOUT record (no wallet effect)
+        try {
+          const { data: unifiedId } = await supabase.rpc('get_unified_user_id', { user_email: item.employee_email })
+          if (unifiedId) {
+            await supabase.from('ledger_entries').insert({
+              user_id: String(unifiedId),
+              entry_type: 'PAYOUT',
+              amount: Number(item.amount),
+              reference: `AIRTIME-${batch.month_year}-${item.id}`,
+              metadata: {
+                allowance_type: 'monthly_airtime',
+                employee_name: item.employee_name,
+                month_year: batch.month_year,
+                disbursement_method: 'manual_mark_paid',
+                marked_by: actor,
+                phone: item.phone,
+                batch_id: batchId,
+                description: `${batch.month_year} airtime UGX ${Number(item.amount).toLocaleString()} marked as paid by ${actor}`,
+              },
+            })
+          }
+        } catch (_) { /* non-blocking */ }
+
+        // Email confirmation
+        try {
+          await supabase.functions.invoke('send-transactional-email', {
+            body: {
+              templateName: 'general-notification',
+              recipientEmail: item.employee_email,
+              recipientName: item.employee_name,
+              subject: `Your ${batch.month_year} airtime allowance has been paid`,
+              data: {
+                title: 'Airtime Allowance Paid',
+                message: `Dear ${item.employee_name}, your ${batch.month_year} airtime allowance of UGX ${Number(item.amount).toLocaleString()} has been paid to ${item.phone}. Thank you for your service.`,
+                name: item.employee_name,
+              },
+            },
+          })
+        } catch (_) { /* non-blocking */ }
+
+        // SMS confirmation
+        try {
+          await supabase.functions.invoke('send-sms', {
+            body: {
+              phone: item.phone,
+              message: `Dear ${item.employee_name}, your ${batch.month_year} airtime allowance of UGX ${Number(item.amount).toLocaleString()} has been paid. - Great Agro Coffee`,
+              userName: item.employee_name,
+              messageType: 'monthly_allowance',
+              recipientEmail: item.employee_email,
+            },
+          })
+        } catch (_) { /* non-blocking */ }
+      }
+
+      // Refresh batch status
+      const { data: remaining } = await supabase
+        .from('airtime_batch_items')
+        .select('id')
+        .eq('batch_id', batchId)
+        .eq('included', true)
+        .in('payment_status', ['pending', 'failed', 'pending_approval'])
+      const finalStatus = (remaining || []).length === 0 ? 'completed' : batch.status
+      await supabase.from('airtime_batches').update({
+        status: finalStatus,
+        notes: `${batch.notes || ''} | ${marked} item(s) manually marked paid by ${actor}`.slice(0, 500),
+        updated_at: new Date().toISOString(),
+      }).eq('id', batchId)
+
+      return json({ ok: true, marked, status: finalStatus })
+    }
+
     return json({ ok: false, error: 'Unknown action' })
   } catch (e) {
     return json({ ok: false, error: (e as Error).message })
