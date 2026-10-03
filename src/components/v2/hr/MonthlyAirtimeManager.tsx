@@ -110,7 +110,7 @@ const MonthlyAirtimeManager = () => {
   }, []);
 
   useEffect(() => { loadBatches(); }, [loadBatches]);
-  useEffect(() => { loadItems(selectedId); }, [selectedId, loadItems]);
+  useEffect(() => { loadItems(selectedId); setMarkIds(new Set()); }, [selectedId, loadItems]);
 
   const call = async (payload: Record<string, unknown>) => {
     const { data, error } = await supabase.functions.invoke('hr-airtime-batch', {
