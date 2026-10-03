@@ -27,13 +27,16 @@ import {
   FileText,
   ArrowRight,
   Smartphone,
+  CalendarDays,
+  FileSpreadsheet,
+  BookMarked,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 // Department to navigation mapping
 const DEPARTMENT_NAV_CONFIG: Record<string, { 
   section: string; 
-  items: { icon: any; label: string; path: string; permission?: string }[] 
+  items: { icon: any; label: string; path: string; permission?: string; children?: { icon: any; label: string; path: string; adminOnly?: boolean }[] }[] 
 }[]> = {
   'Store': [
     {
@@ -91,7 +94,7 @@ const DEPARTMENT_NAV_CONFIG: Record<string, {
     {
       section: "HR Operations",
       items: [
-        { icon: Users, label: "HR Dashboard", path: "/v2/hr", permission: "Human Resources" },
+        { icon: Users, label: "HR Dashboard", path: "/v2/hr", permission: "Human Resources", children: [{ icon: CalendarDays, label: "Leave Requests", path: "/admin/leave-requests", adminOnly: true }] },
         { icon: CreditCard, label: "Salary Advances", path: "/v2/hr/salary-advances", permission: "Human Resources" },
         { icon: Clock, label: "Time Deductions", path: "/v2/hr/time-deductions", permission: "Human Resources" },
         { icon: ShieldAlert, label: "Absence Appeals", path: "/v2/hr/absence-appeals", permission: "Human Resources" },
@@ -111,9 +114,9 @@ const DEPARTMENT_NAV_CONFIG: Record<string, {
   ],
   'Data Analysis': [
     {
-      section: "Analytics",
+      section: "Trade",
       items: [
-        { icon: BarChart3, label: "Analytics", path: "/v2/analytics", permission: "Data Analysis" },
+        { icon: BarChart3, label: "Trade", path: "/v2/analytics", permission: "Data Analysis", children: [{ icon: BookMarked, label: "Coffee Bookings", path: "/coffee-bookings", adminOnly: true }] },
       ]
     }
   ],
@@ -153,7 +156,7 @@ const DEPARTMENT_NAV_CONFIG: Record<string, {
     {
       section: "Procurement",
       items: [
-        { icon: ShoppingBag, label: "Procurement", path: "/v2/procurement", permission: "Procurement" },
+        { icon: ShoppingBag, label: "Procurement", path: "/v2/procurement", permission: "Procurement", children: [{ icon: FileText, label: "Procurement Review", path: "/procurement-review" }] },
       ]
     }
   ],
@@ -200,19 +203,28 @@ const ADMIN_NAV = [
       { icon: Warehouse, label: "Inventory", path: "/v2/inventory" },
       { icon: ShoppingCart, label: "Sales", path: "/v2/sales" },
       { icon: Wallet, label: "Finance", path: "/v2/finance" },
-      { icon: Users, label: "HR", path: "/v2/hr" },
+      { icon: Users, label: "HR", path: "/v2/hr", children: [{ icon: CalendarDays, label: "Leave Requests", path: "/admin/leave-requests" }] },
       { icon: Smartphone, label: "Monthly Airtime", path: "/v2/hr/airtime" },
       { icon: MapPin, label: "Field Ops", path: "/v2/field-operations" },
-      { icon: BarChart3, label: "Analytics", path: "/v2/analytics" },
+      { icon: BarChart3, label: "Trade", path: "/v2/analytics", children: [{ icon: BookMarked, label: "Coffee Bookings", path: "/coffee-bookings" }] },
       { icon: Leaf, label: "EUDR", path: "/v2/eudr" },
-      { icon: ShoppingBag, label: "Procurement", path: "/v2/procurement" },
+      { icon: ShoppingBag, label: "Procurement", path: "/v2/procurement", children: [{ icon: FileText, label: "Procurement Review", path: "/procurement-review" }] },
       { icon: Truck, label: "Logistics", path: "/v2/logistics" },
       { icon: Cog, label: "Milling", path: "/v2/milling" },
     ]
   },
   {
-    section: "System Admin",
+    section: "Reports",
     items: [
+      { icon: FileText, label: "Reports", path: "/reports", children: [{ icon: FileSpreadsheet, label: "Excel Reports", path: "/admin/excel-reports" }] },
+    ]
+  },
+  {
+    section: "Admin",
+    items: [
+      { icon: FileText, label: "Excel Work Rewards", path: "/excel-loyalty" },
+      { icon: Wallet, label: "Budget Wallet", path: "/budget-wallet" },
+      { icon: Wallet, label: "Budget Management", path: "/admin/budget-management" },
       { icon: ArrowLeftRight, label: "System Transactions", path: "/admin/system-transactions" },
       { icon: FileText, label: "User Statement", path: "/admin/user-statement" },
       { icon: FileText, label: "Backfill Trace", path: "/admin/backfill-trace" },
@@ -228,6 +240,7 @@ const ADMIN_NAV = [
 const V2Navigation = () => {
   const location = useLocation();
   const { employee, isAdmin } = useAuth();
+  const [openGroups, setOpenGroups] = useState<string[]>(["/v2/procurement", "/v2/hr", "/v2/analytics", "/reports"]);
 
   const hasPermission = (permission?: string) => {
     if (!permission) return true;
@@ -238,9 +251,9 @@ const V2Navigation = () => {
   };
 
   const mergeNavigationSections = (
-    sections: { section: string; items: { icon: any; label: string; path: string; permission?: string }[] }[]
+    sections: { section: string; items: { icon: any; label: string; path: string; permission?: string; children?: { icon: any; label: string; path: string; adminOnly?: boolean }[] }[] }[]
   ) => {
-    const sectionMap = new Map<string, { section: string; items: { icon: any; label: string; path: string; permission?: string }[] }>();
+    const sectionMap = new Map<string, { section: string; items: { icon: any; label: string; path: string; permission?: string; children?: { icon: any; label: string; path: string; adminOnly?: boolean }[] }[] }>();
 
     sections.forEach((section) => {
       const existingSection = sectionMap.get(section.section);
@@ -348,10 +361,11 @@ const V2Navigation = () => {
                   (item.path !== '/v2' && location.pathname.startsWith(item.path));
                 
                 return (
+                  <div key={item.path + item.label}>
+                  <div className="flex items-center">
                   <Button
-                    key={item.path + item.label}
                     variant={isActive ? "default" : "ghost"}
-                    className="w-full justify-start"
+                    className="flex-1 min-w-0 justify-start"
                     asChild
                   >
                     <Link to={item.path}>
@@ -359,6 +373,14 @@ const V2Navigation = () => {
                       {item.label}
                     </Link>
                   </Button>
+                  {item.children?.some((child: any) => !child.adminOnly || isAdmin()) && (
+                    <Button variant="ghost" size="icon" className="shrink-0" aria-label={`Toggle ${item.label} links`} aria-expanded={openGroups.includes(item.path)} onClick={() => setOpenGroups(prev => prev.includes(item.path) ? prev.filter(path => path !== item.path) : [...prev, item.path])}><ChevronDown className="h-4 w-4" /></Button>
+                  )}
+                  </div>
+                  {openGroups.includes(item.path) && item.children?.filter((child: any) => !child.adminOnly || isAdmin()).map((child: any) => (
+                    <Button key={child.path} variant={location.pathname === child.path ? "secondary" : "ghost"} className="w-[calc(100%-1.5rem)] ml-6 justify-start" asChild><Link to={child.path}><child.icon className="mr-2 h-4 w-4" />{child.label}</Link></Button>
+                  ))}
+                  </div>
                 );
               })}
             </nav>
