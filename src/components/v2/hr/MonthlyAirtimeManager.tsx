@@ -161,6 +161,28 @@ const MonthlyAirtimeManager = () => {
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
   };
 
+  const toggleMark = (id: string, v: boolean) => {
+    setMarkIds((prev) => {
+      const next = new Set(prev);
+      if (v) next.add(id); else next.delete(id);
+      return next;
+    });
+  };
+
+  const markPaid = async () => {
+    if (!selected || markIds.size === 0) return;
+    const names = items.filter((i) => markIds.has(i.id)).map((i) => i.employee_name).join(', ');
+    if (!confirm(`Mark ${markIds.size} recipient(s) as paid and send email/SMS confirmations?\n\n${names}`)) return;
+    setBusy(true);
+    try {
+      const res = await call({ action: 'mark_paid', batchId: selected.id, itemIds: Array.from(markIds) });
+      toast.success(`Marked ${res.marked} as paid — confirmations sent`);
+      setMarkIds(new Set());
+      await loadBatches();
+      await loadItems(selected.id);
+    } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
+  };
+
   return (
     <Tabs defaultValue="manage" className="space-y-6">
       <TabsList>
