@@ -74,9 +74,12 @@ const MonthlyAirtimeManager = () => {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [newMonth, setNewMonth] = useState(currentMonth());
+  const [markIds, setMarkIds] = useState<Set<string>>(new Set());
 
   const selected = useMemo(() => batches.find((b) => b.id === selectedId) || null, [batches, selectedId]);
   const editable = selected?.status === 'draft';
+  const markable = !!selected && ['approved', 'processing', 'partial'].includes(selected.status);
+  const unpaidItems = useMemo(() => items.filter((i) => i.included && !['paid', 'sent', 'skipped'].includes(i.payment_status)), [items]);
 
   const includedItems = useMemo(() => items.filter((i) => i.included), [items]);
   const total = useMemo(() => includedItems.reduce((s, i) => s + Number(i.amount || 0), 0), [includedItems]);
@@ -107,7 +110,7 @@ const MonthlyAirtimeManager = () => {
   }, []);
 
   useEffect(() => { loadBatches(); }, [loadBatches]);
-  useEffect(() => { loadItems(selectedId); }, [selectedId, loadItems]);
+  useEffect(() => { loadItems(selectedId); setMarkIds(new Set()); }, [selectedId, loadItems]);
 
   const call = async (payload: Record<string, unknown>) => {
     const { data, error } = await supabase.functions.invoke('hr-airtime-batch', {
@@ -153,6 +156,28 @@ const MonthlyAirtimeManager = () => {
     try {
       const res = await call({ action: 'disburse', batchId: selected.id });
       toast.success(`Disbursed: ${res.sent} sent, ${res.failed} failed`);
+      await loadBatches();
+      await loadItems(selected.id);
+    } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
+  };
+
+  const toggleMark = (id: string, v: boolean) => {
+    setMarkIds((prev) => {
+      const next = new Set(prev);
+      if (v) next.add(id); else next.delete(id);
+      return next;
+    });
+  };
+
+  const markPaid = async () => {
+    if (!selected || markIds.size === 0) return;
+    const names = items.filter((i) => markIds.has(i.id)).map((i) => i.employee_name).join(', ');
+    if (!confirm(`Mark ${markIds.size} recipient(s) as paid and send email/SMS confirmations?\n\n${names}`)) return;
+    setBusy(true);
+    try {
+      const res = await call({ action: 'mark_paid', batchId: selected.id, itemIds: Array.from(markIds) });
+      toast.success(`Marked ${res.marked} as paid — confirmations sent`);
+      setMarkIds(new Set());
       await loadBatches();
       await loadItems(selected.id);
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
@@ -218,6 +243,16 @@ const MonthlyAirtimeManager = () => {
                     {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
                     Send via Yo Payments
                   </Button>
+                  {markable && (
+                    <Button
+                      variant="outline"
+                      onClick={markPaid}
+                      disabled={busy || markIds.size === 0}
+                    >
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Mark {markIds.size > 0 ? `${markIds.size} ` : ''}as paid
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
@@ -228,7 +263,11 @@ const MonthlyAirtimeManager = () => {
           <CardHeader>
             <CardTitle>Recipients</CardTitle>
             <CardDescription>
-              {editable ? 'Untick anyone who should not receive airtime and adjust amounts.' : 'This batch is locked — amounts can only be edited while in draft.'}
+              {editable
+                ? 'Untick anyone who should not receive airtime and adjust amounts.'
+                : markable
+                  ? 'Tick anyone you have already paid, then tap "Mark as paid" — they will get an email and SMS confirmation.'
+                  : 'This batch is locked — amounts can only be edited while in draft.'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -242,6 +281,15 @@ const MonthlyAirtimeManager = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-12">Pay</TableHead>
+                      {markable && (
+                        <TableHead className="w-12">
+                          <Checkbox
+                            checked={unpaidItems.length > 0 && unpaidItems.every((i) => markIds.has(i.id))}
+                            onCheckedChange={(v) => setMarkIds(v ? new Set(unpaidItems.map((i) => i.id)) : new Set())}
+                            aria-label="Select all unpaid"
+                          />
+                        </TableHead>
+                      )}
                       <TableHead>Employee</TableHead>
                       <TableHead>Phone</TableHead>
                       <TableHead>Tier</TableHead>
@@ -260,6 +308,19 @@ const MonthlyAirtimeManager = () => {
                             onCheckedChange={(v) => updateItem(item.id, { included: !!v })}
                           />
                         </TableCell>
+                        {markable && (
+                          <TableCell>
+                            {item.included && !['paid', 'sent', 'skipped'].includes(item.payment_status) ? (
+                              <Checkbox
+                                checked={markIds.has(item.id)}
+                                onCheckedChange={(v) => toggleMark(item.id, !!v)}
+                                aria-label={`Mark ${item.employee_name} as paid`}
+                              />
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                        )}
                         <TableCell>
                           <div className="font-medium">{item.employee_name}</div>
                           <div className="text-xs text-muted-foreground">{item.department || '—'}</div>
