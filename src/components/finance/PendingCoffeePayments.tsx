@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import PartPayControl from '@/components/finance/PartPayControl';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -791,6 +792,9 @@ export const PendingCoffeePayments = () => {
           )}
 
           <DialogFooter>
+            {selectedPayment && (
+              <PartPayControl sourceType="supplier" sourceId={selectedPayment.id} totalAmount={Number(selectedPayment.totalAmount) || 0} payeeName={selectedPayment.supplier} />
+            )}
             <Button onClick={() => setShowDetailsDialog(false)} variant="outline">
               Close
             </Button>
