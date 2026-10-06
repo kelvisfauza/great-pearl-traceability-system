@@ -146,18 +146,44 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
         <CardContent className="space-y-3">
           {iws.length === 0 && <p className="text-sm text-muted-foreground">Nothing waiting.</p>}
           {iws.map(w => (
-            <div key={w.id} className="p-3 border rounded-lg flex flex-wrap justify-between gap-2">
-              <div>
-                <p className="font-medium">{w.employee_name} — {fmt(w.amount)}</p>
-                <p className="text-sm text-muted-foreground">GosentePay • {w.phone_number} • Approved by {w.admin_approved_by || 'admin'}</p>
-                {w.last_error && <p className="text-xs text-destructive">Last attempt failed: {w.last_error}</p>}
+            <div key={w.id} className="p-3 border rounded-lg space-y-2">
+              <div className="flex flex-wrap justify-between gap-2">
+                <div>
+                  <p className="font-medium">{w.employee_name} — {fmt(w.amount)}</p>
+                  <p className="text-sm text-muted-foreground">GosentePay • {w.phone_number} • Requested {new Date(w.created_at).toLocaleString()} • Approved by {w.admin_approved_by || 'admin'}</p>
+                  {w.last_error && <p className="text-xs text-destructive">Last attempt failed: {w.last_error}</p>}
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" disabled={busy === w.id} onClick={() => releaseIw(w)}>Release</Button>
+                  <Button size="sm" variant="outline" disabled={busy === w.id} onClick={() => sendBackIw(w)}>Send back</Button>
+                  <Button size="sm" variant="outline" disabled={busy === w.id} onClick={() => setIwRejecting(iwRejecting === w.id ? null : w.id)}><XCircle className="h-4 w-4 mr-1" /> Reject</Button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Button size="sm" disabled={busy === w.id} onClick={() => releaseIw(w)}>Release</Button>
-                <Button size="sm" variant="outline" disabled={busy === w.id} onClick={() => sendBackIw(w)}>Send back</Button>
-              </div>
+              {iwRejecting === w.id && (
+                <div className="flex gap-2">
+                  <Textarea value={iwReason} onChange={e => setIwReason(e.target.value)} placeholder="Reason — the money goes back to their wallet" className="min-h-[40px]" />
+                  <Button size="sm" variant="destructive" onClick={() => rejectIw(w)} disabled={busy === w.id}>Confirm</Button>
+                </div>
+              )}
             </div>
           ))}
+          {iwRecent.length > 0 && (
+            <div className="pt-3 border-t space-y-1">
+              <p className="text-sm font-medium">History</p>
+              {iwRecent.map(w => (
+                <div key={w.id} className="flex flex-wrap gap-2 text-sm items-center">
+                  <span className="text-xs text-muted-foreground">{new Date(w.created_at).toLocaleString()}</span>
+                  <span className="flex-1 truncate">{w.employee_name} — {fmt(w.amount)}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {w.admin_approved_by ? `Admin: ${w.admin_approved_by}` : ''}{w.finance_released_by ? ` • Finance: ${w.finance_released_by}` : ''}
+                  </span>
+                  <Badge variant={w.payout_status === 'success' ? 'default' : ['rejected', 'failed'].includes(w.payout_status) ? 'destructive' : 'secondary'}>
+                    {w.payout_status === 'pending_approval' ? 'awaiting admin' : w.payout_status}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
