@@ -46,12 +46,15 @@ serve(async (req) => {
       if (!isFinance && !isAdmin) return respond(false, { error: "Not allowed" });
       const { data: rows } = await supabase.from("instant_withdrawals").select("*")
         .eq("payout_status", "pending_finance").order("created_at", { ascending: true });
-      const out = [];
-      for (const r of rows || []) {
+      const { data: recentRows } = await supabase.from("instant_withdrawals").select("*")
+        .neq("payout_status", "pending_finance").order("created_at", { ascending: false }).limit(25);
+      const nameOf = async (r: any) => {
         const { data: e } = await supabase.from("employees").select("name, email").or(`auth_user_id.eq.${r.user_id},id.eq.${r.user_id}`).maybeSingle();
-        out.push({ ...r, employee_name: e?.name || r.user_id, employee_email: e?.email || null });
-      }
-      return respond(true, { withdrawals: out });
+        return { ...r, employee_name: e?.name || r.user_id, employee_email: e?.email || null };
+      };
+      const out = await Promise.all((rows || []).map(nameOf));
+      const recent = await Promise.all((recentRows || []).map(nameOf));
+      return respond(true, { withdrawals: out, recent });
     }
     if (!instant_withdrawal_id || instant_withdrawal_id === "x") return respond(false, { error: "Missing instant_withdrawal_id" });
 

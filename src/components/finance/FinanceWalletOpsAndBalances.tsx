@@ -20,22 +20,42 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const [iws, setIws] = useState<any[]>([]);
+  const [iwRecent, setIwRecent] = useState<any[]>([]);
+  const [iwRejecting, setIwRejecting] = useState<string | null>(null);
+  const [iwReason, setIwReason] = useState('');
   const [receipt, setReceipt] = useState<ReleaseReceiptData | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    supabase.functions.invoke('sync-yo-balance').catch(() => {});
+  const load = useCallback(async (quiet = false) => {
+    if (!quiet) setLoading(true);
+    if (!quiet) supabase.functions.invoke('sync-yo-balance').catch(() => {});
     const [{ data: o }, { data: l }, { data: iw }] = await Promise.all([
       (supabase as any).rpc('get_treasury_accounts_overview'),
       supabase.functions.invoke('admin-wallet-operation', { body: { action: 'finance_list' } }),
       supabase.functions.invoke('dispatch-gosente-instant', { body: { action: 'finance_list', instant_withdrawal_id: 'x' } }),
     ]);
     setIws(iw?.ok ? iw.withdrawals : []);
+    setIwRecent(iw?.ok ? (iw.recent || []) : []);
     setOv(o?.ok ? o : null);
     setOps(l?.ok ? l.operations : []);
     setLoading(false);
   }, []);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    const t = setInterval(() => load(true), 30000);
+    const onFocus = () => load(true);
+    window.addEventListener('focus', onFocus);
+    return () => { clearInterval(t); window.removeEventListener('focus', onFocus); };
+  }, [load]);
+
+  const rejectIw = async (w: any) => {
+    if (!iwReason.trim()) { toast.error('Give a reason'); return; }
+    setBusy(w.id);
+    const { data, error } = await supabase.functions.invoke('dispatch-gosente-instant', { body: { instant_withdrawal_id: w.id, action: 'finance_reject', reason: iwReason } });
+    setBusy(null);
+    if (error || !data?.ok) { toast.error(data?.error || error?.message || 'Reject failed'); return; }
+    toast.success(`Rejected — UGX ${Number(data.refunded || 0).toLocaleString()} returned to wallet`);
+    setIwRejecting(null); setIwReason(''); load(true);
+  };
 
   const release = async (op: any) => {
     setBusy(op.id);
