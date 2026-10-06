@@ -819,7 +819,7 @@ const QuickLoans = () => {
         updateData = isSecondSlot
           ? { guarantor2_approved: true, guarantor2_approved_at: new Date().toISOString() }
           : { guarantor_approved: true, guarantor_approved_at: new Date().toISOString() };
-        if (allApproved) updateData.status = 'pending_admin';
+        if (allApproved && !pendingGuarantorLoan.approved_via_appeal) updateData.status = 'pending_admin';
       } else {
         updateData = isSecondSlot
           ? { guarantor2_declined: true, guarantor2_approved: false, status: 'guarantor_declined', admin_rejection_reason: 'Guarantor declined' }
@@ -829,15 +829,22 @@ const QuickLoans = () => {
       const { error } = await (supabase as any).from('loans').update(updateData).eq('id', pendingGuarantorLoan.id);
       if (error) throw error;
 
+      // Appeal loans: admins already decided — release once all guarantors have signed
+      const isAppealLoan = !!pendingGuarantorLoan.approved_via_appeal;
+      if (approve && allApproved && isAppealLoan) {
+        const { data: fin } = await supabase.functions.invoke('loan-appeal-disburse', { body: { action: 'finalize', loan_id: pendingGuarantorLoan.id } });
+        if (fin && fin.ok === false) console.warn('appeal finalize', fin.error);
+      }
+
       // Notify borrower via SMS + email
       await supabase.functions.invoke('send-sms', {
-        body: { phone: pendingGuarantorLoan.employee_phone, message: approve ? `Dear ${pendingGuarantorLoan.employee_name}, your guarantor ${employee?.name} has approved your loan request. ${allApproved ? 'It is now pending admin approval.' : 'Waiting for your other guarantor to approve.'}` : `Dear ${pendingGuarantorLoan.employee_name}, your guarantor ${employee?.name} has declined your loan request. Log in to select a new guarantor for the same application.`, userName: pendingGuarantorLoan.employee_name, messageType: 'loan_guarantor_response' }
+        body: { phone: pendingGuarantorLoan.employee_phone, message: approve ? `Dear ${pendingGuarantorLoan.employee_name}, your guarantor ${employee?.name} has approved your loan request. ${allApproved ? (isAppealLoan ? 'Your appeal loan has been sent to your wallet.' : 'It is now pending admin approval.') : 'Waiting for your other guarantor to approve.'}` : `Dear ${pendingGuarantorLoan.employee_name}, your guarantor ${employee?.name} has declined your loan request. Log in to select a new guarantor for the same application.`, userName: pendingGuarantorLoan.employee_name, messageType: 'loan_guarantor_response' }
       });
       await supabase.functions.invoke('send-transactional-email', {
         body: { templateName: 'loan-guarantor-response', recipientEmail: pendingGuarantorLoan.employee_email, idempotencyKey: `guarantor-response-${pendingGuarantorLoan.id}-${isSecondSlot ? 'g2' : 'g1'}-${approve}`, templateData: { borrowerName: pendingGuarantorLoan.employee_name, guarantorName: employee?.name || '', loanAmount: pendingGuarantorLoan.loan_amount.toLocaleString(), durationMonths: String(pendingGuarantorLoan.duration_months), isApproved: approve } }
       });
 
-      toast({ title: approve ? "Loan Guaranteed" : "Loan Declined", description: approve ? (allApproved ? "The loan is now pending admin approval" : "Recorded — waiting for the second guarantor") : "The borrower will be notified" });
+      toast({ title: approve ? "Loan Guaranteed" : "Loan Declined", description: approve ? (allApproved ? (pendingGuarantorLoan.approved_via_appeal ? "Appeal loan released to the borrower" : "The loan is now pending admin approval") : "Recorded — waiting for the second guarantor") : "The borrower will be notified" });
       setPendingGuarantorLoan(null);
       setGuarantorCode('');
       fetchLoans();
@@ -1595,6 +1602,7 @@ const QuickLoans = () => {
           messageType: 'loan_guarantor_request'
         }
       });
+      supabase.functions.invoke('send-transactional-email', { body: { templateName: 'loan-guarantor-code', recipientEmail: guarantor.email, idempotencyKey: `loan-guarantor-change-${changeGuarantorLoan.id}-${approvalCode}`, templateData: { guarantorName: guarantor.name, borrowerName: employee.name, loanAmount: changeGuarantorLoan.loan_amount.toLocaleString(), duration: String(changeGuarantorLoan.duration_months), approvalCode } } }).catch(() => {});
 
       toast({ title: "New Guarantor Selected", description: `${guarantor.name} has been notified via SMS` });
       setShowChangeGuarantorDialog(false);
@@ -2495,6 +2503,8 @@ const QuickLoans = () => {
                 loanType={loanType}
                 requestedAmount={parseFloat(loanAmount) || 0}
                 requestedTerm={parseInt(durationMonths) || 0}
+                guarantors={[employees.find(e => e.id === guarantorId), employees.find(e => e.id === guarantor2Id)].filter(Boolean)}
+                guarantorsRequired={LOAN_TYPE_CONFIG[loanType].requiresGuarantor !== false ? Math.max(1, getGuarantorsRequired(loanType)) : 0}
               />
             )}
 
