@@ -40,7 +40,7 @@ serve(async (req) => {
     const isAdmin = ["Administrator", "Super Admin"].includes(role);
     const isFinance = role === "Finance" || perms.includes("Finance:approve") || perms.includes("Finance:process");
 
-    const { instant_withdrawal_id, action } = await req.json();
+    const { instant_withdrawal_id, action, reason } = await req.json();
 
     if (action === "finance_list") {
       if (!isFinance && !isAdmin) return respond(false, { error: "Not allowed" });
@@ -70,7 +70,6 @@ serve(async (req) => {
 
     if (action === "finance_reject") {
       if (!isFinance) return respond(false, { error: "Only Finance can reject" });
-      const { reason } = await req.clone().json().catch(() => ({})) as any;
       const { data: upd } = await supabase.from("instant_withdrawals").update({
         payout_status: "rejected", last_error: `Rejected by Finance: ${reason || "no reason given"}`.slice(0, 300),
         finance_released_by: adminEmp?.name || adminEmail, finance_released_at: new Date().toISOString(),
