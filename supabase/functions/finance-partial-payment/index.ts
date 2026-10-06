@@ -50,6 +50,7 @@ Deno.serve(async (req) => {
     if (!Number.isFinite(amount) || amount <= 0) return respond(false, { error: "Enter an amount above zero" });
 
     // Load the source item from the database (never trust client totals)
+    let lotId = "";
     let title = "", total = 0, payeeName = "", payeeEmail: string | null = null, payeePhone: string | null = null, approver = "";
     if (sourceType === "provider") {
       const { data: s } = await db.from("provider_submission_requests").select("*").eq("id", sourceId).maybeSingle();
@@ -66,8 +67,12 @@ Deno.serve(async (req) => {
       total = Number(w.amount); title = "Withdrawal";
       payeeName = e?.name || "Staff member"; payeeEmail = e?.email || null; payeePhone = w.phone_number || e?.phone || null; approver = w.admin_approved_by || "";
     } else if (sourceType === "supplier") {
-      const { data: l } = await db.from("finance_coffee_lots").select("*").eq("id", sourceId).maybeSingle();
-      if (!l) return respond(false, { error: "Coffee lot not found" });
+      // sourceId is the coffee record id (falls back to lot id)
+      let { data: l } = await db.from("finance_coffee_lots").select("*").eq("coffee_record_id", sourceId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (!l) ({ data: l } = await db.from("finance_coffee_lots").select("*").eq("id", sourceId).maybeSingle());
+      if (!l) return respond(false, { error: "This coffee has no Finance lot yet — use Process Payment" });
+      if (!(Number(l.total_amount_ugx) > 0)) return respond(false, { error: "This lot has no price yet — set the price first" });
+      lotId = l.id;
       if (l.payment_status === "FULLY_PAID") return respond(false, { error: "This lot is already fully paid" });
       const { data: sup } = l.supplier_id ? await db.from("suppliers").select("name, phone, email").eq("id", l.supplier_id).maybeSingle() : { data: null } as any;
       total = Number(l.total_amount_ugx || 0) - Number(l.advance_recovered_ugx || 0);
@@ -121,10 +126,11 @@ Deno.serve(async (req) => {
         const { error } = await db.from("instant_withdrawals").update({ payout_status: "success", finance_released_by: financeName, finance_released_at: now, completed_at: now }).eq("id", sourceId);
         if (error) sourceWarning = error.message;
       } else if (sourceType === "supplier") {
-        const { data: l } = await db.from("finance_coffee_lots").select("amount_paid_ugx").eq("id", sourceId).maybeSingle();
+        const { data: l } = await db.from("finance_coffee_lots").select("amount_paid_ugx").eq("id", lotId).maybeSingle();
         const patch: any = { amount_paid_ugx: Number(l?.amount_paid_ugx || 0) + amount, payment_status: full ? "FULLY_PAID" : "PARTIALLY_PAID" };
         if (full) patch.finance_status = "PAID";
-        const { error } = await db.from("finance_coffee_lots").update(patch).eq("id", sourceId);
+        const { error } = await db.from("finance_coffee_lots").update(patch).eq("id", lotId);
+        if (full) await db.from("coffee_records").update({ status: "inventory" }).eq("id", sourceId);
         if (error) sourceWarning = error.message;
       } else if (sourceType === "expense" && full) {
         const { error } = await db.from("approval_requests").update({ status: "Approved", finance_approved: true, finance_approved_by: financeName, finance_approved_at: now }).eq("id", sourceId);
