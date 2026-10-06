@@ -478,8 +478,8 @@ serve(async (req) => {
     }
 
     if (submission.status !== "pending") {
-      // Finance release operates on rows the admin already approved.
-      if (isFinanceRelease && submission.status === "awaiting_finance") {
+      // Finance release / reject operates on rows the admin already approved.
+      if ((isFinanceRelease || action === "reject") && submission.status === "awaiting_finance") {
         // allowed — fall through
       } else {
       // Allow retry if a previous attempt got stuck in `processing` for >90s
@@ -623,16 +623,45 @@ serve(async (req) => {
     }
 
     if (action === "reject") {
-      await supabase
+      const byFinance = submission.status === "awaiting_finance";
+      const { data: rejUpd } = await supabase
         .from("provider_submission_requests")
         .update({
           status: "rejected",
-          rejection_reason: rejectionReason || null,
+          rejection_reason: (byFinance ? "[Finance] " : "") + (rejectionReason || "Rejected"),
           reviewed_by: reviewer.id,
           reviewed_by_name: reviewerName,
           reviewed_at: new Date().toISOString(),
         })
-        .eq("id", submissionId);
+        .eq("id", submissionId)
+        .eq("status", submission.status)
+        .select("id");
+      if (!rejUpd?.length) {
+        return new Response(JSON.stringify({ ok: false, error: "Already processed" }), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      await supabase.from("audit_logs").insert({
+        action: byFinance ? "FINANCE_REJECT_PROVIDER" : "ADMIN_REJECT_PROVIDER",
+        table_name: "provider_submission_requests", record_id: submissionId,
+        performed_by: reviewerName, reason: rejectionReason || null,
+        record_data: { amount: submission.amount, provider: submission.provider_name, type: submission.request_type },
+      } as any).then(() => {}, () => {});
+      if (submission.email) {
+        try {
+          await supabase.functions.invoke("send-transactional-email", {
+            body: {
+              templateName: "general-notification",
+              recipientEmail: submission.email,
+              idempotencyKey: `provider-reject-${submissionId}`,
+              templateData: {
+                title: "Payment request not approved",
+                message: `Dear ${submission.provider_name}, your request of UGX ${Number(submission.amount).toLocaleString()} was not approved${byFinance ? " by Finance" : ""}. Reason: ${rejectionReason || "Not specified"}. No money has been paid. Great Agro Coffee.`,
+              },
+            },
+          });
+        } catch (_) { /* non-blocking */ }
+      }
 
       return new Response(JSON.stringify({ ok: true, status: "rejected" }), {
         status: 200,
