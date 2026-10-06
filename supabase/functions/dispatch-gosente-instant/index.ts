@@ -40,18 +40,21 @@ serve(async (req) => {
     const isAdmin = ["Administrator", "Super Admin"].includes(role);
     const isFinance = role === "Finance" || perms.includes("Finance:approve") || perms.includes("Finance:process");
 
-    const { instant_withdrawal_id, action } = await req.json();
+    const { instant_withdrawal_id, action, reason } = await req.json();
 
     if (action === "finance_list") {
       if (!isFinance && !isAdmin) return respond(false, { error: "Not allowed" });
       const { data: rows } = await supabase.from("instant_withdrawals").select("*")
         .eq("payout_status", "pending_finance").order("created_at", { ascending: true });
-      const out = [];
-      for (const r of rows || []) {
+      const { data: recentRows } = await supabase.from("instant_withdrawals").select("*")
+        .neq("payout_status", "pending_finance").order("created_at", { ascending: false }).limit(25);
+      const nameOf = async (r: any) => {
         const { data: e } = await supabase.from("employees").select("name, email").or(`auth_user_id.eq.${r.user_id},id.eq.${r.user_id}`).maybeSingle();
-        out.push({ ...r, employee_name: e?.name || r.user_id, employee_email: e?.email || null });
-      }
-      return respond(true, { withdrawals: out });
+        return { ...r, employee_name: e?.name || r.user_id, employee_email: e?.email || null };
+      };
+      const out = await Promise.all((rows || []).map(nameOf));
+      const recent = await Promise.all((recentRows || []).map(nameOf));
+      return respond(true, { withdrawals: out, recent });
     }
     if (!instant_withdrawal_id || instant_withdrawal_id === "x") return respond(false, { error: "Missing instant_withdrawal_id" });
 
@@ -66,6 +69,42 @@ serve(async (req) => {
       }).eq("id", instant_withdrawal_id).eq("payout_status", "pending_approval").select("id");
       if (!upd?.length) return respond(false, { error: "Already processed" });
       return respond(true, { awaiting_finance: true });
+    }
+
+    if (action === "finance_reject") {
+      if (!isFinance) return respond(false, { error: "Only Finance can reject" });
+      const { data: upd } = await supabase.from("instant_withdrawals").update({
+        payout_status: "rejected", last_error: `Rejected by Finance: ${reason || "no reason given"}`.slice(0, 300),
+        finance_released_by: adminEmp?.name || adminEmail, finance_released_at: new Date().toISOString(),
+      }).eq("id", instant_withdrawal_id).in("payout_status", ["pending_finance", "pending_approval"]).select("*");
+      if (!upd?.length) return respond(false, { error: "Already processed" });
+      const iw = upd[0];
+      // Refund every wallet debit held for this withdrawal (amount + fee)
+      const { data: holds } = await supabase.from("ledger_entries").select("user_id, amount, reference")
+        .eq("metadata->>instant_withdrawal_id", iw.id).lt("amount", 0);
+      let refunded = 0;
+      for (const h of holds || []) {
+        const amt = Math.abs(Number(h.amount));
+        const { error: rErr } = await supabase.from("ledger_entries").insert({
+          user_id: h.user_id, entry_type: "DEPOSIT", amount: amt, source_category: "REFUND",
+          reference: `REFUND-${h.reference}`,
+          metadata: { type: "withdrawal_refund", instant_withdrawal_id: iw.id, bypass_treasury_check: true,
+            description: `Refund — instant withdrawal rejected by Finance${reason ? ` (${reason})` : ""}`, initiated_by: adminEmail },
+        });
+        if (!rErr) refunded += amt;
+        else console.error("refund insert failed", rErr);
+      }
+      const { data: owner } = await supabase.from("employees").select("name, email, phone").or(`auth_user_id.eq.${iw.user_id},id.eq.${iw.user_id}`).maybeSingle();
+      await supabase.from("audit_logs").insert({ action: "FINANCE_REJECT_INSTANT_WITHDRAWAL", table_name: "instant_withdrawals", record_id: iw.id, performed_by: adminEmp?.name || adminEmail, reason: reason || null, record_data: { amount: iw.amount, refunded } });
+      if (owner?.email) {
+        try {
+          await supabase.functions.invoke("send-transactional-email", { body: {
+            templateName: "general-notification", recipientEmail: owner.email, idempotencyKey: `iw-reject-${iw.id}`,
+            templateData: { title: "Withdrawal not approved", message: `Dear ${owner.name}, your withdrawal of UGX ${Number(iw.amount).toLocaleString()} was rejected by Finance. Reason: ${reason || "Not specified"}. UGX ${refunded.toLocaleString()} has been returned to your wallet. Great Agro Coffee.` },
+          } });
+        } catch (_) { /* non-blocking */ }
+      }
+      return respond(true, { refunded });
     }
 
     if (action === "send_back") {

@@ -69,6 +69,25 @@ const FinanceProviderReleases: React.FC = () => {
     }
   };
 
+  const reject = async (s: any) => {
+    const reason = window.prompt(`Reason for rejecting ${s.provider_name}'s request?`);
+    if (!reason || !reason.trim()) return;
+    setReleasing(s.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('process-provider-submission', {
+        body: { action: 'reject', submissionId: s.id, rejectionReason: reason.trim() },
+      });
+      if (error) throw error;
+      if (!(data as any)?.ok) throw new Error((data as any)?.error || 'Reject failed');
+      toast({ title: 'Rejected', description: 'Marked as rejected — no money was paid out, it stays in the company account.' });
+      queryClient.invalidateQueries({ queryKey: ['finance-provider-releases'] });
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } finally {
+      setReleasing(null);
+    }
+  };
+
   // Keep the receipt prompt mounted even after the last item leaves the list.
   if (!isLoading && submissions.length === 0) {
     return receipt ? <ReleaseReceiptDialog data={receipt} onClose={() => setReceipt(null)} /> : null;
@@ -151,6 +170,8 @@ const FinanceProviderReleases: React.FC = () => {
                         );
                       })}
                     </div>
+                    <div className="flex gap-2">
+                    <Button size="sm" variant="outline" disabled={releasing === s.id} onClick={() => reject(s)}>Reject</Button>
                     <Button size="sm" onClick={() => release(s)} disabled={releasing === s.id}>
                       {releasing === s.id ? (
                         <Loader2 className="w-3 h-3 mr-1 animate-spin" />
@@ -159,6 +180,7 @@ const FinanceProviderReleases: React.FC = () => {
                       )}
                       {m === 'cash' ? 'Confirm Cash Payout' : m === 'gosente' ? 'Release via GosentePay' : 'Release via Yo Payments'}
                     </Button>
+                    </div>
                   </div>
                 </div>
               );

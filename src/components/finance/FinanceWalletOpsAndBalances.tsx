@@ -20,22 +20,42 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const [iws, setIws] = useState<any[]>([]);
+  const [iwRecent, setIwRecent] = useState<any[]>([]);
+  const [iwRejecting, setIwRejecting] = useState<string | null>(null);
+  const [iwReason, setIwReason] = useState('');
   const [receipt, setReceipt] = useState<ReleaseReceiptData | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    supabase.functions.invoke('sync-yo-balance').catch(() => {});
+  const load = useCallback(async (quiet = false) => {
+    if (!quiet) setLoading(true);
+    if (!quiet) supabase.functions.invoke('sync-yo-balance').catch(() => {});
     const [{ data: o }, { data: l }, { data: iw }] = await Promise.all([
       (supabase as any).rpc('get_treasury_accounts_overview'),
       supabase.functions.invoke('admin-wallet-operation', { body: { action: 'finance_list' } }),
       supabase.functions.invoke('dispatch-gosente-instant', { body: { action: 'finance_list', instant_withdrawal_id: 'x' } }),
     ]);
     setIws(iw?.ok ? iw.withdrawals : []);
+    setIwRecent(iw?.ok ? (iw.recent || []) : []);
     setOv(o?.ok ? o : null);
     setOps(l?.ok ? l.operations : []);
     setLoading(false);
   }, []);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    const t = setInterval(() => load(true), 30000);
+    const onFocus = () => load(true);
+    window.addEventListener('focus', onFocus);
+    return () => { clearInterval(t); window.removeEventListener('focus', onFocus); };
+  }, [load]);
+
+  const rejectIw = async (w: any) => {
+    if (!iwReason.trim()) { toast.error('Give a reason'); return; }
+    setBusy(w.id);
+    const { data, error } = await supabase.functions.invoke('dispatch-gosente-instant', { body: { instant_withdrawal_id: w.id, action: 'finance_reject', reason: iwReason } });
+    setBusy(null);
+    if (error || !data?.ok) { toast.error(data?.error || error?.message || 'Reject failed'); return; }
+    toast.success(`Rejected — UGX ${Number(data.refunded || 0).toLocaleString()} returned to wallet`);
+    setIwRejecting(null); setIwReason(''); load(true);
+  };
 
   const release = async (op: any) => {
     setBusy(op.id);
@@ -93,7 +113,7 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
             <CardTitle className="flex items-center gap-2"><Landmark className="h-5 w-5 text-primary" /> Account balances</CardTitle>
             <CardDescription>Live money available with payment providers and in company accounts</CardDescription>
           </div>
-          <Button variant="outline" size="sm" onClick={load} disabled={loading}><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /></Button>
+          <Button variant="outline" size="sm" onClick={() => load()} disabled={loading}><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /></Button>
         </CardHeader>
         <CardContent>
           {!ov ? <p className="text-sm text-muted-foreground">{loading ? 'Loading…' : 'Balances unavailable for your account.'}</p> : (
@@ -126,18 +146,44 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
         <CardContent className="space-y-3">
           {iws.length === 0 && <p className="text-sm text-muted-foreground">Nothing waiting.</p>}
           {iws.map(w => (
-            <div key={w.id} className="p-3 border rounded-lg flex flex-wrap justify-between gap-2">
-              <div>
-                <p className="font-medium">{w.employee_name} — {fmt(w.amount)}</p>
-                <p className="text-sm text-muted-foreground">GosentePay • {w.phone_number} • Approved by {w.admin_approved_by || 'admin'}</p>
-                {w.last_error && <p className="text-xs text-destructive">Last attempt failed: {w.last_error}</p>}
+            <div key={w.id} className="p-3 border rounded-lg space-y-2">
+              <div className="flex flex-wrap justify-between gap-2">
+                <div>
+                  <p className="font-medium">{w.employee_name} — {fmt(w.amount)}</p>
+                  <p className="text-sm text-muted-foreground">GosentePay • {w.phone_number} • Requested {new Date(w.created_at).toLocaleString()} • Approved by {w.admin_approved_by || 'admin'}</p>
+                  {w.last_error && <p className="text-xs text-destructive">Last attempt failed: {w.last_error}</p>}
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" disabled={busy === w.id} onClick={() => releaseIw(w)}>Release</Button>
+                  <Button size="sm" variant="outline" disabled={busy === w.id} onClick={() => sendBackIw(w)}>Send back</Button>
+                  <Button size="sm" variant="outline" disabled={busy === w.id} onClick={() => setIwRejecting(iwRejecting === w.id ? null : w.id)}><XCircle className="h-4 w-4 mr-1" /> Reject</Button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Button size="sm" disabled={busy === w.id} onClick={() => releaseIw(w)}>Release</Button>
-                <Button size="sm" variant="outline" disabled={busy === w.id} onClick={() => sendBackIw(w)}>Send back</Button>
-              </div>
+              {iwRejecting === w.id && (
+                <div className="flex gap-2">
+                  <Textarea value={iwReason} onChange={e => setIwReason(e.target.value)} placeholder="Reason — the money goes back to their wallet" className="min-h-[40px]" />
+                  <Button size="sm" variant="destructive" onClick={() => rejectIw(w)} disabled={busy === w.id}>Confirm</Button>
+                </div>
+              )}
             </div>
           ))}
+          {iwRecent.length > 0 && (
+            <div className="pt-3 border-t space-y-1">
+              <p className="text-sm font-medium">History</p>
+              {iwRecent.map(w => (
+                <div key={w.id} className="flex flex-wrap gap-2 text-sm items-center">
+                  <span className="text-xs text-muted-foreground">{new Date(w.created_at).toLocaleString()}</span>
+                  <span className="flex-1 truncate">{w.employee_name} — {fmt(w.amount)}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {w.admin_approved_by ? `Admin: ${w.admin_approved_by}` : ''}{w.finance_released_by ? ` • Finance: ${w.finance_released_by}` : ''}
+                  </span>
+                  <Badge variant={w.payout_status === 'success' ? 'default' : ['rejected', 'failed'].includes(w.payout_status) ? 'destructive' : 'secondary'}>
+                    {w.payout_status === 'pending_approval' ? 'awaiting admin' : w.payout_status}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
