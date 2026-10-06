@@ -8739,6 +8739,107 @@ export type Database = {
           },
         ]
       }
+      partial_payment_installments: {
+        Row: {
+          amount: number
+          balance_after: number
+          created_at: string
+          id: string
+          method: string
+          notes: string | null
+          paid_by_email: string | null
+          paid_by_name: string | null
+          partial_payment_id: string
+          reference: string | null
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          created_at?: string
+          id?: string
+          method: string
+          notes?: string | null
+          paid_by_email?: string | null
+          paid_by_name?: string | null
+          partial_payment_id: string
+          reference?: string | null
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          created_at?: string
+          id?: string
+          method?: string
+          notes?: string | null
+          paid_by_email?: string | null
+          paid_by_name?: string | null
+          partial_payment_id?: string
+          reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partial_payment_installments_partial_payment_id_fkey"
+            columns: ["partial_payment_id"]
+            isOneToOne: false
+            referencedRelation: "partial_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partial_payments: {
+        Row: {
+          approved_by_email: string | null
+          approved_by_name: string | null
+          balance: number | null
+          created_at: string
+          id: string
+          paid_amount: number
+          payee_email: string | null
+          payee_name: string | null
+          payee_phone: string | null
+          source_id: string
+          source_type: string
+          status: string
+          title: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          approved_by_email?: string | null
+          approved_by_name?: string | null
+          balance?: number | null
+          created_at?: string
+          id?: string
+          paid_amount?: number
+          payee_email?: string | null
+          payee_name?: string | null
+          payee_phone?: string | null
+          source_id: string
+          source_type: string
+          status?: string
+          title: string
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          approved_by_email?: string | null
+          approved_by_name?: string | null
+          balance?: number | null
+          created_at?: string
+          id?: string
+          paid_amount?: number
+          payee_email?: string | null
+          payee_name?: string | null
+          payee_phone?: string | null
+          source_id?: string
+          source_type?: string
+          status?: string
+          title?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payment_receipt_prints: {
         Row: {
           batch_number: string | null
@@ -17292,6 +17393,7 @@ export type Database = {
         Args: { _topic: string; _uid: string }
         Returns: boolean
       }
+      can_track_payments: { Args: never; Returns: boolean }
       charge_balance_check: { Args: never; Returns: Json }
       charge_statement_fee: {
         Args: { p_period_from: string; p_period_to: string; p_user_id: string }
