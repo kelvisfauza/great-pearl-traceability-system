@@ -6386,6 +6386,14 @@ export type Database = {
           final_amount: number | null
           final_decision: string | null
           final_term_months: number | null
+          guarantor_email: string | null
+          guarantor_id: string | null
+          guarantor_name: string | null
+          guarantor_phone: string | null
+          guarantor2_email: string | null
+          guarantor2_id: string | null
+          guarantor2_name: string | null
+          guarantor2_phone: string | null
           id: string
           justification: string
           loan_evaluation_id: string | null
@@ -6408,6 +6416,14 @@ export type Database = {
           final_amount?: number | null
           final_decision?: string | null
           final_term_months?: number | null
+          guarantor_email?: string | null
+          guarantor_id?: string | null
+          guarantor_name?: string | null
+          guarantor_phone?: string | null
+          guarantor2_email?: string | null
+          guarantor2_id?: string | null
+          guarantor2_name?: string | null
+          guarantor2_phone?: string | null
           id?: string
           justification: string
           loan_evaluation_id?: string | null
@@ -6430,6 +6446,14 @@ export type Database = {
           final_amount?: number | null
           final_decision?: string | null
           final_term_months?: number | null
+          guarantor_email?: string | null
+          guarantor_id?: string | null
+          guarantor_name?: string | null
+          guarantor_phone?: string | null
+          guarantor2_email?: string | null
+          guarantor2_id?: string | null
+          guarantor2_name?: string | null
+          guarantor2_phone?: string | null
           id?: string
           justification?: string
           loan_evaluation_id?: string | null
