@@ -113,7 +113,7 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
             <CardTitle className="flex items-center gap-2"><Landmark className="h-5 w-5 text-primary" /> Account balances</CardTitle>
             <CardDescription>Live money available with payment providers and in company accounts</CardDescription>
           </div>
-          <Button variant="outline" size="sm" onClick={load} disabled={loading}><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /></Button>
+          <Button variant="outline" size="sm" onClick={() => load()} disabled={loading}><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /></Button>
         </CardHeader>
         <CardContent>
           {!ov ? <p className="text-sm text-muted-foreground">{loading ? 'Loading…' : 'Balances unavailable for your account.'}</p> : (
