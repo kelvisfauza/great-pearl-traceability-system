@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Banknote, Smartphone, Wallet, HandCoins } from 'lucide-react';
 import ReleaseReceiptDialog from '@/components/finance/ReleaseReceiptDialog';
+import PartPayControl from '@/components/finance/PartPayControl';
 
 type PayMethod = 'momo' | 'gosente' | 'cash';
 
@@ -170,7 +171,9 @@ const FinanceProviderReleases: React.FC = () => {
                         );
                       })}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-end">
+                    <PartPayControl sourceType="provider" sourceId={s.id} totalAmount={amt + chg} payeeName={s.provider_name}
+                      onChanged={() => queryClient.invalidateQueries({ queryKey: ['finance-provider-releases'] })} />
                     <Button size="sm" variant="outline" disabled={releasing === s.id} onClick={() => reject(s)}>Reject</Button>
                     <Button size="sm" onClick={() => release(s)} disabled={releasing === s.id}>
                       {releasing === s.id ? (

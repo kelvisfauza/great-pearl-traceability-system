@@ -14,6 +14,7 @@ import {
   FileText
 } from 'lucide-react';
 import { useFinanceApprovals } from '@/hooks/useFinanceApprovals';
+import PartPayControl from '@/components/finance/PartPayControl';
 import { RejectionModal } from '@/components/workflow/RejectionModal';
 import { DelegateApprovalModal } from '@/components/approval/DelegateApprovalModal';
 import { useAuth } from '@/contexts/AuthContext';
@@ -215,6 +216,7 @@ const PendingApprovalRequests = () => {
                       <Eye className="h-4 w-4 mr-1" />
                       Details
                     </Button>
+                    <PartPayControl sourceType="expense" sourceId={request.id} totalAmount={Number((request as any).amount) || 0} payeeName={(request as any).requestedby_name || (request as any).requestedBy} />
                     <Button
                       size="sm"
                       variant="destructive"

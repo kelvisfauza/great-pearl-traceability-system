@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Landmark, RefreshCw, Send, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import PartPayControl from '@/components/finance/PartPayControl';
 import { ReleaseReceiptDialog } from '@/components/finance/ReleaseReceiptDialog';
 import type { ReleaseReceiptData } from '@/utils/financeReleaseReceipt';
 
@@ -153,7 +154,8 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
                   <p className="text-sm text-muted-foreground">GosentePay • {w.phone_number} • Requested {new Date(w.created_at).toLocaleString()} • Approved by {w.admin_approved_by || 'admin'}</p>
                   {w.last_error && <p className="text-xs text-destructive">Last attempt failed: {w.last_error}</p>}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-end">
+                  <PartPayControl sourceType="withdrawal" sourceId={w.id} totalAmount={Number(w.amount)} payeeName={w.employee_name} onChanged={() => load()} />
                   <Button size="sm" disabled={busy === w.id} onClick={() => releaseIw(w)}>Release</Button>
                   <Button size="sm" variant="outline" disabled={busy === w.id} onClick={() => sendBackIw(w)}>Send back</Button>
                   <Button size="sm" variant="outline" disabled={busy === w.id} onClick={() => setIwRejecting(iwRejecting === w.id ? null : w.id)}><XCircle className="h-4 w-4 mr-1" /> Reject</Button>

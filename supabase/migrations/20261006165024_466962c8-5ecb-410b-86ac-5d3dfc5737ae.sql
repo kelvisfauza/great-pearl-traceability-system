@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.can_track_payments() FROM PUBLIC, anon;

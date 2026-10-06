@@ -34,6 +34,7 @@ const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
         { name: "Milling", icon: Coffee, path: "/milling", permission: "Milling" },
         { name: "Procurement", icon: Package, path: "/procurement", permission: "Procurement", children: [
           { name: "Procurement Review", icon: ClipboardCheck, path: "/procurement-review" },
+          { name: "Payment Tracker", icon: ClipboardCheck, path: "/payment-tracker" },
         ] },
         { name: "Inventory", icon: Package, path: "/inventory", permission: "Inventory" },
         { name: "Field Operations", icon: MapPin, path: "/field-operations", permission: "Field Operations" },
