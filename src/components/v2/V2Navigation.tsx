@@ -158,7 +158,7 @@ const DEPARTMENT_NAV_CONFIG: Record<string, {
     {
       section: "Procurement",
       items: [
-        { icon: ShoppingBag, label: "Procurement", path: "/v2/procurement", permission: "Procurement", children: [{ icon: FileText, label: "Procurement Review", path: "/procurement-review" }] },
+        { icon: ShoppingBag, label: "Procurement", path: "/v2/procurement", permission: "Procurement", children: [{ icon: FileText, label: "Procurement Review", path: "/procurement-review" }, { icon: FileText, label: "Payment Tracker", path: "/payment-tracker" }] },
       ]
     }
   ],
@@ -215,7 +215,7 @@ const ADMIN_NAV = [
       { icon: MapPin, label: "Field Ops", path: "/v2/field-operations" },
       { icon: BarChart3, label: "Trade", path: "/v2/analytics", children: [{ icon: BookMarked, label: "Coffee Bookings", path: "/coffee-bookings" }] },
       { icon: Leaf, label: "EUDR", path: "/v2/eudr" },
-      { icon: ShoppingBag, label: "Procurement", path: "/v2/procurement", children: [{ icon: FileText, label: "Procurement Review", path: "/procurement-review" }] },
+      { icon: ShoppingBag, label: "Procurement", path: "/v2/procurement", children: [{ icon: FileText, label: "Procurement Review", path: "/procurement-review" }, { icon: FileText, label: "Payment Tracker", path: "/payment-tracker" }] },
       { icon: Truck, label: "Logistics", path: "/v2/logistics" },
       { icon: Cog, label: "Milling", path: "/v2/milling" },
     ]

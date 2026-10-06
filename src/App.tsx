@@ -148,6 +148,7 @@ import Treasury from "./pages/admin/Treasury";
 import LeaveRequests from "./pages/admin/LeaveRequests";
 import ExcelReports from "./pages/admin/ExcelReports";
 import UserStatement from "./pages/admin/UserStatement";
+import PaymentTracker from "./pages/PaymentTracker";
 import BackfillTrace from "./pages/admin/BackfillTrace";
 import WalletAudit from "./pages/admin/WalletAudit";
 import BudgetWallet from "./pages/BudgetWallet";
@@ -649,6 +650,11 @@ const App: React.ComponentType = () => {
                 <Route path="/admin/treasury" element={
                   <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
                     <Treasury />
+                  </ProtectedRoute>
+                } />
+                <Route path="/payment-tracker" element={
+                  <ProtectedRoute>
+                    <PaymentTracker />
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/user-statement" element={
