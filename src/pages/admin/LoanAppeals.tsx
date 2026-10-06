@@ -94,7 +94,9 @@ export default function LoanAppeals() {
     try {
       const { data, error } = await supabase.functions.invoke('loan-appeal-disburse', { body: { appeal_id: appealId } });
       if (error) throw error;
-      if (data?.ok && !data?.already) {
+      if (data?.ok && data?.pending_guarantor) {
+        toast({ title: 'Appeal approved', description: 'Guarantor(s) have been sent an approval code. Money is released once they approve.' });
+      } else if (data?.ok && !data?.already) {
         toast({ title: 'Loan auto-disbursed', description: 'Funds credited to the borrower\u2019s wallet.' });
       } else if (data?.ok === false) {
         console.warn('disburse skipped', data.error);
