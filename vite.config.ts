@@ -6,7 +6,10 @@ import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/supabase/vite";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: './',
+  // Relative base is only for the Capacitor (Android/iOS) bundle, which loads
+  // index.html from the filesystem. The web build must use '/' so deep links
+  // like /admin/treasury resolve assets correctly on refresh.
+  base: process.env.CAPACITOR_BUILD === 'true' ? './' : '/',
   server: {
     host: "::",
     port: 8080,
