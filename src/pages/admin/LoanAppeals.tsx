@@ -94,7 +94,9 @@ export default function LoanAppeals() {
     try {
       const { data, error } = await supabase.functions.invoke('loan-appeal-disburse', { body: { appeal_id: appealId } });
       if (error) throw error;
-      if (data?.ok && !data?.already) {
+      if (data?.ok && data?.pending_guarantor) {
+        toast({ title: 'Appeal approved', description: 'Guarantor(s) have been sent an approval code. Money is released once they approve.' });
+      } else if (data?.ok && !data?.already) {
         toast({ title: 'Loan auto-disbursed', description: 'Funds credited to the borrower\u2019s wallet.' });
       } else if (data?.ok === false) {
         console.warn('disburse skipped', data.error);
@@ -220,6 +222,14 @@ export default function LoanAppeals() {
               <div className="font-semibold">UGX {Number(a.offered_amount).toLocaleString()}</div>
             </div>
           </div>
+          {a.loan_type !== 'pure_salary' && (
+            <div className="rounded border p-2 text-xs">
+              <span className="font-semibold">Guarantor(s): </span>
+              {(a as any).guarantor_name
+                ? [(a as any).guarantor_name, (a as any).guarantor2_name].filter(Boolean).join(', ') + ' — will sign with a code after approval'
+                : 'None chosen yet — borrower must pick one after approval before money is sent'}
+            </div>
+          )}
           <div>
             <div className="text-xs font-semibold mb-1">Justification</div>
             <div className="rounded border bg-background p-2 whitespace-pre-wrap">{a.justification}</div>

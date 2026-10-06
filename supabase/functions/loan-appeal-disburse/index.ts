@@ -20,11 +20,27 @@ serve(async (req) => {
     const { data: userData } = await supabase.auth.getUser(token);
     if (!userData?.user) return ok({ ok: false, error: "Unauthorized" });
 
-    // Only loan-appeal admins can trigger
     const { data: isAdmin } = await supabase.rpc("is_loan_appeal_admin", { _uid: userData.user.id });
-    if (!isAdmin) return ok({ ok: false, error: "Forbidden" });
+    const reqBody = await req.json();
+    const action = reqBody.action || "decide";
+    let appeal_id = reqBody.appeal_id;
+    let existingLoan: any = null;
 
-    const { appeal_id } = await req.json();
+    if (action === "finalize") {
+      // Called once every guarantor has approved with their code
+      const { data: l } = await supabase.from("loans").select("*").eq("id", reqBody.loan_id).maybeSingle();
+      if (!l || !(l as any).approved_via_appeal) return ok({ ok: false, error: "Appeal loan not found" });
+      const callerEmail = (userData.user.email || "").toLowerCase();
+      const isGuarantor = [l.guarantor_email, l.guarantor2_email].some((e: any) => (e || "").toLowerCase() === callerEmail);
+      if (!isAdmin && !isGuarantor) return ok({ ok: false, error: "Forbidden" });
+      if (l.status === "active") return ok({ ok: true, already: true, loan_id: l.id });
+      const allSigned = !!l.guarantor_approved && (!l.guarantor2_email || !!l.guarantor2_approved);
+      if (!allSigned) return ok({ ok: false, error: "Waiting for guarantor approval" });
+      existingLoan = l;
+      appeal_id = (l as any).appeal_id;
+    } else if (!isAdmin) {
+      return ok({ ok: false, error: "Forbidden" });
+    }
     if (!appeal_id) return ok({ ok: false, error: "appeal_id required" });
 
     // Load appeal
@@ -34,7 +50,7 @@ serve(async (req) => {
     if (!["decided_approve", "decided_counter"].includes(appeal.status)) {
       return ok({ ok: false, error: `Appeal not in disbursable status (${appeal.status})` });
     }
-    if (appeal.resulting_loan_id) {
+    if (appeal.resulting_loan_id && !existingLoan) {
       return ok({ ok: true, already: true, loan_id: appeal.resulting_loan_id });
     }
 
@@ -99,8 +115,7 @@ serve(async (req) => {
       ? Math.ceil(totalRepayable / halfSalary)
       : months;
 
-    // Insert loan (auto-approved via appeal — no guarantor required, no fee deducted)
-    const { data: loanRow, error: lErr } = await supabase.from("loans").insert({
+    const baseLoan: any = {
       employee_id: emp.id,
       employee_email: emp.email,
       employee_name: emp.name,
@@ -113,18 +128,80 @@ serve(async (req) => {
       monthly_installment: monthlyInstallment,
       remaining_balance: totalRepayable,
       repayment_frequency: "monthly",
-      status: "active",
-      guarantor_approved: true,
       loan_type: appeal.loan_type || "quick",
-      start_date: new Date().toISOString().split("T")[0],
       admin_approved_by: "Admin Panel (Appeal)",
       admin_approved_at: new Date().toISOString(),
       appeal_id: appeal.id,
       appeal_admin_voters: votersForRecord,
       approved_via_appeal: true,
-    } as any).select().single();
+    };
 
-    if (lErr || !loanRow) return ok({ ok: false, error: `Loan insert failed: ${lErr?.message}` });
+    const needsGuarantors = !isPureSalary;
+    if (!existingLoan && needsGuarantors) {
+      // Guarantors must sign with their code before any money moves — same as normal loans
+      const hasG1 = !!appeal.guarantor_email;
+      const code1 = Math.floor(100000 + Math.random() * 900000).toString();
+      const code2 = appeal.guarantor2_email ? Math.floor(100000 + Math.random() * 900000).toString() : null;
+      const { data: pl, error: pErr } = await supabase.from("loans").insert({
+        ...baseLoan,
+        status: hasG1 ? "pending_guarantor" : "guarantor_declined",
+        admin_rejection_reason: hasG1 ? null : "Appeal approved — select a guarantor to continue",
+        guarantor_id: appeal.guarantor_id, guarantor_email: appeal.guarantor_email,
+        guarantor_name: appeal.guarantor_name, guarantor_phone: appeal.guarantor_phone || "",
+        guarantor_approval_code: hasG1 ? code1 : null, guarantor_approved: false,
+        guarantor2_id: appeal.guarantor2_id, guarantor2_email: appeal.guarantor2_email,
+        guarantor2_name: appeal.guarantor2_name, guarantor2_phone: appeal.guarantor2_phone || null,
+        guarantor2_approval_code: code2, guarantor2_approved: false,
+      } as any).select().single();
+      if (pErr || !pl) return ok({ ok: false, error: `Loan insert failed: ${pErr?.message}` });
+      await supabase.from("loan_appeals").update({ resulting_loan_id: (pl as any).id }).eq("id", appeal.id);
+
+      const gList = [
+        hasG1 ? { name: appeal.guarantor_name, email: appeal.guarantor_email, phone: appeal.guarantor_phone, code: code1, slot: "g1" } : null,
+        code2 ? { name: appeal.guarantor2_name, email: appeal.guarantor2_email, phone: appeal.guarantor2_phone, code: code2, slot: "g2" } : null,
+      ].filter(Boolean) as any[];
+      for (const g of gList) {
+        try {
+          if (g.phone) await supabase.functions.invoke("send-sms", { body: {
+            phone: g.phone, userName: g.name, recipientEmail: g.email, messageType: "loan_guarantor_code", priority: "premium",
+            message: `Great Agro Coffee\nHi ${String(g.name || "").split(" ")[0]}, admins approved ${emp.name}'s loan appeal of UGX ${principal.toLocaleString()} for ${months} months. You are the guarantor. Approval code: ${g.code}. Log into the system to approve or reject.`,
+          } });
+        } catch (e) { console.warn("guarantor sms failed", e); }
+        try {
+          await supabase.functions.invoke("send-transactional-email", { body: {
+            templateName: "loan-guarantor-code", recipientEmail: g.email,
+            idempotencyKey: `appeal-guarantor-${appeal.id}-${g.slot}`,
+            templateData: { guarantorName: g.name, borrowerName: emp.name, loanAmount: principal.toLocaleString(), duration: String(months), approvalCode: g.code },
+          } });
+        } catch (e) { console.warn("guarantor email failed", e); }
+      }
+      // Tell the borrower where things stand
+      const msg = hasG1
+        ? `Admins approved your loan appeal for UGX ${principal.toLocaleString()} over ${months} month(s). Your guarantor${gList.length > 1 ? "s have" : " has"} been sent an approval code. The money is sent to your wallet once ${gList.length > 1 ? "they both approve" : "they approve"}.`
+        : `Admins approved your loan appeal for UGX ${principal.toLocaleString()} over ${months} month(s). Please log in and choose a guarantor for this loan. The money is sent once your guarantor approves.`;
+      try {
+        await supabase.functions.invoke("send-transactional-email", { body: {
+          templateName: "general-notification", recipientEmail: emp.email,
+          idempotencyKey: `appeal-awaiting-guarantor-${appeal.id}`,
+          templateData: { title: "Loan Appeal Approved — Awaiting Guarantor", recipientName: emp.name, message: msg },
+        } });
+      } catch (e) { console.warn("borrower email failed", e); }
+      return ok({ ok: true, loan_id: (pl as any).id, pending_guarantor: true });
+    }
+
+    let loanRow: any; let lErr: any;
+    if (existingLoan) {
+      ({ data: loanRow, error: lErr } = await supabase.from("loans")
+        .update({ ...baseLoan, status: "active", start_date: new Date().toISOString().split("T")[0] } as any)
+        .eq("id", existingLoan.id).eq("status", "pending_guarantor").select().single());
+    } else {
+      ({ data: loanRow, error: lErr } = await supabase.from("loans").insert({
+        ...baseLoan, status: "active", guarantor_approved: true,
+        start_date: new Date().toISOString().split("T")[0],
+      } as any).select().single());
+    }
+
+    if (lErr || !loanRow) return ok({ ok: false, error: `Loan activation failed: ${lErr?.message}` });
 
     const loanId = (loanRow as any).id;
 

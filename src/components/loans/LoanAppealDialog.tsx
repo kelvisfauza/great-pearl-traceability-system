@@ -16,10 +16,12 @@ interface Props {
   loanType: string;
   requestedAmount: number;
   requestedTerm: number;
+  guarantors?: any[];
+  guarantorsRequired?: number;
   onSubmitted?: () => void;
 }
 
-export default function LoanAppealDialog({ open, onOpenChange, evaluation, employee, loanType, requestedAmount, requestedTerm, onSubmitted }: Props) {
+export default function LoanAppealDialog({ open, onOpenChange, evaluation, employee, loanType, requestedAmount, requestedTerm, guarantors = [], guarantorsRequired = 0, onSubmitted }: Props) {
   const { toast } = useToast();
   const [justification, setJustification] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -30,6 +32,11 @@ export default function LoanAppealDialog({ open, onOpenChange, evaluation, emplo
   const submit = async () => {
     if (justification.trim().length < 30) {
       toast({ title: 'Add more detail', description: 'Please write at least 30 characters explaining why.', variant: 'destructive' });
+      return;
+    }
+    const gs = (guarantors || []).filter(Boolean);
+    if (gs.length < guarantorsRequired) {
+      toast({ title: 'Select guarantor first', description: `This loan needs ${guarantorsRequired} guarantor(s). Pick them in the application form, then appeal.`, variant: 'destructive' });
       return;
     }
     setSubmitting(true);
@@ -48,8 +55,18 @@ export default function LoanAppealDialog({ open, onOpenChange, evaluation, emplo
         requested_term_months: requestedTerm,
         justification: justification.trim(),
         evaluation_snapshot: evaluation || {},
+        guarantor_id: gs[0]?.id || null, guarantor_email: gs[0]?.email || null,
+        guarantor_name: gs[0]?.name || null, guarantor_phone: gs[0]?.phone || null,
+        guarantor2_id: gs[1]?.id || null, guarantor2_email: gs[1]?.email || null,
+        guarantor2_name: gs[1]?.name || null, guarantor2_phone: gs[1]?.phone || null,
       });
       if (error) throw error;
+      // Confirmation emails: borrower + each guarantor
+      const notify = (to: string, name: string, title: string, message: string, key: string) =>
+        supabase.functions.invoke('send-transactional-email', { body: { templateName: 'general-notification', recipientEmail: to, idempotencyKey: key, templateData: { title, recipientName: name, message } } }).catch(() => {});
+      const stamp = Date.now();
+      if (employee?.email) notify(employee.email, employee.name, 'Loan Appeal Submitted', `Your appeal for UGX ${requestedAmount.toLocaleString()} (${requestedTerm} months) has been received. Three admins will review it.${gs.length ? ` If approved, your guarantor${gs.length > 1 ? 's' : ''} (${gs.map((g: any) => g.name).join(', ')}) will receive an approval code to sign before any money is sent.` : ''}`, `appeal-submitted-${uid}-${stamp}`);
+      gs.forEach((g: any, i: number) => g?.email && notify(g.email, g.name, 'You are listed as a loan guarantor', `${employee?.name} has appealed a loan decision for UGX ${requestedAmount.toLocaleString()} over ${requestedTerm} months and listed you as guarantor. If admins approve the appeal, you will receive an approval code by SMS and email to approve or reject it.`, `appeal-guarantor-listed-${uid}-${i}-${stamp}`));
       toast({ title: 'Appeal submitted', description: 'Admins will review. You will be notified once 3 admins decide.' });
       onOpenChange(false);
       setJustification('');
@@ -76,6 +93,9 @@ export default function LoanAppealDialog({ open, onOpenChange, evaluation, emplo
               <div className="flex justify-between"><span>You requested:</span><strong>UGX {requestedAmount.toLocaleString()}</strong></div>
               <div className="flex justify-between"><span>System offered:</span><strong>UGX {offered.toLocaleString()}</strong></div>
               <div className="flex justify-between"><span>Term requested:</span><strong>{requestedTerm} months</strong></div>
+              {(guarantors || []).filter(Boolean).length > 0 && (
+                <div className="flex justify-between"><span>Guarantor(s):</span><strong>{(guarantors || []).filter(Boolean).map((g: any) => g.name).join(', ')}</strong></div>
+              )}
               <div className="flex justify-between"><span>Decision:</span><strong className="uppercase">{evaluation?.decision}</strong></div>
               {factors.length > 0 && (
                 <div className="pt-1 text-xs text-muted-foreground">
