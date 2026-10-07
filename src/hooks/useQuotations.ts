@@ -41,6 +41,21 @@ export interface QuotationMessage {
   created_at: string;
 }
 
+export interface QuotationRevision {
+  id: string;
+  quotation_id: string;
+  revision_number: number;
+  previous_amount: number | null;
+  amount: number | null;
+  previous_file_path: string | null;
+  previous_file_name: string | null;
+  file_path: string | null;
+  file_name: string | null;
+  changes_summary: string | null;
+  attached_by: string | null;
+  created_at: string;
+}
+
 export const QUOTATION_STATUS_LABEL: Record<string, string> = {
   submitted: 'Awaiting procurement review',
   revision_requested: 'Revision requested',
@@ -53,6 +68,7 @@ export const QUOTATION_STATUS_LABEL: Record<string, string> = {
 export const useQuotations = () => {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [messages, setMessages] = useState<Record<string, QuotationMessage[]>>({});
+  const [revisions, setRevisions] = useState<Record<string, QuotationRevision[]>>({});
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
@@ -74,6 +90,16 @@ export const useQuotations = () => {
         (grouped[m.quotation_id] ||= []).push(m);
       });
       setMessages(grouped);
+
+      const { data: revs } = await (supabase as any)
+        .from('quotation_revisions')
+        .select('*')
+        .order('created_at', { ascending: true });
+      const rg: Record<string, QuotationRevision[]> = {};
+      ((revs || []) as QuotationRevision[]).forEach((r) => {
+        (rg[r.quotation_id] ||= []).push(r);
+      });
+      setRevisions(rg);
     } catch (err) {
       console.error('Failed to load quotations:', err);
     } finally {
@@ -155,6 +181,43 @@ export const useQuotations = () => {
     await refresh();
   };
 
+  const attachRevision = async (
+    q: Quotation,
+    opts: { file: File | null; amount: number | null; changes: string },
+    by: { name?: string | null; email?: string | null },
+  ) => {
+    let file_path = q.file_path;
+    let file_name = q.file_name;
+    if (opts.file) {
+      const up = await uploadFile(opts.file);
+      file_path = up.path;
+      file_name = up.name;
+    }
+    const prev = revisions[q.id] || [];
+    const { error: rErr } = await (supabase as any).from('quotation_revisions').insert({
+      quotation_id: q.id,
+      revision_number: prev.length + 1,
+      previous_amount: q.amount,
+      amount: opts.amount,
+      previous_file_path: q.file_path,
+      previous_file_name: q.file_name,
+      file_path,
+      file_name,
+      changes_summary: opts.changes || null,
+      attached_by: by.name || by.email || null,
+      attached_by_email: by.email || null,
+    });
+    if (rErr) throw rErr;
+    const { error } = await (supabase as any).from('quotations').update({
+      amount: opts.amount,
+      file_path,
+      file_name,
+      status: 'submitted',
+    }).eq('id', q.id);
+    if (error) throw error;
+    await refresh();
+  };
+
   const notifyCompany = async (opts: {
     quotationId: string;
     subject: string;
@@ -172,11 +235,13 @@ export const useQuotations = () => {
   return {
     quotations,
     messages,
+    revisions,
     loading,
     refresh,
     createQuotation,
     recordProcurementDecision,
     recordApproval,
     notifyCompany,
+    attachRevision,
   };
 };
