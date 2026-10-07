@@ -76,6 +76,9 @@ const AttendanceTimeManager = () => {
   // Report filter
   const [reportPeriod, setReportPeriod] = useState('month');
   const [rankings, setRankings] = useState<RankingEntry[]>([]);
+  // Historical month picker (e.g. view September, July rankings)
+  const [customMonth, setCustomMonth] = useState(format(new Date(), 'yyyy-MM'));
+  const [customRecords, setCustomRecords] = useState<AttendanceRecord[]>([]);
 
   // Records filter state
   const [filterDateFrom, setFilterDateFrom] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
@@ -88,8 +91,34 @@ const AttendanceTimeManager = () => {
   }, []);
 
   useEffect(() => {
-    if (records.length > 0) computeRankings();
-  }, [records, reportPeriod]);
+    if (reportPeriod === 'custom') {
+      fetchCustomMonthRecords();
+    } else if (records.length > 0) {
+      computeRankings();
+    }
+  }, [records, reportPeriod, customMonth]);
+
+  // Fetch all records for a specific past month (not limited to the latest 500)
+  const fetchCustomMonthRecords = async () => {
+    try {
+      const monthStart = startOfMonth(new Date(customMonth + '-01'));
+      const monthEnd = endOfMonth(monthStart);
+      const { data, error } = await supabase
+        .from('attendance_time_records')
+        .select('*')
+        .gte('record_date', format(monthStart, 'yyyy-MM-dd'))
+        .lte('record_date', format(monthEnd, 'yyyy-MM-dd'));
+      if (error) throw error;
+      setCustomRecords((data as any[]) || []);
+    } catch (err: any) {
+      toast.error('Failed to load that month: ' + err.message);
+      setCustomRecords([]);
+    }
+  };
+
+  useEffect(() => {
+    if (reportPeriod === 'custom') computeRankings();
+  }, [customRecords]);
 
   const fetchCompanyWorkers = async () => {
     try {
@@ -397,15 +426,21 @@ const AttendanceTimeManager = () => {
   const computeRankingsImpl = () => {
     const now = new Date();
     let start: Date, end: Date;
+    let source = records;
     if (reportPeriod === 'week') {
       start = startOfWeek(now, { weekStartsOn: 1 });
       end = endOfWeek(now, { weekStartsOn: 1 });
+    } else if (reportPeriod === 'custom') {
+      const monthStart = startOfMonth(new Date(customMonth + '-01'));
+      start = monthStart;
+      end = endOfMonth(monthStart);
+      source = customRecords;
     } else {
       start = startOfMonth(now);
       end = endOfMonth(now);
     }
 
-    const filtered = records.filter(r => {
+    const filtered = source.filter(r => {
       const d = new Date(r.record_date);
       return d >= start && d <= end;
     });
@@ -894,15 +929,42 @@ const AttendanceTimeManager = () => {
 
         {/* RANKINGS TAB */}
         <TabsContent value="rankings" className="space-y-4">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <Label>Period:</Label>
             <Select value={reportPeriod} onValueChange={setReportPeriod}>
-              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="week">This Week</SelectItem>
                 <SelectItem value="month">This Month</SelectItem>
+                <SelectItem value="custom">Previous Month…</SelectItem>
               </SelectContent>
             </Select>
+            {reportPeriod === 'custom' && (
+              <div className="flex items-center gap-2">
+                <Select
+                  value={customMonth.split('-')[1]}
+                  onValueChange={(m) => setCustomMonth(`${customMonth.split('-')[0]}-${m}`)}
+                >
+                  <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {['January','February','March','April','May','June','July','August','September','October','November','December'].map((name, i) => (
+                      <SelectItem key={name} value={String(i + 1).padStart(2, '0')}>{name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={customMonth.split('-')[0]}
+                  onValueChange={(y) => setCustomMonth(`${y}-${customMonth.split('-')[1]}`)}
+                >
+                  <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(y => (
+                      <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           {/* Summary Cards */}
