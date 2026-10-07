@@ -7,6 +7,7 @@ import { Landmark, RefreshCw, Send, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import PartPayControl from '@/components/finance/PartPayControl';
+import { waitForFunds } from '@/lib/waitForFunds';
 import { ReleaseReceiptDialog } from '@/components/finance/ReleaseReceiptDialog';
 import type { ReleaseReceiptData } from '@/utils/financeReleaseReceipt';
 
@@ -25,6 +26,7 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
   const [iwRejecting, setIwRejecting] = useState<string | null>(null);
   const [iwReason, setIwReason] = useState('');
   const [receipt, setReceipt] = useState<ReleaseReceiptData | null>(null);
+  const [iwWait, setIwWait] = useState<Record<string, number>>({});
 
   const load = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
@@ -75,8 +77,13 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
   };
   const releaseIw = async (w: any) => {
     setBusy(w.id);
-    const { data, error } = await supabase.functions.invoke('dispatch-gosente-instant', { body: { instant_withdrawal_id: w.id } });
+    const { data, error, timedOut } = await waitForFunds(
+      () => supabase.functions.invoke('dispatch-gosente-instant', { body: { instant_withdrawal_id: w.id } }),
+      (sec) => setIwWait((x) => ({ ...x, [w.id]: sec })),
+    );
+    setIwWait((x) => { const n = { ...x }; delete n[w.id]; return n; });
     setBusy(null);
+    if (timedOut) { toast.error('Not funded after 2 minutes — marked as failed. Fund GosentePay and tap Try again.'); load(); return; }
     if (error || !data?.ok) { toast.error(data?.error || error?.message || 'Payout failed — still waiting, you can retry'); load(); return; }
     const { data: s } = await supabase.auth.getSession();
     setReceipt({
@@ -156,7 +163,7 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
                 </div>
                 <div className="flex gap-2 items-end">
                   <PartPayControl sourceType="withdrawal" sourceId={w.id} totalAmount={Number(w.amount)} payeeName={w.employee_name} onChanged={() => load()} />
-                  <Button size="sm" disabled={busy === w.id} onClick={() => releaseIw(w)}>Release</Button>
+                  <Button size="sm" disabled={busy === w.id} onClick={() => releaseIw(w)}>{iwWait[w.id] != null ? `Waiting for funds… ${iwWait[w.id]}s` : w.last_error ? 'Try again' : 'Release'}</Button>
                   <Button size="sm" variant="outline" disabled={busy === w.id} onClick={() => sendBackIw(w)}>Send back</Button>
                   <Button size="sm" variant="outline" disabled={busy === w.id} onClick={() => setIwRejecting(iwRejecting === w.id ? null : w.id)}><XCircle className="h-4 w-4 mr-1" /> Reject</Button>
                 </div>
