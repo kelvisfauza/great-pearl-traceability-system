@@ -67,6 +67,11 @@ serve(async (req) => {
       return respond(false, { error: `Payout already ${reqRow.payout_status}` });
     }
 
+    const { data: pp } = await svc.from("partial_payments").select("paid_amount, balance")
+      .eq("source_type", "expense").eq("source_id", requestId).maybeSingle();
+    if (pp && Number(pp.paid_amount) > 0) {
+      return respond(false, { error: `UGX ${Number(pp.paid_amount).toLocaleString()} was already part-paid. Use "Pay balance" to pay the remaining UGX ${Number(pp.balance).toLocaleString()}.` });
+    }
     const amount = Number(reqRow.amount) || 0;
     if (amount <= 0) return respond(false, { error: "Invalid amount" });
 

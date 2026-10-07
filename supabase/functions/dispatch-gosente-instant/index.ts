@@ -71,6 +71,15 @@ serve(async (req) => {
       return respond(true, { awaiting_finance: true });
     }
 
+    // Part-paid withdrawals can only be finished through "Pay balance"
+    if (["finance_reject", "send_back", "release", undefined, null, ""].includes(action as any) || action === "finance_release") {
+      const { data: pp } = await supabase.from("partial_payments").select("paid_amount, balance")
+        .eq("source_type", "withdrawal").eq("source_id", instant_withdrawal_id).maybeSingle();
+      if (pp && Number(pp.paid_amount) > 0) {
+        return respond(false, { error: `UGX ${Number(pp.paid_amount).toLocaleString()} was already part-paid. Use "Pay balance" to pay the remaining UGX ${Number(pp.balance).toLocaleString()}.` });
+      }
+    }
+
     if (action === "finance_reject") {
       if (!isFinance) return respond(false, { error: "Only Finance can reject" });
       const { data: upd } = await supabase.from("instant_withdrawals").update({
