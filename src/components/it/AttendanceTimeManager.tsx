@@ -76,6 +76,9 @@ const AttendanceTimeManager = () => {
   // Report filter
   const [reportPeriod, setReportPeriod] = useState('month');
   const [rankings, setRankings] = useState<RankingEntry[]>([]);
+  // Historical month picker (e.g. view September, July rankings)
+  const [customMonth, setCustomMonth] = useState(format(new Date(), 'yyyy-MM'));
+  const [customRecords, setCustomRecords] = useState<AttendanceRecord[]>([]);
 
   // Records filter state
   const [filterDateFrom, setFilterDateFrom] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
