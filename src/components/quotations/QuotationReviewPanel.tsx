@@ -13,6 +13,7 @@ import QuotationViewer from './QuotationViewer';
 import QuotationFormDialog from './QuotationFormDialog';
 import QuotationReplyBox from './QuotationReplyBox';
 import QuotationRevisionDialog from './QuotationRevisionDialog';
+import QuotationJourney from './QuotationJourney';
 
 const statusVariant = (status: string) => {
   if (status === 'approved') return 'default' as const;
@@ -78,26 +79,7 @@ const QuotationReviewPanel = () => {
         )}
 
         {(revisions[q.id] || []).length > 0 && (
-          <div className="space-y-1">
-            <p className="text-xs font-medium text-muted-foreground">Revisions</p>
-            {(revisions[q.id] || []).map((r) => (
-              <div key={r.id} className="text-xs rounded border p-2 space-y-1">
-                <p>
-                  <span className="font-medium">Revision {r.revision_number}</span>
-                  {' · '}{q.currency} {r.previous_amount != null ? new Intl.NumberFormat('en-UG').format(r.previous_amount) : '—'}
-                  {' → '}<span className="font-semibold">{r.amount != null ? new Intl.NumberFormat('en-UG').format(r.amount) : '—'}</span>
-                  <span className="text-muted-foreground"> · {new Date(r.created_at).toLocaleString()} · {r.attached_by}</span>
-                </p>
-                {r.changes_summary && <p>{r.changes_summary}</p>}
-                {r.previous_file_path && r.previous_file_path !== r.file_path && (
-                  <details>
-                    <summary className="cursor-pointer text-muted-foreground">View earlier document</summary>
-                    <QuotationViewer path={r.previous_file_path} name={r.previous_file_name} />
-                  </details>
-                )}
-              </div>
-            ))}
-          </div>
+          <QuotationJourney quotation={q} revisions={revisions[q.id] || []} />
         )}
 
         <div className="flex flex-wrap gap-2">

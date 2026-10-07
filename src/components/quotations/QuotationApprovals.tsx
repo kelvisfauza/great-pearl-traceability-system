@@ -10,12 +10,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQuotations, QUOTATION_STATUS_LABEL } from '@/hooks/useQuotations';
 import QuotationViewer from './QuotationViewer';
 import QuotationReplyBox from './QuotationReplyBox';
+import QuotationJourney from './QuotationJourney';
 
 /** Management approval of quotations already recommended by procurement. */
 const QuotationApprovals = () => {
   const { employee } = useAuth();
   const { toast } = useToast();
-  const { quotations, loading, refresh, recordApproval, notifyCompany } = useQuotations();
+  const { quotations, revisions, loading, refresh, recordApproval, notifyCompany } = useQuotations();
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -70,6 +71,9 @@ const QuotationApprovals = () => {
                 {q.procurement_by ? ` — ${q.procurement_by}` : ''}
               </p>
             )}
+
+            <QuotationJourney quotation={q} revisions={revisions[q.id] || []} />
+
 
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={() => setOpenId(openId === q.id ? null : q.id)}>
