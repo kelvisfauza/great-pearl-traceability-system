@@ -91,8 +91,34 @@ const AttendanceTimeManager = () => {
   }, []);
 
   useEffect(() => {
-    if (records.length > 0) computeRankings();
-  }, [records, reportPeriod]);
+    if (reportPeriod === 'custom') {
+      fetchCustomMonthRecords();
+    } else if (records.length > 0) {
+      computeRankings();
+    }
+  }, [records, reportPeriod, customMonth]);
+
+  // Fetch all records for a specific past month (not limited to the latest 500)
+  const fetchCustomMonthRecords = async () => {
+    try {
+      const monthStart = startOfMonth(new Date(customMonth + '-01'));
+      const monthEnd = endOfMonth(monthStart);
+      const { data, error } = await supabase
+        .from('attendance_time_records')
+        .select('*')
+        .gte('record_date', format(monthStart, 'yyyy-MM-dd'))
+        .lte('record_date', format(monthEnd, 'yyyy-MM-dd'));
+      if (error) throw error;
+      setCustomRecords((data as any[]) || []);
+    } catch (err: any) {
+      toast.error('Failed to load that month: ' + err.message);
+      setCustomRecords([]);
+    }
+  };
+
+  useEffect(() => {
+    if (reportPeriod === 'custom') computeRankings();
+  }, [customRecords]);
 
   const fetchCompanyWorkers = async () => {
     try {
