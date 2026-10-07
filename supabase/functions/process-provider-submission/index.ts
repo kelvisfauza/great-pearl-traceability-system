@@ -857,10 +857,10 @@ serve(async (req) => {
     if (!reservedTreasury.ok) {
       // Put it back in the queue so it can be released once the account is funded
       await supabase.from("provider_submission_requests")
-        .update({ status: isFinanceRelease ? "awaiting_finance" : "pending", payout_message: `Not paid: ${reservedTreasury.error || "Operations account empty"}` })
+        .update({ status: isFinanceRelease ? "awaiting_finance" : "pending", payout_status: "failed", payout_message: `Not funded: ${reservedTreasury.error || "Operations account empty"}` })
         .eq("id", submission.id).eq("status", "processing");
       return new Response(
-        JSON.stringify({ ok: false, success: false, error: reservedTreasury.error || "Operations / Procurement account cannot cover this payment" }),
+        JSON.stringify({ ok: false, success: false, code: "TREASURY_INSUFFICIENT", error: reservedTreasury.error || "Operations / Procurement account cannot cover this payment" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }

@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Banknote, Smartphone, Wallet, HandCoins } from 'lucide-react';
 import ReleaseReceiptDialog from '@/components/finance/ReleaseReceiptDialog';
 import PartPayControl from '@/components/finance/PartPayControl';
+import { waitForFunds } from '@/lib/waitForFunds';
 
 type PayMethod = 'momo' | 'gosente' | 'cash';
 
@@ -18,6 +19,7 @@ const FinanceProviderReleases: React.FC = () => {
   const [releasing, setReleasing] = useState<string | null>(null);
   const [method, setMethod] = useState<Record<string, PayMethod>>({});
   const [receipt, setReceipt] = useState<any>(null);
+  const [waiting, setWaiting] = useState<Record<string, number>>({});
 
   const { data: submissions = [], isLoading } = useQuery({
     queryKey: ['finance-provider-releases'],
@@ -36,9 +38,17 @@ const FinanceProviderReleases: React.FC = () => {
     const mode = method[s.id] || 'momo';
     setReleasing(s.id);
     try {
-      const { data, error } = await supabase.functions.invoke('process-provider-submission', {
-        body: { action: 'finance_release', submissionId: s.id, paymentMode: mode },
-      });
+      const { data, error, timedOut } = await waitForFunds(
+        () => supabase.functions.invoke('process-provider-submission', {
+          body: { action: 'finance_release', submissionId: s.id, paymentMode: mode },
+        }),
+        (sec) => setWaiting((w) => ({ ...w, [s.id]: sec })),
+      );
+      setWaiting((w) => { const n = { ...w }; delete n[s.id]; return n; });
+      if (timedOut) {
+        queryClient.invalidateQueries({ queryKey: ['finance-provider-releases'] });
+        throw new Error('Not funded after 2 minutes — marked as failed. Fund the account and tap Try again.');
+      }
       if (error) throw error;
       if (!(data as any)?.ok) throw new Error((data as any)?.error || 'Release failed');
       toast({ title: 'Released', description: (data as any)?.message || 'Payment released' });
@@ -144,7 +154,7 @@ const FinanceProviderReleases: React.FC = () => {
                   <p className="text-sm bg-muted/50 p-2 rounded">{s.description}</p>
                   {s.payout_status === 'failed' && (
                     <div className="text-xs bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded px-2 py-1.5">
-                      <strong>Previous payout failed.</strong> {s.payout_message || 'The payment provider rejected it.'} Fix the issue and release again.
+                      <strong>Previous payout failed.</strong> {s.payout_message || 'The payment provider rejected it.'} Fund the account, then tap Try again.
                     </div>
                   )}
                   <div className="flex items-center justify-between flex-wrap gap-2">
@@ -181,7 +191,7 @@ const FinanceProviderReleases: React.FC = () => {
                       ) : (
                         <HandCoins className="w-3 h-3 mr-1" />
                       )}
-                      {m === 'cash' ? 'Confirm Cash Payout' : m === 'gosente' ? 'Release via GosentePay' : 'Release via Yo Payments'}
+                      {waiting[s.id] != null ? `Waiting for funds… ${waiting[s.id]}s` : s.payout_status === 'failed' ? 'Try again' : m === 'cash' ? 'Confirm Cash Payout' : m === 'gosente' ? 'Release via GosentePay' : 'Release via Yo Payments'}
                     </Button>
                     </div>
                   </div>
