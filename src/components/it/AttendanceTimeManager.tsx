@@ -929,15 +929,42 @@ const AttendanceTimeManager = () => {
 
         {/* RANKINGS TAB */}
         <TabsContent value="rankings" className="space-y-4">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <Label>Period:</Label>
             <Select value={reportPeriod} onValueChange={setReportPeriod}>
-              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="week">This Week</SelectItem>
                 <SelectItem value="month">This Month</SelectItem>
+                <SelectItem value="custom">Previous Month…</SelectItem>
               </SelectContent>
             </Select>
+            {reportPeriod === 'custom' && (
+              <div className="flex items-center gap-2">
+                <Select
+                  value={customMonth.split('-')[1]}
+                  onValueChange={(m) => setCustomMonth(`${customMonth.split('-')[0]}-${m}`)}
+                >
+                  <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {['January','February','March','April','May','June','July','August','September','October','November','December'].map((name, i) => (
+                      <SelectItem key={name} value={String(i + 1).padStart(2, '0')}>{name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={customMonth.split('-')[0]}
+                  onValueChange={(y) => setCustomMonth(`${y}-${customMonth.split('-')[1]}`)}
+                >
+                  <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(y => (
+                      <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           {/* Summary Cards */}
