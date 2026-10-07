@@ -12,20 +12,11 @@ import { useQuotations, QUOTATION_STATUS_LABEL, type Quotation } from '@/hooks/u
 import QuotationViewer from './QuotationViewer';
 import QuotationFormDialog from './QuotationFormDialog';
 import QuotationReplyBox from './QuotationReplyBox';
-
-const statusVariant = (status: string) => {
-  if (status === 'approved') return 'default' as const;
-  if (status === 'rejected' || status === 'rejected_procurement') return 'destructive' as const;
-  if (status === 'recommended') return 'secondary' as const;
-  return 'outline' as const;
-};
-
-const QuotationReviewPanel = () => {
-  const { employee } = useAuth();
-  const { toast } = useToast();
+import QuotationRevisionDialog from './QuotationRevisionDialog';
+...
   const {
-    quotations, messages, loading, refresh,
-    createQuotation, recordProcurementDecision, notifyCompany,
+    quotations, messages, revisions, loading, refresh,
+    createQuotation, recordProcurementDecision, notifyCompany, attachRevision,
   } = useQuotations();
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
@@ -76,10 +67,39 @@ const QuotationReviewPanel = () => {
           </p>
         )}
 
+        {(revisions[q.id] || []).length > 0 && (
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-muted-foreground">Revisions</p>
+            {(revisions[q.id] || []).map((r) => (
+              <div key={r.id} className="text-xs rounded border p-2 space-y-1">
+                <p>
+                  <span className="font-medium">Revision {r.revision_number}</span>
+                  {' · '}{q.currency} {r.previous_amount != null ? new Intl.NumberFormat('en-UG').format(r.previous_amount) : '—'}
+                  {' → '}<span className="font-semibold">{r.amount != null ? new Intl.NumberFormat('en-UG').format(r.amount) : '—'}</span>
+                  <span className="text-muted-foreground"> · {new Date(r.created_at).toLocaleString()} · {r.attached_by}</span>
+                </p>
+                {r.changes_summary && <p>{r.changes_summary}</p>}
+                {r.previous_file_path && r.previous_file_path !== r.file_path && (
+                  <details>
+                    <summary className="cursor-pointer text-muted-foreground">View earlier document</summary>
+                    <QuotationViewer path={r.previous_file_path} name={r.previous_file_name} />
+                  </details>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => setOpenId(expanded ? null : q.id)}>
             <FileText className="h-4 w-4 mr-1" /> {expanded ? 'Hide details' : 'Open quotation'}
           </Button>
+          {q.status === 'revision_requested' && (
+            <QuotationRevisionDialog
+              quotation={q}
+              onSubmit={(o) => attachRevision(q, o, { name: employee?.name, email: employee?.email })}
+            />
+          )}
           {allowDecision && (
             <>
               <Button size="sm" onClick={() => decide(q, 'recommended')} disabled={busy === q.id}>
