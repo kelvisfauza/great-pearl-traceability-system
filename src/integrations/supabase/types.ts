@@ -10897,6 +10897,62 @@ export type Database = {
           },
         ]
       }
+      quotation_revisions: {
+        Row: {
+          amount: number | null
+          attached_by: string | null
+          attached_by_email: string | null
+          changes_summary: string | null
+          created_at: string
+          file_name: string | null
+          file_path: string | null
+          id: string
+          previous_amount: number | null
+          previous_file_name: string | null
+          previous_file_path: string | null
+          quotation_id: string
+          revision_number: number
+        }
+        Insert: {
+          amount?: number | null
+          attached_by?: string | null
+          attached_by_email?: string | null
+          changes_summary?: string | null
+          created_at?: string
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          previous_amount?: number | null
+          previous_file_name?: string | null
+          previous_file_path?: string | null
+          quotation_id: string
+          revision_number?: number
+        }
+        Update: {
+          amount?: number | null
+          attached_by?: string | null
+          attached_by_email?: string | null
+          changes_summary?: string | null
+          created_at?: string
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          previous_amount?: number | null
+          previous_file_name?: string | null
+          previous_file_path?: string | null
+          quotation_id?: string
+          revision_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotation_revisions_quotation_id_fkey"
+            columns: ["quotation_id"]
+            isOneToOne: false
+            referencedRelation: "quotations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quotations: {
         Row: {
           amount: number | null
