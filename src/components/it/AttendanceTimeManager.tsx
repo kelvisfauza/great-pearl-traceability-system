@@ -426,15 +426,21 @@ const AttendanceTimeManager = () => {
   const computeRankingsImpl = () => {
     const now = new Date();
     let start: Date, end: Date;
+    let source = records;
     if (reportPeriod === 'week') {
       start = startOfWeek(now, { weekStartsOn: 1 });
       end = endOfWeek(now, { weekStartsOn: 1 });
+    } else if (reportPeriod === 'custom') {
+      const monthStart = startOfMonth(new Date(customMonth + '-01'));
+      start = monthStart;
+      end = endOfMonth(monthStart);
+      source = customRecords;
     } else {
       start = startOfMonth(now);
       end = endOfMonth(now);
     }
 
-    const filtered = records.filter(r => {
+    const filtered = source.filter(r => {
       const d = new Date(r.record_date);
       return d >= start && d <= end;
     });
