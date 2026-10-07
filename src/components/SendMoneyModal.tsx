@@ -441,7 +441,7 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
                         <TrendingDown className="h-4 w-4 mt-0.5 shrink-0 text-amber-600" />
                         <div>
                           <p className="font-semibold">Overdraft will be applied: UGX {employeeOdPortion.toLocaleString()}</p>
-                          <p className="mt-0.5">Your wallet doesn't fully cover this. UGX {employeeOdPortion.toLocaleString()} will be drawn plus a 2.75% access fee of UGX {employeeOdFee.toLocaleString()}. Your total overdraft owed will become <strong>UGX {employeeNewOutstanding.toLocaleString()}</strong> (0.6% daily interest until cleared). This full amount will appear on your statement.</p>
+                          <p className="mt-0.5">Your wallet doesn't fully cover this. UGX {employeeOdPortion.toLocaleString()} will be drawn plus a 2.75% access fee of UGX {employeeOdFee.toLocaleString()}. Your total overdraft owed will become <strong>UGX {employeeNewOutstanding.toLocaleString()}</strong> (1.2% daily interest until cleared). This full amount will appear on your statement.</p>
                         </div>
                       </div>
                       <label className="flex items-center gap-2 cursor-pointer text-amber-900 dark:text-amber-200">
@@ -521,7 +521,7 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
                         <TrendingDown className="h-4 w-4 mt-0.5 shrink-0 text-amber-600" />
                         <div>
                           <p className="font-semibold">Overdraft will be applied: UGX {mobileOdPortion.toLocaleString()}</p>
-                          <p className="mt-0.5">Your wallet doesn't fully cover this. UGX {mobileOdPortion.toLocaleString()} will be drawn plus a 2.75% access fee of UGX {mobileOdFee.toLocaleString()}. Your total overdraft owed will become <strong>UGX {mobileNewOutstanding.toLocaleString()}</strong> (0.6% daily interest until cleared). This full amount will appear on your statement.</p>
+                          <p className="mt-0.5">Your wallet doesn't fully cover this. UGX {mobileOdPortion.toLocaleString()} will be drawn plus a 2.75% access fee of UGX {mobileOdFee.toLocaleString()}. Your total overdraft owed will become <strong>UGX {mobileNewOutstanding.toLocaleString()}</strong> (1.2% daily interest until cleared). This full amount will appear on your statement.</p>
                         </div>
                       </div>
                       <label className="flex items-center gap-2 cursor-pointer text-amber-900 dark:text-amber-200">
