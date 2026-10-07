@@ -480,7 +480,13 @@ serve(async (req) => {
     if (submission.status !== "pending") {
       // Finance release / reject operates on rows the admin already approved.
       if ((isFinanceRelease || action === "reject") && submission.status === "awaiting_finance") {
-        // allowed — fall through
+        // allowed — fall through, unless already part-paid
+        const { data: pp } = await supabase.from("partial_payments").select("paid_amount, balance")
+          .eq("source_type", "provider").eq("source_id", submissionId).maybeSingle();
+        if (pp && Number(pp.paid_amount) > 0) {
+          return new Response(JSON.stringify({ ok: false, error: `UGX ${Number(pp.paid_amount).toLocaleString()} was already part-paid. Use "Pay balance" to pay the remaining UGX ${Number(pp.balance).toLocaleString()}.` }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
       } else {
       // Allow retry if a previous attempt got stuck in `processing` for >90s
       // (payout call crashed before it could reset the row). Everything else
