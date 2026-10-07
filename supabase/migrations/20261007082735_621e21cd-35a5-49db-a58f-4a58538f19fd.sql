@@ -1,0 +1,12 @@
+DROP POLICY IF EXISTS "Managers can create import batches" ON public.attendance_import_batches;
+DROP POLICY IF EXISTS "Managers can update import batches" ON public.attendance_import_batches;
+DROP POLICY IF EXISTS "Managers can delete import batches" ON public.attendance_import_batches;
+DROP POLICY IF EXISTS "Managers can create import rows" ON public.attendance_import_rows;
+DROP POLICY IF EXISTS "Managers can update import rows" ON public.attendance_import_rows;
+DROP POLICY IF EXISTS "Managers can delete import rows" ON public.attendance_import_rows;
+CREATE POLICY "Managers can create import batches" ON public.attendance_import_batches FOR INSERT TO authenticated WITH CHECK (public.can_manage_employees() OR public.user_has_permission('IT Management:manage'));
+CREATE POLICY "Managers can update import batches" ON public.attendance_import_batches FOR UPDATE TO authenticated USING (public.can_manage_employees() OR public.user_has_permission('IT Management:manage')) WITH CHECK (public.can_manage_employees() OR public.user_has_permission('IT Management:manage'));
+CREATE POLICY "Managers can delete import batches" ON public.attendance_import_batches FOR DELETE TO authenticated USING (public.can_manage_employees() OR public.user_has_permission('IT Management:manage'));
+CREATE POLICY "Managers can create import rows" ON public.attendance_import_rows FOR INSERT TO authenticated WITH CHECK (public.can_manage_employees() OR public.user_has_permission('IT Management:manage'));
+CREATE POLICY "Managers can update import rows" ON public.attendance_import_rows FOR UPDATE TO authenticated USING (public.can_manage_employees() OR public.user_has_permission('IT Management:manage')) WITH CHECK (public.can_manage_employees() OR public.user_has_permission('IT Management:manage'));
+CREATE POLICY "Managers can delete import rows" ON public.attendance_import_rows FOR DELETE TO authenticated USING (public.can_manage_employees() OR public.user_has_permission('IT Management:manage'));
