@@ -72,7 +72,7 @@ serve(async (req) => {
     }
 
     // Part-paid withdrawals can only be finished through "Pay balance"
-    if (["finance_reject", "send_back", "release", undefined, null, ""].includes(action as any) || action === "finance_release") {
+    {
       const { data: pp } = await supabase.from("partial_payments").select("paid_amount, balance")
         .eq("source_type", "withdrawal").eq("source_id", instant_withdrawal_id).maybeSingle();
       if (pp && Number(pp.paid_amount) > 0) {
