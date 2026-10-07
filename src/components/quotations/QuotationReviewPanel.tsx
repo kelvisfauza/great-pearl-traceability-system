@@ -13,7 +13,17 @@ import QuotationViewer from './QuotationViewer';
 import QuotationFormDialog from './QuotationFormDialog';
 import QuotationReplyBox from './QuotationReplyBox';
 import QuotationRevisionDialog from './QuotationRevisionDialog';
-...
+
+const statusVariant = (status: string) => {
+  if (status === 'approved') return 'default' as const;
+  if (status === 'rejected' || status === 'rejected_procurement') return 'destructive' as const;
+  if (status === 'recommended') return 'secondary' as const;
+  return 'outline' as const;
+};
+
+const QuotationReviewPanel = () => {
+  const { employee } = useAuth();
+  const { toast } = useToast();
   const {
     quotations, messages, revisions, loading, refresh,
     createQuotation, recordProcurementDecision, notifyCompany, attachRevision,
