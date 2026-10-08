@@ -1,5 +1,6 @@
 import { FinanceWalletOpsAndBalances } from '@/components/finance/FinanceWalletOpsAndBalances';
 import FinanceProviderReleases from '@/components/finance/FinanceProviderReleases';
+import FinanceQuotationPayments from '@/components/finance/FinanceQuotationPayments';
 import FinanceSamplingOrderPayments from '@/components/finance/FinanceSamplingOrderPayments';
 import React, { useState, lazy, Suspense } from 'react';
 import Layout from '@/components/Layout';
@@ -119,7 +120,7 @@ const Finance = () => {
                       <Suspense fallback={<LoadingSpinner />}>
                         <div className="space-y-6">
                           <FinanceWalletOpsAndBalances />
-                          <FinanceProviderReleases />
+                          <FinanceProviderReleases /><FinanceQuotationPayments />
                           <FinanceSamplingOrderPayments />
                           <AwaitingDisbursementPanel />
                           <PendingApprovalRequests />

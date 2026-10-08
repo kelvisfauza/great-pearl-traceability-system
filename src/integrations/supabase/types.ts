@@ -10967,6 +10967,11 @@ export type Database = {
           email: string | null
           file_name: string | null
           file_path: string | null
+          finance_method: string | null
+          finance_paid_at: string | null
+          finance_paid_by: string | null
+          finance_reference: string | null
+          finance_status: string | null
           id: string
           notes: string | null
           phone: string | null
@@ -10974,6 +10979,7 @@ export type Database = {
           procurement_by: string | null
           procurement_decision: string | null
           procurement_notes: string | null
+          reference: string | null
           status: string
           subject: string
           submitted_by: string | null
@@ -10993,6 +10999,11 @@ export type Database = {
           email?: string | null
           file_name?: string | null
           file_path?: string | null
+          finance_method?: string | null
+          finance_paid_at?: string | null
+          finance_paid_by?: string | null
+          finance_reference?: string | null
+          finance_status?: string | null
           id?: string
           notes?: string | null
           phone?: string | null
@@ -11000,6 +11011,7 @@ export type Database = {
           procurement_by?: string | null
           procurement_decision?: string | null
           procurement_notes?: string | null
+          reference?: string | null
           status?: string
           subject: string
           submitted_by?: string | null
@@ -11019,6 +11031,11 @@ export type Database = {
           email?: string | null
           file_name?: string | null
           file_path?: string | null
+          finance_method?: string | null
+          finance_paid_at?: string | null
+          finance_paid_by?: string | null
+          finance_reference?: string | null
+          finance_status?: string | null
           id?: string
           notes?: string | null
           phone?: string | null
@@ -11026,6 +11043,7 @@ export type Database = {
           procurement_by?: string | null
           procurement_decision?: string | null
           procurement_notes?: string | null
+          reference?: string | null
           status?: string
           subject?: string
           submitted_by?: string | null

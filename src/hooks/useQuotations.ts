@@ -24,6 +24,12 @@ export interface Quotation {
   approval_notes: string | null;
   approval_by: string | null;
   approval_at: string | null;
+  reference?: string | null;
+  finance_status?: string | null;
+  finance_method?: string | null;
+  finance_reference?: string | null;
+  finance_paid_by?: string | null;
+  finance_paid_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -109,6 +115,15 @@ export const useQuotations = () => {
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  // Status text + email to the company at each stage (never blocks the action itself)
+  const notifyStage = async (quotationId: string, stage: string) => {
+    try {
+      await supabase.functions.invoke('quotation-notify', { body: { quotationId, stage } });
+    } catch (e) {
+      console.warn('quotation stage message failed', e);
+    }
+  };
+
   const uploadFile = async (file: File) => {
     const ext = file.name.split('.').pop() || 'pdf';
     const path = `${new Date().getFullYear()}/${crypto.randomUUID()}.${ext}`;
@@ -129,15 +144,16 @@ export const useQuotations = () => {
       file_path = uploaded.path;
       file_name = uploaded.name;
     }
-    const { error } = await (supabase as any).from('quotations').insert({
+    const { data: created, error } = await (supabase as any).from('quotations').insert({
       ...payload,
       file_path,
       file_name,
       status: 'submitted',
       submitted_by: submitter.name || null,
       submitted_by_email: submitter.email || null,
-    });
+    }).select('id').single();
     if (error) throw error;
+    if (created?.id) await notifyStage(created.id, 'received');
     await refresh();
   };
 
@@ -158,6 +174,7 @@ export const useQuotations = () => {
       })
       .eq('id', id);
     if (error) throw error;
+    if (decision === 'recommended') await notifyStage(id, 'procurement_approved');
     await refresh();
   };
 
@@ -178,6 +195,17 @@ export const useQuotations = () => {
       })
       .eq('id', id);
     if (error) throw error;
+    if (decision === 'approved') await notifyStage(id, 'admin_approved');
+    await refresh();
+  };
+
+  /** Finance marks an approved quotation as paid; the company gets the final message. */
+  const markDisbursed = async (id: string, method: string, paymentReference?: string) => {
+    const { data, error } = await supabase.functions.invoke('quotation-notify', {
+      body: { quotationId: id, stage: 'disbursed', method, paymentReference },
+    });
+    if (error) throw error;
+    if ((data as any)?.ok === false) throw new Error((data as any).error || 'Could not mark as disbursed');
     await refresh();
   };
 
@@ -241,6 +269,7 @@ export const useQuotations = () => {
     createQuotation,
     recordProcurementDecision,
     recordApproval,
+    markDisbursed,
     notifyCompany,
     attachRevision,
   };

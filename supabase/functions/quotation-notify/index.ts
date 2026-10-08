@@ -51,16 +51,60 @@ serve(async (req) => {
     const perms: string[] = sender?.permissions || [];
     const allowed = !!sender && !sender.disabled && sender.status === 'Active' && (
       role.includes('admin') || role === 'managing director' || role === 'manager' ||
-      dept.includes('procurement') || perms.some((p) => (p || '').toLowerCase().includes('procurement'))
+      dept.includes('procurement') || dept.includes('finance') || role === 'finance' || perms.some((p) => (p || '').toLowerCase().includes('procurement'))
     );
     if (!allowed) return json({ ok: false, error: 'Only procurement staff and administrators can reply to companies' }, 403);
 
     const body = await req.json();
     const quotationId: string = body.quotationId;
-    const message: string = (body.message || '').toString().trim();
-    const subject: string = (body.subject || 'Regarding your quotation').toString().trim().slice(0, 150);
-    const sendEmail: boolean = body.sendEmail === true;
-    const sendSms: boolean = body.sendSms === true;
+    let message: string = (body.message || '').toString().trim();
+    let subject: string = (body.subject || 'Regarding your quotation').toString().trim().slice(0, 150);
+    let sendEmail: boolean = body.sendEmail === true;
+    let sendSms: boolean = body.sendSms === true;
+
+    // ── Automatic stage updates to the company that billed us ──
+    const stage: string | undefined = body.stage;
+    if (stage) {
+      if (!quotationId) return json({ ok: false, error: 'Quotation is required' }, 400);
+      const { data: q } = await admin.from('quotations').select('*').eq('id', quotationId).maybeSingle();
+      if (!q) return json({ ok: false, error: 'Quotation not found' }, 404);
+      const isFinance = role === 'finance' || dept.includes('finance') || perms.some((p) => /^finance:(approve|process)/i.test(p || '')) || role.includes('admin');
+      const amt = `${q.currency || 'UGX'} ${Math.round(Number(q.amount || 0)).toLocaleString()}`;
+      const ref = q.reference;
+      const what = `quotation/invoice ${ref} for ${amt}`;
+      if (stage === 'received') {
+        if (q.status !== 'submitted') return json({ ok: true, skipped: true });
+        subject = `Received: ${ref}`;
+        message = `Great Agro Coffee has received your ${what}. Status: received and under procurement review. We will update you at each step.`;
+      } else if (stage === 'procurement_approved') {
+        if (q.status !== 'recommended') return json({ ok: true, skipped: true });
+        subject = `Procurement approved: ${ref}`;
+        message = `Your ${what} has been approved by Procurement and is awaiting approval from Admin.`;
+      } else if (stage === 'admin_approved') {
+        if (q.status !== 'approved') return json({ ok: true, skipped: true });
+        subject = `Fully approved: ${ref}`;
+        message = `Your ${what} is fully approved and has been sent to Finance for disbursement.`;
+      } else if (stage === 'disbursed') {
+        if (!isFinance) return json({ ok: false, error: 'Only Finance can mark a quotation as disbursed' }, 403);
+        if (q.status !== 'approved') return json({ ok: false, error: 'This quotation is not fully approved yet' });
+        if (q.finance_status === 'disbursed') return json({ ok: false, error: 'This quotation is already disbursed' });
+        const method = String(body.method || '').trim().slice(0, 40);
+        if (!method) return json({ ok: false, error: 'Pick how it was paid' }, 400);
+        const payRef = body.paymentReference ? String(body.paymentReference).slice(0, 120) : null;
+        const { data: upd } = await admin.from('quotations').update({
+          finance_status: 'disbursed', finance_method: method, finance_reference: payRef,
+          finance_paid_by: sender!.name || sender!.email, finance_paid_at: new Date().toISOString(),
+        }).eq('id', quotationId).is('finance_status', null).select('id');
+        if (!upd?.length) return json({ ok: false, error: 'This quotation is already disbursed' });
+        subject = `Disbursed: ${ref}`;
+        message = `Payment for your ${what} has been disbursed via ${method}${payRef ? ` (ref ${payRef})` : ''}. Thank you.`;
+      } else return json({ ok: false, error: 'Unknown stage' }, 400);
+      // Never send the same stage twice
+      const { count } = await admin.from('quotation_messages').select('id', { count: 'exact', head: true }).eq('quotation_id', quotationId).eq('subject', subject).eq('status', 'sent');
+      if (count) return json({ ok: true, skipped: true });
+      message = `Dear ${q.contact_name || q.company_name || 'Supplier'}, ${message}`;
+      sendEmail = true; sendSms = true;
+    }
 
     if (!quotationId) return json({ ok: false, error: 'Quotation is required' }, 400);
     if (!message) return json({ ok: false, error: 'Message is required' }, 400);
@@ -104,7 +148,7 @@ serve(async (req) => {
     if (sendSms) {
       const phone = normalizePhone(quotation.phone);
       if (!phone) {
-        logs.push({ quotation_id: quotationId, channel: 'sms', body: message, recipient: quotation.phone || null, status: 'failed', error: 'No valid phone number on the quotation', sent_by: sender!.email });
+        logs.push({ quotation_id: quotationId, channel: 'sms', body: message, subject, recipient: quotation.phone || null, status: 'failed', error: 'No valid phone number on the quotation', sent_by: sender!.email });
       } else {
         const res = await fetch(`${supabaseUrl}/functions/v1/send-sms`, {
           method: 'POST',
@@ -121,7 +165,7 @@ serve(async (req) => {
         const ok = res.ok;
         const text = ok ? null : await res.text();
         smsSent = ok;
-        logs.push({ quotation_id: quotationId, channel: 'sms', body: message, recipient: phone, status: ok ? 'sent' : 'failed', error: text?.slice(0, 500) ?? null, sent_by: sender!.email });
+        logs.push({ quotation_id: quotationId, channel: 'sms', body: message, subject, recipient: phone, status: ok ? 'sent' : 'failed', error: text?.slice(0, 500) ?? null, sent_by: sender!.email });
       }
     }
 
@@ -129,7 +173,7 @@ serve(async (req) => {
 
     const failed = logs.filter((l) => l.status === 'failed');
     return json({
-      ok: failed.length === 0,
+      ok: stage ? (emailSent || smsSent) : failed.length === 0,
       emailSent,
       smsSent,
       error: failed.length ? failed.map((f) => f.error).join('; ') : undefined,
