@@ -24,6 +24,12 @@ export interface Quotation {
   approval_notes: string | null;
   approval_by: string | null;
   approval_at: string | null;
+  reference?: string | null;
+  finance_status?: string | null;
+  finance_method?: string | null;
+  finance_reference?: string | null;
+  finance_paid_by?: string | null;
+  finance_paid_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -263,6 +269,7 @@ export const useQuotations = () => {
     createQuotation,
     recordProcurementDecision,
     recordApproval,
+    markDisbursed,
     notifyCompany,
     attachRevision,
   };
