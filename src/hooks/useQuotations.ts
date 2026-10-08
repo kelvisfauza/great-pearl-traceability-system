@@ -200,9 +200,9 @@ export const useQuotations = () => {
   };
 
   /** Finance marks an approved quotation as paid; the company gets the final message. */
-  const markDisbursed = async (id: string, method: string, paymentReference?: string) => {
+  const markDisbursed = async (id: string, method: string, paymentReference?: string, payPhone?: string) => {
     const { data, error } = await supabase.functions.invoke('quotation-notify', {
-      body: { quotationId: id, stage: 'disbursed', method, paymentReference },
+      body: { quotationId: id, stage: 'disbursed', method, paymentReference, payPhone },
     });
     if (error) throw error;
     if ((data as any)?.ok === false) throw new Error((data as any).error || 'Could not mark as disbursed');
