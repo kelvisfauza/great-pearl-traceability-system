@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
     let sendRef: string | null = null;
     let sendNote = "";
     if (SEND_METHODS.includes(method)) {
-      const rollback = () => db.from("partial_payments").update({ paid_amount: pp.paid_amount, status: Number(pp.paid_amount) > 0 ? "part_paid" : "pending" }).eq("id", pp.id);
+      const rollback = () => db.from("partial_payments").update({ paid_amount: pp.paid_amount, status: "part_paid" }).eq("id", pp.id);
       if (!["provider", "withdrawal"].includes(sourceType)) { await rollback(); return respond(false, { error: "Sending through Yo or GosentePay is only for meal plans, providers and staff withdrawals. Pay this by cash or bank and record it." }); }
       if (!payeePhone) { await rollback(); return respond(false, { error: "No phone number on this request to send money to" }); }
       const phone = normalizePhone(payeePhone)!;
