@@ -51,7 +51,7 @@ serve(async (req) => {
     const perms: string[] = sender?.permissions || [];
     const allowed = !!sender && !sender.disabled && sender.status === 'Active' && (
       role.includes('admin') || role === 'managing director' || role === 'manager' ||
-      dept.includes('procurement') || perms.some((p) => (p || '').toLowerCase().includes('procurement'))
+      dept.includes('procurement') || dept.includes('finance') || role === 'finance' || perms.some((p) => (p || '').toLowerCase().includes('procurement'))
     );
     if (!allowed) return json({ ok: false, error: 'Only procurement staff and administrators can reply to companies' }, 403);
 
@@ -148,7 +148,7 @@ serve(async (req) => {
     if (sendSms) {
       const phone = normalizePhone(quotation.phone);
       if (!phone) {
-        logs.push({ quotation_id: quotationId, channel: 'sms', body: message, recipient: quotation.phone || null, status: 'failed', error: 'No valid phone number on the quotation', sent_by: sender!.email });
+        logs.push({ quotation_id: quotationId, channel: 'sms', body: message, subject, recipient: quotation.phone || null, status: 'failed', error: 'No valid phone number on the quotation', sent_by: sender!.email });
       } else {
         const res = await fetch(`${supabaseUrl}/functions/v1/send-sms`, {
           method: 'POST',
@@ -165,7 +165,7 @@ serve(async (req) => {
         const ok = res.ok;
         const text = ok ? null : await res.text();
         smsSent = ok;
-        logs.push({ quotation_id: quotationId, channel: 'sms', body: message, recipient: phone, status: ok ? 'sent' : 'failed', error: text?.slice(0, 500) ?? null, sent_by: sender!.email });
+        logs.push({ quotation_id: quotationId, channel: 'sms', body: message, subject, recipient: phone, status: ok ? 'sent' : 'failed', error: text?.slice(0, 500) ?? null, sent_by: sender!.email });
       }
     }
 
@@ -173,7 +173,7 @@ serve(async (req) => {
 
     const failed = logs.filter((l) => l.status === 'failed');
     return json({
-      ok: failed.length === 0,
+      ok: stage ? (emailSent || smsSent) : failed.length === 0,
       emailSent,
       smsSent,
       error: failed.length ? failed.map((f) => f.error).join('; ') : undefined,
