@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -35,6 +36,19 @@ const QuotationReviewPanel = () => {
 
   const pending = useMemo(() => quotations.filter((q) => ['submitted', 'revision_requested'].includes(q.status)), [quotations]);
   const decided = useMemo(() => quotations.filter((q) => !['submitted', 'revision_requested'].includes(q.status)), [quotations]);
+
+  // Catch up: quotations entered before stage messages existed get their "received" message once
+  // (the server skips any stage already sent).
+  const caughtUp = React.useRef(new Set<string>());
+  React.useEffect(() => {
+    quotations
+      .filter((q) => q.status === 'submitted' && !(messages[q.id] || []).some((m) => (m.subject || '').startsWith('Received:')))
+      .forEach((q) => {
+        if (caughtUp.current.has(q.id)) return;
+        caughtUp.current.add(q.id);
+        supabase.functions.invoke('quotation-notify', { body: { quotationId: q.id, stage: 'received' } }).catch(() => {});
+      });
+  }, [quotations, messages]);
 
   const decide = async (q: Quotation, decision: 'recommended' | 'revision_requested' | 'rejected_procurement') => {
     setBusy(q.id);
