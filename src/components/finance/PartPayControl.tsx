@@ -149,7 +149,7 @@ const PartPayControl: React.FC<Props> = ({ sourceType, sourceId, totalAmount, pa
           </div>
           <DialogFooter>
             <Button onClick={submit} disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Record payment
+              {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} {isSend ? "Send payment" : "Record payment"}
             </Button>
           </DialogFooter>
         </DialogContent>
