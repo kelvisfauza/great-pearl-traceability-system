@@ -3,7 +3,6 @@ import DashboardLayout from '@/components/DashboardLayout';
 import ApprovalCenter from '@/components/ApprovalCenter';
 import ApprovedRequestsHistory from '@/components/admin/ApprovedRequestsHistory';
 import AdminQualityPricingReview from '@/components/admin/AdminQualityPricingReview';
-import AdminRejectedLotsReview from '@/components/admin/AdminRejectedLotsReview';
 import ContractRenewalApprovals from '@/components/admin/ContractRenewalApprovals';
 import MealDisbursementSection from '@/components/admin/MealDisbursementSection';
 import ServiceProviderPayments from '@/components/admin/ServiceProviderPayments';
@@ -78,8 +77,8 @@ const Approvals = () => {
         {/* Quality Assessments Pending Pricing */}
         <AdminQualityPricingReview />
 
-        {/* Rejected Lots — Admin Discretion Buying */}
-        <AdminRejectedLotsReview />
+        {/* Rejected Lots moved to Quality Department → Rejected Lots tab */}
+
 
         {/* Contract Renewal Requests */}
         <ContractRenewalApprovals />
