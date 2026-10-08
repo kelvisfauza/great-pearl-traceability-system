@@ -1,5 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.5";
+import { treasuryReserve, treasuryRelease } from "../_shared/treasury.ts";
+import { yoPayout, normalizePhone as yoNormalize } from "../_shared/yo-payments.ts";
+import { gosenteWithdraw, isGosenteSuccess } from "../_shared/gosentepay.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -130,14 +133,53 @@ serve(async (req) => {
         if (!isFinance) return json({ ok: false, error: 'Only Finance can mark a quotation as disbursed' }, 403);
         if (q.status !== 'approved') return json({ ok: false, error: 'This quotation is not fully approved yet' });
         if (q.finance_status === 'disbursed') return json({ ok: false, error: 'This quotation is already disbursed' });
-        const method = String(body.method || '').trim().slice(0, 40);
-        if (!method) return json({ ok: false, error: 'Pick how it was paid' }, 400);
-        const payRef = body.paymentReference ? String(body.paymentReference).slice(0, 120) : null;
+        let method = String(body.method || '').trim().slice(0, 40);
+        if (!method) return json({ ok: false, error: 'Pick how to pay' }, 400);
+        let payRef: string | null = body.paymentReference ? String(body.paymentReference).slice(0, 120) : null;
+        const live = method === 'GosentePay' || method === 'Yo Mobile Money';
+        // Lock so it can never be paid twice
+        const { data: lock } = await admin.from('quotations').update({ finance_status: 'processing' })
+          .eq('id', quotationId).is('finance_status', null).select('id');
+        if (!lock?.length) return json({ ok: false, error: 'This quotation is already being paid or disbursed' });
+        const unlock = () => admin.from('quotations').update({ finance_status: null }).eq('id', quotationId);
+        if (live) {
+          const amount = Math.round(Number(q.amount || 0));
+          const rawPhone = String(body.payPhone || q.phone || '').trim();
+          const phone = rawPhone ? yoNormalize(rawPhone) : '';
+          if (!phone || amount <= 0) { await unlock(); return json({ ok: false, error: 'No valid phone number to send the money to' }); }
+          const tRef = `QT-${String(ref || quotationId).slice(-12)}-${Date.now()}`;
+          const r = await treasuryReserve({ account: 'operations', amount, reference: tRef, description: `Quotation ${ref} - ${q.company_name}`, email: q.email || '', name: q.company_name, performedBy: sender!.name || sender!.email, metadata: { quotation_id: quotationId } });
+          if (!r.ok) { await unlock(); return json({ ok: false, code: 'TREASURY_INSUFFICIENT', error: `Not funded: ${r.error || 'Operations account cannot cover this payment'}` }); }
+          let sent = false, detail = '';
+          if (method === 'GosentePay') {
+            const gRef = `GSP-QT-${Date.now()}`.slice(0, 30);
+            try {
+              const g = await gosenteWithdraw({ phone, amount, email: q.email && /@/.test(q.email) ? q.email : 'finance@greatpearlcoffee.com', reason: `Quotation ${ref}`, ref: gRef });
+              sent = isGosenteSuccess(g.status, g.body);
+              if (!sent) detail = `GosentePay: ${String(g.body?.message || g.body?.data?.message || g.body?.error || g.status).slice(0, 200)}`;
+            } catch (e) { detail = `GosentePay error: ${(e as Error).message}`; }
+            payRef = payRef || gRef;
+          } else {
+            const yRef = `QT-${Date.now()}`;
+            const y = await yoPayout({ phone, amount, narrative: `Quotation ${ref} - ${q.company_name}`, privateRef: yRef });
+            const p22 = String(y.statusMessage || '').includes('-22') || String(y.rawResponse || '').includes('<StatusCode>-22</StatusCode>');
+            sent = y.success || p22;
+            if (!sent) detail = y.errorMessage || 'Yo Payments rejected the payment';
+            payRef = payRef || y.transactionRef || yRef;
+          }
+          if (!sent) {
+            await treasuryRelease({ account: 'operations', amount, reference: tRef, description: 'Quotation payment failed — funds returned', performedBy: sender!.name || sender!.email });
+            await unlock();
+            return json({ ok: false, error: detail || 'Payment did not go through' });
+          }
+          method = method === 'GosentePay' ? `GosentePay to ${phone}` : `Mobile Money (Yo) to ${phone}`;
+        }
         const { data: upd } = await admin.from('quotations').update({
           finance_status: 'disbursed', finance_method: method, finance_reference: payRef,
           finance_paid_by: sender!.name || sender!.email, finance_paid_at: new Date().toISOString(),
-        }).eq('id', quotationId).is('finance_status', null).select('id');
+        }).eq('id', quotationId).eq('finance_status', 'processing').select('id');
         if (!upd?.length) return json({ ok: false, error: 'This quotation is already disbursed' });
+        await admin.from('audit_logs').insert({ action: 'QUOTATION_DISBURSED', table_name: 'quotations', record_id: quotationId, performed_by: sender!.email, reason: `${method} ${payRef || ''}` } as any).then(() => {}, () => {});
         subject = `Disbursed: ${ref}`;
         message = `Payment for your ${what} has been disbursed via ${method}${payRef ? ` (ref ${payRef})` : ''}. Thank you.`;
       } else return json({ ok: false, error: 'Unknown stage' }, 400);
