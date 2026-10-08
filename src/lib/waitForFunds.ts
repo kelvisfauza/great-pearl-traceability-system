@@ -7,6 +7,9 @@ const FUNDING_WORDS = /insufficient|cannot cover|float|empty|not funded|TREASURY
 
 export const isFundingError = (data: any, error: any) => {
   const text = `${data?.code || ''} ${data?.error || ''} ${error?.message || ''}`;
+  // "Part-paid" refusals mention the remaining balance but are not funding
+  // problems — retrying them for 2 minutes hides the real instruction.
+  if (/part-paid/i.test(text)) return false;
   return FUNDING_WORDS.test(text);
 };
 
