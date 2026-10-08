@@ -33,8 +33,11 @@ const FinanceQuotationPayments: React.FC = () => {
     if (!active) return;
     setSaving(true);
     try {
-      const call = () => markDisbursed(active.id, method, ref || undefined, live ? phone : undefined);
-      if (live) await waitForFunds(call, setWaitLeft); else await call();
+      const call = () => markDisbursed(active.id, method, ref || undefined, live ? phone : undefined)
+        .then(() => ({ data: { ok: true }, error: null }))
+        .catch((e: any) => ({ data: { ok: false, error: e.message }, error: null }));
+      const res = live ? await waitForFunds(call, setWaitLeft) : await call();
+      if (!res.data?.ok) throw new Error(res.data?.error || 'Payment did not go through');
       toast({ title: live ? 'Money sent' : 'Payment recorded', description: `${active.company_name} has been sent a text and email.` });
       setActive(null); setRef('');
     } catch (e: any) {
