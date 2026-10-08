@@ -65,6 +65,31 @@ serve(async (req) => {
     let sendEmail: boolean = body.sendEmail === true;
     let sendSms: boolean = body.sendSms === true;
 
+    // ── Phone number corrected: re-text every stage message the company has not yet received on its current number ──
+    if (body.stage === 'resend_phone') {
+      const { data: q } = await admin.from('quotations').select('id, phone, contact_name, company_name').eq('id', quotationId).maybeSingle();
+      if (!q) return json({ ok: false, error: 'Quotation not found' }, 404);
+      const sbPhone = normalizePhone(q.phone);
+      if (!sbPhone) return json({ ok: true, skipped: true });
+      const { data: past } = await admin.from('quotation_messages').select('subject, body, recipient, status, created_at').eq('quotation_id', quotationId).eq('channel', 'sms').order('created_at');
+      const rows = past || [];
+      const done = new Set(rows.filter((m: any) => m.status === 'sent' && normalizePhone(m.recipient) === sbPhone).map((m: any) => m.subject || m.body));
+      const seen = new Set<string>();
+      const todo = rows.filter((m: any) => m.status === 'sent' && normalizePhone(m.recipient) !== sbPhone).filter((m: any) => {
+        const k = m.subject || m.body; if (done.has(k) || seen.has(k)) return false; seen.add(k); return true;
+      });
+      const out: any[] = [];
+      for (const m of todo) {
+        const res = await fetch(`${supabaseUrl}/functions/v1/send-sms`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${serviceKey}` },
+          body: JSON.stringify({ phone: sbPhone, message: String(m.body).slice(0, 480), messageType: 'quotation_reply', userName: q.contact_name || q.company_name, triggeredBy: sender!.email, priority: 'premium' }),
+        });
+        out.push({ quotation_id: quotationId, channel: 'sms', body: m.body, subject: m.subject, recipient: sbPhone, status: res.ok ? 'sent' : 'failed', error: res.ok ? null : (await res.text()).slice(0, 500), sent_by: sender!.email });
+      }
+      if (out.length) await admin.from('quotation_messages').insert(out);
+      return json({ ok: true, resent: out.filter((o) => o.status === 'sent').length });
+    }
+
     // ── Admin sends a recommended quotation back to Procurement for changes (internal email only) ──
     if (body.stage === 'sent_back') {
       if (!role.includes('admin') && role !== 'managing director') return json({ ok: false, error: 'Only admins can send a quotation back' }, 403);
