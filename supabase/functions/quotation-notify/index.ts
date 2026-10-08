@@ -62,6 +62,48 @@ serve(async (req) => {
     let sendEmail: boolean = body.sendEmail === true;
     let sendSms: boolean = body.sendSms === true;
 
+    // ── Admin sends a recommended quotation back to Procurement for changes (internal email only) ──
+    if (body.stage === 'sent_back') {
+      if (!role.includes('admin') && role !== 'managing director') return json({ ok: false, error: 'Only admins can send a quotation back' }, 403);
+      const note = String(body.note || '').trim().slice(0, 600);
+      if (!note) return json({ ok: false, error: 'Write what Procurement should change' }, 400);
+      const { data: q } = await admin.from('quotations').select('*').eq('id', quotationId).maybeSingle();
+      if (!q) return json({ ok: false, error: 'Quotation not found' }, 404);
+      if (q.status !== 'recommended') return json({ ok: false, error: 'Only quotations awaiting approval can be sent back' });
+      const by = sender!.name || sender!.email;
+      await admin.from('quotations').update({
+        status: 'revision_requested',
+        approval_notes: note,
+        procurement_notes: `Sent back by ${by}: ${note}`,
+      }).eq('id', quotationId).eq('status', 'recommended');
+      const recips = new Map<string, string>();
+      const { data: proc } = await admin.from('employees').select('email, name').ilike('department', '%procurement%').eq('status', 'Active');
+      for (const p of proc || []) if (p.email) recips.set(p.email.toLowerCase(), p.name);
+      if (q.procurement_by) {
+        const { data: r } = await admin.from('employees').select('email, name').ilike('name', q.procurement_by).maybeSingle();
+        if (r?.email) recips.set(r.email.toLowerCase(), r.name);
+      }
+      const amt = `${q.currency || 'UGX'} ${Math.round(Number(q.amount || 0)).toLocaleString()}`;
+      for (const [to, name] of recips) {
+        await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${serviceKey}` },
+          body: JSON.stringify({
+            recipientEmail: to, templateName: 'general-notification',
+            idempotencyKey: `quotation-sentback-${quotationId}-${Date.now()}-${to}`,
+            templateData: {
+              recipientName: name,
+              subject: `Quotation sent back for changes: ${q.reference}`,
+              title: `Quotation sent back for changes: ${q.reference}`,
+              message: `${by} has sent back the quotation from ${q.company_name} (${q.reference}, ${amt}, "${q.subject}") to Procurement.\n\nChanges needed: ${note}\n\nOpen Procurement Review → Quotations, attach the revised quotation and recommend it again.`,
+            },
+          }),
+        }).catch(() => {});
+      }
+      await admin.from('audit_logs').insert({ action: 'QUOTATION_SENT_BACK', table_name: 'quotations', record_id: quotationId, performed_by: sender!.email, reason: note } as any).then(() => {}, () => {});
+      return json({ ok: true, emailed: recips.size });
+    }
+
     // ── Automatic stage updates to the company that billed us ──
     const stage: string | undefined = body.stage;
     if (stage) {

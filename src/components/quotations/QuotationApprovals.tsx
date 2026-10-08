@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { CheckCircle, XCircle, FileText, Loader2, RefreshCw } from 'lucide-react';
+import { CheckCircle, XCircle, FileText, Loader2, RefreshCw, Undo2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuotations, QUOTATION_STATUS_LABEL } from '@/hooks/useQuotations';
@@ -30,6 +31,26 @@ const QuotationApprovals = () => {
       toast({ title: decision === 'approved' ? 'Quotation approved' : 'Quotation rejected' });
     } catch (err) {
       toast({ title: 'Could not save the decision', description: err instanceof Error ? err.message : 'Please try again', variant: 'destructive' });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const sendBack = async (id: string) => {
+    const note = (notes[id] || '').trim();
+    if (!note) {
+      toast({ title: 'Write what should change', description: 'Use the decision note box to tell Procurement what to fix.', variant: 'destructive' });
+      return;
+    }
+    setBusy(id);
+    try {
+      const { data, error } = await supabase.functions.invoke('quotation-notify', { body: { quotationId: id, stage: 'sent_back', note } });
+      if (error) throw error;
+      if ((data as any)?.ok === false) throw new Error((data as any).error);
+      toast({ title: 'Sent back to Procurement', description: 'Procurement has been emailed with your note.' });
+      await refresh();
+    } catch (err) {
+      toast({ title: 'Could not send back', description: err instanceof Error ? err.message : 'Please try again', variant: 'destructive' });
     } finally {
       setBusy(null);
     }
@@ -81,6 +102,9 @@ const QuotationApprovals = () => {
               </Button>
               <Button size="sm" onClick={() => decide(q.id, 'approved')} disabled={busy === q.id}>
                 {busy === q.id ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-1" />} Approve
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => sendBack(q.id)} disabled={busy === q.id}>
+                <Undo2 className="h-4 w-4 mr-1" /> Send back to Procurement
               </Button>
               <Button variant="destructive" size="sm" onClick={() => decide(q.id, 'rejected')} disabled={busy === q.id}>
                 <XCircle className="h-4 w-4 mr-1" /> Reject
