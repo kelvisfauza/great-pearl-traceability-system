@@ -48,6 +48,16 @@ const QuotationReviewPanel = () => {
         caughtUp.current.add(q.id);
         supabase.functions.invoke('quotation-notify', { body: { quotationId: q.id, stage: 'received' } }).catch(() => {});
       });
+    // Phone number corrected: re-text earlier messages to the new number (server skips anything already received there)
+    const tail = (p?: string | null) => (p || '').replace(/\D/g, '').slice(-9);
+    quotations.forEach((q) => {
+      const key = `phone:${q.id}:${tail(q.phone)}`;
+      if (!tail(q.phone) || caughtUp.current.has(key)) return;
+      const sms = (messages[q.id] || []).filter((m) => m.channel === 'sms' && m.status === 'sent');
+      if (!sms.some((m) => tail(m.recipient) !== tail(q.phone))) return;
+      caughtUp.current.add(key);
+      supabase.functions.invoke('quotation-notify', { body: { quotationId: q.id, stage: 'resend_phone' } }).catch(() => {});
+    });
   }, [quotations, messages]);
 
   const decide = async (q: Quotation, decision: 'recommended' | 'revision_requested' | 'rejected_procurement') => {
