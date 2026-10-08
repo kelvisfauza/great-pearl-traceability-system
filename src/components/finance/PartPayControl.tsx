@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Coins } from 'lucide-react';
+import { waitForFunds } from '@/lib/waitForFunds';
 
 export type PartPaySource = 'provider' | 'withdrawal' | 'supplier' | 'expense';
 
@@ -27,9 +28,12 @@ const PartPayControl: React.FC<Props> = ({ sourceType, sourceId, totalAmount, pa
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState('');
-  const [method, setMethod] = useState('cash');
+  const canSend = sourceType === 'provider' || sourceType === 'withdrawal';
+  const [method, setMethod] = useState(canSend ? 'yo' : 'cash');
   const [reference, setReference] = useState('');
   const [saving, setSaving] = useState(false);
+  const [waitLeft, setWaitLeft] = useState<number | null>(null);
+  const isSend = method === 'yo' || method === 'gosentepay';
   const key = ['partial-payment', sourceType, sourceId];
 
   const { data: pp } = useQuery({
@@ -55,14 +59,16 @@ const PartPayControl: React.FC<Props> = ({ sourceType, sourceId, totalAmount, pa
     if (amt > balance) return toast({ title: `Amount is more than the balance (${ugx(balance)})`, variant: 'destructive' });
     setSaving(true);
     try {
-      const { data, error } = await supabase.functions.invoke('finance-partial-payment', {
+      const call = () => supabase.functions.invoke('finance-partial-payment', {
         body: { action: 'pay', sourceType, sourceId, amount: amt, method, reference: reference || undefined },
       });
-      if (error) throw error;
-      const d = data as any;
-      if (!d?.ok) throw new Error(d?.error || 'Payment failed');
+      const res = isSend ? await waitForFunds(call, (s) => setWaitLeft(s)) : { ...(await call()), timedOut: false };
+      setWaitLeft(null);
+      if (res.error) throw res.error;
+      const d = res.data as any;
+      if (!d?.ok) throw new Error(res.timedOut ? `Not funded after 2 minutes — fund the account and try again. ${d?.error || ''}` : (d?.error || 'Payment failed'));
       toast({
-        title: d.fullyPaid ? 'Fully paid' : 'Part payment recorded',
+        title: d.fullyPaid ? 'Fully paid' : isSend ? 'Part payment sent' : 'Part payment recorded',
         description: d.fullyPaid
           ? `${ugx(d.total)} fully paid. Confirmations sent.`
           : `Paid ${ugx(d.paid)} of ${ugx(d.total)} — balance ${ugx(d.balance)}. Confirmations sent.`,
@@ -72,9 +78,10 @@ const PartPayControl: React.FC<Props> = ({ sourceType, sourceId, totalAmount, pa
       qc.invalidateQueries({ queryKey: ['payment-tracker'] });
       onChanged?.();
     } catch (e: any) {
-      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+      toast({ title: 'Payment not sent', description: e.message, variant: 'destructive' });
     } finally {
       setSaving(false);
+      setWaitLeft(null);
     }
   };
 
@@ -112,16 +119,21 @@ const PartPayControl: React.FC<Props> = ({ sourceType, sourceId, totalAmount, pa
             <Select value={method} onValueChange={setMethod}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="cash">Cash</SelectItem>
-                <SelectItem value="mobile money">Mobile money</SelectItem>
-                <SelectItem value="bank">Bank</SelectItem>
-                <SelectItem value="gosentepay">GosentePay</SelectItem>
+                {canSend && <SelectItem value="yo">Send now — Mobile money (Yo)</SelectItem>}
+                {canSend && <SelectItem value="gosentepay">Send now — GosentePay</SelectItem>}
+                <SelectItem value="cash">Cash (already handed over)</SelectItem>
+                <SelectItem value="bank">Bank (already transferred)</SelectItem>
+                <SelectItem value="mobile money">Mobile money (already sent by hand)</SelectItem>
               </SelectContent>
             </Select>
             <Input placeholder="Reference (optional)" value={reference} onChange={(e) => setReference(e.target.value)} />
             <p className="text-xs text-muted-foreground">
-              Record money you have actually handed over. The person paid, the approving admin, Procurement and Operations get an email and text for every part.
+              {isSend
+                ? `This sends the amount to ${payeeName || 'the payee'} now. If the account is short, it waits up to 2 minutes for funds.`
+                : 'Record money you have actually handed over.'}{' '}
+              The person paid, the approving admin, Procurement and Operations get an email and text for every part.
             </p>
+            {waitLeft !== null && <p className="text-xs font-medium">Waiting for funds… {waitLeft}s</p>}
             {pp?.partial_payment_installments?.length > 0 && (
               <div className="border-t pt-2 space-y-1">
                 {[...pp.partial_payment_installments]
@@ -137,7 +149,7 @@ const PartPayControl: React.FC<Props> = ({ sourceType, sourceId, totalAmount, pa
           </div>
           <DialogFooter>
             <Button onClick={submit} disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Record payment
+              {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} {isSend ? "Send payment" : "Record payment"}
             </Button>
           </DialogFooter>
         </DialogContent>

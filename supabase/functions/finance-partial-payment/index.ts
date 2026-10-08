@@ -1,7 +1,12 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { treasuryReserve, treasuryRelease } from "../_shared/treasury.ts";
+import { yoPayout } from "../_shared/yo-payments.ts";
+import { gosenteWithdraw, isGosenteSuccess } from "../_shared/gosentepay.ts";
 
 type SourceType = "provider" | "withdrawal" | "supplier" | "expense";
+// Methods that actually send money now (others only record money handed over)
+const SEND_METHODS = ["yo", "gosentepay"];
 const respond = (ok: boolean, body: Record<string, unknown> = {}) =>
   new Response(JSON.stringify({ ok, ...body }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 const ugx = (n: number) => `UGX ${Math.round(n).toLocaleString()}`;
@@ -110,8 +115,48 @@ Deno.serve(async (req) => {
     const { data: upd } = await db.from("partial_payments").update({ paid_amount: newPaid, status: full ? "fully_paid" : "part_paid" })
       .eq("id", pp.id).eq("paid_amount", pp.paid_amount).select("id");
     if (!upd?.length) return respond(false, { error: "Another payment was just recorded — refresh and try again" });
+
+    // Send the money now when Finance picked a live channel
+    let sendRef: string | null = null;
+    let sendNote = "";
+    if (SEND_METHODS.includes(method)) {
+      const rollback = () => db.from("partial_payments").update({ paid_amount: pp.paid_amount, status: "part_paid" }).eq("id", pp.id);
+      if (!["provider", "withdrawal"].includes(sourceType)) { await rollback(); return respond(false, { error: "Sending through Yo or GosentePay is only for meal plans, providers and staff withdrawals. Pay this by cash or bank and record it." }); }
+      if (!payeePhone) { await rollback(); return respond(false, { error: "No phone number on this request to send money to" }); }
+      const phone = normalizePhone(payeePhone)!;
+      const n = ((await db.from("partial_payment_installments").select("id", { count: "exact", head: true }).eq("partial_payment_id", pp.id)).count || 0) + 1;
+      const treasuryRef = `PART-${sourceId.slice(0, 8)}-${n}-${Date.now()}`;
+      if (sourceType === "provider") {
+        const r = await treasuryReserve({ account: "operations", amount, reference: treasuryRef, description: `Part payment ${title} - ${payeeName}`, email: payeeEmail, name: payeeName, performedBy: me?.name || email, metadata: { provider_submission_id: sourceId, part: n } });
+        if (!r.ok) { await rollback(); return respond(false, { code: "TREASURY_INSUFFICIENT", error: `Not funded: ${r.error || "Operations account cannot cover this part"}` }); }
+      }
+      let sent = false, detail = "";
+      if (method === "gosentepay") {
+        sendRef = `GSP-${sourceId.slice(0, 6)}-${n}-${Date.now()}`.slice(0, 30);
+        try {
+          const g = await gosenteWithdraw({ phone, amount, email: payeeEmail && /@/.test(payeeEmail) ? payeeEmail : "finance@greatpearlcoffee.com", reason: `Part payment ${payeeName}`, ref: sendRef });
+          sent = isGosenteSuccess(g.status, g.body);
+          if (!sent) detail = `GosentePay: ${String(g.body?.message || g.body?.data?.message || g.body?.error || g.status).slice(0, 200)}`;
+        } catch (e) { detail = `GosentePay error: ${(e as Error).message}`; }
+        sendNote = "sent via GosentePay";
+      } else {
+        sendRef = `PART-${sourceId.slice(0, 8)}-${n}-${Date.now()}`;
+        const y = await yoPayout({ phone, amount, narrative: `Part payment ${title} - ${payeeName}`, privateRef: sendRef });
+        const pending22 = String(y.statusMessage || "").includes("-22") || String(y.rawResponse || "").includes("<StatusCode>-22</StatusCode>");
+        sent = y.success || pending22;
+        if (!sent) detail = y.errorMessage || "Yo Payments rejected the payment";
+        sendRef = y.transactionRef || sendRef;
+        sendNote = pending22 ? "sent via Yo Payments (awaiting Yo authorization)" : "sent via Yo Payments";
+      }
+      if (!sent) {
+        if (sourceType === "provider") await treasuryRelease({ account: "operations", amount, reference: treasuryRef, description: "Part payment failed — funds returned", performedBy: me?.name || email });
+        await rollback();
+        return respond(false, { error: detail || "Payment did not go through" });
+      }
+    }
+
     await db.from("partial_payment_installments").insert({
-      partial_payment_id: pp.id, amount, method, reference, notes, balance_after: balanceAfter, paid_by_name: me?.name || email, paid_by_email: email,
+      partial_payment_id: pp.id, amount, method, reference: reference || sendRef, notes: sendNote || notes, balance_after: balanceAfter, paid_by_name: me?.name || email, paid_by_email: email,
     });
 
     // Update the source item
