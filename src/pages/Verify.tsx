@@ -256,6 +256,25 @@ const Verify = () => {
                 )}
 
                 {/* Reference Number */}
+                {verification.subtype === 'daily_coffee_prices' && verification.meta?.prices && typeof verification.meta.prices === 'object' && (
+                  <div className="border-t pt-4 text-foreground">
+                    <h3 className="font-semibold">Coffee prices — {String(verification.meta.date || '')}</h3>
+                    <dl className="mt-3 space-y-2">
+                      {([
+                        ['Drugar', 'drugar_local', 'UGX/kg'], ['Wugar', 'wugar_local', 'UGX/kg'],
+                        ['Robusta FAQ', 'robusta_faq_local', 'UGX/kg'], ['Sorted', 'sorted_price', 'UGX/kg'],
+                        ['Arabica buying', 'arabica_buying_price', 'UGX/kg'], ['Robusta buying', 'robusta_buying_price', 'UGX/kg'],
+                        ['ICE Arabica', 'ice_arabica', 'US cents/lb'], ['ICE Robusta', 'robusta', 'USD/tonne'],
+                        ['USD / UGX', 'exchange_rate', 'UGX/USD'],
+                      ]).map(([label, key, unit]) => {
+                        const value = (verification.meta?.prices as Record<string, unknown>)[key];
+                        return <div key={key} className="flex flex-wrap justify-between gap-2 border-b border-border pb-2">
+                          <dt>{label}</dt><dd className="font-semibold">{typeof value === 'number' && value > 0 ? `${value.toLocaleString('en-UG')} ${unit}` : 'Not set'}</dd>
+                        </div>;
+                      })}
+                    </dl>
+                  </div>
+                )}
                 {verification.reference_no && (
                   <div className="border-t pt-4">
                     <p className="text-sm text-gray-500">Reference Number</p>
