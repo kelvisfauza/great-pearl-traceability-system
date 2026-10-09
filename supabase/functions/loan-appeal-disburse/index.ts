@@ -103,9 +103,16 @@ serve(async (req) => {
     const months = Number(appeal.final_term_months || appeal.requested_term_months || 1);
     const loanType = String(appeal.loan_type || "quick");
     const isPureSalary = loanType === "pure_salary";
-    const monthlyRate = isPureSalary ? 15 : 10; // %/month
+    // Same rates and caps as normal applications (src/lib/loanMath.ts)
+    const RATES: Record<string, { rate: number; cap: number }> = {
+      quick: { rate: 10, cap: 35 }, long_term: { rate: 10, cap: 35 },
+      pure_salary: { rate: 15, cap: 45 }, business: { rate: 4, cap: 30 },
+    };
+    const cfg = RATES[loanType] || RATES.quick;
+    const monthlyRate = cfg.rate; // %/month
     const dailyRate = Number((monthlyRate / 30).toFixed(4));
-    const totalRepayable = Math.ceil(principal + (principal * monthlyRate / 100) * months);
+    const interest = Math.min(principal * (monthlyRate / 100) * months, principal * cfg.cap / 100);
+    const totalRepayable = Math.ceil(principal + interest);
     // Pure salary: installment = 50% of salary, paid every 27th payroll until cleared.
     // Standard: equal installments over N months.
     const salaryAmt = Number((emp as any).salary || 0);
