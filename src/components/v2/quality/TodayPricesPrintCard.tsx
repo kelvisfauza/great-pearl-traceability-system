@@ -35,11 +35,11 @@ const TodayPricesPrintCard = () => {
         code, type: 'document', subtype: 'daily_coffee_prices', status: 'verified',
         issued_to_name: 'Quality Department', issued_at: now.toISOString(), created_by: user.id,
         reference_no: `PRICES-${now.toISOString().slice(0, 10)}-${code}`,
-        meta: { title: "Today's coffee prices", date: kampalaDate(now), prices: snapshot },
+        meta: { title: "Today's coffee prices", date: kampalaDate(now), prices: { ...snapshot } },
       });
       if (verificationError) throw new Error('The verification code could not be registered. No price sheet was issued. Please try again.');
       doc.autoPrint();
-      doc.save(`Coffee-Prices-${kampalaDate(now).replaceAll(' ', '-')}.pdf`);
+      doc.save(`Coffee-Prices-${kampalaDate(now).replace(/ /g, '-')}.pdf`);
     } catch (error) {
       toast({ title: 'Unable to print prices', description: error instanceof Error ? error.message : 'Please try again.', variant: 'destructive' });
     } finally { setBusy(false); }
