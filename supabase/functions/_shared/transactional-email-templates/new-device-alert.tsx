@@ -35,7 +35,7 @@ const NewDeviceAlertEmail = ({
           <Text style={greeting}>Hi {employeeName},</Text>
           <Text style={text}>
             Someone just signed into your {SITE_NAME} account from a new device. 
-            If this was you, please verify this device by clicking the button below.
+            Tap the button below to approve or reject this device. If you already entered your login code on it, no action is needed.
           </Text>
 
           <Section style={detailsCard}>
@@ -48,7 +48,7 @@ const NewDeviceAlertEmail = ({
 
           <Section style={ctaSection}>
             <Button href={verifyUrl} style={verifyButton}>
-              ✅ Verify This Device
+              Approve or Reject Device
             </Button>
           </Section>
 
@@ -56,8 +56,8 @@ const NewDeviceAlertEmail = ({
             <Text style={warningTitle}>⚠️ Wasn't you?</Text>
             <Text style={warningText}>
               If you did not perform this login, please change your password immediately 
-              and contact your administrator. Your account has been temporarily restricted 
-              until this device is verified.
+              and contact your administrator. Tap the button above and choose Reject 
+              to block this device.
             </Text>
           </Section>
 
@@ -85,7 +85,7 @@ export const template = {
     browser: 'Chrome 120',
     os: 'Windows 11',
     loginTime: '2026-04-05 at 5:30 PM EAT',
-    verifyUrl: 'https://great-pearl-traceability-system.lovable.app/verify-device?token=abc123',
+    verifyUrl: 'https://greatpearlcoffeesystem.site/verify-device?token=abc123',
   },
 } satisfies TemplateEntry
 

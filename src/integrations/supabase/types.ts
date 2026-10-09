@@ -2712,6 +2712,7 @@ export type Database = {
           is_trusted: boolean | null
           last_seen_at: string | null
           os: string | null
+          rejected_at: string | null
           token_expires_at: string | null
           token_used_at: string | null
           user_agent: string | null
@@ -2728,6 +2729,7 @@ export type Database = {
           is_trusted?: boolean | null
           last_seen_at?: string | null
           os?: string | null
+          rejected_at?: string | null
           token_expires_at?: string | null
           token_used_at?: string | null
           user_agent?: string | null
@@ -2744,6 +2746,7 @@ export type Database = {
           is_trusted?: boolean | null
           last_seen_at?: string | null
           os?: string | null
+          rejected_at?: string | null
           token_expires_at?: string | null
           token_used_at?: string | null
           user_agent?: string | null
@@ -18228,6 +18231,7 @@ export type Database = {
         Args: { _reason: string; _request_id: string }
         Returns: Json
       }
+      reject_device_token: { Args: { p_token: string }; Returns: Json }
       reject_transfer_reversal: {
         Args: { p_notes?: string; p_request_id: string }
         Returns: Json

@@ -408,25 +408,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.log('🔐 First device auto-trusted for:', signInEmail);
         } else {
           // Check if current device is trusted
-          const deviceCheck = await checkDeviceTrust(signInEmail, data.user.id);
+          const deviceCheck: any = await checkDeviceTrust(signInEmail, data.user.id);
+          if (deviceCheck.rejected) {
+            await supabase.auth.signOut();
+            toast({
+              title: "Device blocked",
+              description: "This device was rejected from your email. Contact IT support if this was a mistake.",
+              variant: "destructive"
+            });
+            throw new Error('NEW_DEVICE_VERIFICATION_REQUIRED');
+          }
           if (!deviceCheck.trusted && deviceCheck.token) {
-            // New device detected — send alert email and sign out
-            await sendNewDeviceAlertEmail(
+            // New device: send approve/reject link by email but do NOT block login.
+            // The login verification code the user enters next is enough to trust it.
+            sendNewDeviceAlertEmail(
               signInEmail,
               employeeData?.name || signInEmail.split('@')[0],
               deviceCheck.token
             );
-
-            // Sign out immediately — user must verify device first
-            await supabase.auth.signOut();
-            
-            toast({
-              title: "🔒 New Device Detected",
-              description: "A verification email has been sent. Please check your inbox and verify this device before logging in.",
-              variant: "destructive"
-            });
-
-            throw new Error('NEW_DEVICE_VERIFICATION_REQUIRED');
           }
         }
       } catch (deviceError: any) {
