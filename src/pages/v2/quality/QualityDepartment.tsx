@@ -28,6 +28,7 @@ import QualityAnalysisFormDownload from "@/components/expenses/QualityAnalysisFo
 import AdminRejectedLotsReview from "@/components/admin/AdminRejectedLotsReview";
 import PriceComparisonTab from "@/components/v2/quality/tabs/PriceComparisonTab";
 import { Scale } from "lucide-react";
+import TodayPricesPrintCard from '@/components/v2/quality/TodayPricesPrintCard';
 
 const allTabs = [
   { id: "overview", label: "Overview", icon: LayoutGrid },
@@ -76,6 +77,7 @@ const QualityDepartment = () => {
           </div>
 
           <div className="lg:col-span-4">
+            <TodayPricesPrintCard />
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
                 {tabs.map((tab) => (
