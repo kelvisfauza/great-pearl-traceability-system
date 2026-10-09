@@ -252,7 +252,11 @@ Deno.serve(async (req) => {
         .map((l: string) => l.trim())
         .filter((l: string) => l.length > 0)[0] || ''
       // Strip emojis / smart punctuation so BulkSMS bills GSM-7 (160 chars/segment)
-      const smsBody = toGsm7(`${resolvedSubject}${firstLine ? ` - ${firstLine}` : ''}`).slice(0, 320)
+      // Codes (guarantor/approval/PIN) must always reach the phone text, never just the email.
+      const td: any = templateData || {}
+      const codeVal = td.approvalCode || td.code || td.pin || td.otp
+      const codePart = codeVal ? ` Code: ${codeVal}.` : ''
+      const smsBody = toGsm7(`${resolvedSubject}${codePart}${firstLine ? ` - ${firstLine}` : ''}`).slice(0, 320)
 
       const { error: smsErr } = await supa.functions.invoke('send-sms', {
         body: {
