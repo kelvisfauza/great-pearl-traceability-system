@@ -1,6 +1,15 @@
 import { supabase } from '@/integrations/supabase/client';
 
-const APP_URL = 'https://greatpearlfinance.com';
+const APP_URL = 'https://greatpearlcoffeesystem.site';
+
+/** Mark the current device trusted (used after the user passes the login verification code). */
+export const trustCurrentDevice = async (userEmail: string, authUserId?: string) => {
+  try {
+    await trustFirstDevice(userEmail, authUserId);
+  } catch (e) {
+    console.error('trustCurrentDevice failed', e);
+  }
+};
 
 /**
  * Generate a simple device fingerprint from browser properties.
@@ -67,7 +76,7 @@ export const checkDeviceTrust = async (
   // Check if this device is already trusted
   const { data: existing } = await supabase
     .from('device_sessions')
-    .select('id, is_trusted')
+    .select('id, is_trusted, rejected_at')
     .eq('user_email', userEmail)
     .eq('device_fingerprint', fingerprint)
     .maybeSingle();
@@ -79,6 +88,10 @@ export const checkDeviceTrust = async (
       .update({ last_seen_at: new Date().toISOString() })
       .eq('id', existing.id);
     return { trusted: true };
+  }
+
+  if ((existing as any)?.rejected_at) {
+    return { trusted: false, rejected: true } as any;
   }
 
   if (existing && !existing.is_trusted) {
