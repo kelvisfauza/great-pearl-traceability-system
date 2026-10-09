@@ -347,6 +347,11 @@ const Auth = () => {
     let displayName = '';
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      // Verification code passed on this device — trust it, no email link needed.
+      if (user?.email) {
+        const { trustCurrentDevice } = await import('@/utils/deviceDetection');
+        await trustCurrentDevice(user.email, user.id);
+      }
       const metaName = (user?.user_metadata?.full_name || user?.user_metadata?.name || '').trim();
       if (metaName) {
         displayName = metaName;
