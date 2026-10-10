@@ -371,7 +371,7 @@ Deno.serve(async (req) => {
         employee_name: emp.employee_name,
         amount: bonusAmount,
         reason: `Employee of the Month - ${monthNames[targetMonth]} ${targetYear} (#${rank} Rank)`,
-        status: "allocated",
+        status: "pending",
         allocated_by: "system-auto",
       });
 
