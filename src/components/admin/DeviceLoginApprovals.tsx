@@ -58,7 +58,15 @@ const DeviceLoginApprovals: React.FC = () => {
           <div key={d.id} className="p-3 border rounded-lg flex flex-wrap justify-between gap-2 items-center">
             <div>
               <p className="font-medium">{d.user_email}</p>
-              <p className="text-sm text-muted-foreground">{d.browser || 'Browser'} • {d.os || 'Unknown'} • Last seen {new Date(d.last_seen_at || d.created_at).toLocaleString()}</p>
+              <p className="text-sm text-muted-foreground">
+                {d.device_name || d.browser || 'Browser'} • {d.os_version || d.os || 'Unknown'} • Last seen {new Date(d.last_seen_at || d.created_at).toLocaleString()}
+              </p>
+              {(d.location_label || d.latitude != null) && (
+                <p className="text-xs text-muted-foreground">
+                  {d.location_label || 'Location'}
+                  {d.latitude != null && <> ({d.latitude}, {d.longitude})</>}
+                </p>
+              )}
             </div>
             <div className="flex gap-2">
               <Button size="sm" disabled={busy === d.id} onClick={() => decide(d, true)}><Check className="h-4 w-4 mr-1" /> Approve</Button>
