@@ -601,7 +601,49 @@ serve(async (req) => {
         if (cand.initiated_by === actorId || (cand.approved_by_email || "").toLowerCase() === actorEmail.toLowerCase()) {
           return respond(false, { error: "Separation of duties: you created or approved this operation, so another Finance officer must release it." });
         }
+        // Finance chooses how a withdrawal is paid: cash, GosentePay, Yo or bank.
+        const method = String(body.payout_method || "").toLowerCase();
+        const methodPatch: Record<string, unknown> = {};
+        if (cand.operation_type === "withdraw" && method) {
+          if (!["cash", "gosentepay", "yo", "bank"].includes(method)) return respond(false, { error: "Invalid payment method" });
+          if (method === "bank") {
+            const { bank_name, account_number, account_name, branch } = body;
+            if (!bank_name || !account_number || !account_name) return respond(false, { error: "Bank name, account number and account name are required" });
+            const bankRef = `BNK-AWO-${cand.id.slice(0, 8)}`;
+            const { data: claimed } = await supabase.from("admin_wallet_operations").update({
+              status: "completed",
+              finance_released_by_email: actorEmail,
+              finance_released_by_name: actorEmp?.name || actorEmail,
+              finance_released_at: new Date().toISOString(),
+              executed_at: new Date().toISOString(),
+              gateway_reference: bankRef,
+              execution_error: null,
+            }).eq("id", operation_id).eq("status", "awaiting_finance").select("id").maybeSingle();
+            if (!claimed) return respond(false, { error: "Request status changed; refresh and retry." });
+            const { error: bErr } = await supabase.from("bank_deposit_requests").insert({
+              user_id: cand.target_user_id, employee_email: cand.target_email, employee_name: cand.target_name || cand.target_email,
+              amount: Number(cand.amount), fee: 0, total_deducted: Number(cand.amount),
+              bank_name: String(bank_name).trim(), branch: branch ? String(branch).trim() : null,
+              account_number: String(account_number).trim(), account_name: String(account_name).trim(),
+              reference: bankRef, status: "pending_admin",
+            });
+            if (bErr) {
+              await supabase.from("admin_wallet_operations").update({ status: "awaiting_finance", finance_released_at: null, finance_released_by_email: null, finance_released_by_name: null, executed_at: null, gateway_reference: null, execution_error: `Bank request failed: ${bErr.message}` }).eq("id", operation_id);
+              return respond(false, { error: `Could not create bank request: ${bErr.message}` });
+            }
+            return respond(true, { message: "Sent to admin for bank payment", reference: bankRef, bank: true });
+          }
+          methodPatch.payout_provider = method;
+          if (method === "cash") methodPatch.service_fee = 0;
+          else {
+            const ph = String(body.destination_phone || cand.destination_phone || "").trim();
+            if (!ph) return respond(false, { error: "Mobile money number required" });
+            methodPatch.destination_phone = ph;
+            if (cand.payout_provider === "cash" || !Number(cand.service_fee)) methodPatch.service_fee = computeWithdrawFee(Number(cand.amount));
+          }
+        }
         const res = await supabase.from("admin_wallet_operations").update({
+          ...methodPatch,
           status: "approved",
           finance_released_by_email: actorEmail,
           finance_released_by_name: actorEmp?.name || actorEmail,

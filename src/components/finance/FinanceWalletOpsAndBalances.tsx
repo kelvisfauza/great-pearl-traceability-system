@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Landmark, RefreshCw, Send, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -27,6 +28,8 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
   const [iwReason, setIwReason] = useState('');
   const [receipt, setReceipt] = useState<ReleaseReceiptData | null>(null);
   const [iwWait, setIwWait] = useState<Record<string, number>>({});
+  const [forms, setForms] = useState<Record<string, any>>({});
+  const setForm = (id: string, patch: any) => setForms((x) => ({ ...x, [id]: { ...(x[id] || {}), ...patch } }));
 
   const load = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
@@ -61,10 +64,20 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
   };
 
   const release = async (op: any) => {
+    const isW = op.operation_type === 'withdraw';
+    const f = forms[op.id] || {};
+    const method = isW ? (f.method || op.payout_provider || 'cash') : undefined;
+    if (isW && (method === 'gosentepay' || method === 'yo') && !(f.phone ?? op.destination_phone)) { toast.error('Enter the mobile money number'); return; }
+    if (isW && method === 'bank' && (!f.bank_name || !f.account_number || !f.account_name)) { toast.error('Enter bank name, account number and account name'); return; }
     setBusy(op.id);
-    const { data, error } = await supabase.functions.invoke('admin-wallet-operation', { body: { action: 'finance_release', operation_id: op.id } });
+    const { data, error } = await supabase.functions.invoke('admin-wallet-operation', { body: {
+      action: 'finance_release', operation_id: op.id,
+      ...(isW ? { payout_method: method, destination_phone: f.phone ?? op.destination_phone, bank_name: f.bank_name, branch: f.branch, account_number: f.account_number, account_name: f.account_name } : {}),
+    } });
     setBusy(null);
     if (error || !data?.ok) { toast.error(data?.error || error?.message || 'Release failed'); return; }
+    if (data.bank) { toast.success(`Sent to admin for bank payment — Ref ${data.reference}`); load(); return; }
+    op = { ...op, payout_provider: method || op.payout_provider, destination_phone: method === 'cash' ? null : (f.phone ?? op.destination_phone) };
     const { data: s } = await supabase.auth.getSession();
     setReceipt({
       reference: data.reference || op.id.slice(0, 8), title: `Admin wallet ${op.operation_type}`, amount: Number(op.amount),
@@ -231,9 +244,41 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
                 </div>
                 <div className="flex gap-2">
                   <Button size="sm" variant="outline" onClick={() => setRejecting(rejecting === op.id ? null : op.id)}><XCircle className="h-4 w-4 mr-1" /> Reject</Button>
-                  <Button size="sm" onClick={() => release(op)} disabled={busy === op.id}><Send className="h-4 w-4 mr-1" /> {busy === op.id ? 'Releasing…' : 'Release'}</Button>
+                  <Button size="sm" onClick={() => release(op)} disabled={busy === op.id}><Send className="h-4 w-4 mr-1" /> {busy === op.id ? 'Processing…' : (() => {
+                    if (op.operation_type !== 'withdraw') return 'Release';
+                    const m = forms[op.id]?.method || op.payout_provider || 'cash';
+                    return m === 'cash' ? 'Mark paid in cash' : m === 'bank' ? 'Send to admin for bank' : m === 'yo' ? 'Send via Yo' : 'Send via GosentePay';
+                  })()}</Button>
                 </div>
               </div>
+              {op.operation_type === 'withdraw' && (() => {
+                const f = forms[op.id] || {};
+                const m = f.method || op.payout_provider || 'cash';
+                return (
+                  <div className="space-y-2 rounded-md bg-muted/40 p-2">
+                    <p className="text-xs font-medium">How should Finance pay this?</p>
+                    <div className="flex flex-wrap gap-1">
+                      {[['cash', 'Cash'], ['gosentepay', 'GosentePay'], ['yo', 'Yo Payments'], ['bank', 'Bank']].map(([v, l]) => (
+                        <Button key={v} type="button" size="sm" variant={m === v ? 'default' : 'outline'} onClick={() => setForm(op.id, { method: v })}>{l}</Button>
+                      ))}
+                    </div>
+                    {(m === 'gosentepay' || m === 'yo') && (
+                      <Input placeholder="Mobile money number" value={f.phone ?? op.destination_phone ?? ''} onChange={(e) => setForm(op.id, { phone: e.target.value })} />
+                    )}
+                    {m === 'bank' && (
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <Input placeholder="Bank name" value={f.bank_name || ''} onChange={(e) => setForm(op.id, { bank_name: e.target.value })} />
+                        <Input placeholder="Branch (optional)" value={f.branch || ''} onChange={(e) => setForm(op.id, { branch: e.target.value })} />
+                        <Input placeholder="Account number" value={f.account_number || ''} onChange={(e) => setForm(op.id, { account_number: e.target.value })} />
+                        <Input placeholder="Account name" value={f.account_name || ''} onChange={(e) => setForm(op.id, { account_name: e.target.value })} />
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      {m === 'cash' ? 'Hand over the cash first — this completes the withdrawal.' : m === 'bank' ? 'Goes to admin Bank Withdrawals to pay into the account.' : 'Money is sent straight away to this number.'}
+                    </p>
+                  </div>
+                );
+              })()}
               {rejecting === op.id && (
                 <div className="flex gap-2">
                   <Textarea value={reason} onChange={e => setReason(e.target.value)} placeholder="Reason for rejecting" className="min-h-[40px]" />
