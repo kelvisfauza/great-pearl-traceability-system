@@ -137,7 +137,7 @@ serve(async (req) => {
     if (iw.payout_status !== "pending_finance") {
       return respond(false, { error: "Already processed" });
     }
-    if (iw.payment_provider !== "gosente") {
+    if (action !== "pay_cash" && iw.payment_provider !== "gosente") {
       return respond(false, { error: "Not a GosentePay withdrawal" });
     }
 
@@ -155,8 +155,38 @@ serve(async (req) => {
       return respond(false, { error: "You approved this as admin — another Finance officer must release it" });
     }
 
+    // Finance pays the employee in cash — record it, no provider call
+    if (action === "pay_cash") {
+      const voucher = String(reason || "").trim().slice(0, 80);
+      const cashRef = `CASH-${voucher || iw.id.slice(0, 8)}`;
+      const { data: upd } = await supabase.from("instant_withdrawals").update({
+        payout_status: "success", payout_provider: "cash", payout_ref: cashRef,
+        completed_at: new Date().toISOString(),
+        finance_released_by: adminEmp?.name || adminEmail, finance_released_at: new Date().toISOString(), last_error: null,
+      } as any).eq("id", iw.id).eq("payout_status", "pending_finance").select("id");
+      if (!upd?.length) {
+        // payout_provider column may not exist — retry without it
+        const { data: upd2 } = await supabase.from("instant_withdrawals").update({
+          payout_status: "success", payout_ref: cashRef, completed_at: new Date().toISOString(),
+          finance_released_by: adminEmp?.name || adminEmail, finance_released_at: new Date().toISOString(), last_error: null,
+        }).eq("id", iw.id).eq("payout_status", "pending_finance").select("id");
+        if (!upd2?.length) return respond(false, { error: "Already processed" });
+      }
+      await supabase.from("audit_logs").insert({ action: "FINANCE_CASH_INSTANT_WITHDRAWAL", table_name: "instant_withdrawals", record_id: iw.id, performed_by: adminEmp?.name || adminEmail, reason: voucher || null, record_data: { amount: iw.amount, method: "cash" } });
+      if (reqEmp?.email) {
+        try {
+          await supabase.functions.invoke("send-transactional-email", { body: {
+            templateName: "general-notification", recipientEmail: reqEmp.email, idempotencyKey: `iw-cash-${iw.id}`,
+            templateData: { title: "Withdrawal paid in cash", message: `Dear ${reqEmp.name || "there"}, your withdrawal of UGX ${Number(iw.amount).toLocaleString()} has been paid to you in cash by Finance (ref ${cashRef}). Great Agro Coffee.` },
+          } });
+        } catch (_) { /* non-blocking */ }
+      }
+      return respond(true, { success: true, ref: cashRef });
+    }
+
     const ref = iw.payout_ref || `INSTANT-WD-${iw.id}`;
     const amount = Number(iw.amount);
+
     console.log(`[dispatch-gosente-instant] admin=${adminEmail} amount=${amount} phone=${iw.phone_number} ref=${ref}`);
 
     const { status, body } = await gosenteWithdraw({
