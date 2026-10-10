@@ -39,6 +39,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useQualityControl } from "@/hooks/useQualityControl";
 import { useWorkflowTracking } from "@/hooks/useWorkflowTracking";
 import { usePrices } from "@/contexts/PriceContext";
+import TodayPricesPrintCard from "@/components/v2/quality/TodayPricesPrintCard";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQualityRole } from '@/hooks/useQualityRole';
@@ -1170,6 +1171,7 @@ const QualityControl = () => {
             </AlertDescription>
           </Alert>
         )}
+        <TodayPricesPrintCard />
         {/* Current Prices Display */}
         <Card>
           <CardHeader>
