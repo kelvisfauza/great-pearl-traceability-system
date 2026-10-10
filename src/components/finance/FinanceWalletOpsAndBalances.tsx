@@ -27,6 +27,8 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
   const [iwReason, setIwReason] = useState('');
   const [receipt, setReceipt] = useState<ReleaseReceiptData | null>(null);
   const [iwWait, setIwWait] = useState<Record<string, number>>({});
+  const [forms, setForms] = useState<Record<string, any>>({});
+  const setForm = (id: string, patch: any) => setForms((x) => ({ ...x, [id]: { ...(x[id] || {}), ...patch } }));
 
   const load = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
@@ -61,10 +63,20 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
   };
 
   const release = async (op: any) => {
+    const isW = op.operation_type === 'withdraw';
+    const f = forms[op.id] || {};
+    const method = isW ? (f.method || op.payout_provider || 'cash') : undefined;
+    if (isW && (method === 'gosentepay' || method === 'yo') && !(f.phone ?? op.destination_phone)) { toast.error('Enter the mobile money number'); return; }
+    if (isW && method === 'bank' && (!f.bank_name || !f.account_number || !f.account_name)) { toast.error('Enter bank name, account number and account name'); return; }
     setBusy(op.id);
-    const { data, error } = await supabase.functions.invoke('admin-wallet-operation', { body: { action: 'finance_release', operation_id: op.id } });
+    const { data, error } = await supabase.functions.invoke('admin-wallet-operation', { body: {
+      action: 'finance_release', operation_id: op.id,
+      ...(isW ? { payout_method: method, destination_phone: f.phone ?? op.destination_phone, bank_name: f.bank_name, branch: f.branch, account_number: f.account_number, account_name: f.account_name } : {}),
+    } });
     setBusy(null);
     if (error || !data?.ok) { toast.error(data?.error || error?.message || 'Release failed'); return; }
+    if (data.bank) { toast.success(`Sent to admin for bank payment — Ref ${data.reference}`); load(); return; }
+    op = { ...op, payout_provider: method || op.payout_provider, destination_phone: method === 'cash' ? null : (f.phone ?? op.destination_phone) };
     const { data: s } = await supabase.auth.getSession();
     setReceipt({
       reference: data.reference || op.id.slice(0, 8), title: `Admin wallet ${op.operation_type}`, amount: Number(op.amount),
