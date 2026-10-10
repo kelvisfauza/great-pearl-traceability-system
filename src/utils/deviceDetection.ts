@@ -156,6 +156,7 @@ export const checkDeviceTrust = async (
 ): Promise<{ trusted: boolean; token?: string; deviceId?: string }> => {
   const fingerprint = generateDeviceFingerprint();
   const { browser, os } = parseUserAgent(navigator.userAgent);
+  const details = await collectDeviceDetails();
 
   // Check if this device is already trusted
   const { data: existing } = await supabase
@@ -166,10 +167,10 @@ export const checkDeviceTrust = async (
     .maybeSingle();
 
   if (existing?.is_trusted) {
-    // Update last_seen
+    // Update last_seen + refresh device details (model, OS version, location)
     await supabase
       .from('device_sessions')
-      .update({ last_seen_at: new Date().toISOString() })
+      .update({ last_seen_at: new Date().toISOString(), ...details })
       .eq('id', existing.id);
     return { trusted: true };
   }
@@ -187,6 +188,8 @@ export const checkDeviceTrust = async (
         verification_token: newToken,
         token_expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
         token_used_at: null,
+        last_seen_at: new Date().toISOString(),
+        ...details,
       })
       .eq('id', existing.id);
     
