@@ -2707,11 +2707,16 @@ export type Database = {
           browser: string | null
           created_at: string | null
           device_fingerprint: string
+          device_name: string | null
           first_seen_at: string | null
           id: string
           is_trusted: boolean | null
           last_seen_at: string | null
+          latitude: number | null
+          location_label: string | null
+          longitude: number | null
           os: string | null
+          os_version: string | null
           rejected_at: string | null
           token_expires_at: string | null
           token_used_at: string | null
@@ -2724,11 +2729,16 @@ export type Database = {
           browser?: string | null
           created_at?: string | null
           device_fingerprint: string
+          device_name?: string | null
           first_seen_at?: string | null
           id?: string
           is_trusted?: boolean | null
           last_seen_at?: string | null
+          latitude?: number | null
+          location_label?: string | null
+          longitude?: number | null
           os?: string | null
+          os_version?: string | null
           rejected_at?: string | null
           token_expires_at?: string | null
           token_used_at?: string | null
@@ -2741,11 +2751,16 @@ export type Database = {
           browser?: string | null
           created_at?: string | null
           device_fingerprint?: string
+          device_name?: string | null
           first_seen_at?: string | null
           id?: string
           is_trusted?: boolean | null
           last_seen_at?: string | null
+          latitude?: number | null
+          location_label?: string | null
+          longitude?: number | null
           os?: string | null
+          os_version?: string | null
           rejected_at?: string | null
           token_expires_at?: string | null
           token_used_at?: string | null
