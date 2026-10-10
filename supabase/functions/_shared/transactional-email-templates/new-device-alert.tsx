@@ -9,6 +9,8 @@ interface NewDeviceAlertProps {
   employeeName?: string
   browser?: string
   os?: string
+  deviceName?: string
+  location?: string
   loginTime?: string
   verifyUrl?: string
 }
@@ -17,6 +19,8 @@ const NewDeviceAlertEmail = ({
   employeeName = 'User',
   browser = 'Unknown Browser',
   os = 'Unknown OS',
+  deviceName = '',
+  location = '',
   loginTime = '',
   verifyUrl = '#',
 }: NewDeviceAlertProps) => (
@@ -41,8 +45,10 @@ const NewDeviceAlertEmail = ({
           <Section style={detailsCard}>
             <Text style={detailsTitle}>📱 Device Details</Text>
             <Hr style={thinHr} />
+            {deviceName ? <Text style={detailRow}><strong>Device:</strong> {deviceName}</Text> : null}
             <Text style={detailRow}><strong>Browser:</strong> {browser}</Text>
             <Text style={detailRow}><strong>Operating System:</strong> {os}</Text>
+            {location ? <Text style={detailRow}><strong>Location:</strong> {location}</Text> : null}
             <Text style={detailRow}><strong>Time:</strong> {loginTime}</Text>
           </Section>
 
