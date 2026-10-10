@@ -137,7 +137,7 @@ serve(async (req) => {
     if (iw.payout_status !== "pending_finance") {
       return respond(false, { error: "Already processed" });
     }
-    if (iw.payment_provider !== "gosente") {
+    if (action !== "pay_cash" && iw.payment_provider !== "gosente") {
       return respond(false, { error: "Not a GosentePay withdrawal" });
     }
 

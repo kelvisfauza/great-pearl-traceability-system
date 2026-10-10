@@ -94,6 +94,22 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
     });
     load();
   };
+  const payCashIw = async (w: any) => {
+    const voucher = window.prompt(`Pay ${w.employee_name} UGX ${Math.round(Number(w.amount)).toLocaleString()} in cash.\nEnter the cash voucher number (optional), then OK once the cash is handed over:`, '');
+    if (voucher === null) return;
+    setBusy(w.id);
+    const { data, error } = await supabase.functions.invoke('dispatch-gosente-instant', { body: { instant_withdrawal_id: w.id, action: 'pay_cash', reason: voucher } });
+    setBusy(null);
+    if (error || !data?.ok) { toast.error(data?.error || error?.message || 'Cash payment failed'); return; }
+    const { data: s } = await supabase.auth.getSession();
+    setReceipt({
+      reference: data.ref, title: 'Instant withdrawal (Cash)', amount: Number(w.amount),
+      recipientName: w.employee_name, phone: w.phone_number, channel: 'cash',
+      releasedBy: s?.session?.user?.email || 'Finance', requestId: w.id,
+      approvals: [{ label: 'Admin approval', by: w.admin_approved_by, at: w.admin_approved_at }],
+    } as any);
+    load();
+  };
   const sendBackIw = async (w: any) => {
     setBusy(w.id);
     const { data, error } = await supabase.functions.invoke('dispatch-gosente-instant', { body: { instant_withdrawal_id: w.id, action: 'send_back' } });
@@ -164,6 +180,7 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
                 <div className="flex gap-2 items-end">
                   <PartPayControl sourceType="withdrawal" sourceId={w.id} totalAmount={Number(w.amount)} payeeName={w.employee_name} onChanged={() => load()} />
                   <Button size="sm" disabled={busy === w.id} onClick={() => releaseIw(w)}>{iwWait[w.id] != null ? `Waiting for funds… ${iwWait[w.id]}s` : w.last_error ? 'Try again' : 'Release'}</Button>
+                  <Button size="sm" variant="outline" disabled={busy === w.id} onClick={() => payCashIw(w)}>Pay cash</Button>
                   <Button size="sm" variant="outline" disabled={busy === w.id} onClick={() => sendBackIw(w)}>Send back</Button>
                   <Button size="sm" variant="outline" disabled={busy === w.id} onClick={() => setIwRejecting(iwRejecting === w.id ? null : w.id)}><XCircle className="h-4 w-4 mr-1" /> Reject</Button>
                 </div>
