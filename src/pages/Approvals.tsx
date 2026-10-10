@@ -11,6 +11,7 @@ import SupportStaffPerDiemSection from '@/components/admin/SupportStaffPerDiemSe
 import AdminWalletOperations from '@/components/admin/AdminWalletOperations';
 import BankDepositApprovals from '@/components/admin/BankDepositApprovals';
 import QuotationApprovals from '@/components/quotations/QuotationApprovals';
+import DeviceLoginApprovals from '@/components/admin/DeviceLoginApprovals';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRoleBasedData } from '@/hooks/useRoleBasedData';
 import { Shield, ClipboardCheck, DollarSign } from 'lucide-react';
@@ -70,6 +71,9 @@ const Approvals = () => {
             </div>
           </div>
         </div>
+
+        {/* New device sign-ins awaiting admin authorisation */}
+        <DeviceLoginApprovals />
 
         {/* Quotations recommended by procurement */}
         <QuotationApprovals />
