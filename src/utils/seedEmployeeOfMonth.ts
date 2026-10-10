@@ -54,7 +54,7 @@ export const seedEmployeeOfTheMonth = async () => {
       employee_name: w.employee_name,
       amount: 50000,
       reason: `Employee of the Month - March 2026 (#${w.rank} Rank)`,
-      status: 'allocated',
+      status: 'pending',
       allocated_by: 'fauzakusa@greatpearlcoffee.com',
     });
   }
