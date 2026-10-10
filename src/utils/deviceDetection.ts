@@ -62,6 +62,90 @@ export const parseUserAgent = (ua: string) => {
   return { browser, os };
 };
 
+export interface DeviceDetails {
+  device_name?: string;
+  os_version?: string;
+  latitude?: number;
+  longitude?: number;
+  location_label?: string;
+}
+
+/**
+ * Collect rich device details: model name, OS version, and GPS location.
+ * Uses the Capacitor Device/Geolocation plugins inside the native app,
+ * and falls back to user-agent parsing + browser geolocation on the web.
+ * Never throws — returns whatever could be gathered.
+ */
+export const collectDeviceDetails = async (): Promise<DeviceDetails> => {
+  const details: DeviceDetails = {};
+  const ua = navigator.userAgent;
+
+  // 1) Parse Android version + device model from the user agent
+  const androidMatch = ua.match(/Android\s([\d.]+)/i);
+  if (androidMatch) details.os_version = `Android ${androidMatch[1]}`;
+  const modelMatch = ua.match(/Android[\d.\s]*;\s*([^;)]+)/i);
+  if (modelMatch) {
+    const model = modelMatch[1].trim();
+    if (model && !/^(wv|en-|sw-|U;?)$/i.test(model)) details.device_name = model;
+  }
+  const iosMatch = ua.match(/OS\s([\d_]+)\slike Mac OS X/i);
+  if (iosMatch) details.os_version = `iOS ${iosMatch[1].replace(/_/g, '.')}`;
+
+  // 2) Native app: ask the Capacitor Device plugin for the real model + OS version
+  try {
+    const { Capacitor } = await import('@capacitor/core');
+    if (Capacitor.isNativePlatform()) {
+      const { Device } = await import('@capacitor/device');
+      const info = await Device.getInfo();
+      if (info.model) details.device_name = info.model;
+      if (info.osVersion) details.os_version = `${info.operatingSystem === 'ios' ? 'iOS' : 'Android'} ${info.osVersion}`;
+      if (info.manufacturer && details.device_name && !details.device_name.toLowerCase().includes(info.manufacturer.toLowerCase())) {
+        details.device_name = `${info.manufacturer} ${details.device_name}`;
+      }
+    }
+  } catch { /* web fallback already parsed above */ }
+
+  // 3) GPS location (native plugin first, browser geolocation as fallback)
+  let coords: { latitude: number; longitude: number } | null = null;
+  try {
+    const { Capacitor } = await import('@capacitor/core');
+    if (Capacitor.isNativePlatform()) {
+      const { Geolocation } = await import('@capacitor/geolocation');
+      const pos = await Geolocation.getCurrentPosition({ timeout: 8000 });
+      coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+    }
+  } catch { /* permission denied or unavailable */ }
+  if (!coords && 'geolocation' in navigator) {
+    coords = await new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+        () => resolve(null),
+        { timeout: 8000, maximumAge: 300000 }
+      );
+    });
+  }
+  if (coords) {
+    details.latitude = Math.round(coords.latitude * 1e6) / 1e6;
+    details.longitude = Math.round(coords.longitude * 1e6) / 1e6;
+    // 4) Reverse-geocode to a human-readable place name (OpenStreetMap)
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${coords.latitude}&lon=${coords.longitude}&zoom=14`,
+        { headers: { Accept: 'application/json' } }
+      );
+      if (res.ok) {
+        const geo = await res.json();
+        const a = geo.address || {};
+        const place = a.suburb || a.neighbourhood || a.village || a.town || a.city || a.county;
+        const region = a.state || a.country;
+        details.location_label = [place, region].filter(Boolean).join(', ') || geo.display_name?.split(',').slice(0, 2).join(',');
+      }
+    } catch { /* keep coordinates only */ }
+  }
+
+  return details;
+};
+
 /**
  * Check if the current device is trusted for this user.
  * Returns { trusted: true } if recognized, or { trusted: false, token, deviceId } if new.
@@ -72,6 +156,7 @@ export const checkDeviceTrust = async (
 ): Promise<{ trusted: boolean; token?: string; deviceId?: string }> => {
   const fingerprint = generateDeviceFingerprint();
   const { browser, os } = parseUserAgent(navigator.userAgent);
+  const details = await collectDeviceDetails();
 
   // Check if this device is already trusted
   const { data: existing } = await supabase
@@ -82,10 +167,10 @@ export const checkDeviceTrust = async (
     .maybeSingle();
 
   if (existing?.is_trusted) {
-    // Update last_seen
+    // Update last_seen + refresh device details (model, OS version, location)
     await supabase
       .from('device_sessions')
-      .update({ last_seen_at: new Date().toISOString() })
+      .update({ last_seen_at: new Date().toISOString(), ...details })
       .eq('id', existing.id);
     return { trusted: true };
   }
@@ -103,6 +188,8 @@ export const checkDeviceTrust = async (
         verification_token: newToken,
         token_expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
         token_used_at: null,
+        last_seen_at: new Date().toISOString(),
+        ...details,
       })
       .eq('id', existing.id);
     
@@ -123,6 +210,7 @@ export const checkDeviceTrust = async (
       is_trusted: false,
       verification_token: token,
       token_expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      ...details,
     })
     .select('id')
     .single();
@@ -145,11 +233,15 @@ export const sendNewDeviceAlertEmail = async (
   token: string
 ) => {
   const { browser, os } = parseUserAgent(navigator.userAgent);
+  const details = await collectDeviceDetails();
+  const deviceLabel = [details.device_name, details.os_version || os].filter(Boolean).join(' — ') || `${browser} on ${os}`;
+  const locationLabel = details.location_label
+    || (details.latitude != null ? `${details.latitude}, ${details.longitude}` : 'Unknown location');
   const verifyUrl = `${APP_URL}/verify-device?token=${token}`;
-  const loginTime = new Date().toLocaleString('en-UG', { 
-    dateStyle: 'medium', 
+  const loginTime = new Date().toLocaleString('en-UG', {
+    dateStyle: 'medium',
     timeStyle: 'short',
-    timeZone: 'Africa/Kampala' 
+    timeZone: 'Africa/Kampala'
   });
 
   try {
@@ -162,6 +254,8 @@ export const sendNewDeviceAlertEmail = async (
           employeeName,
           browser,
           os,
+          deviceName: deviceLabel,
+          location: locationLabel,
           loginTime,
           verifyUrl,
         },
@@ -180,6 +274,7 @@ export const sendNewDeviceAlertEmail = async (
 export const trustFirstDevice = async (userEmail: string, authUserId?: string) => {
   const fingerprint = generateDeviceFingerprint();
   const { browser, os } = parseUserAgent(navigator.userAgent);
+  const details = await collectDeviceDetails();
 
   await supabase
     .from('device_sessions')
@@ -192,6 +287,8 @@ export const trustFirstDevice = async (userEmail: string, authUserId?: string) =
       os,
       is_trusted: true,
       token_used_at: new Date().toISOString(),
+      last_seen_at: new Date().toISOString(),
+      ...details,
     }, { onConflict: 'user_email,device_fingerprint' });
 
   console.log('🔐 First device auto-trusted for:', userEmail);
