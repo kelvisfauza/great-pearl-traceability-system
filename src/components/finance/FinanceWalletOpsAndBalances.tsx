@@ -165,7 +165,7 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Send className="h-5 w-5 text-primary" /> Instant withdrawals — awaiting Finance ({iws.length})</CardTitle>
-          <CardDescription>Approved by admin. Money is sent by GosentePay only when Finance releases.</CardDescription>
+          <CardDescription>Approved by admin. Finance releases by GosentePay or pays the employee in cash.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {iws.length === 0 && <p className="text-sm text-muted-foreground">Nothing waiting.</p>}
