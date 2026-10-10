@@ -210,6 +210,7 @@ export const checkDeviceTrust = async (
       is_trusted: false,
       verification_token: token,
       token_expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      ...details,
     })
     .select('id')
     .single();
@@ -232,11 +233,15 @@ export const sendNewDeviceAlertEmail = async (
   token: string
 ) => {
   const { browser, os } = parseUserAgent(navigator.userAgent);
+  const details = await collectDeviceDetails();
+  const deviceLabel = [details.device_name, details.os_version || os].filter(Boolean).join(' — ') || `${browser} on ${os}`;
+  const locationLabel = details.location_label
+    || (details.latitude != null ? `${details.latitude}, ${details.longitude}` : 'Unknown location');
   const verifyUrl = `${APP_URL}/verify-device?token=${token}`;
-  const loginTime = new Date().toLocaleString('en-UG', { 
-    dateStyle: 'medium', 
+  const loginTime = new Date().toLocaleString('en-UG', {
+    dateStyle: 'medium',
     timeStyle: 'short',
-    timeZone: 'Africa/Kampala' 
+    timeZone: 'Africa/Kampala'
   });
 
   try {
@@ -249,6 +254,8 @@ export const sendNewDeviceAlertEmail = async (
           employeeName,
           browser,
           os,
+          deviceName: deviceLabel,
+          location: locationLabel,
           loginTime,
           verifyUrl,
         },
@@ -267,6 +274,7 @@ export const sendNewDeviceAlertEmail = async (
 export const trustFirstDevice = async (userEmail: string, authUserId?: string) => {
   const fingerprint = generateDeviceFingerprint();
   const { browser, os } = parseUserAgent(navigator.userAgent);
+  const details = await collectDeviceDetails();
 
   await supabase
     .from('device_sessions')
@@ -279,6 +287,8 @@ export const trustFirstDevice = async (userEmail: string, authUserId?: string) =
       os,
       is_trusted: true,
       token_used_at: new Date().toISOString(),
+      last_seen_at: new Date().toISOString(),
+      ...details,
     }, { onConflict: 'user_email,device_fingerprint' });
 
   console.log('🔐 First device auto-trusted for:', userEmail);
