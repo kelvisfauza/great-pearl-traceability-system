@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import V2Navigation from "@/components/v2/V2Navigation";
 import { ShoppingCart } from "lucide-react";
 import SalesTransactionsList from "@/components/v2/sales/SalesTransactionsList";
+import SalesReportPrint from "@/components/v2/sales/SalesReportPrint";
 import NewSaleForm from "@/components/v2/sales/NewSaleForm";
 import PriceTicker from "@/components/PriceTicker";
 
@@ -37,8 +38,9 @@ const SalesIndex = () => {
 
               <TabsContent value="transactions">
                 <Card>
-                  <CardHeader>
+                  <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <CardTitle>Recent Transactions</CardTitle>
+                    <SalesReportPrint />
                   </CardHeader>
                   <CardContent>
                     <SalesTransactionsList />
