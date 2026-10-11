@@ -36,6 +36,27 @@ const ComparisonCharts = () => {
   const [loading, setLoading] = useState(true);
   // 8 weekly buckets, index 0 = oldest, 7 = current
   const [weeks, setWeeks] = useState<Array<{ label: string; start: Date; end: Date } & WeekBucket>>([]);
+  const [period, setPeriod] = useState<"week" | "month">("week");
+  const [inkMode, setInkMode] = useState(true);
+  const unit = period === "week" ? "Week" : "Month";
+  const n = period === "week" ? 8 : 6;
+  const win = `${n}-${unit}`;
+  const c1 = inkMode ? "hsl(var(--foreground))" : "hsl(var(--chart-1))";
+  const c2 = inkMode ? "url(#inkHatch)" : "hsl(var(--chart-3))";
+  const c2Line = inkMode ? "hsl(var(--muted-foreground))" : "hsl(var(--chart-3))";
+  const INK_PIE = ["hsl(var(--foreground))", "url(#inkHatch)", "hsl(var(--muted-foreground))", "url(#inkDots)", "hsl(var(--background))"];
+  const InkDefs = () => (
+    <defs>
+      <pattern id="inkHatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+        <rect width="6" height="6" fill="hsl(var(--background))" />
+        <line x1="0" y1="0" x2="0" y2="6" stroke="hsl(var(--foreground))" strokeWidth="2.5" />
+      </pattern>
+      <pattern id="inkDots" patternUnits="userSpaceOnUse" width="5" height="5">
+        <rect width="5" height="5" fill="hsl(var(--background))" />
+        <circle cx="2.5" cy="2.5" r="1.2" fill="hsl(var(--foreground))" />
+      </pattern>
+    </defs>
+  );
 
   useEffect(() => {
     const fetchData = async () => {
@@ -44,7 +65,14 @@ const ComparisonCharts = () => {
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       // Build 8 weekly buckets ending today (each week = 7 days)
       const buckets: Array<{ label: string; start: Date; end: Date } & WeekBucket> = [];
-      for (let i = 7; i >= 0; i--) {
+      if (period === "month") {
+        for (let i = 5; i >= 0; i--) {
+          const start = new Date(today.getFullYear(), today.getMonth() - i, 1);
+          const monthEnd = new Date(today.getFullYear(), today.getMonth() - i + 1, 0);
+          const end = monthEnd > today ? today : monthEnd;
+          buckets.push({ start, end, label: start.toLocaleDateString("en-US", { month: "short", year: "numeric" }), ...emptyWeek() });
+        }
+      } else for (let i = 7; i >= 0; i--) {
         const end = new Date(today); end.setDate(end.getDate() - i * 7);
         const start = new Date(end); start.setDate(start.getDate() - 6);
         buckets.push({
@@ -81,7 +109,7 @@ const ComparisonCharts = () => {
       setLoading(false);
     };
     fetchData();
-  }, []);
+  }, [period]);
 
   const fmtNum = (n: number) => Math.round(n).toLocaleString();
   const fmtUGX = (n: number) => `UGX ${Math.round(n).toLocaleString()}`;
@@ -188,7 +216,28 @@ const ComparisonCharts = () => {
     },
   ];
 
-  const handlePrint = () => window.print();
+  const handlePrint = () => {
+    const area = document.querySelector(".print-area");
+    if (!area) return;
+    const w = window.open("", "_blank");
+    if (!w) { window.print(); return; }
+    const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style')).map(el => el.outerHTML).join("");
+    w.document.write(`<!doctype html><html><head><title>Comparison Charts</title>${styles}
+      <style>
+        body{background:#fff;padding:12px;}
+        .no-print{display:none!important}
+        .print-only-block{display:block!important}
+        .recharts-wrapper{width:100%!important;height:auto!important}
+        svg.recharts-surface{width:100%!important;height:auto!important}
+        .recharts-legend-wrapper{position:static!important;width:100%!important}
+        .chart-card{break-after:page;page-break-after:always;break-inside:avoid;box-shadow:none!important}
+        .chart-card:last-child{break-after:auto;page-break-after:auto}
+        *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+        @page{size:A4;margin:10mm}
+      </style></head><body>${area.innerHTML}</body></html>`);
+    w.document.close();
+    setTimeout(() => { w.focus(); w.print(); }, 800);
+  };
 
   const ChangeChip = ({ change }: { change: number }) => {
     const Icon = change > 0 ? TrendingUp : change < 0 ? TrendingDown : Minus;
@@ -196,7 +245,7 @@ const ComparisonCharts = () => {
     return (
       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${tone}`}>
         <Icon className="h-3 w-3" />
-        {change > 0 ? "+" : ""}{change.toFixed(1)}% WoW
+        {change > 0 ? "+" : ""}{change.toFixed(1)}% vs last {unit.toLowerCase()}
       </span>
     );
   };
@@ -240,14 +289,23 @@ const ComparisonCharts = () => {
         }
       `}</style>
 
-      <Layout title="Comparison Charts" subtitle="Weekly comparisons across the business — 8-week window">
+      <Layout title="Comparison Charts" subtitle={`${unit}ly comparisons across the business — ${n}-${unit.toLowerCase()} window`}>
         <div className="space-y-6 no-print">
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap items-center">
+            <Tabs value={period} onValueChange={(v) => setPeriod(v as any)}>
+              <TabsList>
+                <TabsTrigger value="week">Compare weeks</TabsTrigger>
+                <TabsTrigger value="month">Compare months</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Button variant={inkMode ? "default" : "outline"} onClick={() => setInkMode(v => !v)}>
+              {inkMode ? "Black ink view: on" : "Black ink view: off"}
+            </Button>
             <Button variant="outline" onClick={() => navigate("/reports")} className="gap-2">
               <ArrowLeft className="h-4 w-4" /> Back to Reports
             </Button>
             <Button onClick={handlePrint} className="gap-2">
-              <Printer className="h-4 w-4" /> Print (one chart per page)
+              <Printer className="h-4 w-4" /> Print all charts
             </Button>
           </div>
 
@@ -257,10 +315,10 @@ const ComparisonCharts = () => {
         </div>
 
         <div className="print-area">
-          <div className="hidden print:block mb-4">
+          <div className="hidden print:block print-only-block mb-4">
             <StandardPrintHeader
               title="Comparison Charts Report"
-              subtitle="8-week comparison across key operations"
+              subtitle={`${n}-${unit.toLowerCase()} comparison across key operations`}
               additionalInfo={`Generated: ${format(new Date(), "PPP 'at' pp")}`}
               includeDate
             />
@@ -270,7 +328,7 @@ const ComparisonCharts = () => {
             const Icon = c.icon;
             const s = c.summary;
             return (
-              <Card key={c.id} className="border-border/40 overflow-hidden print:break-after-page print:shadow-none">
+              <Card key={c.id} className="chart-card border-border/40 overflow-hidden print:break-after-page print:shadow-none">
                 <div className="h-1 bg-gradient-to-r from-chart-1 via-chart-2 to-chart-3" />
                 <CardHeader className="pb-3 pt-5 px-6">
                   <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -290,19 +348,19 @@ const ComparisonCharts = () => {
                   {/* Summary stats */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div className="p-3 rounded-lg bg-muted/40 border border-border/40">
-                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Current Week</div>
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Current {unit}</div>
                       <div className="text-sm font-bold mt-1">{s.formatter(s.curr)}</div>
                     </div>
                     <div className="p-3 rounded-lg bg-muted/40 border border-border/40">
-                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Previous Week</div>
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Previous {unit}</div>
                       <div className="text-sm font-bold mt-1">{s.formatter(s.prev)}</div>
                     </div>
                     <div className="p-3 rounded-lg bg-muted/40 border border-border/40">
-                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">8-Week Average</div>
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">{win} Average</div>
                       <div className="text-sm font-bold mt-1">{s.formatter(s.avg)}</div>
                     </div>
                     <div className="p-3 rounded-lg bg-muted/40 border border-border/40">
-                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">8-Week Total</div>
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">{win} Total</div>
                       <div className="text-sm font-bold mt-1">{s.formatter(s.total)}</div>
                     </div>
                   </div>
@@ -315,6 +373,7 @@ const ComparisonCharts = () => {
                     <TabsContent value="bar" className="mt-0">
                       <ResponsiveContainer width="100%" height={320}>
                         <BarChart data={c.data} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+                          <InkDefs />
                           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
                           <XAxis dataKey="week" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                           <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
@@ -322,7 +381,7 @@ const ComparisonCharts = () => {
                           <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }} />
                           {c.series.map((s, i) => (
                             <Bar key={s.key} dataKey={s.key} name={s.label}
-                              fill={i === 0 ? "hsl(var(--chart-1))" : "hsl(var(--chart-3))"}
+                              fill={i === 0 ? c1 : c2} stroke={inkMode ? "hsl(var(--foreground))" : undefined}
                               radius={[4, 4, 0, 0]} maxBarSize={48} />
                           ))}
                         </BarChart>
@@ -331,6 +390,7 @@ const ComparisonCharts = () => {
                     <TabsContent value="line" className="mt-0">
                       <ResponsiveContainer width="100%" height={320}>
                         <LineChart data={c.data} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+                          <InkDefs />
                           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
                           <XAxis dataKey="week" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                           <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
@@ -338,8 +398,9 @@ const ComparisonCharts = () => {
                           <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }} />
                           {c.series.map((s, i) => (
                             <Line key={s.key} type="monotone" dataKey={s.key} name={s.label}
-                              stroke={i === 0 ? "hsl(var(--chart-1))" : "hsl(var(--chart-3))"}
-                              strokeWidth={2.5} dot={{ r: 4 }} />
+                              stroke={i === 0 ? c1 : c2Line}
+                              strokeDasharray={inkMode && i === 1 ? "6 4" : undefined}
+                              strokeWidth={2.5} dot={inkMode && i === 1 ? { r: 4, fill: "hsl(var(--background))" } : { r: 4 }} />
                           ))}
                         </LineChart>
                       </ResponsiveContainer>
@@ -355,7 +416,7 @@ const ComparisonCharts = () => {
                     <div className="p-4 rounded-lg bg-amber-500/5 border border-amber-500/20">
                       <div className="text-[10px] uppercase tracking-wide text-amber-700 font-bold mb-1">How to read it</div>
                       <p className="text-xs text-foreground/80 leading-relaxed">
-                        {c.insight} The peak in this 8-week window was <strong>{c.valueFormat(s.peak)}</strong>; current week sits at <strong>{c.valueFormat(s.curr)}</strong>, a <strong>{s.change >= 0 ? "+" : ""}{s.change.toFixed(1)}%</strong> change versus the previous week.
+                        {c.insight} The peak in this {win.toLowerCase()} window was <strong>{c.valueFormat(s.peak)}</strong>; current {unit.toLowerCase()} sits at <strong>{c.valueFormat(s.curr)}</strong>, a <strong>{s.change >= 0 ? "+" : ""}{s.change.toFixed(1)}%</strong> change versus the previous {unit.toLowerCase()}.
                       </p>
                     </div>
                   </div>
@@ -376,29 +437,29 @@ const ComparisonCharts = () => {
             const PIE_COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
             const pies: Array<{ id: string; title: string; description: string; insight: string; data: { name: string; value: number }[]; format: (n: number) => string; }> = [
               {
-                id: "pie-pvs", title: "Purchases vs Sales Share (8 weeks)",
-                description: "Proportion of total kilograms purchased versus sold across the 8-week window.",
+                id: "pie-pvs", title: "Purchases vs Sales Share ",
+                description: "Proportion of total kilograms purchased versus sold across the window.",
                 insight: "A larger Purchases slice indicates net stock accumulation; a larger Sales slice means inventory is being drawn down faster than replenished.",
                 data: [{ name: "Purchases", value: Math.round(totals.purchases) }, { name: "Sales", value: Math.round(totals.sales) }],
                 format: (n) => `${fmtNum(n)} kg`,
               },
               {
-                id: "pie-rve", title: "Revenue vs Expenses Share (8 weeks)",
+                id: "pie-rve", title: "Revenue vs Expenses Share ",
                 description: "How the total cash inflow from sales compares to operating expenses recorded.",
                 insight: "When the Expenses slice is comparable to or larger than Revenue, the business is operating at thin or negative margins for the period.",
                 data: [{ name: "Revenue", value: Math.round(totals.revenue) }, { name: "Expenses", value: Math.round(totals.expenses) }],
                 format: fmtUGX,
               },
               {
-                id: "pie-weekly-purchases", title: "Weekly Purchases Distribution",
-                description: "Share of total green-coffee intake contributed by each of the last 8 weeks.",
+                id: "pie-weekly-purchases", title: `${unit}ly Purchases Distribution`,
+                description: "Share of total green-coffee intake contributed by each period in the window.",
                 insight: "Identifies which weeks dominated supply. Heavy concentration in a few weeks signals seasonality or bulk-delivery patterns from key suppliers.",
                 data: weeks.map(w => ({ name: w.label, value: Math.round(w.purchasesKg) })),
                 format: (n) => `${fmtNum(n)} kg`,
               },
               {
-                id: "pie-weekly-revenue", title: "Weekly Revenue Distribution",
-                description: "Share of total sales revenue earned in each week of the 8-week window.",
+                id: "pie-weekly-revenue", title: `${unit}ly Revenue Distribution`,
+                description: "Share of total sales revenue earned in each period of the window.",
                 insight: "Highlights revenue concentration. A single dominant slice means the period's income depends heavily on one week — a risk if that pattern is not repeatable.",
                 data: weeks.map(w => ({ name: w.label, value: Math.round(w.revenue) })),
                 format: fmtUGX,
@@ -407,7 +468,7 @@ const ComparisonCharts = () => {
             return pies.map((p, i) => {
               const total = p.data.reduce((s, d) => s + d.value, 0);
               return (
-                <Card key={p.id} className="border-border/40 overflow-hidden print:break-after-page print:shadow-none">
+                <Card key={p.id} className="chart-card border-border/40 overflow-hidden print:break-after-page print:shadow-none">
                   <div className="h-1 bg-gradient-to-r from-chart-2 via-chart-4 to-chart-1" />
                   <CardHeader className="pb-3 pt-5 px-6">
                     <div className="flex items-center gap-3">
@@ -423,9 +484,10 @@ const ComparisonCharts = () => {
                   <CardContent className="px-6 pb-6 pt-0 space-y-4">
                     <ResponsiveContainer width="100%" height={340}>
                       <PieChart>
+                        <InkDefs />
                         <Pie data={p.data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={120} label={(e: any) => `${e.name}: ${((e.value / (total || 1)) * 100).toFixed(1)}%`} labelLine={false}>
                           {p.data.map((_, idx2) => (
-                            <Cell key={idx2} fill={PIE_COLORS[idx2 % PIE_COLORS.length]} />
+                            <Cell key={idx2} fill={(inkMode ? INK_PIE : PIE_COLORS)[idx2 % 5]} stroke="hsl(var(--foreground))" />
                           ))}
                         </Pie>
                         <Tooltip contentStyle={tooltipStyle} formatter={(v: any, name: any) => [p.format(Number(v)), name]} />
