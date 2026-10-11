@@ -18661,6 +18661,7 @@ export type Database = {
           id: string
           issued_at: string
           issued_to_name: string
+          meta: Json
           position: string
           reference_no: string
           status: string
