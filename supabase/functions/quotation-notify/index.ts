@@ -282,10 +282,13 @@ serve(async (req) => {
 
     const failed = logs.filter((l) => l.status === 'failed');
     return json({
-      ok: stage ? (emailSent || smsSent) : failed.length === 0,
+      // Once disbursed, the payment stands even if the confirmation messages fail.
+      ok: stage === 'disbursed' ? true : stage ? (emailSent || smsSent) : failed.length === 0,
+      paid: stage === 'disbursed' ? true : undefined,
       emailSent,
       smsSent,
       error: failed.length ? failed.map((f) => f.error).join('; ') : undefined,
+      notifyError: stage === 'disbursed' && !emailSent && !smsSent ? 'Paid, but the text and email to the company did not go through.' : undefined,
     });
   } catch (e) {
     console.error('quotation-notify failed:', e);

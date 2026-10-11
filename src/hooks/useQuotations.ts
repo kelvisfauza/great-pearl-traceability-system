@@ -204,9 +204,10 @@ export const useQuotations = () => {
     const { data, error } = await supabase.functions.invoke('quotation-notify', {
       body: { quotationId: id, stage: 'disbursed', method, paymentReference, payPhone },
     });
+    await refresh();
     if (error) throw error;
     if ((data as any)?.ok === false) throw new Error((data as any).error || 'Could not mark as disbursed');
-    await refresh();
+    return data as { notifyError?: string } | null;
   };
 
   const attachRevision = async (
