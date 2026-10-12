@@ -262,7 +262,6 @@ export const checkDeviceTrust = async (
       is_trusted: false,
       verification_token: token,
       token_expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-      ...details,
     })
     .select('id')
     .single();
@@ -273,6 +272,7 @@ export const checkDeviceTrust = async (
     return { trusted: true };
   }
 
+  applyDetails(newDevice.id);
   return { trusted: false, token, deviceId: newDevice.id };
 };
 
@@ -327,9 +327,8 @@ export const trustFirstDevice = async (userEmail: string, authUserId?: string) =
   userEmail = (userEmail || '').trim().toLowerCase();
   const fingerprint = generateDeviceFingerprint();
   const { browser, os } = parseUserAgent(navigator.userAgent);
-  const details = await collectDeviceDetails();
 
-  await supabase
+  const { data: upserted } = await supabase
     .from('device_sessions')
     .upsert({
       user_email: userEmail,
@@ -341,8 +340,16 @@ export const trustFirstDevice = async (userEmail: string, authUserId?: string) =
       is_trusted: true,
       token_used_at: new Date().toISOString(),
       last_seen_at: new Date().toISOString(),
-      ...details,
-    }, { onConflict: 'user_email,device_fingerprint' });
+    }, { onConflict: 'user_email,device_fingerprint' })
+    .select('id')
+    .maybeSingle();
+
+  // Fill in device model / OS version / location in the background so sign-in isn't delayed
+  if (upserted?.id) {
+    collectDeviceDetails()
+      .then((details) => supabase.from('device_sessions').update(details).eq('id', upserted.id))
+      .catch(() => null);
+  }
 
   console.log('🔐 First device auto-trusted for:', userEmail);
 };
