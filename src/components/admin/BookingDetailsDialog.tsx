@@ -15,9 +15,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { useCoffeeBookings, CoffeeBooking, BookingDelivery } from '@/hooks/useCoffeeBookings';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
-import { 
+import { useToast } from '@/hooks/use-toast';
+import {
   Coffee, Calendar, Package, Truck, XCircle, Loader2, 
-  CheckCircle, Clock, AlertTriangle, Archive, Phone, Send
+  CheckCircle, Clock, AlertTriangle, Archive, Phone, Send, RefreshCw
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -48,6 +49,38 @@ const BookingDetailsDialog = ({ bookingId, open, onOpenChange }: BookingDetailsD
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [closeReason, setCloseReason] = useState('');
   const [sendingCloseSms, setSendingCloseSms] = useState(false);
+  const [sendingConfirmSms, setSendingConfirmSms] = useState(false);
+  const { toast } = useToast();
+
+  const handleResendConfirmation = async () => {
+    if (!booking.supplier_phone) return;
+    setSendingConfirmSms(true);
+    const message = `Great Agro Coffee: Booking confirmed.
+
+Dear ${booking.supplier_name},
+
+${booking.coffee_type} ${booking.booked_quantity_kg.toLocaleString()}kg @ UGX ${booking.booked_price_per_kg.toLocaleString()}/kg. Valid until ${booking.expiry_date}.
+
+Thank you for your business with Great Agro Coffee.`;
+    try {
+      const { error } = await supabase.functions.invoke('send-sms', {
+        body: { phone: booking.supplier_phone, message, userName: booking.supplier_name, messageType: 'coffee_booking', department: 'Procurement' }
+      });
+      if (error) throw error;
+      toast({
+        title: "Confirmation sent",
+        description: `Booking confirmation resent to ${booking.supplier_name} (${booking.supplier_phone})`
+      });
+    } catch (error) {
+      console.error('Failed to resend booking confirmation SMS:', error);
+      toast({
+        title: "SMS Failed",
+        description: "Could not resend the booking confirmation. Please try again.",
+        variant: "destructive"
+      });
+    }
+    setSendingConfirmSms(false);
+  };
 
   const sendClosureSMS = async () => {
     if (!booking.supplier_phone) return;
@@ -293,6 +326,17 @@ Thank you for your business with Great Agro Coffee.`;
             {/* Actions */}
             <div className="flex justify-between pt-2">
               <div className="flex gap-2">
+                {booking.supplier_phone && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleResendConfirmation}
+                    disabled={sendingConfirmSms}
+                  >
+                    {sendingConfirmSms ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+                    Resend confirmation
+                  </Button>
+                )}
                 {canClose && (
                   <Button 
                     variant="secondary" 
