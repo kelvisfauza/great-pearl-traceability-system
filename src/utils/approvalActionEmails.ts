@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 
-const APP_URL = 'https://greatpearlfinance.com';
+const APP_URL = 'https://greatpearlcoffeesystem.site';
 
 interface ApprovalEmailParams {
   requestId: string;
@@ -87,16 +87,15 @@ export const sendApprovalActionEmails = async (params: ApprovalEmailParams, stag
           .select('token')
           .single();
 
-        if (approveErr || rejectErr || !approveToken || !rejectToken) {
-          console.error('Failed to create tokens for', approver.email, approveErr, rejectErr);
-          continue;
-        }
-
-        const approveUrl = `${APP_URL}/approve-action?token=${approveToken.token}&action=approve`;
-        const rejectUrl = `${APP_URL}/approve-action?token=${rejectToken.token}&action=reject`;
+        // If one-click tokens can't be created, still notify — buttons open the approvals page.
+        const fallbackUrl = stage === 'finance' ? `${APP_URL}/v2/finance` : `${APP_URL}/approvals`;
+        const tokensOk = !approveErr && !rejectErr && approveToken && rejectToken;
+        if (!tokensOk) console.warn('Approval tokens unavailable, using page link for', approver.email);
+        const approveUrl = tokensOk ? `${APP_URL}/approve-action?token=${approveToken.token}&action=approve` : fallbackUrl;
+        const rejectUrl = tokensOk ? `${APP_URL}/approve-action?token=${rejectToken.token}&action=reject` : fallbackUrl;
 
         // Send email with action buttons
-        await supabase.functions.invoke('send-transactional-email', {
+        const { error: sendErr } = await supabase.functions.invoke('send-transactional-email', {
           body: {
             templateName: 'approval-action',
             recipientEmail: approver.email,
@@ -118,6 +117,7 @@ export const sendApprovalActionEmails = async (params: ApprovalEmailParams, stag
           },
         });
 
+        if (sendErr) { console.error('Approval email failed for', approver.email, sendErr); continue; }
         console.log(`✅ Approval action email sent to ${approver.name} (${approver.email})`);
       } catch (err) {
         console.error(`Failed to send approval email to ${approver.email}:`, err);
