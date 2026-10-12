@@ -132,34 +132,51 @@ export const collectDeviceDetails = async (): Promise<DeviceDetails> => {
     }
   } catch { /* web fallback already parsed above */ }
 
-  // 3) GPS location (native plugin first, browser geolocation as fallback)
+  // 3) GPS location (native plugin first, browser geolocation as fallback).
+  // Hard-capped at ~2.5s: the geolocation `timeout` option does NOT count time
+  // spent waiting on the permission prompt, so an ignored prompt would hang
+  // sign-in forever without this race.
+  const GEO_HARD_LIMIT_MS = 2500;
+  const withHardLimit = <T,>(p: Promise<T>, fallback: T): Promise<T> =>
+    Promise.race([p, new Promise<T>((res) => setTimeout(() => res(fallback), GEO_HARD_LIMIT_MS))]);
+
   let coords: { latitude: number; longitude: number } | null = null;
   try {
     const { Capacitor } = await import('@capacitor/core');
     if (Capacitor.isNativePlatform()) {
       const { Geolocation } = await import('@capacitor/geolocation');
-      const pos = await Geolocation.getCurrentPosition({ timeout: 8000 });
-      coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+      const pos = await withHardLimit(
+        Geolocation.getCurrentPosition({ timeout: 8000 }).catch(() => null),
+        null
+      );
+      if (pos) coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
     }
   } catch { /* permission denied or unavailable */ }
   if (!coords && 'geolocation' in navigator) {
-    coords = await new Promise((resolve) => {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
-        () => resolve(null),
-        { timeout: 8000, maximumAge: 300000 }
-      );
-    });
+    coords = await withHardLimit(
+      new Promise<{ latitude: number; longitude: number } | null>((resolve) => {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+          () => resolve(null),
+          { timeout: 8000, maximumAge: 300000 }
+        );
+      }),
+      null
+    );
   }
   if (coords) {
     details.latitude = Math.round(coords.latitude * 1e6) / 1e6;
     details.longitude = Math.round(coords.longitude * 1e6) / 1e6;
-    // 4) Reverse-geocode to a human-readable place name (OpenStreetMap)
+    // 4) Reverse-geocode to a human-readable place name (OpenStreetMap).
+    // AbortController caps the wait — an unbounded fetch could stall sign-in.
     try {
+      const controller = new AbortController();
+      const abortTimer = setTimeout(() => controller.abort(), 3000);
       const res = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${coords.latitude}&lon=${coords.longitude}&zoom=14`,
-        { headers: { Accept: 'application/json' } }
+        { headers: { Accept: 'application/json' }, signal: controller.signal }
       );
+      clearTimeout(abortTimer);
       if (res.ok) {
         const geo = await res.json();
         const a = geo.address || {};
