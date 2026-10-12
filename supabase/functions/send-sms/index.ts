@@ -493,8 +493,10 @@ serve(async (req) => {
     // Transactional-email parallel SMS dispatch always uses a "tx:" source prefix.
     // Allow it through so the user gets BOTH email AND SMS, non-blocking.
     const isTxSource = lowerType.startsWith('tx:') || lowerType.startsWith('source:tx:')
+    const isBookingMessage = /great agro coffee:\s*booking/i.test(message || '')
     const isAllowedType =
       isTxSource ||
+      isBookingMessage ||
       ALLOWED_SMS_TYPES.includes(lowerType) ||
       PREMIUM_SMS_TYPES.has(lowerType) ||
       PREMIUM_SMS_TYPES.has(normalizeSmsType(messageType))
