@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, Download, FileText, Truck, Calendar, Pencil, QrCode } from 'lucide-react';
+import { Eye, Download, FileText, Truck, Calendar, Pencil, QrCode, Trash2 } from 'lucide-react';
+import { DeletionRequestModal } from '@/components/admin/DeletionRequestModal';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
@@ -74,6 +75,7 @@ const EUDRDispatchReportsList = ({ reports, showAll = false, onRefresh }: EUDRDi
   const { hasPermission, employee } = useAuth();
   const isAdmin = hasPermission('Administrator') || hasPermission('Managing Director') || employee?.role === 'Administrator' || employee?.role === 'Managing Director';
   const [editingReport, setEditingReport] = useState<DispatchReport | null>(null);
+  const [deletingReport, setDeletingReport] = useState<DispatchReport | null>(null);
 
   if (reports.length === 0) {
     return (
@@ -169,6 +171,10 @@ const EUDRDispatchReportsList = ({ reports, showAll = false, onRefresh }: EUDRDi
                          </Button>
                        )}
 
+                       <Button variant="ghost" size="sm" title="Request deletion (admin approval)" onClick={() => setDeletingReport(report)}>
+                         <Trash2 className="h-4 w-4 text-destructive" />
+                       </Button>
+
                        {report.attachment_url && (
                          <Button
                            variant="ghost"
@@ -191,6 +197,17 @@ const EUDRDispatchReportsList = ({ reports, showAll = false, onRefresh }: EUDRDi
              })}
            </TableBody>
          </Table>
+
+         {deletingReport && (
+           <DeletionRequestModal
+             isOpen={!!deletingReport}
+             onClose={() => setDeletingReport(null)}
+             onSuccess={() => onRefresh?.()}
+             recordData={deletingReport}
+             tableName="eudr_dispatch_reports"
+             recordSummary={`Dispatch report ${format(new Date(deletingReport.dispatch_date), 'dd MMM yyyy')} — ${deletingReport.destination_buyer} (${deletingReport.coffee_type})`}
+           />
+         )}
 
          {editingReport && (
            <EditDispatchReportModal
