@@ -481,6 +481,12 @@ serve(async (req) => {
       'daily_report',
       // Procurement supplier follow-up reminders
       'procurement_reminder',
+      // Coffee booking messages to suppliers — always by SMS
+      'coffee_booking',
+      'booking',
+      'booking_confirmation',
+      'booking_expiry',
+      'booking_fulfilled',
     ]
     
     const lowerType = (messageType || '').toLowerCase()
