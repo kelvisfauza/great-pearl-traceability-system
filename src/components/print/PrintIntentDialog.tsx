@@ -47,15 +47,21 @@ const PrintIntentDialog = () => {
   const handleQueue = async () => {
     if (!intent) return;
     setSaving(true);
-    const job = await addToPrintQueue({
-      title: intent.title || 'Document',
-      docType: 'document',
-      html: intent.html || '',
-    });
-    intent.dismiss();
-    close();
-    if (job) toast.success('Added to your print queue', { description: 'Open Print Queue to print everything at once.' });
-    else toast.error('Could not add to print queue');
+    try {
+      const job = await addToPrintQueue({
+        title: intent.title || 'Document',
+        docType: 'document',
+        html: intent.html || '',
+      });
+      intent.dismiss();
+      close();
+      if (job) toast.success('Added to your print queue', { description: 'Open Print Queue to print everything at once.' });
+      else toast.error('Could not add to print queue');
+    } catch {
+      intent.dismiss();
+      close();
+      toast.error('Could not add to print queue');
+    }
   };
 
   const handleCancel = () => {
