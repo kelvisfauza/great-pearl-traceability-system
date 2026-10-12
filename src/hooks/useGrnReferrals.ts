@@ -164,6 +164,7 @@ const notifyReferralAssignee = async (p: {
 export const useGrnReferrals = () => {
   const { user, employee } = useAuth();
   const myEmail = (employee?.email || user?.email || '').toLowerCase();
+  const canPayAll = useCanReleasePayments();
   const qc = useQueryClient();
 
   const query = useQuery({
@@ -255,7 +256,11 @@ export const useGrnReferrals = () => {
   });
 
   const pending = referrals.filter((r) => r.status === 'pending');
-  const assignedToMe = pending.filter((r) => r.assigned_to_email.toLowerCase() === myEmail);
+  // Any Finance payer can pay any pending GRN, not just ones assigned to them,
+  // so a new Finance officer sees the full payment queue.
+  const assignedToMe = canPayAll
+    ? pending
+    : pending.filter((r) => r.assigned_to_email.toLowerCase() === myEmail);
   const referredByMe = referrals.filter((r) => r.referred_by_email.toLowerCase() === myEmail);
   const allReferredByMe = allReferrals.filter((r) => r.referred_by_email.toLowerCase() === myEmail);
   const referralRewards = allReferredByMe.reduce((s, r) => s + Number(r.referrer_reward_ugx || 0), 0);
