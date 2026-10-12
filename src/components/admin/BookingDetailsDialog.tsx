@@ -67,7 +67,7 @@ Thank you for your business with Great Agro Coffee.`;
 
     try {
       await supabase.functions.invoke('send-sms', {
-        body: { phone: booking.supplier_phone, message }
+        body: { phone: booking.supplier_phone, message, userName: booking.supplier_name, messageType: 'coffee_booking', department: 'Procurement' }
       });
     } catch (error) {
       console.error('Failed to send closure SMS:', error);
