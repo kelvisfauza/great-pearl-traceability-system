@@ -37,7 +37,10 @@ export const sendApprovalActionEmails = async (params: ApprovalEmailParams, stag
 
     let approvers: typeof employees;
     if (stage === 'finance') {
-      approvers = activeEmployees.filter(e => e.department === 'Finance');
+      // Finance staff may sit in another department (e.g. Kibaba: role Finance, dept Quality Control)
+      approvers = activeEmployees.filter(e =>
+        e.department === 'Finance' || /finance/i.test(e.role || '')
+      );
     } else {
       approvers = activeEmployees.filter(e => 
         e.role === 'Administrator' || e.role === 'Super Admin'

@@ -6,6 +6,24 @@ import { useWorkflowTracking } from './useWorkflowTracking';
 import { useNotifications } from './useNotifications';
 import { useGlobalErrorHandler } from './useGlobalErrorHandler';
 import { useSeparationOfDuties } from './useSeparationOfDuties';
+import { sendApprovalActionEmails } from '@/utils/approvalActionEmails';
+
+// Tell Finance (email + text) that an admin-approved request is waiting for release. Non-blocking.
+const notifyFinancePending = (req: any, adminName: string) => {
+  const amount = Number(req.amount) || 0;
+  sendApprovalActionEmails({
+    requestId: req.id,
+    requestTitle: req.title || 'Approval request',
+    requestType: req.requestType || req.type || 'Request',
+    requestedBy: req.requestedBy || req.requestedby || '',
+    requestedByName: req.requestedByName || req.requestedBy || req.requestedby || '',
+    department: req.department || '',
+    amount,
+    priority: req.priority || 'High',
+    description: `Approved by Admin (${adminName}) — awaiting Finance release. ${req.description || ''}`.trim(),
+    dateRequested: req.dateRequested || new Date().toLocaleDateString(),
+  }, 'finance').catch((e) => console.error('Finance notify failed:', e));
+};
 
 export interface UnifiedApprovalRequest {
   id: string;
@@ -762,6 +780,20 @@ export const useUnifiedApprovalRequests = () => {
           return { blocked: true, reason: `Approval failed: ${dbMsg}` };
         }
 
+        if (sentToFinance) {
+          notifyFinancePending({
+            id: withdrawalId,
+            title: currentWithdrawal.title || 'Withdrawal request',
+            requestType: currentWithdrawal.type || 'Withdrawal',
+            requestedBy: currentWithdrawal.requestedby,
+            department: currentWithdrawal.department,
+            amount: currentWithdrawal.amount,
+            priority: currentWithdrawal.priority,
+            description: currentWithdrawal.description,
+            dateRequested: currentWithdrawal.daterequested,
+          }, adminName);
+        }
+
         // Trigger GosentePay payout immediately on final admin approval
         let payoutSuccess = false;
         let payoutRef = '';
@@ -1018,6 +1050,10 @@ export const useUnifiedApprovalRequests = () => {
         if (error) {
           console.error('Supabase update error:', error);
           return false;
+        }
+
+        if (updateData.status === 'Pending Finance') {
+          notifyFinancePending(request, employee?.name || 'Admin');
         }
 
         // Invalidate email action tokens when request is fully resolved
