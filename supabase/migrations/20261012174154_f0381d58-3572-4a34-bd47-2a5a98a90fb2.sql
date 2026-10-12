@@ -1,0 +1,3 @@
+DROP POLICY IF EXISTS "Requester or admin view deletion requests" ON public.deletion_requests;
+CREATE POLICY "Requester or admin view deletion requests" ON public.deletion_requests FOR SELECT TO authenticated
+USING (requested_by = (auth.jwt() ->> 'email') OR requested_by = (SELECT e.name FROM public.employees e WHERE lower(e.email) = lower(auth.jwt() ->> 'email') LIMIT 1) OR public.is_current_user_admin());
