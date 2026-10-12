@@ -226,7 +226,7 @@ const Finance = () => {
                       </Suspense>
                     )
                   }
-                ] as { value: string }[]).filter(tab =>
+                ] as any[]).filter(tab =>
                   !scanOnly || ["pending-approvals", "payments"].includes(tab.value)
                 )}
               />
