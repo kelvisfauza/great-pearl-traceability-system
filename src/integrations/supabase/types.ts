@@ -12697,6 +12697,36 @@ export type Database = {
           },
         ]
       }
+      store_report_form_numbers: {
+        Row: {
+          created_at: string
+          form_number: string
+          id: string
+          issued_by: string | null
+          issued_by_name: string | null
+          period_key: string
+          seq: number
+        }
+        Insert: {
+          created_at?: string
+          form_number: string
+          id?: string
+          issued_by?: string | null
+          issued_by_name?: string | null
+          period_key: string
+          seq: number
+        }
+        Update: {
+          created_at?: string
+          form_number?: string
+          id?: string
+          issued_by?: string | null
+          issued_by_name?: string | null
+          period_key?: string
+          seq?: number
+        }
+        Relationships: []
+      }
       store_reports: {
         Row: {
           advances_given: number
@@ -18050,6 +18080,10 @@ export type Database = {
       is_v3_admin: { Args: { _user_id: string }; Returns: boolean }
       is_valid_grn_pay_code: { Args: { p_code: string }; Returns: boolean }
       issue_quality_form_numbers: {
+        Args: { p_count?: number; p_issued_by_name?: string }
+        Returns: string[]
+      }
+      issue_store_report_form_numbers: {
         Args: { p_count?: number; p_issued_by_name?: string }
         Returns: string[]
       }
