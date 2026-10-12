@@ -395,6 +395,26 @@ export const useUnifiedApprovalRequests = () => {
     try {
       console.log('Updating unified request status:', request.id, status);
 
+      // Deletion requests live in their own table; approving fires the
+      // execute_approved_deletion trigger which removes the record and logs it.
+      if (request.type === 'deletion') {
+        const { error: delErr } = await supabase
+          .from('deletion_requests')
+          .update({
+            status: status === 'Approved' ? 'approved' : 'rejected',
+            reviewed_by: employee?.name || employee?.email || 'Admin',
+            reviewed_at: new Date().toISOString(),
+            admin_comments: status === 'Rejected' ? [rejectionReason, rejectionComments].filter(Boolean).join(' — ') || null : null,
+          })
+          .eq('id', request.id);
+        if (delErr) {
+          console.error('Deletion request update failed:', delErr);
+          return false;
+        }
+        setRequests((prev) => prev.filter((r) => r.id !== request.id));
+        return true;
+      }
+
       // POLICY: Check self-approval and SoD for approvals on supabase requests
       // Skip for withdrawal requests – they have their own SoD checks below
       if (
