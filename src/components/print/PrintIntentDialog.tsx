@@ -76,15 +76,17 @@ const PrintIntentDialog = () => {
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="gap-2 sm:gap-2">
-          <AlertDialogCancel onClick={handleCancel}>Cancel</AlertDialogCancel>
-          <Button variant="outline" onClick={handleQueue} disabled={saving}>
+          <Button type="button" variant="ghost" onClick={handleCancel} disabled={saving}>
+            Cancel
+          </Button>
+          <Button type="button" variant="outline" onClick={handleQueue} disabled={saving}>
             <ListPlus className="h-4 w-4 mr-2" />
             {saving ? 'Adding…' : 'Add to queue'}
           </Button>
-          <AlertDialogAction onClick={handlePrintNow}>
+          <Button type="button" onClick={handlePrintNow} disabled={saving}>
             <Printer className="h-4 w-4 mr-2" />
             Print now
-          </AlertDialogAction>
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
