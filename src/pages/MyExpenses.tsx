@@ -27,6 +27,7 @@ import CompanyHeaderSheetDownload from '@/components/expenses/CompanyHeaderSheet
 import YedaHeaderSheetDownload from '@/components/expenses/YedaHeaderSheetDownload';
 import PerDiemTemplateDownload from '@/components/expenses/PerDiemTemplateDownload';
 import QualityAnalysisFormDownload from '@/components/expenses/QualityAnalysisFormDownload';
+import StoreDailyReportFormDownload from '@/components/expenses/StoreDailyReportFormDownload';
 import PurchaseReportTemplateDownload from '@/components/expenses/PurchaseReportTemplateDownload';
 import SalesReceiptTemplateDownload from '@/components/expenses/SalesReceiptTemplateDownload';
 import DispatchMonitoringTemplateDownload from '@/components/expenses/DispatchMonitoringTemplateDownload';
@@ -625,6 +626,7 @@ const MyExpenses = () => {
             <SalesReceiptTemplateDownload />
             <DispatchMonitoringTemplateDownload />
             <DispatchMonitoringBlankTemplateDownload />
+            <StoreDailyReportFormDownload />
             <StoreCoffeeClearanceTemplateDownload />
             <StoreReleaseQualityCheckTemplateDownload />
             <SupplierAdvanceAgreementTemplateDownload />
