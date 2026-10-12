@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialog, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
@@ -47,15 +47,21 @@ const PrintIntentDialog = () => {
   const handleQueue = async () => {
     if (!intent) return;
     setSaving(true);
-    const job = await addToPrintQueue({
-      title: intent.title || 'Document',
-      docType: 'document',
-      html: intent.html || '',
-    });
-    intent.dismiss();
-    close();
-    if (job) toast.success('Added to your print queue', { description: 'Open Print Queue to print everything at once.' });
-    else toast.error('Could not add to print queue');
+    try {
+      const job = await addToPrintQueue({
+        title: intent.title || 'Document',
+        docType: 'document',
+        html: intent.html || '',
+      });
+      intent.dismiss();
+      close();
+      if (job) toast.success('Added to your print queue', { description: 'Open Print Queue to print everything at once.' });
+      else toast.error('Could not add to print queue');
+    } catch {
+      intent.dismiss();
+      close();
+      toast.error('Could not add to print queue');
+    }
   };
 
   const handleCancel = () => {
@@ -76,15 +82,17 @@ const PrintIntentDialog = () => {
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="gap-2 sm:gap-2">
-          <AlertDialogCancel onClick={handleCancel}>Cancel</AlertDialogCancel>
-          <Button variant="outline" onClick={handleQueue} disabled={saving}>
+          <Button type="button" variant="ghost" onClick={handleCancel} disabled={saving}>
+            Cancel
+          </Button>
+          <Button type="button" variant="outline" onClick={handleQueue} disabled={saving}>
             <ListPlus className="h-4 w-4 mr-2" />
             {saving ? 'Adding…' : 'Add to queue'}
           </Button>
-          <AlertDialogAction onClick={handlePrintNow}>
+          <Button type="button" onClick={handlePrintNow} disabled={saving}>
             <Printer className="h-4 w-4 mr-2" />
             Print now
-          </AlertDialogAction>
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
