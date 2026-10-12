@@ -48,6 +48,38 @@ const BookingDetailsDialog = ({ bookingId, open, onOpenChange }: BookingDetailsD
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [closeReason, setCloseReason] = useState('');
   const [sendingCloseSms, setSendingCloseSms] = useState(false);
+  const [sendingConfirmSms, setSendingConfirmSms] = useState(false);
+  const { toast } = useToast();
+
+  const handleResendConfirmation = async () => {
+    if (!booking.supplier_phone) return;
+    setSendingConfirmSms(true);
+    const message = `Great Agro Coffee: Booking confirmed.
+
+Dear ${booking.supplier_name},
+
+${booking.coffee_type} ${booking.booked_quantity_kg.toLocaleString()}kg @ UGX ${booking.booked_price_per_kg.toLocaleString()}/kg. Valid until ${booking.expiry_date}.
+
+Thank you for your business with Great Agro Coffee.`;
+    try {
+      const { error } = await supabase.functions.invoke('send-sms', {
+        body: { phone: booking.supplier_phone, message, userName: booking.supplier_name, messageType: 'coffee_booking', department: 'Procurement' }
+      });
+      if (error) throw error;
+      toast({
+        title: "Confirmation sent",
+        description: `Booking confirmation resent to ${booking.supplier_name} (${booking.supplier_phone})`
+      });
+    } catch (error) {
+      console.error('Failed to resend booking confirmation SMS:', error);
+      toast({
+        title: "SMS Failed",
+        description: "Could not resend the booking confirmation. Please try again.",
+        variant: "destructive"
+      });
+    }
+    setSendingConfirmSms(false);
+  };
 
   const sendClosureSMS = async () => {
     if (!booking.supplier_phone) return;
