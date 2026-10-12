@@ -16,7 +16,7 @@ export const trustCurrentDevice = async (userEmail: string, authUserId?: string)
  * This is NOT cryptographically secure — it's meant as a practical identifier
  * for detecting "obviously different" devices (phone vs desktop, new browser, etc.)
  */
-export const generateDeviceFingerprint = (): string => {
+export const generateLegacyFingerprint = (): string => {
   const components = [
     navigator.userAgent,
     navigator.language,
@@ -25,16 +25,43 @@ export const generateDeviceFingerprint = (): string => {
     Intl.DateTimeFormat().resolvedOptions().timeZone,
     navigator.hardwareConcurrency || 'unknown',
   ];
-  
-  // Simple hash
   let hash = 0;
   const str = components.join('|');
   for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash = hash & hash;
   }
   return Math.abs(hash).toString(36);
+};
+
+const DEVICE_ID_KEY = 'gac_device_id';
+
+/**
+ * Stable per-device ID, saved on the device. Browser/app updates, screen
+ * rotation or language changes no longer make the device look "new".
+ */
+export const generateDeviceFingerprint = (): string => {
+  try {
+    let id = localStorage.getItem(DEVICE_ID_KEY);
+    if (!id) {
+      id = 'd-' + crypto.randomUUID();
+      localStorage.setItem(DEVICE_ID_KEY, id);
+    }
+    return id;
+  } catch {
+    return generateLegacyFingerprint();
+  }
+};
+
+/** Move an old hash-based record onto the stable ID so trusted devices stay trusted. */
+const adoptLegacyRecord = async (userEmail: string, stableId: string) => {
+  const legacy = generateLegacyFingerprint();
+  if (legacy === stableId) return;
+  const { data } = await supabase.from('device_sessions').select('id')
+    .eq('user_email', userEmail).eq('device_fingerprint', legacy).maybeSingle();
+  if (data?.id) {
+    await supabase.from('device_sessions').update({ device_fingerprint: stableId }).eq('id', data.id);
+  }
 };
 
 /**
