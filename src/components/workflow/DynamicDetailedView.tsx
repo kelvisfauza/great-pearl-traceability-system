@@ -38,6 +38,7 @@ import {
 import { UnifiedApprovalRequest } from '@/hooks/useUnifiedApprovalRequests';
 import { supabase } from '@/integrations/supabase/client';
 import { requiresFingerprintApproval } from '@/utils/fingerprintApproval';
+import { DeletionRecordPreview } from './DeletionRecordPreview';
 
 interface DynamicDetailedViewProps {
   request: UnifiedApprovalRequest;
@@ -630,8 +631,14 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
         )}
       </div>
 
-      <ScrollArea className="h-96">
+      <ScrollArea className="h-[60vh]">
         <div className="space-y-4">
+          {request.type === 'deletion' && (
+            <DeletionRecordPreview
+              tableName={request.details?.table_name}
+              record={request.details?.record_data}
+            />
+          )}
           {/* Basic Request Information */}
           <Card>
             <CardHeader className="pb-3">
