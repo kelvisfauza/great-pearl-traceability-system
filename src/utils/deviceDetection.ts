@@ -181,6 +181,7 @@ export const checkDeviceTrust = async (
   userEmail: string,
   authUserId?: string
 ): Promise<{ trusted: boolean; token?: string; deviceId?: string }> => {
+  userEmail = (userEmail || '').trim().toLowerCase();
   const fingerprint = generateDeviceFingerprint();
   const { browser, os } = parseUserAgent(navigator.userAgent);
   const details = await collectDeviceDetails();
@@ -300,6 +301,7 @@ export const sendNewDeviceAlertEmail = async (
  * Call this only when a user has zero devices registered.
  */
 export const trustFirstDevice = async (userEmail: string, authUserId?: string) => {
+  userEmail = (userEmail || '').trim().toLowerCase();
   const fingerprint = generateDeviceFingerprint();
   const { browser, os } = parseUserAgent(navigator.userAgent);
   const details = await collectDeviceDetails();
