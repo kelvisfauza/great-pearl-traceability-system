@@ -184,6 +184,7 @@ export const checkDeviceTrust = async (
   const fingerprint = generateDeviceFingerprint();
   const { browser, os } = parseUserAgent(navigator.userAgent);
   const details = await collectDeviceDetails();
+  await adoptLegacyRecord(userEmail, fingerprint).catch(() => null);
 
   // Check if this device is already trusted
   const { data: existing } = await supabase
