@@ -9,6 +9,7 @@ import { ResponsiveTabs } from '@/components/ui/responsive-tabs';
 import { Button } from '@/components/ui/button';
 import { DollarSign, Wallet, Receipt, Users, TrendingUp, Coffee, CheckCircle, HandCoins, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useIsGrnInputOnly } from '@/hooks/useGrnInputRole';
 import { FinanceStats } from '@/components/finance/FinanceStats';
 import { PendingCashDeposits } from '@/components/finance/PendingCashDeposits';
 
@@ -35,6 +36,7 @@ const LoadingSpinner = () => (
 
 const Finance = () => {
   const { hasPermission } = useAuth();
+  const scanOnly = useIsGrnInputOnly();
   const [showAdvanceModal, setShowAdvanceModal] = useState(false);
 
   if (!hasPermission('Finance')) {
