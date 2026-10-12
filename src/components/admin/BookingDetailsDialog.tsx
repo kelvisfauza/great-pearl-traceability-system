@@ -40,6 +40,7 @@ interface BookingDetailsDialogProps {
 const BookingDetailsDialog = ({ bookingId, open, onOpenChange }: BookingDetailsDialogProps) => {
   const { bookings, recordDelivery, cancelBooking, closeBooking, getBookingDeliveries } = useCoffeeBookings();
   const { employee } = useAuth();
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   
   const [deliveries, setDeliveries] = useState<BookingDelivery[]>([]);
   const [loading, setLoading] = useState(false);
