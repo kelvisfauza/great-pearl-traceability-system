@@ -9,6 +9,7 @@ import { ResponsiveTabs } from '@/components/ui/responsive-tabs';
 import { Button } from '@/components/ui/button';
 import { DollarSign, Wallet, Receipt, Users, TrendingUp, Coffee, CheckCircle, HandCoins, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useIsGrnInputOnly } from '@/hooks/useGrnInputRole';
 import { FinanceStats } from '@/components/finance/FinanceStats';
 import { PendingCashDeposits } from '@/components/finance/PendingCashDeposits';
 
@@ -35,6 +36,7 @@ const LoadingSpinner = () => (
 
 const Finance = () => {
   const { hasPermission } = useAuth();
+  const scanOnly = useIsGrnInputOnly();
   const [showAdvanceModal, setShowAdvanceModal] = useState(false);
 
   if (!hasPermission('Finance')) {
@@ -72,6 +74,7 @@ const Finance = () => {
                 </h1>
               </div>
               <div className="flex-1 flex justify-center sm:justify-end">
+                {!scanOnly && (
                 <Button 
                   onClick={() => setShowAdvanceModal(true)}
                   className="btn-glow bg-warning hover:bg-warning/90 text-warning-foreground shadow-md hover:shadow-lg transition-all"
@@ -81,20 +84,25 @@ const Finance = () => {
                   <span className="hidden sm:inline">Give Supplier Advance</span>
                   <span className="sm:hidden">Advance</span>
                 </Button>
+                )}
               </div>
             </div>
             <p className="text-muted-foreground text-sm sm:text-base">Manage coffee payments, expenses, and financial operations</p>
           </div>
 
           {/* Finance Statistics */}
-          <div className="animate-in-delay">
-            <FinanceStats />
-          </div>
-          
-          {/* Pending Cash Deposits for Finance Confirmation */}
-          <div className="animate-in-delay">
-            <PendingCashDeposits />
-          </div>
+          {!scanOnly && (
+            <>
+              <div className="animate-in-delay">
+                <FinanceStats />
+              </div>
+
+              {/* Pending Cash Deposits for Finance Confirmation */}
+              <div className="animate-in-delay">
+                <PendingCashDeposits />
+              </div>
+            </>
+          )}
 
           {/* Main Finance Tabs */}
           <Card className="card-modern animate-in-delay">
@@ -111,7 +119,7 @@ const Finance = () => {
               <ResponsiveTabs
                 defaultValue="pending-approvals"
                 visibleTabsCount={10}
-                tabs={[
+                tabs={([
                   {
                     value: "pending-approvals",
                     icon: <CheckCircle className="h-3 w-3 md:h-4 md:w-4" />,
@@ -218,7 +226,9 @@ const Finance = () => {
                       </Suspense>
                     )
                   }
-                ]}
+                ] as any[]).filter(tab =>
+                  !scanOnly || ["pending-approvals", "payments"].includes(tab.value)
+                )}
               />
             </CardContent>
           </Card>
