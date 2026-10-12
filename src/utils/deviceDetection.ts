@@ -218,11 +218,12 @@ export const checkDeviceTrust = async (
     .maybeSingle();
 
   if (existing?.is_trusted) {
-    // Update last_seen + refresh device details (model, OS version, location)
+    // Update last_seen now; refresh device details (model, OS version, location) in the background
     await supabase
       .from('device_sessions')
-      .update({ last_seen_at: new Date().toISOString(), ...details })
+      .update({ last_seen_at: new Date().toISOString() })
       .eq('id', existing.id);
+    applyDetails(existing.id);
     return { trusted: true };
   }
 
@@ -240,10 +241,10 @@ export const checkDeviceTrust = async (
         token_expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
         token_used_at: null,
         last_seen_at: new Date().toISOString(),
-        ...details,
       })
       .eq('id', existing.id);
-    
+    applyDetails(existing.id);
+
     return { trusted: false, token: newToken, deviceId: existing.id };
   }
 
