@@ -132,34 +132,51 @@ export const collectDeviceDetails = async (): Promise<DeviceDetails> => {
     }
   } catch { /* web fallback already parsed above */ }
 
-  // 3) GPS location (native plugin first, browser geolocation as fallback)
+  // 3) GPS location (native plugin first, browser geolocation as fallback).
+  // Hard-capped at ~2.5s: the geolocation `timeout` option does NOT count time
+  // spent waiting on the permission prompt, so an ignored prompt would hang
+  // sign-in forever without this race.
+  const GEO_HARD_LIMIT_MS = 2500;
+  const withHardLimit = <T,>(p: Promise<T>, fallback: T): Promise<T> =>
+    Promise.race([p, new Promise<T>((res) => setTimeout(() => res(fallback), GEO_HARD_LIMIT_MS))]);
+
   let coords: { latitude: number; longitude: number } | null = null;
   try {
     const { Capacitor } = await import('@capacitor/core');
     if (Capacitor.isNativePlatform()) {
       const { Geolocation } = await import('@capacitor/geolocation');
-      const pos = await Geolocation.getCurrentPosition({ timeout: 8000 });
-      coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+      const pos = await withHardLimit(
+        Geolocation.getCurrentPosition({ timeout: 8000 }).catch(() => null),
+        null
+      );
+      if (pos) coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
     }
   } catch { /* permission denied or unavailable */ }
   if (!coords && 'geolocation' in navigator) {
-    coords = await new Promise((resolve) => {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
-        () => resolve(null),
-        { timeout: 8000, maximumAge: 300000 }
-      );
-    });
+    coords = await withHardLimit(
+      new Promise<{ latitude: number; longitude: number } | null>((resolve) => {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+          () => resolve(null),
+          { timeout: 8000, maximumAge: 300000 }
+        );
+      }),
+      null
+    );
   }
   if (coords) {
     details.latitude = Math.round(coords.latitude * 1e6) / 1e6;
     details.longitude = Math.round(coords.longitude * 1e6) / 1e6;
-    // 4) Reverse-geocode to a human-readable place name (OpenStreetMap)
+    // 4) Reverse-geocode to a human-readable place name (OpenStreetMap).
+    // AbortController caps the wait — an unbounded fetch could stall sign-in.
     try {
+      const controller = new AbortController();
+      const abortTimer = setTimeout(() => controller.abort(), 3000);
       const res = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${coords.latitude}&lon=${coords.longitude}&zoom=14`,
-        { headers: { Accept: 'application/json' } }
+        { headers: { Accept: 'application/json' }, signal: controller.signal }
       );
+      clearTimeout(abortTimer);
       if (res.ok) {
         const geo = await res.json();
         const a = geo.address || {};
@@ -184,7 +201,12 @@ export const checkDeviceTrust = async (
   userEmail = (userEmail || '').trim().toLowerCase();
   const fingerprint = generateDeviceFingerprint();
   const { browser, os } = parseUserAgent(navigator.userAgent);
-  const details = await collectDeviceDetails();
+  // Collect GPS/device details in the background so sign-in never waits on them.
+  const detailsPromise = collectDeviceDetails().catch(() => ({} as DeviceDetails));
+  const applyDetails = (rowId: string) =>
+    detailsPromise.then((details) =>
+      supabase.from('device_sessions').update(details).eq('id', rowId)
+    ).catch(() => null);
   await adoptLegacyRecord(userEmail, fingerprint).catch(() => null);
 
   // Check if this device is already trusted
@@ -196,11 +218,12 @@ export const checkDeviceTrust = async (
     .maybeSingle();
 
   if (existing?.is_trusted) {
-    // Update last_seen + refresh device details (model, OS version, location)
+    // Update last_seen now; refresh device details (model, OS version, location) in the background
     await supabase
       .from('device_sessions')
-      .update({ last_seen_at: new Date().toISOString(), ...details })
+      .update({ last_seen_at: new Date().toISOString() })
       .eq('id', existing.id);
+    applyDetails(existing.id);
     return { trusted: true };
   }
 
@@ -218,10 +241,10 @@ export const checkDeviceTrust = async (
         token_expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
         token_used_at: null,
         last_seen_at: new Date().toISOString(),
-        ...details,
       })
       .eq('id', existing.id);
-    
+    applyDetails(existing.id);
+
     return { trusted: false, token: newToken, deviceId: existing.id };
   }
 
@@ -239,7 +262,6 @@ export const checkDeviceTrust = async (
       is_trusted: false,
       verification_token: token,
       token_expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-      ...details,
     })
     .select('id')
     .single();
@@ -250,6 +272,7 @@ export const checkDeviceTrust = async (
     return { trusted: true };
   }
 
+  applyDetails(newDevice.id);
   return { trusted: false, token, deviceId: newDevice.id };
 };
 
@@ -304,9 +327,8 @@ export const trustFirstDevice = async (userEmail: string, authUserId?: string) =
   userEmail = (userEmail || '').trim().toLowerCase();
   const fingerprint = generateDeviceFingerprint();
   const { browser, os } = parseUserAgent(navigator.userAgent);
-  const details = await collectDeviceDetails();
 
-  await supabase
+  const { data: upserted } = await supabase
     .from('device_sessions')
     .upsert({
       user_email: userEmail,
@@ -318,8 +340,16 @@ export const trustFirstDevice = async (userEmail: string, authUserId?: string) =
       is_trusted: true,
       token_used_at: new Date().toISOString(),
       last_seen_at: new Date().toISOString(),
-      ...details,
-    }, { onConflict: 'user_email,device_fingerprint' });
+    }, { onConflict: 'user_email,device_fingerprint' })
+    .select('id')
+    .maybeSingle();
+
+  // Fill in device model / OS version / location in the background so sign-in isn't delayed
+  if (upserted?.id) {
+    collectDeviceDetails()
+      .then((details) => supabase.from('device_sessions').update(details).eq('id', upserted.id))
+      .catch(() => null);
+  }
 
   console.log('🔐 First device auto-trusted for:', userEmail);
 };
