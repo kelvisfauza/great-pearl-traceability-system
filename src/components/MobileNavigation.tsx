@@ -46,6 +46,7 @@ const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
         { name: "Approvals", icon: CheckSquare, path: "/approvals", permission: null, requiresAdmin: true },
         { name: "Suppliers", icon: UserCheck, path: "/suppliers", permission: null },
         { name: "Sales & Marketing", icon: TrendingUp, path: "/sales-marketing", permission: "Sales Marketing" },
+        { name: "Finance", icon: Banknote, path: "/finance", permission: "Finance" },
         { name: "Company Forms", icon: DollarSign, path: "/my-expenses", permission: null },
         { name: "Quick Loans", icon: Banknote, path: "/quick-loans", permission: null, requiresAdmin: true },
         { name: "Human Resources", icon: Users, path: "/human-resources", permission: "Human Resources", children: [
