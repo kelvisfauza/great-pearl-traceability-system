@@ -201,7 +201,12 @@ export const checkDeviceTrust = async (
   userEmail = (userEmail || '').trim().toLowerCase();
   const fingerprint = generateDeviceFingerprint();
   const { browser, os } = parseUserAgent(navigator.userAgent);
-  const details = await collectDeviceDetails();
+  // Collect GPS/device details in the background so sign-in never waits on them.
+  const detailsPromise = collectDeviceDetails().catch(() => ({} as DeviceDetails));
+  const applyDetails = (rowId: string) =>
+    detailsPromise.then((details) =>
+      supabase.from('device_sessions').update(details).eq('id', rowId)
+    ).catch(() => null);
   await adoptLegacyRecord(userEmail, fingerprint).catch(() => null);
 
   // Check if this device is already trusted
