@@ -74,6 +74,7 @@ const Finance = () => {
                 </h1>
               </div>
               <div className="flex-1 flex justify-center sm:justify-end">
+                {!scanOnly && (
                 <Button 
                   onClick={() => setShowAdvanceModal(true)}
                   className="btn-glow bg-warning hover:bg-warning/90 text-warning-foreground shadow-md hover:shadow-lg transition-all"
@@ -83,20 +84,25 @@ const Finance = () => {
                   <span className="hidden sm:inline">Give Supplier Advance</span>
                   <span className="sm:hidden">Advance</span>
                 </Button>
+                )}
               </div>
             </div>
             <p className="text-muted-foreground text-sm sm:text-base">Manage coffee payments, expenses, and financial operations</p>
           </div>
 
           {/* Finance Statistics */}
-          <div className="animate-in-delay">
-            <FinanceStats />
-          </div>
-          
-          {/* Pending Cash Deposits for Finance Confirmation */}
-          <div className="animate-in-delay">
-            <PendingCashDeposits />
-          </div>
+          {!scanOnly && (
+            <>
+              <div className="animate-in-delay">
+                <FinanceStats />
+              </div>
+
+              {/* Pending Cash Deposits for Finance Confirmation */}
+              <div className="animate-in-delay">
+                <PendingCashDeposits />
+              </div>
+            </>
+          )}
 
           {/* Main Finance Tabs */}
           <Card className="card-modern animate-in-delay">
