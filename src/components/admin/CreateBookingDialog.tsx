@@ -88,7 +88,7 @@ const CreateBookingDialog = ({ open, onOpenChange }: CreateBookingDialogProps) =
 
     try {
       const { error } = await supabase.functions.invoke('send-sms', {
-        body: { phone, message }
+        body: { phone, message, userName: bookingData.supplier_name, messageType: 'coffee_booking', department: 'Procurement' }
       });
       
       if (error) throw error;
