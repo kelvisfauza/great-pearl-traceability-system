@@ -326,6 +326,17 @@ Thank you for your business with Great Agro Coffee.`;
             {/* Actions */}
             <div className="flex justify-between pt-2">
               <div className="flex gap-2">
+                {booking.supplier_phone && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleResendConfirmation}
+                    disabled={sendingConfirmSms}
+                  >
+                    {sendingConfirmSms ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+                    Resend confirmation
+                  </Button>
+                )}
                 {canClose && (
                   <Button 
                     variant="secondary" 
