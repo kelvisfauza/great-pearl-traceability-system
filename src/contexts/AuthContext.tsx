@@ -459,7 +459,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Never block login on monitoring failures
       }
 
-      return {};
+      return { deviceTrusted };
     } catch (error: any) {
       console.error('Login error:', error);
 
