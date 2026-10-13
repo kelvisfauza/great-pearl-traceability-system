@@ -313,9 +313,15 @@ const Auth = () => {
         return;
       }
 
-      // After successful password auth, require email verification
-      console.log('📧 Requiring email verification for:', email);
       setPendingLoginEmail(email.toLowerCase().trim());
+      // Approved (trusted) device — remembered, no code needed this time
+      if (result.deviceTrusted) {
+        setLoading(false);
+        await handleEmailVerificationComplete();
+        return;
+      }
+      // New / not-yet-approved device — require the sign-in code
+      console.log('📧 Requiring email verification for:', email);
       setShowEmailVerification(true);
       setLoading(false);
 
@@ -347,11 +353,7 @@ const Auth = () => {
     let displayName = '';
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      // Verification code passed on this device — trust it, no email link needed.
-      if (user?.email) {
-        const { trustCurrentDevice } = await import('@/utils/deviceDetection');
-        await trustCurrentDevice(user.email, user.id);
-      }
+      // New devices stay pending until an admin (or the user's email link) approves them.
       const metaName = (user?.user_metadata?.full_name || user?.user_metadata?.name || '').trim();
       if (metaName) {
         displayName = metaName;
