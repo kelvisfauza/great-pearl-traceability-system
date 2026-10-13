@@ -40,16 +40,28 @@ const DEVICE_ID_KEY = 'gac_device_id';
  * Stable per-device ID, saved on the device. Browser/app updates, screen
  * rotation or language changes no longer make the device look "new".
  */
+const readCookieId = (): string | null => {
+  try {
+    const m = document.cookie.match(new RegExp('(?:^|; )' + DEVICE_ID_KEY + '=([^;]+)'));
+    return m ? decodeURIComponent(m[1]) : null;
+  } catch { return null; }
+};
+const writeCookieId = (id: string) => {
+  try {
+    document.cookie = `${DEVICE_ID_KEY}=${encodeURIComponent(id)}; max-age=${60 * 60 * 24 * 365 * 5}; path=/; SameSite=Lax`;
+  } catch { /* ignore */ }
+};
+
 export const generateDeviceFingerprint = (): string => {
   try {
-    let id = localStorage.getItem(DEVICE_ID_KEY);
-    if (!id) {
-      id = 'd-' + crypto.randomUUID();
-      localStorage.setItem(DEVICE_ID_KEY, id);
-    }
+    // Keep the ID in two places so clearing one (e.g. site data cleanup) doesn't make the device "new"
+    let id = localStorage.getItem(DEVICE_ID_KEY) || readCookieId();
+    if (!id) id = 'd-' + crypto.randomUUID();
+    localStorage.setItem(DEVICE_ID_KEY, id);
+    writeCookieId(id);
     return id;
   } catch {
-    return generateLegacyFingerprint();
+    return readCookieId() || generateLegacyFingerprint();
   }
 };
 
@@ -268,8 +280,8 @@ export const checkDeviceTrust = async (
 
   if (error) {
     console.error('Failed to create device session:', error);
-    // On error, allow login (don't block user)
-    return { trusted: true };
+    // On error, still let them sign in with the code, but don't skip verification
+    return { trusted: false };
   }
 
   applyDetails(newDevice.id);

@@ -39,7 +39,7 @@ interface AuthContextType {
   session: Session | null;
   employee: Employee | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ requiresPasswordChange?: boolean }>;
+  signIn: (email: string, password: string) => Promise<{ requiresPasswordChange?: boolean; deviceTrusted?: boolean }>;
   signOut: (reason?: 'inactivity' | 'manual') => Promise<void>;
   hasPermission: (permission: string) => boolean;
   hasRole: (role: string) => boolean;
@@ -394,6 +394,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('✅ Successful login for:', normalizedEmail, signInEmail !== normalizedEmail ? `(resolved to ${signInEmail})` : '');
 
       // --- New Device Detection ---
+      let deviceTrusted = false;
       try {
         // Check if user has ANY devices registered
         const { data: existingDevices } = await supabase
@@ -418,9 +419,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             });
             throw new Error('NEW_DEVICE_VERIFICATION_REQUIRED');
           }
+          deviceTrusted = deviceCheck.trusted === true && !deviceCheck.token;
           if (!deviceCheck.trusted && deviceCheck.token) {
-            // New device: send approve/reject link by email but do NOT block login.
-            // The login verification code the user enters next is enough to trust it.
+            // New device: stays pending in Admin → Approvals; email link lets the user approve too.
             sendNewDeviceAlertEmail(
               signInEmail,
               employeeData?.name || signInEmail.split('@')[0],
@@ -458,7 +459,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Never block login on monitoring failures
       }
 
-      return {};
+      return { deviceTrusted };
     } catch (error: any) {
       console.error('Login error:', error);
 
