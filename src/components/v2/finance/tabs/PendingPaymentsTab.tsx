@@ -32,7 +32,7 @@ interface FinanceLot {
   bags?: number;
 }
 
-const MAX_BULK_PRINT = 20;
+const MAX_BULK_PRINT = 50;
 
 const PendingPaymentsTab = () => {
   const [search, setSearch] = useState("");
