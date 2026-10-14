@@ -28,6 +28,8 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
   const [iwReason, setIwReason] = useState('');
   const [receipt, setReceipt] = useState<ReleaseReceiptData | null>(null);
   const [iwWait, setIwWait] = useState<Record<string, number>>({});
+  const [showAllIw, setShowAllIw] = useState(false);
+  const [showAllOps, setShowAllOps] = useState(false);
   const [forms, setForms] = useState<Record<string, any>>({});
   const setForm = (id: string, patch: any) => setForms((x) => ({ ...x, [id]: { ...(x[id] || {}), ...patch } }));
 
