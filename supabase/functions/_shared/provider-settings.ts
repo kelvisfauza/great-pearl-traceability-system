@@ -37,10 +37,10 @@ export const DEFAULT_PROVIDER_SETTINGS: ProviderSettings = {
     service_fee: 0,
     require_admin_approval: true,
   },
-  gosente: {
+    gosente: {
     enabled: true,
     min_amount: 500,
-    routing_threshold: 50000,
+    routing_threshold: 65000,
     max_amount: 1000000,
     require_admin_approval: true,
     fee_tiers: [

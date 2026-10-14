@@ -371,7 +371,7 @@ serve(async (req) => {
     // positive — leading to bogus OVERDRAFT_DRAW tags and missing / wrong
     // access-fee handling. Fee is included here because it debits the
     // wallet in the same transaction path.
-    // Service fee applies ONLY to GosentePay payouts (amounts < UGX 50,000).
+    // Service fee applies ONLY to GosentePay payouts (amounts < UGX 65,000).
     // Yo Payments withdrawals are fee-free.
     // Admin-configured provider settings (Admin > System Settings > Providers)
     const providerCfg = await loadProviderSettings(supabase);
