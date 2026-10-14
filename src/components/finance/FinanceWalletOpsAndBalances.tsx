@@ -28,6 +28,8 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
   const [iwReason, setIwReason] = useState('');
   const [receipt, setReceipt] = useState<ReleaseReceiptData | null>(null);
   const [iwWait, setIwWait] = useState<Record<string, number>>({});
+  const [showAllIw, setShowAllIw] = useState(false);
+  const [showAllOps, setShowAllOps] = useState(false);
   const [forms, setForms] = useState<Record<string, any>>({});
   const setForm = (id: string, patch: any) => setForms((x) => ({ ...x, [id]: { ...(x[id] || {}), ...patch } }));
 
@@ -209,7 +211,7 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
           {iwRecent.length > 0 && (
             <div className="pt-3 border-t space-y-1">
               <p className="text-sm font-medium">History</p>
-              {iwRecent.map(w => (
+              {(showAllIw ? iwRecent : iwRecent.slice(0, 3)).map(w => (
                 <div key={w.id} className="flex flex-wrap gap-2 text-sm items-center">
                   <span className="text-xs text-muted-foreground">{new Date(w.created_at).toLocaleString()}</span>
                   <span className="flex-1 truncate">{w.employee_name} — {fmt(w.amount)}</span>
@@ -221,6 +223,11 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
                   </Badge>
                 </div>
               ))}
+              {iwRecent.length > 3 && (
+                <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setShowAllIw(v => !v)}>
+                  {showAllIw ? 'Show less' : `Show more (${iwRecent.length - 3})`}
+                </Button>
+              )}
             </div>
           )}
         </CardContent>
@@ -290,7 +297,7 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
           {done.length > 0 && (
             <div className="pt-3 border-t space-y-1">
               <p className="text-sm font-medium">Recent</p>
-              {done.map(op => (
+              {(showAllOps ? done : done.slice(0, 3)).map(op => (
                 <div key={op.id} className="flex flex-wrap gap-2 text-sm items-center">
                   <span className="capitalize">{op.operation_type}</span>
                   <span className="flex-1 truncate">{op.target_name || op.target_email} — {fmt(op.amount)}</span>
@@ -298,6 +305,11 @@ export const FinanceWalletOpsAndBalances: React.FC = () => {
                   <Badge variant={op.status === 'completed' ? 'default' : op.status === 'failed' ? 'destructive' : 'secondary'}>{op.status}</Badge>
                 </div>
               ))}
+              {done.length > 3 && (
+                <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setShowAllOps(v => !v)}>
+                  {showAllOps ? 'Show less' : `Show more (${done.length - 3})`}
+                </Button>
+              )}
             </div>
           )}
         </CardContent>
