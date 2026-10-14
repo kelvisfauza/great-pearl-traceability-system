@@ -261,6 +261,10 @@ Deno.serve(async (req) => {
       const codeVal = td.approvalCode || td.code || td.pin || td.otp
       const codePart = codeVal ? ` Code: ${codeVal}.` : ''
       const smsBody = toGsm7(`${resolvedSubject}${codePart}${firstLine ? ` - ${firstLine}` : ''}`).slice(0, 320)
+      // Never send short, content-less texts (e.g. just "System Notification - Great Agro Coffee").
+      if (!codeVal && (!firstLine || firstLine.length < 25)) {
+        return 'skipped' as const
+      }
 
       const { error: smsErr } = await supa.functions.invoke('send-sms', {
         body: {
