@@ -5,6 +5,7 @@ import FinanceSamplingOrderPayments from '@/components/finance/FinanceSamplingOr
 import { useState } from "react";
 import V2Navigation from "@/components/v2/V2Navigation";
 import PriceTicker from "@/components/PriceTicker";
+import PoolMomoDepositsPanel from "@/components/admin/PoolMomoDepositsPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Wallet, GitCompare, ArrowDownUp, Search, FileText, CreditCard, QrCode, Receipt, UserCheck, Printer } from "lucide-react";
@@ -77,7 +78,7 @@ const FinanceDashboard = () => {
               <TabsContent value="receipts"><PaymentReceiptsTab /></TabsContent>
               {!scanOnly && (
                 <>
-                  <TabsContent value="release"><div className="space-y-6"><FinanceWalletOpsAndBalances /><FinanceProviderReleases /><FinanceQuotationPayments /><FinanceSamplingOrderPayments /><AwaitingDisbursementPanel /><PendingApprovalRequests /></div></TabsContent>
+                  <TabsContent value="release"><div className="space-y-6"><PoolMomoDepositsPanel canDeposit={false} /><FinanceWalletOpsAndBalances /><FinanceProviderReleases /><FinanceQuotationPayments /><FinanceSamplingOrderPayments /><AwaitingDisbursementPanel /><PendingApprovalRequests /></div></TabsContent>
                   <TabsContent value="history"><PaymentHistory /></TabsContent>
                   <TabsContent value="reconciliation"><TransactionReconciliationTab /></TabsContent>
                   <TabsContent value="advances"><AdvancesRecoveriesTab /></TabsContent>

@@ -28,6 +28,7 @@ import {
   COMPANY_EMAIL, COMPANY_SUPPORT_EMAIL, COMPANY_WEBSITE, COMPANY_REG,
 } from "@/utils/companyBrand";
 import TreasuryAccountsPanel from "@/components/admin/TreasuryAccountsPanel";
+import PoolMomoDepositsPanel from "@/components/admin/PoolMomoDepositsPanel";
 
 type Direction = "credit" | "debit";
 type Channel = "yo_payments" | "cash" | "bank" | "internal" | "other";
@@ -336,6 +337,7 @@ export default function Treasury() {
 
       {/* Multi-account treasury */}
       <TreasuryAccountsPanel />
+      <PoolMomoDepositsPanel canDeposit onPosted={load} />
 
       {/* Insufficient funds banner */}
       {!loading && balance && Number(balance.current_balance) <= 0 && (
