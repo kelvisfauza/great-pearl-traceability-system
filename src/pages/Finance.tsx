@@ -117,7 +117,7 @@ const Finance = () => {
             </CardHeader>
             <CardContent>
               <ResponsiveTabs
-                defaultValue="pending-approvals"
+                defaultValue={scanOnly ? "payments" : "pending-approvals"}
                 visibleTabsCount={10}
                 tabs={([
                   {
@@ -227,7 +227,7 @@ const Finance = () => {
                     )
                   }
                 ] as any[]).filter(tab =>
-                  !scanOnly || ["pending-approvals", "payments"].includes(tab.value)
+                  !scanOnly || tab.value === "payments"
                 )}
               />
             </CardContent>
