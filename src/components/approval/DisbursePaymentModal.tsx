@@ -34,7 +34,7 @@ export const DisbursePaymentModal: React.FC<Props> = ({ target, onClose, onDone 
   useEffect(() => {
     if (target) {
       setPhone(target.phone || '');
-      setProvider(Number(target.amount) >= 50000 ? 'yo' : 'gosente');
+      setProvider(Number(target.amount) >= 65000 ? 'yo' : 'gosente');
     }
   }, [target]);
 
