@@ -212,3 +212,6 @@ project_id = "pudfybkyfedeggmokhco"
 [studio]
   enabled = true
   port = 54323
+
+[functions.treasury-momo-deposit]
+verify_jwt = false

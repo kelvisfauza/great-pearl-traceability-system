@@ -33,8 +33,12 @@ Deno.serve(async (req) => {
   try {
     const auth = req.headers.get("Authorization") || "";
     const url = Deno.env.get("SUPABASE_URL")!;
-    const userClient = createClient(url, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: auth } } });
-    const { data: u } = await userClient.auth.getUser();
+    const token = auth.replace(/^Bearer\s+/i, "").trim();
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const userClient = createClient(url, anonKey, { global: { headers: { Authorization: auth } }, auth: { persistSession: false } });
+    const authSvc = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
+    const { data: u, error: uErr } = await authSvc.auth.getUser(token);
+    if (uErr) console.log("auth error", uErr.message);
     const email = u?.user?.email;
     if (!email) return json({ ok: false, error: "Please sign in again" });
     const { data: isAdmin } = await userClient.rpc("is_current_user_admin");
