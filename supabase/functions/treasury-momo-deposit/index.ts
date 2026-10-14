@@ -19,7 +19,7 @@ const tag = (xml: string, t: string) => xml.match(new RegExp(`<${t}>(.*?)</${t}>
 
 function providerCode(phone: string) {
   const local = "0" + phone.slice(3);
-  return /^07[05 4]/.test(local) || /^07(0|4|5)/.test(local) ? "AIRTEL" : "MTN";
+  return /^07(0|4|5)/.test(local) ? "AIRTEL" : "MTN";
 }
 
 async function yoCall(inner: string) {
@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
       providerRef = tag(x, "TransactionReference") || null;
       errMsg = tag(x, "StatusMessage") || tag(x, "ErrorMessage") || "Yo Payments rejected the request";
     } else {
-      const r = await gosenteDeposit({ phone, amount, email, ref: reference, callback: `${url}/functions/v1/treasury-momo-deposit-noop` });
+      const r = await gosenteDeposit({ phone, amount, email, ref: reference, callback: `${url}/functions/v1/gosentepay-callback` });
       started = isGosenteSuccess(r.status, r.body);
       errMsg = String(r.body?.data?.message ?? r.body?.message ?? `GosentePay rejected the request (HTTP ${r.status})`);
     }
