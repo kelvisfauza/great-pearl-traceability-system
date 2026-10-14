@@ -21,6 +21,7 @@ const DEPARTMENT_ROUTES: Record<string, string> = {
   'Analytics': '/v2/analytics',
   'EUDR Documentation': '/v2/eudr',
   'EUDR': '/v2/eudr',
+  'Logistics & EUDR': '/v2/eudr',
   'Administration': '/v2/admin',
   'Admin': '/v2/admin',
   'IT': '/v2/it',
@@ -50,6 +51,7 @@ const SUPPORTED_DEPARTMENTS = [
   'Analytics',
   'EUDR Documentation',
   'EUDR',
+  'Logistics & EUDR',
   'Administration',
   'Admin',
   'IT',
@@ -77,7 +79,11 @@ const V2DepartmentRouter = () => {
     }
 
     const department = employee.department;
-    const route = DEPARTMENT_ROUTES[department];
+    let route = DEPARTMENT_ROUTES[department];
+    // GRN input / Finance-permitted staff from other departments fall back to Finance
+    if (!route && employee.permissions?.some((p: string) => p === 'Finance' || p.startsWith('Finance:'))) {
+      route = '/v2/finance';
+    }
 
     if (route) {
       navigate(route, { replace: true });
@@ -100,7 +106,7 @@ const V2DepartmentRouter = () => {
   const department = employee.department;
   const isSupported = SUPPORTED_DEPARTMENTS.some(
     d => d.toLowerCase() === department?.toLowerCase()
-  );
+  ) || !!employee.permissions?.some((p: string) => p === 'Finance' || p.startsWith('Finance:'));
 
   // Access denied for unsupported departments
   if (!isSupported) {
