@@ -14306,6 +14306,60 @@ export type Database = {
         }
         Relationships: []
       }
+      treasury_momo_deposits: {
+        Row: {
+          account_code: string
+          amount: number
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          initiated_by: string
+          note: string | null
+          phone: string
+          posted: boolean
+          provider: string
+          provider_reference: string | null
+          reference: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_code?: string
+          amount: number
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          initiated_by: string
+          note?: string | null
+          phone: string
+          posted?: boolean
+          provider: string
+          provider_reference?: string | null
+          reference: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_code?: string
+          amount?: number
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          initiated_by?: string
+          note?: string | null
+          phone?: string
+          posted?: boolean
+          provider?: string
+          provider_reference?: string | null
+          reference?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       treasury_pool_balance: {
         Row: {
           bank_balance: number
@@ -17597,6 +17651,10 @@ export type Database = {
       expire_old_bookings: { Args: never; Returns: undefined }
       finalize_bank_deposit_request: {
         Args: { p_payment_reference?: string; p_request_id: string }
+        Returns: Json
+      }
+      finalize_treasury_momo_deposit: {
+        Args: { p_error?: string; p_reference: string; p_status: string }
         Returns: Json
       }
       fix_denis_auth_final: { Args: never; Returns: Json }
