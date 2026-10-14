@@ -185,6 +185,9 @@ Deno.serve(async (req) => {
       'lab-rules-announcement',
       'loyalty-daily-credit',
     ])
+    // System/client error digests are EMAIL ONLY — never mirror to SMS.
+    const digestText = `${templateData?.subject || ''} ${templateData?.title || ''} ${idempotencyKey || ''}`.toLowerCase()
+    const isErrorDigest = /error digest|sys-error-digest|client-digest|system error/.test(digestText)
     if (NO_SMS_MIRROR_TEMPLATES.has(templateName)) {
       allowSms = false
     }
@@ -208,6 +211,7 @@ Deno.serve(async (req) => {
         console.warn('channel prefs lookup failed (using defaults):', prefErr)
       }
     }
+    if (isErrorDigest) { allowSms = false; allowEmail = true }
     if (!allowEmail && !allowSms) {
       console.log(`🚫 Template '${templateName}' disabled by admin channel preferences`)
       return new Response(
