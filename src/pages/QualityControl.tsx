@@ -1,3 +1,5 @@
+import OverdueAssessmentsBar from "@/components/quality/OverdueAssessmentsBar";
+import { daysPending, isOverdue } from "@/utils/overdueAssessments";
 import Layout from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
 import SamplingOrderMatch, { type SamplingOrderLite } from "@/components/quality/SamplingOrderMatch";
@@ -255,6 +257,7 @@ const QualityControl = () => {
   
   // Search state for pending assessments
   const [pendingSearch, setPendingSearch] = useState<string>('');
+  const [overdueOnly, setOverdueOnly] = useState(false);
   
   // Search state for quality assessments
   const [assessmentSearch, setAssessmentSearch] = useState<string>('');
@@ -296,10 +299,11 @@ const QualityControl = () => {
 
   // Filter pending records by search
   const filteredPendingRecords = useMemo(() => {
-    if (!pendingSearch.trim()) return pendingRecords;
+    const base = overdueOnly ? pendingRecords.filter((r: any) => isOverdue(r)) : pendingRecords;
+    if (!pendingSearch.trim()) return base;
     
     const searchLower = pendingSearch.toLowerCase().trim();
-    return pendingRecords.filter(record => {
+    return base.filter(record => {
       const supplierMatch = record.supplier_name?.toLowerCase().includes(searchLower);
       const supplierCodeMatch = (record as any).supplier_code?.toLowerCase().includes(searchLower);
       const batchMatch = record.batch_number?.toLowerCase().includes(searchLower);
@@ -307,7 +311,7 @@ const QualityControl = () => {
       
       return supplierMatch || supplierCodeMatch || batchMatch || kgsMatch;
     });
-  }, [pendingRecords, pendingSearch]);
+  }, [pendingRecords, pendingSearch, overdueOnly]);
 
   // Get pending modification requests for quality department
   const pendingModificationRequests = getPendingModificationRequests('Quality');
@@ -1280,6 +1284,7 @@ const QualityControl = () => {
                     className="max-w-md"
                   />
                 </div>
+                <OverdueAssessmentsBar lots={pendingRecords as any} overdueOnly={overdueOnly} onToggle={setOverdueOnly} />
                 {pendingRecords.length === 0 ? (
                   <div className="text-center py-12">
                     <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
@@ -1312,6 +1317,7 @@ const QualityControl = () => {
                           key={record.id}
                           id={`row-${record.id}`}
                           className={cn(
+                            isOverdue(record as any) && "bg-destructive/5",
                             isHighlighted(record.id, record.batch_number) && "ring-2 ring-primary ring-offset-2 bg-primary/10 animate-pulse-highlight"
                           )}
                         >
@@ -1330,7 +1336,7 @@ const QualityControl = () => {
                         <TableCell>{record.kilograms?.toLocaleString()}</TableCell>
                         <TableCell>{record.bags}</TableCell>
                           <TableCell>{record.date}</TableCell>
-                          <TableCell>{getStatusBadge(record.status)}</TableCell>
+                          <TableCell>{isOverdue(record as any) ? <Badge variant="destructive">{daysPending(record as any)} days overdue</Badge> : getStatusBadge(record.status)}</TableCell>
                           <TableCell>
                             <Button 
                               size="sm" 
