@@ -74,6 +74,9 @@ serve(async (req) => {
     } else if (review.status !== "pending") {
       return fail("This overtime has already been decided");
     }
+    const amount = Number(review.adjusted_pay ?? review.calculated_pay ?? 0);
+    if (!amount || amount <= 0) return fail("Amount is zero — nothing to pay");
+
     const monthLabel = `${monthNames[review.month]} ${review.year}`;
 
     // Resolve unified user id (for wallet credit) + phone fallback
