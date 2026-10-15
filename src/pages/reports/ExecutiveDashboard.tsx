@@ -66,7 +66,7 @@ const ExecutiveDashboard = () => {
     queryKey: ["executive-dashboard", year],
     queryFn: async () => {
       const [sales, salesPrev, coffee, coffeePrev, batches, suppliers, assessments] = await Promise.all([
-        supabase.from("sales_transactions").select("total_amount, weight, created_at, customer_name").gte("created_at", yearStart),
+        supabase.from("sales_transactions").select("total_amount, weight, created_at, customer").gte("created_at", yearStart),
         supabase.from("sales_transactions").select("total_amount, weight").gte("created_at", prevStart).lte("created_at", prevEnd),
         supabase.from("coffee_records").select("kilograms, coffee_type, created_at, status").gte("created_at", yearStart),
         supabase.from("coffee_records").select("kilograms, coffee_type").gte("created_at", prevStart).lte("created_at", prevEnd),
@@ -123,7 +123,7 @@ const ExecutiveDashboard = () => {
 
     // Top customer
     const custMap = new Map<string, number>();
-    data.sales.forEach(r => { if (r.customer_name) custMap.set(r.customer_name, (custMap.get(r.customer_name) || 0) + (r.total_amount || 0)); });
+    data.sales.forEach(r => { if (r.customer) custMap.set(r.customer, (custMap.get(r.customer) || 0) + (r.total_amount || 0)); });
     const topCustomer = [...custMap.entries()].sort((a, b) => b[1] - a[1])[0];
 
     const sellThrough = kgBought > 0 ? (kgSold / kgBought) * 100 : 0;
