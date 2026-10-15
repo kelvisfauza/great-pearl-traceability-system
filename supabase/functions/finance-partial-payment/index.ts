@@ -216,10 +216,15 @@ Deno.serve(async (req) => {
         });
       } catch (e) { console.warn("email failed", to, (e as Error).message); }
     }
-    // Payee without email still gets a text
-    if (!payeeEmail && payeePhone) {
+    // Payee always gets a text confirmation
+    if (payeePhone) {
       try {
-        await db.functions.invoke("send-sms", { body: { phone: normalizePhone(payeePhone), message: `Dear ${payeeName}, Great Agro Coffee: ${msg}`, userName: payeeName, messageType: "payout_confirmation", department: "Finance" } });
+        const r = await fetch(`${url}/functions/v1/send-sms`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: svc, Authorization: `Bearer ${svc}` },
+          body: JSON.stringify({ phone: normalizePhone(payeePhone), message: `Dear ${payeeName}, Great Agro Coffee: ${msg}${reference ? ` Ref ${reference}.` : ""}`, userName: payeeName, recipientEmail: payeeEmail || undefined, messageType: "payout_confirmation", department: "Finance" }),
+        });
+        console.log("payee sms", r.status, (await r.text()).slice(0, 200));
       } catch (e) { console.warn("sms failed", (e as Error).message); }
     }
 
