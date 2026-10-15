@@ -71,13 +71,22 @@ const MonthlyOvertimeReview = () => {
     setPayoutTarget(record);
     setPayoutMethod('wallet');
     setPayoutReference(record.payout_reference || generateRef(record));
-    // Prefill phone from employees table
+    // Prefill phone from employees table (employee_email may hold an email or an employee number like EMP006)
     try {
-      const { data: emp } = await supabase
-        .from('employees')
-        .select('phone')
-        .eq('email', record.employee_email)
-        .maybeSingle();
+      const key = String(record.employee_email || '').trim();
+      let emp: any = null;
+      if (key.includes('@')) {
+        const { data } = await supabase.from('employees').select('phone').ilike('email', key).maybeSingle();
+        emp = data;
+      }
+      if (!emp?.phone && key) {
+        const { data } = await supabase.from('employees').select('phone').ilike('employee_id', key).maybeSingle();
+        emp = data;
+      }
+      if (!emp?.phone && record.employee_name) {
+        const { data } = await supabase.from('employees').select('phone').ilike('name', String(record.employee_name).trim()).maybeSingle();
+        emp = data;
+      }
       setPayoutPhone(emp?.phone || '');
     } catch {
       setPayoutPhone('');
