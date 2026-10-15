@@ -13,9 +13,14 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Loader2, FlaskConical } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
+import OverdueAssessmentsBar from "@/components/quality/OverdueAssessmentsBar";
+import { daysPending, isOverdue } from "@/utils/overdueAssessments";
 
 const PendingLotsTable = () => {
   const navigate = useNavigate();
+  const [overdueOnly, setOverdueOnly] = useState(false);
   
   const { data: pendingLots, isLoading } = useQuery({
     queryKey: ['v2-pending-quality'],
@@ -47,7 +52,11 @@ const PendingLotsTable = () => {
     );
   }
 
+  const shown = overdueOnly ? pendingLots.filter((l) => isOverdue(l)) : pendingLots;
+
   return (
+    <div>
+    <OverdueAssessmentsBar lots={pendingLots} overdueOnly={overdueOnly} onToggle={setOverdueOnly} />
     <div className="rounded-md border">
       <Table>
         <TableHeader>
@@ -63,8 +72,8 @@ const PendingLotsTable = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {pendingLots.map((lot) => (
-            <TableRow key={lot.id}>
+          {shown.map((lot) => (
+            <TableRow key={lot.id} className={cn(isOverdue(lot) && "bg-destructive/5")}>
               <TableCell>{format(new Date(lot.date), 'PP')}</TableCell>
               <TableCell className="font-mono">{lot.batch_number}</TableCell>
               <TableCell>{lot.supplier_name}</TableCell>
@@ -72,7 +81,7 @@ const PendingLotsTable = () => {
               <TableCell className="text-right">{lot.kilograms}</TableCell>
               <TableCell className="text-right">{lot.bags}</TableCell>
               <TableCell>
-                <Badge variant="secondary">PENDING</Badge>
+                {isOverdue(lot) ? <Badge variant="destructive">{daysPending(lot)} days overdue</Badge> : <Badge variant="secondary">PENDING</Badge>}
               </TableCell>
               <TableCell className="text-right">
                 <Button
@@ -87,6 +96,7 @@ const PendingLotsTable = () => {
           ))}
         </TableBody>
       </Table>
+    </div>
     </div>
   );
 };
