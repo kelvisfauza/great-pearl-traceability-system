@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
       }).catch((e) => console.warn("sms failed", e));
 
       const masked = String(emp.phone).replace(/^(\+?\d{3})\d+(\d{3})$/, "$1*****$2");
-      return json({ ok: true, codeId: row.id, phone: masked, reason });
+      return json({ ok: true, codeId: row.id, phone: masked, payPhone: emp.phone, reason });
     }
 
     if (action === "verify") {
