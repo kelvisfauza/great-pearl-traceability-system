@@ -125,12 +125,15 @@ async function notifyWalletOperation(supabase: any, args: {
       ? "An administrator attempted a wallet operation on your account but it did NOT complete. The operation may be retried."
       : "An administrator has performed the following operation on your wallet.";
     const message = `${intro}\n\n${detail}${args.note ? `\n\n${args.note}` : ""}\n\nIf you did not expect this, contact Administration or Finance immediately.`;
+    const emailKey = `wallet-op-email-${args.email}-${args.failed ? "failed" : "done"}-${args.title || ""}-${Date.now()}`;
     await supabase.functions.invoke("send-transactional-email", {
       body: {
         templateName: "general-notification",
         recipientEmail: email,
-        props: {
-          title: args.title,
+        idempotencyKey: emailKey,
+        templateData: {
+          subject: args.title || (args.failed ? "Wallet operation did not complete" : "Wallet update from Great Agro Coffee"),
+          title: args.title || (args.failed ? "Wallet Operation Not Completed" : "Wallet Update"),
           recipientName: name,
           message,
         },
@@ -139,6 +142,7 @@ async function notifyWalletOperation(supabase: any, args: {
   } catch (e) {
     console.warn("[admin-wallet-op] email send failed:", (e as Error).message);
   }
+
 
 }
 
