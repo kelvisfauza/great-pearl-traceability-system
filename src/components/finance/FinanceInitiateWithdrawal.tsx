@@ -16,6 +16,8 @@ export const FinanceInitiateWithdrawal = () => {
   const [reason, setReason] = useState('');
   const [code, setCode] = useState('');
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const [method, setMethod] = useState<'cash' | 'gosentepay' | 'yo'>('cash');
+  const [payPhone, setPayPhone] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -27,15 +29,17 @@ export const FinanceInitiateWithdrawal = () => {
     setBusy(true);
     try {
       const { data, error } = await supabase.functions.invoke('finance-wallet-withdraw', {
-        body: { action, employeeEmail: email, amount: Number(amount), reason, code },
+        body: { action, employeeEmail: email, amount: Number(amount), reason, code, method, payPhone },
       });
       if (error) throw error;
       if (!(data as any)?.ok) throw new Error((data as any)?.error || 'Failed');
       if (action === 'send') {
         setSentTo((data as any).phone);
+        if (!payPhone) setPayPhone((data as any).payPhone || '');
         toast.success(`4-digit code sent to the employee (${(data as any).phone})`);
       } else {
-        toast.success(`Withdrawn UGX ${Number(amount).toLocaleString()} — ref ${(data as any).reference}`);
+        toast.success(`Withdrawn UGX ${Number(amount).toLocaleString()} — paid by ${method === 'cash' ? 'cash' : method === 'gosentepay' ? 'GosentePay' : 'Yo'} — ref ${(data as any).reference}`);
+        setPayPhone(''); setMethod('cash');
         setSentTo(null); setCode(''); setAmount(''); setReason(''); setEmail('');
       }
     } catch (e: any) {
@@ -84,7 +88,23 @@ export const FinanceInitiateWithdrawal = () => {
               <Input value={code} placeholder="0000" className="w-32 text-center font-mono tracking-[0.4em]"
                 inputMode="numeric" onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 4))} />
             </div>
-            <Button disabled={code.length !== 4 || busy} onClick={() => call('verify')}>
+            <div>
+              <Label className="text-xs">Pay employee by</Label>
+              <select className="h-10 rounded-md border bg-background px-2 text-sm" value={method}
+                onChange={(e) => setMethod(e.target.value as any)}>
+                <option value="cash">Cash</option>
+                <option value="gosentepay">GosentePay</option>
+                <option value="yo">Yo Payments</option>
+              </select>
+            </div>
+            {method !== 'cash' && (
+              <div>
+                <Label className="text-xs">Number to send to</Label>
+                <Input value={payPhone} placeholder="07XXXXXXXX" className="w-40" inputMode="tel"
+                  onChange={(e) => setPayPhone(e.target.value)} />
+              </div>
+            )}
+            <Button disabled={code.length !== 4 || busy || (method !== 'cash' && !payPhone.trim())} onClick={() => call('verify')}>
               {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Confirm & debit wallet
             </Button>
             <Button variant="ghost" disabled={busy} onClick={() => call('send')}>Resend</Button>

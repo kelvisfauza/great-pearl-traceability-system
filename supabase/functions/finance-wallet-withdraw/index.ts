@@ -1,4 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { yoPayout, normalizePhone } from "../_shared/yo-payments.ts";
+import { gosenteWithdraw, isGosenteSuccess } from "../_shared/gosentepay.ts";
+import { treasuryReserve, treasuryRelease } from "../_shared/treasury.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -82,13 +85,17 @@ Deno.serve(async (req) => {
       }).catch((e) => console.warn("sms failed", e));
 
       const masked = String(emp.phone).replace(/^(\+?\d{3})\d+(\d{3})$/, "$1*****$2");
-      return json({ ok: true, codeId: row.id, phone: masked, reason });
+      return json({ ok: true, codeId: row.id, phone: masked, payPhone: emp.phone, reason });
     }
 
     if (action === "verify") {
       const amount = Math.round(Number(body.amount));
       const reason = String(body.reason || "").trim().slice(0, 200);
       const code = String(body.code || "").trim();
+      const method = String(body.method || "cash");
+      if (!["cash", "gosentepay", "yo"].includes(method)) return json({ ok: false, error: "Choose cash, GosentePay or Yo" });
+      const payPhone = String(body.payPhone || emp.phone || "").trim();
+      if (method !== "cash" && !/^(\+?256|0)?7\d{8}$/.test(payPhone.replace(/\s/g, ""))) return json({ ok: false, error: "Enter a valid mobile money number" });
       if (!/^\d{4}$/.test(code)) return json({ ok: false, error: "Enter the 4-digit code" });
       const targetId = `${emp.email.toLowerCase()}:${amount}`;
       const { data: rows } = await admin.from("admin_approval_codes").select("*")
@@ -111,8 +118,34 @@ Deno.serve(async (req) => {
       const available = Number((bal as any)?.[0]?.available_balance ?? (bal as any)?.available_balance ?? (bal as any)?.[0]?.wallet_balance ?? 0);
       if (available < amount) return json({ ok: false, error: `Insufficient wallet balance (UGX ${available.toLocaleString()})` });
 
-      const { data: unifiedId } = await admin.rpc("get_unified_user_id", { input_email: emp.email });
       const reference = `FIN-WD-${row.id.substring(0, 8).toUpperCase()}`;
+      const methodLabel = method === "cash" ? "cash" : method === "gosentepay" ? "GosentePay" : "Yo Payments";
+      let providerRef: string | null = null;
+      if (method !== "cash") {
+        const r = await treasuryReserve({ account: "user_wallets", amount, reference, description: `Finance wallet withdrawal to ${emp.name}`, email: emp.email, name: emp.name, performedBy: myName, metadata: { code_id: row.id } });
+        if (!r.ok) {
+          await admin.from("admin_approval_codes").update({ used_at: null }).eq("id", row.id);
+          return json({ ok: false, error: `Not sent: ${r.error || "pool account empty"}` });
+        }
+        let sent = false; let err = "";
+        try {
+          if (method === "gosentepay") {
+            const g = await gosenteWithdraw({ phone: payPhone, amount, email: emp.email, reason: `Wallet withdrawal ${reference}`, ref: reference });
+            sent = isGosenteSuccess(g.status, g.body); providerRef = reference;
+            if (!sent) err = String(g.body?.message || g.body?.data?.message || `GosentePay error ${g.status}`);
+          } else {
+            const y = await yoPayout({ phone: normalizePhone(payPhone), amount, narrative: `Wallet withdrawal ${reference}` });
+            sent = y.success; providerRef = (y as any).transactionReference || null;
+            if (!sent) err = y.errorMessage || "Yo payout failed";
+          }
+        } catch (e) { err = (e as Error).message; }
+        if (!sent) {
+          await treasuryRelease({ account: "user_wallets", amount, reference, performedBy: myName });
+          await admin.from("admin_approval_codes").update({ used_at: null }).eq("id", row.id);
+          return json({ ok: false, error: `Money not sent: ${err}. Wallet not debited — you can try again.` });
+        }
+      }
+      const { data: unifiedId } = await admin.rpc("get_unified_user_id", { input_email: emp.email });
       const { error: lErr } = await admin.from("ledger_entries").insert({
         user_id: unifiedId || emp.id,
         entry_type: "WITHDRAWAL",
@@ -120,7 +153,8 @@ Deno.serve(async (req) => {
         reference,
         source_category: "WITHDRAWAL",
         metadata: {
-          description: `Finance cash withdrawal: ${reason}`,
+          description: `Finance withdrawal (${methodLabel}): ${reason}`,
+          payout_method: method, payout_phone: method === "cash" ? null : payPhone, provider_ref: providerRef,
           initiated_by: myName,
           initiated_by_email: user.email,
           type: "finance_cash_withdrawal",
@@ -129,7 +163,7 @@ Deno.serve(async (req) => {
       });
       if (lErr) return json({ ok: false, error: lErr.message });
 
-      try {
+      if (method === "cash") try {
         await admin.rpc("record_treasury_entry", {
           p_amount: amount, p_category: "withdrawal", p_channel: "cash",
           p_description: `Finance cash withdrawal from ${emp.name}: ${reason}`,
@@ -142,7 +176,7 @@ Deno.serve(async (req) => {
 
       await admin.from("audit_logs").insert({
         action: "finance_wallet_withdrawal", table_name: "ledger_entries", record_id: reference,
-        performed_by: user.email, reason, new_values: { employee: emp.email, amount },
+        performed_by: user.email, reason, new_values: { employee: emp.email, amount, method, payPhone },
       } as any).then(() => {}, () => {});
 
       await fetch(`${url}/functions/v1/send-sms`, {
@@ -150,7 +184,7 @@ Deno.serve(async (req) => {
         headers: { "Content-Type": "application/json", apikey: anon, Authorization: authHeader },
         body: JSON.stringify({
           phone: emp.phone,
-          message: `Great Agro Coffee: UGX ${amount.toLocaleString()} withdrawn from your wallet by Finance (${myName}) for ${reason}. Ref ${reference}.`,
+          message: `Great Agro Coffee: UGX ${amount.toLocaleString()} withdrawn from your wallet by Finance (${myName}) for ${reason}, paid by ${methodLabel}${method === "cash" ? "" : ` to ${payPhone}`}. Ref ${reference}.`,
           userName: emp.name, recipientEmail: emp.email, messageType: "withdrawal_confirmation",
         }),
       }).catch(() => {});
