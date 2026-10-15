@@ -215,3 +215,6 @@ project_id = "pudfybkyfedeggmokhco"
 
 [functions.treasury-momo-deposit]
 verify_jwt = false
+
+[functions.finance-wallet-withdraw]
+verify_jwt = false
