@@ -732,7 +732,11 @@ serve(async (req) => {
       // else waits for Finance to release the money.
       const superInstant = action === "approve" && isSuperAdmin && op.confirmation_method === "instant";
       if (action !== "finance_release" && !superInstant) {
-        await supabase.from("admin_wallet_operations").update({ status: "awaiting_finance" }).eq("id", op.id);
+        const { error: afErr } = await supabase.from("admin_wallet_operations").update({ status: "awaiting_finance" }).eq("id", op.id);
+        if (afErr) {
+          console.error("awaiting_finance update failed", afErr.message);
+          return respond(false, { error: `Approved but could not send to Finance: ${afErr.message}` });
+        }
         return respond(true, { message: "Approved by admin. Awaiting Finance to release.", awaiting_finance: true });
       }
 
