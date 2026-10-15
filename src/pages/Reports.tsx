@@ -14,6 +14,13 @@ const Reports = () => {
 
   const reportCards = [
     {
+      title: "Executive Dashboard",
+      description: "Dark executive summary with KPIs, trends & market mix",
+      icon: BarChart3,
+      path: "/reports/executive",
+      color: "text-orange-600"
+    },
+    {
       title: "Whole Business Report",
       description: "Complete business intelligence with rankings & recommendations",
       icon: Globe,
