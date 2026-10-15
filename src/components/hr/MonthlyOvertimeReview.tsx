@@ -20,7 +20,7 @@ const MonthlyOvertimeReview = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<{ minutes: string; pay: string; notes: string }>({ minutes: '', pay: '', notes: '' });
   const [payoutTarget, setPayoutTarget] = useState<any | null>(null);
-  const [payoutMethod, setPayoutMethod] = useState<'wallet' | 'mobile_money'>('wallet');
+  const [payoutMethod, setPayoutMethod] = useState<'wallet' | 'gosentepay' | 'yo' | 'cash'>('wallet');
   const [payoutPhone, setPayoutPhone] = useState('');
   const [payoutReference, setPayoutReference] = useState('');
   const [payoutSubmitting, setPayoutSubmitting] = useState(false);
@@ -86,7 +86,7 @@ const MonthlyOvertimeReview = () => {
 
   const submitPayout = async () => {
     if (!payoutTarget) return;
-    if (payoutMethod === 'mobile_money' && !payoutPhone.trim()) {
+    if ((payoutMethod === 'gosentepay' || payoutMethod === 'yo') && !payoutPhone.trim()) {
       toast.error('Phone number is required for mobile money');
       return;
     }
@@ -96,7 +96,7 @@ const MonthlyOvertimeReview = () => {
         body: {
           reviewId: payoutTarget.id,
           payoutMethod,
-          phone: payoutMethod === 'mobile_money' ? payoutPhone.trim() : undefined,
+          phone: (payoutMethod === 'gosentepay' || payoutMethod === 'yo') ? payoutPhone.trim() : undefined,
           approverEmail: user?.email,
           customReference: payoutReference.trim() || undefined,
         },
@@ -106,7 +106,7 @@ const MonthlyOvertimeReview = () => {
       toast.success(
         payoutMethod === 'wallet'
           ? `Credited UGX ${Number(payoutTarget.adjusted_pay ?? payoutTarget.calculated_pay).toLocaleString()} to ${payoutTarget.employee_name}'s wallet`
-          : `Sent UGX ${Number(payoutTarget.adjusted_pay ?? payoutTarget.calculated_pay).toLocaleString()} to ${payoutPhone}`,
+          : `Approved — sent to Finance to pay ${payoutTarget.employee_name} by ${payoutMethod === 'cash' ? 'cash' : payoutMethod === 'gosentepay' ? 'GosentePay' : 'Yo Payments'}`,
       );
       setPayoutTarget(null);
       queryClient.invalidateQueries({ queryKey: ['monthly-overtime-reviews'] });
@@ -361,19 +361,41 @@ const MonthlyOvertimeReview = () => {
                 </Label>
               </div>
               <div className="flex items-start space-x-3 rounded-md border p-3 cursor-pointer hover:bg-muted/50">
-                <RadioGroupItem value="mobile_money" id="pm-momo" className="mt-1" />
-                <Label htmlFor="pm-momo" className="flex-1 cursor-pointer">
+                <RadioGroupItem value="gosentepay" id="pm-gosentepay" className="mt-1" />
+                <Label htmlFor="pm-gosentepay" className="flex-1 cursor-pointer">
                   <div className="flex items-center gap-2 font-medium">
-                    <Smartphone className="h-4 w-4" /> Send to mobile money (Yo Payments)
+                    <Smartphone className="h-4 w-4" /> GosentePay (mobile money)
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Disburses cash directly to the employee's MTN/Airtel number.
+                    Approves now and sends to Finance, who releases the money.
+                  </p>
+                </Label>
+              </div>
+              <div className="flex items-start space-x-3 rounded-md border p-3 cursor-pointer hover:bg-muted/50">
+                <RadioGroupItem value="yo" id="pm-yo" className="mt-1" />
+                <Label htmlFor="pm-yo" className="flex-1 cursor-pointer">
+                  <div className="flex items-center gap-2 font-medium">
+                    <Smartphone className="h-4 w-4" /> Yo Payments (mobile money)
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Approves now and sends to Finance, who releases the money.
+                  </p>
+                </Label>
+              </div>
+              <div className="flex items-start space-x-3 rounded-md border p-3 cursor-pointer hover:bg-muted/50">
+                <RadioGroupItem value="cash" id="pm-cash" className="mt-1" />
+                <Label htmlFor="pm-cash" className="flex-1 cursor-pointer">
+                  <div className="flex items-center gap-2 font-medium">
+                    <Wallet className="h-4 w-4" /> Cash
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Approves now and sends to Finance, who releases the money.
                   </p>
                 </Label>
               </div>
             </RadioGroup>
 
-            {payoutMethod === 'mobile_money' && (
+            {(payoutMethod === 'gosentepay' || payoutMethod === 'yo') && (
               <div className="space-y-1">
                 <Label htmlFor="pm-phone" className="text-xs flex items-center justify-between">
                   <span>Phone number</span>
@@ -403,7 +425,7 @@ const MonthlyOvertimeReview = () => {
               Cancel
             </Button>
             <Button onClick={submitPayout} disabled={payoutSubmitting}>
-              {payoutSubmitting ? 'Processing…' : 'Approve & Pay'}
+              {payoutSubmitting ? 'Processing…' : payoutMethod === 'wallet' ? 'Approve & Pay' : 'Approve & send to Finance'}
             </Button>
           </DialogFooter>
         </DialogContent>
