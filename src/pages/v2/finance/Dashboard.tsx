@@ -1,5 +1,6 @@
 import { FinanceWalletOpsAndBalances } from '@/components/finance/FinanceWalletOpsAndBalances';
 import { FinanceOvertimePayments } from '@/components/finance/FinanceOvertimePayments';
+import { FinanceInitiateWithdrawal } from '@/components/finance/FinanceInitiateWithdrawal';
 import FinanceProviderReleases from '@/components/finance/FinanceProviderReleases';
 import FinanceQuotationPayments from '@/components/finance/FinanceQuotationPayments';
 import FinanceSamplingOrderPayments from '@/components/finance/FinanceSamplingOrderPayments';
@@ -79,7 +80,7 @@ const FinanceDashboard = () => {
               <TabsContent value="receipts"><PaymentReceiptsTab /></TabsContent>
               {!scanOnly && (
                 <>
-                  <TabsContent value="release"><div className="space-y-6"><PoolMomoDepositsPanel canDeposit={false} /><FinanceWalletOpsAndBalances /><FinanceOvertimePayments /><FinanceProviderReleases /><FinanceQuotationPayments /><FinanceSamplingOrderPayments /><AwaitingDisbursementPanel /><PendingApprovalRequests /></div></TabsContent>
+                  <TabsContent value="release"><div className="space-y-6"><PoolMomoDepositsPanel canDeposit={false} /><FinanceWalletOpsAndBalances /><FinanceOvertimePayments /><FinanceInitiateWithdrawal /><FinanceProviderReleases /><FinanceQuotationPayments /><FinanceSamplingOrderPayments /><AwaitingDisbursementPanel /><PendingApprovalRequests /></div></TabsContent>
                   <TabsContent value="history"><PaymentHistory /></TabsContent>
                   <TabsContent value="reconciliation"><TransactionReconciliationTab /></TabsContent>
                   <TabsContent value="advances"><AdvancesRecoveriesTab /></TabsContent>
