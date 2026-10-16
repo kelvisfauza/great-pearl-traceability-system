@@ -27,7 +27,7 @@ interface PriceUpdateProps {
   robustaFaqLocal?: number
   isCorrection?: boolean
   approvedBy?: string
-  stationPrices?: { location: string; quality: string; price: number | null }[]
+  stationPrices?: { location: string; quality: string; price: number | null; moisture?: number | null; outturn?: number | null; fm?: number | null }[]
 }
 
 const fmt = (v?: number) =>
@@ -178,6 +178,9 @@ const PriceUpdateEmail = (props: PriceUpdateProps) => {
                       <th style={stationTh}>Location / Region</th>
                       <th style={stationTh}>Quality</th>
                       <th style={{ ...stationTh, textAlign: 'right' as const }}>UGX/Kg</th>
+                      <th style={{ ...stationTh, textAlign: 'right' as const }}>Moisture</th>
+                      <th style={{ ...stationTh, textAlign: 'right' as const }}>Outturn</th>
+                      <th style={{ ...stationTh, textAlign: 'right' as const }}>Total FM</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -188,6 +191,9 @@ const PriceUpdateEmail = (props: PriceUpdateProps) => {
                         <td style={{ ...stationTd, textAlign: 'right' as const, fontWeight: 'bold' as const }}>
                           {row.price != null && row.price > 0 ? fmt(row.price) : '—'}
                         </td>
+                        <td style={{ ...stationTd, textAlign: 'right' as const }}>{row.moisture != null && row.moisture > 0 ? `${row.moisture}%` : '—'}</td>
+                        <td style={{ ...stationTd, textAlign: 'right' as const }}>{row.outturn != null && row.outturn > 0 ? `${row.outturn}%` : '—'}</td>
+                        <td style={{ ...stationTd, textAlign: 'right' as const }}>{row.fm != null && row.fm > 0 ? `${row.fm}%` : '—'}</td>
                       </tr>
                     ))}
                   </tbody>
