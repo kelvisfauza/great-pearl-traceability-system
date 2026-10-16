@@ -186,22 +186,10 @@ const priceData = {
         throw selectError;
       }
       
-      let error;
-      if (existing) {
-        console.log('💾 Updating existing record with id:', existing.id);
-        const result = await supabase
-          .from('market_prices')
-          .update(priceData)
-          .eq('price_type', 'reference_prices');
-        error = result.error;
-        console.log('💾 Update result error:', result.error);
-      } else {
-        console.log('💾 Inserting new record');
-        const result = await supabase
-          .from('market_prices')
-          .insert({ ...priceData, price_type: 'reference_prices' });
-        error = result.error;
-        console.log('💾 Insert result error:', result.error);
+      let error = await runSave(withParams);
+      if (error && String(error.message || '').includes('station_params')) {
+        console.log('💾 station_params column missing — saving without quality params');
+        error = await runSave(priceData);
       }
       
       if (error) {
@@ -288,6 +276,7 @@ const priceData = {
               kyarumbaUndergrades: data.kyarumba_undergrades || 0,
               rubiriziDrugarClean: data.rubirizi_drugar_clean || 0,
               rubiriziOrdinary: data.rubirizi_ordinary || 0,
+              stationParams: (data.station_params as StationParams) || {},
               lastUpdated: data.last_updated
             });
           }
