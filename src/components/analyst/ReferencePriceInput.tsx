@@ -29,6 +29,7 @@ interface ReferencePrices {
   robustaFm: number;
   robustaBuyingPrice: number;
   sortedPrice: number;
+  parchmentPrice: number;
 }
 
 const ReferencePriceInput: React.FC = () => {
@@ -76,7 +77,8 @@ const [prices, setPrices] = useState<ReferencePrices>({
     robustaMoisture: 0,
     robustaFm: 0,
     robustaBuyingPrice: 0,
-    sortedPrice: 0
+    sortedPrice: 0,
+    parchmentPrice: 0
   });
   const [loading, setLoading] = useState(false);
   const [testLoading, setTestLoading] = useState(false);
@@ -188,7 +190,8 @@ const handleReset = () => {
       robustaMoisture: 13,
       robustaFm: 3,
       robustaBuyingPrice: 7800,
-      sortedPrice: 0
+      sortedPrice: 0,
+      parchmentPrice: 0
     });
   };
 
@@ -196,7 +199,7 @@ const handleTestSMS = async (phoneNumber: string) => {
     try {
       setTestLoading(true);
       const date = new Date().toLocaleDateString('en-GB');
-      const message = `Great Agro Coffee - Price Update\nDate: ${date}\n\n☕ ARABICA:\nOutturn: ${prices.arabicaOutturn}%\nMoisture: ${prices.arabicaMoisture}%\nFM: ${prices.arabicaFm}%\nPrice: UGX ${prices.arabicaBuyingPrice.toLocaleString()}/kg\n\n☕ ROBUSTA:\nOutturn: ${prices.robustaOutturn}%\nMoisture: ${prices.robustaMoisture}%\nFM: ${prices.robustaFm}%\nPrice: UGX ${prices.robustaBuyingPrice.toLocaleString()}/kg\n\n☕ SORTED: UGX ${prices.sortedPrice.toLocaleString()}/kg\n\nDeliver your coffee now!\n📞 Contact: +256 393 001 626 / +256 393 101 103`;
+      const message = `Great Agro Coffee - Price Update\nDate: ${date}\n\n☕ ARABICA:\nOutturn: ${prices.arabicaOutturn}%\nMoisture: ${prices.arabicaMoisture}%\nFM: ${prices.arabicaFm}%\nPrice: UGX ${prices.arabicaBuyingPrice.toLocaleString()}/kg\n\n☕ ROBUSTA:\nOutturn: ${prices.robustaOutturn}%\nMoisture: ${prices.robustaMoisture}%\nFM: ${prices.robustaFm}%\nPrice: UGX ${prices.robustaBuyingPrice.toLocaleString()}/kg\n\n☕ SORTED: UGX ${prices.sortedPrice.toLocaleString()}/kg\n☕ PARCHMENT: UGX ${prices.parchmentPrice.toLocaleString()}/kg\n\nDeliver your coffee now!\n📞 Contact: +256 393 001 626 / +256 393 101 103`;
 
       console.log(`📱 Sending test SMS to ${phoneNumber}`);
       console.log('Message:', message);
@@ -454,6 +457,27 @@ const handleTestSMS = async (phoneNumber: string) => {
                 value={v(prices.sortedPrice)}
                 placeholder="Enter price"
                 onChange={(e) => handleInputChange('sortedPrice', e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Parchment Price */}
+        <div className="p-4 border rounded-lg bg-sky-50 dark:bg-sky-950/20">
+          <div className="flex items-center gap-2 mb-3">
+            <Coffee className="h-5 w-5 text-sky-700" />
+            <h3 className="text-lg font-semibold text-sky-700">Parchment Coffee Price</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="parchmentPrice">Parchment Price (UGX/kg)</Label>
+              <Input
+                id="parchmentPrice"
+                type="number"
+                step="50"
+                value={v(prices.parchmentPrice)}
+                placeholder="Enter price"
+                onChange={(e) => handleInputChange('parchmentPrice', e.target.value)}
               />
             </div>
           </div>
