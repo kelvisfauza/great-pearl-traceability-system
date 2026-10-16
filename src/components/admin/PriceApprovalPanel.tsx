@@ -18,6 +18,7 @@ import { useReferencePrices } from '@/hooks/useReferencePrices';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { buildStationPriceTableHtml, buildStationPriceSmsSummary } from '@/utils/stationPrices';
 import { formatDistanceToNow } from 'date-fns';
 
 // Percentage change chip: green for up, red for down, neutral when unchanged
