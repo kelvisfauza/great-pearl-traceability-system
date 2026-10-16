@@ -375,202 +375,91 @@ const handleTestSMS = async (phoneNumber: string) => {
           )}
         </CardHeader>
         <CardContent className="space-y-6">
-        {/* Arabica Buying Parameters */}
+        {/* Station Prices with quality parameters (Head Office / Kyarumba / Rubirizi) */}
         <div className="p-4 border rounded-lg bg-amber-50 dark:bg-amber-950/20">
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-1">
             <Coffee className="h-5 w-5 text-amber-700" />
-            <h3 className="text-lg font-semibold text-amber-700">Arabica Buying Parameters</h3>
+            <h3 className="text-lg font-semibold text-amber-700">Station Prices & Quality Parameters</h3>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <Label htmlFor="arabicaOutturn">Outturn (%)</Label>
-              <Input
-                id="arabicaOutturn"
-                type="number"
-                step="0.1"
-                value={v(prices.arabicaOutturn)}
-                placeholder="e.g. 70"
-                onChange={(e) => handleInputChange('arabicaOutturn', e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="arabicaMoisture">Moisture (%)</Label>
-              <Input
-                id="arabicaMoisture"
-                type="number"
-                step="0.1"
-                value={v(prices.arabicaMoisture)}
-                placeholder="e.g. 12.5"
-                onChange={(e) => handleInputChange('arabicaMoisture', e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="arabicaFm">FM (%)</Label>
-              <Input
-                id="arabicaFm"
-                type="number"
-                step="0.1"
-                value={v(prices.arabicaFm)}
-                placeholder="e.g. 5"
-                onChange={(e) => handleInputChange('arabicaFm', e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="arabicaBuyingPrice">Buying Price (UGX/kg)</Label>
-              <Input
-                id="arabicaBuyingPrice"
-                type="number"
-                step="50"
-                value={v(prices.arabicaBuyingPrice)}
-                placeholder="Enter price"
-                onChange={(e) => handleInputChange('arabicaBuyingPrice', e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Robusta Buying Parameters */}
-        <div className="p-4 border rounded-lg bg-emerald-50 dark:bg-emerald-950/20">
-          <div className="flex items-center gap-2 mb-3">
-            <Coffee className="h-5 w-5 text-emerald-700" />
-            <h3 className="text-lg font-semibold text-emerald-700">Robusta Buying Parameters</h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <Label htmlFor="robustaOutturn">Outturn (%)</Label>
-              <Input
-                id="robustaOutturn"
-                type="number"
-                step="0.1"
-                value={v(prices.robustaOutturn)}
-                placeholder="e.g. 80"
-                onChange={(e) => handleInputChange('robustaOutturn', e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="robustaMoisture">Moisture (%)</Label>
-              <Input
-                id="robustaMoisture"
-                type="number"
-                step="0.1"
-                value={v(prices.robustaMoisture)}
-                placeholder="e.g. 13"
-                onChange={(e) => handleInputChange('robustaMoisture', e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="robustaFm">FM (%)</Label>
-              <Input
-                id="robustaFm"
-                type="number"
-                step="0.1"
-                value={v(prices.robustaFm)}
-                placeholder="e.g. 3"
-                onChange={(e) => handleInputChange('robustaFm', e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="robustaBuyingPrice">Buying Price (UGX/kg)</Label>
-              <Input
-                id="robustaBuyingPrice"
-                type="number"
-                step="50"
-                value={v(prices.robustaBuyingPrice)}
-                placeholder="Enter price"
-                onChange={(e) => handleInputChange('robustaBuyingPrice', e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Sorted Price */}
-        <div className="p-4 border rounded-lg bg-purple-50 dark:bg-purple-950/20">
-          <div className="flex items-center gap-2 mb-3">
-            <Coffee className="h-5 w-5 text-purple-700" />
-            <h3 className="text-lg font-semibold text-purple-700">Sorted Coffee Price</h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="sortedPrice">Sorted Price (UGX/kg)</Label>
-              <Input
-                id="sortedPrice"
-                type="number"
-                step="50"
-                value={v(prices.sortedPrice)}
-                placeholder="Enter price"
-                onChange={(e) => handleInputChange('sortedPrice', e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Parchment Price */}
-        <div className="p-4 border rounded-lg bg-sky-50 dark:bg-sky-950/20">
-          <div className="flex items-center gap-2 mb-3">
-            <Coffee className="h-5 w-5 text-sky-700" />
-            <h3 className="text-lg font-semibold text-sky-700">Parchment Coffee Price</h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="parchmentPrice">Parchment Price (UGX/kg)</Label>
-              <Input
-                id="parchmentPrice"
-                type="number"
-                step="50"
-                value={v(prices.parchmentPrice)}
-                placeholder="Enter price"
-                onChange={(e) => handleInputChange('parchmentPrice', e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Station Prices (Head Office / Kyarumba / Rubirizi) */}
-        <div className="p-4 border rounded-lg bg-amber-50 dark:bg-amber-950/20">
-          <div className="flex items-center gap-2 mb-3">
-            <Coffee className="h-5 w-5 text-amber-700" />
-            <h3 className="text-lg font-semibold text-amber-700">Station Prices (UGX/kg)</h3>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm font-semibold mb-2">Head Office</p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="parchmentPremium">Parchment Premium</Label>
-                  <Input id="parchmentPremium" type="number" step="50" value={v(prices.parchmentPremium)} placeholder="Enter price" onChange={(e) => handleInputChange('parchmentPremium', e.target.value)} />
+          <p className="text-xs text-muted-foreground mb-4">
+            Enter the buying price (UGX/kg) plus moisture, outturn and total FM for each quality at every station.
+          </p>
+          <div className="space-y-5">
+            {STATION_LOCATIONS.map((location) => (
+              <div key={location}>
+                <p className="text-sm font-semibold mb-2">{location}</p>
+                <div className="space-y-3">
+                  {STATION_PRICE_ROWS.filter(r => r.location === location).map((row) => {
+                    const fieldKey = row.key;
+                    const camelKey = ({
+                      drugar_local: 'drugarLocal',
+                      sorted_price: 'sortedPrice',
+                      robusta_faq_local: 'robustaFaqLocal',
+                      wugar_local: 'wugarLocal',
+                      parchment_premium: 'parchmentPremium',
+                      parchment_price: 'parchmentPrice',
+                      kyarumba_sorted: 'kyarumbaSorted',
+                      kyarumba_ordinary: 'kyarumbaOrdinary',
+                      kyarumba_undergrades: 'kyarumbaUndergrades',
+                      rubirizi_drugar_clean: 'rubiriziDrugarClean',
+                      rubirizi_ordinary: 'rubiriziOrdinary',
+                    } as const)[fieldKey];
+                    const params = stationParams[fieldKey] || {};
+                    return (
+                      <div key={fieldKey} className="p-3 bg-background/60 rounded border">
+                        <p className="text-sm font-medium mb-2">{row.quality}</p>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          <div>
+                            <Label htmlFor={`price-${fieldKey}`}>Price (UGX/kg)</Label>
+                            <Input
+                              id={`price-${fieldKey}`}
+                              type="number"
+                              step="50"
+                              value={v(prices[camelKey] as number)}
+                              placeholder="Enter price"
+                              onChange={(e) => handleInputChange(camelKey, e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor={`moisture-${fieldKey}`}>Moisture (%)</Label>
+                            <Input
+                              id={`moisture-${fieldKey}`}
+                              type="number"
+                              step="0.1"
+                              value={v(params.moisture ?? 0)}
+                              placeholder="e.g. 12.5"
+                              onChange={(e) => handleParamChange(fieldKey, 'moisture', e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor={`outturn-${fieldKey}`}>Outturn (%)</Label>
+                            <Input
+                              id={`outturn-${fieldKey}`}
+                              type="number"
+                              step="0.1"
+                              value={v(params.outturn ?? 0)}
+                              placeholder="e.g. 70"
+                              onChange={(e) => handleParamChange(fieldKey, 'outturn', e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor={`fm-${fieldKey}`}>Total FM (%)</Label>
+                            <Input
+                              id={`fm-${fieldKey}`}
+                              type="number"
+                              step="0.1"
+                              value={v(params.fm ?? 0)}
+                              placeholder="e.g. 5"
+                              onChange={(e) => handleParamChange(fieldKey, 'fm', e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            </div>
-            <div>
-              <p className="text-sm font-semibold mb-2">Kyarumba</p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="kyarumbaSorted">Sorted</Label>
-                  <Input id="kyarumbaSorted" type="number" step="50" value={v(prices.kyarumbaSorted)} placeholder="Enter price" onChange={(e) => handleInputChange('kyarumbaSorted', e.target.value)} />
-                </div>
-                <div>
-                  <Label htmlFor="kyarumbaOrdinary">Ordinary</Label>
-                  <Input id="kyarumbaOrdinary" type="number" step="50" value={v(prices.kyarumbaOrdinary)} placeholder="Enter price" onChange={(e) => handleInputChange('kyarumbaOrdinary', e.target.value)} />
-                </div>
-                <div>
-                  <Label htmlFor="kyarumbaUndergrades">Undergrades</Label>
-                  <Input id="kyarumbaUndergrades" type="number" step="50" value={v(prices.kyarumbaUndergrades)} placeholder="Enter price" onChange={(e) => handleInputChange('kyarumbaUndergrades', e.target.value)} />
-                </div>
-              </div>
-            </div>
-            <div>
-              <p className="text-sm font-semibold mb-2">Rubirizi</p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="rubiriziDrugarClean">Drugar Clean</Label>
-                  <Input id="rubiriziDrugarClean" type="number" step="50" value={v(prices.rubiriziDrugarClean)} placeholder="Enter price" onChange={(e) => handleInputChange('rubiriziDrugarClean', e.target.value)} />
-                </div>
-                <div>
-                  <Label htmlFor="rubiriziOrdinary">Ordinary</Label>
-                  <Input id="rubiriziOrdinary" type="number" step="50" value={v(prices.rubiriziOrdinary)} placeholder="Enter price" onChange={(e) => handleInputChange('rubiriziOrdinary', e.target.value)} />
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
