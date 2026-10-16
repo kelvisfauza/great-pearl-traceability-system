@@ -21,6 +21,8 @@ interface ReferencePrices {
   robustaBuyingPrice: number;
   // Sorted price
   sortedPrice: number;
+  // Parchment price
+  parchmentPrice: number;
   lastUpdated?: string;
 }
 

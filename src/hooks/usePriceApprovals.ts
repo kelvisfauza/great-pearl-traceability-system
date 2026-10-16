@@ -22,6 +22,7 @@ export interface PriceApprovalRequest {
   robusta_fm: number | null;
   robusta_buying_price: number;
   sorted_price: number | null;
+  parchment_price: number | null;
   notify_suppliers: boolean;
   status: 'pending' | 'approved' | 'rejected';
   reviewed_by: string | null;
@@ -129,6 +130,7 @@ const submitForApproval = async (
       robustaFm: number;
       robustaBuyingPrice: number;
       sortedPrice: number;
+      parchmentPrice: number;
     },
     submittedBy: string,
     submittedByEmail: string,
@@ -159,6 +161,7 @@ const submitForApproval = async (
           robusta_fm: prices.robustaFm,
           robusta_buying_price: prices.robustaBuyingPrice,
           sorted_price: prices.sortedPrice,
+          parchment_price: prices.parchmentPrice,
           notify_suppliers: notifySuppliers,
           is_correction: isCorrection,
           status: 'pending',
@@ -193,6 +196,7 @@ const submitForApproval = async (
               robustaFm: String(prices.robustaFm),
               robustaBuyingPrice: String(prices.robustaBuyingPrice),
               sortedPrice: String(prices.sortedPrice),
+              parchmentPrice: String(prices.parchmentPrice),
               approveUrl: `${APP_URL}/v2/admin`,
               submittedAt: new Date().toLocaleDateString('en-UG', { dateStyle: 'full' }),
             }
