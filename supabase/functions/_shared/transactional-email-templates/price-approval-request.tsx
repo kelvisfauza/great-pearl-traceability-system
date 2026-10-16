@@ -26,7 +26,7 @@ interface PriceApprovalRequestProps {
   sortedPrice?: string
   approveUrl?: string
   submittedAt?: string
-  stationPrices?: { location: string; quality: string; price: number | null }[]
+  stationPrices?: { location: string; quality: string; price: number | null; moisture?: number | null; outturn?: number | null; fm?: number | null }[]
 }
 
 const fmt = (v: string | number) => Number(v).toLocaleString()
@@ -192,6 +192,9 @@ const PriceApprovalRequestEmail = ({
                       <th style={{ padding: '6px 8px', textAlign: 'left' as const, borderBottom: '2px solid #1e40af', color: '#1e40af', fontSize: '11px', textTransform: 'uppercase' as const }}>Location / Region</th>
                       <th style={{ padding: '6px 8px', textAlign: 'left' as const, borderBottom: '2px solid #1e40af', color: '#1e40af', fontSize: '11px', textTransform: 'uppercase' as const }}>Quality</th>
                       <th style={{ padding: '6px 8px', textAlign: 'right' as const, borderBottom: '2px solid #1e40af', color: '#1e40af', fontSize: '11px', textTransform: 'uppercase' as const }}>UGX/Kg</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'right' as const, borderBottom: '2px solid #1e40af', color: '#1e40af', fontSize: '11px', textTransform: 'uppercase' as const }}>Moisture</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'right' as const, borderBottom: '2px solid #1e40af', color: '#1e40af', fontSize: '11px', textTransform: 'uppercase' as const }}>Outturn</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'right' as const, borderBottom: '2px solid #1e40af', color: '#1e40af', fontSize: '11px', textTransform: 'uppercase' as const }}>Total FM</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -202,6 +205,9 @@ const PriceApprovalRequestEmail = ({
                         <td style={{ padding: '6px 8px', borderBottom: '1px solid #e2e8f0', color: '#111827', textAlign: 'right' as const, fontWeight: 'bold' as const }}>
                           {row.price != null && row.price > 0 ? Number(row.price).toLocaleString() : '—'}
                         </td>
+                        <td style={{ padding: '6px 8px', borderBottom: '1px solid #e2e8f0', color: '#374151', textAlign: 'right' as const }}>{row.moisture != null && row.moisture > 0 ? `${row.moisture}%` : '—'}</td>
+                        <td style={{ padding: '6px 8px', borderBottom: '1px solid #e2e8f0', color: '#374151', textAlign: 'right' as const }}>{row.outturn != null && row.outturn > 0 ? `${row.outturn}%` : '—'}</td>
+                        <td style={{ padding: '6px 8px', borderBottom: '1px solid #e2e8f0', color: '#374151', textAlign: 'right' as const }}>{row.fm != null && row.fm > 0 ? `${row.fm}%` : '—'}</td>
                       </tr>
                     ))}
                   </tbody>

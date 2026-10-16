@@ -229,7 +229,8 @@ await savePrices({
           kyarumbaOrdinary: request.kyarumba_ordinary || currentPrices.kyarumbaOrdinary,
           kyarumbaUndergrades: request.kyarumba_undergrades || currentPrices.kyarumbaUndergrades,
           rubiriziDrugarClean: request.rubirizi_drugar_clean || currentPrices.rubiriziDrugarClean,
-          rubiriziOrdinary: request.rubirizi_ordinary || currentPrices.rubiriziOrdinary
+          rubiriziOrdinary: request.rubirizi_ordinary || currentPrices.rubiriziOrdinary,
+          stationParams: request.station_params || currentPrices.stationParams || {}
         });
 
         // Send SMS notifications to suppliers & registered recipients
@@ -401,7 +402,7 @@ await savePrices({
         robustaBuyingPrice: request.robusta_buying_price,
         sortedPrice: request.sorted_price || 0,
         parchmentPrice: request.parchment_price || 0,
-        stationPrices: buildStationPriceRows(stationValues(request)),
+        stationPrices: buildStationPriceRows(stationValues(request), request.station_params),
         arabicaOutturn: request.arabica_outturn,
         arabicaMoisture: request.arabica_moisture,
         arabicaFm: request.arabica_fm,
@@ -459,7 +460,7 @@ await savePrices({
                 robustaBuyingPrice: request.robusta_buying_price,
                 sortedPrice: request.sorted_price || 0,
                 parchmentPrice: request.parchment_price || 0,
-                stationPrices: buildStationPriceRows(stationValues(request)),
+                stationPrices: buildStationPriceRows(stationValues(request), request.station_params),
                 isCorrection: request.is_correction,
               },
             },
@@ -696,21 +697,44 @@ await savePrices({
                   </div>
                 )}
 
-                {/* Station prices — Head Office / Kyarumba / Rubirizi */}
-                {(request.parchment_premium !== null || request.kyarumba_sorted !== null || request.kyarumba_ordinary !== null ||
-                  request.kyarumba_undergrades !== null || request.rubirizi_drugar_clean !== null || request.rubirizi_ordinary !== null) && (
-                  <div className="mb-4">
-                    <p className="text-xs font-semibold text-muted-foreground mb-2">STATION PRICES (UGX/KG)</p>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
-                      <CompareItem label="HO Parchment Premium" current={currentPrices.parchmentPremium} next={request.parchment_premium} unit="UGX" />
-                      <CompareItem label="Kyarumba Sorted" current={currentPrices.kyarumbaSorted} next={request.kyarumba_sorted} unit="UGX" />
-                      <CompareItem label="Kyarumba Ordinary" current={currentPrices.kyarumbaOrdinary} next={request.kyarumba_ordinary} unit="UGX" />
-                      <CompareItem label="Kyarumba Undergrades" current={currentPrices.kyarumbaUndergrades} next={request.kyarumba_undergrades} unit="UGX" />
-                      <CompareItem label="Rubirizi Drugar Clean" current={currentPrices.rubiriziDrugarClean} next={request.rubirizi_drugar_clean} unit="UGX" />
-                      <CompareItem label="Rubirizi Ordinary" current={currentPrices.rubiriziOrdinary} next={request.rubirizi_ordinary} unit="UGX" />
-                    </div>
+                {/* Station prices with quality parameters — Head Office / Kyarumba / Rubirizi */}
+                <div className="mb-4">
+                  <p className="text-xs font-semibold text-muted-foreground mb-2">STATION PRICES & QUALITY PARAMETERS</p>
+                  <div className="overflow-x-auto rounded border">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-muted/60 text-left">
+                          <th className="px-3 py-2 text-xs font-semibold">Location</th>
+                          <th className="px-3 py-2 text-xs font-semibold">Quality</th>
+                          <th className="px-3 py-2 text-xs font-semibold text-right">Price (UGX/kg)</th>
+                          <th className="px-3 py-2 text-xs font-semibold text-right">Moisture %</th>
+                          <th className="px-3 py-2 text-xs font-semibold text-right">Outturn %</th>
+                          <th className="px-3 py-2 text-xs font-semibold text-right">Total FM %</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {buildStationPriceRows(stationValues(request), request.station_params).map((row) => {
+                          const currentRow = buildStationPriceRows(stationValues(currentPrices), currentPrices.stationParams)
+                            .find(c => c.location === row.location && c.quality === row.quality);
+                          const fmtPct = (n: number | null | undefined) => (n == null || n <= 0 ? '—' : `${n}%`);
+                          return (
+                            <tr key={`${row.location}-${row.quality}`} className="border-t">
+                              <td className="px-3 py-2">{row.location}</td>
+                              <td className="px-3 py-2 font-medium">{row.quality}</td>
+                              <td className="px-3 py-2 text-right">
+                                <span className="font-semibold">{row.price ? row.price.toLocaleString() : '—'}</span>
+                                <div><ChangePill current={currentRow?.price || 0} next={row.price} /></div>
+                              </td>
+                              <td className="px-3 py-2 text-right">{fmtPct(row.moisture)}</td>
+                              <td className="px-3 py-2 text-right">{fmtPct(row.outturn)}</td>
+                              <td className="px-3 py-2 text-right">{fmtPct(row.fm)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
-                )}
+                </div>
 
                 {/* Notify Suppliers Badge */}
                 {request.notify_suppliers && (

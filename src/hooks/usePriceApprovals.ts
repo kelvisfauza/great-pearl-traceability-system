@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { buildStationPriceRows } from '@/utils/stationPrices';
+import { buildStationPriceRows, StationParams } from '@/utils/stationPrices';
 
 export interface PriceApprovalRequest {
   id: string;
@@ -30,6 +30,7 @@ export interface PriceApprovalRequest {
   kyarumba_undergrades: number | null;
   rubirizi_drugar_clean: number | null;
   rubirizi_ordinary: number | null;
+  station_params?: StationParams | null;
   notify_suppliers: boolean;
   status: 'pending' | 'approved' | 'rejected';
   reviewed_by: string | null;
@@ -148,15 +149,14 @@ const submitForApproval = async (
     submittedBy: string,
     submittedByEmail: string,
     notifySuppliers: boolean,
-    targetDate?: string
+    targetDate?: string,
+    stationParams?: StationParams
   ) => {
     try {
       // Auto-detect if this is a correction
       const isCorrection = await checkIfCorrectionNeeded();
-      
-      const { error } = await (supabase as any)
-        .from('price_approval_requests')
-        .insert({
+
+      const basePayload = {
           submitted_by: submittedBy,
           submitted_by_email: submittedByEmail,
           ice_arabica: prices.iceArabica,
@@ -185,7 +185,19 @@ const submitForApproval = async (
           is_correction: isCorrection,
           status: 'pending',
           target_date: targetDate || new Date().toISOString().split('T')[0]
-        });
+        };
+
+      // station_params column may not exist yet (migration pending) — retry without it.
+      let { error } = await (supabase as any)
+        .from('price_approval_requests')
+        .insert({ ...basePayload, station_params: stationParams || {} });
+
+      if (error && String(error.message || '').includes('station_params')) {
+        const retry = await (supabase as any)
+          .from('price_approval_requests')
+          .insert(basePayload);
+        error = retry.error;
+      }
 
       if (error) throw error;
       
@@ -234,7 +246,7 @@ const submitForApproval = async (
                 kyarumba_undergrades: prices.kyarumbaUndergrades,
                 rubirizi_drugar_clean: prices.rubiriziDrugarClean,
                 rubirizi_ordinary: prices.rubiriziOrdinary,
-              }),
+              }, stationParams),
               approveUrl: `${APP_URL}/v2/admin`,
               submittedAt: new Date().toLocaleDateString('en-UG', { dateStyle: 'full' }),
             }

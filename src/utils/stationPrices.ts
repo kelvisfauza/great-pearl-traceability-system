@@ -1,6 +1,7 @@
 // Station/location-based buying price table (Head Office, Kyarumba, Rubirizi).
 // Used by the Data Analyst price form, the admin approval panel, the approval
 // emails (full table) and the SMS broadcasts (summarised).
+// Each row also carries quality parameters: moisture, outturn and total FM.
 
 export interface StationPriceValues {
   drugar_local?: number | null;
@@ -15,6 +16,15 @@ export interface StationPriceValues {
   rubirizi_drugar_clean?: number | null;
   rubirizi_ordinary?: number | null;
 }
+
+export interface StationQualityParam {
+  moisture?: number | null;
+  outturn?: number | null;
+  fm?: number | null;
+}
+
+/** Quality parameters keyed by the same keys as StationPriceValues. */
+export type StationParams = Partial<Record<keyof StationPriceValues, StationQualityParam>>;
 
 export interface StationPriceRow {
   location: string;
@@ -45,14 +55,23 @@ export interface StationPriceTableRow {
   location: string;
   quality: string;
   price: number | null;
+  moisture?: number | null;
+  outturn?: number | null;
+  fm?: number | null;
 }
 
 /** Structured rows for rendering the full price table in emails. */
-export function buildStationPriceRows(prices: StationPriceValues): StationPriceTableRow[] {
+export function buildStationPriceRows(
+  prices: StationPriceValues,
+  params?: StationParams | null,
+): StationPriceTableRow[] {
   return STATION_PRICE_ROWS.map((r) => ({
     location: r.location,
     quality: r.quality,
     price: prices[r.key] ?? null,
+    moisture: params?.[r.key]?.moisture ?? null,
+    outturn: params?.[r.key]?.outturn ?? null,
+    fm: params?.[r.key]?.fm ?? null,
   }));
 }
 

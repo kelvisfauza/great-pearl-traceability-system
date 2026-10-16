@@ -15,7 +15,7 @@ interface SupplierPriceNoticeProps {
   robustaBuyingPrice?: number
   sortedPrice?: number
   isCorrection?: boolean
-  stationPrices?: { location: string; quality: string; price: number | null }[]
+  stationPrices?: { location: string; quality: string; price: number | null; moisture?: number | null; outturn?: number | null; fm?: number | null }[]
 }
 
 const SupplierPriceNoticeEmail = ({
@@ -72,6 +72,9 @@ const SupplierPriceNoticeEmail = ({
                   <th style={{ padding: '6px 8px', textAlign: 'left' as const, borderBottom: '2px solid #16a34a', color: '#16a34a', fontSize: '11px', textTransform: 'uppercase' as const }}>Location / Region</th>
                   <th style={{ padding: '6px 8px', textAlign: 'left' as const, borderBottom: '2px solid #16a34a', color: '#16a34a', fontSize: '11px', textTransform: 'uppercase' as const }}>Quality</th>
                   <th style={{ padding: '6px 8px', textAlign: 'right' as const, borderBottom: '2px solid #16a34a', color: '#16a34a', fontSize: '11px', textTransform: 'uppercase' as const }}>UGX/Kg</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'right' as const, borderBottom: '2px solid #16a34a', color: '#16a34a', fontSize: '11px', textTransform: 'uppercase' as const }}>Moisture</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'right' as const, borderBottom: '2px solid #16a34a', color: '#16a34a', fontSize: '11px', textTransform: 'uppercase' as const }}>Outturn</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'right' as const, borderBottom: '2px solid #16a34a', color: '#16a34a', fontSize: '11px', textTransform: 'uppercase' as const }}>Total FM</th>
                 </tr>
               </thead>
               <tbody>
@@ -82,6 +85,9 @@ const SupplierPriceNoticeEmail = ({
                     <td style={{ padding: '6px 8px', borderBottom: '1px solid #e9ecef', color: '#16a34a', textAlign: 'right' as const, fontWeight: 'bold' as const }}>
                       {row.price != null && row.price > 0 ? row.price.toLocaleString() : '—'}
                     </td>
+                    <td style={{ padding: '6px 8px', borderBottom: '1px solid #e9ecef', color: '#333', textAlign: 'right' as const }}>{row.moisture != null && row.moisture > 0 ? `${row.moisture}%` : '—'}</td>
+                    <td style={{ padding: '6px 8px', borderBottom: '1px solid #e9ecef', color: '#333', textAlign: 'right' as const }}>{row.outturn != null && row.outturn > 0 ? `${row.outturn}%` : '—'}</td>
+                    <td style={{ padding: '6px 8px', borderBottom: '1px solid #e9ecef', color: '#333', textAlign: 'right' as const }}>{row.fm != null && row.fm > 0 ? `${row.fm}%` : '—'}</td>
                   </tr>
                 ))}
               </tbody>

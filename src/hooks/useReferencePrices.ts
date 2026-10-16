@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { notifyTeams } from '@/lib/teamsNotify';
+import { StationParams } from '@/utils/stationPrices';
 
 interface ReferencePrices {
   iceArabica: number;
@@ -30,6 +31,7 @@ interface ReferencePrices {
   kyarumbaUndergrades: number;
   rubiriziDrugarClean: number;
   rubiriziOrdinary: number;
+  stationParams?: StationParams;
   lastUpdated?: string;
 }
 
@@ -107,6 +109,7 @@ const [prices, setPrices] = useState<ReferencePrices>({
           kyarumbaUndergrades: data.kyarumba_undergrades || 0,
           rubiriziDrugarClean: data.rubirizi_drugar_clean || 0,
           rubiriziOrdinary: data.rubirizi_ordinary || 0,
+          stationParams: ((data as any).station_params as StationParams) || {},
           lastUpdated: data.last_updated
         });
       }
@@ -150,6 +153,22 @@ const priceData = {
         last_updated: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
+
+      // station_params column may not exist yet (migration pending) — retry without it.
+      const withParams = { ...priceData, station_params: newPrices.stationParams || {} };
+      const runSave = async (payload: Record<string, any>) => {
+        if (existing) {
+          const result = await (supabase as any)
+            .from('market_prices')
+            .update(payload)
+            .eq('price_type', 'reference_prices');
+          return result.error;
+        }
+        const result = await (supabase as any)
+          .from('market_prices')
+          .insert({ ...payload, price_type: 'reference_prices' });
+        return result.error;
+      };
       
       console.log('💾 Price data to save:', priceData);
       
@@ -167,22 +186,10 @@ const priceData = {
         throw selectError;
       }
       
-      let error;
-      if (existing) {
-        console.log('💾 Updating existing record with id:', existing.id);
-        const result = await supabase
-          .from('market_prices')
-          .update(priceData)
-          .eq('price_type', 'reference_prices');
-        error = result.error;
-        console.log('💾 Update result error:', result.error);
-      } else {
-        console.log('💾 Inserting new record');
-        const result = await supabase
-          .from('market_prices')
-          .insert({ ...priceData, price_type: 'reference_prices' });
-        error = result.error;
-        console.log('💾 Insert result error:', result.error);
+      let error = await runSave(withParams);
+      if (error && String(error.message || '').includes('station_params')) {
+        console.log('💾 station_params column missing — saving without quality params');
+        error = await runSave(priceData);
       }
       
       if (error) {
@@ -269,6 +276,7 @@ const priceData = {
               kyarumbaUndergrades: data.kyarumba_undergrades || 0,
               rubiriziDrugarClean: data.rubirizi_drugar_clean || 0,
               rubiriziOrdinary: data.rubirizi_ordinary || 0,
+              stationParams: (data.station_params as StationParams) || {},
               lastUpdated: data.last_updated
             });
           }
