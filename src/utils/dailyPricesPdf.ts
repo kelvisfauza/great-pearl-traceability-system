@@ -1,19 +1,12 @@
 import jsPDF from 'jspdf';
 import { COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_PHONES, COMPANY_EMAIL, COMPANY_WEBSITE, COMPANY_REG } from './companyBrand';
+import { STATION_PRICE_ROWS, type StationParams, type StationPriceValues } from './stationPrices';
 
-export interface DailyPriceSnapshot {
+export interface DailyPriceSnapshot extends StationPriceValues {
   ice_arabica: number | null;
   robusta: number | null;
   exchange_rate: number | null;
-  drugar_local: number | null;
-  wugar_local: number | null;
-  robusta_faq_local: number | null;
-  arabica_buying_price: number | null;
-  robusta_buying_price: number | null;
-  sorted_price: number | null;
-  parchment_price: number | null;
-  arabica_outturn: number | null;
-  robusta_outturn: number | null;
+  station_params?: StationParams | null;
   last_updated: string | null;
 }
 
@@ -23,8 +16,11 @@ export const kampalaDate = (date: Date) => new Intl.DateTimeFormat('en-GB', {
 
 export function buildDailyPricesPdf(prices: DailyPriceSnapshot, date: Date, code: string, qr: string, logo: string) {
   const doc = new jsPDF({ format: 'a4', unit: 'mm' });
-  const fmt = (n: number | null, decimals = 0) => n == null || !Number.isFinite(n) || n <= 0
-    ? 'Not set' : n.toLocaleString('en-UG', { maximumFractionDigits: decimals, minimumFractionDigits: decimals });
+  const fmt = (n: number | null | undefined, decimals = 0) => n == null || !Number.isFinite(n) || n <= 0
+    ? '—' : n.toLocaleString('en-UG', { maximumFractionDigits: decimals, minimumFractionDigits: decimals });
+  const fmtPct = (n: number | null | undefined) => n == null || !Number.isFinite(n) || n <= 0 ? '—' : `${n}%`;
+
+  // Header
   doc.setTextColor(0);
   doc.addImage(logo, 'PNG', 15, 13, 25, 25);
   doc.setFont('helvetica', 'bold');
@@ -44,38 +40,71 @@ export function buildDailyPricesPdf(prices: DailyPriceSnapshot, date: Date, code
   doc.text("TODAY'S COFFEE PRICES", 105, 66, { align: 'center' });
   doc.setFontSize(12);
   doc.text(kampalaDate(date), 105, 74, { align: 'center' });
-  const section = (title: string, y: number) => {
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.text(title, 15, y);
-    doc.line(15, y + 3, 195, y + 3);
-  };
-  section('LOCAL MARKET PRICES  /  UGX per kg', 86);
-  [ ['Drugar', prices.drugar_local], ['Wugar', prices.wugar_local], ['Robusta FAQ', prices.robusta_faq_local], ['Sorted', prices.sorted_price], ['Parchment', prices.parchment_price] ].forEach(([label, value], i) => {
-    const y = 100 + i * 13;
-    doc.setFontSize(14); doc.text(String(label), 18, y);
-    doc.setFontSize(26); doc.text(fmt(value as number | null), 192, y, { align: 'right' });
+
+  // Station prices & quality parameters table
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+  doc.text('STATION PRICES & QUALITY PARAMETERS  /  UGX per kg', 15, 84);
+  doc.line(15, 87, 195, 87);
+
+  const cols = { location: 18, quality: 55, price: 105, moisture: 135, outturn: 160, fm: 188 };
+  let y = 94;
+  doc.setFontSize(9);
+  doc.text('Location', cols.location, y);
+  doc.text('Quality', cols.quality, y);
+  doc.text('UGX/kg', cols.price, y, { align: 'right' });
+  doc.text('Moisture', cols.moisture, y, { align: 'right' });
+  doc.text('Outturn', cols.outturn, y, { align: 'right' });
+  doc.text('Total FM', cols.fm, y, { align: 'right' });
+  doc.line(15, y + 2, 195, y + 2);
+  y += 8;
+
+  let lastLocation = '';
+  STATION_PRICE_ROWS.forEach((row, i) => {
+    if (i > 0) {
+      doc.setDrawColor(210);
+      doc.line(15, y - 5, 195, y - 5);
+      doc.setDrawColor(0);
+    }
+    const params = prices.station_params?.[row.key];
+    const showLocation = row.location !== lastLocation;
+    lastLocation = row.location;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+    if (showLocation) doc.text(row.location, cols.location, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(row.quality, cols.quality, y);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+    doc.text(fmt(prices[row.key]), cols.price, y, { align: 'right' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+    doc.text(fmtPct(params?.moisture), cols.moisture, y, { align: 'right' });
+    doc.text(fmtPct(params?.outturn), cols.outturn, y, { align: 'right' });
+    doc.text(fmtPct(params?.fm), cols.fm, y, { align: 'right' });
+    y += 8;
   });
-  section('BUYING PRICES  /  UGX per kg', 168);
-  doc.setFontSize(12);
-  doc.text(`Arabica (${fmt(prices.arabica_outturn)}% outturn)`, 18, 181);
-  doc.text(fmt(prices.arabica_buying_price), 192, 181, { align: 'right' });
-  doc.text(`Robusta (${fmt(prices.robusta_outturn)}% outturn)`, 18, 192);
-  doc.text(fmt(prices.robusta_buying_price), 192, 192, { align: 'right' });
-  section('ICE MARKET REFERENCES & EXCHANGE RATE', 206);
+  doc.line(15, y - 5, 195, y - 5);
+
+  // ICE market references
+  y += 6;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+  doc.text('ICE MARKET REFERENCES & EXCHANGE RATE', 15, y);
+  doc.line(15, y + 3, 195, y + 3);
   doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
-  doc.text('ICE Arabica (US cents/lb)', 18, 218);
-  doc.text(fmt(prices.ice_arabica, 2), 192, 218, { align: 'right' });
-  doc.text('ICE Robusta (USD/tonne)', 18, 228);
-  doc.text(fmt(prices.robusta, 2), 192, 228, { align: 'right' });
-  doc.text('USD / UGX', 18, 238);
-  doc.text(fmt(prices.exchange_rate, 2), 192, 238, { align: 'right' });
-  doc.line(15, 248, 195, 248);
-  doc.addImage(qr, 'PNG', 15, 254, 26, 26);
+  doc.text('ICE Arabica (US cents/lb)', 18, y + 12);
+  doc.text(fmt(prices.ice_arabica, 2), 192, y + 12, { align: 'right' });
+  doc.text('ICE Robusta (USD/tonne)', 18, y + 21);
+  doc.text(fmt(prices.robusta, 2), 192, y + 21, { align: 'right' });
+  doc.text('USD / UGX', 18, y + 30);
+  doc.text(fmt(prices.exchange_rate, 2), 192, y + 30, { align: 'right' });
+  doc.line(15, y + 36, 195, y + 36);
+
+  // Verification QR footer
+  const qrY = y + 42;
+  doc.addImage(qr, 'PNG', 15, qrY, 26, 26);
   doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
-  doc.text('Scan to verify this price sheet', 47, 260);
+  doc.text('Scan to verify this price sheet', 47, qrY + 6);
   doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
-  doc.text(`Verification: ${code}`, 47, 267);
+  doc.text(`Verification: ${code}`, 47, qrY + 13);
   const updated = prices.last_updated ? new Date(prices.last_updated) : null;
-  doc.text(`Prices last updated: ${updated && !Number.isNaN(updated.getTime()) ? kampalaDate(updated) : 'Not recorded'}`, 47, 274);
+  doc.text(`Prices last updated: ${updated && !Number.isNaN(updated.getTime()) ? kampalaDate(updated) : 'Not recorded'}`, 47, qrY + 20);
   doc.setFontSize(8); doc.text(`${COMPANY_NAME} | Quality Department`, 15, 284);
   doc.text('Page 1 of 1', 195, 284, { align: 'right' });
   return doc;
