@@ -2,6 +2,7 @@ import { FinanceWalletOpsAndBalances } from '@/components/finance/FinanceWalletO
 import { FinanceOvertimePayments } from '@/components/finance/FinanceOvertimePayments';
 import { FinanceInitiateWithdrawal } from '@/components/finance/FinanceInitiateWithdrawal';
 import FinanceProviderReleases from '@/components/finance/FinanceProviderReleases';
+import FinancePaymentHistory from '@/components/finance/FinancePaymentHistory';
 import FinanceQuotationPayments from '@/components/finance/FinanceQuotationPayments';
 import FinanceSamplingOrderPayments from '@/components/finance/FinanceSamplingOrderPayments';
 import { useState } from "react";
