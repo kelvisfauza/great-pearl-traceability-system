@@ -42,7 +42,8 @@ const [prices, setPrices] = useState<ReferencePrices>({
     robustaMoisture: 13,
     robustaFm: 3,
     robustaBuyingPrice: 7800,
-    sortedPrice: 0
+    sortedPrice: 0,
+    parchmentPrice: 0
   });
   const [loading, setLoading] = useState(false);
   const channelNameRef = useRef(
@@ -86,6 +87,7 @@ const [prices, setPrices] = useState<ReferencePrices>({
           robustaFm: data.robusta_fm || 3,
           robustaBuyingPrice: data.robusta_buying_price || 7800,
           sortedPrice: data.sorted_price || 0,
+          parchmentPrice: data.parchment_price || 0,
           lastUpdated: data.last_updated
         });
       }
@@ -119,6 +121,7 @@ const priceData = {
         robusta_fm: newPrices.robustaFm,
         robusta_buying_price: newPrices.robustaBuyingPrice,
         sorted_price: newPrices.sortedPrice,
+        parchment_price: newPrices.parchmentPrice,
         last_updated: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -172,7 +175,7 @@ const priceData = {
       notifyTeams(
         "trade",
         "Daily Buying Prices Updated",
-        `Arabica buying price: UGX ${Number(newPrices.arabicaBuyingPrice ?? 0).toLocaleString()}/kg\nRobusta buying price: UGX ${Number(newPrices.robustaBuyingPrice ?? 0).toLocaleString()}/kg\nDrugar local: UGX ${Number(newPrices.drugarLocal ?? 0).toLocaleString()}\nWugar local: UGX ${Number(newPrices.wugarLocal ?? 0).toLocaleString()}\nRobusta FAQ local: UGX ${Number(newPrices.robustaFaqLocal ?? 0).toLocaleString()}\nSorted price: UGX ${Number(newPrices.sortedPrice ?? 0).toLocaleString()}\nICE Arabica ref: ${newPrices.iceArabica}\nRobusta ref: ${newPrices.robusta}\nFX: ${newPrices.exchangeRate}\nUpdated at: ${new Date().toLocaleString()}`,
+        `Arabica buying price: UGX ${Number(newPrices.arabicaBuyingPrice ?? 0).toLocaleString()}/kg\nRobusta buying price: UGX ${Number(newPrices.robustaBuyingPrice ?? 0).toLocaleString()}/kg\nDrugar local: UGX ${Number(newPrices.drugarLocal ?? 0).toLocaleString()}\nWugar local: UGX ${Number(newPrices.wugarLocal ?? 0).toLocaleString()}\nRobusta FAQ local: UGX ${Number(newPrices.robustaFaqLocal ?? 0).toLocaleString()}\nSorted price: UGX ${Number(newPrices.sortedPrice ?? 0).toLocaleString()}\nParchment price: UGX ${Number(newPrices.parchmentPrice ?? 0).toLocaleString()}\nICE Arabica ref: ${newPrices.iceArabica}\nRobusta ref: ${newPrices.robusta}\nFX: ${newPrices.exchangeRate}\nUpdated at: ${new Date().toLocaleString()}`,
       );
       
       return true;
@@ -234,6 +237,7 @@ const priceData = {
               robustaFm: data.robusta_fm || 3,
               robustaBuyingPrice: data.robusta_buying_price || 7800,
               sortedPrice: data.sorted_price || 0,
+              parchmentPrice: data.parchment_price || 0,
               lastUpdated: data.last_updated
             });
           }
