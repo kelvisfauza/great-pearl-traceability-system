@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { buildStationPriceTableHtml } from '@/utils/stationPrices';
+import { buildStationPriceRows } from '@/utils/stationPrices';
 
 export interface PriceApprovalRequest {
   id: string;
@@ -222,7 +222,7 @@ const submitForApproval = async (
               kyarumbaUndergrades: String(prices.kyarumbaUndergrades),
               rubiriziDrugarClean: String(prices.rubiriziDrugarClean),
               rubiriziOrdinary: String(prices.rubiriziOrdinary),
-              priceTable: buildStationPriceTableHtml({
+              stationPrices: buildStationPriceRows({
                 drugar_local: prices.drugarLocal,
                 sorted_price: prices.sortedPrice,
                 robusta_faq_local: prices.robustaFaqLocal,

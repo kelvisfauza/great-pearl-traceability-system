@@ -18,7 +18,7 @@ import { useReferencePrices } from '@/hooks/useReferencePrices';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { buildStationPriceTableHtml, buildStationPriceSmsSummary } from '@/utils/stationPrices';
+import { buildStationPriceRows, buildStationPriceSmsSummary } from '@/utils/stationPrices';
 import { formatDistanceToNow } from 'date-fns';
 
 // Percentage change chip: green for up, red for down, neutral when unchanged
@@ -401,7 +401,7 @@ await savePrices({
         robustaBuyingPrice: request.robusta_buying_price,
         sortedPrice: request.sorted_price || 0,
         parchmentPrice: request.parchment_price || 0,
-        priceTable: buildStationPriceTableHtml(stationValues(request)),
+        stationPrices: buildStationPriceRows(stationValues(request)),
         arabicaOutturn: request.arabica_outturn,
         arabicaMoisture: request.arabica_moisture,
         arabicaFm: request.arabica_fm,
@@ -459,7 +459,7 @@ await savePrices({
                 robustaBuyingPrice: request.robusta_buying_price,
                 sortedPrice: request.sorted_price || 0,
                 parchmentPrice: request.parchment_price || 0,
-                priceTable: buildStationPriceTableHtml(stationValues(request)),
+                stationPrices: buildStationPriceRows(stationValues(request)),
                 isCorrection: request.is_correction,
               },
             },

@@ -41,37 +41,19 @@ export const STATION_LOCATIONS = ['Head Office', 'Kyarumba', 'Rubirizi'] as cons
 const fmtUgx = (n: number | null | undefined) =>
   n == null || !Number.isFinite(n) || n <= 0 ? 'Not set' : `UGX ${n.toLocaleString('en-UG')}/kg`;
 
-/** Full HTML table for emails, styled like the shared market price sheets. */
-export function buildStationPriceTableHtml(prices: StationPriceValues): string {
-  const header =
-    '<tr style="background:#1e3a8a;color:#ffffff;">' +
-    '<th style="padding:8px 10px;text-align:left;border:1px solid #cbd5e1;">Location / Region</th>' +
-    '<th style="padding:8px 10px;text-align:left;border:1px solid #cbd5e1;">Quality</th>' +
-    '<th style="padding:8px 10px;text-align:right;border:1px solid #cbd5e1;">UGX/Kg</th></tr>';
+export interface StationPriceTableRow {
+  location: string;
+  quality: string;
+  price: number | null;
+}
 
-  const rows: string[] = [];
-  STATION_LOCATIONS.forEach((location) => {
-    const locationRows = STATION_PRICE_ROWS.filter((r) => r.location === location);
-    locationRows.forEach((row, i) => {
-      const value = fmtUgx(prices[row.key]);
-      const locationCell =
-        i === 0
-          ? `<td rowspan="${locationRows.length}" style="padding:8px 10px;border:1px solid #cbd5e1;font-weight:bold;vertical-align:top;">${location}</td>`
-          : '';
-      rows.push(
-        `<tr>${locationCell}` +
-          `<td style="padding:8px 10px;border:1px solid #cbd5e1;">${row.quality}</td>` +
-          `<td style="padding:8px 10px;border:1px solid #cbd5e1;text-align:right;font-weight:bold;">${value}</td></tr>`
-      );
-    });
-  });
-
-  return (
-    '<table style="border-collapse:collapse;width:100%;font-family:Arial,sans-serif;font-size:14px;">' +
-    header +
-    rows.join('') +
-    '</table>'
-  );
+/** Structured rows for rendering the full price table in emails. */
+export function buildStationPriceRows(prices: StationPriceValues): StationPriceTableRow[] {
+  return STATION_PRICE_ROWS.map((r) => ({
+    location: r.location,
+    quality: r.quality,
+    price: prices[r.key] ?? null,
+  }));
 }
 
 /** Short plain-text summary for SMS (character-conscious). */
