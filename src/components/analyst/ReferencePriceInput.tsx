@@ -197,7 +197,13 @@ const handleReset = () => {
       robustaFm: 3,
       robustaBuyingPrice: 7800,
       sortedPrice: 0,
-      parchmentPrice: 0
+      parchmentPrice: 0,
+      parchmentPremium: 0,
+      kyarumbaSorted: 0,
+      kyarumbaOrdinary: 0,
+      kyarumbaUndergrades: 0,
+      rubiriziDrugarClean: 0,
+      rubiriziOrdinary: 0
     });
   };
 
