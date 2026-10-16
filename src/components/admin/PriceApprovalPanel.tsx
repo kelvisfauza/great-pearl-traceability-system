@@ -135,7 +135,7 @@ const PriceApprovalPanel: React.FC = () => {
       const allPhones = dedupePhones([...staffList.map(e => e.phone!), ...additionalRecipients]);
 
       const date = new Date().toLocaleDateString('en-GB');
-      const message = `Great Agro Coffee Price Update - ${date}\n\nArabica: UGX ${currentPrices.arabicaBuyingPrice.toLocaleString()}/kg (${currentPrices.arabicaOutturn}% outturn)\nRobusta: UGX ${currentPrices.robustaBuyingPrice.toLocaleString()}/kg (${currentPrices.robustaOutturn}% outturn)\nSorted: UGX ${(currentPrices.sortedPrice || 0).toLocaleString()}/kg\n\nUse these prices for today's purchases.`;
+      const message = `Great Agro Coffee Price Update - ${date}\n\nArabica: UGX ${currentPrices.arabicaBuyingPrice.toLocaleString()}/kg (${currentPrices.arabicaOutturn}% outturn)\nRobusta: UGX ${currentPrices.robustaBuyingPrice.toLocaleString()}/kg (${currentPrices.robustaOutturn}% outturn)\nSorted: UGX ${(currentPrices.sortedPrice || 0).toLocaleString()}/kg\nParchment: UGX ${(currentPrices.parchmentPrice || 0).toLocaleString()}/kg\n\nUse these prices for today's purchases.`;
       const staffMessage = `${message}${buildReferenceBlock({
         iceArabica: currentPrices.iceArabica,
         robusta: currentPrices.robusta,
@@ -206,7 +206,8 @@ await savePrices({
           robustaMoisture: request.robusta_moisture || currentPrices.robustaMoisture,
           robustaFm: request.robusta_fm || currentPrices.robustaFm,
           robustaBuyingPrice: request.robusta_buying_price,
-          sortedPrice: request.sorted_price || currentPrices.sortedPrice
+          sortedPrice: request.sorted_price || currentPrices.sortedPrice,
+          parchmentPrice: request.parchment_price || currentPrices.parchmentPrice
         });
 
         // Send SMS notifications to suppliers & registered recipients
@@ -305,7 +306,7 @@ await savePrices({
       const correctionPrefix = request.is_correction ? 'CORRECTION: ' : '';
       
       // Staff message - plain text, no emojis, keep short for 1 SMS credit
-      const message = `${correctionPrefix}Great Agro Coffee Price Update ${date}\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}%)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}%)\nSorted: UGX ${(request.sorted_price || 0).toLocaleString()}/kg${buildReferenceBlock({
+      const message = `${correctionPrefix}Great Agro Coffee Price Update ${date}\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}%)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}%)\nSorted: UGX ${(request.sorted_price || 0).toLocaleString()}/kg\nParchment: UGX ${(request.parchment_price || 0).toLocaleString()}/kg${buildReferenceBlock({
         iceArabica: request.ice_arabica ?? currentPrices.iceArabica,
         robusta: request.robusta ?? currentPrices.robusta,
         exchangeRate: request.exchange_rate ?? currentPrices.exchangeRate,
@@ -351,7 +352,7 @@ await savePrices({
         ...(fieldAgents?.map(a => a.phone) || []),
       ]).filter(p => !staffSet.has(p));
       // Supplier message - plain text, no emojis, short for reliable delivery
-      const supplierMessage = `${correctionPrefix}Great Agro Coffee Prices ${date}\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}%)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}%)\nSorted: UGX ${(request.sorted_price || 0).toLocaleString()}/kg\n${request.is_correction ? 'Disregard previous prices.' : 'Deliver your coffee now!'}`;
+      const supplierMessage = `${correctionPrefix}Great Agro Coffee Prices ${date}\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}%)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}%)\nSorted: UGX ${(request.sorted_price || 0).toLocaleString()}/kg\nParchment: UGX ${(request.parchment_price || 0).toLocaleString()}/kg\n${request.is_correction ? 'Disregard previous prices.' : 'Deliver your coffee now!'}`;
 
       for (let i = 0; i < supplierPhones.length; i++) {
         await sendSmsWithDelay(supplierPhones[i], supplierMessage, 500);
@@ -377,6 +378,7 @@ await savePrices({
         arabicaBuyingPrice: request.arabica_buying_price,
         robustaBuyingPrice: request.robusta_buying_price,
         sortedPrice: request.sorted_price || 0,
+        parchmentPrice: request.parchment_price || 0,
         arabicaOutturn: request.arabica_outturn,
         arabicaMoisture: request.arabica_moisture,
         arabicaFm: request.arabica_fm,
@@ -433,6 +435,7 @@ await savePrices({
                 arabicaBuyingPrice: request.arabica_buying_price,
                 robustaBuyingPrice: request.robusta_buying_price,
                 sortedPrice: request.sorted_price || 0,
+                parchmentPrice: request.parchment_price || 0,
                 isCorrection: request.is_correction,
               },
             },
@@ -629,6 +632,24 @@ await savePrices({
                         <span className={(request.sorted_price || 0) > currentPrices.sortedPrice ? 'text-green-600 ml-1' : 'text-red-600 ml-1'}>
                           ({(request.sorted_price || 0) > currentPrices.sortedPrice ? '+' : ''}
                           {(((request.sorted_price || 0) - currentPrices.sortedPrice) / currentPrices.sortedPrice * 100).toFixed(1)}%)
+                        </span>
+                      </p>
+                    )}
+                  </div>
+                  <div className="p-3 bg-sky-100 dark:bg-sky-900/30 rounded-lg">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Coffee className="h-4 w-4 text-sky-700" />
+                      <span className="text-sm font-medium">Parchment</span>
+                    </div>
+                    <p className="text-xl font-bold">
+                      UGX {(request.parchment_price || 0).toLocaleString()}/kg
+                    </p>
+                    {currentPrices.parchmentPrice !== (request.parchment_price || 0) && currentPrices.parchmentPrice > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Current: UGX {currentPrices.parchmentPrice.toLocaleString()}/kg
+                        <span className={(request.parchment_price || 0) > currentPrices.parchmentPrice ? 'text-green-600 ml-1' : 'text-red-600 ml-1'}>
+                          ({(request.parchment_price || 0) > currentPrices.parchmentPrice ? '+' : ''}
+                          {(((request.parchment_price || 0) - currentPrices.parchmentPrice) / currentPrices.parchmentPrice * 100).toFixed(1)}%)
                         </span>
                       </p>
                     )}

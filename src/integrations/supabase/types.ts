@@ -7271,6 +7271,7 @@ export type Database = {
           ice_arabica: number
           id: string
           last_updated: string | null
+          parchment_price: number | null
           price_type: string
           robusta: number
           robusta_buying_price: number | null
@@ -7293,6 +7294,7 @@ export type Database = {
           ice_arabica?: number
           id?: string
           last_updated?: string | null
+          parchment_price?: number | null
           price_type?: string
           robusta?: number
           robusta_buying_price?: number | null
@@ -7315,6 +7317,7 @@ export type Database = {
           ice_arabica?: number
           id?: string
           last_updated?: string | null
+          parchment_price?: number | null
           price_type?: string
           robusta?: number
           robusta_buying_price?: number | null
@@ -9096,6 +9099,7 @@ export type Database = {
           id: string
           is_correction: boolean | null
           notify_suppliers: boolean | null
+          parchment_price: number | null
           rejection_reason: string | null
           reviewed_at: string | null
           reviewed_by: string | null
@@ -9129,6 +9133,7 @@ export type Database = {
           id?: string
           is_correction?: boolean | null
           notify_suppliers?: boolean | null
+          parchment_price?: number | null
           rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -9162,6 +9167,7 @@ export type Database = {
           id?: string
           is_correction?: boolean | null
           notify_suppliers?: boolean | null
+          parchment_price?: number | null
           rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
