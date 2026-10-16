@@ -190,15 +190,15 @@ serve(async (req) => {
               .select("id");
             if (updated && updated.length > 0) {
               totalFailed++;
-              // Return the treasury hold — reference differs by origin function
+              // Return the treasury hold — reference differs by origin function;
+              // the non-matching one is a harmless no-op (nothing_to_reverse).
               for (const ref of [`PSR-${record.id}`, `MEAL-${record.id}`]) {
-                const rel = await treasuryRelease({
+                await treasuryRelease({
                   account: "operations",
                   amount: Number(record.total_amount || record.amount),
                   reference: ref,
                   description: `Meal payment to ${record.receiver_name || record.receiver_phone} bounced — funds returned`,
                 });
-                if (rel) break;
               }
             }
           }
