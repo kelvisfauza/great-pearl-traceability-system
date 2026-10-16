@@ -27,6 +27,7 @@ interface PriceUpdateProps {
   robustaFaqLocal?: number
   isCorrection?: boolean
   approvedBy?: string
+  stationPrices?: { location: string; quality: string; price: number | null }[]
 }
 
 const fmt = (v?: number) =>
@@ -54,6 +55,7 @@ const PriceUpdateEmail = (props: PriceUpdateProps) => {
     robustaFaqLocal,
     isCorrection = false,
     approvedBy,
+    stationPrices = [],
   } = props
 
   return (
@@ -163,6 +165,36 @@ const PriceUpdateEmail = (props: PriceUpdateProps) => {
               </Text>
             )}
           </Section>
+
+          {/* Station Prices Table */}
+          {stationPrices.length > 0 && (
+            <>
+              <Hr style={divider} />
+              <Heading style={h2}>Station Prices (UGX/kg)</Heading>
+              <Section style={marketTable}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                  <thead>
+                    <tr>
+                      <th style={stationTh}>Location / Region</th>
+                      <th style={stationTh}>Quality</th>
+                      <th style={{ ...stationTh, textAlign: 'right' as const }}>UGX/Kg</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stationPrices.map((row, i) => (
+                      <tr key={i}>
+                        <td style={stationTd}>{row.location}</td>
+                        <td style={stationTd}>{row.quality}</td>
+                        <td style={{ ...stationTd, textAlign: 'right' as const, fontWeight: 'bold' as const }}>
+                          {row.price != null && row.price > 0 ? fmt(row.price) : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Section>
+            </>
+          )}
 
           <Hr style={divider} />
 
@@ -297,6 +329,8 @@ const marketRow = {
   margin: '0 0 6px',
   lineHeight: '1.6',
 }
+const stationTh = { padding: '6px 8px', textAlign: 'left' as const, borderBottom: '2px solid #1e3a8a', color: '#1e3a8a', fontSize: '12px', textTransform: 'uppercase' as const }
+const stationTd = { padding: '6px 8px', borderBottom: '1px solid #e2e8f0', color: '#334155' }
 const marketLabel = { fontWeight: '500' as const, color: '#64748b' }
 const marketValue = { fontWeight: '600' as const, color: '#1e293b' }
 const instruction = {

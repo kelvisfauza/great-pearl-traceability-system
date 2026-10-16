@@ -26,6 +26,7 @@ interface PriceApprovalRequestProps {
   sortedPrice?: string
   approveUrl?: string
   submittedAt?: string
+  stationPrices?: { location: string; quality: string; price: number | null }[]
 }
 
 const fmt = (v: string | number) => Number(v).toLocaleString()
@@ -51,6 +52,7 @@ const PriceApprovalRequestEmail = ({
   sortedPrice = '0',
   approveUrl = '#',
   submittedAt = new Date().toLocaleDateString(),
+  stationPrices = [],
 }: PriceApprovalRequestProps) => (
   <Html>
     <Head />
@@ -176,6 +178,37 @@ const PriceApprovalRequestEmail = ({
               </Column>
             </Row>
           </Section>
+
+          {/* Station Prices Table */}
+          {stationPrices.length > 0 && (
+            <>
+              <Text style={{ color: '#1e40af', fontSize: '13px', fontWeight: 'bold', textTransform: 'uppercase' as const, letterSpacing: '1px', margin: '20px 0 8px' }}>
+                Station Prices (UGX/kg)
+              </Text>
+              <Section style={{ backgroundColor: '#f8fafc', borderRadius: '8px', padding: '16px', border: '1px solid #e2e8f0' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ padding: '6px 8px', textAlign: 'left' as const, borderBottom: '2px solid #1e40af', color: '#1e40af', fontSize: '11px', textTransform: 'uppercase' as const }}>Location / Region</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'left' as const, borderBottom: '2px solid #1e40af', color: '#1e40af', fontSize: '11px', textTransform: 'uppercase' as const }}>Quality</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'right' as const, borderBottom: '2px solid #1e40af', color: '#1e40af', fontSize: '11px', textTransform: 'uppercase' as const }}>UGX/Kg</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stationPrices.map((row, i) => (
+                      <tr key={i}>
+                        <td style={{ padding: '6px 8px', borderBottom: '1px solid #e2e8f0', color: '#374151' }}>{row.location}</td>
+                        <td style={{ padding: '6px 8px', borderBottom: '1px solid #e2e8f0', color: '#374151' }}>{row.quality}</td>
+                        <td style={{ padding: '6px 8px', borderBottom: '1px solid #e2e8f0', color: '#111827', textAlign: 'right' as const, fontWeight: 'bold' as const }}>
+                          {row.price != null && row.price > 0 ? Number(row.price).toLocaleString() : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Section>
+            </>
+          )}
 
           {/* CTA */}
           <Section style={{ textAlign: 'center' as const, marginTop: '24px' }}>

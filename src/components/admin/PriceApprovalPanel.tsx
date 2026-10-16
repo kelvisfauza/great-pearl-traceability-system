@@ -18,6 +18,7 @@ import { useReferencePrices } from '@/hooks/useReferencePrices';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { buildStationPriceRows, buildStationPriceSmsSummary } from '@/utils/stationPrices';
 import { formatDistanceToNow } from 'date-fns';
 
 // Percentage change chip: green for up, red for down, neutral when unchanged
@@ -50,6 +51,21 @@ const CompareItem = ({ label, current, next, unit }: { label: string; current: n
     <ChangePill current={current} next={next} />
   </div>
 );
+
+// Station prices (Head Office / Kyarumba / Rubirizi) from a request or current prices
+const stationValues = (r: any) => ({
+  drugar_local: r.drugar_local ?? r.drugarLocal,
+  sorted_price: r.sorted_price ?? r.sortedPrice,
+  robusta_faq_local: r.robusta_faq_local ?? r.robustaFaqLocal,
+  wugar_local: r.wugar_local ?? r.wugarLocal,
+  parchment_premium: r.parchment_premium ?? r.parchmentPremium,
+  parchment_price: r.parchment_price ?? r.parchmentPrice,
+  kyarumba_sorted: r.kyarumba_sorted ?? r.kyarumbaSorted,
+  kyarumba_ordinary: r.kyarumba_ordinary ?? r.kyarumbaOrdinary,
+  kyarumba_undergrades: r.kyarumba_undergrades ?? r.kyarumbaUndergrades,
+  rubirizi_drugar_clean: r.rubirizi_drugar_clean ?? r.rubiriziDrugarClean,
+  rubirizi_ordinary: r.rubirizi_ordinary ?? r.rubiriziOrdinary,
+});
 
 // Reference market levels appended to internal (staff) price SMS only
 const buildReferenceBlock = (r: {
@@ -135,7 +151,7 @@ const PriceApprovalPanel: React.FC = () => {
       const allPhones = dedupePhones([...staffList.map(e => e.phone!), ...additionalRecipients]);
 
       const date = new Date().toLocaleDateString('en-GB');
-      const message = `Great Agro Coffee Price Update - ${date}\n\nArabica: UGX ${currentPrices.arabicaBuyingPrice.toLocaleString()}/kg (${currentPrices.arabicaOutturn}% outturn)\nRobusta: UGX ${currentPrices.robustaBuyingPrice.toLocaleString()}/kg (${currentPrices.robustaOutturn}% outturn)\nSorted: UGX ${(currentPrices.sortedPrice || 0).toLocaleString()}/kg\nParchment: UGX ${(currentPrices.parchmentPrice || 0).toLocaleString()}/kg\n\nUse these prices for today's purchases.`;
+      const message = `Great Agro Coffee Price Update - ${date}\n\nArabica: UGX ${currentPrices.arabicaBuyingPrice.toLocaleString()}/kg (${currentPrices.arabicaOutturn}% outturn)\nRobusta: UGX ${currentPrices.robustaBuyingPrice.toLocaleString()}/kg (${currentPrices.robustaOutturn}% outturn)\nSorted: UGX ${(currentPrices.sortedPrice || 0).toLocaleString()}/kg\nParchment: UGX ${(currentPrices.parchmentPrice || 0).toLocaleString()}/kg\n${buildStationPriceSmsSummary(stationValues(currentPrices))}\n\nUse these prices for today's purchases.`;
       const staffMessage = `${message}${buildReferenceBlock({
         iceArabica: currentPrices.iceArabica,
         robusta: currentPrices.robusta,
@@ -207,7 +223,13 @@ await savePrices({
           robustaFm: request.robusta_fm || currentPrices.robustaFm,
           robustaBuyingPrice: request.robusta_buying_price,
           sortedPrice: request.sorted_price || currentPrices.sortedPrice,
-          parchmentPrice: request.parchment_price || currentPrices.parchmentPrice
+          parchmentPrice: request.parchment_price || currentPrices.parchmentPrice,
+          parchmentPremium: request.parchment_premium || currentPrices.parchmentPremium,
+          kyarumbaSorted: request.kyarumba_sorted || currentPrices.kyarumbaSorted,
+          kyarumbaOrdinary: request.kyarumba_ordinary || currentPrices.kyarumbaOrdinary,
+          kyarumbaUndergrades: request.kyarumba_undergrades || currentPrices.kyarumbaUndergrades,
+          rubiriziDrugarClean: request.rubirizi_drugar_clean || currentPrices.rubiriziDrugarClean,
+          rubiriziOrdinary: request.rubirizi_ordinary || currentPrices.rubiriziOrdinary
         });
 
         // Send SMS notifications to suppliers & registered recipients
@@ -306,7 +328,7 @@ await savePrices({
       const correctionPrefix = request.is_correction ? 'CORRECTION: ' : '';
       
       // Staff message - plain text, no emojis, keep short for 1 SMS credit
-      const message = `${correctionPrefix}Great Agro Coffee Price Update ${date}\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}%)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}%)\nSorted: UGX ${(request.sorted_price || 0).toLocaleString()}/kg\nParchment: UGX ${(request.parchment_price || 0).toLocaleString()}/kg${buildReferenceBlock({
+      const message = `${correctionPrefix}Great Agro Coffee Price Update ${date}\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}%)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}%)\nSorted: UGX ${(request.sorted_price || 0).toLocaleString()}/kg\nParchment: UGX ${(request.parchment_price || 0).toLocaleString()}/kg\n${buildStationPriceSmsSummary(stationValues(request))}${buildReferenceBlock({
         iceArabica: request.ice_arabica ?? currentPrices.iceArabica,
         robusta: request.robusta ?? currentPrices.robusta,
         exchangeRate: request.exchange_rate ?? currentPrices.exchangeRate,
@@ -352,7 +374,7 @@ await savePrices({
         ...(fieldAgents?.map(a => a.phone) || []),
       ]).filter(p => !staffSet.has(p));
       // Supplier message - plain text, no emojis, short for reliable delivery
-      const supplierMessage = `${correctionPrefix}Great Agro Coffee Prices ${date}\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}%)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}%)\nSorted: UGX ${(request.sorted_price || 0).toLocaleString()}/kg\nParchment: UGX ${(request.parchment_price || 0).toLocaleString()}/kg\n${request.is_correction ? 'Disregard previous prices.' : 'Deliver your coffee now!'}`;
+      const supplierMessage = `${correctionPrefix}Great Agro Coffee Prices ${date}\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}%)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}%)\nSorted: UGX ${(request.sorted_price || 0).toLocaleString()}/kg\nParchment: UGX ${(request.parchment_price || 0).toLocaleString()}/kg\n${buildStationPriceSmsSummary(stationValues(request))}\n${request.is_correction ? 'Disregard previous prices.' : 'Deliver your coffee now!'}`;
 
       for (let i = 0; i < supplierPhones.length; i++) {
         await sendSmsWithDelay(supplierPhones[i], supplierMessage, 500);
@@ -379,6 +401,7 @@ await savePrices({
         robustaBuyingPrice: request.robusta_buying_price,
         sortedPrice: request.sorted_price || 0,
         parchmentPrice: request.parchment_price || 0,
+        stationPrices: buildStationPriceRows(stationValues(request)),
         arabicaOutturn: request.arabica_outturn,
         arabicaMoisture: request.arabica_moisture,
         arabicaFm: request.arabica_fm,
@@ -436,6 +459,7 @@ await savePrices({
                 robustaBuyingPrice: request.robusta_buying_price,
                 sortedPrice: request.sorted_price || 0,
                 parchmentPrice: request.parchment_price || 0,
+                stationPrices: buildStationPriceRows(stationValues(request)),
                 isCorrection: request.is_correction,
               },
             },
@@ -668,6 +692,22 @@ await savePrices({
                       <CompareItem label="Drugar" current={currentPrices.drugarLocal} next={request.drugar_local} unit="UGX" />
                       <CompareItem label="Wugar" current={currentPrices.wugarLocal} next={request.wugar_local} unit="UGX" />
                       <CompareItem label="Robusta FAQ" current={currentPrices.robustaFaqLocal} next={request.robusta_faq_local} unit="UGX" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Station prices — Head Office / Kyarumba / Rubirizi */}
+                {(request.parchment_premium !== null || request.kyarumba_sorted !== null || request.kyarumba_ordinary !== null ||
+                  request.kyarumba_undergrades !== null || request.rubirizi_drugar_clean !== null || request.rubirizi_ordinary !== null) && (
+                  <div className="mb-4">
+                    <p className="text-xs font-semibold text-muted-foreground mb-2">STATION PRICES (UGX/KG)</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+                      <CompareItem label="HO Parchment Premium" current={currentPrices.parchmentPremium} next={request.parchment_premium} unit="UGX" />
+                      <CompareItem label="Kyarumba Sorted" current={currentPrices.kyarumbaSorted} next={request.kyarumba_sorted} unit="UGX" />
+                      <CompareItem label="Kyarumba Ordinary" current={currentPrices.kyarumbaOrdinary} next={request.kyarumba_ordinary} unit="UGX" />
+                      <CompareItem label="Kyarumba Undergrades" current={currentPrices.kyarumbaUndergrades} next={request.kyarumba_undergrades} unit="UGX" />
+                      <CompareItem label="Rubirizi Drugar Clean" current={currentPrices.rubiriziDrugarClean} next={request.rubirizi_drugar_clean} unit="UGX" />
+                      <CompareItem label="Rubirizi Ordinary" current={currentPrices.rubiriziOrdinary} next={request.rubirizi_ordinary} unit="UGX" />
                     </div>
                   </div>
                 )}

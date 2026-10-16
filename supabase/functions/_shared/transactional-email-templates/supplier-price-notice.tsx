@@ -15,6 +15,7 @@ interface SupplierPriceNoticeProps {
   robustaBuyingPrice?: number
   sortedPrice?: number
   isCorrection?: boolean
+  stationPrices?: { location: string; quality: string; price: number | null }[]
 }
 
 const SupplierPriceNoticeEmail = ({
@@ -24,6 +25,7 @@ const SupplierPriceNoticeEmail = ({
   robustaBuyingPrice = 0,
   sortedPrice = 0,
   isCorrection = false,
+  stationPrices = [],
 }: SupplierPriceNoticeProps) => (
   <Html lang="en" dir="ltr">
     <Head />
@@ -61,6 +63,31 @@ const SupplierPriceNoticeEmail = ({
             </Section>
           )}
         </Section>
+
+        {stationPrices.length > 0 && (
+          <Section style={priceTable}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+              <thead>
+                <tr>
+                  <th style={{ padding: '6px 8px', textAlign: 'left' as const, borderBottom: '2px solid #16a34a', color: '#16a34a', fontSize: '11px', textTransform: 'uppercase' as const }}>Location / Region</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'left' as const, borderBottom: '2px solid #16a34a', color: '#16a34a', fontSize: '11px', textTransform: 'uppercase' as const }}>Quality</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'right' as const, borderBottom: '2px solid #16a34a', color: '#16a34a', fontSize: '11px', textTransform: 'uppercase' as const }}>UGX/Kg</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stationPrices.map((row, i) => (
+                  <tr key={i}>
+                    <td style={{ padding: '6px 8px', borderBottom: '1px solid #e9ecef', color: '#333' }}>{row.location}</td>
+                    <td style={{ padding: '6px 8px', borderBottom: '1px solid #e9ecef', color: '#333' }}>{row.quality}</td>
+                    <td style={{ padding: '6px 8px', borderBottom: '1px solid #e9ecef', color: '#16a34a', textAlign: 'right' as const, fontWeight: 'bold' as const }}>
+                      {row.price != null && row.price > 0 ? row.price.toLocaleString() : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Section>
+        )}
 
         <Hr style={hr} />
         <Text style={text}>

@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Coffee, Send, Globe, RefreshCw, Clock, CalendarDays, Sun, Moon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import PendingPriceApproval from './PendingPriceApproval';
+import { buildStationPriceSmsSummary } from '@/utils/stationPrices';
 
 interface ReferencePrices {
   iceArabica: number;
@@ -30,6 +31,12 @@ interface ReferencePrices {
   robustaBuyingPrice: number;
   sortedPrice: number;
   parchmentPrice: number;
+  parchmentPremium: number;
+  kyarumbaSorted: number;
+  kyarumbaOrdinary: number;
+  kyarumbaUndergrades: number;
+  rubiriziDrugarClean: number;
+  rubiriziOrdinary: number;
 }
 
 const ReferencePriceInput: React.FC = () => {
@@ -78,7 +85,13 @@ const [prices, setPrices] = useState<ReferencePrices>({
     robustaFm: 0,
     robustaBuyingPrice: 0,
     sortedPrice: 0,
-    parchmentPrice: 0
+    parchmentPrice: 0,
+    parchmentPremium: 0,
+    kyarumbaSorted: 0,
+    kyarumbaOrdinary: 0,
+    kyarumbaUndergrades: 0,
+    rubiriziDrugarClean: 0,
+    rubiriziOrdinary: 0
   });
   const [loading, setLoading] = useState(false);
   const [testLoading, setTestLoading] = useState(false);
@@ -191,7 +204,13 @@ const handleReset = () => {
       robustaFm: 3,
       robustaBuyingPrice: 7800,
       sortedPrice: 0,
-      parchmentPrice: 0
+      parchmentPrice: 0,
+      parchmentPremium: 0,
+      kyarumbaSorted: 0,
+      kyarumbaOrdinary: 0,
+      kyarumbaUndergrades: 0,
+      rubiriziDrugarClean: 0,
+      rubiriziOrdinary: 0
     });
   };
 
@@ -199,7 +218,7 @@ const handleTestSMS = async (phoneNumber: string) => {
     try {
       setTestLoading(true);
       const date = new Date().toLocaleDateString('en-GB');
-      const message = `Great Agro Coffee - Price Update\nDate: ${date}\n\n☕ ARABICA:\nOutturn: ${prices.arabicaOutturn}%\nMoisture: ${prices.arabicaMoisture}%\nFM: ${prices.arabicaFm}%\nPrice: UGX ${prices.arabicaBuyingPrice.toLocaleString()}/kg\n\n☕ ROBUSTA:\nOutturn: ${prices.robustaOutturn}%\nMoisture: ${prices.robustaMoisture}%\nFM: ${prices.robustaFm}%\nPrice: UGX ${prices.robustaBuyingPrice.toLocaleString()}/kg\n\n☕ SORTED: UGX ${prices.sortedPrice.toLocaleString()}/kg\n☕ PARCHMENT: UGX ${prices.parchmentPrice.toLocaleString()}/kg\n\nDeliver your coffee now!\n📞 Contact: +256 393 001 626 / +256 393 101 103`;
+      const message = `Great Agro Coffee - Price Update\nDate: ${date}\n\n☕ ARABICA:\nOutturn: ${prices.arabicaOutturn}%\nMoisture: ${prices.arabicaMoisture}%\nFM: ${prices.arabicaFm}%\nPrice: UGX ${prices.arabicaBuyingPrice.toLocaleString()}/kg\n\n☕ ROBUSTA:\nOutturn: ${prices.robustaOutturn}%\nMoisture: ${prices.robustaMoisture}%\nFM: ${prices.robustaFm}%\nPrice: UGX ${prices.robustaBuyingPrice.toLocaleString()}/kg\n\n☕ SORTED: UGX ${prices.sortedPrice.toLocaleString()}/kg\n☕ PARCHMENT: UGX ${prices.parchmentPrice.toLocaleString()}/kg\n\n${buildStationPriceSmsSummary({ drugar_local: prices.drugarLocal, sorted_price: prices.sortedPrice, robusta_faq_local: prices.robustaFaqLocal, wugar_local: prices.wugarLocal, parchment_premium: prices.parchmentPremium, parchment_price: prices.parchmentPrice, kyarumba_sorted: prices.kyarumbaSorted, kyarumba_ordinary: prices.kyarumbaOrdinary, kyarumba_undergrades: prices.kyarumbaUndergrades, rubirizi_drugar_clean: prices.rubiriziDrugarClean, rubirizi_ordinary: prices.rubiriziOrdinary })}\n\nDeliver your coffee now!\n📞 Contact: +256 393 001 626 / +256 393 101 103`;
 
       console.log(`📱 Sending test SMS to ${phoneNumber}`);
       console.log('Message:', message);
@@ -479,6 +498,55 @@ const handleTestSMS = async (phoneNumber: string) => {
                 placeholder="Enter price"
                 onChange={(e) => handleInputChange('parchmentPrice', e.target.value)}
               />
+            </div>
+          </div>
+        </div>
+
+        {/* Station Prices (Head Office / Kyarumba / Rubirizi) */}
+        <div className="p-4 border rounded-lg bg-amber-50 dark:bg-amber-950/20">
+          <div className="flex items-center gap-2 mb-3">
+            <Coffee className="h-5 w-5 text-amber-700" />
+            <h3 className="text-lg font-semibold text-amber-700">Station Prices (UGX/kg)</h3>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-semibold mb-2">Head Office</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="parchmentPremium">Parchment Premium</Label>
+                  <Input id="parchmentPremium" type="number" step="50" value={v(prices.parchmentPremium)} placeholder="Enter price" onChange={(e) => handleInputChange('parchmentPremium', e.target.value)} />
+                </div>
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-semibold mb-2">Kyarumba</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="kyarumbaSorted">Sorted</Label>
+                  <Input id="kyarumbaSorted" type="number" step="50" value={v(prices.kyarumbaSorted)} placeholder="Enter price" onChange={(e) => handleInputChange('kyarumbaSorted', e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="kyarumbaOrdinary">Ordinary</Label>
+                  <Input id="kyarumbaOrdinary" type="number" step="50" value={v(prices.kyarumbaOrdinary)} placeholder="Enter price" onChange={(e) => handleInputChange('kyarumbaOrdinary', e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="kyarumbaUndergrades">Undergrades</Label>
+                  <Input id="kyarumbaUndergrades" type="number" step="50" value={v(prices.kyarumbaUndergrades)} placeholder="Enter price" onChange={(e) => handleInputChange('kyarumbaUndergrades', e.target.value)} />
+                </div>
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-semibold mb-2">Rubirizi</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="rubiriziDrugarClean">Drugar Clean</Label>
+                  <Input id="rubiriziDrugarClean" type="number" step="50" value={v(prices.rubiriziDrugarClean)} placeholder="Enter price" onChange={(e) => handleInputChange('rubiriziDrugarClean', e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="rubiriziOrdinary">Ordinary</Label>
+                  <Input id="rubiriziOrdinary" type="number" step="50" value={v(prices.rubiriziOrdinary)} placeholder="Enter price" onChange={(e) => handleInputChange('rubiriziOrdinary', e.target.value)} />
+                </div>
+              </div>
             </div>
           </div>
         </div>
