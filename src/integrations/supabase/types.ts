@@ -7286,6 +7286,7 @@ export type Database = {
           rubirizi_drugar_clean: number | null
           rubirizi_ordinary: number | null
           sorted_price: number | null
+          station_params: Json | null
           updated_at: string | null
           wugar_local: number
         }
@@ -7315,6 +7316,7 @@ export type Database = {
           rubirizi_drugar_clean?: number | null
           rubirizi_ordinary?: number | null
           sorted_price?: number | null
+          station_params?: Json | null
           updated_at?: string | null
           wugar_local?: number
         }
@@ -7344,6 +7346,7 @@ export type Database = {
           rubirizi_drugar_clean?: number | null
           rubirizi_ordinary?: number | null
           sorted_price?: number | null
+          station_params?: Json | null
           updated_at?: string | null
           wugar_local?: number
         }
@@ -9135,6 +9138,7 @@ export type Database = {
           rubirizi_drugar_clean: number | null
           rubirizi_ordinary: number | null
           sorted_price: number | null
+          station_params: Json | null
           status: string
           submitted_at: string
           submitted_by: string
@@ -9175,6 +9179,7 @@ export type Database = {
           rubirizi_drugar_clean?: number | null
           rubirizi_ordinary?: number | null
           sorted_price?: number | null
+          station_params?: Json | null
           status?: string
           submitted_at?: string
           submitted_by: string
@@ -9215,6 +9220,7 @@ export type Database = {
           rubirizi_drugar_clean?: number | null
           rubirizi_ordinary?: number | null
           sorted_price?: number | null
+          station_params?: Json | null
           status?: string
           submitted_at?: string
           submitted_by?: string
