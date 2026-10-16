@@ -454,6 +454,20 @@ serve(async (req) => {
       });
     }
 
+    // 📜 Finance: recent history of all provider / meal-plan / per-diem
+    // submissions (any status) so Finance can track outcomes after approval.
+    if (action === "finance_history") {
+      const { data: rows } = await supabase
+        .from("provider_submission_requests")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      return new Response(JSON.stringify({ ok: true, submissions: rows || [] }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (!submissionId || !["approve", "reject", "send_to_finance", "finance_release"].includes(action)) {
       return new Response(JSON.stringify({ ok: false, error: "Invalid request" }), {
         status: 200,

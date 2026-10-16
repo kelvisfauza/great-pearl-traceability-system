@@ -1,5 +1,6 @@
 import { FinanceWalletOpsAndBalances } from '@/components/finance/FinanceWalletOpsAndBalances';
 import FinanceProviderReleases from '@/components/finance/FinanceProviderReleases';
+import FinancePaymentHistory from '@/components/finance/FinancePaymentHistory';
 import { FinanceOvertimePayments } from '@/components/finance/FinanceOvertimePayments';
 import { FinanceInitiateWithdrawal } from '@/components/finance/FinanceInitiateWithdrawal';
 import FinanceQuotationPayments from '@/components/finance/FinanceQuotationPayments';
@@ -132,7 +133,7 @@ const Finance = () => {
                           <FinanceWalletOpsAndBalances />
                           <FinanceOvertimePayments />
                           <FinanceInitiateWithdrawal />
-                          <FinanceProviderReleases /><FinanceQuotationPayments />
+                          <FinanceProviderReleases /><FinancePaymentHistory /><FinanceQuotationPayments />
                           <FinanceSamplingOrderPayments />
                           <AwaitingDisbursementPanel />
                           <PendingApprovalRequests />
