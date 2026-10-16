@@ -109,7 +109,7 @@ const [prices, setPrices] = useState<ReferencePrices>({
           kyarumbaUndergrades: data.kyarumba_undergrades || 0,
           rubiriziDrugarClean: data.rubirizi_drugar_clean || 0,
           rubiriziOrdinary: data.rubirizi_ordinary || 0,
-          stationParams: (data.station_params as StationParams) || {},
+          stationParams: ((data as any).station_params as StationParams) || {},
           lastUpdated: data.last_updated
         });
       }
@@ -158,13 +158,13 @@ const priceData = {
       const withParams = { ...priceData, station_params: newPrices.stationParams || {} };
       const runSave = async (payload: Record<string, any>) => {
         if (existing) {
-          const result = await supabase
+          const result = await (supabase as any)
             .from('market_prices')
             .update(payload)
             .eq('price_type', 'reference_prices');
           return result.error;
         }
-        const result = await supabase
+        const result = await (supabase as any)
           .from('market_prices')
           .insert({ ...payload, price_type: 'reference_prices' });
         return result.error;
