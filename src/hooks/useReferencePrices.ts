@@ -23,6 +23,13 @@ interface ReferencePrices {
   sortedPrice: number;
   // Parchment price
   parchmentPrice: number;
+  // Station prices
+  parchmentPremium: number;
+  kyarumbaSorted: number;
+  kyarumbaOrdinary: number;
+  kyarumbaUndergrades: number;
+  rubiriziDrugarClean: number;
+  rubiriziOrdinary: number;
   lastUpdated?: string;
 }
 
@@ -43,7 +50,13 @@ const [prices, setPrices] = useState<ReferencePrices>({
     robustaFm: 3,
     robustaBuyingPrice: 7800,
     sortedPrice: 0,
-    parchmentPrice: 0
+    parchmentPrice: 0,
+    parchmentPremium: 0,
+    kyarumbaSorted: 0,
+    kyarumbaOrdinary: 0,
+    kyarumbaUndergrades: 0,
+    rubiriziDrugarClean: 0,
+    rubiriziOrdinary: 0
   });
   const [loading, setLoading] = useState(false);
   const channelNameRef = useRef(
@@ -88,6 +101,12 @@ const [prices, setPrices] = useState<ReferencePrices>({
           robustaBuyingPrice: data.robusta_buying_price || 7800,
           sortedPrice: data.sorted_price || 0,
           parchmentPrice: data.parchment_price || 0,
+          parchmentPremium: data.parchment_premium || 0,
+          kyarumbaSorted: data.kyarumba_sorted || 0,
+          kyarumbaOrdinary: data.kyarumba_ordinary || 0,
+          kyarumbaUndergrades: data.kyarumba_undergrades || 0,
+          rubiriziDrugarClean: data.rubirizi_drugar_clean || 0,
+          rubiriziOrdinary: data.rubirizi_ordinary || 0,
           lastUpdated: data.last_updated
         });
       }
@@ -122,6 +141,12 @@ const priceData = {
         robusta_buying_price: newPrices.robustaBuyingPrice,
         sorted_price: newPrices.sortedPrice,
         parchment_price: newPrices.parchmentPrice,
+        parchment_premium: newPrices.parchmentPremium,
+        kyarumba_sorted: newPrices.kyarumbaSorted,
+        kyarumba_ordinary: newPrices.kyarumbaOrdinary,
+        kyarumba_undergrades: newPrices.kyarumbaUndergrades,
+        rubirizi_drugar_clean: newPrices.rubiriziDrugarClean,
+        rubirizi_ordinary: newPrices.rubiriziOrdinary,
         last_updated: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -175,7 +200,7 @@ const priceData = {
       notifyTeams(
         "trade",
         "Daily Buying Prices Updated",
-        `Arabica buying price: UGX ${Number(newPrices.arabicaBuyingPrice ?? 0).toLocaleString()}/kg\nRobusta buying price: UGX ${Number(newPrices.robustaBuyingPrice ?? 0).toLocaleString()}/kg\nDrugar local: UGX ${Number(newPrices.drugarLocal ?? 0).toLocaleString()}\nWugar local: UGX ${Number(newPrices.wugarLocal ?? 0).toLocaleString()}\nRobusta FAQ local: UGX ${Number(newPrices.robustaFaqLocal ?? 0).toLocaleString()}\nSorted price: UGX ${Number(newPrices.sortedPrice ?? 0).toLocaleString()}\nParchment price: UGX ${Number(newPrices.parchmentPrice ?? 0).toLocaleString()}\nICE Arabica ref: ${newPrices.iceArabica}\nRobusta ref: ${newPrices.robusta}\nFX: ${newPrices.exchangeRate}\nUpdated at: ${new Date().toLocaleString()}`,
+        `Arabica buying price: UGX ${Number(newPrices.arabicaBuyingPrice ?? 0).toLocaleString()}/kg\nRobusta buying price: UGX ${Number(newPrices.robustaBuyingPrice ?? 0).toLocaleString()}/kg\nDrugar local: UGX ${Number(newPrices.drugarLocal ?? 0).toLocaleString()}\nWugar local: UGX ${Number(newPrices.wugarLocal ?? 0).toLocaleString()}\nRobusta FAQ local: UGX ${Number(newPrices.robustaFaqLocal ?? 0).toLocaleString()}\nSorted price: UGX ${Number(newPrices.sortedPrice ?? 0).toLocaleString()}\nParchment price: UGX ${Number(newPrices.parchmentPrice ?? 0).toLocaleString()}\nParchment premium: UGX ${Number(newPrices.parchmentPremium ?? 0).toLocaleString()}\nKyarumba sorted: UGX ${Number(newPrices.kyarumbaSorted ?? 0).toLocaleString()}\nKyarumba ordinary: UGX ${Number(newPrices.kyarumbaOrdinary ?? 0).toLocaleString()}\nKyarumba undergrades: UGX ${Number(newPrices.kyarumbaUndergrades ?? 0).toLocaleString()}\nRubirizi drugar clean: UGX ${Number(newPrices.rubiriziDrugarClean ?? 0).toLocaleString()}\nRubirizi ordinary: UGX ${Number(newPrices.rubiriziOrdinary ?? 0).toLocaleString()}\nICE Arabica ref: ${newPrices.iceArabica}\nRobusta ref: ${newPrices.robusta}\nFX: ${newPrices.exchangeRate}\nUpdated at: ${new Date().toLocaleString()}`,
       );
       
       return true;
@@ -238,6 +263,12 @@ const priceData = {
               robustaBuyingPrice: data.robusta_buying_price || 7800,
               sortedPrice: data.sorted_price || 0,
               parchmentPrice: data.parchment_price || 0,
+              parchmentPremium: data.parchment_premium || 0,
+              kyarumbaSorted: data.kyarumba_sorted || 0,
+              kyarumbaOrdinary: data.kyarumba_ordinary || 0,
+              kyarumbaUndergrades: data.kyarumba_undergrades || 0,
+              rubiriziDrugarClean: data.rubirizi_drugar_clean || 0,
+              rubiriziOrdinary: data.rubirizi_ordinary || 0,
               lastUpdated: data.last_updated
             });
           }
