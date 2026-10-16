@@ -153,6 +153,22 @@ const priceData = {
         last_updated: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
+
+      // station_params column may not exist yet (migration pending) — retry without it.
+      const withParams = { ...priceData, station_params: newPrices.stationParams || {} };
+      const runSave = async (payload: Record<string, any>) => {
+        if (existing) {
+          const result = await supabase
+            .from('market_prices')
+            .update(payload)
+            .eq('price_type', 'reference_prices');
+          return result.error;
+        }
+        const result = await supabase
+          .from('market_prices')
+          .insert({ ...payload, price_type: 'reference_prices' });
+        return result.error;
+      };
       
       console.log('💾 Price data to save:', priceData);
       
