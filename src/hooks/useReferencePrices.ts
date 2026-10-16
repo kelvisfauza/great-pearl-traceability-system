@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { notifyTeams } from '@/lib/teamsNotify';
+import { StationParams } from '@/utils/stationPrices';
 
 interface ReferencePrices {
   iceArabica: number;
@@ -30,6 +31,7 @@ interface ReferencePrices {
   kyarumbaUndergrades: number;
   rubiriziDrugarClean: number;
   rubiriziOrdinary: number;
+  stationParams?: StationParams;
   lastUpdated?: string;
 }
 
@@ -107,6 +109,7 @@ const [prices, setPrices] = useState<ReferencePrices>({
           kyarumbaUndergrades: data.kyarumba_undergrades || 0,
           rubiriziDrugarClean: data.rubirizi_drugar_clean || 0,
           rubiriziOrdinary: data.rubirizi_ordinary || 0,
+          stationParams: (data.station_params as StationParams) || {},
           lastUpdated: data.last_updated
         });
       }
