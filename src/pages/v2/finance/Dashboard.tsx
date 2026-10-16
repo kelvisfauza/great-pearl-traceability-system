@@ -81,7 +81,7 @@ const FinanceDashboard = () => {
               <TabsContent value="receipts"><PaymentReceiptsTab /></TabsContent>
               {!scanOnly && (
                 <>
-                  <TabsContent value="release"><div className="space-y-6"><PoolMomoDepositsPanel canDeposit={false} /><FinanceWalletOpsAndBalances /><FinanceOvertimePayments /><FinanceInitiateWithdrawal /><FinanceProviderReleases /><FinanceQuotationPayments /><FinanceSamplingOrderPayments /><AwaitingDisbursementPanel /><PendingApprovalRequests /></div></TabsContent>
+                  <TabsContent value="release"><div className="space-y-6"><PoolMomoDepositsPanel canDeposit={false} /><FinanceWalletOpsAndBalances /><FinanceOvertimePayments /><FinanceInitiateWithdrawal /><FinanceProviderReleases /><FinancePaymentHistory /><FinanceQuotationPayments /><FinanceSamplingOrderPayments /><AwaitingDisbursementPanel /><PendingApprovalRequests /></div></TabsContent>
                   <TabsContent value="history"><PaymentHistory /></TabsContent>
                   <TabsContent value="reconciliation"><TransactionReconciliationTab /></TabsContent>
                   <TabsContent value="advances"><AdvancesRecoveriesTab /></TabsContent>

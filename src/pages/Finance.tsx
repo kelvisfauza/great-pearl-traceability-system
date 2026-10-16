@@ -133,7 +133,7 @@ const Finance = () => {
                           <FinanceWalletOpsAndBalances />
                           <FinanceOvertimePayments />
                           <FinanceInitiateWithdrawal />
-                          <FinanceProviderReleases /><FinanceQuotationPayments />
+                          <FinanceProviderReleases /><FinancePaymentHistory /><FinanceQuotationPayments />
                           <FinanceSamplingOrderPayments />
                           <AwaitingDisbursementPanel />
                           <PendingApprovalRequests />
