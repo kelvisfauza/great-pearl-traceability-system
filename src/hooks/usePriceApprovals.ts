@@ -185,7 +185,19 @@ const submitForApproval = async (
           is_correction: isCorrection,
           status: 'pending',
           target_date: targetDate || new Date().toISOString().split('T')[0]
-        });
+        };
+
+      // station_params column may not exist yet (migration pending) — retry without it.
+      let { error } = await (supabase as any)
+        .from('price_approval_requests')
+        .insert({ ...basePayload, station_params: stationParams || {} });
+
+      if (error && String(error.message || '').includes('station_params')) {
+        const retry = await (supabase as any)
+          .from('price_approval_requests')
+          .insert(basePayload);
+        error = retry.error;
+      }
 
       if (error) throw error;
       
@@ -234,7 +246,7 @@ const submitForApproval = async (
                 kyarumba_undergrades: prices.kyarumbaUndergrades,
                 rubirizi_drugar_clean: prices.rubiriziDrugarClean,
                 rubirizi_ordinary: prices.rubiriziOrdinary,
-              }),
+              }, stationParams),
               approveUrl: `${APP_URL}/v2/admin`,
               submittedAt: new Date().toLocaleDateString('en-UG', { dateStyle: 'full' }),
             }
