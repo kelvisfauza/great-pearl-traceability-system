@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Coffee, Send, Globe, RefreshCw, Clock, CalendarDays, Sun, Moon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import PendingPriceApproval from './PendingPriceApproval';
+import { buildStationPriceSmsSummary } from '@/utils/stationPrices';
 
 interface ReferencePrices {
   iceArabica: number;
@@ -30,6 +31,12 @@ interface ReferencePrices {
   robustaBuyingPrice: number;
   sortedPrice: number;
   parchmentPrice: number;
+  parchmentPremium: number;
+  kyarumbaSorted: number;
+  kyarumbaOrdinary: number;
+  kyarumbaUndergrades: number;
+  rubiriziDrugarClean: number;
+  rubiriziOrdinary: number;
 }
 
 const ReferencePriceInput: React.FC = () => {
