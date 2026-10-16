@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { resolveYoTransactionStatus } from "../_shared/yo-status.ts";
+import { gosenteStatus, interpretGosenteTxStatus } from "../_shared/gosentepay.ts";
+import { treasuryRelease } from "../_shared/treasury.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -150,6 +152,58 @@ serve(async (req) => {
             totalFailed++;
             console.log(`[Payout Poller] SP ${record.yo_reference} auto-expired after 24h`);
           }
+        }
+      }
+    }
+
+    // ─── Re-verify GosentePay meal disbursements marked "success" ───
+    // GosentePay's initial "accepted" response is treated as success, but the
+    // payout can still bounce afterwards. Re-check recent ones so a bounced
+    // payment is marked failed and the treasury hold is returned.
+    const verifyCutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+    const { data: gosenteMeals } = await supabase
+      .from("meal_disbursements")
+      .select("*")
+      .eq("yo_status", "success")
+      .like("yo_reference", "GSP-%")
+      .gte("created_at", verifyCutoff)
+      .order("created_at", { ascending: true });
+
+    if (gosenteMeals && gosenteMeals.length > 0) {
+      console.log(`[Payout Poller] Re-verifying ${gosenteMeals.length} GosentePay meal disbursements`);
+      for (const record of gosenteMeals) {
+        try {
+          totalChecked++;
+          const { body } = await gosenteStatus(record.yo_reference);
+          const outcome = interpretGosenteTxStatus(body);
+          console.log(`[Payout Poller] Gosente meal ${record.id} (${record.yo_reference}): ${outcome}`);
+          if (outcome === "failed") {
+            const { data: updated } = await supabase
+              .from("meal_disbursements")
+              .update({
+                yo_status: "failed",
+                yo_raw_response: `GosentePay payout bounced after acceptance. Raw: ${JSON.stringify(body)}`,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", record.id)
+              .eq("yo_status", "success")
+              .select("id");
+            if (updated && updated.length > 0) {
+              totalFailed++;
+              // Return the treasury hold — reference differs by origin function;
+              // the non-matching one is a harmless no-op (nothing_to_reverse).
+              for (const ref of [`PSR-${record.id}`, `MEAL-${record.id}`]) {
+                await treasuryRelease({
+                  account: "operations",
+                  amount: Number(record.total_amount || record.amount),
+                  reference: ref,
+                  description: `Meal payment to ${record.receiver_name || record.receiver_phone} bounced — funds returned`,
+                });
+              }
+            }
+          }
+        } catch (e) {
+          console.error(`[Payout Poller] Gosente re-verify error for ${record.id}:`, e);
         }
       }
     }
