@@ -100,7 +100,7 @@ const [prices, setPrices] = useState<ReferencePrices>({
   // Quality parameters (moisture / outturn / FM) per station price row
   const [stationParams, setStationParams] = useState<StationParams>({});
 
-  const handleParamChange = (key: keyof StationParams extends never ? never : import('@/utils/stationPrices').StationPriceValues extends infer T ? keyof T : never, field: 'moisture' | 'outturn' | 'fm', value: string) => {
+  const handleParamChange = (key: keyof import('@/utils/stationPrices').StationPriceValues, field: 'moisture' | 'outturn' | 'fm', value: string) => {
     const numValue = parseFloat(value) || 0;
     setStationParams(prev => ({
       ...prev,
