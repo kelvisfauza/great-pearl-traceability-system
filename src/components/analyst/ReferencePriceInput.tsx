@@ -518,46 +518,6 @@ const handleTestSMS = async (phoneNumber: string) => {
           </div>
         </div>
 
-        {/* Local Markets */}
-        <div>
-          <h3 className="text-lg font-semibold mb-3">Local Markets (UGX/kg)</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="drugarLocal">Drugar</Label>
-              <Input
-                id="drugarLocal"
-                type="number"
-                step="50"
-                value={v(prices.drugarLocal)}
-                placeholder="Enter price"
-                onChange={(e) => handleInputChange('drugarLocal', e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="wugarLocal">Wugar</Label>
-              <Input
-                id="wugarLocal"
-                type="number"
-                step="50"
-                value={v(prices.wugarLocal)}
-                placeholder="Enter price"
-                onChange={(e) => handleInputChange('wugarLocal', e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="robustaFaqLocal">Robusta FAQ</Label>
-              <Input
-                id="robustaFaqLocal"
-                type="number"
-                step="50"
-                value={v(prices.robustaFaqLocal)}
-                placeholder="Enter price"
-                onChange={(e) => handleInputChange('robustaFaqLocal', e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-
         {/* SMS Notification Option */}
         <div className="flex items-center space-x-2 pt-2">
           <Checkbox
