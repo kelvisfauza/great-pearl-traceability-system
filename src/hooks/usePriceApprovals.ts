@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { buildStationPriceTableHtml } from '@/utils/stationPrices';
 
 export interface PriceApprovalRequest {
   id: string;
@@ -23,6 +24,12 @@ export interface PriceApprovalRequest {
   robusta_buying_price: number;
   sorted_price: number | null;
   parchment_price: number | null;
+  parchment_premium: number | null;
+  kyarumba_sorted: number | null;
+  kyarumba_ordinary: number | null;
+  kyarumba_undergrades: number | null;
+  rubirizi_drugar_clean: number | null;
+  rubirizi_ordinary: number | null;
   notify_suppliers: boolean;
   status: 'pending' | 'approved' | 'rejected';
   reviewed_by: string | null;
@@ -131,6 +138,12 @@ const submitForApproval = async (
       robustaBuyingPrice: number;
       sortedPrice: number;
       parchmentPrice: number;
+      parchmentPremium: number;
+      kyarumbaSorted: number;
+      kyarumbaOrdinary: number;
+      kyarumbaUndergrades: number;
+      rubiriziDrugarClean: number;
+      rubiriziOrdinary: number;
     },
     submittedBy: string,
     submittedByEmail: string,
@@ -162,6 +175,12 @@ const submitForApproval = async (
           robusta_buying_price: prices.robustaBuyingPrice,
           sorted_price: prices.sortedPrice,
           parchment_price: prices.parchmentPrice,
+          parchment_premium: prices.parchmentPremium,
+          kyarumba_sorted: prices.kyarumbaSorted,
+          kyarumba_ordinary: prices.kyarumbaOrdinary,
+          kyarumba_undergrades: prices.kyarumbaUndergrades,
+          rubirizi_drugar_clean: prices.rubiriziDrugarClean,
+          rubirizi_ordinary: prices.rubiriziOrdinary,
           notify_suppliers: notifySuppliers,
           is_correction: isCorrection,
           status: 'pending',
@@ -197,6 +216,25 @@ const submitForApproval = async (
               robustaBuyingPrice: String(prices.robustaBuyingPrice),
               sortedPrice: String(prices.sortedPrice),
               parchmentPrice: String(prices.parchmentPrice),
+              parchmentPremium: String(prices.parchmentPremium),
+              kyarumbaSorted: String(prices.kyarumbaSorted),
+              kyarumbaOrdinary: String(prices.kyarumbaOrdinary),
+              kyarumbaUndergrades: String(prices.kyarumbaUndergrades),
+              rubiriziDrugarClean: String(prices.rubiriziDrugarClean),
+              rubiriziOrdinary: String(prices.rubiriziOrdinary),
+              priceTable: buildStationPriceTableHtml({
+                drugar_local: prices.drugarLocal,
+                sorted_price: prices.sortedPrice,
+                robusta_faq_local: prices.robustaFaqLocal,
+                wugar_local: prices.wugarLocal,
+                parchment_premium: prices.parchmentPremium,
+                parchment_price: prices.parchmentPrice,
+                kyarumba_sorted: prices.kyarumbaSorted,
+                kyarumba_ordinary: prices.kyarumbaOrdinary,
+                kyarumba_undergrades: prices.kyarumbaUndergrades,
+                rubirizi_drugar_clean: prices.rubiriziDrugarClean,
+                rubirizi_ordinary: prices.rubiriziOrdinary,
+              }),
               approveUrl: `${APP_URL}/v2/admin`,
               submittedAt: new Date().toLocaleDateString('en-UG', { dateStyle: 'full' }),
             }
