@@ -149,15 +149,14 @@ const submitForApproval = async (
     submittedBy: string,
     submittedByEmail: string,
     notifySuppliers: boolean,
-    targetDate?: string
+    targetDate?: string,
+    stationParams?: StationParams
   ) => {
     try {
       // Auto-detect if this is a correction
       const isCorrection = await checkIfCorrectionNeeded();
-      
-      const { error } = await (supabase as any)
-        .from('price_approval_requests')
-        .insert({
+
+      const basePayload = {
           submitted_by: submittedBy,
           submitted_by_email: submittedByEmail,
           ice_arabica: prices.iceArabica,
