@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Coffee, Send, Globe, RefreshCw, Clock, CalendarDays, Sun, Moon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import PendingPriceApproval from './PendingPriceApproval';
-import { buildStationPriceSmsSummary, STATION_PRICE_ROWS, STATION_LOCATIONS, StationParams } from '@/utils/stationPrices';
+import { buildStationPriceSmsSummary, buildStationPriceRows, STATION_PRICE_ROWS, STATION_LOCATIONS, StationParams } from '@/utils/stationPrices';
 
 interface ReferencePrices {
   iceArabica: number;
@@ -95,6 +95,7 @@ const [prices, setPrices] = useState<ReferencePrices>({
   });
   const [loading, setLoading] = useState(false);
   const [testLoading, setTestLoading] = useState(false);
+  const [testEmailLoading, setTestEmailLoading] = useState(false);
   const [fetchingICE, setFetchingICE] = useState(false);
   const [sendNotification, setSendNotification] = useState(false);
   // Quality parameters (moisture / outturn / FM) per station price row
@@ -280,6 +281,71 @@ const handleTestSMS = async (phoneNumber: string) => {
       });
     } finally {
       setTestLoading(false);
+    }
+  };
+
+  const handleTestEmail = async () => {
+    try {
+      setTestEmailLoading(true);
+      const date = new Date().toLocaleDateString('en-GB');
+      const stationValues = {
+        drugar_local: prices.drugarLocal,
+        sorted_price: prices.sortedPrice,
+        robusta_faq_local: prices.robustaFaqLocal,
+        wugar_local: prices.wugarLocal,
+        parchment_premium: prices.parchmentPremium,
+        parchment_price: prices.parchmentPrice,
+        kyarumba_sorted: prices.kyarumbaSorted,
+        kyarumba_ordinary: prices.kyarumbaOrdinary,
+        kyarumba_undergrades: prices.kyarumbaUndergrades,
+        rubirizi_drugar_clean: prices.rubiriziDrugarClean,
+        rubirizi_ordinary: prices.rubiriziOrdinary,
+      } as any;
+
+      console.log('📧 Sending test price email');
+      const { error } = await supabase.functions.invoke('send-transactional-email', {
+        body: {
+          templateName: 'price-update',
+          recipientEmail: 'Fauzakusa@greatpearlcoffee.com',
+          idempotencyKey: `price-update-test-${Date.now()}`,
+          templateData: {
+            date,
+            arabicaBuyingPrice: prices.arabicaBuyingPrice,
+            robustaBuyingPrice: prices.robustaBuyingPrice,
+            sortedPrice: prices.sortedPrice,
+            parchmentPrice: prices.parchmentPrice,
+            stationPrices: buildStationPriceRows(stationValues, stationParams),
+            arabicaOutturn: prices.arabicaOutturn,
+            arabicaMoisture: prices.arabicaMoisture,
+            arabicaFm: prices.arabicaFm,
+            robustaOutturn: prices.robustaOutturn,
+            robustaMoisture: prices.robustaMoisture,
+            robustaFm: prices.robustaFm,
+            iceArabica: prices.iceArabica,
+            robustaInternational: prices.robusta,
+            exchangeRate: prices.exchangeRate,
+            drugarLocal: prices.drugarLocal,
+            wugarLocal: prices.wugarLocal,
+            robustaFaqLocal: prices.robustaFaqLocal,
+            isCorrection: false,
+            approvedBy: employee?.name || 'Data Analyst',
+          },
+        },
+      });
+      if (error) throw error;
+      toast({
+        title: "Test Email Sent",
+        description: "Price table email sent to Fauzakusa@greatpearlcoffee.com - check your inbox!"
+      });
+    } catch (error) {
+      console.error('Error sending test email:', error);
+      toast({
+        title: "Test Email Failed",
+        description: "Could not send test email",
+        variant: "destructive"
+      });
+    } finally {
+      setTestEmailLoading(false);
     }
   };
 
@@ -574,6 +640,18 @@ const handleTestSMS = async (phoneNumber: string) => {
               <Send className="mr-2 h-4 w-4" />
             )}
             {testLoading ? 'Sending...' : 'Test SMS (0707756445)'}
+          </Button>
+          <Button 
+            variant="secondary" 
+            onClick={handleTestEmail} 
+            disabled={testEmailLoading}
+          >
+            {testEmailLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="mr-2 h-4 w-4" />
+            )}
+            {testEmailLoading ? 'Sending...' : 'Test Email (Fauza)'}
           </Button>
         </div>
         </CardContent>
