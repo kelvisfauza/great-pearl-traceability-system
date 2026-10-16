@@ -636,6 +636,24 @@ await savePrices({
                       </p>
                     )}
                   </div>
+                  <div className="p-3 bg-sky-100 dark:bg-sky-900/30 rounded-lg">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Coffee className="h-4 w-4 text-sky-700" />
+                      <span className="text-sm font-medium">Parchment</span>
+                    </div>
+                    <p className="text-xl font-bold">
+                      UGX {(request.parchment_price || 0).toLocaleString()}/kg
+                    </p>
+                    {currentPrices.parchmentPrice !== (request.parchment_price || 0) && currentPrices.parchmentPrice > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Current: UGX {currentPrices.parchmentPrice.toLocaleString()}/kg
+                        <span className={(request.parchment_price || 0) > currentPrices.parchmentPrice ? 'text-green-600 ml-1' : 'text-red-600 ml-1'}>
+                          ({(request.parchment_price || 0) > currentPrices.parchmentPrice ? '+' : ''}
+                          {(((request.parchment_price || 0) - currentPrices.parchmentPrice) / currentPrices.parchmentPrice * 100).toFixed(1)}%)
+                        </span>
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Market indicators & local prices — show % change vs current on every submitted value */}
