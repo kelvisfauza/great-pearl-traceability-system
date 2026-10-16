@@ -7270,7 +7270,11 @@ export type Database = {
           exchange_rate: number
           ice_arabica: number
           id: string
+          kyarumba_ordinary: number | null
+          kyarumba_sorted: number | null
+          kyarumba_undergrades: number | null
           last_updated: string | null
+          parchment_premium: number | null
           parchment_price: number | null
           price_type: string
           robusta: number
@@ -7279,6 +7283,8 @@ export type Database = {
           robusta_fm: number | null
           robusta_moisture: number | null
           robusta_outturn: number | null
+          rubirizi_drugar_clean: number | null
+          rubirizi_ordinary: number | null
           sorted_price: number | null
           updated_at: string | null
           wugar_local: number
@@ -7293,7 +7299,11 @@ export type Database = {
           exchange_rate?: number
           ice_arabica?: number
           id?: string
+          kyarumba_ordinary?: number | null
+          kyarumba_sorted?: number | null
+          kyarumba_undergrades?: number | null
           last_updated?: string | null
+          parchment_premium?: number | null
           parchment_price?: number | null
           price_type?: string
           robusta?: number
@@ -7302,6 +7312,8 @@ export type Database = {
           robusta_fm?: number | null
           robusta_moisture?: number | null
           robusta_outturn?: number | null
+          rubirizi_drugar_clean?: number | null
+          rubirizi_ordinary?: number | null
           sorted_price?: number | null
           updated_at?: string | null
           wugar_local?: number
@@ -7316,7 +7328,11 @@ export type Database = {
           exchange_rate?: number
           ice_arabica?: number
           id?: string
+          kyarumba_ordinary?: number | null
+          kyarumba_sorted?: number | null
+          kyarumba_undergrades?: number | null
           last_updated?: string | null
+          parchment_premium?: number | null
           parchment_price?: number | null
           price_type?: string
           robusta?: number
@@ -7325,6 +7341,8 @@ export type Database = {
           robusta_fm?: number | null
           robusta_moisture?: number | null
           robusta_outturn?: number | null
+          rubirizi_drugar_clean?: number | null
+          rubirizi_ordinary?: number | null
           sorted_price?: number | null
           updated_at?: string | null
           wugar_local?: number
@@ -9098,7 +9116,11 @@ export type Database = {
           ice_arabica: number | null
           id: string
           is_correction: boolean | null
+          kyarumba_ordinary: number | null
+          kyarumba_sorted: number | null
+          kyarumba_undergrades: number | null
           notify_suppliers: boolean | null
+          parchment_premium: number | null
           parchment_price: number | null
           rejection_reason: string | null
           reviewed_at: string | null
@@ -9110,6 +9132,8 @@ export type Database = {
           robusta_fm: number | null
           robusta_moisture: number | null
           robusta_outturn: number | null
+          rubirizi_drugar_clean: number | null
+          rubirizi_ordinary: number | null
           sorted_price: number | null
           status: string
           submitted_at: string
@@ -9132,7 +9156,11 @@ export type Database = {
           ice_arabica?: number | null
           id?: string
           is_correction?: boolean | null
+          kyarumba_ordinary?: number | null
+          kyarumba_sorted?: number | null
+          kyarumba_undergrades?: number | null
           notify_suppliers?: boolean | null
+          parchment_premium?: number | null
           parchment_price?: number | null
           rejection_reason?: string | null
           reviewed_at?: string | null
@@ -9144,6 +9172,8 @@ export type Database = {
           robusta_fm?: number | null
           robusta_moisture?: number | null
           robusta_outturn?: number | null
+          rubirizi_drugar_clean?: number | null
+          rubirizi_ordinary?: number | null
           sorted_price?: number | null
           status?: string
           submitted_at?: string
@@ -9166,7 +9196,11 @@ export type Database = {
           ice_arabica?: number | null
           id?: string
           is_correction?: boolean | null
+          kyarumba_ordinary?: number | null
+          kyarumba_sorted?: number | null
+          kyarumba_undergrades?: number | null
           notify_suppliers?: boolean | null
+          parchment_premium?: number | null
           parchment_price?: number | null
           rejection_reason?: string | null
           reviewed_at?: string | null
@@ -9178,6 +9212,8 @@ export type Database = {
           robusta_fm?: number | null
           robusta_moisture?: number | null
           robusta_outturn?: number | null
+          rubirizi_drugar_clean?: number | null
+          rubirizi_ordinary?: number | null
           sorted_price?: number | null
           status?: string
           submitted_at?: string
