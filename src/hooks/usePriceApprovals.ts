@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { buildStationPriceRows } from '@/utils/stationPrices';
+import { buildStationPriceRows, StationParams } from '@/utils/stationPrices';
 
 export interface PriceApprovalRequest {
   id: string;
@@ -30,6 +30,7 @@ export interface PriceApprovalRequest {
   kyarumba_undergrades: number | null;
   rubirizi_drugar_clean: number | null;
   rubirizi_ordinary: number | null;
+  station_params?: StationParams | null;
   notify_suppliers: boolean;
   status: 'pending' | 'approved' | 'rejected';
   reviewed_by: string | null;
