@@ -97,6 +97,16 @@ const [prices, setPrices] = useState<ReferencePrices>({
   const [testLoading, setTestLoading] = useState(false);
   const [fetchingICE, setFetchingICE] = useState(false);
   const [sendNotification, setSendNotification] = useState(false);
+  // Quality parameters (moisture / outturn / FM) per station price row
+  const [stationParams, setStationParams] = useState<StationParams>({});
+
+  const handleParamChange = (key: keyof StationParams extends never ? never : import('@/utils/stationPrices').StationPriceValues extends infer T ? keyof T : never, field: 'moisture' | 'outturn' | 'fm', value: string) => {
+    const numValue = parseFloat(value) || 0;
+    setStationParams(prev => ({
+      ...prev,
+      [key]: { ...prev[key], [field]: numValue }
+    }));
+  };
 
   // Update target date every minute
   useEffect(() => {
@@ -148,11 +158,24 @@ const [prices, setPrices] = useState<ReferencePrices>({
     try {
       setLoading(true);
       const success = await submitForApproval(
-        prices,
+        {
+          ...prices,
+          // Old Head Office arabica/robusta parameter blocks were removed;
+          // carry the last approved values forward so nothing else breaks.
+          arabicaOutturn: prices.arabicaOutturn || currentPrices.arabicaOutturn,
+          arabicaMoisture: prices.arabicaMoisture || currentPrices.arabicaMoisture,
+          arabicaFm: prices.arabicaFm || currentPrices.arabicaFm,
+          arabicaBuyingPrice: prices.arabicaBuyingPrice || currentPrices.arabicaBuyingPrice,
+          robustaOutturn: prices.robustaOutturn || currentPrices.robustaOutturn,
+          robustaMoisture: prices.robustaMoisture || currentPrices.robustaMoisture,
+          robustaFm: prices.robustaFm || currentPrices.robustaFm,
+          robustaBuyingPrice: prices.robustaBuyingPrice || currentPrices.robustaBuyingPrice,
+        },
         employee.name,
         employee.email,
         sendNotification,
-        targetInfo.date
+        targetInfo.date,
+        stationParams
       );
 
       if (success) {
