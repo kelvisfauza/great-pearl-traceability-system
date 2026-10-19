@@ -1,5 +1,7 @@
 # Project architecture
 
+- Keep V1 batch details read-only, linking quality to original deliveries and sales to batch allocations; show recorded quality ranges and value remaining stock only when all batch kilograms have a saved buying cost, so the view does not imply verified payment or unrecorded dispatch.
+
 - Generate Quality daily-price sheets from freshly fetched saved reference prices, registering an immutable verification snapshot before issuing the A4 PDF, so QR scans identify the printed values rather than later price changes.
 
 - Keep V1 desktop/mobile and V2 navigation grouping aligned while preserving existing route paths and permission guards, so menu organization does not change access rights or bookmarked links.
