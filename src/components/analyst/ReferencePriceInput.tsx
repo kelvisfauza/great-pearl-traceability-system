@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Coffee, Send, Globe, RefreshCw, Clock, CalendarDays, Sun, Moon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import PendingPriceApproval from './PendingPriceApproval';
-import { buildStationPriceSmsSummary, buildStationPriceRows, STATION_PRICE_ROWS, STATION_LOCATIONS, StationParams } from '@/utils/stationPrices';
+import { buildPriceSms, buildStationPriceRows, STATION_PRICE_ROWS, STATION_LOCATIONS, StationParams } from '@/utils/stationPrices';
 
 interface ReferencePrices {
   iceArabica: number;
@@ -242,7 +242,7 @@ const handleTestSMS = async (phoneNumber: string) => {
     try {
       setTestLoading(true);
       const date = new Date().toLocaleDateString('en-GB');
-      const message = `Great Agro Coffee - Price Update\nDate: ${date}\n\n${buildStationPriceSmsSummary({ drugar_local: prices.drugarLocal, sorted_price: prices.sortedPrice, robusta_faq_local: prices.robustaFaqLocal, wugar_local: prices.wugarLocal, parchment_premium: prices.parchmentPremium, parchment_price: prices.parchmentPrice, kyarumba_sorted: prices.kyarumbaSorted, kyarumba_ordinary: prices.kyarumbaOrdinary, kyarumba_undergrades: prices.kyarumbaUndergrades, rubirizi_drugar_clean: prices.rubiriziDrugarClean, rubirizi_ordinary: prices.rubiriziOrdinary })}\n\nDeliver your coffee now!\n📞 Contact: +256 393 001 626 / +256 393 101 103`;
+      const message = buildPriceSms({ drugar_local: prices.drugarLocal, sorted_price: prices.sortedPrice, robusta_faq_local: prices.robustaFaqLocal, wugar_local: prices.wugarLocal, parchment_premium: prices.parchmentPremium, parchment_price: prices.parchmentPrice, kyarumba_sorted: prices.kyarumbaSorted, kyarumba_ordinary: prices.kyarumbaOrdinary, kyarumba_undergrades: prices.kyarumbaUndergrades, rubirizi_drugar_clean: prices.rubiriziDrugarClean, rubirizi_ordinary: prices.rubiriziOrdinary }, date);
 
       console.log(`📱 Sending test SMS to ${phoneNumber}`);
       console.log('Message:', message);

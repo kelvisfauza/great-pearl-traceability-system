@@ -18,7 +18,7 @@ import { useReferencePrices } from '@/hooks/useReferencePrices';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { buildStationPriceRows, buildStationPriceSmsSummary } from '@/utils/stationPrices';
+import { buildStationPriceRows, buildPriceSms } from '@/utils/stationPrices';
 import { formatDistanceToNow } from 'date-fns';
 
 // Percentage change chip: green for up, red for down, neutral when unchanged
@@ -151,15 +151,8 @@ const PriceApprovalPanel: React.FC = () => {
       const allPhones = dedupePhones([...staffList.map(e => e.phone!), ...additionalRecipients]);
 
       const date = new Date().toLocaleDateString('en-GB');
-      const message = `Great Agro Coffee Price Update - ${date}\n\nArabica: UGX ${currentPrices.arabicaBuyingPrice.toLocaleString()}/kg (${currentPrices.arabicaOutturn}% outturn)\nRobusta: UGX ${currentPrices.robustaBuyingPrice.toLocaleString()}/kg (${currentPrices.robustaOutturn}% outturn)\nSorted: UGX ${(currentPrices.sortedPrice || 0).toLocaleString()}/kg\nParchment: UGX ${(currentPrices.parchmentPrice || 0).toLocaleString()}/kg\n${buildStationPriceSmsSummary(stationValues(currentPrices))}\n\nUse these prices for today's purchases.`;
-      const staffMessage = `${message}${buildReferenceBlock({
-        iceArabica: currentPrices.iceArabica,
-        robusta: currentPrices.robusta,
-        exchangeRate: currentPrices.exchangeRate,
-        drugarLocal: currentPrices.drugarLocal,
-        wugarLocal: currentPrices.wugarLocal,
-        robustaFaqLocal: currentPrices.robustaFaqLocal,
-      })}`;
+      const message = buildPriceSms(stationValues(currentPrices), date);
+      const staffMessage = message;
 
       let sent = 0;
       for (let i = 0; i < allPhones.length; i++) {
@@ -329,14 +322,8 @@ await savePrices({
       const correctionPrefix = request.is_correction ? 'CORRECTION: ' : '';
       
       // Staff message - plain text, no emojis, keep short for 1 SMS credit
-      const message = `${correctionPrefix}Great Agro Coffee Price Update ${date}\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}%)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}%)\nSorted: UGX ${(request.sorted_price || 0).toLocaleString()}/kg\nParchment: UGX ${(request.parchment_price || 0).toLocaleString()}/kg\n${buildStationPriceSmsSummary(stationValues(request))}${buildReferenceBlock({
-        iceArabica: request.ice_arabica ?? currentPrices.iceArabica,
-        robusta: request.robusta ?? currentPrices.robusta,
-        exchangeRate: request.exchange_rate ?? currentPrices.exchangeRate,
-        drugarLocal: request.drugar_local ?? currentPrices.drugarLocal,
-        wugarLocal: request.wugar_local ?? currentPrices.wugarLocal,
-        robustaFaqLocal: request.robusta_faq_local ?? currentPrices.robustaFaqLocal,
-      })}\n${request.is_correction ? 'Disregard previous prices.' : 'Use these prices today.'}`;
+      void correctionPrefix;
+      const message = buildPriceSms(stationValues(request), date, { correction: !!request.is_correction });
 
       // Send to all recipients
       for (let i = 0; i < allPhones.length; i++) {
@@ -375,7 +362,7 @@ await savePrices({
         ...(fieldAgents?.map(a => a.phone) || []),
       ]).filter(p => !staffSet.has(p));
       // Supplier message - plain text, no emojis, short for reliable delivery
-      const supplierMessage = `${correctionPrefix}Great Agro Coffee Prices ${date}\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}%)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}%)\nSorted: UGX ${(request.sorted_price || 0).toLocaleString()}/kg\nParchment: UGX ${(request.parchment_price || 0).toLocaleString()}/kg\n${buildStationPriceSmsSummary(stationValues(request))}\n${request.is_correction ? 'Disregard previous prices.' : 'Deliver your coffee now!'}`;
+      const supplierMessage = buildPriceSms(stationValues(request), date, { correction: !!request.is_correction, closing: 'Deliver your coffee today.' });
 
       for (let i = 0; i < supplierPhones.length; i++) {
         await sendSmsWithDelay(supplierPhones[i], supplierMessage, 500);

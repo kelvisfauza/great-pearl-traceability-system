@@ -75,14 +75,26 @@ export function buildStationPriceRows(
   }));
 }
 
-/** Short plain-text summary for SMS (character-conscious). */
+/** Compact station block for SMS: each price once, stations as headings. */
 export function buildStationPriceSmsSummary(prices: StationPriceValues): string {
   const short = (n: number | null | undefined) =>
     n == null || !Number.isFinite(n) || n <= 0 ? '-' : n.toLocaleString('en-UG');
-  const lines = [
-    `HQ: Drugar ${short(prices.drugar_local)}, Sorted ${short(prices.sorted_price)}, Robusta ${short(prices.robusta_faq_local)}, Wugar/DC ${short(prices.wugar_local)}, Parch Prem ${short(prices.parchment_premium)}, Parch Ord ${short(prices.parchment_price)}`,
-    `Kyarumba: Sorted ${short(prices.kyarumba_sorted)}, Ord ${short(prices.kyarumba_ordinary)}, UG ${short(prices.kyarumba_undergrades)}`,
-    `Rubirizi: Drugar Clean ${short(prices.rubirizi_drugar_clean)}, Ord ${short(prices.rubirizi_ordinary)}`,
-  ];
-  return lines.join('\n');
+  return [
+    'HEAD OFFICE',
+    `Drugar ${short(prices.drugar_local)} | Sorted ${short(prices.sorted_price)}`,
+    `Robusta ${short(prices.robusta_faq_local)} | Wugar ${short(prices.wugar_local)}`,
+    `Parch Prem ${short(prices.parchment_premium)} | Parch Ord ${short(prices.parchment_price)}`,
+    'KYARUMBA',
+    `Sorted ${short(prices.kyarumba_sorted)} | Ord ${short(prices.kyarumba_ordinary)} | UG ${short(prices.kyarumba_undergrades)}`,
+    'RUBIRIZI',
+    `Drugar Clean ${short(prices.rubirizi_drugar_clean)} | Ord ${short(prices.rubirizi_ordinary)}`,
+    'All: Moisture 14%, FM max 3%',
+  ].join('\n');
+}
+
+/** Full compact price SMS used for staff and supplier broadcasts. */
+export function buildPriceSms(prices: StationPriceValues, date: string, opts: { correction?: boolean; closing?: string } = {}): string {
+  const head = `${opts.correction ? 'CORRECTION: ' : ''}Great Agro Coffee Prices ${date} (UGX/kg)`;
+  const closing = opts.correction ? 'Disregard previous prices.' : (opts.closing || 'Deliver today. Full table sent by email.');
+  return `${head}\n${buildStationPriceSmsSummary(prices)}\n${closing}`;
 }
