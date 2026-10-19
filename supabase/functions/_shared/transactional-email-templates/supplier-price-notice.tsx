@@ -43,26 +43,6 @@ const SupplierPriceNoticeEmail = ({
             : `We are writing to inform you of the updated buying prices effective ${date}:`}
         </Text>
 
-        <Section style={priceTable}>
-          {arabicaBuyingPrice > 0 && (
-            <Section style={priceRow}>
-              <Text style={priceLabel}>Arabica</Text>
-              <Text style={priceValue}>UGX {arabicaBuyingPrice.toLocaleString()} /kg</Text>
-            </Section>
-          )}
-          {robustaBuyingPrice > 0 && (
-            <Section style={priceRow}>
-              <Text style={priceLabel}>Robusta</Text>
-              <Text style={priceValue}>UGX {robustaBuyingPrice.toLocaleString()} /kg</Text>
-            </Section>
-          )}
-          {sortedPrice > 0 && (
-            <Section style={priceRow}>
-              <Text style={priceLabel}>Sorted</Text>
-              <Text style={priceValue}>UGX {sortedPrice.toLocaleString()} /kg</Text>
-            </Section>
-          )}
-        </Section>
 
         {stationPrices.length > 0 && (
           <Section style={priceTable}>

@@ -83,40 +83,6 @@ const PriceUpdateEmail = (props: PriceUpdateProps) => {
 
           <Hr style={divider} />
 
-          {/* Buying Prices — Main Section */}
-          <Heading style={h2}>Buying Prices (UGX/kg)</Heading>
-
-          {/* Arabica Card */}
-          <Section style={priceCard}>
-            <Text style={priceCardLabel}>🫘 Arabica</Text>
-            <Text style={priceCardValue}>UGX {fmt(arabicaBuyingPrice)}/kg</Text>
-            <Section style={metricsRow}>
-              <Text style={metricItem}>Outturn: {arabicaOutturn}%</Text>
-              <Text style={metricItem}>Moisture: {arabicaMoisture}%</Text>
-              <Text style={metricItem}>Foreign Matter: {arabicaFm}%</Text>
-            </Section>
-          </Section>
-
-          {/* Robusta Card */}
-          <Section style={{ ...priceCard, borderLeft: '4px solid #059669' }}>
-            <Text style={{ ...priceCardLabel, color: '#059669' }}>🫘 Robusta</Text>
-            <Text style={{ ...priceCardValue, color: '#059669' }}>UGX {fmt(robustaBuyingPrice)}/kg</Text>
-            <Section style={metricsRow}>
-              <Text style={metricItem}>Outturn: {robustaOutturn}%</Text>
-              <Text style={metricItem}>Moisture: {robustaMoisture}%</Text>
-              <Text style={metricItem}>Foreign Matter: {robustaFm}%</Text>
-            </Section>
-          </Section>
-
-          {/* Sorted Price */}
-          {sortedPrice > 0 && (
-            <Section style={{ ...priceCard, borderLeft: '4px solid #7c3aed' }}>
-              <Text style={{ ...priceCardLabel, color: '#7c3aed' }}>🫘 Sorted Coffee</Text>
-              <Text style={{ ...priceCardValue, color: '#7c3aed' }}>UGX {fmt(sortedPrice)}/kg</Text>
-            </Section>
-          )}
-
-          <Hr style={divider} />
 
           {/* International Market Indicators */}
           <Heading style={h2}>International Market Indicators</Heading>
@@ -141,30 +107,6 @@ const PriceUpdateEmail = (props: PriceUpdateProps) => {
             )}
           </Section>
 
-          <Hr style={divider} />
-
-          {/* Local Reference Prices */}
-          <Heading style={h2}>Local Reference Prices (UGX/kg)</Heading>
-          <Section style={marketTable}>
-            {drugarLocal != null && (
-              <Text style={marketRow}>
-                <span style={marketLabel}>Drugar:</span>{' '}
-                <span style={marketValue}>UGX {fmt(drugarLocal)}</span>
-              </Text>
-            )}
-            {wugarLocal != null && (
-              <Text style={marketRow}>
-                <span style={marketLabel}>Wugar:</span>{' '}
-                <span style={marketValue}>UGX {fmt(wugarLocal)}</span>
-              </Text>
-            )}
-            {robustaFaqLocal != null && (
-              <Text style={marketRow}>
-                <span style={marketLabel}>Robusta FAQ:</span>{' '}
-                <span style={marketValue}>UGX {fmt(robustaFaqLocal)}</span>
-              </Text>
-            )}
-          </Section>
 
           {/* Station Prices Table */}
           {stationPrices.length > 0 && (
