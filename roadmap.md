@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Make V1 inventory batches self-explanatory with stock, supplier, quality, cost and expandable history details
+
 - [x] Prepare a native Android application project for the existing system, using bundled app files rather than the preview website
 - [x] Reorganize V1 and V2 navigation: Procurement Review, Leave Requests, Excel Reports, Trade/Bookings, Admin tools; temporarily freeze My Deductions
 - [x] Create International Coffee Day greeting poster and prepare September month-end report submission and reminder
