@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  AlertDialog, AlertDialogContent,
+  AlertDialog, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
@@ -65,9 +65,21 @@ const PrintIntentDialog = () => {
   };
 
   const handleCancel = () => {
-    intent?.cancel();
-    intent?.dismiss();
+    const current = intent;
+    // Release the popup before touching a print window that may already be
+    // closed, navigated, or detached by the document's own cleanup timer.
     close();
+    if (!current) return;
+    try {
+      current.cancel();
+    } catch (error) {
+      console.warn('Print cancellation cleanup failed', error);
+    }
+    try {
+      current.dismiss();
+    } catch (error) {
+      console.warn('Print window cleanup failed', error);
+    }
   };
 
   return (
@@ -82,9 +94,11 @@ const PrintIntentDialog = () => {
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="gap-2 sm:gap-2">
-          <Button type="button" variant="ghost" onClick={handleCancel} disabled={saving}>
-            Cancel
-          </Button>
+          <AlertDialogCancel asChild>
+            <Button type="button" variant="ghost" disabled={saving}>
+              Cancel
+            </Button>
+          </AlertDialogCancel>
           <Button type="button" variant="outline" onClick={handleQueue} disabled={saving}>
             <ListPlus className="h-4 w-4 mr-2" />
             {saving ? 'Adding…' : 'Add to queue'}

@@ -1,5 +1,6 @@
 # Roadmap
 
+- [x] Make print popup cancellation release the dialog even when print-window cleanup fails
 - [x] Make V1 inventory batches self-explanatory with stock, supplier, quality, cost and expandable history details
 
 - [x] Prepare a native Android application project for the existing system, using bundled app files rather than the preview website
