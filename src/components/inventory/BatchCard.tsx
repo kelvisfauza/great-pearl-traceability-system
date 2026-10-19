@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Package, TrendingDown, Users, Calendar, CheckCircle2, AlertCircle, DollarSign, Printer } from "lucide-react";
+import { ChevronDown, Package, Users, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { batchDateLabel, batchAgeDays, qualityRange, remainingPurchaseValue } from "./batchPresentation";
@@ -285,11 +285,11 @@ const BatchCard = ({ batch }: BatchCardProps) => {
         <div><span>Total Volume</span>${batch.total_kilograms.toLocaleString()} kg</div>
         <div><span>Remaining</span>${batch.remaining_kilograms.toLocaleString()} kg</div>
         <div><span>Sold</span>${soldKg.toLocaleString()} kg</div>
-        <div><span>Avg Paid Price</span>${priceInfo ? 'UGX ' + Math.round(priceInfo.avgPrice).toLocaleString() + '/kg' : '—'}</div>
+        <div><span>Average Buying Cost</span>${priceInfo ? 'UGX ' + Math.round(priceInfo.avgPrice).toLocaleString() + '/kg' : '—'}</div>
         <div><span>Total Cost</span>${priceInfo ? 'UGX ' + Math.round(priceInfo.totalCost).toLocaleString() : '—'}</div>
       </div>
       <h2>Source Purchases (${batch.sources.length})</h2>
-      <table><thead><tr><th>Supplier</th><th>Delivered</th><th>Input By</th><th style="text-align:right">Quantity</th><th style="text-align:right">Price/kg</th><th style="text-align:right">Total Paid</th></tr></thead>
+      <table><thead><tr><th>Supplier</th><th>Delivered</th><th>Input By</th><th style="text-align:right">Quantity</th><th style="text-align:right">Price/kg</th><th style="text-align:right">Purchase Cost</th></tr></thead>
       <tbody>${sourcesHtml || '<tr><td colspan="6" style="text-align:center;color:#888">No sources</td></tr>'}</tbody></table>
       ${batch.sales.length > 0 ? `<h2>Sales History (${batch.sales.length})</h2>
       <table><thead><tr><th>Customer</th><th>Date</th><th style="text-align:right">Qty Sold</th></tr></thead>
@@ -308,9 +308,6 @@ const BatchCard = ({ batch }: BatchCardProps) => {
   };
   
   const percentRemaining = batch.total_kilograms > 0 ? (batch.remaining_kilograms / batch.total_kilograms) * 100 : 0;
-  const percentSold = batch.total_kilograms > 0 
-    ? ((batch.total_kilograms - batch.remaining_kilograms) / batch.total_kilograms) * 100 
-    : 0;
   const soldKg = batch.total_kilograms - batch.remaining_kilograms;
   const isDepleted = batch.remaining_kilograms === 0 || batch.status === 'sold_out';
   const isLowStock = percentRemaining < 20 && !isDepleted;
