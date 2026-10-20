@@ -1,5 +1,6 @@
 import { GRNDocumentData, getGRNPrintDocumentHTML } from "@/utils/grnPrintTemplate";
 import { enrichGRNListWithSuppliers } from "@/utils/enrichGRNSupplier";
+import { recordGrnPrintsByBatch } from "@/utils/grnPrintLog";
 
 export type GRNData = GRNDocumentData & { supplierId?: string | null };
 
@@ -22,4 +23,5 @@ export async function openBulkGRNPrintWindow(grnDataList: GRNData[]): Promise<vo
     getGRNPrintDocumentHTML(enriched, `Bulk GRN Print - ${enriched.length} documents`)
   );
   printWindow.document.close();
+  void recordGrnPrintsByBatch(enriched.map((g: any) => g.batchNumber || g.grnNumber));
 }

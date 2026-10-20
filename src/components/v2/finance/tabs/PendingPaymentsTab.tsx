@@ -50,16 +50,16 @@ const PendingPaymentsTab = () => {
     queryKey: ["finance-grn-print-log"],
     queryFn: async () => {
       // PostgREST caps a plain select at 1000 rows — page through everything
-      const all: { lot_id: string }[] = [];
+      const all: { lot_id: string; batch_number: string | null }[] = [];
       let from = 0;
       const pageSize = 1000;
       while (true) {
         const { data, error } = await (supabase as any)
           .from("grn_print_log")
-          .select("lot_id")
+          .select("lot_id, batch_number")
           .range(from, from + pageSize - 1);
         if (error) throw error;
-        const page = (data || []) as { lot_id: string }[];
+        const page = (data || []) as { lot_id: string; batch_number: string | null }[];
         all.push(...page);
         if (page.length < pageSize) break;
         from += pageSize;
@@ -71,6 +71,13 @@ const PendingPaymentsTab = () => {
     () => new Set<string>((printedRows || []).map((r) => r.lot_id)),
     [printedRows]
   );
+  // Quality-printed GRNs are logged by batch number
+  const printedBatches = useMemo(
+    () => new Set<string>((printedRows || []).map((r) => (r.batch_number || "").toUpperCase()).filter(Boolean)),
+    [printedRows]
+  );
+  const isPrinted = (l: { id: string; batch_number?: string | null }) =>
+    printedIds.has(l.id) || (!!l.batch_number && printedBatches.has(l.batch_number.toUpperCase()));
 
   const markPrinted = async (items: { id: string; batch_number: string | null }[]) => {
     const { data: auth } = await supabase.auth.getUser();
@@ -264,7 +271,7 @@ const PendingPaymentsTab = () => {
   };
 
   const toggleSelectAll = () => {
-    const selectable = filtered.filter((l) => !printedIds.has(l.id)).slice(0, MAX_BULK_PRINT);
+    const selectable = filtered.filter((l) => !isPrinted(l)).slice(0, MAX_BULK_PRINT);
     if (selectedIds.size > 0) {
       setSelectedIds(new Set());
     } else {
@@ -405,9 +412,9 @@ const PendingPaymentsTab = () => {
                     <TableCell>
                       <Checkbox
                         checked={selectedIds.has(lot.id)}
-                        disabled={printedIds.has(lot.id)}
+                        disabled={isPrinted(lot)}
                         onCheckedChange={() => toggleSelect(lot.id)}
-                        title={printedIds.has(lot.id) ? "Already printed — use Reprint" : undefined}
+                        title={isPrinted(lot) ? "Already printed — use Reprint" : undefined}
                       />
                     </TableCell>
 
@@ -475,18 +482,18 @@ const PendingPaymentsTab = () => {
                         </Button>
                         <Button
                           size="sm"
-                          variant={printedIds.has(lot.id) ? "outline" : "secondary"}
+                          variant={isPrinted(lot) ? "outline" : "secondary"}
                           onClick={() => printGrns([lot])}
                           disabled={printing}
                           className="h-7 gap-1 px-2 text-[11px]"
-                          title={printedIds.has(lot.id) ? "Already printed — reprint this GRN" : "Print this GRN with the coffee details and pay QR"}
+                          title={isPrinted(lot) ? "Already printed — reprint this GRN" : "Print this GRN with the coffee details and pay QR"}
                         >
-                          {printedIds.has(lot.id) ? (
+                          {isPrinted(lot) ? (
                             <CheckCircle2 className="h-3 w-3" />
                           ) : (
                             <Printer className="h-3 w-3" />
                           )}
-                          {printedIds.has(lot.id) ? "Reprint" : "Print"}
+                          {isPrinted(lot) ? "Reprint" : "Print"}
                         </Button>
                       </div>
                     </TableCell>
