@@ -726,6 +726,7 @@ serve(async (req) => {
         { name: 'Musema Wyclif', email: 'musemawyclif@greatpearlcoffee.com', phone: '256772000000' },
         { name: 'Bwambale Denis', email: 'bwambaledenis@greatpearlcoffee.com', phone: '256772000000' },
         { name: 'Fauza Kusa', email: 'fauzakusa@greatpearlcoffee.com', phone: '256772000000' },
+        { name: 'Kibaba Nicholus', email: 'nickscott@greatpearlcoffee.com', phone: '0700729340' },
       ];
       // Pull real admin phones from employees table
       try {
@@ -1125,6 +1126,7 @@ serve(async (req) => {
         { name: 'Musema Wyclif', email: 'musemawyclif@greatpearlcoffee.com' },
         { name: 'Bwambale Denis', email: 'bwambaledenis@greatpearlcoffee.com' },
         { name: 'Fauza Kusa', email: 'fauzakusa@greatpearlcoffee.com' },
+        { name: 'Kibaba Nicholus', email: 'nickscott@greatpearlcoffee.com' },
       ];
 
       for (const admin of adminRecipients) {
