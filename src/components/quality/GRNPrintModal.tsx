@@ -12,6 +12,7 @@ import { useActivityTracker } from '@/hooks/useActivityTracker';
 import { getGrnPayCode } from '@/utils/grnPayCode';
 import { getGrnScanQrDataUrl } from '@/utils/grnScanUrl';
 import { getGrnBarcodeDataUrl } from '@/utils/grnBarcode';
+import { recordGrnPrintsByBatch } from '@/utils/grnPrintLog';
 
 
 interface GRNPrintModalProps {
@@ -246,6 +247,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData, o
 
     printWindow.document.write(getGRNPrintDocumentHTML([previewData], `GRN - ${previewData.grnNumber}`, { includeFinanceCopy: !hideFinanceCopy }));
     printWindow.document.close();
+    void recordGrnPrintsByBatch([(previewData as any).batchNumber || previewData.grnNumber]);
     onPrinted?.();
   };
 
