@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Prevent old price SMS senders, queued messages and resends from repeating standalone buying and local-reference prices
+
 - [x] Make print popup cancellation release the dialog even when print-window cleanup fails
 - [x] Make V1 inventory batches self-explanatory with stock, supplier, quality, cost and expandable history details
 

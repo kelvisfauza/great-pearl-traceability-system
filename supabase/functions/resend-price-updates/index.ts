@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+import { compactLegacyPriceSms } from '../_shared/compact-price-sms.ts'
 
 // One-off / on-demand resender for failed price_update SMS.
 // Sends directly via YoolaSMS using LOCAL Uganda format (07XXXXXXXX),
@@ -44,7 +45,7 @@ Deno.serve(async (req) => {
     for (const r of rows ?? []) {
       const local = String(r.recipient_phone ?? '').trim().replace(/^\+?256/, '0')
       if (!/^07\d{8}$/.test(local)) continue
-      if (!targets.has(local)) targets.set(local, { message: r.message_content ?? '', name: r.recipient_name ?? null })
+      if (!targets.has(local)) targets.set(local, { message: compactLegacyPriceSms(r.message_content ?? ''), name: r.recipient_name ?? null })
     }
 
     if (dryRun) {

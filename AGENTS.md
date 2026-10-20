@@ -1,4 +1,6 @@
 # Project architecture
+ 
+- Normalize legacy station-based price SMS at the sending boundary, queue and resender using the shared compact-price-sms helper; preserve original station amounts rather than replacing them with later saved prices, so older installed clients cannot send duplicate buying/reference blocks.
 
 - Keep V1 batch details read-only, linking quality to original deliveries and sales to batch allocations; show recorded quality ranges and value remaining stock only when all batch kilograms have a saved buying cost, so the view does not imply verified payment or unrecorded dispatch.
 

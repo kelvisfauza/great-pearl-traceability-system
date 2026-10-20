@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { loadProviderSettings } from "../_shared/provider-settings.ts"
+import { compactLegacyPriceSms } from "../_shared/compact-price-sms.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -328,10 +329,11 @@ serve(async (req) => {
 
           // YoolaSMS only accepts local Uganda format (07XXXXXXXX)
           const yoolaPhone = formattedPhone.replace(/^\+256/, '0')
+          const queuedMessage = toGsm7(compactLegacyPriceSms(msg.message || ''))
           const smsResponse = await fetch('https://yoolasms.com/api/v1/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone: yoolaPhone, message: toGsm7(msg.message || ''), api_key: apiKey })
+            body: JSON.stringify({ phone: yoolaPhone, message: queuedMessage, api_key: apiKey })
           })
 
           const success = smsResponse.ok
@@ -345,7 +347,7 @@ serve(async (req) => {
 
           // If YoolaSMS failed, try Infobip fallback
           if (!success) {
-            const infobipResult = await sendInfobipSmsFallback(formattedPhone, toGsm7(msg.message || ''), supabase, {
+            const infobipResult = await sendInfobipSmsFallback(formattedPhone, queuedMessage, supabase, {
               userName: 'Employee', recipientEmail: msg.recipient_email, messageType: msg.notification_type
             })
             if (infobipResult.success) {
@@ -404,7 +406,7 @@ serve(async (req) => {
     // Flatten to GSM-7 so emoji/em-dash bodies don't silently become
     // 70-char UCS-2 segments (which is what was burning BulkSMS credits).
     const rawMessage: string = parsedBody.message || ''
-    const message = toGsm7(rawMessage)
+    const message = toGsm7(compactLegacyPriceSms(rawMessage))
 
     console.log('📱 SMS request from user:', userId, '| type:', messageType)
     console.log('Received SMS request:', {
