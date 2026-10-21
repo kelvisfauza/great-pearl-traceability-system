@@ -1,0 +1,2 @@
+REVOKE ALL ON public.quality_analysis_postings FROM anon,authenticated; GRANT SELECT ON public.quality_analysis_postings TO authenticated; GRANT ALL ON public.quality_analysis_postings TO service_role;
+REVOKE ALL ON public.quality_outlook_sync_state,public.quality_outlook_checked_items FROM anon,authenticated; GRANT ALL ON public.quality_outlook_sync_state,public.quality_outlook_checked_items TO service_role;
