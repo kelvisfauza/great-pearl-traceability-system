@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Add admin red-flag tasks for missing Quality analysis attachments, duplicate Store clearance numbers and cross-department integrity issues
+
 - [x] Prevent old price SMS senders, queued messages and resends from repeating standalone buying and local-reference prices
 
 - [x] Make print popup cancellation release the dialog even when print-window cleanup fails
