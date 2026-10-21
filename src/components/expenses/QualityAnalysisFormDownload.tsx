@@ -235,6 +235,7 @@ const emptyValues: Values = {
 };
 
 const NUMERIC_FIELDS: { key: FieldKey; label: string; dual?: boolean }[] = [
+  { key: 'ref_price', label: 'Reference price (UGX per KG)' },
   { key: 'grams', label: 'Grams used (sample weight)' },
   { key: 'moisture', label: 'Moisture (M.C %)' },
   { key: 'below12', label: 'Below 12', dual: true },
@@ -244,7 +245,6 @@ const NUMERIC_FIELDS: { key: FieldKey; label: string; dual?: boolean }[] = [
   { key: 'husks', label: 'Husks', dual: true },
   { key: 'non_coffee', label: 'Non-coffee', dual: true },
   { key: 'outturn', label: 'Outturn', dual: true },
-  { key: 'ref_price', label: 'Reference price (UGX per KG)' },
   { key: 'price', label: 'Price (UGX per KG)' },
 ];
 
