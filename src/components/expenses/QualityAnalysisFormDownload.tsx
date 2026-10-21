@@ -130,7 +130,20 @@ const generateQualityForm = async (
       doc.text(r.label, margin + 3, y + rowH / 2 + 1);
 
       const filledValue = r.key ? (values?.[r.key] || '').toString().trim() : '';
-      if (r.label === 'Form No.') {
+      if (r.dual && r.key) {
+        const half = valueW / 2;
+        doc.line(margin + labelW + half, y, margin + labelW + half, y + rowH);
+        const gVal = (values?.[gKey(r.key)] || '').toString().trim();
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        if (gVal) doc.text(gVal, margin + labelW + 4, y + rowH / 2 + 1);
+        if (filledValue) doc.text(filledValue, margin + labelW + half + 4, y + rowH / 2 + 1);
+        doc.setFontSize(8);
+        doc.setTextColor(90, 90, 90);
+        doc.text('g', margin + labelW + half - 3, y + rowH / 2 + 1, { align: 'right' });
+        doc.text('%', margin + contentW - 3, y + rowH / 2 + 1, { align: 'right' });
+      } else if (r.label === 'Form No.') {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
