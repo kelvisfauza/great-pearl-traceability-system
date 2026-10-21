@@ -18,6 +18,7 @@ import { PermissionChangeApprovals } from './PermissionChangeApprovals';
 import PriceApprovalPanel from './PriceApprovalPanel';
 import AttendanceOverviewCard from './AttendanceOverviewCard';
 import DueInstallmentsCard from './DueInstallmentsCard';
+import SystemRedFlagsPanel from './SystemRedFlagsPanel';
 
 import { DataArchiveManager } from './DataArchiveManager';
 import { usePresenceList } from '@/hooks/usePresenceList';
@@ -89,6 +90,7 @@ const AdminDashboard = () => {
         </div>
 
         <TabsContent value="overview" className="space-y-6">
+          <SystemRedFlagsPanel />
           {/* System Status Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <Card className="border-2 hover:shadow-lg transition-all">

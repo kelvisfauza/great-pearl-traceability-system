@@ -1,4 +1,6 @@
 # Project architecture
+
+- Detect system integrity red flags from explicit record links via change-triggered scans, keep privileged processing in a non-exposed schema, and resolve tasks only when their source issue disappears; administrators claim and annotate tasks without altering source records.
  
 - Normalize legacy station-based price SMS at the sending boundary, queue and resender using the shared compact-price-sms helper; preserve original station amounts rather than replacing them with later saved prices, so older installed clients cannot send duplicate buying/reference blocks.
 
