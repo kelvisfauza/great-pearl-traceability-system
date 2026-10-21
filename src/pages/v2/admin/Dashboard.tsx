@@ -6,6 +6,7 @@ import StoreRealTimeTracker from "@/components/v2/admin/StoreRealTimeTracker";
 import PriceApprovalPanel from "@/components/admin/PriceApprovalPanel";
 import AttendanceOverviewCard from "@/components/admin/AttendanceOverviewCard";
 import LoanStatsCard from "@/components/admin/LoanStatsCard";
+import SystemRedFlagsPanel from "@/components/admin/SystemRedFlagsPanel";
 import { Shield, Users, Settings, BarChart3, Package, FlaskConical, Warehouse, ShoppingCart, TrendingUp, FileText, Activity, Banknote, ArrowRight, ArrowDownToLine } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -92,6 +93,7 @@ const AdminDashboard = () => {
             </Card>
 
             {/* Price Approval Requests - Admin Only */}
+            <SystemRedFlagsPanel />
             <PriceApprovalPanel />
 
             {/* Pending Loan Applications */}
