@@ -46,6 +46,7 @@ const ROWS: { key?: FieldKey; label: string; hint?: string; dual?: boolean }[] =
   
   { key: 'supplier_name', label: 'Supplier Name' },
   { key: 'analysis_date', label: 'Date' },
+  { key: 'ref_price', label: 'Reference Price (UGX per KG)' },
   { key: 'grams', label: 'Grams Used (Sample Weight)' },
   { key: 'moisture', label: 'Moisture Content (M.C %)' },
   { key: 'below12', label: 'Below 12', dual: true },
@@ -56,7 +57,6 @@ const ROWS: { key?: FieldKey; label: string; hint?: string; dual?: boolean }[] =
   { key: 'non_coffee', label: 'Non-Coffee', dual: true },
   { key: 'outturn', label: 'Outturn', dual: true },
   { key: 'robusta', label: 'Robusta', hint: 'Yes / No' },
-  { key: 'ref_price', label: 'Reference Price (UGX per KG)' },
   { key: 'price', label: 'Price (UGX per KG)' },
   { key: 'analysed_by', label: 'Analysed By' },
   { key: 'comments', label: 'Comments' },
