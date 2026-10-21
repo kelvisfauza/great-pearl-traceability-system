@@ -38,29 +38,32 @@ const loadImageAsBase64 = (url: string): Promise<string | null> =>
 
 type FieldKey =
   | 'supplier_name' | 'analysis_date' | 'grams' | 'moisture' | 'below12' | 'gp1' | 'gp2'
-  | 'pods' | 'husks' | 'non_coffee' | 'outturn' | 'robusta' | 'price' | 'analysed_by' | 'comments';
+  | 'pods' | 'husks' | 'non_coffee' | 'outturn' | 'robusta' | 'ref_price' | 'price' | 'analysed_by' | 'comments';
 
-const ROWS: { key?: FieldKey; label: string; hint?: string }[] = [
+/** Rows marked dual print two boxes: grams weighed on the left, percentage on the right. */
+const ROWS: { key?: FieldKey; label: string; hint?: string; dual?: boolean }[] = [
   { label: 'Form No.' },
   
   { key: 'supplier_name', label: 'Supplier Name' },
   { key: 'analysis_date', label: 'Date' },
   { key: 'grams', label: 'Grams Used (Sample Weight)' },
   { key: 'moisture', label: 'Moisture Content (M.C %)' },
-  { key: 'below12', label: 'Below 12% (%)' },
-  { key: 'gp1', label: 'Group 1 Defects (%)' },
-  { key: 'gp2', label: 'Group 2 Defects (%)' },
-  { key: 'pods', label: 'Pods (%)' },
-  { key: 'husks', label: 'Husks (%)' },
-  { key: 'non_coffee', label: 'Non-Coffee (%)' },
-  { key: 'outturn', label: 'Outturn (%)' },
+  { key: 'below12', label: 'Below 12', dual: true },
+  { key: 'gp1', label: 'Group 1 Defects', dual: true },
+  { key: 'gp2', label: 'Group 2 Defects', dual: true },
+  { key: 'pods', label: 'Pods', dual: true },
+  { key: 'husks', label: 'Husks', dual: true },
+  { key: 'non_coffee', label: 'Non-Coffee', dual: true },
+  { key: 'outturn', label: 'Outturn', dual: true },
   { key: 'robusta', label: 'Robusta', hint: 'Yes / No' },
+  { key: 'ref_price', label: 'Reference Price (UGX per KG)' },
   { key: 'price', label: 'Price (UGX per KG)' },
   { key: 'analysed_by', label: 'Analysed By' },
   { key: 'comments', label: 'Comments' },
 ];
 
-type Values = Partial<Record<FieldKey, string>>;
+type Values = Partial<Record<string, string>>;
+const gKey = (k: FieldKey) => `${k}_g`;
 
 const generateQualityForm = async (
   entries: { formNumber: string; values?: Values }[],
@@ -127,7 +130,20 @@ const generateQualityForm = async (
       doc.text(r.label, margin + 3, y + rowH / 2 + 1);
 
       const filledValue = r.key ? (values?.[r.key] || '').toString().trim() : '';
-      if (r.label === 'Form No.') {
+      if (r.dual && r.key) {
+        const half = valueW / 2;
+        doc.line(margin + labelW + half, y, margin + labelW + half, y + rowH);
+        const gVal = (values?.[gKey(r.key)] || '').toString().trim();
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        if (gVal) doc.text(gVal, margin + labelW + 4, y + rowH / 2 + 1);
+        if (filledValue) doc.text(filledValue, margin + labelW + half + 4, y + rowH / 2 + 1);
+        doc.setFontSize(8);
+        doc.setTextColor(90, 90, 90);
+        doc.text('g', margin + labelW + half - 3, y + rowH / 2 + 1, { align: 'right' });
+        doc.text('%', margin + contentW - 3, y + rowH / 2 + 1, { align: 'right' });
+      } else if (r.label === 'Form No.') {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
@@ -215,19 +231,20 @@ const generateQualityForm = async (
 const emptyValues: Values = {
   supplier_name: '', analysis_date: new Date().toISOString().slice(0, 10), grams: '', moisture: '',
   below12: '', gp1: '', gp2: '', pods: '', husks: '', non_coffee: '', outturn: '',
-  robusta: '', price: '', analysed_by: '', comments: '',
+  robusta: '', ref_price: '', price: '', analysed_by: '', comments: '',
 };
 
-const NUMERIC_FIELDS: { key: FieldKey; label: string }[] = [
+const NUMERIC_FIELDS: { key: FieldKey; label: string; dual?: boolean }[] = [
   { key: 'grams', label: 'Grams used (sample weight)' },
   { key: 'moisture', label: 'Moisture (M.C %)' },
-  { key: 'below12', label: 'Below 12 (%)' },
-  { key: 'gp1', label: 'Group 1 defects (%)' },
-  { key: 'gp2', label: 'Group 2 defects (%)' },
-  { key: 'pods', label: 'Pods (%)' },
-  { key: 'husks', label: 'Husks (%)' },
-  { key: 'non_coffee', label: 'Non-coffee (%)' },
-  { key: 'outturn', label: 'Outturn (%)' },
+  { key: 'below12', label: 'Below 12', dual: true },
+  { key: 'gp1', label: 'Group 1 defects', dual: true },
+  { key: 'gp2', label: 'Group 2 defects', dual: true },
+  { key: 'pods', label: 'Pods', dual: true },
+  { key: 'husks', label: 'Husks', dual: true },
+  { key: 'non_coffee', label: 'Non-coffee', dual: true },
+  { key: 'outturn', label: 'Outturn', dual: true },
+  { key: 'ref_price', label: 'Reference price (UGX per KG)' },
   { key: 'price', label: 'Price (UGX per KG)' },
 ];
 
@@ -440,7 +457,38 @@ const QualityAnalysisFormDownload = () => {
                   </Select>
                 </div>
 
-                {NUMERIC_FIELDS.map((f) => (
+                {NUMERIC_FIELDS.map((f) => f.dual ? (
+                  <div key={f.key} className="space-y-2 sm:col-span-2">
+                    <Label>{f.label}</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="Grams (g)"
+                        value={values[gKey(f.key)] || ''}
+                        onChange={(e) => {
+                          const g = e.target.value;
+                          const sample = Number.parseFloat(values.grams || '');
+                          const gNum = Number.parseFloat(g);
+                          setValues((prev) => ({
+                            ...prev,
+                            [gKey(f.key)]: g,
+                            ...(sample > 0 && Number.isFinite(gNum)
+                              ? { [f.key]: ((gNum / sample) * 100).toFixed(1) }
+                              : {}),
+                          }));
+                        }}
+                      />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="Percentage (%)"
+                        value={values[f.key] || ''}
+                        onChange={(e) => setField(f.key, e.target.value)}
+                      />
+                    </div>
+                  </div>
+                ) : (
                   <div key={f.key} className="space-y-2">
                     <Label>{f.label}</Label>
                     <Input
