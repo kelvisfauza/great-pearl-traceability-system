@@ -10114,6 +10114,75 @@ export type Database = {
         }
         Relationships: []
       }
+      quality_analysis_postings: {
+        Row: {
+          analysis_date: string | null
+          batch_number: string | null
+          created_at: string
+          filename: string
+          form_number: string | null
+          id: string
+          mime_type: string
+          received_at: string
+          recognition_reason: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          sender_email: string | null
+          sender_name: string | null
+          source_key: string
+          status: string
+          storage_path: string
+          subject: string
+          supplier_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          analysis_date?: string | null
+          batch_number?: string | null
+          created_at?: string
+          filename: string
+          form_number?: string | null
+          id?: string
+          mime_type: string
+          received_at: string
+          recognition_reason?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sender_email?: string | null
+          sender_name?: string | null
+          source_key: string
+          status?: string
+          storage_path: string
+          subject: string
+          supplier_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          analysis_date?: string | null
+          batch_number?: string | null
+          created_at?: string
+          filename?: string
+          form_number?: string | null
+          id?: string
+          mime_type?: string
+          received_at?: string
+          recognition_reason?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sender_email?: string | null
+          sender_name?: string | null
+          source_key?: string
+          status?: string
+          storage_path?: string
+          subject?: string
+          supplier_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       quality_assessments: {
         Row: {
           admin_discretion_at: string | null
@@ -10547,6 +10616,75 @@ export type Database = {
           original_price?: number | null
           reviewer_email?: string | null
           reviewer_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      quality_outlook_checked_items: {
+        Row: {
+          created_at: string
+          outcome: string
+          source_key: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          outcome: string
+          source_key: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          outcome?: string
+          source_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      quality_outlook_sync_state: {
+        Row: {
+          attachment_cursor: number
+          checked_attachments: number
+          created_at: string
+          cursor_path: string | null
+          id: string
+          last_error: string | null
+          last_run_at: string | null
+          last_success_at: string | null
+          lease_token: string | null
+          lease_until: string | null
+          pause_reason: string | null
+          paused: boolean
+          updated_at: string
+        }
+        Insert: {
+          attachment_cursor?: number
+          checked_attachments?: number
+          created_at?: string
+          cursor_path?: string | null
+          id?: string
+          last_error?: string | null
+          last_run_at?: string | null
+          last_success_at?: string | null
+          lease_token?: string | null
+          lease_until?: string | null
+          pause_reason?: string | null
+          paused?: boolean
+          updated_at?: string
+        }
+        Update: {
+          attachment_cursor?: number
+          checked_attachments?: number
+          created_at?: string
+          cursor_path?: string | null
+          id?: string
+          last_error?: string | null
+          last_run_at?: string | null
+          last_success_at?: string | null
+          lease_token?: string | null
+          lease_until?: string | null
+          pause_reason?: string | null
+          paused?: boolean
           updated_at?: string
         }
         Relationships: []
@@ -17537,6 +17675,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      acquire_quality_outlook_lease: {
+        Args: { p_token: string }
+        Returns: Json
+      }
       admin_delete_all_system_data: { Args: never; Returns: Json }
       admin_overdraft_close: {
         Args: { p_account_id: string; p_admin_email: string }
@@ -17688,6 +17830,7 @@ export type Database = {
         Returns: boolean
       }
       can_track_payments: { Args: never; Returns: boolean }
+      can_view_quality_postings: { Args: never; Returns: boolean }
       charge_balance_check: { Args: never; Returns: Json }
       charge_statement_fee: {
         Args: { p_period_from: string; p_period_to: string; p_user_id: string }
@@ -18414,6 +18557,7 @@ export type Database = {
         Args: { _device_token: string; _lookup: string; _pin: string }
         Returns: Json
       }
+      quality_outlook_status: { Args: never; Returns: Json }
       rebuild_inventory_batches: {
         Args: never
         Returns: {
@@ -18512,6 +18656,10 @@ export type Database = {
       }
       reverse_wallet_transfer: {
         Args: { p_admin_reason: string; p_ledger_entry_id: string }
+        Returns: Json
+      }
+      review_quality_posting: {
+        Args: { p_id: string; p_notes: string; p_status: string }
         Returns: Json
       }
       review_system_red_flag: {
