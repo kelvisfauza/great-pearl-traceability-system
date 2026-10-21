@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Collect Outlook quality analysis attachments and add V1 Quality Analysis Postings with administrator review
+- [x] Collect Outlook quality analysis attachments and add V1 Quality Analysis Postings with administrator review (two actual PDF forms imported; authenticated review UI unavailable on external Supabase)
 
 - [x] Add admin red-flag tasks for missing Quality analysis attachments, duplicate Store clearance numbers and cross-department integrity issues (database rules and lifecycle verified; authenticated UI review unavailable on external Supabase)
 
