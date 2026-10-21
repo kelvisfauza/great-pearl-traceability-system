@@ -39,7 +39,6 @@ project_id = "pudfybkyfedeggmokhco"
   [functions.receipt-link]
     verify_jwt = false
   [functions.overdraft-recovery-notify]
-    verify_jwt = false
     verify_jwt = true
   [functions.weighbridge-upload-ticket]
     verify_jwt = false
@@ -217,4 +216,7 @@ project_id = "pudfybkyfedeggmokhco"
 verify_jwt = false
 
 [functions.finance-wallet-withdraw]
+verify_jwt = false
+
+[functions.quality-outlook-sync]
 verify_jwt = false
