@@ -231,19 +231,20 @@ const generateQualityForm = async (
 const emptyValues: Values = {
   supplier_name: '', analysis_date: new Date().toISOString().slice(0, 10), grams: '', moisture: '',
   below12: '', gp1: '', gp2: '', pods: '', husks: '', non_coffee: '', outturn: '',
-  robusta: '', price: '', analysed_by: '', comments: '',
+  robusta: '', ref_price: '', price: '', analysed_by: '', comments: '',
 };
 
-const NUMERIC_FIELDS: { key: FieldKey; label: string }[] = [
+const NUMERIC_FIELDS: { key: FieldKey; label: string; dual?: boolean }[] = [
   { key: 'grams', label: 'Grams used (sample weight)' },
   { key: 'moisture', label: 'Moisture (M.C %)' },
-  { key: 'below12', label: 'Below 12 (%)' },
-  { key: 'gp1', label: 'Group 1 defects (%)' },
-  { key: 'gp2', label: 'Group 2 defects (%)' },
-  { key: 'pods', label: 'Pods (%)' },
-  { key: 'husks', label: 'Husks (%)' },
-  { key: 'non_coffee', label: 'Non-coffee (%)' },
-  { key: 'outturn', label: 'Outturn (%)' },
+  { key: 'below12', label: 'Below 12', dual: true },
+  { key: 'gp1', label: 'Group 1 defects', dual: true },
+  { key: 'gp2', label: 'Group 2 defects', dual: true },
+  { key: 'pods', label: 'Pods', dual: true },
+  { key: 'husks', label: 'Husks', dual: true },
+  { key: 'non_coffee', label: 'Non-coffee', dual: true },
+  { key: 'outturn', label: 'Outturn', dual: true },
+  { key: 'ref_price', label: 'Reference price (UGX per KG)' },
   { key: 'price', label: 'Price (UGX per KG)' },
 ];
 
