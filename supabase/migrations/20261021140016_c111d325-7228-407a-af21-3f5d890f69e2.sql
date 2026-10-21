@@ -1,0 +1,3 @@
+REVOKE ALL ON FUNCTION public.can_view_quality_postings() FROM PUBLIC,anon; GRANT EXECUTE ON FUNCTION public.can_view_quality_postings() TO authenticated,service_role;
+CREATE POLICY outlook_state_service_only ON public.quality_outlook_sync_state FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY outlook_checked_service_only ON public.quality_outlook_checked_items FOR ALL TO service_role USING (true) WITH CHECK (true);
