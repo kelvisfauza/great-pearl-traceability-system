@@ -39,7 +39,10 @@ Deno.serve(async (req) => {
         const rights = await caller.rpc('can_manage_system_red_flags'); admin = rights.data === true;
       }
     } else if (!internal && body.action === 'scheduled') {
-      permitted = req.headers.get('apikey') === Deno.env.get('SUPABASE_ANON_KEY');
+      // External-project schedules use the project's publishable legacy key, which
+      // can differ from the runtime-injected anon key.
+      permitted = req.headers.get('apikey') === Deno.env.get('SUPABASE_ANON_KEY') || req.headers.get('apikey') === 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1ZGZ5Ymt5ZmVkZWdnbW9raGNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNDAxNjEsImV4cCI6MjA2NzkxNjE2MX0.RSK-BwEjyRMn9YM998_93-W9g8obmjnLXgOgTrIAZJk';
+      if (!permitted) return json({ok:false,error:'Quality access required'},401);
       const { data: state } = await db.from('quality_outlook_sync_state').select('last_run_at').eq('id','outlook').single();
       if (!scheduledCheckDue(state?.last_run_at)) return json({ok:true, skipped:true});
     }
