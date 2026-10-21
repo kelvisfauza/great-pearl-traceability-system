@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
         permitted = access.data === true;
         const rights = await caller.rpc('can_manage_system_red_flags'); admin = rights.data === true;
       }
-    } else if (body.action === 'scheduled') {
+    } else if (!internal && body.action === 'scheduled') {
       permitted = req.headers.get('apikey') === Deno.env.get('SUPABASE_ANON_KEY');
       const { data: state } = await db.from('quality_outlook_sync_state').select('last_run_at').eq('id','outlook').single();
       if (!scheduledCheckDue(state?.last_run_at)) return json({ok:true, skipped:true});
