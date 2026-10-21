@@ -13925,6 +13925,63 @@ export type Database = {
         }
         Relationships: []
       }
+      system_red_flags: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          department: string
+          details: Json
+          fingerprint: string
+          first_detected_at: string
+          id: string
+          last_detected_at: string
+          resolved_at: string | null
+          review_notes: string | null
+          review_path: string
+          rule_key: string
+          severity: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          department: string
+          details?: Json
+          fingerprint: string
+          first_detected_at?: string
+          id?: string
+          last_detected_at?: string
+          resolved_at?: string | null
+          review_notes?: string | null
+          review_path: string
+          rule_key: string
+          severity: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          department?: string
+          details?: Json
+          fingerprint?: string
+          first_detected_at?: string
+          id?: string
+          last_detected_at?: string
+          resolved_at?: string | null
+          review_notes?: string | null
+          review_path?: string
+          rule_key?: string
+          severity?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       system_settings: {
         Row: {
           setting_key: string
@@ -17340,6 +17397,18 @@ export type Database = {
           },
         ]
       }
+      system_red_flag_candidates: {
+        Row: {
+          department: string | null
+          details: Json | null
+          fingerprint: string | null
+          review_path: string | null
+          rule_key: string | null
+          severity: string | null
+          title: string | null
+        }
+        Relationships: []
+      }
       withdrawal_requests: {
         Row: {
           admin_approved: boolean | null
@@ -17606,6 +17675,7 @@ export type Database = {
       }
       can_manage_employees: { Args: never; Returns: boolean }
       can_manage_quality_assessments: { Args: never; Returns: boolean }
+      can_manage_system_red_flags: { Args: never; Returns: boolean }
       can_manage_users: { Args: never; Returns: boolean }
       can_perform_action: { Args: { action_type: string }; Returns: boolean }
       can_process_finance: { Args: never; Returns: boolean }
@@ -18380,6 +18450,11 @@ export type Database = {
         }
         Returns: string
       }
+      red_flag_form_key: { Args: { value: string }; Returns: string }
+      red_flag_missing_analysis: {
+        Args: { has_file: boolean; has_sampling: boolean }
+        Returns: boolean
+      }
       refresh_current_week_allowances: { Args: never; Returns: Json }
       refresh_monthly_payment_summary: { Args: never; Returns: undefined }
       reject_budget_withdrawal: {
@@ -18439,6 +18514,11 @@ export type Database = {
         Args: { p_admin_reason: string; p_ledger_entry_id: string }
         Returns: Json
       }
+      review_system_red_flag: {
+        Args: { p_claim?: boolean; p_id: string; p_notes: string }
+        Returns: Json
+      }
+      scan_system_red_flags: { Args: never; Returns: Json }
       send_birthday_wish: {
         Args: { p_recipient_employee_id: string }
         Returns: Json
