@@ -457,7 +457,38 @@ const QualityAnalysisFormDownload = () => {
                   </Select>
                 </div>
 
-                {NUMERIC_FIELDS.map((f) => (
+                {NUMERIC_FIELDS.map((f) => f.dual ? (
+                  <div key={f.key} className="space-y-2 sm:col-span-2">
+                    <Label>{f.label}</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="Grams (g)"
+                        value={values[gKey(f.key)] || ''}
+                        onChange={(e) => {
+                          const g = e.target.value;
+                          const sample = Number.parseFloat(values.grams || '');
+                          const gNum = Number.parseFloat(g);
+                          setValues((prev) => ({
+                            ...prev,
+                            [gKey(f.key)]: g,
+                            ...(sample > 0 && Number.isFinite(gNum)
+                              ? { [f.key]: ((gNum / sample) * 100).toFixed(1) }
+                              : {}),
+                          }));
+                        }}
+                      />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="Percentage (%)"
+                        value={values[f.key] || ''}
+                        onChange={(e) => setField(f.key, e.target.value)}
+                      />
+                    </div>
+                  </div>
+                ) : (
                   <div key={f.key} className="space-y-2">
                     <Label>{f.label}</Label>
                     <Input
