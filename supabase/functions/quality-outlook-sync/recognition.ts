@@ -3,7 +3,7 @@ export function supportedAttachment(a: { isInline?: boolean; contentType?: strin
     (a.contentType === 'application/pdf' || ['image/jpeg','image/png','image/webp'].includes(a.contentType ?? ''));
 }
 export function validatedGraphPath(value: string) {
-  const url = new URL(value, 'https://graph.microsoft.com/v1.0/');
+  const url = new URL(value.startsWith('/me/messages') ? '/v1.0'+value : value, 'https://graph.microsoft.com/v1.0/');
   if (url.origin !== 'https://graph.microsoft.com' || !url.pathname.startsWith('/v1.0/me/messages')) throw new Error('Invalid Outlook continuation');
   return url.pathname.slice('/v1.0'.length) + url.search;
 }
