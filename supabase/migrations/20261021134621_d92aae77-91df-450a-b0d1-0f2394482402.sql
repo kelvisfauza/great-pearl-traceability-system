@@ -1,0 +1,11 @@
+CREATE SCHEMA IF NOT EXISTS system_integrity_private; REVOKE ALL ON SCHEMA system_integrity_private FROM PUBLIC,anon; GRANT USAGE ON SCHEMA system_integrity_private TO authenticated,service_role;
+ALTER FUNCTION public.can_manage_system_red_flags() SET SCHEMA system_integrity_private;
+ALTER FUNCTION public.scan_system_red_flags() SET SCHEMA system_integrity_private;
+ALTER FUNCTION public.review_system_red_flag(uuid,text,boolean) SET SCHEMA system_integrity_private;
+ALTER FUNCTION public.detect_system_red_flags_on_change() SET SCHEMA system_integrity_private;
+CREATE FUNCTION public.can_manage_system_red_flags() RETURNS boolean LANGUAGE sql STABLE SECURITY INVOKER SET search_path=public AS $$ SELECT system_integrity_private.can_manage_system_red_flags(); $$;
+CREATE FUNCTION public.scan_system_red_flags() RETURNS jsonb LANGUAGE sql SECURITY INVOKER SET search_path=public AS $$ SELECT system_integrity_private.scan_system_red_flags(); $$;
+CREATE FUNCTION public.review_system_red_flag(p_id uuid,p_notes text,p_claim boolean DEFAULT false) RETURNS jsonb LANGUAGE sql SECURITY INVOKER SET search_path=public AS $$ SELECT system_integrity_private.review_system_red_flag(p_id,p_notes,p_claim); $$;
+REVOKE ALL ON FUNCTION public.can_manage_system_red_flags(),public.scan_system_red_flags(),public.review_system_red_flag(uuid,text,boolean) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.can_manage_system_red_flags(),public.scan_system_red_flags(),public.review_system_red_flag(uuid,text,boolean) TO authenticated,service_role;
+REVOKE ALL ON FUNCTION public.touch_system_red_flag() FROM PUBLIC,anon,authenticated;
