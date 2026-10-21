@@ -1,0 +1,1 @@
+DO $$ DECLARE definition text; BEGIN SELECT pg_get_functiondef('system_integrity_private.scan_system_red_flags()'::regprocedure) INTO definition; definition:=replace(definition,'SELECT 1 FROM pg_temp.current_red_flags c WHERE c.fingerprint=f.fingerprint','SELECT 1 FROM pg_temp.current_red_flags candidate WHERE candidate.fingerprint=f.fingerprint'); EXECUTE definition; END; $$;
