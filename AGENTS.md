@@ -1,6 +1,6 @@
 # Project architecture
 
-- Collect Outlook quality postings through a bounded, database-leased attachment recognizer with immutable message/attachment deduplication, private files and permission-checked administrator reviews; mailbox events trigger collection and hourly reconciliation renews subscriptions and advances historical scanning without changing coffee assessments.
+- Collect Outlook quality postings through a bounded, database-leased attachment recognizer with immutable deduplication and private files; mailbox events collect arrivals, recent-mail reconciliation has a separate cursor from hourly historical scanning and subscription renewal. Link only unique exact references automatically; date/supplier candidates require administrator confirmation through permission-checked private-schema routines without changing original assessments or deliveries.
 
 - Detect system integrity red flags from explicit record links via change-triggered scans, keep privileged processing in a non-exposed schema, and resolve tasks only when their source issue disappears; administrators claim and annotate tasks without altering source records.
  

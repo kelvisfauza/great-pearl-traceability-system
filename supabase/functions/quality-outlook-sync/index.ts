@@ -4,9 +4,9 @@ import { createOpenAI } from 'npm:@ai-sdk/openai@3';
 import { streamText, Output } from 'npm:ai@6';
 import { z } from 'npm:zod@4';
 import { createLovableAiGatewayRunIdFetch } from './run-id.ts';
-import { supportedAttachment, validatedGraphPath } from './recognition.ts';
+import { supportedAttachment, validatedGraphPath, scheduledCheckDue } from './recognition.ts';
 
-const Recognition = z.object({ is_quality_analysis: z.boolean(), reason: z.string(), form_number: z.string().nullable(), supplier_name: z.string().nullable(), batch_number: z.string().nullable(), analysis_date: z.string().nullable() });
+const Recognition = z.object({ is_quality_analysis: z.boolean(), reason: z.string(), form_number: z.string().nullable(), sampling_order_number: z.string().nullable(), supplier_name: z.string().nullable(), batch_number: z.string().nullable(), analysis_date: z.string().nullable() });
 const initialPath = '/me/messages?$filter=receivedDateTime%20ge%201900-01-01T00:00:00Z%20and%20hasAttachments%20eq%20true&$top=1&$orderby=receivedDateTime%20desc&$select=id,subject,from,receivedDateTime,bodyPreview';
 const BUCKET = 'quality-outlook-postings';
 
@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
     } else if (body.action === 'scheduled') {
       permitted = req.headers.get('apikey') === Deno.env.get('SUPABASE_ANON_KEY');
       const { data: state } = await db.from('quality_outlook_sync_state').select('last_run_at').eq('id','outlook').single();
-      if (state?.last_run_at && Date.now() - Date.parse(state.last_run_at) < 55*60*1000) return json({ok:true, skipped:true});
+      if (!scheduledCheckDue(state?.last_run_at)) return json({ok:true, skipped:true});
     }
     if (!permitted) return json({ok:false,error:'Quality access required'},401);
     if (!key || !connector || !secret) return json({ok:false,error:'Outlook collection is not configured'});
@@ -59,23 +59,26 @@ Deno.serve(async (req) => {
       if (!response.ok) { upstreamStatus=response.status; const details=await response.text(); console.error('Outlook failed',response.status,details); throw new Error(`Outlook [${response.status}]: ${details}`); }
       return response.status===204 ? {} : response.json();
     };
-    // Event-driven collection, with an hourly reconciliation that also renews the expiring subscription.
-    if (!webhook) {
+    // Event-driven arrivals plus minute recent-mail reconciliation; renewal remains hourly.
+    if (!webhook && (body.action !== 'scheduled' || new Date().getUTCMinutes() === 0)) {
       const subscriptions = await graph('/subscriptions');
       const callback = `${Deno.env.get('SUPABASE_URL')}/functions/v1/quality-outlook-sync`;
       const current = subscriptions.value?.find((s:any)=>s.notificationUrl===callback);
       const expirationDateTime = new Date(Date.now()+2*24*60*60*1000).toISOString();
-      if (!current) await graph('/subscriptions',{method:'POST',body:JSON.stringify({changeType:'created',notificationUrl:callback,resource:"me/mailFolders('inbox')/messages",expirationDateTime,clientState:secret})});
+      if (!current) await graph('/subscriptions',{method:'POST',body:JSON.stringify({changeType:'created',notificationUrl:callback,resource:'me/messages',expirationDateTime,clientState:secret})});
       else if (Date.parse(current.expirationDateTime)-Date.now()<24*60*60*1000) await graph('/subscriptions/'+encodeURIComponent(current.id),{method:'PATCH',body:JSON.stringify({expirationDateTime})});
     }
     let imported=0, checked=0;
-    let cursor=state.cursor_path || initialPath;
-    let attachmentCursor=state.attachment_cursor || 0;
+    const recent = !webhook && body.action === 'scheduled' && new Date().getUTCMinutes() !== 0;
+    const recentStart = '/me/messages?$filter=receivedDateTime%20ge%20'+new Date(Date.now()-3*24*60*60*1000).toISOString()+'%20and%20hasAttachments%20eq%20true&$top=1&$orderby=receivedDateTime%20desc&$select=id,subject,from,receivedDateTime,bodyPreview';
+    const startPath = recent ? recentStart : initialPath;
+    let cursor=(recent ? state.recent_cursor_path : state.cursor_path) || startPath;
+    let attachmentCursor=(recent ? state.recent_attachment_cursor : state.attachment_cursor) || 0;
     const eventIds = webhook ? body.value.map((n:any)=>n.resourceData?.id).filter((id:any)=>typeof id==='string').slice(0,2) : [];
     for (let i=0; i<(webhook ? eventIds.length : 10); i++) {
       const page = webhook ? {value:[await graph('/me/messages/'+encodeURIComponent(eventIds[i])+'?$select=id,subject,from,receivedDateTime,bodyPreview')]} : await graph(validatedGraphPath(cursor));
       const message=page.value?.[0];
-      if (!message) { cursor=initialPath; attachmentCursor=0; break; }
+      if (!message) { cursor=null; attachmentCursor=0; break; }
       const attachments=await graph('/me/messages/'+encodeURIComponent(message.id)+'/attachments?$select=id,name,contentType,size,isInline');
       const files=attachments.value ?? [];
       let completed=true;
@@ -102,16 +105,16 @@ Deno.serve(async (req) => {
           const path=hash+'/'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
           const bytes=Uint8Array.from(atob(full.contentBytes),c=>c.charCodeAt(0));
           const uploaded=await db.storage.from(BUCKET).upload(path,bytes,{contentType:file.contentType,upsert:true}); if(uploaded.error) throw uploaded.error;
-          const saved=await db.from('quality_analysis_postings').upsert({source_key:sourceKey,subject:message.subject ?? '(No subject)',sender_name:message.from?.emailAddress?.name,sender_email:message.from?.emailAddress?.address,received_at:message.receivedDateTime,filename:file.name,mime_type:file.contentType,storage_path:path,form_number:decision.form_number,supplier_name:decision.supplier_name,batch_number:decision.batch_number,analysis_date:decision.analysis_date,recognition_reason:decision.reason},{onConflict:'source_key',ignoreDuplicates:true}); if(saved.error) throw saved.error;
+          const saved=await db.from('quality_analysis_postings').upsert({source_key:sourceKey,subject:message.subject || '(No subject)',sender_name:message.from?.emailAddress?.name,sender_email:message.from?.emailAddress?.address,received_at:message.receivedDateTime,filename:file.name,mime_type:file.contentType,storage_path:path,form_number:decision.form_number,sampling_order_number:decision.sampling_order_number,supplier_name:decision.supplier_name,batch_number:decision.batch_number,analysis_date:decision.analysis_date,recognition_reason:decision.reason},{onConflict:'source_key',ignoreDuplicates:true}); if(saved.error) throw saved.error;
           imported++;
         }
         const marked=await db.from('quality_outlook_checked_items').insert({source_key:sourceKey,outcome:decision.is_quality_analysis?'imported':'not_quality'}); if(marked.error) throw marked.error;
         checked++;
       }
-      if (!webhook) {if(!completed) break; attachmentCursor=0; cursor=page['@odata.nextLink'] ? validatedGraphPath(page['@odata.nextLink']) : initialPath; if(!page['@odata.nextLink']) break;}
+      if (!webhook) {if(!completed) break; attachmentCursor=0; cursor=page['@odata.nextLink'] ? validatedGraphPath(page['@odata.nextLink']) : null; if(!page['@odata.nextLink']) break;}
       if(checked>=2) break;
     }
-    const savedState=await db.from('quality_outlook_sync_state').update({...(webhook ? {} : {cursor_path:cursor,attachment_cursor:attachmentCursor}),last_success_at:new Date().toISOString(),last_error:null,checked_attachments:Number(state.checked_attachments)+checked}).eq('id','outlook').eq('lease_token',token); if(savedState.error) throw savedState.error;
+    const savedState=await db.from('quality_outlook_sync_state').update({...(webhook ? {} : recent ? {recent_cursor_path:cursor,recent_attachment_cursor:attachmentCursor} : {cursor_path:cursor,attachment_cursor:attachmentCursor}),last_success_at:new Date().toISOString(),last_error:null,checked_attachments:Number(state.checked_attachments)+checked}).eq('id','outlook').eq('lease_token',token); if(savedState.error) throw savedState.error;
     return json({ok:true,imported,checked});
   } catch(error:any) {
     const message=error.message ?? 'Outlook collection failed';
