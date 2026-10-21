@@ -7,7 +7,7 @@ import { createLovableAiGatewayRunIdFetch } from './run-id.ts';
 import { supportedAttachment, validatedGraphPath } from './recognition.ts';
 
 const Recognition = z.object({ is_quality_analysis: z.boolean(), reason: z.string(), form_number: z.string().nullable(), supplier_name: z.string().nullable(), batch_number: z.string().nullable(), analysis_date: z.string().nullable() });
-const initialPath = '/me/messages?$filter=hasAttachments%20eq%20true&$top=1&$orderby=receivedDateTime%20desc&$select=id,subject,from,receivedDateTime,bodyPreview';
+const initialPath = '/me/messages?$filter=receivedDateTime%20ge%201900-01-01T00:00:00Z%20and%20hasAttachments%20eq%20true&$top=1&$orderby=receivedDateTime%20desc&$select=id,subject,from,receivedDateTime,bodyPreview';
 const BUCKET = 'quality-outlook-postings';
 
 Deno.serve(async (req) => {
