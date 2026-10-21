@@ -10122,12 +10122,18 @@ export type Database = {
           filename: string
           form_number: string | null
           id: string
+          link_method: string | null
+          linked_at: string | null
+          linked_by: string | null
+          linked_delivery_id: string | null
+          linked_sampling_order_id: string | null
           mime_type: string
           received_at: string
           recognition_reason: string | null
           review_notes: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          sampling_order_number: string | null
           sender_email: string | null
           sender_name: string | null
           source_key: string
@@ -10144,12 +10150,18 @@ export type Database = {
           filename: string
           form_number?: string | null
           id?: string
+          link_method?: string | null
+          linked_at?: string | null
+          linked_by?: string | null
+          linked_delivery_id?: string | null
+          linked_sampling_order_id?: string | null
           mime_type: string
           received_at: string
           recognition_reason?: string | null
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          sampling_order_number?: string | null
           sender_email?: string | null
           sender_name?: string | null
           source_key: string
@@ -10166,12 +10178,18 @@ export type Database = {
           filename?: string
           form_number?: string | null
           id?: string
+          link_method?: string | null
+          linked_at?: string | null
+          linked_by?: string | null
+          linked_delivery_id?: string | null
+          linked_sampling_order_id?: string | null
           mime_type?: string
           received_at?: string
           recognition_reason?: string | null
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          sampling_order_number?: string | null
           sender_email?: string | null
           sender_name?: string | null
           source_key?: string
@@ -10181,7 +10199,22 @@ export type Database = {
           supplier_name?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "quality_analysis_postings_linked_delivery_id_fkey"
+            columns: ["linked_delivery_id"]
+            isOneToOne: false
+            referencedRelation: "coffee_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quality_analysis_postings_linked_sampling_order_id_fkey"
+            columns: ["linked_sampling_order_id"]
+            isOneToOne: false
+            referencedRelation: "quality_sampling_orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       quality_assessments: {
         Row: {
@@ -10655,6 +10688,8 @@ export type Database = {
           lease_until: string | null
           pause_reason: string | null
           paused: boolean
+          recent_attachment_cursor: number
+          recent_cursor_path: string | null
           updated_at: string
         }
         Insert: {
@@ -10670,6 +10705,8 @@ export type Database = {
           lease_until?: string | null
           pause_reason?: string | null
           paused?: boolean
+          recent_attachment_cursor?: number
+          recent_cursor_path?: string | null
           updated_at?: string
         }
         Update: {
@@ -10685,6 +10722,8 @@ export type Database = {
           lease_until?: string | null
           pause_reason?: string | null
           paused?: boolean
+          recent_attachment_cursor?: number
+          recent_cursor_path?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -18406,6 +18445,10 @@ export type Database = {
         Args: { p_count?: number; p_issued_by_name?: string }
         Returns: string[]
       }
+      link_quality_posting: {
+        Args: { p_delivery_id?: string; p_id: string; p_order_id?: string }
+        Returns: Json
+      }
       list_overdraft_accounts_admin: {
         Args: { p_email: string }
         Returns: {
@@ -18558,6 +18601,7 @@ export type Database = {
         Returns: Json
       }
       quality_outlook_status: { Args: never; Returns: Json }
+      quality_posting_candidates: { Args: { p_id: string }; Returns: Json }
       rebuild_inventory_batches: {
         Args: never
         Returns: {
