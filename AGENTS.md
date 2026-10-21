@@ -1,5 +1,7 @@
 # Project architecture
 
+- Collect Outlook quality postings through a bounded, database-leased attachment recognizer with immutable message/attachment deduplication, private files and permission-checked administrator reviews; mailbox events trigger collection and hourly reconciliation renews subscriptions and advances historical scanning without changing coffee assessments.
+
 - Detect system integrity red flags from explicit record links via change-triggered scans, keep privileged processing in a non-exposed schema, and resolve tasks only when their source issue disappears; administrators claim and annotate tasks without altering source records.
  
 - Normalize legacy station-based price SMS at the sending boundary, queue and resender using the shared compact-price-sms helper; preserve original station amounts rather than replacing them with later saved prices, so older installed clients cannot send duplicate buying/reference blocks.

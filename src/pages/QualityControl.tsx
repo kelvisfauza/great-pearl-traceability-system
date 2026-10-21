@@ -1273,6 +1273,8 @@ const QualityControl = () => {
             />
           </TabsContent>
 
+          <TabsContent value="analysis-postings"><QualityAnalysisPostings /></TabsContent>
+
           <TabsContent value="pending">
             <Card>
               <CardHeader>
