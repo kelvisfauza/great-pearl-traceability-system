@@ -1,5 +1,6 @@
 import OverdueAssessmentsBar from "@/components/quality/OverdueAssessmentsBar";
 import QualityAnalysisPostings from "@/components/quality/QualityAnalysisPostings";
+import { useQualityPostingCounts } from "@/components/quality/useQualityPostingCounts";
 import { daysPending, isOverdue } from "@/utils/overdueAssessments";
 import Layout from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
@@ -78,6 +79,7 @@ import AssessmentChainDialog from "@/components/quality/AssessmentChainDialog";
 
 const QualityControl = () => {
   const { isQualityHead, canPrintGRN } = useQualityRole();
+  const postingCounts = useQualityPostingCounts();
   const {
     storeRecords,
     qualityAssessments,
@@ -1244,6 +1246,8 @@ const QualityControl = () => {
           <TabsContent value="overview">
             <Button variant="outline" className="mb-4 gap-2" onClick={() => setActiveTab('analysis-postings')}>
               <FileText className="h-4 w-4" />Quality Analysis Postings
+              {(postingCounts.data?.total ?? 0) > 0 && <Badge variant="secondary">{postingCounts.data?.total}</Badge>}
+              {(postingCounts.data?.pending ?? 0) > 0 && <Badge variant="destructive">{postingCounts.data?.pending} awaiting review</Badge>}
             </Button>
             <QualityOverviewTab
               onNavigate={setActiveTab}
