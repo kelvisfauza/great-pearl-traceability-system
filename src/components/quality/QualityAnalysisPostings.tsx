@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQualityPostingCounts } from '@/components/quality/useQualityPostingCounts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -43,7 +44,8 @@ export default function QualityAnalysisPostings() {
   const status=useQuery({queryKey:['quality-outlook-status'],refetchInterval:60_000,queryFn:async()=>{
     const res=await (supabase as any).rpc('quality_outlook_status'); if(res.error) throw res.error; return res.data;
   }});
-  const refresh=async()=>{await Promise.all([rows.refetch(),status.refetch()]);};
+  const counts=useQualityPostingCounts();
+  const refresh=async()=>{await Promise.all([rows.refetch(),status.refetch(),counts.refetch()]);};
   const sync=async(action='sync')=>{
     setBusy(true);setError('');
     try {const res=await supabase.functions.invoke('quality-outlook-sync',{body:{action}});
@@ -72,9 +74,16 @@ export default function QualityAnalysisPostings() {
       <Button disabled={busy || status.data?.paused} onClick={()=>sync()}>{busy?<Loader2 className="mr-2 h-4 w-4 animate-spin"/>:<Mail className="mr-2 h-4 w-4"/>}Check Outlook</Button>
       {status.data?.paused && isAdmin() && <Button variant="outline" disabled={busy} onClick={()=>sync('resume')}>Resume collection</Button>}</div>
     </div>
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {([{key:'all',label:'Total postings',value:counts.data?.total},{key:'pending',label:'Awaiting review',value:counts.data?.pending},{key:'reviewed',label:'Reviewed',value:counts.data?.reviewed},{key:'needs_correction',label:'Needs correction',value:counts.data?.needs_correction}] as const).map(tile=>
+        <button key={tile.key} type="button" onClick={()=>{setFilter(tile.key);setPage(0);}} aria-pressed={filter===tile.key} className={`rounded-md border bg-card p-3 text-left transition-colors hover:border-primary/60 ${filter===tile.key?'border-primary ring-1 ring-primary/40':''}`}>
+          <div className="text-2xl font-semibold tabular-nums">{counts.isLoading?<Loader2 className="h-5 w-5 animate-spin"/>:(tile.value ?? 0)}</div>
+          <div className="text-sm text-muted-foreground">{tile.label}</div>
+        </button>)}
+    </div>
     {(error || rows.error || status.error || status.data?.last_error) && <Alert variant="destructive"><AlertDescription className="break-words">{error || (rows.error as Error)?.message || (status.error as Error)?.message || status.data?.last_error}</AlertDescription></Alert>}
     <div className="flex flex-wrap gap-3"><Input className="max-w-sm" placeholder="Search this page" aria-label="Search postings" value={search} onChange={e=>setSearch(e.target.value)}/>
-    <Select value={filter} onValueChange={v=>{setFilter(v);setPage(0);}}><SelectTrigger className="w-52"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All postings</SelectItem>{Object.entries(labels).map(([value,label])=><SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select></div>
+    <Select value={filter} onValueChange={v=>{setFilter(v);setPage(0);}}><SelectTrigger className="w-52"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All postings{counts.data?` (${counts.data.total})`:''}</SelectItem>{Object.entries(labels).map(([value,label])=><SelectItem key={value} value={value}>{label}{counts.data?` (${(counts.data as any)[value] ?? 0})`:''}</SelectItem>)}</SelectContent></Select></div>
     <div className="overflow-x-auto border rounded-md"><Table><TableHeader><TableRow><TableHead>Received / Posted by</TableHead><TableHead>Analysis form</TableHead><TableHead>Supplier / Batch</TableHead><TableHead>Status</TableHead><TableHead>Attachment</TableHead></TableRow></TableHeader>
     <TableBody>{rows.isLoading?<TableRow><TableCell colSpan={5}>Loading postings…</TableCell></TableRow>:visible.length===0?<TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">No quality analysis postings found.</TableCell></TableRow>:visible.map(item=><TableRow key={item.id}>
       <TableCell><div>{new Date(item.received_at).toLocaleDateString()}</div><div className="text-sm text-muted-foreground">{item.sender_name || item.sender_email}</div></TableCell>
