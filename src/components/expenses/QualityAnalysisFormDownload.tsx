@@ -38,29 +38,32 @@ const loadImageAsBase64 = (url: string): Promise<string | null> =>
 
 type FieldKey =
   | 'supplier_name' | 'analysis_date' | 'grams' | 'moisture' | 'below12' | 'gp1' | 'gp2'
-  | 'pods' | 'husks' | 'non_coffee' | 'outturn' | 'robusta' | 'price' | 'analysed_by' | 'comments';
+  | 'pods' | 'husks' | 'non_coffee' | 'outturn' | 'robusta' | 'ref_price' | 'price' | 'analysed_by' | 'comments';
 
-const ROWS: { key?: FieldKey; label: string; hint?: string }[] = [
+/** Rows marked dual print two boxes: grams weighed on the left, percentage on the right. */
+const ROWS: { key?: FieldKey; label: string; hint?: string; dual?: boolean }[] = [
   { label: 'Form No.' },
   
   { key: 'supplier_name', label: 'Supplier Name' },
   { key: 'analysis_date', label: 'Date' },
   { key: 'grams', label: 'Grams Used (Sample Weight)' },
   { key: 'moisture', label: 'Moisture Content (M.C %)' },
-  { key: 'below12', label: 'Below 12% (%)' },
-  { key: 'gp1', label: 'Group 1 Defects (%)' },
-  { key: 'gp2', label: 'Group 2 Defects (%)' },
-  { key: 'pods', label: 'Pods (%)' },
-  { key: 'husks', label: 'Husks (%)' },
-  { key: 'non_coffee', label: 'Non-Coffee (%)' },
-  { key: 'outturn', label: 'Outturn (%)' },
+  { key: 'below12', label: 'Below 12', dual: true },
+  { key: 'gp1', label: 'Group 1 Defects', dual: true },
+  { key: 'gp2', label: 'Group 2 Defects', dual: true },
+  { key: 'pods', label: 'Pods', dual: true },
+  { key: 'husks', label: 'Husks', dual: true },
+  { key: 'non_coffee', label: 'Non-Coffee', dual: true },
+  { key: 'outturn', label: 'Outturn', dual: true },
   { key: 'robusta', label: 'Robusta', hint: 'Yes / No' },
+  { key: 'ref_price', label: 'Reference Price (UGX per KG)' },
   { key: 'price', label: 'Price (UGX per KG)' },
   { key: 'analysed_by', label: 'Analysed By' },
   { key: 'comments', label: 'Comments' },
 ];
 
-type Values = Partial<Record<FieldKey, string>>;
+type Values = Partial<Record<string, string>>;
+const gKey = (k: FieldKey) => `${k}_g`;
 
 const generateQualityForm = async (
   entries: { formNumber: string; values?: Values }[],
