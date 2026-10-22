@@ -20,7 +20,8 @@ import {
   Receipt,
   UserCheck,
   ArrowRight,
-  FileCheck
+  FileCheck,
+  CalendarDays
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
@@ -92,6 +93,7 @@ const Navigation = () => {
         { name: "Suppliers", icon: UserCheck, path: "/suppliers", permission: null },
         { name: "Sales & Marketing", icon: TrendingUp, path: "/sales-marketing", permission: "Sales Marketing" },
         { name: "Company Forms", icon: DollarSign, path: "/my-expenses", permission: null },
+        { name: "Apply for Leave", icon: CalendarDays, path: "/apply-leave", permission: null },
         { name: "Budget Wallet", icon: DollarSign, path: "/budget-wallet", permission: null },
         { name: "Human Resources", icon: Users, path: "/human-resources", permission: "Human Resources" },
         { name: "Data Analyst", icon: LineChart, path: "/data-analyst", permission: "Data Analysis" },

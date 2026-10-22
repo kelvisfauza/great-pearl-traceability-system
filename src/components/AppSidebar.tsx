@@ -87,6 +87,7 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
         { name: "Sales & Marketing", icon: TrendingUp, path: "/sales-marketing", permission: "Sales Marketing" },
        { name: "Finance", icon: Banknote, path: "/finance", permission: "Finance" },
         { name: "Company Forms", icon: DollarSign, path: "/my-expenses", permission: null },
+        { name: "Apply for Leave", icon: CalendarDays, path: "/apply-leave", permission: null },
         { name: "Quick Loans", icon: Banknote, path: "/quick-loans", permission: null, requiresAdmin: true },
         { name: "Human Resources", icon: Users, path: "/human-resources", permission: "Human Resources", children: [
           { name: "Leave Requests", icon: CalendarDays, path: "/admin/leave-requests", requiresAdmin: true },
