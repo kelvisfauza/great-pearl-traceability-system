@@ -61,7 +61,7 @@ export async function sendLoanAgreement(loanId: string, approverName = 'Administ
     const end = new Date(start);
     end.setMonth(end.getMonth() + Number(loan.duration_months || numInstallments));
 
-    const pdfBlob = generateLoanAgreementPdf({
+    const pdfBlob = await generateLoanAgreementPdf({
       loanId: loan.id,
       loanType: loanTypeLabel,
       principal: Number(loan.loan_amount),

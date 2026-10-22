@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import { preparePdfPrint } from '@/utils/pdfPrintStamp';
 import logoUrl from '@/assets/great-agro-coffee-logo.png';
 import stampUrl from '@/assets/stamp-yeda.png';
 import { resolveSignatureBlock } from '@/utils/approverSignatures';
@@ -360,5 +361,6 @@ export const generatePaymentReceiptPdf = async (data: ReceiptPayload): Promise<B
   doc.text(`Customer Support: ${COMPANY.supportEmail}`, pageW / 2, pageH - 30, { align: 'center' });
   doc.text('Thank you for doing business with us.', pageW / 2, pageH - 22, { align: 'center' });
 
+  await preparePdfPrint(doc, `Payment receipt ${data.reference}`);
   return doc.output('blob');
 };

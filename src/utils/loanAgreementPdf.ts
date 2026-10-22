@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import { preparePdfPrint } from '@/utils/pdfPrintStamp';
 
 interface LoanPdfData {
   // Loan details
@@ -36,7 +37,7 @@ interface LoanPdfData {
 
 const fmt = (n: number) => `UGX ${n.toLocaleString()}`;
 
-export function generateLoanAgreementPdf(data: LoanPdfData): Blob {
+export async function generateLoanAgreementPdf(data: LoanPdfData): Promise<Blob> {
   const doc = new jsPDF('p', 'mm', 'a4');
   const w = doc.internal.pageSize.getWidth();
   const margin = 18;
@@ -177,5 +178,6 @@ export function generateLoanAgreementPdf(data: LoanPdfData): Blob {
   doc.text(`© ${new Date().getFullYear()} Great Pearl Coffee • Official Loan Agreement Document • Generated at approval`, w / 2, y, { align: 'center' });
   doc.text('Please keep this document for your records.', w / 2, y + 4, { align: 'center' });
 
+  await preparePdfPrint(doc, 'Loan agreement');
   return doc.output('blob');
 }

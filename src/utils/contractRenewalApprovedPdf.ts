@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import { preparePdfPrint } from '@/utils/pdfPrintStamp';
 
 export interface ApprovedContractData {
   employeeName: string;
@@ -24,7 +25,7 @@ const GREY: [number, number, number] = [96, 96, 96];
 const LINE: [number, number, number] = [150, 150, 150];
 const DARK: [number, number, number] = [0, 0, 0];
 
-export function generateApprovedContractBlob(d: ApprovedContractData): Blob {
+export async function generateApprovedContractBlob(d: ApprovedContractData): Promise<Blob> {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const W = 210, H = 297, M = 14;
   let y = 0;
@@ -172,5 +173,6 @@ export function generateApprovedContractBlob(d: ApprovedContractData): Blob {
   doc.text('Great Agro Coffee — A Member of YEDA Coffee Company Limited — Human Resources Department', M, H - 9);
   doc.text('CC: Operations Department', W - M, H - 9, { align: 'right' });
 
+  await preparePdfPrint(doc, 'Approved contract renewal');
   return doc.output('blob');
 }

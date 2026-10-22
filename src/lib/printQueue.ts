@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { bypassPrint } from '@/lib/printInterceptor';
+import { prepareHtmlPrint } from '@/lib/documentPrintStamp';
 
 export type PrintJob = {
   id: string;
@@ -56,7 +57,7 @@ export async function addToPrintQueue(input: QueueInput): Promise<PrintJob | nul
   if (!user) return null;
 
   const format: 'html' | 'pdf' = input.pdfDataUrl ? 'pdf' : 'html';
-  const content = input.pdfDataUrl || input.html || '';
+  const content = input.pdfDataUrl || (input.html ? await prepareHtmlPrint(input.html, input.title) : '');
   if (!content) return null;
 
   const { data, error } = await supabase
@@ -136,11 +137,11 @@ const stripDocumentWrapper = (html: string) => {
 };
 
 /** Print several HTML jobs in one browser print dialog, each on its own page. */
-export function printHtmlJobs(jobs: PrintJob[]) {
-  const parts = jobs.map(j => {
-    const { inner, styles } = stripDocumentWrapper(j.content);
+export async function printHtmlJobs(jobs: PrintJob[]) {
+  const parts = await Promise.all(jobs.map(async j => {
+    const { inner, styles } = stripDocumentWrapper(await prepareHtmlPrint(j.content, j.title));
     return `${styles}<section class="pq-doc">${inner}</section>`;
-  });
+  }));
 
   const doc = `<!DOCTYPE html><html><head><title>Print Queue</title>
     <style>

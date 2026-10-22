@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import { preparePdfPrint } from '@/utils/pdfPrintStamp';
 import { format } from 'date-fns';
 
 export interface StoreReport {
@@ -20,7 +21,7 @@ export interface StoreReport {
   scanner_used?: string;
 }
 
-export const generateStoreReportPDF = (report: StoreReport, preview: boolean = false) => {
+export const generateStoreReportPDF = async (report: StoreReport, preview: boolean = false) => {
   try {
     console.log('Generating PDF for report:', report.id, 'Preview mode:', preview);
     
@@ -180,6 +181,7 @@ export const generateStoreReportPDF = (report: StoreReport, preview: boolean = f
     if (preview) {
       console.log('Opening PDF preview in new tab');
       // Create blob and open in new tab for preview
+      await preparePdfPrint(doc, fileName);
       const pdfBlob = doc.output('blob');
       console.log('PDF blob created:', pdfBlob.size, 'bytes');
       

@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import { preparePdfPrint } from '@/utils/pdfPrintStamp';
 import logoUrl from '@/assets/great-agro-coffee-logo.png';
 
 export interface FuelOrderPayload {
@@ -321,6 +322,7 @@ export const generateFuelOrderPdf = async (data: FuelOrderPayload): Promise<Blob
   doc.setTextColor(120, 120, 120);
   doc.text(`${COMPANY.name} • This document is computer generated and valid without alteration.`, pageW / 2, footY, { align: 'center' });
 
+  await preparePdfPrint(doc, `Fuel order ${data.orderNumber}`);
   return doc.output('blob');
 };
 

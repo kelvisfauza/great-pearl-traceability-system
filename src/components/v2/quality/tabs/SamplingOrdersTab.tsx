@@ -86,6 +86,7 @@ const buildOrderPdfBase64 = async (order: any): Promise<string | undefined> => {
     doc.setFontSize(11);
     doc.text(String(order.order_number || ""), 297, y + 140, { align: "center" });
 
+    await (await import('@/utils/pdfPrintStamp')).preparePdfPrint(doc, `Sampling order ${order.order_number}`);
     const out = doc.output("datauristring");
     return out.split(",")[1];
   } catch {

@@ -7,6 +7,8 @@
  * cross-device print queue.
  */
 
+import { prepareHtmlPrint, reportPrintError } from '@/lib/documentPrintStamp';
+
 export const PRINT_INTENT_EVENT = 'print-intent';
 
 export type PrintIntent = {
@@ -87,8 +89,8 @@ export function printHtmlInFreshWindow(html: string, title: string) {
   }
 }
 
-function ask(win: Window, originalPrint: () => void) {
-  const html = grabHtml(win);
+async function ask(win: Window, originalPrint: () => void) {
+  let html = grabHtml(win);
   const title = grabTitle(win);
 
   // Nothing capturable (PDF viewers, cross-origin) -> just print.
@@ -97,6 +99,15 @@ function ask(win: Window, originalPrint: () => void) {
     return;
   }
 
+  // PDFs have already been stamped at issuance; do not print their viewer wrapper.
+  if (win.document.querySelector('embed[type="application/pdf"], iframe[src^="data:application/pdf"], iframe[src^="blob:"]')) {
+    originalPrint();
+    return;
+  }
+  try { html = await prepareHtmlPrint(html, title); }
+  catch (error) { reportPrintError(error); return; }
+  const stampedHtml = html;
+
   const isChild = win !== window;
 
   const detail: PrintIntent = {
@@ -104,10 +115,12 @@ function ask(win: Window, originalPrint: () => void) {
     html,
     win,
     now: () => {
-      if (isChild) {
+      if (stampedHtml) {
         // Original child window is usually closed by the caller already.
-        if (printHtmlInFreshWindow(html, title)) return;
+        if (printHtmlInFreshWindow(stampedHtml, title)) return;
       }
+      reportPrintError(new Error('Please allow pop-ups to print the verified document.'));
+      return;
       // Focus the target window first — a print() fired while a modal in the
       // opener still holds focus is silently dropped by Chrome/Edge.
       try { win.focus(); } catch { /* ignore */ }
@@ -128,7 +141,7 @@ function ask(win: Window, originalPrint: () => void) {
     new CustomEvent<PrintIntent>(PRINT_INTENT_EVENT, { detail, cancelable: true })
   );
   // No dialog mounted -> keep the original behaviour.
-  if (notPrevented) originalPrint();
+  if (notPrevented) printHtmlInFreshWindow(stampedHtml, title);
 }
 
 
