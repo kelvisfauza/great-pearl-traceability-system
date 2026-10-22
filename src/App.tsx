@@ -60,6 +60,7 @@ import Milling from "./pages/Milling";
 import PermissionManagement from "./pages/PermissionManagement";
 import Expenses from "./pages/Expenses";
 import MyExpenses from "./pages/MyExpenses";
+import ApplyLeave from "./pages/ApplyLeave";
 import EURDocumentationPage from "./pages/EUDRDocumentation";
 import Suppliers from "./pages/Suppliers";
 import Approvals from "./pages/Approvals";
@@ -465,6 +466,7 @@ const App: React.ComponentType = () => {
                     <Expenses />
                   </ProtectedRoute>
                 } />
+                <Route path="/apply-leave" element={<ProtectedRoute><ApplyLeave /></ProtectedRoute>} />
                 <Route path="/my-expenses" element={
                   <ProtectedRoute>
                     <MyExpenses />
