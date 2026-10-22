@@ -40,16 +40,8 @@ export const useBalanceReveal = () => {
     sessionStorage.setItem(todayKey(), 'true');
     setRevealed(true);
     await loadStatus();
-    if (res?.fee > 0) {
-      toast({
-        title: `UGX ${Number(res.fee).toLocaleString()} charged`,
-        description: `Balance check ${res.checks_today} today. UGX ${Number(res.fees_today).toLocaleString()} of your UGX 1,000 daily limit used.`,
-      });
-    } else if (res?.cap_reached) {
-      toast({ title: 'Balance shown', description: 'You have reached today\u2019s UGX 1,000 charge limit \u2014 further checks today are free.' });
-    } else {
-      toast({ title: 'Balance shown', description: 'This was your free check for today. Each extra check costs UGX 200.' });
-    }
+    void res;
+    toast({ title: 'Balance shown', description: 'Balance checks are free.' });
   }, [revealed, busy, toast, loadStatus]);
 
   const hide = useCallback(() => {
