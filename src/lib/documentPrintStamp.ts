@@ -45,7 +45,12 @@ export function stampHtmlDocument(html: string, stamp: PrintStamp): string {
   const footer = doc.createElement('footer');
   footer.dataset.systemPrintStamp = stamp.code;
   footer.innerHTML = `<div><p><strong>Printed by: ${escapeHtml(stamp.printedBy)}</strong></p><p>${escapeHtml(new Date(stamp.printedAt).toLocaleString('en-GB', { timeZone: 'Africa/Kampala' }))} (Uganda)</p><p>Great Agro Coffee — a member of YEDA Coffee Company Limited</p><p>${escapeHtml(stamp.code)} · Scan to verify document issuance</p></div><img src="${stamp.qr}" alt="Document verification QR code" />`;
-  doc.body.appendChild(footer);
+  const copies = doc.querySelectorAll('.gac-grn-page, section.copy, .pq-doc');
+  if (copies.length) {
+    copies.forEach(copy => copy.appendChild(footer.cloneNode(true)));
+  } else {
+    doc.body.appendChild(footer);
+  }
   return '<!DOCTYPE html>' + doc.documentElement.outerHTML;
 }
 
