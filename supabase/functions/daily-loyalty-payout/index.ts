@@ -25,6 +25,14 @@ Deno.serve(async (req) => {
     const day = (body?.date as string) || kampalaToday()
     const notify = body?.notify !== false
 
+    // Silent suspension: when loyalty mode is 'off', post nothing and notify no one.
+    const { data: mode } = await supabase.rpc('loyalty_award_mode')
+    if (mode === 'off') {
+      return new Response(JSON.stringify({ ok: true, date: day, skipped: 'loyalty_off' }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     const { data: credited, error } = await supabase.rpc('credit_daily_loyalty', { p_date: day })
     if (error) throw new Error(`credit_daily_loyalty failed: ${error.message}`)
 

@@ -1,14 +1,10 @@
 ---
 name: Loyalty Awards Suspension Switch
-description: Automatic loyalty-point awards are suspended from 13 Sep 2026 via the loyalty_awards system setting
+description: Loyalty awards silently switched off for all employees from 22 Oct 2026 (mode 'off'); no payouts, no messages
 type: feature
 ---
-Management suspended automatic loyalty-point awards with immediate effect (13 Sep 2026, indefinite).
-
-- Switch: `system_settings.setting_key = 'loyalty_awards'` -> `{"suspended": true}`; helper `public.loyalty_awards_suspended()`.
-- `award_activity_reward(uuid,text,jsonb)` and `award_approval_reward(uuid,text,text)` are thin wrappers that return `{success:false, suspended:true, reward_given:0}` while suspended; the original logic lives in `*_impl` (unchanged, not publicly executable).
-- Existing loyalty balances, ledger entries and history are preserved — never delete them.
-- Salaries, allowances, reimbursements, bonuses and other authorised wallet transactions are unaffected.
-- To resume: set `suspended` to false in that setting (no code change needed).
-
-Hard block (15 Sep 2026): trigger `trg_block_reward_entries_when_suspended` on `ledger_entries` silently drops any INSERT of `LOYALTY_REWARD`, `MEETING_ATTENDANCE_BONUS` or `HOST_MEETING_BONUS` while suspended — covers meeting-bonus RPCs that bypassed the wrappers.
+22 Oct 2026: management suspended all loyalty awards silently for everyone "for now".
+- `system_settings.loyalty_awards` = `{"suspended": true, "mode": "off", "silent": true}`. In 'off' mode the ledger trigger drops reward inserts; the 8pm `daily-loyalty-payout` exits without crediting or notifying.
+- No announcement/SMS/email about the suspension.
+- Existing balances, ledger history and uncredited accruals are preserved — never delete them.
+- To resume: set mode back to 'daily' (or 'instant') and suspended false.
