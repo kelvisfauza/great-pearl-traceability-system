@@ -6,6 +6,7 @@ import MessagingSettings from "@/components/admin/MessagingSettings";
 import WalletFreezeManager from "@/components/admin/WalletFreezeManager";
 import OverdraftUsageRules from "@/components/admin/OverdraftUsageRules";
 import SundayWithdrawalSettings from "@/components/admin/SundayWithdrawalSettings";
+import LoyaltyAwardsToggle from "@/components/admin/LoyaltyAwardsToggle";
 import LoanPolicySettings from "@/components/admin/LoanPolicySettings";
 import UnifiedPermissionManager from "@/components/admin/UnifiedPermissionManager";
 import AdminWalletOperations from "@/components/admin/AdminWalletOperations";
@@ -147,6 +148,7 @@ const SystemSettings = () => {
         </TabsContent>
 
         <TabsContent value="wallet" className="space-y-4">
+          <LoyaltyAwardsToggle />
           <SundayWithdrawalSettings />
           <WalletFreezeManager />
         </TabsContent>

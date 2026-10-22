@@ -18157,6 +18157,7 @@ export type Database = {
           template_name: string
         }[]
       }
+      get_loyalty_awards_status: { Args: never; Returns: Json }
       get_maintenance_status: {
         Args: never
         Returns: {
@@ -18718,6 +18719,10 @@ export type Database = {
       send_print_jobs_to_user: {
         Args: { p_job_ids: string[]; p_recipient_user_id: string }
         Returns: number
+      }
+      set_loyalty_awards_enabled: {
+        Args: { p_enabled: boolean }
+        Returns: Json
       }
       sg_is_automation: { Args: never; Returns: boolean }
       submit_procurement_review: {
