@@ -18899,6 +18899,14 @@ export type Database = {
         Args: { p_coffee_record_id: string }
         Returns: Json
       }
+      update_own_bank_details: {
+        Args: {
+          _account_name: string
+          _account_number: string
+          _bank_name: string
+        }
+        Returns: Json
+      }
       update_own_employee_profile: {
         Args: {
           _account_name?: string
