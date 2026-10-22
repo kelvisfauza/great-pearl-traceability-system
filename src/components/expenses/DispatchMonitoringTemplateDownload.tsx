@@ -377,7 +377,7 @@ export const generateDispatchMonitoringForm = async (formNumber: string, v: Form
     { align: 'center' },
   );
 
-  doc.save(opts?.blank ? 'Dispatch-Monitoring-Blank-Manual.pdf' : `Dispatch-Monitoring-${formNumber}.pdf`);
+  await doc.save(opts?.blank ? 'Dispatch-Monitoring-Blank-Manual.pdf' : `Dispatch-Monitoring-${formNumber}.pdf`);
   try {
     const blobUrl = doc.output('bloburl') as unknown as string;
     const printWin = window.open(blobUrl, '_blank');

@@ -212,7 +212,7 @@ const generateQualityForm = async (
 
   const first = entries[0].formNumber;
   const last = entries[entries.length - 1].formNumber;
-  doc.save(
+  await doc.save(
     entries.length > 1
       ? `Quality-Analysis-Forms-${first}-to-${last}.pdf`.replace(/\s/g, '')
       : `Quality-Analysis-Form-${first}.pdf`.replace(/\s/g, ''),

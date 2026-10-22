@@ -1079,7 +1079,7 @@ const QuickLoans = () => {
         const borrowerEmp = await supabase.from('employees').select('phone, position, department, salary').eq('email', loan.employee_email).single();
         const guarantorEmp = await supabase.from('employees').select('phone, email').eq('name', loan.guarantor_name).single();
         
-        const pdfBlob = generateLoanAgreementPdf({
+        const pdfBlob = await generateLoanAgreementPdf({
           loanId: loanId,
           loanType: loan.loan_type === 'business' ? 'Employee Business Loan' : loan.loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan',
           principal: loan.loan_amount,

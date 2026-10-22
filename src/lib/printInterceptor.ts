@@ -7,6 +7,8 @@
  * cross-device print queue.
  */
 
+import { prepareHtmlPrint, reportPrintError } from '@/lib/documentPrintStamp';
+
 export const PRINT_INTENT_EVENT = 'print-intent';
 
 export type PrintIntent = {
@@ -87,8 +89,8 @@ export function printHtmlInFreshWindow(html: string, title: string) {
   }
 }
 
-function ask(win: Window, originalPrint: () => void) {
-  const html = grabHtml(win);
+async function ask(win: Window, originalPrint: () => void) {
+  let html = grabHtml(win);
   const title = grabTitle(win);
 
   // Nothing capturable (PDF viewers, cross-origin) -> just print.
@@ -97,25 +99,25 @@ function ask(win: Window, originalPrint: () => void) {
     return;
   }
 
-  const isChild = win !== window;
+  // PDFs have already been stamped at issuance; do not print their viewer wrapper.
+  if (win.document.querySelector('embed[type="application/pdf"], iframe[src^="data:application/pdf"], iframe[src^="blob:"]')) {
+    originalPrint();
+    return;
+  }
+  try { html = await prepareHtmlPrint(html, title); }
+  catch (error) { reportPrintError(error); return; }
+  const stampedHtml = html;
 
   const detail: PrintIntent = {
     title,
     html,
     win,
     now: () => {
-      if (isChild) {
+      if (stampedHtml) {
         // Original child window is usually closed by the caller already.
-        if (printHtmlInFreshWindow(html, title)) return;
+        if (printHtmlInFreshWindow(stampedHtml, title)) return;
       }
-      // Focus the target window first — a print() fired while a modal in the
-      // opener still holds focus is silently dropped by Chrome/Edge.
-      try { win.focus(); } catch { /* ignore */ }
-      try {
-        originalPrint();
-      } catch {
-        try { (win as any).print?.(); } catch { /* ignore */ }
-      }
+      reportPrintError(new Error('Please allow pop-ups to print the verified document.'));
     },
     queue: () => { /* handled by the dialog via printQueue */ },
     cancel: () => { /* no-op */ },
@@ -128,7 +130,7 @@ function ask(win: Window, originalPrint: () => void) {
     new CustomEvent<PrintIntent>(PRINT_INTENT_EVENT, { detail, cancelable: true })
   );
   // No dialog mounted -> keep the original behaviour.
-  if (notPrevented) originalPrint();
+  if (notPrevented) printHtmlInFreshWindow(stampedHtml, title);
 }
 
 
@@ -142,7 +144,7 @@ function patchWindow(win: Window | null) {
     w.__pqPatched = true;
     w.print = () => {
       if (isBypassed()) return original();
-      ask(win, original);
+      void ask(win, original).catch(reportPrintError);
     };
   } catch {
     /* cross-origin */
@@ -157,6 +159,13 @@ export function installPrintInterceptor() {
 
   // 1. Top-level window.print()
   patchWindow(window);
+  // Browser shortcut must use the same verified document path as Print buttons.
+  window.addEventListener('keydown', event => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'p') {
+      event.preventDefault();
+      window.print();
+    }
+  }, true);
 
   // 2. window.open(...) — patch the child as soon as it exists.
   const nativeOpen = window.open.bind(window);

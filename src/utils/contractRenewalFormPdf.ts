@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import { preparePdfPrint } from '@/utils/pdfPrintStamp';
 
 export interface ContractRenewalFormData {
   ref?: string;
@@ -40,10 +41,11 @@ export function generateContractRenewalFormPdf(
   doc.save(filename);
 }
 
-export function generateContractRenewalFormBlob(
+export async function generateContractRenewalFormBlob(
   data: ContractRenewalFormData = {}
-): Blob {
+): Promise<Blob> {
   const doc = buildContractRenewalDoc(data);
+  await preparePdfPrint(doc, 'Contract renewal form');
   return doc.output('blob');
 }
 

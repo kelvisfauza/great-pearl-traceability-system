@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Add shared printed-by footers and registered verification QR codes to browser prints, PDF downloads and Word templates (tests and controlled HTML/PDF/Word samples checked; signed-in production issuance unavailable on external Supabase)
+
 - [x] Link Outlook analysis postings to sampling orders and deliveries; attachment-only and minute rules tested, live collector imported two further forms; signed-in confirmation UI unavailable on external Supabase
 
 - [x] Collect Outlook quality analysis attachments and add V1 Quality Analysis Postings with administrator review (two actual PDF forms imported; authenticated review UI unavailable on external Supabase)

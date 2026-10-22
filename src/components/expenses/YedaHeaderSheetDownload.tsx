@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { FileText, Download } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { createDocxPrintFooter } from '@/utils/docxPrintStamp';
 import {
   Document, Packer, Paragraph, TextRun, PageOrientation, Footer,
 } from 'docx';
@@ -18,6 +19,7 @@ const generateDocx = async () => {
   const logoBytes = await fetchYedaLogoBytes();
   const now = new Date();
   const refNo = `YEDA-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+  const printFooter = await createDocxPrintFooter(`YEDA letterhead ${refNo}`);
 
   const doc = new Document({
     styles: { default: { document: { run: { font: 'Arial', size: 20 } } } },
@@ -25,11 +27,11 @@ const generateDocx = async () => {
       properties: {
         page: {
           size: { width: 11906, height: 16838, orientation: PageOrientation.PORTRAIT },
-          margin: { top: 480, right: 720, bottom: 240, left: 720 },
+          margin: { top: 480, right: 720, bottom: 2400, left: 720 },
         },
       },
       footers: {
-        default: new Footer({ children: [createYedaFooter()] }),
+        default: new Footer({ children: [createYedaFooter(), ...printFooter] }),
       },
       children: [
         createYedaHeader(logoBytes),

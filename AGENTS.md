@@ -1,5 +1,7 @@
 # Project architecture
 
+- Issue print verification before browser printing, PDF serialization, and Word packing; resolve the employee name from the authenticated account and add a registered QR footer, reserving space rather than covering original content. Queue reprints identify the current printing employee; verification confirms issuance, not payment, approval, or later edits.
+
 - Collect Outlook quality postings through a bounded, database-leased attachment recognizer with immutable deduplication and private files; mailbox events collect arrivals, recent-mail reconciliation has a separate cursor from hourly historical scanning and subscription renewal. Link only unique exact references automatically; date/supplier candidates require administrator confirmation through permission-checked private-schema routines without changing original assessments or deliveries.
 
 - Detect system integrity red flags from explicit record links via change-triggered scans, keep privileged processing in a non-exposed schema, and resolve tasks only when their source issue disappears; administrators claim and annotate tasks without altering source records.

@@ -667,6 +667,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       doc.text(`Generated on ${format(new Date(), 'MMM dd, yyyy h:mm a')} | For questions: operations@greatpearlcoffee.com`, margin, sy);
 
       // 4. Upload PDF to Supabase Storage
+      await (await import('@/utils/pdfPrintStamp')).preparePdfPrint(doc, 'Wallet statement');
       const pdfBlob = doc.output('blob');
       const fileName = `${unifiedUserId}/${format(new Date(), 'yyyyMMdd-HHmmss')}-statement.pdf`;
       

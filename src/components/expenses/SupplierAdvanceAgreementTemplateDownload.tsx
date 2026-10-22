@@ -296,7 +296,7 @@ export const generateSupplierAdvanceAgreementForm = async () => {
     drawFooter(p, total);
   }
 
-  doc.save('Supplier-Advance-Agreement-Form.pdf');
+  await doc.save('Supplier-Advance-Agreement-Form.pdf');
   try {
     const blobUrl = doc.output('bloburl') as unknown as string;
     const printWin = window.open(blobUrl, '_blank');

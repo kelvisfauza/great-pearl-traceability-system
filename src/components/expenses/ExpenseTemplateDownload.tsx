@@ -34,6 +34,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { createDocxPrintFooter } from '@/utils/docxPrintStamp';
+import { preparePdfPrint } from '@/utils/pdfPrintStamp';
 
 
 const LOGO_URL = '/lovable-uploads/great-agro-coffee-logo.png';
@@ -300,6 +302,7 @@ const generateDepartmentReportDocx = async (
 
   // ===== Standard letterhead footer (keeps the incorporation date in the footer) =====
   const footerTable = createLetterheadFooter(true);
+  const printFooter = await createDocxPrintFooter(`${template.title} ${refNo}`);
 
   const doc = new DocxDocument({
     creator: 'Great Agro Coffee',
@@ -311,11 +314,11 @@ const generateDepartmentReportDocx = async (
       properties: {
         page: {
           size: { width: 11906, height: 16838 }, // A4
-          margin: { top: 1080, right: 1080, bottom: 1440, left: 1080 },
+          margin: { top: 1080, right: 1080, bottom: 2400, left: 1080 },
         },
       },
       footers: {
-        default: new Footer({ children: [footerTable] }),
+        default: new Footer({ children: [footerTable, ...printFooter] }),
       },
       children: [
         headerTable,
@@ -798,6 +801,7 @@ const generatePDF = async (
   doc.text(`Great Agro Coffee  |  ${COMPANY_TAGLINE}  |  ${COMPANY_ADDRESS}  |  Internal Use Only`, pageW / 2, footerY + 10, { align: 'center' });
 
   // Open in new tab and trigger print, also save copy
+  await preparePdfPrint(doc, `${template.title} ${refNo}`);
   const blobUrl = doc.output('bloburl');
   const printWin = window.open(blobUrl as unknown as string, '_blank');
   if (printWin) {

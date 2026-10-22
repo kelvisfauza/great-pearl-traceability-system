@@ -97,7 +97,7 @@ const ContractRenewalApprovals = () => {
     try {
       const c = r.contract;
       const fmt = (s: string) => new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-      const blob = generateApprovedContractBlob({
+      const blob = await generateApprovedContractBlob({
         employeeName: r.employee_name,
         employeeEmail: r.employee_email,
         employeeId: c.employee_gac_id || undefined,
@@ -262,7 +262,7 @@ Great Agro Coffee — Human Resources`,
       try {
         const c = data.contract;
         const fmt = (s: string) => new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-        const blob = generateApprovedContractBlob({
+        const blob = await generateApprovedContractBlob({
           employeeName: c.employee_name,
           employeeEmail: c.employee_email,
           employeeId: c.employee_id || undefined,

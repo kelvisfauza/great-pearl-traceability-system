@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { FileText, Download } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { createDocxPrintFooter } from '@/utils/docxPrintStamp';
 import {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
   WidthType, BorderStyle, AlignmentType, PageOrientation, Footer,
@@ -63,6 +64,7 @@ const generateDocx = async (employee: any) => {
 
   // FOOTER: thin top border + 4 columns + registration line
   const footerTableFixed = createLetterheadFooter(true);
+  const printFooter = await createDocxPrintFooter(`Company letterhead ${refNo}`);
 
 
   const doc = new Document({
@@ -73,11 +75,11 @@ const generateDocx = async (employee: any) => {
       properties: {
         page: {
           size: { width: 11906, height: 16838, orientation: PageOrientation.PORTRAIT },
-          margin: { top: 720, right: 720, bottom: 720, left: 720 },
+          margin: { top: 720, right: 720, bottom: 2400, left: 720 },
         },
       },
       footers: {
-        default: new Footer({ children: [footerTableFixed] }),
+        default: new Footer({ children: [footerTableFixed, ...printFooter] }),
       },
       children: [
         headerTable,

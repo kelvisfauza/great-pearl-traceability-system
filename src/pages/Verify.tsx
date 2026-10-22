@@ -256,6 +256,13 @@ const Verify = () => {
                 )}
 
                 {/* Reference Number */}
+                {verification.subtype === 'system_print' && verification.meta && (
+                  <div className="border-t border-border pt-4 text-foreground space-y-2">
+                    <p className="font-semibold">{String(verification.meta.title || 'System document')}</p>
+                    <p>Printed by: {String(verification.meta.printed_by || verification.issued_to_name)}</p>
+                    <p className="text-sm text-muted-foreground">{String(verification.meta.verification_scope || 'Document issuance only.')}</p>
+                  </div>
+                )}
                 {verification.subtype === 'daily_coffee_prices' && verification.meta?.prices && typeof verification.meta.prices === 'object' && (
                   <div className="border-t pt-4 text-foreground">
                     <h3 className="font-semibold">Coffee prices — {String(verification.meta.date || '')}</h3>

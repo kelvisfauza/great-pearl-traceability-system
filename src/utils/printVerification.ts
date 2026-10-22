@@ -14,14 +14,14 @@ export const createPrintVerification = async (options: PrintVerificationOptions)
   code: string;
   qrUrl: string;
 }> => {
-  const code = generateVerificationCode('report');
+  const code = generateVerificationCode(options.type);
   const qrUrl = getVerificationQRUrl(code);
 
-  try {
     // Get current user for RLS policy compliance
     const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Please sign in before printing.');
     
-    await supabase.from('verifications').insert({
+    const { error } = await supabase.from('verifications').insert({
       code,
       type: options.type,
       subtype: options.subtype,
@@ -32,9 +32,7 @@ export const createPrintVerification = async (options: PrintVerificationOptions)
       meta: options.meta || {},
       created_by: user?.id
     });
-  } catch (error) {
-    console.error('Error creating verification record:', error);
-  }
+    if (error) throw new Error('Document verification could not be registered. Please try again.');
 
   return { code, qrUrl };
 };

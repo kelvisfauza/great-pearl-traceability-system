@@ -393,7 +393,7 @@ const generateSalesReceipt = async (v: ReceiptValues) => {
   renderCopy(12, 'OFFICE COPY');
 
   const fileName = `Sales-Receipt-${(v.receiptNo || 'blank').replace(/[^\w-]/g, '') || 'blank'}.pdf`;
-  doc.save(fileName);
+  await doc.save(fileName);
   try {
     const blobUrl = doc.output('bloburl') as unknown as string;
     const printWin = window.open(blobUrl, '_blank');

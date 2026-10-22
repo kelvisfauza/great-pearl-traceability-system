@@ -5,6 +5,8 @@ import { Printer, ListPlus, Download, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { addToPrintQueue, printPdfJob } from '@/lib/printQueue';
 import { buildReleaseReceiptPdf, ReleaseReceiptData } from '@/utils/financeReleaseReceipt';
+import { preparePdfPrint } from '@/utils/pdfPrintStamp';
+import { reportPrintError } from '@/lib/documentPrintStamp';
 
 /** Shown after Finance releases money. A receipt must be printed, queued or downloaded before closing. */
 export const ReleaseReceiptDialog: React.FC<{ data: ReleaseReceiptData | null; onClose: () => void }> = ({ data, onClose }) => {
@@ -14,19 +16,34 @@ export const ReleaseReceiptDialog: React.FC<{ data: ReleaseReceiptData | null; o
   const pdf = () => buildReleaseReceiptPdf(data);
   const title = `Payment receipt ${data.reference}`;
 
-  const printNow = () => {
-    const url = pdf().output('datauristring');
-    printPdfJob({ id: 'now', title, content: url } as any);
-    setDone(true);
+  const printNow = async () => {
+    setBusy(true);
+    try {
+      const doc = pdf();
+      await preparePdfPrint(doc, title);
+      const ok = await printPdfJob({ id: 'now', title, content: doc.output('datauristring') } as any);
+      if (ok) setDone(true);
+      else toast.error('Please allow pop-ups to print.');
+    } catch (error) { reportPrintError(error); }
+    finally { setBusy(false); }
   };
   const queue = async () => {
     setBusy(true);
-    const job = await addToPrintQueue({ title, docType: 'finance_receipt', pdfDataUrl: pdf().output('datauristring') });
-    setBusy(false);
-    if (job) { toast.success('Receipt added to print queue'); setDone(true); }
-    else toast.error('Could not add to print queue');
+    try {
+      const doc = pdf();
+      await preparePdfPrint(doc, title);
+      const job = await addToPrintQueue({ title, docType: 'finance_receipt', pdfDataUrl: doc.output('datauristring') });
+      if (job) { toast.success('Receipt added to print queue'); setDone(true); }
+      else toast.error('Could not add to print queue');
+    } catch (error) { reportPrintError(error); }
+    finally { setBusy(false); }
   };
-  const download = () => { pdf().save(`${data.reference}.pdf`); setDone(true); };
+  const download = async () => {
+    setBusy(true);
+    try { await pdf().save(`${data.reference}.pdf`); setDone(true); }
+    catch (error) { reportPrintError(error); }
+    finally { setBusy(false); }
+  };
   const close = () => { setDone(false); onClose(); };
 
   return (
@@ -40,9 +57,9 @@ export const ReleaseReceiptDialog: React.FC<{ data: ReleaseReceiptData | null; o
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-2">
-          <Button onClick={printNow}><Printer className="h-4 w-4 mr-2" /> Print now</Button>
+          <Button onClick={printNow} disabled={busy}><Printer className="h-4 w-4 mr-2" /> Print now</Button>
           <Button variant="outline" onClick={queue} disabled={busy}><ListPlus className="h-4 w-4 mr-2" /> {busy ? 'Adding…' : 'Add to print queue'}</Button>
-          <Button variant="outline" onClick={download}><Download className="h-4 w-4 mr-2" /> Download PDF</Button>
+          <Button variant="outline" onClick={download} disabled={busy}><Download className="h-4 w-4 mr-2" /> Download PDF</Button>
           <Button variant="ghost" onClick={close} disabled={!done}>{done ? 'Done' : 'Choose an option above first'}</Button>
         </div>
       </DialogContent>

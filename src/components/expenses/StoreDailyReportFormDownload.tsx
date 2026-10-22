@@ -119,7 +119,7 @@ const generateStoreForms = async (numbers: string[]) => {
     drawPage(numbers[i], qr);
   }
   const first = numbers[0], last = numbers[numbers.length - 1];
-  doc.save((numbers.length > 1 ? `Store-Daily-Reports-${first}-to-${last}.pdf` : `Store-Daily-Report-${first}.pdf`).replace(/\s/g, ''));
+  await doc.save((numbers.length > 1 ? `Store-Daily-Reports-${first}-to-${last}.pdf` : `Store-Daily-Report-${first}.pdf`).replace(/\s/g, ''));
   try {
     const w = window.open(doc.output('bloburl') as unknown as string, '_blank');
     w?.addEventListener('load', () => { try { w.focus(); w.print(); } catch {} });

@@ -178,7 +178,7 @@ export const generateStoreReleaseQualityCheckForm = async () => {
     { align: 'center' },
   );
 
-  doc.save('Quality-Check-Store-Release-Form.pdf');
+  await doc.save('Quality-Check-Store-Release-Form.pdf');
   try {
     const blobUrl = doc.output('bloburl') as unknown as string;
     const printWin = window.open(blobUrl, '_blank');

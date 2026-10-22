@@ -1,6 +1,4 @@
-import QRCode from 'qrcode';
-import { buildPublicUrl } from './publicUrl';
-import { generateVerificationCode } from './verificationCode';
+import { createDocumentPrintStamp } from '@/lib/documentPrintStamp';
 
 export interface DocQr {
   code: string;
@@ -10,10 +8,8 @@ export interface DocQr {
 
 /** Builds a verification code + QR data URL that can be embedded in a jsPDF document. */
 export async function buildDocumentQr(reference?: string): Promise<DocQr> {
-  const code = reference || generateVerificationCode('assessment');
-  const url = buildPublicUrl(`/verify/${encodeURIComponent(code)}`);
-  const dataUrl = await QRCode.toDataURL(url, { margin: 0, width: 256, errorCorrectionLevel: 'M' });
-  return { code, url, dataUrl };
+  const stamp = await createDocumentPrintStamp(reference || 'Document template', 'pdf_template');
+  return { code: stamp.code, url: stamp.url, dataUrl: stamp.qr };
 }
 
 /** Draws a small QR block (image + code + caption) at the given position in a jsPDF doc. */
