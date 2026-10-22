@@ -1,0 +1,1 @@
+revoke execute on function public.block_loyalty_when_suspended() from public, anon, authenticated;
