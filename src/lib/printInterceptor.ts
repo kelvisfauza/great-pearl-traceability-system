@@ -159,6 +159,13 @@ export function installPrintInterceptor() {
 
   // 1. Top-level window.print()
   patchWindow(window);
+  // Browser shortcut must use the same verified document path as Print buttons.
+  window.addEventListener('keydown', event => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'p') {
+      event.preventDefault();
+      window.print();
+    }
+  }, true);
 
   // 2. window.open(...) — patch the child as soon as it exists.
   const nativeOpen = window.open.bind(window);
