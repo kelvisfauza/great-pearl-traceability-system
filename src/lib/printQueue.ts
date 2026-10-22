@@ -164,13 +164,15 @@ export async function printHtmlJobs(jobs: PrintJob[]) {
 }
 
 /** Open a PDF job in a new tab and trigger its print dialog. */
-export function printPdfJob(job: PrintJob) {
+export async function printPdfJob(job: PrintJob) {
+  const { stampQueuedPdf } = await import('@/utils/queuedPdfPrintStamp');
+  const content = await stampQueuedPdf(job.content, job.title);
   return bypassPrint(() => {
   const w = window.open('', '_blank', 'width=980,height=800');
   if (!w) return false;
   w.document.open();
   w.document.write(
-    `<!DOCTYPE html><html><head><title>${job.title}</title><style>html,body{margin:0;height:100%}iframe{border:0;width:100%;height:100%}</style></head><body><iframe src="${job.content}"></iframe></body></html>`
+    `<!DOCTYPE html><html><head><title>Verified PDF</title><style>html,body{margin:0;height:100%}iframe{border:0;width:100%;height:100%}</style></head><body><iframe src="${content}"></iframe></body></html>`
   );
   w.document.close();
   return true;
