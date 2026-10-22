@@ -384,9 +384,7 @@ export const AccountButton = () => {
                 </div>
                 {balanceHidden && (
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {checkStatus && checkStatus.next_fee > 0
-                      ? `Another look costs UGX ${checkStatus.next_fee.toLocaleString()} (UGX ${checkStatus.fees_today.toLocaleString()} of UGX 1,000 used today).`
-                      : 'Your first balance check today is free. Each extra check costs UGX 200, up to UGX 1,000 a day.'}
+                    Balance checks are free.
                   </p>
                 )}
                 {!balanceHidden && (effectiveWalletBalance < 0 ? (
