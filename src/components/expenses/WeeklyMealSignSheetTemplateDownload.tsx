@@ -245,7 +245,7 @@ export const generateWeeklyMealSignSheet = async (weekStartISO?: string, blankOn
   }
 
   const stamp = weekStart.toISOString().slice(0, 10);
-  doc.save(`Weekly-Meals-Sign-Sheet-${stamp}.pdf`);
+  await doc.save(`Weekly-Meals-Sign-Sheet-${stamp}.pdf`);
   try {
     const blobUrl = doc.output('bloburl') as unknown as string;
     const printWin = window.open(blobUrl, '_blank');

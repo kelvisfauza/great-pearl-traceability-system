@@ -326,6 +326,7 @@ const generatePDF = async (
   doc.text(`Ref: ${refNo}  |  Submit to Finance with all supporting documents.`, pageW / 2, footerY + 5, { align: 'center' });
   doc.text('Great Agro Coffee Ltd  |  A Member of YEDA Coffee Company Limited  |  P.O Box 431420, Kasese, Uganda  |  Internal Use Only', pageW / 2, footerY + 10, { align: 'center' });
 
+  await (await import('@/utils/pdfPrintStamp')).preparePdfPrint(doc, `Per diem ${refNo}`);
   const blobUrl = doc.output('bloburl');
   const printWin = window.open(blobUrl as unknown as string, '_blank');
   if (printWin) {

@@ -185,7 +185,7 @@ const generatePurchaseReport = async (reportDate: string, warehouse: string) => 
     { align: 'center' },
   );
 
-  doc.save(`Purchase-Report-${(reportDate || 'blank').replace(/[^\w-]/g, '')}.pdf`);
+  await doc.save(`Purchase-Report-${(reportDate || 'blank').replace(/[^\w-]/g, '')}.pdf`);
   try {
     const blobUrl = doc.output('bloburl') as unknown as string;
     const printWin = window.open(blobUrl, '_blank');

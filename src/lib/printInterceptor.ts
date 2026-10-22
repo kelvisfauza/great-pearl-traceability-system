@@ -108,8 +108,6 @@ async function ask(win: Window, originalPrint: () => void) {
   catch (error) { reportPrintError(error); return; }
   const stampedHtml = html;
 
-  const isChild = win !== window;
-
   const detail: PrintIntent = {
     title,
     html,
@@ -120,15 +118,6 @@ async function ask(win: Window, originalPrint: () => void) {
         if (printHtmlInFreshWindow(stampedHtml, title)) return;
       }
       reportPrintError(new Error('Please allow pop-ups to print the verified document.'));
-      return;
-      // Focus the target window first — a print() fired while a modal in the
-      // opener still holds focus is silently dropped by Chrome/Edge.
-      try { win.focus(); } catch { /* ignore */ }
-      try {
-        originalPrint();
-      } catch {
-        try { (win as any).print?.(); } catch { /* ignore */ }
-      }
     },
     queue: () => { /* handled by the dialog via printQueue */ },
     cancel: () => { /* no-op */ },
@@ -155,7 +144,7 @@ function patchWindow(win: Window | null) {
     w.__pqPatched = true;
     w.print = () => {
       if (isBypassed()) return original();
-      ask(win, original);
+      void ask(win, original).catch(reportPrintError);
     };
   } catch {
     /* cross-origin */

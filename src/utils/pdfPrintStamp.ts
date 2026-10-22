@@ -15,7 +15,7 @@ export function preparePdfPrint(doc: jsPDF, title = 'System document'): Promise<
   const promise = (async () => {
     const stamp = await createDocumentPrintStamp(title, 'pdf');
     const count = doc.getNumberOfPages();
-    const current = doc.internal.getCurrentPageInfo().pageNumber;
+    const current = (doc.internal as any).getCurrentPageInfo().pageNumber;
     const unit = doc.internal.scaleFactor;
     for (let page = 1; page <= count; page++) {
       doc.setPage(page);

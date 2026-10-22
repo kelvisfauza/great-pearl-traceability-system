@@ -164,7 +164,7 @@ export const generateStoreCoffeeClearanceForm = async () => {
     { align: 'center' },
   );
 
-  doc.save('Store-Coffee-Clearance-Form.pdf');
+  await doc.save('Store-Coffee-Clearance-Form.pdf');
   try {
     const blobUrl = doc.output('bloburl') as unknown as string;
     const printWin = window.open(blobUrl, '_blank');

@@ -10,6 +10,7 @@ import { Printer, Trash2, RotateCcw, History, Inbox, Send } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { loadEmployeeDirectory, type DirectoryUser } from '@/lib/employeeDirectory';
+import { reportPrintError } from '@/lib/documentPrintStamp';
 import {
   PrintJob, fetchPrintJobs, markPrinted, deleteJobs, requeueJob,
   cleanupExpiredPrintJobs, printHtmlJobs, printPdfJob, subscribePrintQueue,
@@ -80,8 +81,10 @@ const PrintQueuePage = () => {
     const htmlJobs = items.filter(j => j.format === 'html');
     const pdfJobs = items.filter(j => j.format === 'pdf');
     let ok = true;
-    if (htmlJobs.length) ok = printHtmlJobs(htmlJobs) && ok;
-    pdfJobs.forEach(j => { ok = printPdfJob(j) && ok; });
+    try {
+      if (htmlJobs.length) ok = (await printHtmlJobs(htmlJobs)) && ok;
+      for (const j of pdfJobs) ok = (await printPdfJob(j)) && ok;
+    } catch (error) { reportPrintError(error); return; }
     if (!ok) {
       toast({ title: 'Pop-up blocked', description: 'Allow pop-ups for this site to print.', variant: 'destructive' });
       return;
