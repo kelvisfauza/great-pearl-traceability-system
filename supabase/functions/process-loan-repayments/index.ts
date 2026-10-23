@@ -203,6 +203,21 @@ Deno.serve(async (req) => {
         }
 
         // ═══════════════════════════════════════════════════
+        // STEP 2b: GUARANTOR RECOVERY PENALTY — 5% of what the
+        // guarantor(s) covered, charged to the BORROWER, booked to
+        // Profits (LOAN_PENALTY). Overdraft covers any shortfall.
+        // ═══════════════════════════════════════════════════
+        if (deductedFromGuarantor > 0) {
+          await applyGuarantorPenalty(supabase, {
+            borrowerUserId: String(borrowerUserId),
+            loan,
+            installment: repayment.installment_number,
+            collected: deductedFromGuarantor,
+          })
+        }
+
+
+        // ═══════════════════════════════════════════════════
         // STEP 3: SALARY RECOVERY (last resort)
         // Auto-create salary advance if employee hasn't been
         // paid this month yet — deducted from next payroll
