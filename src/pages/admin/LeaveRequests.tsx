@@ -143,6 +143,19 @@ const LeaveRequests = () => {
     return c;
   }, [rows]);
 
+  const ongoing = useMemo(() => {
+    const now = new Date();
+    const today = format(now, "yyyy-MM-dd");
+    const dayMs = 24 * 60 * 60 * 1000;
+    return rows
+      .filter((r) => statusKey(r.status) === "approved" && r.details?.start_date && r.details?.end_date && r.details.start_date <= today && r.details.end_date >= today)
+      .map((r) => {
+        const left = Math.round((new Date(r.details.end_date + "T00:00:00").getTime() - new Date(today + "T00:00:00").getTime()) / dayMs) + 1;
+        return { row: r, left };
+      })
+      .sort((a, b) => a.left - b.left);
+  }, [rows]);
+
   const visible = rows.filter((r) => tab === "all" || statusKey(r.status) === tab);
 
   const sourceLabel = (d: any) => {
@@ -225,6 +238,29 @@ const LeaveRequests = () => {
   return (
     <DashboardLayout title="Leave Requests" subtitle="All leave requests from the system, email and Teams">
       <div className="space-y-4">
+        <div className="rounded-lg border bg-card p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <CalendarDays className="h-4 w-4 text-primary" />
+            <h2 className="font-semibold text-foreground">On leave now ({ongoing.length})</h2>
+          </div>
+          {ongoing.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nobody is on leave today.</p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {ongoing.map(({ row, left }) => (
+                <div key={row.id} className="rounded-md border bg-muted/40 p-3">
+                  <p className="font-medium text-foreground">{names[row.requestedby]?.name || row.requestedby}</p>
+                  <p className="text-xs text-muted-foreground">{row.details.leave_type || "Leave"} · {fmt(row.details.start_date)} → {fmt(row.details.end_date)}</p>
+                  <p className="mt-2 text-sm">
+                    <span className="text-2xl font-bold text-primary">{left}</span>{" "}
+                    <span className="text-muted-foreground">{left === 1 ? "day left (last day today)" : "days left"}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">Back on {fmt(format(new Date(new Date(row.details.end_date + "T00:00:00").getTime() + 86400000), "yyyy-MM-dd"))}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="pending">Pending ({counts.pending})</TabsTrigger>
