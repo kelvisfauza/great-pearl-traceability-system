@@ -509,3 +509,110 @@ Deno.serve(async (req) => {
     })
   }
 })
+
+// 5% penalty on any amount recovered from a guarantor, charged to the borrower.
+export const GUARANTOR_PENALTY_RATE = 0.05
+export const guarantorPenalty = (collected: number) => Math.round(Math.max(0, collected) * GUARANTOR_PENALTY_RATE)
+
+async function applyGuarantorPenalty(
+  supabase: any,
+  p: { borrowerUserId: string; loan: any; installment: number; collected: number },
+) {
+  const penalty = guarantorPenalty(p.collected)
+  if (penalty <= 0) return
+  const reference = `LOAN-GUARANTOR-PENALTY-${p.loan.id}-${p.installment}`
+  const ugx = (n: number) => `UGX ${Math.round(n).toLocaleString()}`
+  try {
+    const { data: existing } = await supabase.from('ledger_entries').select('id').eq('reference', reference).limit(1)
+    if (existing && existing.length) return
+
+    const { data: bal } = await supabase.rpc('get_effective_wallet_balance', { p_user_id: p.borrowerUserId })
+    const before = Number(bal) || 0
+    const overdraftPortion = Math.max(0, Math.min(penalty, penalty - Math.max(before, 0)))
+
+    const { error } = await supabase.from('ledger_entries').insert({
+      user_id: p.borrowerUserId,
+      entry_type: 'ADJUSTMENT',
+      amount: -penalty,
+      reference,
+      source_category: 'LOAN_PENALTY',
+      metadata: {
+        type: 'guarantor_recovery_penalty',
+        loan_id: p.loan.id,
+        installment_number: p.installment,
+        guarantor_collected: p.collected,
+        rate: GUARANTOR_PENALTY_RATE,
+        overdraft_portion: overdraftPortion,
+        bypass_treasury_check: true,
+        description: `Guarantor recovery penalty (5% of ${ugx(p.collected)}) – installment #${p.installment}`,
+      },
+    })
+    if (error) { console.error('  ❌ Guarantor penalty insert failed:', error); return }
+
+    // Record the overdraft draw so it is recovered from the next deposit.
+    if (overdraftPortion > 0) {
+      let { data: acct } = await supabase.from('overdraft_accounts')
+        .select('id, outstanding_balance, total_drawn').eq('user_id', p.borrowerUserId).eq('status', 'active').maybeSingle()
+      if (!acct) {
+        const { data: created } = await supabase.from('overdraft_accounts').insert({
+          user_id: p.borrowerUserId, employee_email: p.loan.employee_email, employee_name: p.loan.employee_name,
+          approved_limit: 50000, status: 'active', approved_by: 'SYSTEM_AUTO_GUARANTOR_PENALTY',
+          activation_fee_paid: true, auto_managed: true,
+        }).select('id, outstanding_balance, total_drawn').single()
+        acct = created
+      }
+      if (acct) {
+        const newOut = Number(acct.outstanding_balance || 0) + overdraftPortion
+        await supabase.from('overdraft_accounts').update({
+          outstanding_balance: newOut,
+          total_drawn: Number(acct.total_drawn || 0) + overdraftPortion,
+          last_used_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+        }).eq('id', acct.id)
+        await supabase.from('overdraft_transactions').insert({
+          account_id: acct.id, user_id: p.borrowerUserId, transaction_type: 'draw', amount: overdraftPortion,
+          balance_after: newOut, reference, metadata: { source: 'guarantor_recovery_penalty', loan_id: p.loan.id },
+        })
+      }
+    }
+
+    const { data: emp } = await supabase.from('employees').select('name, phone').ilike('email', p.loan.employee_email).maybeSingle()
+    const name = emp?.name || p.loan.employee_name
+    const odText = overdraftPortion > 0 ? ` ${ugx(overdraftPortion)} of it was taken from your overdraft.` : ''
+    await supabase.functions.invoke('send-transactional-email', {
+      body: {
+        templateName: 'general-notification',
+        recipientEmail: p.loan.employee_email,
+        idempotencyKey: `guarantor-penalty-${p.loan.id}-${p.installment}`,
+        templateData: {
+          subject: `Loan Penalty of ${ugx(penalty)} – Guarantor Recovery`,
+          title: 'Guarantor Recovery Penalty',
+          recipientName: name,
+          message: [
+            `Your loan installment #${p.installment} could not be fully covered from your wallet, so ${ugx(p.collected)} was recovered from your guarantor.`,
+            '',
+            'Detail | Value',
+            `Recovered from guarantor | ${ugx(p.collected)}`,
+            `Penalty (5%) | ${ugx(penalty)}`,
+            ...(overdraftPortion > 0 ? [`Covered by overdraft | ${ugx(overdraftPortion)}`] : []),
+            `Reference | ${reference}`,
+            '',
+            `A penalty of ${ugx(penalty)} has been deducted from your wallet.${odText} Keep enough funds in your wallet on due dates to avoid this charge.`,
+          ].join('\n'),
+        },
+      },
+    })
+    if (emp?.phone) {
+      await supabase.from('sms_logs').insert({
+        phone: emp.phone,
+        message: `Dear ${name}, ${ugx(p.collected)} of your loan installment #${p.installment} was recovered from your guarantor. A 5% penalty of ${ugx(penalty)} has been deducted from your wallet.${odText} Ref ${reference}. - Great Agro Coffee`,
+        message_type: 'loan_guarantor_penalty',
+        status: 'failed',
+        recipient_email: p.loan.employee_email,
+        request_id: `${reference}-sms`,
+      } as any)
+    }
+    console.log(`  ⚖️ Guarantor penalty ${ugx(penalty)} charged to borrower (overdraft ${ugx(overdraftPortion)})`)
+  } catch (e) {
+    console.error('  ❌ Guarantor penalty failed:', e)
+  }
+}
