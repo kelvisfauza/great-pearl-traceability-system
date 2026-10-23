@@ -43,6 +43,8 @@ export function useITReadOnly(): boolean {
   if (!employee) return false;
   if (isAdmin?.() || isSuperAdmin?.() || isAdministrator?.()) return false;
   if (!isITOfficerRole(employee.role)) return false;
+  // IT Officers granted 'Full Operations' by an admin operate fully everywhere.
+  if ((employee as any).permissions?.includes?.('Full Operations')) return false;
   const path = location.pathname.toLowerCase();
   return READ_ONLY_ROUTES.some((r) => path === r || path.startsWith(r + '/'));
 }
