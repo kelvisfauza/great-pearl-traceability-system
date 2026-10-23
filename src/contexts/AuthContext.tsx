@@ -733,7 +733,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return roleBasedActions.includes(action) || hasGranularPermission;
     }
     
-    return false;
+    // Other roles (e.g. IT Officer): admin-granted 'Full Operations' unlocks
+    // everything except delete; otherwise only explicit granular permissions.
+    if (employee.permissions?.includes('Full Operations')) return action !== 'delete';
+    return action === 'view' || (employee.permissions?.some(p => p.endsWith(`:${action}`)) ?? false);
   };
 
   const changePassword = async (newPassword: string): Promise<void> => {
