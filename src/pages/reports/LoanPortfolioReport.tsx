@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import Layout from "@/components/Layout";
@@ -141,7 +141,7 @@ const LoanPortfolioReport = () => {
                 </TableRow></TableHeader>
                 <TableBody>
                   {filtered.map((r: any) => (
-                    <>
+                    <Fragment key={r.id}>
                       <TableRow key={r.id} className="cursor-pointer" onClick={() => setExpanded(expanded === r.id ? null : r.id)}>
                         <TableCell>{expanded === r.id ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</TableCell>
                         <TableCell><div className="font-medium flex items-center gap-1">{r.employee_name}{r.issues.length > 0 && <AlertTriangle className="h-3.5 w-3.5 text-destructive" />}</div><div className="text-xs text-muted-foreground">{r.employee_email}</div></TableCell>
@@ -180,7 +180,7 @@ const LoanPortfolioReport = () => {
                           </TableCell>
                         </TableRow>
                       )}
-                    </>
+                    </Fragment>
                   ))}
                 </TableBody>
               </Table>
