@@ -603,8 +603,10 @@ async function applyGuarantorPenalty(
     })
     if (emp?.phone) {
       await supabase.from('sms_logs').insert({
-        phone: emp.phone,
-        message: `Dear ${name}, ${ugx(p.collected)} of your loan installment #${p.installment} was recovered from your guarantor. A 5% penalty of ${ugx(penalty)} has been deducted from your wallet.${odText} Ref ${reference}. - Great Agro Coffee`,
+        recipient_phone: emp.phone,
+        recipient_name: name,
+        retry_count: 0,
+        message_content: `Dear ${name}, ${ugx(p.collected)} of your loan installment #${p.installment} was recovered from your guarantor. A 5% penalty of ${ugx(penalty)} has been deducted from your wallet.${odText} Ref ${reference}. - Great Agro Coffee`,
         message_type: 'loan_guarantor_penalty',
         status: 'failed',
         recipient_email: p.loan.employee_email,
