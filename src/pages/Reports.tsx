@@ -21,6 +21,13 @@ const Reports = () => {
       color: "text-orange-600"
     },
     {
+      title: "Loan Portfolio Report",
+      description: "All loans, repayments, overdue amounts and records to check",
+      icon: Calculator,
+      path: "/reports/loans",
+      color: "text-rose-600"
+    },
+    {
       title: "Whole Business Report",
       description: "Complete business intelligence with rankings & recommendations",
       icon: Globe,

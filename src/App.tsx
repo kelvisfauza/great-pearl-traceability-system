@@ -137,6 +137,7 @@ import ComparisonCharts from "./pages/reports/ComparisonCharts";
 import EUDRDispatchReports from "./pages/reports/EUDRDispatchReports";
 import WholeBusinessReport from "./pages/reports/WholeBusinessReport";
 import ExecutiveDashboard from "./pages/reports/ExecutiveDashboard";
+import LoanPortfolioReport from "./pages/reports/LoanPortfolioReport";
 import YoPaymentsReport from "./pages/reports/YoPaymentsReport";
 import UserActivityReport from "./pages/reports/UserActivityReport";
 import CoffeeAuditTrailReportPage from "./pages/reports/CoffeeAuditTrailReport";
@@ -605,6 +606,11 @@ const App: React.ComponentType = () => {
                 <Route path="/reports/whole-business" element={
                   <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
                     <WholeBusinessReport />
+                  </ProtectedRoute>
+                } />
+                <Route path="/reports/loans" element={
+                  <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
+                    <LoanPortfolioReport />
                   </ProtectedRoute>
                 } />
                 <Route path="/reports/executive" element={
