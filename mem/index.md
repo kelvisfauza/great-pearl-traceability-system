@@ -8,3 +8,4 @@
 - [Loyalty Daily Collection](mem://rewards/loyalty-system/daily-collection) — 8pm payout, accruals table, credit RPC and cron
 - [Loyalty Suspension](mem://rewards/loyalty-system/suspension) — How automatic loyalty awards are switched off and how to resume
 - [Trainee Role](mem://access-control/trainee-role) — View-only intern account: masked money, restricted menus, guided tour, HR progress card
+- [Guarantor Penalty](mem://features/loans/guarantor-recovery-penalty) — 5% of guarantor-recovered amount charged to borrower, to Profits, overdraft if short, email+SMS
