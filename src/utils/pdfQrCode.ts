@@ -1,4 +1,6 @@
+import QRCode from 'qrcode';
 import { createDocumentPrintStamp } from '@/lib/documentPrintStamp';
+import { getVerificationUrl } from '@/utils/verificationCode';
 
 export interface DocQr {
   code: string;
@@ -8,6 +10,13 @@ export interface DocQr {
 
 /** Builds a verification code + QR data URL that can be embedded in a jsPDF document. */
 export async function buildDocumentQr(reference?: string): Promise<DocQr> {
+  // A form number (e.g. quality analysis / store report) must stay scannable so the
+  // form can be loaded back; the "Printed by" verification footer is added separately.
+  if (reference) {
+    const url = getVerificationUrl(reference);
+    const dataUrl = await QRCode.toDataURL(url, { width: 256, margin: 4, errorCorrectionLevel: 'M' });
+    return { code: reference, url, dataUrl };
+  }
   const stamp = await createDocumentPrintStamp(reference || 'Document template', 'pdf_template');
   return { code: stamp.code, url: stamp.url, dataUrl: stamp.qr };
 }
