@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 const MoneyRequestsManager = lazy(() => import('./MoneyRequestsManager').then(m => ({ default: m.default })));
 const FuelOrderModal = lazy(() => import('./FuelOrderModal').then(m => ({ default: m.default })));
+const FuelVouchersManager = lazy(() => import('./FuelVouchersManager').then(m => ({ default: m.default })));
 
 export const ExpenseManagement = () => {
   const { employee } = useAuth();
@@ -87,6 +88,28 @@ export const ExpenseManagement = () => {
             New Fuel Order
           </Button>
         </CardHeader>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Fuel className="h-5 w-5 text-primary" />
+            Fuel Vouchers (Truck Register)
+          </CardTitle>
+          <CardDescription>
+            Issue numbered A4 fuel vouchers for company trucks — trip-specific or pre-numbered blank books.
+            Every voucher is QR-verified; track issued, used and cancelled vouchers plus fuel spending per truck.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Suspense fallback={
+            <div className="flex items-center justify-center h-40">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          }>
+            <FuelVouchersManager />
+          </Suspense>
+        </CardContent>
       </Card>
 
       <Card>
