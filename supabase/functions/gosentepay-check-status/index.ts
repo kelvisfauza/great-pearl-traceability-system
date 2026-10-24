@@ -111,9 +111,7 @@ serve(async (req) => {
     console.log(`[Yo Check Status] Response: ${responseText}`);
 
     const txStatusMatch = responseText.match(/<TransactionStatus>(.*?)<\/TransactionStatus>/);
-    const statusMatch = responseText.match(/<Status>(.*?)<\/Status>/);
     const txStatus = txStatusMatch?.[1]?.trim()?.toUpperCase();
-    const yoStatus = statusMatch?.[1]?.trim()?.toUpperCase();
 
     // IMPORTANT: <Status>OK</Status> is only the API envelope (the lookup worked) —
     // it does NOT mean the customer paid. Only <TransactionStatus> decides the outcome.
