@@ -115,7 +115,9 @@ serve(async (req) => {
     const txStatus = txStatusMatch?.[1]?.trim()?.toUpperCase();
     const yoStatus = statusMatch?.[1]?.trim()?.toUpperCase();
 
-    if (txStatus === "SUCCEEDED" || txStatus === "COMPLETED" || yoStatus === "OK") {
+    // IMPORTANT: <Status>OK</Status> is only the API envelope (the lookup worked) —
+    // it does NOT mean the customer paid. Only <TransactionStatus> decides the outcome.
+    if (txStatus === "SUCCEEDED" || txStatus === "COMPLETED") {
       newStatus = "completed";
     } else if (txStatus === "FAILED" || txStatus === "EXPIRED" || txStatus === "CANCELLED") {
       newStatus = "failed";
