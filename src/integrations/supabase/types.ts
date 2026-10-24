@@ -5289,6 +5289,99 @@ export type Database = {
         }
         Relationships: []
       }
+      fuel_voucher_counters: {
+        Row: {
+          last_number: number
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          year: number
+        }
+        Update: {
+          last_number?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      fuel_vouchers: {
+        Row: {
+          batch_reference: string | null
+          cancelled_at: string | null
+          cancelled_reason: string | null
+          created_at: string
+          driver_name: string | null
+          driver_phone: string | null
+          fuel_type: string
+          id: string
+          issued_by_email: string | null
+          issued_by_name: string | null
+          kind: string
+          notes: string | null
+          purpose: string | null
+          route: string | null
+          service_provider: string | null
+          status: string
+          truck_number: string | null
+          updated_at: string
+          used_amount: number | null
+          used_at: string | null
+          used_litres: number | null
+          used_provider: string | null
+          voucher_number: string
+        }
+        Insert: {
+          batch_reference?: string | null
+          cancelled_at?: string | null
+          cancelled_reason?: string | null
+          created_at?: string
+          driver_name?: string | null
+          driver_phone?: string | null
+          fuel_type?: string
+          id?: string
+          issued_by_email?: string | null
+          issued_by_name?: string | null
+          kind?: string
+          notes?: string | null
+          purpose?: string | null
+          route?: string | null
+          service_provider?: string | null
+          status?: string
+          truck_number?: string | null
+          updated_at?: string
+          used_amount?: number | null
+          used_at?: string | null
+          used_litres?: number | null
+          used_provider?: string | null
+          voucher_number?: string
+        }
+        Update: {
+          batch_reference?: string | null
+          cancelled_at?: string | null
+          cancelled_reason?: string | null
+          created_at?: string
+          driver_name?: string | null
+          driver_phone?: string | null
+          fuel_type?: string
+          id?: string
+          issued_by_email?: string | null
+          issued_by_name?: string | null
+          kind?: string
+          notes?: string | null
+          purpose?: string | null
+          route?: string | null
+          service_provider?: string | null
+          status?: string
+          truck_number?: string | null
+          updated_at?: string
+          used_amount?: number | null
+          used_at?: string | null
+          used_litres?: number | null
+          used_provider?: string | null
+          voucher_number?: string
+        }
+        Relationships: []
+      }
       generated_receipts: {
         Row: {
           amount: number | null
@@ -18541,6 +18634,7 @@ export type Database = {
       milling_unremitted_total: { Args: never; Returns: number }
       next_batch_number: { Args: { p_date?: string }; Returns: string }
       next_dispatch_monitoring_form_number: { Args: never; Returns: string }
+      next_fuel_voucher_number: { Args: never; Returns: string }
       normalize_grn_pay_code: { Args: { p_code: string }; Returns: string }
       overdraft_activate: { Args: { p_email: string }; Returns: Json }
       overdraft_daily_maintenance: { Args: never; Returns: Json }
