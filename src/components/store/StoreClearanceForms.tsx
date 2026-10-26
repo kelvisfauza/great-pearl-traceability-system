@@ -92,7 +92,7 @@ const StoreClearanceForms = ({ salesView = false, eudrView = false }: { salesVie
     try {
       const added: any[] = [];
       for (const file of Array.from(files)) {
-        const path = `clearance/${row.id}/${Date.now()}-${file.name.replace(/[^a-z0-9._-]/gi, '_')}`;
+        const path = `clearance-forms/${row.id}/${Date.now()}-${file.name.replace(/[^a-z0-9._-]/gi, '_')}`;
         const { error } = await supabase.storage.from('dispatch-attachments').upload(path, file);
         if (error) throw error;
         added.push({ name: file.name, path, uploaded_by: employee?.email || null, uploaded_at: new Date().toISOString() });
@@ -403,7 +403,7 @@ const StoreClearanceForms = ({ salesView = false, eudrView = false }: { salesVie
                           )}
                         </TableCell>
                         <TableCell className="text-right whitespace-nowrap">
-                          {eudrView && (canManage || hasPermission('EUDR Documentation')) && !f.sale_id && <label className="inline-flex"><input type="file" multiple accept="image/*,application/pdf" className="hidden" disabled={uploadingId === f.id} onChange={(e) => { uploadSigned(f, e.target.files); e.target.value = ''; }} /><span className="inline-flex items-center rounded-md border px-2 py-1 text-xs cursor-pointer hover:bg-accent">{uploadingId === f.id ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Paperclip className="mr-1 h-3.5 w-3.5" />}Attach signed form</span></label>}
+                          {eudrView && canManage && !f.sale_id && <label className="inline-flex"><input type="file" multiple accept="image/*,application/pdf" className="hidden" disabled={uploadingId === f.id} onChange={(e) => { uploadSigned(f, e.target.files); e.target.value = ''; }} /><span className="inline-flex items-center rounded-md border px-2 py-1 text-xs cursor-pointer hover:bg-accent">{uploadingId === f.id ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Paperclip className="mr-1 h-3.5 w-3.5" />}Attach signed form</span></label>}
                           {f.delivery_note_number && <Button size="sm" variant="ghost" title="Print clearance and delivery note" aria-label="Print clearance and delivery note" disabled={printing} onClick={() => printPair(f)}><Printer className="h-3.5 w-3.5" /></Button>}
                           {salesView && canAdmin && f.delivery_note_number && !f.sale_id && <Button size="sm" variant="outline" onClick={() => setAttachRow(f)}><Link2 className="mr-1 h-3.5 w-3.5" />Attach sale</Button>}
                           {canManage && !salesView && !f.sale_id && <Button size="sm" variant="ghost" title="Edit clearance" onClick={() => openEdit(f)}><Pencil className="h-3.5 w-3.5" /></Button>}
