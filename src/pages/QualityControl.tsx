@@ -1,3 +1,4 @@
+import { useSearchParams } from "react-router-dom";
 import OverdueAssessmentsBar from "@/components/quality/OverdueAssessmentsBar";
 import QualityAnalysisPostings from "@/components/quality/QualityAnalysisPostings";
 import { useQualityPostingCounts } from "@/components/quality/useQualityPostingCounts";
