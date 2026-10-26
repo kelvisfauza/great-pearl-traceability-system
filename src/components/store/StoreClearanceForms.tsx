@@ -136,6 +136,9 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
     return rows;
   } });
   const batches = batchesQuery.data || [];
+  const [autoType, setAutoType] = useState("");
+  const [autoKg, setAutoKg] = useState("");
+  const coffeeTypes = Array.from(new Set(batches.map(b => b.coffee_type.charAt(0).toUpperCase() + b.coffee_type.slice(1).toLowerCase())));
   const selectBatch = (index: number, id: string) => {
     const batch = batches.find(b => b.id === id);
     if (!batch) return;
@@ -457,6 +460,19 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
             <Label>Coffee released from store — batches</Label>
             {batchesQuery.isError && <p role="alert" className="text-destructive">Could not load batches.</p>}
             {!batchesQuery.isFetching && !batchesQuery.isError && !batches.length && <p className="text-muted-foreground">No batches with available stock.</p>}
+            <div className="flex flex-wrap items-end gap-2 rounded-md border bg-muted/30 p-3">
+              <div className="w-40"><Label className="text-xs">Coffee type</Label>
+                <Select value={autoType} onValueChange={setAutoType}><SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
+                  <SelectContent>{coffeeTypes.map(t => <SelectItem key={t} value={t}>{t} · {batches.filter(b => b.coffee_type.toLowerCase() === t.toLowerCase()).reduce((s, b) => s + b.remaining_kilograms, 0).toLocaleString()} kg</SelectItem>)}</SelectContent></Select></div>
+              <div className="w-36"><Label className="text-xs">Kgs sold / released</Label><Input type="number" min="0.01" step="0.01" value={autoKg} onChange={e => setAutoKg(e.target.value)} /></div>
+              <Button type="button" size="sm" disabled={batchesQuery.isFetching || !autoType} onClick={() => {
+                try {
+                  const lines = allocateFromBatches(batches, autoType, Number(autoKg));
+                  setItems(lines.map(l => ({ ...l, bags: '', weight_kg: String(l.weight_kg) })));
+                } catch (e: any) { toast.error(e.message); }
+              }}>Fetch from batches</Button>
+              <p className="w-full text-xs text-muted-foreground">Oldest batches are used first. You can still adjust lines and bags below.</p>
+            </div>
             <div className="border rounded-md overflow-x-auto">
               <Table>
                 <TableHeader>
