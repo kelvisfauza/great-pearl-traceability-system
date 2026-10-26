@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Fuel, Printer, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { buildFuelOrderNumber, openFuelOrderPdf, type FuelOrderPayload } from '@/utils/fuelOrderPdf';
+import { buildFuelOrderNumber, openFuelOrderPdf, openBlankFuelOrdersPdf, type FuelOrderPayload } from '@/utils/fuelOrderPdf';
 
 interface Props {
   open: boolean;
@@ -46,6 +46,19 @@ export const FuelOrderModal: React.FC<Props> = ({ open, onClose }) => {
 
   const update = <K extends keyof FuelOrderPayload>(k: K, v: FuelOrderPayload[K]) =>
     setForm(prev => ({ ...prev, [k]: v }));
+
+  const [blankPages, setBlankPages] = useState(10);
+  const handleBlankPrint = async () => {
+    try {
+      setBusy(true);
+      await openBlankFuelOrdersPdf(blankPages);
+      toast({ title: 'Blank orders generated', description: `${blankPages} page(s)` });
+    } catch (e: any) {
+      toast({ title: 'Failed to generate PDF', description: e?.message || 'Unknown error', variant: 'destructive' });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const handlePrint = async () => {
     if (!form.serviceProvider.trim() || !form.truckNumber.trim() || !form.driverName.trim()) {
@@ -203,6 +216,18 @@ export const FuelOrderModal: React.FC<Props> = ({ open, onClose }) => {
               onChange={e => update('notes', e.target.value)}
             />
           </div>
+        </div>
+
+        <div className="rounded-lg border bg-muted/40 p-3 flex flex-col md:flex-row md:items-end gap-3">
+          <div className="flex-1">
+            <Label>Print blank orders (number of pages)</Label>
+            <p className="text-xs text-muted-foreground mb-1">Empty, numbered A4 orders to fill in by hand.</p>
+            <Input type="number" min={1} max={200} value={blankPages}
+              onChange={e => setBlankPages(Math.max(1, Math.min(200, parseInt(e.target.value) || 1)))} />
+          </div>
+          <Button variant="secondary" onClick={handleBlankPrint} disabled={busy}>
+            <Printer className="h-4 w-4 mr-2" />Print {blankPages} blank
+          </Button>
         </div>
 
         <DialogFooter className="gap-2">
