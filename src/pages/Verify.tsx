@@ -256,6 +256,12 @@ const Verify = () => {
                 )}
 
                 {/* Reference Number */}
+                {['quality_analysis_form', 'store_report_form'].includes(verification.subtype) && verification.meta && (
+                  <div className="border-t border-border pt-4 text-foreground space-y-2">
+                    <p className="font-semibold">{String(verification.meta.title || 'Issued form')}</p>
+                    <p className="text-sm text-muted-foreground">{String(verification.meta.verification_scope || 'Form issuance only.')}</p>
+                  </div>
+                )}
                 {verification.subtype === 'system_print' && verification.meta && (
                   <div className="border-t border-border pt-4 text-foreground space-y-2">
                     <p className="font-semibold">{String(verification.meta.title || 'System document')}</p>
