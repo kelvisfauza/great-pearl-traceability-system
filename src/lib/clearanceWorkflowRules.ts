@@ -7,4 +7,20 @@ export function validateClearanceConfirmation(basis: string, contractId: string,
   if (basis === 'spot') return { basis: 'spot', contractId: null };
   if (basis !== 'contract' || !contracts.some(c => c.id === contractId && c.buyer_name.trim().toLowerCase() === buyer.trim().toLowerCase())) throw new Error('Choose a contract belonging to the clearance buyer');
   return { basis: 'contract', contractId };
+}/** Fill a released weight from the oldest batches of a coffee type first (batches must be pre-sorted oldest first). */
+export function allocateFromBatches(batches: ClearanceBatch[], coffeeType: string, kg: number) {
+  if (!(kg > 0)) throw new Error('Enter the kilograms released');
+  const type = coffeeType.trim().toLowerCase();
+  const pool = batches.filter(b => b.coffee_type.trim().toLowerCase() === type && b.remaining_kilograms > 0);
+  const available = pool.reduce((s, b) => s + b.remaining_kilograms, 0);
+  if (kg > available + 1e-9) throw new Error(`Only ${available.toLocaleString()} kg of ${coffeeType} is in stock`);
+  const lines: ReturnType<typeof batchClearanceLine>[] = [];
+  let left = kg;
+  for (const b of pool) {
+    if (left <= 1e-9) break;
+    const take = Math.round(Math.min(left, b.remaining_kilograms) * 100) / 100;
+    lines.push(batchClearanceLine(b, take));
+    left = Math.round((left - take) * 100) / 100;
+  }
+  return lines;
 }
