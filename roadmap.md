@@ -1,9 +1,10 @@
 # Roadmap
 
 ## Batch-based clearance and Procurement confirmation
-- [ ] Source clearance lines from batches and remove contract choice, comparison linking and uploads from Store.
-- [ ] Send saved clearances to a live Procurement queue for contract or spot-sale confirmation in V1/V2.
-- [ ] Validate workflow rules and record authenticated verification limits.
+- [x] Source clearance lines from batches and remove contract choice, comparison linking and uploads from Store; preserve automatic numbering and paired printing.
+- [x] Send saved clearances to a live Procurement queue for contract or spot-sale confirmation in V1/V2, with permission-checked confirmation and recorded identity/time.
+- [x] Validate batch/confirmation rules and public-access rejection — 13 tests passed, anonymous confirmation denied, latest build clean.
+- [ ] Verify signed-in batch selection, saved request, Procurement confirmation and Store status update — authenticated checks unavailable for external Supabase.
 
 ## Store coffee delivery intake
 - [x] Ask whether a sample was taken and atomically link a matching supplier sampling order when Yes, in both Store versions and offline uploads.
