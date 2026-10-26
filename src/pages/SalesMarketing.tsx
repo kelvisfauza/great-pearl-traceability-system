@@ -148,6 +148,7 @@ const SalesMarketing = () => {
           <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
             <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 bg-muted/50 p-1 rounded-xl gap-1">
               <TabsTrigger value="sales-form" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Sales</TabsTrigger>
+              <TabsTrigger value="delivery-notes" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Delivery Notes</TabsTrigger>
               <TabsTrigger value="customers" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Customers</TabsTrigger>
               <TabsTrigger value="contract-files" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Contracts</TabsTrigger>
               <TabsTrigger value="supplier-subcontracts" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Subcontracts</TabsTrigger>
@@ -160,6 +161,7 @@ const SalesMarketing = () => {
           <TabsContent value="clearance" className="space-y-4">
             <StoreClearanceForms />
           </TabsContent>
+          <TabsContent value="delivery-notes" className="space-y-4"><StoreClearanceForms salesView /></TabsContent>
 
           <TabsContent value="sales-form" className="space-y-4">
             <SalesForm />

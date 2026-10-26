@@ -6,6 +6,7 @@ import SalesTransactionsList from "@/components/v2/sales/SalesTransactionsList";
 import SalesReportPrint from "@/components/v2/sales/SalesReportPrint";
 import NewSaleForm from "@/components/v2/sales/NewSaleForm";
 import PriceTicker from "@/components/PriceTicker";
+import StoreClearanceForms from "@/components/store/StoreClearanceForms";
 
 const SalesIndex = () => {
   return (
@@ -31,10 +32,12 @@ const SalesIndex = () => {
 
           <div className="lg:col-span-3">
             <Tabs defaultValue="transactions" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="flex flex-wrap h-auto w-full gap-1">
                 <TabsTrigger value="transactions">Sales History</TabsTrigger>
                 <TabsTrigger value="new">New Sale</TabsTrigger>
+                <TabsTrigger value="delivery-notes">Delivery Notes</TabsTrigger>
               </TabsList>
+              <TabsContent value="delivery-notes"><StoreClearanceForms salesView /></TabsContent>
 
               <TabsContent value="transactions">
                 <Card>

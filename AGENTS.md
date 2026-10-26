@@ -1,5 +1,7 @@
 # Project architecture
 
+- Store clearance and delivery notes share a persisted dispatch snapshot with trigger-issued immutable numbers; Sales administrators link existing sales through a permission-checked private routine without creating sales or deducting inventory, and paired PDFs use the registered print footer.
+
 - Embed the shared SamplingOrdersTab in both V1 and V2 Store pages, preserving its existing creation checks, so Store staff can use sampling orders without entering Quality Control.
 
 - Restore sale stock from recorded allocations in database triggers on deletion/cancellation/stock-field edits; lock sale and batch rows and cap repeated deduction calls by outstanding sale weight, so every client shares atomic, idempotent stock accounting. Confirm returned deleted rows before reporting success; preserve reversals and source snapshots in the audit trail.

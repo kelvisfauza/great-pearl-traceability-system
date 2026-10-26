@@ -12822,6 +12822,7 @@ export type Database = {
           contract_id: string | null
           created_at: string
           created_by: string | null
+          delivery_note_number: string | null
           destination_buyer: string | null
           dispatch_report_id: string | null
           driver_name: string | null
@@ -12832,6 +12833,9 @@ export type Database = {
           received_by_driver: string | null
           released_by: string | null
           remarks: string | null
+          sale_attached_at: string | null
+          sale_attached_by: string | null
+          sale_id: string | null
           total_bags: number
           total_weight_kg: number
           updated_at: string
@@ -12846,6 +12850,7 @@ export type Database = {
           contract_id?: string | null
           created_at?: string
           created_by?: string | null
+          delivery_note_number?: string | null
           destination_buyer?: string | null
           dispatch_report_id?: string | null
           driver_name?: string | null
@@ -12856,6 +12861,9 @@ export type Database = {
           received_by_driver?: string | null
           released_by?: string | null
           remarks?: string | null
+          sale_attached_at?: string | null
+          sale_attached_by?: string | null
+          sale_id?: string | null
           total_bags?: number
           total_weight_kg?: number
           updated_at?: string
@@ -12870,6 +12878,7 @@ export type Database = {
           contract_id?: string | null
           created_at?: string
           created_by?: string | null
+          delivery_note_number?: string | null
           destination_buyer?: string | null
           dispatch_report_id?: string | null
           driver_name?: string | null
@@ -12880,6 +12889,9 @@ export type Database = {
           received_by_driver?: string | null
           released_by?: string | null
           remarks?: string | null
+          sale_attached_at?: string | null
+          sale_attached_by?: string | null
+          sale_id?: string | null
           total_bags?: number
           total_weight_kg?: number
           updated_at?: string
@@ -12892,6 +12904,13 @@ export type Database = {
             columns: ["contract_id"]
             isOneToOne: false
             referencedRelation: "buyer_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_clearance_forms_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales_transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -17874,6 +17893,10 @@ export type Database = {
         Args: { p_notes?: string; p_request_id: string }
         Returns: Json
       }
+      attach_sale_to_delivery_note: {
+        Args: { p_clearance_id: string; p_sale_id: string }
+        Returns: Json
+      }
       attach_sampling_order_grn: {
         Args: { p_code: string; p_order_id: string }
         Returns: Json
@@ -17923,6 +17946,7 @@ export type Database = {
         Args: { employee_salary: number }
         Returns: number
       }
+      can_admin_store_dispatch: { Args: never; Returns: boolean }
       can_approve_finance: { Args: never; Returns: boolean }
       can_bypass_sms_verification: {
         Args: { user_email: string }

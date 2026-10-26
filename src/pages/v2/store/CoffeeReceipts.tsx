@@ -13,12 +13,14 @@ import DamagedBagsTab from "@/components/v2/store/tabs/DamagedBagsTab";
 import ReconciliationTab from "@/components/v2/store/tabs/ReconciliationTab";
 import StoreReportsTab from "@/components/v2/store/tabs/StoreReportsTab";
 import SamplingOrdersTab from "@/components/v2/quality/tabs/SamplingOrdersTab";
+import StoreClearanceForms from "@/components/store/StoreClearanceForms";
 import { Plus } from "lucide-react";
 import { useState as useDialogState } from "react";
 
 const tabs = [
   { id: "receipts", label: "Receipts", icon: Package },
   { id: "sampling-orders", label: "Sampling Orders", icon: FileText },
+  { id: "clearance", label: "Clearance & Delivery Notes", icon: FileText },
   { id: "verification", label: "Verification", icon: ClipboardCheck },
   { id: "damaged", label: "Damaged Bags", icon: AlertTriangle },
   { id: "reconciliation", label: "Reconciliation", icon: GitCompare },
@@ -56,7 +58,7 @@ const CoffeeReceipts = () => {
                 <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
                   {tabs.map(tab => (
                     <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-1.5 text-xs sm:text-sm px-2 py-1.5">
-                      <tab.icon className="h-3.5 w-3.5" /><span className={tab.id === "sampling-orders" ? "" : "hidden sm:inline"}>{tab.label}</span>
+                      <tab.icon className="h-3.5 w-3.5" /><span className={['sampling-orders', 'clearance'].includes(tab.id) ? "" : "hidden sm:inline"}>{tab.label}</span>
                     </TabsTrigger>
                   ))}
                 </TabsList>
@@ -66,6 +68,7 @@ const CoffeeReceipts = () => {
               </div>
               <TabsContent value="receipts"><CoffeeReceiptsTable /><NewCoffeeReceiptDialog open={showNewDialog} onOpenChange={setShowNewDialog} /></TabsContent>
               <TabsContent value="sampling-orders"><SamplingOrdersTab /></TabsContent>
+              <TabsContent value="clearance"><StoreClearanceForms /></TabsContent>
               <TabsContent value="verification"><StockVerificationTab /></TabsContent>
               <TabsContent value="damaged"><DamagedBagsTab /></TabsContent>
               <TabsContent value="reconciliation"><ReconciliationTab /></TabsContent>

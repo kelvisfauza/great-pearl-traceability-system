@@ -1,5 +1,10 @@
 # Roadmap
 
+## Store clearance and sales delivery notes
+- [x] Add paired numbered clearance/delivery-note creation to both Store pages and prompt printing both after save.
+- [x] Show delivery notes on both Sales pages with administrator-only sale attachment.
+- [ ] Verify signed-in creation, sale attachment and paired printing — external Supabase session unavailable; local validation and public-access rejection tests cover available checks.
+
 ## Printed QR verification
 - [x] Restore verification for issued quality and store form QR codes, including existing printed sheets, without exposing analysis data (public QR flow and live regression tests passed).
 

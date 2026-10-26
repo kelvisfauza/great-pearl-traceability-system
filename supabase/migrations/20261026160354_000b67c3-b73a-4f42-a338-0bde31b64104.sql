@@ -1,0 +1,15 @@
+CREATE SCHEMA IF NOT EXISTS store_dispatch_private;
+REVOKE ALL ON SCHEMA store_dispatch_private FROM PUBLIC,anon;
+GRANT USAGE ON SCHEMA store_dispatch_private TO authenticated,service_role;
+ALTER FUNCTION public.can_admin_store_dispatch() SET SCHEMA store_dispatch_private;
+CREATE FUNCTION public.can_admin_store_dispatch() RETURNS boolean LANGUAGE sql STABLE SECURITY INVOKER SET search_path=public AS $$ SELECT store_dispatch_private.can_admin_store_dispatch(); $$;
+REVOKE ALL ON FUNCTION public.can_admin_store_dispatch() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.can_admin_store_dispatch() TO authenticated,service_role;
+ALTER FUNCTION public.attach_sale_to_delivery_note(uuid,uuid) SET SCHEMA store_dispatch_private;
+CREATE FUNCTION public.attach_sale_to_delivery_note(p_clearance_id uuid,p_sale_id uuid) RETURNS jsonb LANGUAGE sql SECURITY INVOKER SET search_path=public AS $$ SELECT store_dispatch_private.attach_sale_to_delivery_note(p_clearance_id,p_sale_id); $$;
+REVOKE ALL ON FUNCTION public.attach_sale_to_delivery_note(uuid,uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.attach_sale_to_delivery_note(uuid,uuid) TO authenticated;
+REVOKE ALL ON FUNCTION store_dispatch_private.can_admin_store_dispatch() FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION store_dispatch_private.can_admin_store_dispatch() TO authenticated,service_role;
+REVOKE ALL ON FUNCTION store_dispatch_private.attach_sale_to_delivery_note(uuid,uuid) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION store_dispatch_private.attach_sale_to_delivery_note(uuid,uuid) TO authenticated;
