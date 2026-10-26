@@ -1,5 +1,8 @@
 # Roadmap
 
+## Store sampling pickup texts
+- [ ] Notify Alex and Onesmus when Ben creates a new sampling order; validate saved creator identity and suppress disabled recipients.
+
 ## Batch-based clearance and Procurement confirmation
 - [x] Source clearance lines from batches and remove contract choice, comparison linking and uploads from Store; preserve automatic numbering and paired printing.
 - [x] Send saved clearances to a live Procurement queue for contract or spot-sale confirmation in V1/V2, with permission-checked confirmation and recorded identity/time.
