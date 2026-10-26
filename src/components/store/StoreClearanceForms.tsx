@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,16 +17,18 @@ import { Loader2, Plus, ClipboardList, Trash2, Scale, Pencil, Paperclip, Printer
 import type { DispatchReport } from "@/hooks/useEUDRDispatchReports";
 import { validateDispatch } from "@/lib/storeDispatchRules";
 import { printStoreDispatchPair } from "@/utils/storeDispatchPdf";
+import { batchClearanceLine, ClearanceBatch } from "@/lib/clearanceWorkflowRules";
 import AttachDeliveryNoteSaleDialog from "@/components/sales/AttachDeliveryNoteSaleDialog";
 
 interface ClearanceItem {
+  batch_id: string;
   lot_ref: string;
   coffee_type: string;
   bags: string;
   weight_kg: string;
 }
 
-const emptyItem: ClearanceItem = { lot_ref: "", coffee_type: "", bags: "", weight_kg: "" };
+const emptyItem: ClearanceItem = { batch_id: "", lot_ref: "", coffee_type: "", bags: "", weight_kg: "" };
 
 const emptyForm = {
   form_number: "",
@@ -65,13 +67,10 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<any>({ ...emptyForm });
   const [items, setItems] = useState<ClearanceItem[]>([{ ...emptyItem }]);
-  const [attachments, setAttachments] = useState<{ name: string; path: string }[]>([]);
-  const [uploading, setUploading] = useState(false);
   const [printRow, setPrintRow] = useState<any | null>(null);
   const [attachRow, setAttachRow] = useState<any | null>(null);
   const [printing, setPrinting] = useState(false);
   const [createdRow, setCreatedRow] = useState<any | null>(null);
-  const [attachmentOpen, setAttachmentOpen] = useState(false);
   const { data: canAdmin = false } = useQuery({ queryKey: ['store-dispatch-admin', employee?.email], queryFn: async () => {
     const { data, error } = await (supabase as any).rpc('can_admin_store_dispatch');
     if (error) throw error;
@@ -86,27 +85,6 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
   };
 
   const set = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }));
-
-  const uploadFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    setUploading(true);
-    try {
-      const uploaded: { name: string; path: string }[] = [];
-      for (const file of Array.from(files)) {
-        const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const path = `clearance-forms/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safe}`;
-        const { error } = await supabase.storage.from("dispatch-attachments").upload(path, file, { upsert: false });
-        if (error) throw error;
-        uploaded.push({ name: file.name, path });
-      }
-      setAttachments((p) => [...p, ...uploaded]);
-      toast({ title: `${uploaded.length} file(s) attached` });
-    } catch (e: any) {
-      toast({ title: "Upload failed", description: e.message, variant: "destructive" });
-    } finally {
-      setUploading(false);
-    }
-  };
 
   const openAttachment = async (path: string) => {
     const { data, error } = await supabase.storage.from("dispatch-attachments").createSignedUrl(path, 3600);
@@ -135,6 +113,7 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
 
   const { data: contracts = [] } = useQuery({
     queryKey: ["clearance-buyer-contracts"],
+    enabled: salesView,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("buyer_contracts")
@@ -145,6 +124,29 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
       return data as any[];
     },
   });
+
+  const batchesQuery = useQuery({ queryKey: ['clearance-available-batches'], enabled: open && !salesView, staleTime: 0, queryFn: async () => {
+    const rows: ClearanceBatch[] = [];
+    for (let offset = 0; ; offset += 500) {
+      const { data, error } = await supabase.from('inventory_batches').select('id,batch_code,coffee_type,remaining_kilograms').gt('remaining_kilograms', 0).order('batch_date').order('id').range(offset, offset + 499);
+      if (error) throw error;
+      rows.push(...data);
+      if (data.length < 500) break;
+    }
+    return rows;
+  } });
+  const batches = batchesQuery.data || [];
+  const selectBatch = (index: number, id: string) => {
+    const batch = batches.find(b => b.id === id);
+    if (!batch) return;
+    const line = batchClearanceLine(batch);
+    setItems(previous => previous.map((item, i) => i === index ? { ...line, bags: '', weight_kg: String(line.weight_kg) } : item));
+  };
+  useEffect(() => {
+    if (!createdRow) return;
+    const channel = supabase.channel(`store-clearance-status-${crypto.randomUUID()}`).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'store_clearance_forms', filter: `id=eq.${createdRow.id}` }, payload => setCreatedRow(payload.new)).subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [createdRow?.id]);
 
   const contractById = useMemo(
     () => new Map((contracts as any[]).map((c: any) => [c.id, c])),
@@ -159,7 +161,6 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
   const resetForm = () => {
     setForm({ ...emptyForm, released_by: employee?.name || "" });
     setItems([{ ...emptyItem }]);
-    setAttachments([]);
     setEditingId(null);
   };
 
@@ -187,9 +188,8 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
       contract_id: row.contract_id || "",
     });
     setItems(Array.isArray(row.items) && row.items.length ? row.items.map((i: any) => ({
-      lot_ref: i.lot_ref || "", coffee_type: i.coffee_type || "", bags: String(i.bags ?? ""), weight_kg: String(i.weight_kg ?? ""),
+      batch_id: i.batch_id || "", lot_ref: i.lot_ref || "", coffee_type: i.coffee_type || "", bags: String(i.bags ?? ""), weight_kg: String(i.weight_kg ?? ""),
     })) : [{ ...emptyItem }]);
-    setAttachments(Array.isArray(row.attachments) ? row.attachments : []);
     setOpen(true);
   };
 
@@ -198,7 +198,12 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
       if (!form.vehicle_registration?.trim()) throw new Error("Vehicle / truck number is required");
       const cleanItems = items
         .filter((i) => i.coffee_type || i.bags || i.weight_kg || i.lot_ref)
-        .map((i) => ({ lot_ref: i.lot_ref, coffee_type: i.coffee_type, bags: n(i.bags), weight_kg: n(i.weight_kg) }));
+        .map((i) => {
+          const batch = batches.find(b => b.id === i.batch_id);
+          if (!batch) throw new Error('Choose an available inventory batch for each line');
+          return batchClearanceLine(batch, n(i.weight_kg), n(i.bags));
+        });
+      if (new Set(cleanItems.map(i => i.batch_id)).size !== cleanItems.length) throw new Error('Choose each batch only once');
       if (cleanItems.length === 0) throw new Error("Add at least one coffee line");
       validateDispatch(form.destination_buyer || '', form.vehicle_registration || '', cleanItems);
 
@@ -218,9 +223,9 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
         released_by: form.released_by || null,
         received_by_driver: form.received_by_driver || null,
         approved_by: form.approved_by || null,
-        dispatch_report_id: form.dispatch_report_id || null,
-        contract_id: form.contract_id || null,
-        attachments,
+        dispatch_report_id: null,
+        contract_id: null,
+        attachments: [],
       };
 
       if (editingId) {
@@ -236,7 +241,8 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
       }
     },
     onSuccess: (row: any) => {
-      toast({ title: editingId ? "Clearance form updated" : "Clearance form saved" });
+      toast({ title: "Clearance saved — sent to Procurement for confirmation" });
+      qc.invalidateQueries({ queryKey: ["procurement-clearance-requests"] });
       qc.invalidateQueries({ queryKey: ["store-clearance-forms"] });
       setOpen(false);
       resetForm();
@@ -244,23 +250,6 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
       if (row.delivery_note_number) setPrintRow(row);
     },
     onError: (e: any) => toast({ title: "Failed to save", description: e.message, variant: "destructive" }),
-  });
-
-  const saveAttachments = useMutation({
-    mutationFn: async () => {
-      if (!createdRow) throw new Error('No clearance selected');
-      const { data, error } = await (supabase as any).from('store_clearance_forms')
-        .update({ attachments }).eq('id', createdRow.id).select('*').single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (row: any) => {
-      setCreatedRow(row);
-      setAttachmentOpen(false);
-      qc.invalidateQueries({ queryKey: ['store-clearance-forms'] });
-      toast({ title: 'Signed form attached' });
-    },
-    onError: (error: any) => toast({ title: 'Could not attach form', description: error.message, variant: 'destructive' }),
   });
 
   const remove = useMutation({
@@ -324,9 +313,8 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
         <p className="font-mono text-sm break-words">{createdRow.form_number} · {createdRow.delivery_note_number}</p>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" disabled={printing} onClick={() => printPair(createdRow)}><Printer className="mr-2 h-4 w-4" />Print both</Button>
-          <Button onClick={() => { setAttachments(Array.isArray(createdRow.attachments) ? createdRow.attachments : []); setAttachmentOpen(true); }}><Paperclip className="mr-2 h-4 w-4" />Attach signed form / scan</Button>
         </div>
-        {(createdRow.attachments || []).map((a: any) => <Button key={a.path} variant="link" onClick={() => openAttachment(a.path)}><Paperclip className="mr-2 h-4 w-4" />{a.name}</Button>)}
+        <Badge variant="outline">{createdRow.procurement_status === 'confirmed' ? createdRow.sale_basis === 'spot' ? 'Procurement confirmed: selling on spot' : 'Procurement confirmed: buyer contract' : 'Awaiting Procurement confirmation'}</Badge>
       </div>}
 
       {salesView && <Tabs defaultValue="records">
@@ -455,53 +443,20 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
           </DialogHeader>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div><Label>Form No.</Label><Input value={form.form_number} readOnly placeholder="Assigned on save" /></div>
+            <div><Label>Form No. (automatic)</Label><Input value={form.form_number} readOnly placeholder="Generated automatically on save" /></div>
             <div><Label>Date</Label><Input type="date" value={form.clearance_date} onChange={(e) => set("clearance_date", e.target.value)} /></div>
             <div><Label>Warehouse / Store</Label><Input value={form.warehouse} onChange={(e) => set("warehouse", e.target.value)} placeholder="Kasese" /></div>
             <div><Label>Destination / Buyer *</Label><Input value={form.destination_buyer} onChange={(e) => set("destination_buyer", e.target.value)} /></div>
             <div><Label>Vehicle / Truck No. *</Label><Input value={form.vehicle_registration} onChange={(e) => set("vehicle_registration", e.target.value)} /></div>
             <div><Label>Driver Name</Label><Input value={form.driver_name} onChange={(e) => set("driver_name", e.target.value)} /></div>
             <div><Label>Driver Tel.</Label><Input value={form.driver_phone} onChange={(e) => set("driver_phone", e.target.value)} /></div>
-            {salesView && <div className="md:col-span-2">
-              <Label>Link dispatch comparison report (optional)</Label>
-              <Select value={form.dispatch_report_id || "none"} onValueChange={(v) => set("dispatch_report_id", v === "none" ? "" : v)}>
-                <SelectTrigger><SelectValue placeholder="Auto-match by vehicle" /></SelectTrigger>
-                <SelectContent className="bg-background z-50">
-                  <SelectItem value="none">Auto-match by vehicle</SelectItem>
-                  {dispatchReports.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.dispatch_date} — {r.destination_buyer || "Buyer"} — {r.vehicle_registrations}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>}
-            <div className="md:col-span-2">
-              <Label>Procurement / sales contract (optional)</Label>
-              <Select
-                value={form.contract_id || "none"}
-                onValueChange={(v) => {
-                  const picked = contracts.find((c: any) => c.id === v);
-                  set("contract_id", v === "none" ? "" : v);
-                  if (picked && !form.destination_buyer) set("destination_buyer", picked.buyer_name || "");
-                }}
-              >
-                <SelectTrigger><SelectValue placeholder="Not linked to a contract" /></SelectTrigger>
-                <SelectContent className="bg-background z-50">
-                  <SelectItem value="none">Not linked to a contract</SelectItem>
-                  {contracts.map((c: any) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.contract_ref || "Contract"} — {c.buyer_name} — {n(c.total_quantity).toLocaleString()} kg
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
 
 
           <div className="space-y-2">
-            <Label>Coffee released from store</Label>
+            <Label>Coffee released from store — batches</Label>
+            {batchesQuery.isError && <p role="alert" className="text-destructive">Could not load batches.</p>}
+            {!batchesQuery.isFetching && !batchesQuery.isError && !batches.length && <p className="text-muted-foreground">No batches with available stock.</p>}
             <div className="border rounded-md overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -518,10 +473,10 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
                   {items.map((it, idx) => (
                     <TableRow key={idx}>
                       <TableCell>{idx + 1}</TableCell>
-                      <TableCell><Input value={it.lot_ref} onChange={(e) => setItems((p) => p.map((x, i) => i === idx ? { ...x, lot_ref: e.target.value } : x))} /></TableCell>
-                      <TableCell><Input value={it.coffee_type} onChange={(e) => setItems((p) => p.map((x, i) => i === idx ? { ...x, coffee_type: e.target.value } : x))} placeholder="Arabica" /></TableCell>
+                      <TableCell><Select value={it.batch_id} onValueChange={id => selectBatch(idx, id)} disabled={batchesQuery.isFetching}><SelectTrigger><SelectValue placeholder="Select batch" /></SelectTrigger><SelectContent>{batches.filter(b => b.id === it.batch_id || !items.some(i => i.batch_id === b.id)).map(b => <SelectItem key={b.id} value={b.id}>{b.batch_code} · {b.remaining_kilograms.toLocaleString()} kg</SelectItem>)}</SelectContent></Select></TableCell>
+                      <TableCell><Input value={it.coffee_type} readOnly placeholder="From batch" /></TableCell>
                       <TableCell><Input type="number" value={it.bags} onChange={(e) => setItems((p) => p.map((x, i) => i === idx ? { ...x, bags: e.target.value } : x))} /></TableCell>
-                      <TableCell><Input type="number" value={it.weight_kg} onChange={(e) => setItems((p) => p.map((x, i) => i === idx ? { ...x, weight_kg: e.target.value } : x))} /></TableCell>
+                      <TableCell><Input type="number" min="0.01" step="0.01" max={batches.find(b => b.id === it.batch_id)?.remaining_kilograms} value={it.weight_kg} onChange={(e) => setItems((p) => p.map((x, i) => i === idx ? { ...x, weight_kg: e.target.value } : x))} /></TableCell>
                       <TableCell>
                         <Button size="sm" variant="ghost" onClick={() => setItems((p) => p.length > 1 ? p.filter((_, i) => i !== idx) : p)}>
                           <Trash2 className="h-3.5 w-3.5 text-destructive" />
@@ -545,37 +500,6 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
 
           <div><Label>Remarks</Label><Textarea value={form.remarks} onChange={(e) => set("remarks", e.target.value)} rows={2} /></div>
 
-          <div className="space-y-2">
-            <Label>Attach signed form / scan (PDF or image)</Label>
-            <Input
-              type="file"
-              multiple
-              accept="application/pdf,image/*"
-              disabled={uploading}
-              onChange={(e) => uploadFiles(e.target.files)}
-            />
-            {uploading && (
-              <p className="text-xs text-muted-foreground flex items-center gap-2">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…
-              </p>
-            )}
-            {attachments.length > 0 && (
-              <ul className="space-y-1">
-                {attachments.map((a, idx) => (
-                  <li key={a.path} className="flex items-center justify-between border rounded-md px-2 py-1 text-sm">
-                    <button type="button" className="flex items-center gap-2 hover:underline text-left" onClick={() => openAttachment(a.path)}>
-                      <Paperclip className="h-3.5 w-3.5" /> {a.name}
-                    </button>
-                    <Button size="sm" variant="ghost" onClick={() => setAttachments((p) => p.filter((_, i) => i !== idx))}>
-                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div><Label>Released By — Store Manager</Label><Input value={form.released_by} onChange={(e) => set("released_by", e.target.value)} /></div>
             <div><Label>Received By — Driver</Label><Input value={form.received_by_driver} onChange={(e) => set("received_by_driver", e.target.value)} /></div>
@@ -584,7 +508,7 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={() => save.mutate()} disabled={save.isPending || uploading}>
+            <Button onClick={() => save.mutate()} disabled={save.isPending || batchesQuery.isFetching || batchesQuery.isError}>
               {save.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Save Form
             </Button>
           </DialogFooter>
@@ -593,16 +517,6 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
       <Dialog open={Boolean(printRow)} onOpenChange={open => { if (!open && !printing) setPrintRow(null); }}>
         <DialogContent><DialogHeader><DialogTitle>Print clearance and delivery note?</DialogTitle><DialogDescription>{printRow?.form_number} · {printRow?.delivery_note_number}</DialogDescription></DialogHeader>
           <DialogFooter><Button variant="outline" disabled={printing} onClick={() => setPrintRow(null)}>Later</Button><Button disabled={printing} onClick={() => printRow && printPair(printRow)}><Printer className="mr-2 h-4 w-4" />{printing ? 'Preparing…' : 'Print both'}</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={attachmentOpen} onOpenChange={value => { if (!uploading && !saveAttachments.isPending) setAttachmentOpen(value); }}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Attach signed clearance / scan</DialogTitle><DialogDescription>{createdRow?.form_number} · {createdRow?.delivery_note_number}</DialogDescription></DialogHeader>
-          <Label htmlFor="signed-clearance-upload">Signed form (PDF or image)</Label>
-          <Input id="signed-clearance-upload" type="file" multiple accept="application/pdf,image/*" disabled={uploading || saveAttachments.isPending} onChange={e => uploadFiles(e.target.files)} />
-          {uploading && <p className="text-sm text-muted-foreground">Uploading…</p>}
-          {attachments.map(a => <Button key={a.path} variant="link" onClick={() => openAttachment(a.path)}><Paperclip className="mr-2 h-4 w-4" />{a.name}</Button>)}
-          <DialogFooter><Button variant="outline" disabled={uploading || saveAttachments.isPending} onClick={() => setAttachmentOpen(false)}>Cancel</Button><Button disabled={uploading || saveAttachments.isPending || !attachments.length} onClick={() => saveAttachments.mutate()}>{saveAttachments.isPending ? 'Saving…' : 'Save attachment'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
       {attachRow && <AttachDeliveryNoteSaleDialog key={attachRow.id} note={attachRow} onClose={() => setAttachRow(null)} />}
