@@ -469,7 +469,7 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
                 try {
                   const lines = allocateFromBatches(batches, autoType, Number(autoKg));
                   setItems(lines.map(l => ({ ...l, bags: '', weight_kg: String(l.weight_kg) })));
-                } catch (e: any) { toast.error(e.message); }
+                } catch (e: any) { toast({ title: "Cannot fetch", description: e.message, variant: "destructive" }); }
               }}>Fetch from batches</Button>
               <p className="w-full text-xs text-muted-foreground">Oldest batches are used first. You can still adjust lines and bags below.</p>
             </div>
