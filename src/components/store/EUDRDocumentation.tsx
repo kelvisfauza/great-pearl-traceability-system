@@ -616,7 +616,7 @@ const EUDRDocumentation = () => {
         </TabsList>
 
         <TabsContent value="store-clearance" className="space-y-4">
-          <StoreClearanceForms />
+          <StoreClearanceForms eudrView />
         </TabsContent>
 
         <TabsContent value="inventory-linking" className="space-y-4">

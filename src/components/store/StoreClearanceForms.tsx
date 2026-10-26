@@ -49,7 +49,8 @@ const emptyForm = {
 
 const n = (v: any) => (v === "" || v === null || v === undefined ? 0 : Number(v) || 0);
 
-const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => {
+const StoreClearanceForms = ({ salesView = false, eudrView = false }: { salesView?: boolean; eudrView?: boolean }) => {
+  const listView = salesView || eudrView;
   const { employee, hasPermission } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -84,6 +85,29 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
     finally { setPrinting(false); }
   };
 
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const uploadSigned = async (row: any, files: FileList | null) => {
+    if (!files?.length) return;
+    setUploadingId(row.id);
+    try {
+      const added: any[] = [];
+      for (const file of Array.from(files)) {
+        const path = `clearance-forms/${row.id}/${Date.now()}-${file.name.replace(/[^a-z0-9._-]/gi, '_')}`;
+        const { error } = await supabase.storage.from('dispatch-attachments').upload(path, file);
+        if (error) throw error;
+        added.push({ name: file.name, path, uploaded_by: employee?.email || null, uploaded_at: new Date().toISOString() });
+      }
+      const next = [...(Array.isArray(row.attachments) ? row.attachments : []), ...added];
+      const { data, error } = await (supabase as any).from('store_clearance_forms').update({ attachments: next }).eq('id', row.id).select('id');
+      if (error) throw error;
+      if (!data?.length) throw new Error('The signed form was not saved');
+      toast({ title: 'Signed clearance attached' });
+      qc.invalidateQueries({ queryKey: ['store-clearance-forms'] });
+    } catch (e: any) {
+      toast({ title: 'Could not attach', description: e.message, variant: 'destructive' });
+    } finally { setUploadingId(null); }
+  };
+
   const set = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }));
 
   const openAttachment = async (path: string) => {
@@ -98,7 +122,7 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
 
   const { data: forms = [], isLoading, error: formsError } = useQuery({
     queryKey: ["store-clearance-forms"],
-    enabled: salesView,
+    enabled: listView,
     refetchInterval: 30000,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
@@ -113,7 +137,7 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
 
   const { data: contracts = [] } = useQuery({
     queryKey: ["clearance-buyer-contracts"],
-    enabled: salesView,
+    enabled: listView,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("buyer_contracts")
@@ -306,13 +330,13 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold flex items-center gap-2">
-            <ClipboardList className="h-5 w-5" /> {salesView ? 'Sales Delivery Notes' : 'Store Clearance & Delivery Notes'}
+            <ClipboardList className="h-5 w-5" /> {salesView ? 'Sales Delivery Notes' : eudrView ? 'Store Clearance Records' : 'Store Clearance / Release Form'}
           </h3>
         </div>
-        {canManage && !salesView && <Button onClick={openNew}><Plus className="h-4 w-4 mr-2" /> New Clearance Form</Button>}
+        {canManage && !listView && <Button onClick={openNew}><Plus className="h-4 w-4 mr-2" /> New Clearance Form</Button>}
       </div>
 
-      {!salesView && createdRow && <div className="border-t py-4 space-y-3">
+      {!listView && createdRow && <div className="border-t py-4 space-y-3">
         <p className="font-mono text-sm break-words">{createdRow.form_number} · {createdRow.delivery_note_number}</p>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" disabled={printing} onClick={() => printPair(createdRow)}><Printer className="mr-2 h-4 w-4" />Print both</Button>
@@ -320,10 +344,11 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
         <Badge variant="outline">{createdRow.procurement_status === 'confirmed' ? createdRow.sale_basis === 'spot' ? 'Procurement confirmed: selling on spot' : 'Procurement confirmed: buyer contract' : 'Awaiting Procurement confirmation'}</Badge>
       </div>}
 
-      {salesView && <Tabs defaultValue="records">
+      {!listView && <p className="text-sm text-muted-foreground">Fill the clearance form, print it and take it to the administrator for verification and signing. The signed copy is then attached under EUDR → Store Clearance.</p>}
+      {listView && <Tabs defaultValue="records">
         <TabsList>
           <TabsTrigger value="records">Clearance Records</TabsTrigger>
-          <TabsTrigger value="comparison">Weight Comparison</TabsTrigger>
+          {salesView && <TabsTrigger value="comparison">Weight Comparison</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="records" className="mt-4">
@@ -378,6 +403,7 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
                           )}
                         </TableCell>
                         <TableCell className="text-right whitespace-nowrap">
+                          {eudrView && canManage && !f.sale_id && <label className="inline-flex"><input type="file" multiple accept="image/*,application/pdf" className="hidden" disabled={uploadingId === f.id} onChange={(e) => { uploadSigned(f, e.target.files); e.target.value = ''; }} /><span className="inline-flex items-center rounded-md border px-2 py-1 text-xs cursor-pointer hover:bg-accent">{uploadingId === f.id ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Paperclip className="mr-1 h-3.5 w-3.5" />}Attach signed form</span></label>}
                           {f.delivery_note_number && <Button size="sm" variant="ghost" title="Print clearance and delivery note" aria-label="Print clearance and delivery note" disabled={printing} onClick={() => printPair(f)}><Printer className="h-3.5 w-3.5" /></Button>}
                           {salesView && canAdmin && f.delivery_note_number && !f.sale_id && <Button size="sm" variant="outline" onClick={() => setAttachRow(f)}><Link2 className="mr-1 h-3.5 w-3.5" />Attach sale</Button>}
                           {canManage && !salesView && !f.sale_id && <Button size="sm" variant="ghost" title="Edit clearance" onClick={() => openEdit(f)}><Pencil className="h-3.5 w-3.5" /></Button>}
