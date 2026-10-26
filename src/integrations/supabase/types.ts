@@ -12843,11 +12843,15 @@ export type Database = {
           form_number: string | null
           id: string
           items: Json
+          procurement_confirmed_at: string | null
+          procurement_confirmed_by: string | null
+          procurement_status: string
           received_by_driver: string | null
           released_by: string | null
           remarks: string | null
           sale_attached_at: string | null
           sale_attached_by: string | null
+          sale_basis: string | null
           sale_id: string | null
           total_bags: number
           total_weight_kg: number
@@ -12871,11 +12875,15 @@ export type Database = {
           form_number?: string | null
           id?: string
           items?: Json
+          procurement_confirmed_at?: string | null
+          procurement_confirmed_by?: string | null
+          procurement_status?: string
           received_by_driver?: string | null
           released_by?: string | null
           remarks?: string | null
           sale_attached_at?: string | null
           sale_attached_by?: string | null
+          sale_basis?: string | null
           sale_id?: string | null
           total_bags?: number
           total_weight_kg?: number
@@ -12899,11 +12907,15 @@ export type Database = {
           form_number?: string | null
           id?: string
           items?: Json
+          procurement_confirmed_at?: string | null
+          procurement_confirmed_by?: string | null
+          procurement_status?: string
           received_by_driver?: string | null
           released_by?: string | null
           remarks?: string | null
           sale_attached_at?: string | null
           sale_attached_by?: string | null
+          sale_basis?: string | null
           sale_id?: string | null
           total_bags?: number
           total_weight_kg?: number
@@ -18029,6 +18041,14 @@ export type Database = {
           p_approval_role: string
           p_confirmed_by: string
           p_transaction_id: string
+        }
+        Returns: Json
+      }
+      confirm_clearance_procurement: {
+        Args: {
+          p_basis: string
+          p_clearance_id: string
+          p_contract_id?: string
         }
         Returns: Json
       }
