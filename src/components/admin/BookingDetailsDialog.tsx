@@ -203,7 +203,7 @@ Thank you for your business with Great Agro Coffee.`;
   };
 
   const canModify = booking.status === 'active' || booking.status === 'partially_fulfilled';
-  const canClose = booking.status === 'partially_fulfilled';
+  const canClose = ['active', 'partially_fulfilled', 'fulfilled'].includes(booking.status);
 
   return (
     <>
@@ -393,17 +393,26 @@ Thank you for your business with Great Agro Coffee.`;
             <AlertDialogDescription asChild>
               <div className="space-y-3">
                 <p>
-                  This will close the booking for {booking.supplier_name} with partial delivery.
+                  {booking.remaining_quantity_kg < 0
+                    ? `This will close the booking for ${booking.supplier_name}, who delivered more than booked.`
+                    : `This will close the booking for ${booking.supplier_name}.`}
                 </p>
                 <div className="p-3 rounded-lg bg-muted/50 text-sm">
                   <div className="flex justify-between">
                     <span>Delivered:</span>
                     <span className="font-medium text-green-600">{booking.delivered_quantity_kg.toLocaleString()} kg</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Remaining (will be written off):</span>
-                    <span className="font-medium text-amber-600">{booking.remaining_quantity_kg.toLocaleString()} kg</span>
-                  </div>
+                  {booking.remaining_quantity_kg < 0 ? (
+                    <div className="flex justify-between">
+                      <span>Excess delivered:</span>
+                      <span className="font-medium text-amber-600">{Math.abs(booking.remaining_quantity_kg).toLocaleString()} kg</span>
+                    </div>
+                  ) : booking.remaining_quantity_kg > 0 ? (
+                    <div className="flex justify-between">
+                      <span>Remaining (will be written off):</span>
+                      <span className="font-medium text-amber-600">{booking.remaining_quantity_kg.toLocaleString()} kg</span>
+                    </div>
+                  ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="closeReason">Reason for closing (optional)</Label>
