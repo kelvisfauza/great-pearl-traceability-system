@@ -378,7 +378,7 @@ const App: React.ComponentType = () => {
                   </ProtectedRoute>
                 } />
                 <Route path="/quality-control" element={
-                  <ProtectedRoute requiredPermissions={["Quality Control"]}>
+                  <ProtectedRoute requiredPermissions={["Quality Control", "Store Management"]}>
                     <QualityControl />
                   </ProtectedRoute>
                 } />

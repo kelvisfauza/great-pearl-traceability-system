@@ -139,12 +139,16 @@ const printSamplingOrder = (order: any) => {
 };
 
 const SamplingOrdersTab = () => {
-  const { employee, isAdmin } = useAuth();
+  const { employee, isAdmin, hasPermission } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const email = (employee?.email || "").toLowerCase();
-  const canCreate = SAMPLING_EMAILS.includes(email) || isAdmin?.();
+  const role = (employee?.role || "").toLowerCase();
+  const isStoreManagement =
+    hasPermission?.("Store Management") ||
+    ["store manager", "store keeper", "storekeeper"].includes(role);
+  const canCreate = SAMPLING_EMAILS.includes(email) || isAdmin?.() || isStoreManagement;
 
   const { trackFormSubmission } = useActivityTracker();
   const [reviewOrder, setReviewOrder] = useState<any | null>(null);

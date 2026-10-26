@@ -28,7 +28,8 @@ import {
   TrendingDown,
   HardDrive,
   CalendarDays,
-  FileSpreadsheet
+  FileSpreadsheet,
+  ClipboardList
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { isTraineeRole, isTraineeRouteAllowed } from "@/lib/trainee";
@@ -66,6 +67,7 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
         { name: "Dashboard", icon: BarChart3, path: "/", permission: "Dashboard" },
         { name: "Quality Control", icon: ClipboardCheck, path: "/quality-control", permission: "Quality Control" },
         { name: "Store Management", icon: Shield, path: "/store", permission: "Store Management" },
+        { name: "Sampling Orders", icon: ClipboardList, path: "/quality-control?tab=sampling-orders", permission: "Store Management" },
         { name: "EUDR Documentation", icon: FileText, path: "/eudr-documentation", permission: "EUDR Documentation" },
         { name: "Milling", icon: Coffee, path: "/milling", permission: "Milling" },
         { name: "Procurement", icon: Package, path: "/procurement", permission: "Procurement", children: [

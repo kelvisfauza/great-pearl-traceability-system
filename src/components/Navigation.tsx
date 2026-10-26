@@ -21,7 +21,8 @@ import {
   UserCheck,
   ArrowRight,
   FileCheck,
-  CalendarDays
+  CalendarDays,
+  ClipboardList
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
@@ -81,6 +82,7 @@ const Navigation = () => {
         { name: "Dashboard", icon: BarChart3, path: "/", permission: "Dashboard" },
         { name: "Quality Control", icon: ClipboardCheck, path: "/quality-control", permission: "Quality Control" },
         { name: "Store Management", icon: Shield, path: "/store", permission: "Store Management" },
+        { name: "Sampling Orders", icon: ClipboardList, path: "/quality-control?tab=sampling-orders", permission: "Store Management" },
         { name: "EUDR Documentation", icon: FileText, path: "/eudr-documentation", permission: "EUDR Documentation" },
         { name: "Milling", icon: Coffee, path: "/milling", permission: "Milling" },
         { name: "Inventory", icon: Package, path: "/inventory", permission: "Inventory" },
