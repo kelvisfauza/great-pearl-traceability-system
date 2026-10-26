@@ -96,14 +96,21 @@ const drawFuelOrderPage = (doc: jsPDF, data: FuelOrderPayload, logo: string | nu
   doc.setFontSize(11);
   doc.text(data.orderNumber, metaX + 10, metaY + 26);
   doc.setFontSize(10);
-  doc.text(formatDate(data.date), metaX + 10, metaY + 50);
-  if (data.reference) {
+  if (blank) {
+    doc.setDrawColor(150, 150, 150);
+    doc.setLineWidth(0.4);
+    doc.line(metaX + 10, metaY + 52, metaX + 110, metaY + 52);
+    doc.setDrawColor(0, 0, 0);
+  } else {
+    doc.text(formatDate(data.date), metaX + 10, metaY + 50);
+  }
+  if (data.reference || blank) {
     doc.setFontSize(8);
     doc.setTextColor(120, 120, 120);
     doc.text('REFERENCE', metaX + 120, metaY + 14);
     doc.setTextColor(20, 20, 20);
     doc.setFontSize(10);
-    doc.text(data.reference, metaX + 120, metaY + 26);
+    if (data.reference) doc.text(data.reference, metaX + 120, metaY + 26);
   }
 
   let y = 185;
@@ -116,7 +123,14 @@ const drawFuelOrderPage = (doc: jsPDF, data: FuelOrderPayload, logo: string | nu
   y += 14;
   doc.setTextColor(20, 20, 20);
   doc.setFontSize(13);
-  doc.text(data.serviceProvider || '—', margin, y);
+  if (blank) {
+    doc.setDrawColor(150, 150, 150);
+    doc.setLineWidth(0.4);
+    doc.line(margin, y + 4, margin + 300, y + 4);
+    doc.setDrawColor(0, 0, 0);
+  } else {
+    doc.text(data.serviceProvider || '—', margin, y);
+  }
   if (data.providerAddress) {
     y += 14;
     doc.setFont('helvetica', 'normal');
@@ -147,6 +161,13 @@ const drawFuelOrderPage = (doc: jsPDF, data: FuelOrderPayload, logo: string | nu
     doc.setFontSize(8);
     doc.setTextColor(120, 120, 120);
     doc.text(label.toUpperCase(), x + 10, fy + 14);
+    if (blank) {
+      doc.setDrawColor(150, 150, 150);
+      doc.setLineWidth(0.4);
+      doc.line(x + 10, fy + 34, x + colW - 10, fy + 34);
+      doc.setDrawColor(0, 0, 0);
+      return;
+    }
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(11);
     doc.setTextColor(20, 20, 20);
@@ -156,12 +177,22 @@ const drawFuelOrderPage = (doc: jsPDF, data: FuelOrderPayload, logo: string | nu
   drawField('Truck / Vehicle No.', data.truckNumber, boxX, y);
   drawField('Driver Name', data.driverName, boxX + colW, y);
   drawField('Driver Phone', data.driverPhone || '—', boxX, y + 42);
-  drawField('Fuel Type', data.fuelType, boxX + colW, y + 42);
-  drawField('Volume Requested', data.fullTank ? 'FULL TANK' : (data.requestedVolume || '—'), boxX, y + 84);
+  drawField(blank ? 'Fuel Type (Diesel / Petrol / Other)' : 'Fuel Type', data.fuelType, boxX + colW, y + 42);
+  drawField(blank ? 'Volume Requested / Full Tank' : 'Volume Requested', data.fullTank ? 'FULL TANK' : (data.requestedVolume || '—'), boxX, y + 84);
   drawField('Destination / Route', data.destination || '—', boxX + colW, y + 84);
 
   y += 145;
-  if (data.purpose) {
+  if (blank) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(120, 120, 120);
+    doc.text('PURPOSE', margin, y);
+    doc.setDrawColor(150, 150, 150);
+    doc.setLineWidth(0.4);
+    doc.line(margin + 60, y + 2, pageW - margin, y + 2);
+    doc.setDrawColor(0, 0, 0);
+    y += 14;
+  } else if (data.purpose) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
     doc.setTextColor(120, 120, 120);
