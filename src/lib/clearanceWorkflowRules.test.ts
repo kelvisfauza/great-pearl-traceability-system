@@ -1,0 +1,10 @@
+import { it } from 'node:test';
+import { strict as assert } from 'node:assert';
+import { batchClearanceLine, validateClearanceConfirmation } from './clearanceWorkflowRules';
+const batch = { id: 'batch-1', batch_code: 'B001', coffee_type: 'Arabica', remaining_kilograms: 500 };
+it('automatically sources reference, type and weight from the selected batch', () => assert.deepEqual(batchClearanceLine(batch), { batch_id: 'batch-1', lot_ref: 'B001', coffee_type: 'Arabica', weight_kg: 500, bags: 0 }));
+it('does not release more than available batch kilograms', () => assert.throws(() => batchClearanceLine(batch, 501)));
+it('allows a partial batch release', () => assert.equal(batchClearanceLine(batch, 200, 4).weight_kg, 200));
+it('spot confirmation has no contract', () => assert.deepEqual(validateClearanceConfirmation('spot', 'old', 'Buyer', []), { basis: 'spot', contractId: null }));
+it('contract confirmation requires a matching buyer contract', () => assert.throws(() => validateClearanceConfirmation('contract', 'c1', 'Buyer', [{ id: 'c1', buyer_name: 'Other' }])));
+it('confirms the matching contract', () => assert.equal(validateClearanceConfirmation('contract', 'c1', 'Buyer', [{ id: 'c1', buyer_name: 'Buyer' }]).contractId, 'c1'));
