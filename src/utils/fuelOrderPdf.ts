@@ -54,18 +54,16 @@ export const buildFuelOrderNumber = (): string => {
   return `FO-${stamp}-${rand}`;
 };
 
-export const generateFuelOrderPdf = async (data: FuelOrderPayload): Promise<Blob> => {
-  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+const drawFuelOrderPage = (doc: jsPDF, data: FuelOrderPayload, logo: string | null, blank: boolean) => {
   const pageW = doc.internal.pageSize.getWidth();
   const margin = 40;
 
   // Header band
   doc.setFillColor(0, 0, 0);
   doc.rect(0, 0, pageW, 90, 'F');
-  try {
-    const logo = await loadImageAsDataUrl(logoUrl);
-    doc.addImage(logo, 'PNG', margin, 18, 54, 54);
-  } catch {/* optional */}
+  if (logo) {
+    try { doc.addImage(logo, 'PNG', margin, 18, 54, 54); } catch {/* optional */}
+  }
 
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
