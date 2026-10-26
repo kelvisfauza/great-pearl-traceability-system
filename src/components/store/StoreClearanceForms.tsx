@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Plus, ClipboardList, Trash2, Scale, Pencil, Paperclip, Printer, Link2 } from "lucide-react";
-import { useEUDRDispatchReports } from "@/hooks/useEUDRDispatchReports";
+import type { DispatchReport } from "@/hooks/useEUDRDispatchReports";
 import { validateDispatch } from "@/lib/storeDispatchRules";
 import { printStoreDispatchPair } from "@/utils/storeDispatchPdf";
 import AttachDeliveryNoteSaleDialog from "@/components/sales/AttachDeliveryNoteSaleDialog";
@@ -51,7 +51,15 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
   const { employee, hasPermission } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
-  const { reports: dispatchReports } = useEUDRDispatchReports();
+  const { data: dispatchReports = [] } = useQuery({
+    queryKey: ['clearance-dispatch-comparison-reports'],
+    enabled: salesView,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('eudr_dispatch_reports').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      return data as unknown as DispatchReport[];
+    },
+  });
 
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -62,6 +70,8 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
   const [printRow, setPrintRow] = useState<any | null>(null);
   const [attachRow, setAttachRow] = useState<any | null>(null);
   const [printing, setPrinting] = useState(false);
+  const [createdRow, setCreatedRow] = useState<any | null>(null);
+  const [attachmentOpen, setAttachmentOpen] = useState(false);
   const { data: canAdmin = false } = useQuery({ queryKey: ['store-dispatch-admin', employee?.email], queryFn: async () => {
     const { data, error } = await (supabase as any).rpc('can_admin_store_dispatch');
     if (error) throw error;
@@ -110,6 +120,7 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
 
   const { data: forms = [], isLoading, error: formsError } = useQuery({
     queryKey: ["store-clearance-forms"],
+    enabled: salesView,
     refetchInterval: 30000,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
@@ -229,9 +240,27 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
       qc.invalidateQueries({ queryKey: ["store-clearance-forms"] });
       setOpen(false);
       resetForm();
+      if (!salesView) setCreatedRow(row);
       if (row.delivery_note_number) setPrintRow(row);
     },
     onError: (e: any) => toast({ title: "Failed to save", description: e.message, variant: "destructive" }),
+  });
+
+  const saveAttachments = useMutation({
+    mutationFn: async () => {
+      if (!createdRow) throw new Error('No clearance selected');
+      const { data, error } = await (supabase as any).from('store_clearance_forms')
+        .update({ attachments }).eq('id', createdRow.id).select('*').single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (row: any) => {
+      setCreatedRow(row);
+      setAttachmentOpen(false);
+      qc.invalidateQueries({ queryKey: ['store-clearance-forms'] });
+      toast({ title: 'Signed form attached' });
+    },
+    onError: (error: any) => toast({ title: 'Could not attach form', description: error.message, variant: 'destructive' }),
   });
 
   const remove = useMutation({
@@ -291,7 +320,16 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
         {canManage && !salesView && <Button onClick={openNew}><Plus className="h-4 w-4 mr-2" /> New Clearance Form</Button>}
       </div>
 
-      <Tabs defaultValue="records">
+      {!salesView && createdRow && <div className="border-t py-4 space-y-3">
+        <p className="font-mono text-sm break-words">{createdRow.form_number} · {createdRow.delivery_note_number}</p>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" disabled={printing} onClick={() => printPair(createdRow)}><Printer className="mr-2 h-4 w-4" />Print both</Button>
+          <Button onClick={() => { setAttachments(Array.isArray(createdRow.attachments) ? createdRow.attachments : []); setAttachmentOpen(true); }}><Paperclip className="mr-2 h-4 w-4" />Attach signed form / scan</Button>
+        </div>
+        {(createdRow.attachments || []).map((a: any) => <Button key={a.path} variant="link" onClick={() => openAttachment(a.path)}><Paperclip className="mr-2 h-4 w-4" />{a.name}</Button>)}
+      </div>}
+
+      {salesView && <Tabs defaultValue="records">
         <TabsList>
           <TabsTrigger value="records">Clearance Records</TabsTrigger>
           <TabsTrigger value="comparison">Weight Comparison</TabsTrigger>
@@ -407,7 +445,7 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
             </CardContent>
           </Card>
         </TabsContent>
-      </Tabs>
+      </Tabs>}
 
       <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -424,7 +462,7 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
             <div><Label>Vehicle / Truck No. *</Label><Input value={form.vehicle_registration} onChange={(e) => set("vehicle_registration", e.target.value)} /></div>
             <div><Label>Driver Name</Label><Input value={form.driver_name} onChange={(e) => set("driver_name", e.target.value)} /></div>
             <div><Label>Driver Tel.</Label><Input value={form.driver_phone} onChange={(e) => set("driver_phone", e.target.value)} /></div>
-            <div className="md:col-span-2">
+            {salesView && <div className="md:col-span-2">
               <Label>Link dispatch comparison report (optional)</Label>
               <Select value={form.dispatch_report_id || "none"} onValueChange={(v) => set("dispatch_report_id", v === "none" ? "" : v)}>
                 <SelectTrigger><SelectValue placeholder="Auto-match by vehicle" /></SelectTrigger>
@@ -437,7 +475,7 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </div>}
             <div className="md:col-span-2">
               <Label>Procurement / sales contract (optional)</Label>
               <Select
@@ -546,7 +584,7 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            <Button onClick={() => save.mutate()} disabled={save.isPending || uploading}>
               {save.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Save Form
             </Button>
           </DialogFooter>
@@ -555,6 +593,16 @@ const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => 
       <Dialog open={Boolean(printRow)} onOpenChange={open => { if (!open && !printing) setPrintRow(null); }}>
         <DialogContent><DialogHeader><DialogTitle>Print clearance and delivery note?</DialogTitle><DialogDescription>{printRow?.form_number} · {printRow?.delivery_note_number}</DialogDescription></DialogHeader>
           <DialogFooter><Button variant="outline" disabled={printing} onClick={() => setPrintRow(null)}>Later</Button><Button disabled={printing} onClick={() => printRow && printPair(printRow)}><Printer className="mr-2 h-4 w-4" />{printing ? 'Preparing…' : 'Print both'}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={attachmentOpen} onOpenChange={value => { if (!uploading && !saveAttachments.isPending) setAttachmentOpen(value); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Attach signed clearance / scan</DialogTitle><DialogDescription>{createdRow?.form_number} · {createdRow?.delivery_note_number}</DialogDescription></DialogHeader>
+          <Label htmlFor="signed-clearance-upload">Signed form (PDF or image)</Label>
+          <Input id="signed-clearance-upload" type="file" multiple accept="application/pdf,image/*" disabled={uploading || saveAttachments.isPending} onChange={e => uploadFiles(e.target.files)} />
+          {uploading && <p className="text-sm text-muted-foreground">Uploading…</p>}
+          {attachments.map(a => <Button key={a.path} variant="link" onClick={() => openAttachment(a.path)}><Paperclip className="mr-2 h-4 w-4" />{a.name}</Button>)}
+          <DialogFooter><Button variant="outline" disabled={uploading || saveAttachments.isPending} onClick={() => setAttachmentOpen(false)}>Cancel</Button><Button disabled={uploading || saveAttachments.isPending || !attachments.length} onClick={() => saveAttachments.mutate()}>{saveAttachments.isPending ? 'Saving…' : 'Save attachment'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
       {attachRow && <AttachDeliveryNoteSaleDialog key={attachRow.id} note={attachRow} onClose={() => setAttachRow(null)} />}
