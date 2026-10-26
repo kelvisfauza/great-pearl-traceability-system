@@ -1,10 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.5";
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { z } from 'npm:zod@3';
+import { needsStorePickup, canReceivePickup, PICKUP_RECIPIENT_EMAILS } from './pickup-rules.ts';
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+const Input = z.object({
+  order: z.object({ id: z.string().uuid() }),
+  pdf_base64: z.string().max(14000000).optional(),
+});
 
 const LAB_RECIPIENTS = [
   { name: "Tumwine Alex", email: "tumwinealex@greatpearlcoffee.com" },
@@ -26,16 +28,50 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const body = await req.json();
-    const order = body?.order;
-    const pdfBase64: string | undefined = body?.pdf_base64;
+    const url = Deno.env.get('SUPABASE_URL');
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!url || !serviceKey) return json({ ok: false, error: 'Notification service is not configured' });
+    const token = req.headers.get('Authorization')?.replace(/^Bearer /, '');
+    if (!token) return new Response(JSON.stringify({ ok: false, error: 'Authentication required' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    const supabase = createClient(url, serviceKey);
+    let callerEmail: string | undefined;
+    if (token !== serviceKey) {
+      const { data, error } = await supabase.auth.getUser(token);
+      if (error || !data.user) return new Response(JSON.stringify({ ok: false, error: 'Invalid authentication' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      callerEmail = data.user.email?.toLowerCase();
+      const { data: caller } = await supabase.from('employees').select('disabled').ilike('email', callerEmail || '').maybeSingle();
+      if (!caller || caller.disabled === true) return json({ ok: false, error: 'Account unavailable' });
+    }
+    const parsed = Input.safeParse(await req.json());
+    if (!parsed.success) return json({ ok: false, error: 'A saved sampling order ID is required; PDF must be within size limits' });
+    const pdfBase64 = parsed.data.pdf_base64;
+    const { data: order, error: orderError } = await supabase.from('quality_sampling_orders').select('*').eq('id', parsed.data.order.id).single();
+    if (orderError || !order) return json({ ok: false, error: 'Sampling order not found' });
+    if (callerEmail && callerEmail !== order.created_by_email?.toLowerCase()) return json({ ok: false, error: 'Only the creator can notify this sampling order' });
 
-    if (!order?.order_number) return json({ ok: false, error: "order details are required" });
-
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const pickupResults: any[] = [];
+    if (needsStorePickup(order)) {
+      const { data: recipients, error: recipientError } = await supabase.from('employees').select('name,email,phone,disabled').in('email', PICKUP_RECIPIENT_EMAILS);
+      if (recipientError) throw recipientError;
+      for (const person of recipients || []) {
+        if (!canReceivePickup(person)) continue;
+        const requestId = `sampling-pickup-${order.id}-${person.email}`;
+        const { data: previous, error: lookupError } = await supabase.from('sms_logs').select('id').eq('request_id', requestId).eq('status', 'sent').limit(1);
+        if (lookupError) throw lookupError;
+        if (previous?.length) { pickupResults.push({ email: person.email, ok: true, duplicate: true }); continue; }
+        const { data, error } = await supabase.functions.invoke('send-sms', { body: {
+          phone: person.phone,
+          userName: person.name,
+          recipientEmail: person.email,
+          message: `Sampling order ${order.order_number} has been created in Store Management. Please pick the sample from Store.`,
+          messageType: 'sampling_order_pickup',
+          department: 'Store Management',
+          triggeredBy: order.created_by_email,
+          requestId,
+        } });
+        pickupResults.push({ email: person.email, ok: !error && data?.success === true && !data?.blocked, error: error?.message || data?.error || (data?.blocked ? 'Text was blocked' : undefined) });
+      }
+    }
 
     let pdfUrl = "";
     if (pdfBase64) {
@@ -153,7 +189,7 @@ Deno.serve(async (req) => {
       results.push({ email: OPERATIONS_EMAIL, ok: false, error: String((e as any)?.message || e), cc: true });
     }
 
-    return json({ ok: true, pdf_url: pdfUrl, results });
+    return json({ ok: pickupResults.every((r) => r.ok), pdf_url: pdfUrl, results, pickup_results: pickupResults });
 
   } catch (err) {
     return json({ ok: false, error: String((err as any)?.message || err) });
