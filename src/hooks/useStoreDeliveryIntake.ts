@@ -9,6 +9,7 @@ export function useStoreDeliveryIntake(open: boolean, date: string, supplier: st
   const [orderId, setOrderId] = useState('');
   const [batch, setBatch] = useState<{ date: string; number: string } | null>(null);
   const [batchError, setBatchError] = useState('');
+  const [generation, setGeneration] = useState(0);
   useEffect(() => { setSampleAnswer(''); setOrderId(''); }, [open, supplier]);
   useEffect(() => {
     setBatch(null);
@@ -18,7 +19,7 @@ export function useStoreDeliveryIntake(open: boolean, date: string, supplier: st
     generateBatchNumber(date).then(number => { if (active) setBatch({ date, number }); })
       .catch(() => { if (active) setBatchError('Unable to assign a batch. Reopen the form to retry.'); });
     return () => { active = false; };
-  }, [open, date]);
+  }, [open, date, generation]);
   const ordersQuery = useQuery({
     queryKey: ['store-delivery-sampling-orders', supplier],
     enabled: open && !!supplier && sampleAnswer === 'yes',
@@ -46,5 +47,6 @@ export function useStoreDeliveryIntake(open: boolean, date: string, supplier: st
   };
   return { sampleAnswer, setSampleAnswer: (answer: string) => { setSampleAnswer(answer); setOrderId(''); },
     orderId, setOrderId, batchNumber, batchError, orders: ordersQuery.data || [],
-    ordersLoading: ordersQuery.isFetching, ordersError: ordersQuery.isError, validate };
+    ordersLoading: ordersQuery.isFetching, ordersError: ordersQuery.isError, validate,
+    reset: () => { setSampleAnswer(''); setOrderId(''); setBatch(null); setGeneration(value => value + 1); } };
 }
