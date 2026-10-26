@@ -39,12 +39,15 @@ export const useDeletionRequest = () => {
 
     try {
       // Delete directly from the table
-      const { error } = await (supabase as any)
+      const { data, error } = await (supabase as any)
         .from(tableName)
         .delete()
-        .eq('id', recordId);
+        .eq('id', recordId)
+        .select('id')
+        .single();
 
       if (error) throw error;
+      if (!data) throw new Error('No record deleted; check your deletion permission');
 
       toast({
         title: "Record Deleted",
