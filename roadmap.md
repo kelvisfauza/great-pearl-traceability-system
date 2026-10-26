@@ -1,5 +1,10 @@
 # Roadmap
 
+## Store coffee delivery intake
+- [ ] Ask whether a sample was taken and link a matching supplier sampling order when Yes.
+- [ ] Show the delivery batch during entry and preserve automatic batch creation on save.
+- [ ] Test sampling selection and batch behavior; authenticated saving requires an available staff session.
+
 ## Store clearance and sales delivery notes
 - [x] Add paired numbered clearance/delivery-note creation to both Store pages and prompt printing both after save.
 - [x] Show delivery notes on both Sales pages with administrator-only sale attachment.
