@@ -150,7 +150,7 @@ const ProfileCompletionModal = () => {
       const { data, error } = await (supabase as any).rpc('update_own_employee_profile', {
         _national_id_name: formData.national_id_name.trim(),
         _national_id_number: formData.national_id_number.trim(),
-        _date_of_birth: formData.date_of_birth,
+        _date_of_birth: formData.date_of_birth || null,
         _gender: formData.gender,
         _marital_status: formData.marital_status,
         _tribe: formData.tribe,
