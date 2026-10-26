@@ -1,5 +1,10 @@
 # Roadmap
 
+## Batch-based clearance and Procurement confirmation
+- [ ] Source clearance lines from batches and remove contract choice, comparison linking and uploads from Store.
+- [ ] Send saved clearances to a live Procurement queue for contract or spot-sale confirmation in V1/V2.
+- [ ] Validate workflow rules and record authenticated verification limits.
+
 ## Store coffee delivery intake
 - [x] Ask whether a sample was taken and atomically link a matching supplier sampling order when Yes, in both Store versions and offline uploads.
 - [x] Reserve and show the delivery batch number during entry; save that same number and preserve stock-batch creation after inventory promotion.
