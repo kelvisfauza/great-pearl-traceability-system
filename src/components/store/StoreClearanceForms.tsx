@@ -17,7 +17,7 @@ import { Loader2, Plus, ClipboardList, Trash2, Scale, Pencil, Paperclip, Printer
 import type { DispatchReport } from "@/hooks/useEUDRDispatchReports";
 import { validateDispatch } from "@/lib/storeDispatchRules";
 import { printStoreDispatchPair } from "@/utils/storeDispatchPdf";
-import { batchClearanceLine, ClearanceBatch } from "@/lib/clearanceWorkflowRules";
+import { allocateFromBatches, batchClearanceLine, ClearanceBatch } from "@/lib/clearanceWorkflowRules";
 import AttachDeliveryNoteSaleDialog from "@/components/sales/AttachDeliveryNoteSaleDialog";
 
 interface ClearanceItem {
