@@ -1,5 +1,7 @@
 # Project architecture
 
+- Embed the shared SamplingOrdersTab in both V1 and V2 Store pages, preserving its existing creation checks, so Store staff can use sampling orders without entering Quality Control.
+
 - Restore sale stock from recorded allocations in database triggers on deletion/cancellation/stock-field edits; lock sale and batch rows and cap repeated deduction calls by outstanding sale weight, so every client shares atomic, idempotent stock accounting. Confirm returned deleted rows before reporting success; preserve reversals and source snapshots in the audit trail.
 
 - Issue print verification before browser printing, PDF serialization, and Word packing; resolve the employee name from the authenticated account and add a registered QR footer, reserving space rather than covering original content. Queue reprints identify the current printing employee; verification confirms issuance, not payment, approval, or later edits.
