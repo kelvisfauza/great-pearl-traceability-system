@@ -1,9 +1,10 @@
 # Roadmap
 
 ## Store coffee delivery intake
-- [ ] Ask whether a sample was taken and link a matching supplier sampling order when Yes.
-- [ ] Show the delivery batch during entry and preserve automatic batch creation on save.
-- [ ] Test sampling selection and batch behavior; authenticated saving requires an available staff session.
+- [x] Ask whether a sample was taken and atomically link a matching supplier sampling order when Yes, in both Store versions and offline uploads.
+- [x] Reserve and show the delivery batch number during entry; save that same number and preserve stock-batch creation after inventory promotion.
+- [x] Test sampling rules — seven focused tests and four dispatch regression tests passed; database triggers installed and build clean.
+- [ ] Verify signed-in delivery saving and batch display — external Supabase session unavailable; public browser check stopped at the location-permission screen.
 
 ## Store clearance and sales delivery notes
 - [x] Add paired numbered clearance/delivery-note creation to both Store pages and prompt printing both after save.
