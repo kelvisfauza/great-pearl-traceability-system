@@ -64,12 +64,13 @@ import StorePreviewModal from "@/components/store/StorePreviewModal";
 import MissingAttachmentsPanel from "@/components/v2/store/MissingAttachmentsPanel";
 import StoreDispatchMonitoring from "@/components/store/StoreDispatchMonitoring";
 import SamplingOrdersTab from "@/components/v2/quality/tabs/SamplingOrdersTab";
+import StoreClearanceForms from "@/components/store/StoreClearanceForms";
 
 /* -------------------------------------------------------------------------- */
 /*                               Helper Types                                 */
 /* -------------------------------------------------------------------------- */
 
-type StoreTab = "records" | "sampling-orders" | "pricing" | "operations" | "dispatch" | "suppliers" | "reports";
+type StoreTab = "records" | "sampling-orders" | "clearance" | "pricing" | "operations" | "dispatch" | "suppliers" | "reports";
 
 type NewSupplierForm = {
   name: string;
@@ -168,7 +169,7 @@ const Store = () => {
 
   const initialTabParam = searchParams.get("tab");
   const initialTab: StoreTab =
-    initialTabParam === "sampling-orders" || initialTabParam === "pricing" || initialTabParam === "operations" || initialTabParam === "dispatch" || initialTabParam === "suppliers"
+    initialTabParam === "clearance" || initialTabParam === "sampling-orders" || initialTabParam === "pricing" || initialTabParam === "operations" || initialTabParam === "dispatch" || initialTabParam === "suppliers"
       ? initialTabParam
       : "records";
 
@@ -245,7 +246,7 @@ const Store = () => {
 
   useEffect(() => {
     const tabParam = searchParams.get("tab") as StoreTab | null;
-    if (tabParam && ["records", "sampling-orders", "pricing", "operations", "suppliers"].includes(tabParam)) {
+    if (tabParam && ["records", "sampling-orders", "clearance", "pricing", "operations", "suppliers"].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [searchParams]);
@@ -646,6 +647,10 @@ const Store = () => {
                 <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Sampling Orders
               </TabsTrigger>
+              <TabsTrigger value="clearance" className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                <Truck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Clearance & Delivery Notes
+              </TabsTrigger>
               <TabsTrigger value="pricing" className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                 <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Pricing
@@ -672,6 +677,7 @@ const Store = () => {
           <TabsContent value="sampling-orders" className="space-y-6">
             <SamplingOrdersTab />
           </TabsContent>
+          <TabsContent value="clearance" className="space-y-6"><StoreClearanceForms /></TabsContent>
 
           {/* ------------------------------------------------------------------ */}
           {/*                            Coffee Records                         */}
