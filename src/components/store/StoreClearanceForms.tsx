@@ -13,8 +13,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, Plus, ClipboardList, Trash2, Scale, Pencil, Paperclip } from "lucide-react";
+import { Loader2, Plus, ClipboardList, Trash2, Scale, Pencil, Paperclip, Printer, Link2 } from "lucide-react";
 import { useEUDRDispatchReports } from "@/hooks/useEUDRDispatchReports";
+import { validateDispatch } from "@/lib/storeDispatchRules";
+import { printStoreDispatchPair } from "@/utils/storeDispatchPdf";
+import AttachDeliveryNoteSaleDialog from "@/components/sales/AttachDeliveryNoteSaleDialog";
 
 interface ClearanceItem {
   lot_ref: string;
@@ -44,8 +47,8 @@ const emptyForm = {
 
 const n = (v: any) => (v === "" || v === null || v === undefined ? 0 : Number(v) || 0);
 
-const StoreClearanceForms = () => {
-  const { employee } = useAuth();
+const StoreClearanceForms = ({ salesView = false }: { salesView?: boolean }) => {
+  const { employee, hasPermission } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
   const { reports: dispatchReports } = useEUDRDispatchReports();
@@ -56,6 +59,21 @@ const StoreClearanceForms = () => {
   const [items, setItems] = useState<ClearanceItem[]>([{ ...emptyItem }]);
   const [attachments, setAttachments] = useState<{ name: string; path: string }[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [printRow, setPrintRow] = useState<any | null>(null);
+  const [attachRow, setAttachRow] = useState<any | null>(null);
+  const [printing, setPrinting] = useState(false);
+  const { data: canAdmin = false } = useQuery({ queryKey: ['store-dispatch-admin', employee?.email], queryFn: async () => {
+    const { data, error } = await (supabase as any).rpc('can_admin_store_dispatch');
+    if (error) throw error;
+    return data === true;
+  }, enabled: Boolean(employee) });
+  const canManage = canAdmin || hasPermission('Store Management');
+  const printPair = async (row: any) => {
+    setPrinting(true);
+    try { await printStoreDispatchPair(row); setPrintRow(null); }
+    catch (error: any) { toast({ title: 'Could not print', description: error.message, variant: 'destructive' }); }
+    finally { setPrinting(false); }
+  };
 
   const set = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }));
 
@@ -90,8 +108,9 @@ const StoreClearanceForms = () => {
   };
 
 
-  const { data: forms = [], isLoading } = useQuery({
+  const { data: forms = [], isLoading, error: formsError } = useQuery({
     queryKey: ["store-clearance-forms"],
+    refetchInterval: 30000,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("store_clearance_forms")
@@ -170,6 +189,7 @@ const StoreClearanceForms = () => {
         .filter((i) => i.coffee_type || i.bags || i.weight_kg || i.lot_ref)
         .map((i) => ({ lot_ref: i.lot_ref, coffee_type: i.coffee_type, bags: n(i.bags), weight_kg: n(i.weight_kg) }));
       if (cleanItems.length === 0) throw new Error("Add at least one coffee line");
+      validateDispatch(form.destination_buyer || '', form.vehicle_registration || '', cleanItems);
 
       const payload: any = {
         form_number: form.form_number || null,
@@ -193,28 +213,32 @@ const StoreClearanceForms = () => {
       };
 
       if (editingId) {
-        const { error } = await (supabase as any).from("store_clearance_forms").update(payload).eq("id", editingId);
+        const { data, error } = await (supabase as any).from("store_clearance_forms").update(payload).eq("id", editingId).select('*').single();
         if (error) throw error;
+        return data;
       } else {
-        const { error } = await (supabase as any)
+        const { data, error } = await (supabase as any)
           .from("store_clearance_forms")
-          .insert({ ...payload, created_by: employee?.email || null });
+          .insert({ ...payload, created_by: employee?.email || null }).select('*').single();
         if (error) throw error;
+        return data;
       }
     },
-    onSuccess: () => {
+    onSuccess: (row: any) => {
       toast({ title: editingId ? "Clearance form updated" : "Clearance form saved" });
       qc.invalidateQueries({ queryKey: ["store-clearance-forms"] });
       setOpen(false);
       resetForm();
+      if (row.delivery_note_number) setPrintRow(row);
     },
     onError: (e: any) => toast({ title: "Failed to save", description: e.message, variant: "destructive" }),
   });
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any).from("store_clearance_forms").delete().eq("id", id);
+      const { data, error } = await (supabase as any).from("store_clearance_forms").delete().eq("id", id).select('id');
       if (error) throw error;
+      if (!data?.length) throw new Error('The clearance was not deleted');
     },
     onSuccess: () => {
       toast({ title: "Clearance form deleted" });
@@ -261,13 +285,10 @@ const StoreClearanceForms = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold flex items-center gap-2">
-            <ClipboardList className="h-5 w-5" /> Store Coffee Clearance / Release Forms
+            <ClipboardList className="h-5 w-5" /> {salesView ? 'Sales Delivery Notes' : 'Store Clearance & Delivery Notes'}
           </h3>
-          <p className="text-sm text-muted-foreground">
-            Record what left the store, then compare it with the dispatch comparison report and buyer weighing.
-          </p>
         </div>
-        <Button onClick={openNew}><Plus className="h-4 w-4 mr-2" /> New Clearance Form</Button>
+        {canManage && !salesView && <Button onClick={openNew}><Plus className="h-4 w-4 mr-2" /> New Clearance Form</Button>}
       </div>
 
       <Tabs defaultValue="records">
@@ -279,13 +300,14 @@ const StoreClearanceForms = () => {
         <TabsContent value="records" className="mt-4">
           <Card>
             <CardContent className="p-0">
-              {isLoading ? (
+              {formsError ? <p className="p-4 text-sm text-destructive">Could not load clearance forms. Please try again.</p> : isLoading ? (
                 <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Form No.</TableHead>
+                      <TableHead>Delivery Note / Sale</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Warehouse</TableHead>
                       <TableHead>Contract</TableHead>
@@ -300,10 +322,11 @@ const StoreClearanceForms = () => {
                   </TableHeader>
                   <TableBody>
                     {forms.length === 0 ? (
-                      <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground py-6">No clearance forms recorded yet</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-6">No clearance forms recorded yet</TableCell></TableRow>
                     ) : forms.map((f: any) => (
                       <TableRow key={f.id}>
                         <TableCell className="font-mono text-xs">{f.form_number || "—"}</TableCell>
+                        <TableCell><div className="font-mono text-xs">{f.delivery_note_number || 'Legacy form'}</div>{f.delivery_note_number && <Badge variant={f.sale_id ? 'secondary' : 'outline'}>{f.sale_id ? 'Sale attached' : 'Awaiting sale'}</Badge>}{f.sale_id && <div className="text-xs text-muted-foreground break-all" title={f.sale_id}>Sale {f.sale_id.slice(0, 8)}</div>}</TableCell>
                         <TableCell>{f.clearance_date}</TableCell>
                         <TableCell>{f.warehouse || "—"}</TableCell>
                         <TableCell className="text-xs">{contractById.get(f.contract_id)?.contract_ref || "—"}</TableCell>
@@ -326,8 +349,10 @@ const StoreClearanceForms = () => {
                           )}
                         </TableCell>
                         <TableCell className="text-right whitespace-nowrap">
-                          <Button size="sm" variant="ghost" onClick={() => openEdit(f)}><Pencil className="h-3.5 w-3.5" /></Button>
-                          <Button size="sm" variant="ghost" onClick={() => remove.mutate(f.id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
+                          {f.delivery_note_number && <Button size="sm" variant="ghost" title="Print clearance and delivery note" aria-label="Print clearance and delivery note" disabled={printing} onClick={() => printPair(f)}><Printer className="h-3.5 w-3.5" /></Button>}
+                          {salesView && canAdmin && f.delivery_note_number && !f.sale_id && <Button size="sm" variant="outline" onClick={() => setAttachRow(f)}><Link2 className="mr-1 h-3.5 w-3.5" />Attach sale</Button>}
+                          {canManage && !salesView && !f.sale_id && <Button size="sm" variant="ghost" title="Edit clearance" onClick={() => openEdit(f)}><Pencil className="h-3.5 w-3.5" /></Button>}
+                          {canAdmin && !f.sale_id && <Button size="sm" variant="ghost" title="Delete clearance" onClick={() => remove.mutate(f.id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -388,14 +413,14 @@ const StoreClearanceForms = () => {
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingId ? "Edit" : "New"} Store Coffee Clearance / Release Form</DialogTitle>
-            <DialogDescription>Capture the paper form exactly as signed at the store.</DialogDescription>
+            <DialogDescription>Clearance and delivery note</DialogDescription>
           </DialogHeader>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div><Label>Form No.</Label><Input value={form.form_number} onChange={(e) => set("form_number", e.target.value)} placeholder="4003" /></div>
+            <div><Label>Form No.</Label><Input value={form.form_number} readOnly placeholder="Assigned on save" /></div>
             <div><Label>Date</Label><Input type="date" value={form.clearance_date} onChange={(e) => set("clearance_date", e.target.value)} /></div>
             <div><Label>Warehouse / Store</Label><Input value={form.warehouse} onChange={(e) => set("warehouse", e.target.value)} placeholder="Kasese" /></div>
-            <div><Label>Destination / Buyer</Label><Input value={form.destination_buyer} onChange={(e) => set("destination_buyer", e.target.value)} /></div>
+            <div><Label>Destination / Buyer *</Label><Input value={form.destination_buyer} onChange={(e) => set("destination_buyer", e.target.value)} /></div>
             <div><Label>Vehicle / Truck No. *</Label><Input value={form.vehicle_registration} onChange={(e) => set("vehicle_registration", e.target.value)} /></div>
             <div><Label>Driver Name</Label><Input value={form.driver_name} onChange={(e) => set("driver_name", e.target.value)} /></div>
             <div><Label>Driver Tel.</Label><Input value={form.driver_phone} onChange={(e) => set("driver_phone", e.target.value)} /></div>
@@ -527,6 +552,12 @@ const StoreClearanceForms = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <Dialog open={Boolean(printRow)} onOpenChange={open => { if (!open && !printing) setPrintRow(null); }}>
+        <DialogContent><DialogHeader><DialogTitle>Print clearance and delivery note?</DialogTitle><DialogDescription>{printRow?.form_number} · {printRow?.delivery_note_number}</DialogDescription></DialogHeader>
+          <DialogFooter><Button variant="outline" disabled={printing} onClick={() => setPrintRow(null)}>Later</Button><Button disabled={printing} onClick={() => printRow && printPair(printRow)}><Printer className="mr-2 h-4 w-4" />{printing ? 'Preparing…' : 'Print both'}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {attachRow && <AttachDeliveryNoteSaleDialog key={attachRow.id} note={attachRow} onClose={() => setAttachRow(null)} />}
     </div>
   );
 };
