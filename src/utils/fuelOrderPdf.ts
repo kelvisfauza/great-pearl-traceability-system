@@ -54,18 +54,16 @@ export const buildFuelOrderNumber = (): string => {
   return `FO-${stamp}-${rand}`;
 };
 
-export const generateFuelOrderPdf = async (data: FuelOrderPayload): Promise<Blob> => {
-  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+const drawFuelOrderPage = (doc: jsPDF, data: FuelOrderPayload, logo: string | null, blank: boolean) => {
   const pageW = doc.internal.pageSize.getWidth();
   const margin = 40;
 
   // Header band
   doc.setFillColor(0, 0, 0);
   doc.rect(0, 0, pageW, 90, 'F');
-  try {
-    const logo = await loadImageAsDataUrl(logoUrl);
-    doc.addImage(logo, 'PNG', margin, 18, 54, 54);
-  } catch {/* optional */}
+  if (logo) {
+    try { doc.addImage(logo, 'PNG', margin, 18, 54, 54); } catch {/* optional */}
+  }
 
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
@@ -98,14 +96,21 @@ export const generateFuelOrderPdf = async (data: FuelOrderPayload): Promise<Blob
   doc.setFontSize(11);
   doc.text(data.orderNumber, metaX + 10, metaY + 26);
   doc.setFontSize(10);
-  doc.text(formatDate(data.date), metaX + 10, metaY + 50);
-  if (data.reference) {
+  if (blank) {
+    doc.setDrawColor(150, 150, 150);
+    doc.setLineWidth(0.4);
+    doc.line(metaX + 10, metaY + 52, metaX + 110, metaY + 52);
+    doc.setDrawColor(0, 0, 0);
+  } else {
+    doc.text(formatDate(data.date), metaX + 10, metaY + 50);
+  }
+  if (data.reference || blank) {
     doc.setFontSize(8);
     doc.setTextColor(120, 120, 120);
     doc.text('REFERENCE', metaX + 120, metaY + 14);
     doc.setTextColor(20, 20, 20);
     doc.setFontSize(10);
-    doc.text(data.reference, metaX + 120, metaY + 26);
+    if (data.reference) doc.text(data.reference, metaX + 120, metaY + 26);
   }
 
   let y = 185;
@@ -118,7 +123,14 @@ export const generateFuelOrderPdf = async (data: FuelOrderPayload): Promise<Blob
   y += 14;
   doc.setTextColor(20, 20, 20);
   doc.setFontSize(13);
-  doc.text(data.serviceProvider || '—', margin, y);
+  if (blank) {
+    doc.setDrawColor(150, 150, 150);
+    doc.setLineWidth(0.4);
+    doc.line(margin, y + 4, margin + 300, y + 4);
+    doc.setDrawColor(0, 0, 0);
+  } else {
+    doc.text(data.serviceProvider || '—', margin, y);
+  }
   if (data.providerAddress) {
     y += 14;
     doc.setFont('helvetica', 'normal');
@@ -149,6 +161,13 @@ export const generateFuelOrderPdf = async (data: FuelOrderPayload): Promise<Blob
     doc.setFontSize(8);
     doc.setTextColor(120, 120, 120);
     doc.text(label.toUpperCase(), x + 10, fy + 14);
+    if (blank) {
+      doc.setDrawColor(150, 150, 150);
+      doc.setLineWidth(0.4);
+      doc.line(x + 10, fy + 34, x + colW - 10, fy + 34);
+      doc.setDrawColor(0, 0, 0);
+      return;
+    }
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(11);
     doc.setTextColor(20, 20, 20);
@@ -158,12 +177,22 @@ export const generateFuelOrderPdf = async (data: FuelOrderPayload): Promise<Blob
   drawField('Truck / Vehicle No.', data.truckNumber, boxX, y);
   drawField('Driver Name', data.driverName, boxX + colW, y);
   drawField('Driver Phone', data.driverPhone || '—', boxX, y + 42);
-  drawField('Fuel Type', data.fuelType, boxX + colW, y + 42);
-  drawField('Volume Requested', data.fullTank ? 'FULL TANK' : (data.requestedVolume || '—'), boxX, y + 84);
+  drawField(blank ? 'Fuel Type (Diesel / Petrol / Other)' : 'Fuel Type', data.fuelType, boxX + colW, y + 42);
+  drawField(blank ? 'Volume Requested / Full Tank' : 'Volume Requested', data.fullTank ? 'FULL TANK' : (data.requestedVolume || '—'), boxX, y + 84);
   drawField('Destination / Route', data.destination || '—', boxX + colW, y + 84);
 
   y += 145;
-  if (data.purpose) {
+  if (blank) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(120, 120, 120);
+    doc.text('PURPOSE', margin, y);
+    doc.setDrawColor(150, 150, 150);
+    doc.setLineWidth(0.4);
+    doc.line(margin + 60, y + 2, pageW - margin, y + 2);
+    doc.setDrawColor(0, 0, 0);
+    y += 14;
+  } else if (data.purpose) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
     doc.setTextColor(120, 120, 120);
@@ -280,8 +309,10 @@ export const generateFuelOrderPdf = async (data: FuelOrderPayload): Promise<Blob
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
   doc.setTextColor(20, 20, 20);
-  doc.text(data.requestedBy || '—', margin, y + 18);
-  doc.text(data.authorisedBy || '—', margin + boxW / 2, y + 18);
+  if (!blank) {
+    doc.text(data.requestedBy || '—', margin, y + 18);
+    doc.text(data.authorisedBy || '—', margin + boxW / 2, y + 18);
+  }
   if (data.requestedByTitle) {
     doc.setFontSize(9);
     doc.setTextColor(100, 100, 100);
@@ -322,8 +353,38 @@ export const generateFuelOrderPdf = async (data: FuelOrderPayload): Promise<Blob
   doc.setTextColor(120, 120, 120);
   doc.text(`${COMPANY.name} • This document is computer generated and valid without alteration.`, pageW / 2, footY, { align: 'center' });
 
+};
+
+const tryLoadLogo = async (): Promise<string | null> => {
+  try { return await loadImageAsDataUrl(logoUrl); } catch { return null; }
+};
+
+export const generateFuelOrderPdf = async (data: FuelOrderPayload): Promise<Blob> => {
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  drawFuelOrderPage(doc, data, await tryLoadLogo(), false);
   await preparePdfPrint(doc, `Fuel order ${data.orderNumber}`);
   return doc.output('blob');
+};
+
+/** Blank, pre-numbered fuel/service orders — one A4 page each, filled by hand. */
+export const openBlankFuelOrdersPdf = async (pages: number) => {
+  const count = Math.max(1, Math.min(200, Math.floor(pages)));
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const logo = await tryLoadLogo();
+  const base = buildFuelOrderNumber();
+  for (let i = 0; i < count; i++) {
+    if (i > 0) doc.addPage();
+    const blankData: FuelOrderPayload = {
+      orderNumber: `${base}-${String(i + 1).padStart(3, '0')}`,
+      date: '', serviceProvider: '', truckNumber: '', driverName: '', fuelType: 'Diesel',
+      fullTank: false, requestedBy: '', authorisedBy: '',
+    };
+    drawFuelOrderPage(doc, blankData, logo, true);
+  }
+  await preparePdfPrint(doc, `Blank fuel orders ${base} (${count} pages)`);
+  const url = URL.createObjectURL(doc.output('blob'));
+  const w = window.open(url, '_blank');
+  if (w) w.onload = () => setTimeout(() => w.print(), 400);
 };
 
 export const openFuelOrderPdf = async (data: FuelOrderPayload) => {
