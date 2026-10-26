@@ -1,8 +1,8 @@
 # Roadmap
 
 ## Sales and stock correction
-- [ ] Remove the confirmed duplicate 31 March sale with an audit record and reconcile affected stock allocations.
-- [ ] Make deletion/cancellation restore stock atomically and prevent silent deletion failures and repeated deductions; run regression checks.
+- [x] Remove the confirmed duplicate 31 March sale with an audit record and reconcile affected stock allocations.
+- [x] Make deletion/cancellation restore stock atomically and prevent silent deletion failures and repeated deductions (live correction verified; isolated database regression test unavailable).
 
 - [x] Add shared printed-by footers and registered verification QR codes to browser prints, PDF downloads and Word templates (tests and controlled HTML/PDF/Word samples checked; signed-in production issuance unavailable on external Supabase)
 
