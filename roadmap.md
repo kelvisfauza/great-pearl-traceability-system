@@ -1,5 +1,9 @@
 # Roadmap
 
+## Sales and stock correction
+- [ ] Remove the confirmed duplicate 31 March sale with an audit record and reconcile affected stock allocations.
+- [ ] Make deletion/cancellation restore stock atomically and prevent silent deletion failures and repeated deductions; run regression checks.
+
 - [x] Add shared printed-by footers and registered verification QR codes to browser prints, PDF downloads and Word templates (tests and controlled HTML/PDF/Word samples checked; signed-in production issuance unavailable on external Supabase)
 
 - [x] Link Outlook analysis postings to sampling orders and deliveries; attachment-only and minute rules tested, live collector imported two further forms; signed-in confirmation UI unavailable on external Supabase

@@ -70,7 +70,7 @@ export const EditSalesTransactionDialog = ({
     totalAmount: transaction.total_amount,
     truckDetails: transaction.truck_details || '',
     driverDetails: transaction.driver_details || '',
-    status: transaction.status
+    status: transaction.status.toLowerCase()
   });
 
   const handleInputChange = (field: string, value: any) => {
@@ -103,7 +103,9 @@ export const EditSalesTransactionDialog = ({
           driver_details: formData.driverDetails,
           status: formData.status
         })
-        .eq('id', transaction.id);
+        .eq('id', transaction.id)
+        .select('id')
+        .single();
 
       if (error) throw error;
 
@@ -236,9 +238,9 @@ export const EditSalesTransactionDialog = ({
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Completed">Completed</SelectItem>
-                <SelectItem value="Pending">Pending</SelectItem>
-                <SelectItem value="Cancelled">Cancelled</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -18782,6 +18782,10 @@ export type Database = {
         Returns: Json
       }
       resolve_login_email: { Args: { p_email: string }; Returns: string }
+      restore_sale_inventory: {
+        Args: { p_sale_id: string }
+        Returns: undefined
+      }
       reverse_treasury_profit: {
         Args: {
           p_amount: number

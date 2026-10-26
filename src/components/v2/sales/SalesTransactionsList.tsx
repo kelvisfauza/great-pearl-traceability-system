@@ -73,12 +73,15 @@ const SalesTransactionsList = () => {
   const handleDelete = async (transaction: SalesTransaction) => {
     if (!window.confirm(`Are you sure you want to delete the sale to "${transaction.customer}"?`)) return;
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('sales_transactions')
         .delete()
-        .eq('id', transaction.id);
+        .eq('id', transaction.id)
+        .select('id')
+        .single();
       if (error) throw error;
-      toast({ title: "Deleted", description: "Sales transaction deleted successfully" });
+      if (!data) throw new Error('Sale was not deleted');
+      toast({ title: "Deleted", description: "Sale deleted and its recorded stock deductions restored" });
       fetchTransactions();
     } catch (error) {
       console.error('Error deleting sales transaction:', error);

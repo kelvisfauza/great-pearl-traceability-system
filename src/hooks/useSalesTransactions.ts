@@ -376,15 +376,18 @@ export const useSalesTransactions = () => {
     try {
       console.log('Deleting transaction:', id);
       
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('sales_transactions')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .select('id')
+        .single();
 
       if (error) {
         console.error('Error deleting transaction:', error);
         throw error;
       }
+      if (!data) throw new Error('Sale was not deleted; check your deletion permission');
 
       console.log('Transaction deleted successfully');
       await fetchTransactions(); // Refresh the list
