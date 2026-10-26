@@ -1,3 +1,4 @@
+import { useSearchParams } from "react-router-dom";
 import OverdueAssessmentsBar from "@/components/quality/OverdueAssessmentsBar";
 import QualityAnalysisPostings from "@/components/quality/QualityAnalysisPostings";
 import { useQualityPostingCounts } from "@/components/quality/useQualityPostingCounts";
@@ -110,8 +111,15 @@ const QualityControl = () => {
   const readOnly = !access.canManageQuality;
   const canAccessAdminPriceCalculator = isAdmin();
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(() => searchParams.get("tab") || "overview");
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Honour ?tab= links (e.g. "Sampling Orders" from the store menu)
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab) setActiveTab(tab);
+  }, [searchParams]);
   
   // Switch to correct tab when searching for a record
   useEffect(() => {

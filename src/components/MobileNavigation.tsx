@@ -3,7 +3,8 @@ import {
   Coffee, Users, Package, TrendingUp, Shield, FileText, Settings,
   Truck, BarChart3, DollarSign, ClipboardCheck, MapPin, LineChart,
   Receipt, UserCheck, Home, X, ArrowRight, CheckSquare, BookMarked,
-  Banknote, FileCheck, CalendarDays, FileSpreadsheet, Wallet, ChevronDown
+  Banknote, FileCheck, CalendarDays, FileSpreadsheet, Wallet, ChevronDown,
+  ClipboardList
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { isTraineeRole, isTraineeRouteAllowed } from "@/lib/trainee";
@@ -30,6 +31,7 @@ const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
         { name: "Dashboard", icon: BarChart3, path: "/", permission: "Reports" },
         { name: "Quality Control", icon: ClipboardCheck, path: "/quality-control", permission: "Quality Control" },
         { name: "Store Management", icon: Shield, path: "/store", permission: "Store Management" },
+        { name: "Sampling Orders", icon: ClipboardList, path: "/quality-control?tab=sampling-orders", permission: "Store Management" },
         { name: "EUDR Documentation", icon: FileText, path: "/eudr-documentation", permission: "EUDR Documentation" },
         { name: "Milling", icon: Coffee, path: "/milling", permission: "Milling" },
         { name: "Procurement", icon: Package, path: "/procurement", permission: "Procurement", children: [
