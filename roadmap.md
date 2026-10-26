@@ -1,7 +1,8 @@
 # Roadmap
 
 ## Store sampling pickup texts
-- [ ] Notify Alex and Onesmus when Ben creates a new sampling order; validate saved creator identity and suppress disabled recipients.
+- [x] Notify Alex and Onesmus when Ben creates a new sampling order; validate saved creator identity and suppress disabled recipients. Three rule tests passed, functions deployed, unauthenticated request rejected.
+- [ ] Verify delivery of pickup texts after Ben saves a real order — signed-in end-to-end checks unavailable for external Supabase.
 
 ## Batch-based clearance and Procurement confirmation
 - [x] Source clearance lines from batches and remove contract choice, comparison linking and uploads from Store; preserve automatic numbering and paired printing.
