@@ -231,16 +231,16 @@ const SamplingOrdersTab = () => {
       }
       (async () => {
         const pdf_base64 = await buildOrderPdfBase64(order);
-        const { error } = await supabase.functions.invoke("notify-sampling-order", {
+        const { data, error } = await supabase.functions.invoke("notify-sampling-order", {
           body: {
             order: { ...order, sample_type_label: typeLabel(order.sample_type) },
             pdf_base64,
           },
         });
-        if (error) {
-          toast({ title: "Lab team not notified", description: error.message, variant: "destructive" });
+        if (error || !data?.ok) {
+          toast({ title: "Order saved; notification needs attention", description: error?.message || data?.error || "A pickup text could not be sent.", variant: "destructive" });
         } else {
-          toast({ title: "Lab team notified", description: "Alex, Kibaba, Morjalia and Nuwagaba received the sampling order by email." });
+          toast({ title: "Sampling order notifications processed", description: data.pickup_results?.length ? "Pickup text requests processed for Alex and Onesmus; lab emails also requested." : "Lab email notifications requested." });
         }
       })();
     },

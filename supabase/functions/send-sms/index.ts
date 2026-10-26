@@ -486,6 +486,7 @@ serve(async (req) => {
       'daily_report',
       // Procurement supplier follow-up reminders
       'procurement_reminder',
+      'sampling_order_pickup',
       // Coffee booking messages to suppliers — always by SMS
       'coffee_booking',
       'booking',
