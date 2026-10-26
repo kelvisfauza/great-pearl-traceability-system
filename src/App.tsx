@@ -259,7 +259,7 @@ const App: React.ComponentType = () => {
                 <OvertimeNotification />
                 <DailyReportReminder />
                 <MonthlyReportReminder />
-                <ProfileCompletionModal />
+                {/* Profile completion paused: staff update details in their settings */}
                 <BankDetailsPrompt />
                 <BirthdaySplash />
                 <BirthdayNotification />
