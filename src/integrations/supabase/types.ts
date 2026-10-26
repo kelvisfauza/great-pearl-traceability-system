@@ -2069,6 +2069,8 @@ export type Database = {
           grn_printed_by: string | null
           id: string
           kilograms: number
+          sample_taken: boolean | null
+          sampling_order_id: string | null
           status: string
           supplier_id: string | null
           supplier_name: string
@@ -2087,6 +2089,8 @@ export type Database = {
           grn_printed_by?: string | null
           id?: string
           kilograms: number
+          sample_taken?: boolean | null
+          sampling_order_id?: string | null
           status?: string
           supplier_id?: string | null
           supplier_name: string
@@ -2105,12 +2109,21 @@ export type Database = {
           grn_printed_by?: string | null
           id?: string
           kilograms?: number
+          sample_taken?: boolean | null
+          sampling_order_id?: string | null
           status?: string
           supplier_id?: string | null
           supplier_name?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "coffee_records_sampling_order_id_fkey"
+            columns: ["sampling_order_id"]
+            isOneToOne: false
+            referencedRelation: "quality_sampling_orders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "coffee_records_supplier_id_fkey"
             columns: ["supplier_id"]

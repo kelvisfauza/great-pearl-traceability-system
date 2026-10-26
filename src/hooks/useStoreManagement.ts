@@ -17,6 +17,8 @@ export interface StoreRecord {
   grnPrintedAt?: string | null;
   grnPrintedBy?: string | null;
   createdBy?: string | null;
+  sampleTaken?: boolean | null;
+  samplingOrderId?: string | null;
 }
 
 export interface Supplier {
@@ -437,7 +439,9 @@ export const useStoreManagement = () => {
           batch_number: recordData.batchNumber,
           status: recordData.status,
           supplier_id: supplier?.id || null,
-          created_by: employee?.name || employee?.email || 'Store Department'
+          created_by: employee?.name || employee?.email || 'Store Department',
+          sample_taken: recordData.sampleTaken ?? null,
+          sampling_order_id: recordData.samplingOrderId ?? null,
         })
         .select()
         .single();

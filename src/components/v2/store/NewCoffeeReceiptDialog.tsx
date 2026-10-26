@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useStoreDeliveryIntake } from '@/hooks/useStoreDeliveryIntake';
+import DeliverySamplingFields from '@/components/store/DeliverySamplingFields';
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,13 +39,12 @@ interface ReceiptForm {
 }
 
 // Import batch number generator from utils for consistent format
-import { generateBatchNumber } from '@/utils/batchUtils';
 
 const NewCoffeeReceiptDialog = ({ open, onOpenChange }: NewCoffeeReceiptDialogProps) => {
   const { employee } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { register, handleSubmit, reset, setValue } = useForm<ReceiptForm>({
+  const { register, handleSubmit, reset, setValue, watch } = useForm<ReceiptForm>({
     defaultValues: {
       date: new Date().toISOString().split('T')[0]
     }
@@ -62,10 +62,18 @@ const NewCoffeeReceiptDialog = ({ open, onOpenChange }: NewCoffeeReceiptDialogPr
     }
   });
 
+  const supplierId = watch('supplier_id');
+  const supplierName = suppliers?.find(supplier => supplier.id === supplierId)?.name || '';
+  const deliveryIntake = useStoreDeliveryIntake(open, watch('date'), supplierName);
+
   const createReceipt = useMutation({
     mutationFn: async (data: ReceiptForm) => {
       const supplier = suppliers?.find(s => s.id === data.supplier_id);
-      const batchNumber = await generateBatchNumber(data.date);
+      if (!supplier || !data.coffee_type || !(data.kilograms > 0) || !Number.isInteger(data.bags) || data.bags <= 0) {
+        throw new Error('Select a supplier and coffee type, and enter valid kilograms and bags');
+      }
+      const sampling = deliveryIntake.validate();
+      const batchNumber = deliveryIntake.batchNumber;
       const recordId = crypto.randomUUID();
 
       const recordPayload = {
@@ -79,6 +87,7 @@ const NewCoffeeReceiptDialog = ({ open, onOpenChange }: NewCoffeeReceiptDialogPr
         batch_number: batchNumber,
         status: 'pending',
         created_by: employee?.email || '',
+        ...sampling,
       };
 
       const financeLot = {
@@ -128,6 +137,7 @@ const NewCoffeeReceiptDialog = ({ open, onOpenChange }: NewCoffeeReceiptDialogPr
         );
       }
       reset();
+      deliveryIntake.reset();
       onOpenChange(false);
     },
     onError: (error: any) => {
@@ -145,7 +155,7 @@ const NewCoffeeReceiptDialog = ({ open, onOpenChange }: NewCoffeeReceiptDialogPr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>New Coffee Receipt</DialogTitle>
         </DialogHeader>
@@ -153,7 +163,7 @@ const NewCoffeeReceiptDialog = ({ open, onOpenChange }: NewCoffeeReceiptDialogPr
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <Label htmlFor="supplier_id">Supplier *</Label>
-            <Select onValueChange={(value) => setValue('supplier_id', value)}>
+            <Select value={supplierId || ''} onValueChange={(value) => setValue('supplier_id', value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select supplier" />
               </SelectTrigger>
@@ -169,7 +179,7 @@ const NewCoffeeReceiptDialog = ({ open, onOpenChange }: NewCoffeeReceiptDialogPr
 
           <div>
             <Label htmlFor="coffee_type">Coffee Type *</Label>
-            <Select onValueChange={(value) => setValue('coffee_type', value)}>
+            <Select value={watch('coffee_type') || ''} onValueChange={(value) => setValue('coffee_type', value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select coffee type" />
               </SelectTrigger>
@@ -198,7 +208,8 @@ const NewCoffeeReceiptDialog = ({ open, onOpenChange }: NewCoffeeReceiptDialogPr
                 id="kilograms"
                 type="number"
                 step="0.01"
-                {...register('kilograms', { required: true, valueAsNumber: true })}
+                min="0.01"
+                {...register('kilograms', { required: true, valueAsNumber: true, min: 0.01 })}
               />
             </div>
 
@@ -207,11 +218,14 @@ const NewCoffeeReceiptDialog = ({ open, onOpenChange }: NewCoffeeReceiptDialogPr
               <Input
                 id="bags"
                 type="number"
-                {...register('bags', { required: true, valueAsNumber: true })}
+                min="1"
+                step="1"
+                {...register('bags', { required: true, valueAsNumber: true, min: 1 })}
               />
             </div>
           </div>
 
+          <DeliverySamplingFields intake={deliveryIntake} disabled={createReceipt.isPending} />
 
           <div className="flex justify-end gap-2 pt-4">
             <Button

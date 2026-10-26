@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { generateBatchNumber } from "@/utils/batchUtils";
+import { useStoreDeliveryIntake } from "@/hooks/useStoreDeliveryIntake";
+import DeliverySamplingFields from "@/components/store/DeliverySamplingFields";
 
 import Layout from "@/components/Layout";
 import DailyPurchaseTemplate from "@/components/v2/store/DailyPurchaseTemplate";
@@ -241,6 +242,7 @@ const Store = () => {
   const [selectedGRNData, setSelectedGRNData] = useState<any | null>(null);
   const [showQuickReportModal, setShowQuickReportModal] = useState(false);
   const [showStorePreviewModal, setShowStorePreviewModal] = useState(false);
+  const deliveryIntake = useStoreDeliveryIntake(showAddRecordModal, newRecord.date, newRecord.supplierName);
 
   /* ------------------------ URL → Tab Sync (react-router) -------------------- */
 
@@ -348,12 +350,17 @@ const Store = () => {
 
     setSubmittingRecord(true);
     try {
+      const sampling = deliveryIntake.validate();
       await addCoffeeRecord({
         ...newRecord,
         kilograms: Number(newRecord.kilograms),
         bags: Number(newRecord.bags),
-        batchNumber: await generateBatchNumber(newRecord.date),
+        batchNumber: deliveryIntake.batchNumber,
+        sampleTaken: sampling.sample_taken,
+        samplingOrderId: sampling.sampling_order_id,
       });
+
+      deliveryIntake.reset();
 
       setNewRecord({
         coffeeType: "",
@@ -373,7 +380,7 @@ const Store = () => {
       return true;
     } catch (error) {
       console.error(error);
-      toast.error("Failed to submit coffee record");
+      toast.error(error instanceof Error ? error.message : "Failed to submit coffee record");
       return false;
     } finally {
       setSubmittingRecord(false);
@@ -1599,6 +1606,7 @@ const Store = () => {
                   />
                 </div>
               </div>
+              <DeliverySamplingFields intake={deliveryIntake} disabled={submittingRecord} />
             </div>
 
             <DialogFooter className="flex-col xs:flex-row gap-2">

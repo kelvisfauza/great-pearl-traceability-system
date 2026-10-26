@@ -82,6 +82,8 @@ async function syncCoffeeReceipt(op: QueuedOp) {
       status: p.status || 'pending',
       created_by: p.created_by,
       client_op_id: p.client_op_id,
+      sample_taken: p.sample_taken ?? null,
+      sampling_order_id: p.sampling_order_id ?? null,
     } as any]);
   if (coffeeError) throw coffeeError;
 
