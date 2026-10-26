@@ -63,12 +63,13 @@ import ManualStoreReportForm from "@/components/reports/ManualStoreReportForm";
 import StorePreviewModal from "@/components/store/StorePreviewModal";
 import MissingAttachmentsPanel from "@/components/v2/store/MissingAttachmentsPanel";
 import StoreDispatchMonitoring from "@/components/store/StoreDispatchMonitoring";
+import SamplingOrdersTab from "@/components/v2/quality/tabs/SamplingOrdersTab";
 
 /* -------------------------------------------------------------------------- */
 /*                               Helper Types                                 */
 /* -------------------------------------------------------------------------- */
 
-type StoreTab = "records" | "pricing" | "operations" | "dispatch" | "suppliers" | "reports";
+type StoreTab = "records" | "sampling-orders" | "pricing" | "operations" | "dispatch" | "suppliers" | "reports";
 
 type NewSupplierForm = {
   name: string;
@@ -167,7 +168,7 @@ const Store = () => {
 
   const initialTabParam = searchParams.get("tab");
   const initialTab: StoreTab =
-    initialTabParam === "pricing" || initialTabParam === "operations" || initialTabParam === "dispatch" || initialTabParam === "suppliers"
+    initialTabParam === "sampling-orders" || initialTabParam === "pricing" || initialTabParam === "operations" || initialTabParam === "dispatch" || initialTabParam === "suppliers"
       ? initialTabParam
       : "records";
 
@@ -244,7 +245,7 @@ const Store = () => {
 
   useEffect(() => {
     const tabParam = searchParams.get("tab") as StoreTab | null;
-    if (tabParam && ["records", "pricing", "operations", "suppliers"].includes(tabParam)) {
+    if (tabParam && ["records", "sampling-orders", "pricing", "operations", "suppliers"].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [searchParams]);
@@ -641,6 +642,10 @@ const Store = () => {
                 <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Records
               </TabsTrigger>
+              <TabsTrigger value="sampling-orders" className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Sampling Orders
+              </TabsTrigger>
               <TabsTrigger value="pricing" className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                 <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Pricing
@@ -663,6 +668,10 @@ const Store = () => {
               </TabsTrigger>
             </TabsList>
           </div>
+
+          <TabsContent value="sampling-orders" className="space-y-6">
+            <SamplingOrdersTab />
+          </TabsContent>
 
           {/* ------------------------------------------------------------------ */}
           {/*                            Coffee Records                         */}
