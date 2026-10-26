@@ -1,0 +1,11 @@
+import { it } from 'node:test';
+import { strict as assert } from 'node:assert';
+import { availableDeliveryOrders, validateDeliverySample, DeliverySamplingOrder } from './storeDeliveryRules';
+const order: DeliverySamplingOrder = { id: 'order-1', supplier_name: 'Fauza', order_number: 'SO-1', delivery_time: '2026-10-26', sample_type: 'delivery', linked_store_record_id: null, linked_batch_number: null };
+it('requires an explicit Yes or No answer', () => assert.throws(() => validateDeliverySample('', '', 'Fauza', [order])));
+it('Yes requires a supplier sampling order', () => assert.throws(() => validateDeliverySample('yes', '', 'Fauza', [order])));
+it('Yes persists the selected supplier order', () => assert.deepEqual(validateDeliverySample('yes', 'order-1', 'Fauza', [order]), { sample_taken: true, sampling_order_id: 'order-1' }));
+it('No saves without any order', () => assert.deepEqual(validateDeliverySample('no', 'order-1', 'Fauza', [order]), { sample_taken: false, sampling_order_id: null }));
+it('rejects another supplier order', () => assert.throws(() => validateDeliverySample('yes', 'order-1', 'Denis', [order])));
+it('excludes already attached orders', () => assert.deepEqual(availableDeliveryOrders([{ ...order, linked_store_record_id: 'delivery-1' }], 'Fauza'), []));
+it('matches supplier names exactly ignoring case and surrounding spaces', () => assert.equal(availableDeliveryOrders([order, { ...order, id: 'other', supplier_name: 'Fauza Two' }], ' FAUZA ').length, 1));
