@@ -1,5 +1,8 @@
 # Roadmap
 
+## Printed QR verification
+- [ ] Restore verification for issued quality form QR codes, including existing printed sheets, without exposing analysis data.
+
 ## Sales and stock correction
 - [x] Remove the confirmed duplicate 31 March sale with an audit record and reconcile affected stock allocations.
 - [x] Make deletion/cancellation restore stock atomically and prevent silent deletion failures and repeated deductions (live correction verified; isolated database regression test unavailable).
