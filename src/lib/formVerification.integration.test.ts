@@ -1,4 +1,5 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, it as test } from 'node:test';
+import { strict as assert } from 'node:assert';
 
 // Run against the connected project's public endpoint; no staff session required.
 async function verify(code: string) {
@@ -10,24 +11,24 @@ async function verify(code: string) {
     headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ _code: code }),
   });
-  expect(response.status).toBe(200);
+  assert.equal(response.status, 200);
   return response.json();
 }
 
 describe('Issued printed form verification', () => {
   test('the existing printed quality form verifies anonymously', async () => {
     const rows = await verify('GAC-QA-2610-0166');
-    expect(rows).toHaveLength(1);
-    expect(rows[0].reference_no).toBe('GAC QA 2610-0166');
-    expect(rows[0].status).toBe('verified');
-    expect(rows[0].subtype).toBe('quality_analysis_form');
-    expect(Object.keys(rows[0].meta).sort()).toEqual(['title', 'verification_scope']);
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].reference_no, 'GAC QA 2610-0166');
+    assert.equal(rows[0].status, 'verified');
+    assert.equal(rows[0].subtype, 'quality_analysis_form');
+    assert.deepEqual(Object.keys(rows[0].meta).sort(), ['title', 'verification_scope']);
   });
   test('the written form number also resolves without changing its identity', async () => {
     const rows = await verify(' gac qa 2610-0166 ');
-    expect(rows[0]?.code).toBe('GAC-QA-2610-0166');
+    assert.equal(rows[0]?.code, 'GAC-QA-2610-0166');
   });
   test('an unissued number is not verified', async () => {
-    expect(await verify('GAC-QA-2610-99999999')).toEqual([]);
+    assert.deepEqual(await verify('GAC-QA-2610-99999999'), []);
   });
 });

@@ -1,7 +1,7 @@
 # Roadmap
 
 ## Printed QR verification
-- [ ] Restore verification for issued quality form QR codes, including existing printed sheets, without exposing analysis data.
+- [x] Restore verification for issued quality and store form QR codes, including existing printed sheets, without exposing analysis data (public QR flow and live regression tests passed).
 
 ## Sales and stock correction
 - [x] Remove the confirmed duplicate 31 March sale with an audit record and reconcile affected stock allocations.
