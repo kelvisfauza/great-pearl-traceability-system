@@ -19,3 +19,9 @@ it('signed-out users cannot query the administrator access check', async () => {
   const error = await response.json();
   assert.equal(error.code, '42501');
 });
+it('signed-out users cannot confirm a Procurement contract or spot sale', async () => {
+  const response = await callPublicRpc('confirm_clearance_procurement', { p_clearance_id: '00000000-0000-0000-0000-000000000000', p_basis: 'spot', p_contract_id: null });
+  assert.equal(response.status, 401);
+  const error = await response.json();
+  assert.equal(error.code, '42501');
+});
