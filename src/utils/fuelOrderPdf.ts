@@ -309,8 +309,10 @@ const drawFuelOrderPage = (doc: jsPDF, data: FuelOrderPayload, logo: string | nu
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
   doc.setTextColor(20, 20, 20);
-  doc.text(data.requestedBy || '—', margin, y + 18);
-  doc.text(data.authorisedBy || '—', margin + boxW / 2, y + 18);
+  if (!blank) {
+    doc.text(data.requestedBy || '—', margin, y + 18);
+    doc.text(data.authorisedBy || '—', margin + boxW / 2, y + 18);
+  }
   if (data.requestedByTitle) {
     doc.setFontSize(9);
     doc.setTextColor(100, 100, 100);
@@ -351,8 +353,38 @@ const drawFuelOrderPage = (doc: jsPDF, data: FuelOrderPayload, logo: string | nu
   doc.setTextColor(120, 120, 120);
   doc.text(`${COMPANY.name} • This document is computer generated and valid without alteration.`, pageW / 2, footY, { align: 'center' });
 
+};
+
+const tryLoadLogo = async (): Promise<string | null> => {
+  try { return await loadImageAsDataUrl(logoUrl); } catch { return null; }
+};
+
+export const generateFuelOrderPdf = async (data: FuelOrderPayload): Promise<Blob> => {
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  drawFuelOrderPage(doc, data, await tryLoadLogo(), false);
   await preparePdfPrint(doc, `Fuel order ${data.orderNumber}`);
   return doc.output('blob');
+};
+
+/** Blank, pre-numbered fuel/service orders — one A4 page each, filled by hand. */
+export const openBlankFuelOrdersPdf = async (pages: number) => {
+  const count = Math.max(1, Math.min(200, Math.floor(pages)));
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const logo = await tryLoadLogo();
+  const base = buildFuelOrderNumber();
+  for (let i = 0; i < count; i++) {
+    if (i > 0) doc.addPage();
+    const blankData: FuelOrderPayload = {
+      orderNumber: `${base}-${String(i + 1).padStart(3, '0')}`,
+      date: '', serviceProvider: '', truckNumber: '', driverName: '', fuelType: 'Diesel',
+      fullTank: false, requestedBy: '', authorisedBy: '',
+    };
+    drawFuelOrderPage(doc, blankData, logo, true);
+  }
+  await preparePdfPrint(doc, `Blank fuel orders ${base} (${count} pages)`);
+  const url = URL.createObjectURL(doc.output('blob'));
+  const w = window.open(url, '_blank');
+  if (w) w.onload = () => setTimeout(() => w.print(), 400);
 };
 
 export const openFuelOrderPdf = async (data: FuelOrderPayload) => {
