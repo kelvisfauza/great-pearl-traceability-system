@@ -7629,6 +7629,30 @@ export type Database = {
         }
         Relationships: []
       }
+      meal_plan_forms: {
+        Row: {
+          created_at: string
+          created_by: string
+          document_number: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string
+          document_number?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          document_number?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       meeting_attendance: {
         Row: {
           created_at: string
@@ -9752,6 +9776,7 @@ export type Database = {
           id: string
           invoice_number: string | null
           national_id: string | null
+          paper_document_number: string | null
           payout_message: string | null
           payout_record_id: string | null
           payout_status: string | null
@@ -9759,10 +9784,12 @@ export type Database = {
           provider_name: string
           rejection_reason: string | null
           request_type: string
+          requested_payment_method: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           reviewed_by_name: string | null
           status: string
+          submitted_by: string | null
           submitter_ip: string | null
           updated_at: string
         }
@@ -9779,6 +9806,7 @@ export type Database = {
           id?: string
           invoice_number?: string | null
           national_id?: string | null
+          paper_document_number?: string | null
           payout_message?: string | null
           payout_record_id?: string | null
           payout_status?: string | null
@@ -9786,10 +9814,12 @@ export type Database = {
           provider_name: string
           rejection_reason?: string | null
           request_type: string
+          requested_payment_method?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           reviewed_by_name?: string | null
           status?: string
+          submitted_by?: string | null
           submitter_ip?: string | null
           updated_at?: string
         }
@@ -9806,6 +9836,7 @@ export type Database = {
           id?: string
           invoice_number?: string | null
           national_id?: string | null
+          paper_document_number?: string | null
           payout_message?: string | null
           payout_record_id?: string | null
           payout_status?: string | null
@@ -9813,14 +9844,24 @@ export type Database = {
           provider_name?: string
           rejection_reason?: string | null
           request_type?: string
+          requested_payment_method?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           reviewed_by_name?: string | null
           status?: string
+          submitted_by?: string | null
           submitter_ip?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "provider_submission_requests_paper_document_number_fkey"
+            columns: ["paper_document_number"]
+            isOneToOne: false
+            referencedRelation: "meal_plan_forms"
+            referencedColumns: ["document_number"]
+          },
+        ]
       }
       public_holidays: {
         Row: {

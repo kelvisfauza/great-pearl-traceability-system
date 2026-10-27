@@ -10,6 +10,7 @@ import ProcurementActionCenter from "@/components/procurement/ProcurementActionC
 import DailyProcurementReport from "@/components/procurement/DailyProcurementReport";
 import ProcurementReviewPanel from "@/components/procurement/ProcurementReviewPanel";
 import ClearanceConfirmations from "@/components/procurement/ClearanceConfirmations";
+import MealPlanRequests from "@/components/procurement/MealPlanRequests";
 import { 
   Package, 
   Plus, 
@@ -172,6 +173,7 @@ const Procurement = () => {
           <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
             <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 bg-muted/50 p-1 rounded-xl gap-1">
               <TabsTrigger value="action-center" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Action Center</TabsTrigger>
+              <TabsTrigger value="meal-plans" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Meal Plans</TabsTrigger>
               <TabsTrigger value="clearance-confirmations" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Clearance Confirmations</TabsTrigger>
               <TabsTrigger value="suppliers" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Suppliers</TabsTrigger>
               <TabsTrigger value="orders" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Orders</TabsTrigger>
@@ -187,6 +189,7 @@ const Procurement = () => {
 
           {/* Supplier Overview */}
           <TabsContent value="clearance-confirmations"><ClearanceConfirmations /></TabsContent>
+          <TabsContent value="meal-plans"><MealPlanRequests /></TabsContent>
           <TabsContent value="suppliers" className="space-y-4">
             <Card>
               <CardHeader>

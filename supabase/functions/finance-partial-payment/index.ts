@@ -3,6 +3,7 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { treasuryReserve, treasuryRelease } from "../_shared/treasury.ts";
 import { yoPayout } from "../_shared/yo-payments.ts";
 import { gosenteWithdraw, isGosenteSuccess } from "../_shared/gosentepay.ts";
+import { mealPaymentAllowed } from "../_shared/meal-payment-rules.ts";
 
 type SourceType = "provider" | "withdrawal" | "supplier" | "expense";
 // Methods that actually send money now (others only record money handed over)
@@ -60,6 +61,7 @@ Deno.serve(async (req) => {
     if (sourceType === "provider") {
       const { data: s } = await db.from("provider_submission_requests").select("*").eq("id", sourceId).maybeSingle();
       if (!s) return respond(false, { error: "Request not found" });
+      if (!mealPaymentAllowed(s.requested_payment_method, method)) return respond(false, { error: 'Payment must match the cash or mobile-money choice on the paper meal form' });
       if (s.status !== "awaiting_finance") return respond(false, { error: "This request is no longer waiting for Finance" });
       total = Number(s.admin_approved_amount ?? s.amount) + Number(s.admin_approved_charge ?? 0);
       title = s.request_type === "meal_plan" ? "Meal Plan Payment" : s.request_type === "support_staff_per_diem" ? "Support Staff Per-Diem" : "Service Provider Payment";
