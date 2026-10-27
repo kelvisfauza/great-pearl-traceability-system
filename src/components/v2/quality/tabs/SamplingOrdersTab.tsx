@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useActivityTracker } from "@/hooks/useActivityTracker";
 import jsPDF from "jspdf";
 import QRCode from "qrcode";
+import { COMPANY_TAGLINE, COMPANY_ADDRESS } from '@/utils/companyBrand';
 
 const SAMPLING_EMAILS = [
   "onesmusrubambura@greatpearlcoffee.com",
@@ -50,7 +51,7 @@ const buildOrderPdfBase64 = async (order: any): Promise<string | undefined> => {
     doc.text("GREAT AGRO COFFEE", 297, 50, { align: "center" });
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
-    doc.text("Member of HELLO YEDA COFFEE COMPANY LIMITED · P.O Box 431420, Kasese, Uganda", 297, 65, { align: "center" });
+    doc.text(`${COMPANY_TAGLINE} · ${COMPANY_ADDRESS}`, 297, 65, { align: "center" });
     doc.setLineWidth(1);
     doc.line(48, 76, 547, 76);
 
@@ -115,7 +116,7 @@ const printSamplingOrder = (order: any) => {
     .sign{margin-top:34px;display:flex;justify-content:space-between;font-size:12px}
     .sign div{width:45%;border-top:1px solid #111;padding-top:6px;text-align:center}
   </style></head><body>
-  <div class="head"><h1>GREAT AGRO COFFEE</h1><div class="sub">Member of HELLO YEDA COFFEE COMPANY LIMITED &middot; P.O Box 431420, Kasese, Uganda</div></div>
+  <div class="head"><h1>GREAT AGRO COFFEE</h1><div class="sub">${COMPANY_TAGLINE} &middot; ${COMPANY_ADDRESS}</div></div>
   <div class="title">QUALITY SAMPLING ORDER</div>
   <table>
     <tr><td class="k">Sampling Order No.</td><td><strong>${order.order_number}</strong></td></tr>

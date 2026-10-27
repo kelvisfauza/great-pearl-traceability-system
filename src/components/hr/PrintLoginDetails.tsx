@@ -8,6 +8,7 @@ import { KeyRound, Printer, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { Employee } from '@/hooks/useSupabaseEmployees';
+import { COMPANY_TAGLINE } from '@/utils/companyBrand';
 
 interface PrintLoginDetailsProps {
   employees: Employee[];
@@ -50,7 +51,7 @@ export default function PrintLoginDetails({ employees }: PrintLoginDetailsProps)
       </style></head><body>
         <div class="header">
           <div class="company">Great Agro Coffee</div>
-          <div class="sub">A member of Hello YEDA COFFEE COMPANY LIMITED — P.O Box 431420, Kasese, Uganda</div>
+          <div class="sub">${COMPANY_TAGLINE} — P.O Box 431420, Kasese, Uganda</div>
           <div class="title">Confidential Login Details</div>
           <div class="sub">Issued on ${new Date().toLocaleString()}</div>
         </div>

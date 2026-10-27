@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import { COMPANY_TAGLINE } from '@/utils/companyBrand';
 
 export type ReleaseReceiptData = {
   reference: string;
@@ -26,7 +27,7 @@ export function buildReleaseReceiptPdf(d: ReleaseReceiptData): jsPDF {
   y += 5;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.text('A member of Hello YEDA Coffee Company Limited', w / 2, y, { align: 'center' });
+  doc.text(COMPANY_TAGLINE, w / 2, y, { align: 'center' });
   y += 4;
   doc.text('P.O Box 431420, Kasese, Uganda', w / 2, y, { align: 'center' });
   y += 7;

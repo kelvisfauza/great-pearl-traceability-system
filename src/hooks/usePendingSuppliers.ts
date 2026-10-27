@@ -24,7 +24,7 @@ export function usePendingSuppliers() {
   const propose = useMutation({
     mutationFn: async (input: PendingSupplierInput) => {
       const check = validatePendingSupplier(input);
-      if (!check.ok) throw new Error(check.error);
+      if (check.ok === false) throw new Error(check.error);
       const { error } = await (supabase as any).from('pending_supplier_requests').insert({
         proposed_name: check.value.name,
         origin: check.value.origin,

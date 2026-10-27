@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { COMPANY_TAGLINE } from '@/utils/companyBrand';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -72,7 +73,7 @@ export default function Support() {
           <CardHeader>
             <CardTitle className="text-2xl">Contact Customer Support</CardTitle>
             <CardDescription>
-              Great Agro Coffee — a member of Hello YEDA COFFEE COMPANY LIMITED. We usually respond within one business day.
+              Great Agro Coffee — {COMPANY_TAGLINE}. We usually respond within one business day.
             </CardDescription>
             <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
               <Mail className="h-4 w-4" /> Or email us directly at <b>{SUPPORT_EMAIL}</b>

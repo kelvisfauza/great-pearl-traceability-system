@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { COMPANY_TAGLINE } from '@/utils/companyBrand';
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -143,7 +144,7 @@ const ExecutiveDashboard = () => {
         <div className="mb-6 flex flex-col gap-4 border-b border-slate-800 pb-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-extrabold tracking-wide text-white sm:text-3xl">GREAT AGRO COFFEE — EXECUTIVE DASHBOARD</h1>
-            <p className="mt-1 text-sm text-slate-400">A member of Hello YEDA COFFEE COMPANY LIMITED • Executive Summary {year}</p>
+            <p className="mt-1 text-sm text-slate-400">{COMPANY_TAGLINE} • Executive Summary {year}</p>
           </div>
           <div className="flex gap-2 print:hidden">
             <Button variant="outline" className="gap-2 border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800" onClick={() => navigate("/reports")}>
