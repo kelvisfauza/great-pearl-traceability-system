@@ -110,7 +110,7 @@ const ProcurementReviewPanel = () => {
           .limit(200),
         (supabase as any)
           .from('provider_submission_requests')
-          .select('id,request_type,provider_name,phone,amount,description,status,created_at')
+          .select('id,request_type,provider_name,phone,amount,description,status,created_at,invoice_number,requested_payment_method')
           .eq('status', 'pending')
           .order('created_at', { ascending: false })
           .limit(200),
@@ -132,7 +132,7 @@ const ProcurementReviewPanel = () => {
         id: r.id,
         title: `${PROVIDER_LABEL[String(r.request_type)] || 'Provider Request'} — ${r.provider_name || 'Unnamed'}`,
         type: PROVIDER_LABEL[String(r.request_type)] || String(r.request_type || 'Provider Request'),
-        description: r.description || null,
+        description: [r.invoice_number ? `Document: ${r.invoice_number}` : '', r.requested_payment_method ? `Payment: ${r.requested_payment_method === 'cash' ? 'Cash' : `Mobile money to ${r.phone}`}` : '', r.description || ''].filter(Boolean).join('\n') || null,
         amount: r.amount,
         requestedby: r.phone || null,
         requestedby_name: r.provider_name || null,
