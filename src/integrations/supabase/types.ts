@@ -9165,6 +9165,82 @@ export type Database = {
         }
         Relationships: []
       }
+      pending_supplier_requests: {
+        Row: {
+          coffee_record_id: string | null
+          confirmed_supplier_id: string | null
+          created_at: string
+          delivery_label: string | null
+          id: string
+          opening_balance: number
+          origin: string
+          phone: string | null
+          proposed_by: string
+          proposed_by_name: string | null
+          proposed_name: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          coffee_record_id?: string | null
+          confirmed_supplier_id?: string | null
+          created_at?: string
+          delivery_label?: string | null
+          id?: string
+          opening_balance?: number
+          origin: string
+          phone?: string | null
+          proposed_by: string
+          proposed_by_name?: string | null
+          proposed_name: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          coffee_record_id?: string | null
+          confirmed_supplier_id?: string | null
+          created_at?: string
+          delivery_label?: string | null
+          id?: string
+          opening_balance?: number
+          origin?: string
+          phone?: string | null
+          proposed_by?: string
+          proposed_by_name?: string | null
+          proposed_name?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_supplier_requests_coffee_record_id_fkey"
+            columns: ["coffee_record_id"]
+            isOneToOne: false
+            referencedRelation: "coffee_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_supplier_requests_confirmed_supplier_id_fkey"
+            columns: ["confirmed_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_supplier_requests_confirmed_supplier_id_fkey"
+            columns: ["confirmed_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       per_diem_awards: {
         Row: {
           amount: number
@@ -18096,6 +18172,10 @@ export type Database = {
         }
         Returns: Json
       }
+      confirm_pending_supplier: {
+        Args: { p_request_id: string }
+        Returns: Json
+      }
       consume_spendable: {
         Args: {
           p_amount: number
@@ -18125,6 +18205,10 @@ export type Database = {
       }
       current_user_email: { Args: never; Returns: string }
       decline_my_admin_withdrawal: { Args: { _id: string }; Returns: Json }
+      decline_pending_supplier: {
+        Args: { p_real_supplier_id: string; p_request_id: string }
+        Returns: Json
+      }
       deduct_from_inventory_batches: {
         Args: {
           p_coffee_type: string
