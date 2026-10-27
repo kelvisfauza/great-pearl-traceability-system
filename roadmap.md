@@ -1,5 +1,10 @@
 # Roadmap
 
+## Paper meal-plan requests
+- [ ] Add numbered A4 meal-plan templates and Procurement entry for paper reference, amount, payee and cash/mobile-money choice.
+- [ ] Preserve normal review/approval/release and validate duplicate references and payout routing.
+- [ ] Verify PDF and submission rules; authenticated live submission requires an external Supabase session.
+
 ## Store sampling pickup texts
 - [x] Notify Alex and Onesmus when Ben creates a new sampling order; validate saved creator identity and suppress disabled recipients. Three rule tests passed, functions deployed, unauthenticated request rejected.
 - [ ] Verify delivery of pickup texts after Ben saves a real order — signed-in end-to-end checks unavailable for external Supabase.
