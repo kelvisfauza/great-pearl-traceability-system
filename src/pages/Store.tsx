@@ -55,6 +55,8 @@ import { useSuppliers } from "@/hooks/useSuppliers";
 import { useQualityControl } from "@/hooks/useQualityControl";
 import { useProcessingOperations } from "@/hooks/useProcessingOperations";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePendingSuppliers } from "@/hooks/usePendingSuppliers";
+import { canDirectlyAddSupplier, validatePendingSupplier } from "@/lib/pendingSupplierRules";
 
 import { toast } from "sonner";
 import PriceTicker from "@/components/PriceTicker";
@@ -192,6 +194,7 @@ const Store = () => {
   const { processingBatches, machines, loading: processingLoading, todayMetrics } = useProcessingOperations();
 
   const { hasPermission, isAdmin } = useAuth();
+  const { propose: proposeSupplier } = usePendingSuppliers();
 
   const loading = storeLoading || suppliersLoading || qualityLoading || processingLoading;
 
@@ -208,6 +211,7 @@ const Store = () => {
   });
   const [submittingSupplier, setSubmittingSupplier] = useState(false);
   const [duplicateSupplierDetected, setDuplicateSupplierDetected] = useState<{ name: string } | null>(null);
+  const [newSupplierRecordId, setNewSupplierRecordId] = useState("");
 
   // New record form
   const [newRecord, setNewRecord] = useState<NewRecordForm>({
