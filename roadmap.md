@@ -62,3 +62,9 @@
 ## Procurement reports (v1 + v2)
 - [x] Add a Reports section on Procurement (v1 and v2) showing Store Purchase report, EUDR report, Store Clearance report, Sales report
 - [x] Add a "Create Comprehensive Report" action combining all four into one printable/PDF report
+
+## Store-proposed suppliers and clearance fixes
+- [x] Fix Procurement clearance confirmation contract dropdown to match buyer names loosely and fall back to all active contracts.
+- [x] Remove the "Member of HELLO YEDA" line from printed store clearance / delivery notes.
+- [x] Let store managers propose suppliers attached to a coffee delivery; admin/Procurement confirm (permanent supplier) or decline (choose real supplier) via guarded RPCs.
+- [ ] Verify signed-in proposal, confirmation and decline flows — authenticated checks unavailable for external Supabase.
