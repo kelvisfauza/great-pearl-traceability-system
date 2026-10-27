@@ -11,6 +11,7 @@ import DailyProcurementReport from "@/components/procurement/DailyProcurementRep
 import ProcurementReviewPanel from "@/components/procurement/ProcurementReviewPanel";
 import ClearanceConfirmations from "@/components/procurement/ClearanceConfirmations";
 import MealPlanRequests from "@/components/procurement/MealPlanRequests";
+import ProcurementAnalytics from "@/components/procurement/ProcurementAnalytics";
 import { 
   Package, 
   Plus, 
@@ -40,7 +41,7 @@ import { useAuth } from "@/contexts/AuthContext";
 const Procurement = () => {
   const { suppliers, loading: suppliersLoading } = useSuppliers();
   const { purchaseOrders, loading: ordersLoading } = usePurchaseOrders();
-  const { deliveries, loading: deliveriesLoading } = useDeliveries();
+  const { deliveries, loading: deliveriesLoading, error: deliveriesError } = useDeliveries();
   const { hasPermission, isAdmin } = useAuth();
   const [marketData, setMarketData] = useState<any[]>([]);
   const [marketLoading, setMarketLoading] = useState(true);
@@ -49,6 +50,43 @@ const Procurement = () => {
   const [grnModalOpen, setGrnModalOpen] = useState(false);
   const [qualityReportsOpen, setQualityReportsOpen] = useState(false);
   const [contractsModalOpen, setContractsModalOpen] = useState(false);
+
+  // Fetch market data for reference prices
+  useEffect(() => {
+    const fetchMarketData = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('market_prices')
+          .select('drugar_local,wugar_local,robusta_faq_local,updated_at')
+          .eq('price_type', 'reference_prices')
+          .limit(1);
+
+        if (error) {
+          console.error('Error fetching market data:', error);
+        } else {
+          setMarketData(data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching market data:', error);
+      } finally {
+        setMarketLoading(false);
+      }
+    };
+
+    fetchMarketData();
+  }, []);
+
+  // Calculate derived metrics
+  const activeOrders = purchaseOrders.filter(order => order.status.toLowerCase() === 'active').length;
+  const pendingDeliveries = deliveries.filter(delivery => delivery.status === 'Pending').length;
+  const totalOrderValue = purchaseOrders.reduce((sum, order) => sum + order.totalAmount, 0);
+
+  const savedReference = marketData[0];
+  const referencePrices = savedReference ? [
+    { grade: 'Drugar', currentPrice: savedReference.drugar_local },
+    { grade: 'Wugar', currentPrice: savedReference.wugar_local },
+    { grade: 'Robusta FAQ', currentPrice: savedReference.robusta_faq_local },
+  ].filter(price => price.currentPrice != null) : [];
 
   if (!hasPermission('Procurement')) {
     return (
@@ -68,47 +106,6 @@ const Procurement = () => {
     );
   }
 
-  // Fetch market data for reference prices
-  useEffect(() => {
-    const fetchMarketData = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('market_data')
-          .select('*')
-          .order('date_recorded', { ascending: false })
-          .limit(10);
-
-        if (error) {
-          console.error('Error fetching market data:', error);
-        } else {
-          setMarketData(data || []);
-        }
-      } catch (error) {
-        console.error('Error fetching market data:', error);
-      } finally {
-        setMarketLoading(false);
-      }
-    };
-
-    fetchMarketData();
-  }, []);
-
-  // Calculate derived metrics
-  const activeOrders = purchaseOrders.filter(order => order.status === 'Active').length;
-  const pendingDeliveries = deliveries.filter(delivery => delivery.status === 'Pending').length;
-  const totalOrderValue = purchaseOrders.reduce((sum, order) => sum + order.totalAmount, 0);
-
-  // Reference prices from market data or fallback
-  const referencePrices = marketData.length > 0 ? marketData.slice(0, 3).map(data => ({
-    grade: data.coffee_type,
-    currentPrice: data.price_ugx,
-    previousPrice: data.price_ugx * 0.97, // Simulated previous price
-    change: data.change_percentage ? `${data.change_percentage > 0 ? '+' : ''}${data.change_percentage.toFixed(1)}%` : '+2.5%'
-  })) : [
-    { grade: "Drugar", currentPrice: 7200, previousPrice: 7000, change: "+2.9%" },
-    { grade: "Wugar", currentPrice: 7500, previousPrice: 7300, change: "+2.7%" },
-    { grade: "Robusta", currentPrice: 6800, previousPrice: 6900, change: "-1.4%" }
-  ];
 
   return (
     <Layout 
@@ -122,7 +119,7 @@ const Procurement = () => {
             <CardContent className="p-3 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm font-medium text-gray-600">Active Suppliers</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Registered Suppliers</p>
                   <p className="text-lg sm:text-2xl font-bold">{suppliersLoading ? '...' : suppliers.length}</p>
                   <p className="text-xs text-green-600 hidden sm:block">Real-time data</p>
                 </div>
@@ -160,7 +157,7 @@ const Procurement = () => {
                 <div>
                   <p className="text-xs sm:text-sm font-medium text-gray-600">Order Value</p>
                   <p className="text-lg sm:text-2xl font-bold">{(totalOrderValue / 1000000).toFixed(1)}M</p>
-                  <p className="text-xs text-green-600 hidden sm:block">Current month</p>
+                  <p className="text-xs text-green-600 hidden sm:block">All recorded orders · UGX</p>
                 </div>
                 <DollarSign className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
               </div>
@@ -442,67 +439,7 @@ const Procurement = () => {
 
           {/* Procurement Analytics */}
           <TabsContent value="analytics" className="space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Weekly Procurement Summary</CardTitle>
-                  <CardDescription>Coffee purchases by type and grade</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {ordersLoading ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <p>Loading procurement data...</p>
-                    </div>
-                  ) : purchaseOrders.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <p>No procurement data available yet</p>
-                      <p className="text-sm">Data will appear when purchases are made</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center p-4 border rounded">
-                          <p className="text-2xl font-bold">{purchaseOrders.length}</p>
-                          <p className="text-sm text-gray-600">Total Orders</p>
-                        </div>
-                        <div className="text-center p-4 border rounded">
-                          <p className="text-2xl font-bold">{purchaseOrders.reduce((sum, order) => sum + order.quantity, 0)}</p>
-                          <p className="text-sm text-gray-600">Total Bags</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Price Analysis</CardTitle>
-                  <CardDescription>Average procurement prices and trends</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {marketLoading ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <p>Loading market data...</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {referencePrices.map((price, index) => (
-                        <div key={index} className="flex justify-between items-center p-3 border rounded">
-                          <div>
-                            <p className="font-medium">{price.grade}</p>
-                            <p className="text-sm text-gray-500">Current: UGX {price.currentPrice.toLocaleString()}</p>
-                          </div>
-                          <Badge variant={price.change.startsWith('+') ? 'default' : 'destructive'}>
-                            {price.change}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+            <ProcurementAnalytics deliveries={deliveries} loading={deliveriesLoading} error={deliveriesError} />
           </TabsContent>
 
           {/* Documents */}
@@ -555,35 +492,22 @@ const Procurement = () => {
                   <div>
                     <h3 className="font-medium mb-4">Daily Reference Prices</h3>
                     <div className="space-y-3">
+                      {marketLoading ? <p className="text-muted-foreground">Loading saved reference prices…</p> : referencePrices.length === 0 ? <p className="text-muted-foreground">No saved reference prices available</p> : null}
                       {referencePrices.map((price, index) => (
                         <div key={index} className="flex items-center justify-between p-3 border rounded">
                           <div>
                             <p className="font-medium">{price.grade}</p>
-                            <p className="text-sm text-gray-500">Last updated: Today</p>
+                            <p className="text-sm text-gray-500">Last updated: {savedReference?.updated_at ? new Date(savedReference.updated_at).toLocaleDateString() : '—'}</p>
                           </div>
                           <div className="text-right">
-                            <p className="font-bold">UGX {price.currentPrice.toLocaleString()}</p>
-                            <Button variant="ghost" size="sm">Update</Button>
+                            <p className="font-bold">UGX {price.currentPrice.toLocaleString()}/kg</p>
+
                           </div>
                         </div>
                       ))}
                     </div>
                   </div>
-                  <div>
-                    <h3 className="font-medium mb-4">Price Controls</h3>
-                    <div className="space-y-3">
-                      <div className="p-3 border rounded">
-                        <p className="font-medium">Maximum Price Variance</p>
-                        <p className="text-sm text-gray-500">±5% from reference price</p>
-                        <Button variant="outline" size="sm" className="mt-2">Adjust</Button>
-                      </div>
-                      <div className="p-3 border rounded">
-                        <p className="font-medium">Daily Procurement Cap</p>
-                        <p className="text-sm text-gray-500">UGX 25,000,000</p>
-                        <Button variant="outline" size="sm" className="mt-2">Modify</Button>
-                      </div>
-                    </div>
-                  </div>
+
                 </div>
               </CardContent>
             </Card>

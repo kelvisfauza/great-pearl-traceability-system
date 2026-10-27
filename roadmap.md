@@ -1,5 +1,10 @@
 # Roadmap
 
+## Procurement figure accuracy
+- [x] Replace fabricated prices and trends, calculate weekly purchases from paginated saved deliveries, and correct metric labels and periods; saved reference prices are Drugar 14,200, Wugar 17,800 and Robusta FAQ 11,000 UGX/kg.
+- [x] Eleven calculation/quality tests passed and preview has no reported runtime errors; latest build clean.
+- [ ] Verify signed-in Analytics figures — external Supabase authentication is unavailable; public preview remained blank and cannot verify the staff page.
+
 ## Paper meal-plan requests
 - [x] Add numbered A4 meal-plan templates and Procurement entry for paper reference, amount, payee and cash/mobile-money choice in V1/V2.
 - [x] Preserve normal review/approval/release; unique paper references block duplicates and shared rules enforce cash/mobile-money routing for full and partial releases.

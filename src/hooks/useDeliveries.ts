@@ -8,6 +8,8 @@ export interface Delivery {
   supplier: string;
   coffeeType: string;
   weight: number;
+  kilograms: number;
+  recordStatus: string;
   moistureContent: number | null;
   defects: string | null;
   pricePerKg: number | null;
@@ -19,20 +21,21 @@ export interface Delivery {
 export const useDeliveries = () => {
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchDeliveries = async () => {
     try {
       setLoading(true);
-      // For now, we'll use coffee_records as deliveries since we don't have a specific deliveries table
-      const { data, error } = await supabase
-        .from('coffee_records')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching deliveries:', error);
-        setDeliveries([]);
-        return;
+      setError(null);
+      const data = [];
+      for (let offset = 0; ; offset += 1000) {
+        const { data: page, error: fetchError } = await supabase
+          .from('coffee_records').select('*')
+          .order('created_at', { ascending: false }).order('id')
+          .range(offset, offset + 999);
+        if (fetchError) throw fetchError;
+        data.push(...(page ?? []));
+        if (!page || page.length < 1000) break;
       }
 
       const assessments: DeliveryQuality[] = [];
@@ -60,6 +63,8 @@ export const useDeliveries = () => {
         supplier: record.supplier_name,
         coffeeType: record.coffee_type,
         weight: record.bags,
+        kilograms: record.kilograms,
+        recordStatus: record.status,
         ...savedDeliveryQuality(record, uniqueAssessments),
         grn: record.batch_number,
         status: record.status === 'pending' ? 'Pending' : 'Approved',
@@ -69,6 +74,7 @@ export const useDeliveries = () => {
       setDeliveries(transformedDeliveries);
     } catch (error) {
       console.error('Error fetching deliveries:', error);
+      setError('Unable to load saved deliveries and quality prices.');
       setDeliveries([]);
     } finally {
       setLoading(false);
@@ -82,6 +88,7 @@ export const useDeliveries = () => {
   return {
     deliveries,
     loading,
+    error,
     fetchDeliveries
   };
 };
