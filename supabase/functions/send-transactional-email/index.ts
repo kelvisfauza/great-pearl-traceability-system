@@ -71,12 +71,14 @@ Deno.serve(async (req) => {
   let recipientEmail: string
   let idempotencyKey: string
   let templateData: Record<string, any> = {}
+  let skipSms = false
 
   try {
     const body = await req.json()
     templateName = body.templateName || body.template_name
     recipientEmail = body.recipientEmail || body.recipient_email
     idempotencyKey = body.idempotencyKey || body.idempotency_key || crypto.randomUUID()
+    skipSms = body.skipSms === true
     const rawData = body.templateData || body.data
     if (rawData && typeof rawData === 'object') {
       templateData = rawData
@@ -212,6 +214,7 @@ Deno.serve(async (req) => {
       }
     }
     if (isErrorDigest) { allowSms = false; allowEmail = true }
+    if (skipSms) allowSms = false
     if (!allowEmail && !allowSms) {
       console.log(`🚫 Template '${templateName}' disabled by admin channel preferences`)
       return new Response(
