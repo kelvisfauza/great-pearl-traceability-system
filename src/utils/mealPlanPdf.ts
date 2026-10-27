@@ -2,8 +2,8 @@ import { jsPDF } from 'jspdf';
 import { COMPANY_NAME, COMPANY_TAGLINE, COMPANY_ADDRESS, COMPANY_REG } from '@/utils/companyBrand';
 import { preparePdfPrint } from '@/utils/pdfPrintStamp';
 
-export function drawMealPlanTemplate(number: string) {
-  const doc = new jsPDF({ format: 'a4', unit: 'mm' });
+export function drawMealPlanTemplate(number: string, existing?: jsPDF) {
+  const doc = existing ?? new jsPDF({ format: 'a4', unit: 'mm' });
   doc.setFont('helvetica', 'bold'); doc.setFontSize(18);
   doc.text(COMPANY_NAME, 105, 18, { align: 'center' });
   doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
@@ -34,4 +34,11 @@ export async function downloadMealPlanTemplate(number: string) {
   const doc = drawMealPlanTemplate(number);
   await preparePdfPrint(doc, `Meal plan requisition ${number}`);
   doc.save(`Meal-plan-${number}.pdf`);
+}
+export async function downloadMealPlanTemplates(numbers: string[]) {
+  if (!numbers.length) return;
+  const doc = new jsPDF({ format: 'a4', unit: 'mm' });
+  numbers.forEach((n, i) => { if (i > 0) doc.addPage(); drawMealPlanTemplate(n, doc); });
+  await preparePdfPrint(doc, `Meal plan requisitions ${numbers[0]} to ${numbers[numbers.length - 1]}`);
+  doc.save(`Meal-plans-${numbers[0]}-to-${numbers[numbers.length - 1]}.pdf`);
 }

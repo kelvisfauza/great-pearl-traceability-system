@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Download, Loader2, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { mealPlanPayload, type MealPayment } from '@/lib/mealPlanRules';
-import { downloadMealPlanTemplate } from '@/utils/mealPlanPdf';
+import { downloadMealPlanTemplate, downloadMealPlanTemplates } from '@/utils/mealPlanPdf';
 
 const empty = { documentNumber: '', name: '', phone: '', email: '', amount: '', description: '', payment: 'mobile_money' as MealPayment };
 export default function MealPlanRequests() {
@@ -18,6 +18,20 @@ export default function MealPlanRequests() {
   const [busy, setBusy] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [issued, setIssued] = useState('');
+  const [bulkCount, setBulkCount] = useState('10');
+  async function bulkTemplates() {
+    const n = Math.floor(Number(bulkCount));
+    if (!(n >= 1 && n <= 100)) { toast.error('Enter between 1 and 100 forms'); return; }
+    setPrinting(true);
+    try {
+      const { data, error } = await (supabase as any).from('meal_plan_forms').insert(Array.from({ length: n }, () => ({}))).select('document_number');
+      if (error) throw error;
+      const numbers = (data || []).map((r: any) => r.document_number).sort();
+      await downloadMealPlanTemplates(numbers);
+      toast.success(`${numbers.length} numbered forms issued: ${numbers[0]} to ${numbers[numbers.length - 1]}`);
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Unable to issue forms'); }
+    finally { setPrinting(false); }
+  }
   const qc = useQueryClient();
   const { data: requests = [], error: loadError } = useQuery({ queryKey: ['paper-meal-requests'], queryFn: async () => {
     const { data, error } = await (supabase as any).from('provider_submission_requests').select('id,invoice_number,provider_name,amount,status,requested_payment_method').eq('request_type','meal_plan').not('paper_document_number','is',null).order('created_at', { ascending: false }).limit(50);
@@ -50,6 +64,8 @@ export default function MealPlanRequests() {
     <div className="flex items-center justify-between flex-wrap gap-3"><h2 className="text-xl font-semibold">Meal Plans</h2><div className="flex flex-wrap gap-2">
       {issued && <Button variant="outline" disabled={printing} onClick={() => { setPrinting(true); downloadMealPlanTemplate(issued).catch(e => toast.error(e.message)).finally(() => setPrinting(false)); }}><Download className="h-4 w-4 mr-2" />Download {issued}</Button>}
       <Button variant="outline" disabled={printing} onClick={template}>{printing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}New A4 template</Button>
+      <div className="flex items-center gap-2"><input type="number" min={1} max={100} value={bulkCount} onChange={e => setBulkCount(e.target.value)} aria-label="Number of forms" className="h-10 w-20 rounded-md border border-input bg-background px-2 text-sm" />
+      <Button variant="outline" disabled={printing} onClick={bulkTemplates}><Download className="h-4 w-4 mr-2" />Print in bulk</Button></div>
     </div></div>
     <form onSubmit={submit} className="space-y-4 max-w-2xl">
       <h3 className="font-medium">Submit completed paper form</h3>
