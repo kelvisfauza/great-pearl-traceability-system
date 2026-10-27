@@ -10,6 +10,7 @@
 
 - Share Store delivery sampling and batch reservation across V1/V2 intake; persist sample choice with a trigger-validated supplier order and atomic order linkage, including queued offline receipts, so attachment failures cannot leave a partially linked delivery. Delivery numbers are reserved during entry and remain distinct from stock batches created after inventory promotion.
 
+- Store managers propose new suppliers through pending_supplier_requests (optionally linked to a coffee delivery); only admins/Procurement confirm or decline via supplier_requests_private RPCs, and declining re-points the linked delivery at the chosen real supplier. Direct supplier inserts stay Procurement/admin-only.
 - Store clearance and delivery notes share a persisted dispatch snapshot with trigger-issued immutable numbers and server-validated inventory batch lines. Store renders creation and current-session printing only; saved clearances enter a realtime Procurement confirmation queue for a buyer contract or spot sale, confirmed through a permission-checked private routine. Sales retains history, comparisons and existing-sale attachment without creating sales or deducting inventory; paired PDFs use the registered print footer.
 
 - Embed the shared SamplingOrdersTab in both V1 and V2 Store pages, preserving its existing creation checks, so Store staff can use sampling orders without entering Quality Control.

@@ -39,6 +39,7 @@ import { useReactToPrint } from "react-to-print";
 import { getStandardPrintStyles } from "@/utils/printStyles";
 import { FixPendingPaymentsButton } from "@/components/finance/FixPendingPaymentsButton";
 import SupplierPerformanceRanking from "@/components/suppliers/SupplierPerformanceRanking";
+import PendingSupplierRequests from "@/components/suppliers/PendingSupplierRequests";
 import { Trophy, List } from "lucide-react";
 
 interface SupplierTransaction {
@@ -721,6 +722,10 @@ const Suppliers = () => {
         {/* List View */}
         {!selectedSupplier && view === 'ranking' && (
           <SupplierPerformanceRanking />
+        )}
+
+        {!selectedSupplier && view === 'list' && canManageSuppliers && (
+          <PendingSupplierRequests />
         )}
 
         {!selectedSupplier && view === 'list' && (

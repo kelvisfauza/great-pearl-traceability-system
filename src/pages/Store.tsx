@@ -55,6 +55,8 @@ import { useSuppliers } from "@/hooks/useSuppliers";
 import { useQualityControl } from "@/hooks/useQualityControl";
 import { useProcessingOperations } from "@/hooks/useProcessingOperations";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePendingSuppliers } from "@/hooks/usePendingSuppliers";
+import { canDirectlyAddSupplier, validatePendingSupplier } from "@/lib/pendingSupplierRules";
 
 import { toast } from "sonner";
 import PriceTicker from "@/components/PriceTicker";
@@ -192,6 +194,7 @@ const Store = () => {
   const { processingBatches, machines, loading: processingLoading, todayMetrics } = useProcessingOperations();
 
   const { hasPermission, isAdmin } = useAuth();
+  const { propose: proposeSupplier } = usePendingSuppliers();
 
   const loading = storeLoading || suppliersLoading || qualityLoading || processingLoading;
 
@@ -208,6 +211,7 @@ const Store = () => {
   });
   const [submittingSupplier, setSubmittingSupplier] = useState(false);
   const [duplicateSupplierDetected, setDuplicateSupplierDetected] = useState<{ name: string } | null>(null);
+  const [newSupplierRecordId, setNewSupplierRecordId] = useState("");
 
   // New record form
   const [newRecord, setNewRecord] = useState<NewRecordForm>({
@@ -313,8 +317,36 @@ const Store = () => {
 
     setSubmittingSupplier(true);
     try {
+      if (!canDirectlyAddSupplier(isAdmin(), hasPermission("Procurement"))) {
+        // Store managers propose the supplier; an admin confirms it before it becomes permanent.
+        const normalized = newSupplier.name.trim().toLowerCase().replace(/\s+/g, " ");
+        const existing = suppliers.find((s: any) => s.name.trim().toLowerCase().replace(/\s+/g, " ") === normalized);
+        if (existing) {
+          toast.error(`Supplier "${existing.name}" already exists in the system.`);
+          return;
+        }
+        const linked = coffeeRecords.find((r: any) => r.id === newSupplierRecordId);
+        const check = validatePendingSupplier({
+          name: newSupplier.name,
+          origin: newSupplier.origin,
+          phone: newSupplier.phone,
+          openingBalance: newSupplier.opening_balance,
+          coffeeRecordId: newSupplierRecordId || null,
+          deliveryLabel: linked ? `${linked.date} · ${linked.batchNumber || linked.coffeeType} · ${linked.kilograms} kg` : null,
+        });
+        if (!check.ok) {
+          toast.error(check.error);
+          return;
+        }
+        await proposeSupplier.mutateAsync(check.value);
+        setDuplicateSupplierDetected(null);
+        setNewSupplier({ name: "", phone: "", origin: "", opening_balance: 0 });
+        setNewSupplierRecordId("");
+        toast.success("Supplier sent for admin confirmation");
+        return;
+      }
       const result = await addSupplier(newSupplier, skipDuplicateCheck);
-      
+
       if (result.duplicateDetected && result.existingSupplier) {
         // Show duplicate warning and enable "Save Anyway" option
         setDuplicateSupplierDetected({ name: result.existingSupplier.name });
@@ -1206,7 +1238,7 @@ const Store = () => {
                     </CardDescription>
                   </div>
 
-                  {isAdmin() ? (
+                  {(
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button>
@@ -1285,6 +1317,27 @@ const Store = () => {
                           </div>
                         </div>
 
+                        <div className="mt-4">
+                          <Label htmlFor="supplier-coffee">Coffee delivery (optional)</Label>
+                          <Select value={newSupplierRecordId} onValueChange={setNewSupplierRecordId}>
+                            <SelectTrigger id="supplier-coffee">
+                              <SelectValue placeholder="Attach the coffee this supplier brought" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {coffeeRecords.slice(0, 50).map((r: any) => (
+                                <SelectItem key={r.id} value={r.id}>
+                                  {r.date} · {r.supplierName} · {r.kilograms} kg {r.coffeeType}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {!canDirectlyAddSupplier(isAdmin(), hasPermission("Procurement")) && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              The supplier is saved permanently once an admin confirms it.
+                            </p>
+                          )}
+                        </div>
+
                         {duplicateSupplierDetected && (
                           <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                             <p className="text-sm text-yellow-800">
@@ -1322,10 +1375,6 @@ const Store = () => {
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
-                  ) : (
-                    <Badge variant="secondary" className="text-xs">
-                      Only admins can add suppliers
-                    </Badge>
                   )}
                 </div>
               </CardHeader>
