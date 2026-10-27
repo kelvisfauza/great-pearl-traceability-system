@@ -1,5 +1,7 @@
 # Project architecture
 
+- Procurement analytics groups paginated saved Store deliveries by the current Kampala calendar week and weights uniquely linked saved buying prices by priced kilograms; reference prices come only from saved market_prices, with no fabricated defaults, trends, controls or implied payment completion.
+
 - Procurement delivery quality comes only from explicitly linked saved assessments or a unique legacy batch-only match; show missing values as empty and label saved unit prices per kilogram so fabricated defaults and bag-unit confusion cannot misstate purchases.
 
 - Issue paper meal-plan numbers in a Procurement-only registry, submit each once through provider requests and preserve the cash/mobile-money choice and recipient number across full and partial releases; use the shared PDF verification footer so handwritten offline forms remain traceable without bypassing normal approvals. Bulk printing reserves its window before asynchronous issuance and opens a verified PDF with an automatic print action instead of downloading only.
