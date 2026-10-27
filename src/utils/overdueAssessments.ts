@@ -1,3 +1,5 @@
+import { COMPANY_TAGLINE } from '@/utils/companyBrand';
+
 export const OVERDUE_DAYS = 3;
 
 export interface PendingLotLike {
@@ -41,7 +43,7 @@ h1{margin:0;font-size:20px}h2{font-size:15px;margin:14px 0 4px}.hdr{text-align:c
 table{width:100%;border-collapse:collapse;margin-top:8px}th,td{border:1px solid #000;padding:4px}th{background:#eee}
 td.n{text-align:right}.sig{display:flex;justify-content:space-between;margin-top:40px}.sig div{width:30%;border-top:1px solid #000;padding-top:4px;text-align:center}</style>
 </head><body><div class="hdr"><h1>GREAT AGRO COFFEE</h1>
-<div>A member of Hello YEDA COFFEE COMPANY LIMITED</div><div>P.O Box 431420, Kasese, Uganda</div></div>
+<div>${COMPANY_TAGLINE}</div><div>P.O Box 431420, Kasese, Uganda</div></div>
 <h2>Overdue Pending Quality Assessments (more than ${OVERDUE_DAYS} days)</h2>
 <div>Printed: ${esc(new Date().toLocaleString('en-GB'))} &nbsp;|&nbsp; Lots: ${rows.length} &nbsp;|&nbsp; ${totalBags} bags &nbsp;|&nbsp; ${totalKg.toLocaleString()} kg</div>
 <table><thead><tr><th>#</th><th>Batch</th><th>Date</th><th>Supplier</th><th>Type</th><th>Bags</th><th>Kg</th><th>Days pending</th><th>Reason for delay / action</th></tr></thead><tbody>
