@@ -23,15 +23,19 @@ export default function ClearanceConfirmations() {
     return data as any[];
   } });
   const contracts = useQuery({ queryKey: ['clearance-confirmation-contracts', selected?.destination_buyer], enabled: !!selected, queryFn: async () => {
-    const rows: any[] = [];
-    const buyer = String(selected.destination_buyer).trim().replace(/[\\%_]/g, '\\$&');
+    const active: any[] = [];
     for (let offset = 0; ; offset += 500) {
-      const { data, error } = await supabase.from('buyer_contracts').select('id,contract_ref,buyer_name,status').ilike('buyer_name', buyer).order('created_at', { ascending: false }).order('id').range(offset, offset + 499);
+      const { data, error } = await supabase.from('buyer_contracts').select('id,contract_ref,buyer_name,status').order('created_at', { ascending: false }).order('id').range(offset, offset + 499);
       if (error) throw error;
-      rows.push(...data.filter(c => !['cancelled', 'canceled', 'closed', 'completed'].includes(String(c.status).toLowerCase())));
+      active.push(...data.filter(c => !['cancelled', 'canceled', 'closed', 'completed'].includes(String(c.status).toLowerCase())));
       if (data.length < 500) break;
     }
-    return rows;
+    // Match buyer names loosely either way ("Kyagalanyi" vs "Kyagalanyi Coffee Limited");
+    // if nothing matches, show every active contract so the confirmer can still pick.
+    const norm = (v: string) => v.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const buyer = norm(String(selected.destination_buyer || ''));
+    const matched = buyer ? active.filter(c => { const name = norm(String(c.buyer_name || '')); return name && (name.includes(buyer) || buyer.includes(name)); }) : [];
+    return matched.length ? matched : active;
   } });
   useEffect(() => {
     const channel = supabase.channel(`procurement-clearances-${crypto.randomUUID()}`).on('postgres_changes', { event: '*', schema: 'public', table: 'store_clearance_forms' }, () => {
