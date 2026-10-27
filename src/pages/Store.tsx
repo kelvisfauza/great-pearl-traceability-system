@@ -317,8 +317,36 @@ const Store = () => {
 
     setSubmittingSupplier(true);
     try {
+      if (!canDirectlyAddSupplier(isAdmin(), hasPermission("Procurement"))) {
+        // Store managers propose the supplier; an admin confirms it before it becomes permanent.
+        const normalized = newSupplier.name.trim().toLowerCase().replace(/\s+/g, " ");
+        const existing = suppliers.find((s: any) => s.name.trim().toLowerCase().replace(/\s+/g, " ") === normalized);
+        if (existing) {
+          toast.error(`Supplier "${existing.name}" already exists in the system.`);
+          return;
+        }
+        const linked = coffeeRecords.find((r: any) => r.id === newSupplierRecordId);
+        const check = validatePendingSupplier({
+          name: newSupplier.name,
+          origin: newSupplier.origin,
+          phone: newSupplier.phone,
+          openingBalance: newSupplier.opening_balance,
+          coffeeRecordId: newSupplierRecordId || null,
+          deliveryLabel: linked ? `${linked.date} · ${linked.batchNumber || linked.coffeeType} · ${linked.kilograms} kg` : null,
+        });
+        if (!check.ok) {
+          toast.error(check.error);
+          return;
+        }
+        await proposeSupplier.mutateAsync(check.value);
+        setDuplicateSupplierDetected(null);
+        setNewSupplier({ name: "", phone: "", origin: "", opening_balance: 0 });
+        setNewSupplierRecordId("");
+        toast.success("Supplier sent for admin confirmation");
+        return;
+      }
       const result = await addSupplier(newSupplier, skipDuplicateCheck);
-      
+
       if (result.duplicateDetected && result.existingSupplier) {
         // Show duplicate warning and enable "Save Anyway" option
         setDuplicateSupplierDetected({ name: result.existingSupplier.name });
@@ -1210,7 +1238,7 @@ const Store = () => {
                     </CardDescription>
                   </div>
 
-                  {isAdmin() ? (
+                  {(
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button>
