@@ -1317,6 +1317,27 @@ const Store = () => {
                           </div>
                         </div>
 
+                        <div className="mt-4">
+                          <Label htmlFor="supplier-coffee">Coffee delivery (optional)</Label>
+                          <Select value={newSupplierRecordId} onValueChange={setNewSupplierRecordId}>
+                            <SelectTrigger id="supplier-coffee">
+                              <SelectValue placeholder="Attach the coffee this supplier brought" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {coffeeRecords.slice(0, 50).map((r: any) => (
+                                <SelectItem key={r.id} value={r.id}>
+                                  {r.date} · {r.supplierName} · {r.kilograms} kg {r.coffeeType}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {!canDirectlyAddSupplier(isAdmin(), hasPermission("Procurement")) && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              The supplier is saved permanently once an admin confirms it.
+                            </p>
+                          )}
+                        </div>
+
                         {duplicateSupplierDetected && (
                           <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                             <p className="text-sm text-yellow-800">
@@ -1354,10 +1375,6 @@ const Store = () => {
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
-                  ) : (
-                    <Badge variant="secondary" className="text-xs">
-                      Only admins can add suppliers
-                    </Badge>
                   )}
                 </div>
               </CardHeader>
