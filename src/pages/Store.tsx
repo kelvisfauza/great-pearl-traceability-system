@@ -334,7 +334,7 @@ const Store = () => {
           coffeeRecordId: newSupplierRecordId || null,
           deliveryLabel: linked ? `${linked.date} · ${linked.batchNumber || linked.coffeeType} · ${linked.kilograms} kg` : null,
         });
-        if (!check.ok) {
+        if (check.ok === false) {
           toast.error(check.error);
           return;
         }
