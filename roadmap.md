@@ -1,5 +1,9 @@
 # Roadmap
 
+## Procurement figure accuracy
+- [ ] Replace fabricated prices and trends, calculate weekly purchases from saved deliveries, and correct metric labels and periods.
+- [ ] Run focused calculation tests and check the available preview; authenticated checks are unavailable for external Supabase.
+
 ## Paper meal-plan requests
 - [x] Add numbered A4 meal-plan templates and Procurement entry for paper reference, amount, payee and cash/mobile-money choice in V1/V2.
 - [x] Preserve normal review/approval/release; unique paper references block duplicates and shared rules enforce cash/mobile-money routing for full and partial releases.
