@@ -31,6 +31,7 @@ export default function MealPlanRequests() {
       if (error) throw error;
       const numbers = (data || []).map((r: any) => r.document_number).sort();
       await printMealPlanTemplates(numbers, preview);
+      await (supabase as any).rpc('mark_meal_forms_printed', { p_numbers: numbers });
       toast.success(`${numbers.length} numbered forms issued: ${numbers[0]} to ${numbers[numbers.length - 1]}`);
     } catch (e) { preview.close(); toast.error(e instanceof Error ? e.message : 'Unable to issue forms'); }
     finally { setPrinting(false); }
@@ -46,8 +47,9 @@ export default function MealPlanRequests() {
     try {
       const { data, error } = await (supabase as any).from('meal_plan_forms').insert({}).select('document_number').single();
       if (error) throw error;
-      setIssued(data.document_number); update('documentNumber', data.document_number);
+      setIssued(data.document_number);
       await downloadMealPlanTemplate(data.document_number);
+      await (supabase as any).rpc('mark_meal_forms_printed', { p_numbers: [data.document_number] });
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Unable to issue template'); }
     finally { setPrinting(false); }
   }
@@ -57,7 +59,7 @@ export default function MealPlanRequests() {
     try {
       const payload = mealPlanPayload(form);
       const { error } = await (supabase as any).from('provider_submission_requests').insert(payload);
-      if (error) throw new Error(error.code === '23505' ? 'This document has already been submitted.' : error.code === '23503' ? 'Document number not found. Enter the number from an issued meal-plan form.' : error.message);
+      if (error) throw new Error(error.code === '23505' ? 'This document number has already been used.' : error.code === '23503' ? 'Document number not found. Enter the number from an issued meal-plan form.' : error.message);
       toast.success('Meal plan submitted for Procurement review and Admin approval');
       setForm(empty); qc.invalidateQueries({ queryKey: ['paper-meal-requests'] });
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Submission failed'); }
