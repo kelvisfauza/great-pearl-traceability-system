@@ -18,6 +18,7 @@ import ApprovalCodeDialog, { ApprovalCodeTarget } from '@/components/approval/Ap
 import { requiresFingerprintApproval } from '@/utils/fingerprintApproval';
 import ReturnToProcurementButton from '@/components/approval/ReturnToProcurementButton';
 import { useProcurementReviews } from '@/hooks/useProcurementReviews';
+import { mealPaymentAllowed } from '@/lib/mealPlanRules';
 
 const ProviderSubmissionApprovals: React.FC = () => {
   const { toast } = useToast();
@@ -205,6 +206,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
                     </div>
                     <p className="text-sm text-muted-foreground">{s.phone} {s.email && `• ${s.email}`}</p>
                     {s.invoice_number && <p className="text-xs text-muted-foreground">Invoice: {s.invoice_number}</p>}
+                    {s.requested_payment_method && <p className="text-sm font-medium">Payment on document: {s.requested_payment_method === 'cash' ? 'Cash' : `Mobile money to ${s.phone}`}</p>}
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-bold">UGX {Number(s.amount).toLocaleString()}</p>
@@ -276,7 +278,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
                   </Button>
                   <Button
                     size="sm"
-                    onClick={() => { setSelected(s); setWithdrawCharge(''); setOverrideAmount(String(s.amount || '')); setPayMethod('momo'); setApproveOpen(true); }}
+                    onClick={() => { setSelected(s); setWithdrawCharge(''); setOverrideAmount(String(s.amount || '')); setPayMethod(s.requested_payment_method === 'cash' ? 'cash' : 'momo'); setApproveOpen(true); }}
                     disabled={processing === s.id || awaitingProcurement}
                     title={awaitingProcurement ? 'Procurement must complete its review first' : undefined}
                   >
@@ -362,7 +364,7 @@ const ProviderSubmissionApprovals: React.FC = () => {
                   { id: 'momo', label: 'Yo Payments', icon: Smartphone, hint: 'Mobile Money' },
                   { id: 'gosente', label: 'GosentePay', icon: Wallet, hint: 'Mobile Money' },
                   { id: 'cash', label: 'Cash', icon: Banknote, hint: 'Handed physically' },
-                ] as const).map((opt) => {
+                ] as const).filter(opt => mealPaymentAllowed(selected?.requested_payment_method, opt.id)).map((opt) => {
                   const Icon = opt.icon;
                   const active = payMethod === opt.id;
                   return (

@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { treasuryReserve, treasuryRelease } from "../_shared/treasury.ts";
 import { yoPayout, normalizePhone } from "../_shared/yo-payments.ts";
+import { mealPaymentAllowed } from "../_shared/meal-payment-rules.ts";
 import { gosenteWithdraw, isGosenteSuccess } from "../_shared/gosentepay.ts";
 import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
 import {
@@ -517,6 +518,10 @@ serve(async (req) => {
       }
       console.warn(`[process-provider-submission] Recovering stale processing row ${submissionId}`);
       }
+    }
+
+    if ((action === 'approve' || isFinanceRelease) && !mealPaymentAllowed(submission.requested_payment_method, paymentMode)) {
+      return new Response(JSON.stringify({ ok: false, error: 'Payment must match the cash or mobile-money choice on the paper meal form' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // 🔒 ATOMIC CLAIM — prevent double-send when admin double-clicks or two

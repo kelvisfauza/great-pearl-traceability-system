@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Coins } from 'lucide-react';
 import { waitForFunds } from '@/lib/waitForFunds';
+import { mealPaymentAllowed } from '@/lib/mealPlanRules';
 
 export type PartPaySource = 'provider' | 'withdrawal' | 'supplier' | 'expense';
 
@@ -17,19 +18,20 @@ interface Props {
   sourceId: string;
   totalAmount: number;
   payeeName?: string;
+  paymentChoice?: 'cash' | 'mobile_money';
   onChanged?: () => void;
 }
 
 const ugx = (n: number) => `UGX ${Math.round(n).toLocaleString()}`;
 
 /** Lets Finance pay an approved item in parts and shows paid / balance left. */
-const PartPayControl: React.FC<Props> = ({ sourceType, sourceId, totalAmount, payeeName, onChanged }) => {
+const PartPayControl: React.FC<Props> = ({ sourceType, sourceId, totalAmount, payeeName, paymentChoice, onChanged }) => {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState('');
   const canSend = sourceType === 'provider' || sourceType === 'withdrawal';
-  const [method, setMethod] = useState(canSend ? 'yo' : 'cash');
+  const [method, setMethod] = useState(paymentChoice === 'cash' ? 'cash' : canSend ? 'yo' : 'cash');
   const [reference, setReference] = useState('');
   const [saving, setSaving] = useState(false);
   const [waitLeft, setWaitLeft] = useState<number | null>(null);
@@ -119,11 +121,11 @@ const PartPayControl: React.FC<Props> = ({ sourceType, sourceId, totalAmount, pa
             <Select value={method} onValueChange={setMethod}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {canSend && <SelectItem value="yo">Send now — Mobile money (Yo)</SelectItem>}
-                {canSend && <SelectItem value="gosentepay">Send now — GosentePay</SelectItem>}
-                <SelectItem value="cash">Cash (already handed over)</SelectItem>
-                <SelectItem value="bank">Bank (already transferred)</SelectItem>
-                <SelectItem value="mobile money">Mobile money (already sent by hand)</SelectItem>
+                {canSend && mealPaymentAllowed(paymentChoice, 'yo') && <SelectItem value="yo">Send now — Mobile money (Yo)</SelectItem>}
+                {canSend && mealPaymentAllowed(paymentChoice, 'gosentepay') && <SelectItem value="gosentepay">Send now — GosentePay</SelectItem>}
+                {mealPaymentAllowed(paymentChoice, 'cash') && <SelectItem value="cash">Cash (already handed over)</SelectItem>}
+                {!paymentChoice && <SelectItem value="bank">Bank (already transferred)</SelectItem>}
+                {!paymentChoice && <SelectItem value="mobile money">Mobile money (already sent by hand)</SelectItem>}
               </SelectContent>
             </Select>
             <Input placeholder="Reference (optional)" value={reference} onChange={(e) => setReference(e.target.value)} />

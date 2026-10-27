@@ -20,9 +20,11 @@ import ProcurementActionCenter from "@/components/procurement/ProcurementActionC
 import DailyProcurementReport from "@/components/procurement/DailyProcurementReport";
 import QuotationReviewPanel from "@/components/quotations/QuotationReviewPanel";
 import ClearanceConfirmations from "@/components/procurement/ClearanceConfirmations";
+import MealPlanRequests from "@/components/procurement/MealPlanRequests";
 
 const tabs = [
   { id: "overview", label: "Overview", icon: ShoppingBag },
+  { id: "meal-plans", label: "Meal Plans", icon: FileText },
   { id: "action-center", label: "Action Center", icon: AlertTriangle },
   { id: "clearance-confirmations", label: "Clearance Confirmations", icon: FileCheck },
   { id: "quotations", label: "Quotations", icon: FileText },
@@ -60,11 +62,12 @@ const ProcurementDashboard = () => {
               <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
                 {tabs.map(tab => (
                   <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-1.5 text-xs sm:text-sm px-2 py-1.5">
-                    <tab.icon className="h-3.5 w-3.5" /><span className={tab.id === 'clearance-confirmations' ? '' : 'hidden sm:inline'}>{tab.label}</span>
+                    <tab.icon className="h-3.5 w-3.5" /><span className={['clearance-confirmations', 'meal-plans'].includes(tab.id) ? '' : 'hidden sm:inline'}>{tab.label}</span>
                   </TabsTrigger>
                 ))}
               </TabsList>
               <TabsContent value="overview"><ProcurementOverviewTab /></TabsContent>
+              <TabsContent value="meal-plans"><MealPlanRequests /></TabsContent>
               <TabsContent value="clearance-confirmations"><ClearanceConfirmations /></TabsContent>
               <TabsContent value="action-center" className="space-y-4">
                 <DailyProcurementReport />

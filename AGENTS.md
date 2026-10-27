@@ -1,5 +1,7 @@
 # Project architecture
 
+- Issue paper meal-plan numbers in a Procurement-only registry, submit each once through provider requests and preserve the cash/mobile-money choice and recipient number across full and partial releases; use the shared PDF verification footer so handwritten offline forms remain traceable without bypassing normal approvals.
+
 - Resolve sampling pickup notifications from authenticated saved orders and employee phone records in notify-sampling-order; use the shared SMS sender with per-order recipient references so caller-supplied names cannot redirect pickup alerts.
 
 - Share Store delivery sampling and batch reservation across V1/V2 intake; persist sample choice with a trigger-validated supplier order and atomic order linkage, including queued offline receipts, so attachment failures cannot leave a partially linked delivery. Delivery numbers are reserved during entry and remain distinct from stock batches created after inventory promotion.

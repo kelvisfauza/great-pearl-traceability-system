@@ -11,6 +11,4 @@ export function mealPlanPayload(form: { documentNumber: string; name: string; ph
     provider_name: form.name.trim(), phone, email: form.email.trim() || null, amount,
     description: form.description.trim(), requested_payment_method: form.payment };
 }
-export function mealPaymentAllowed(choice: unknown, mode: string) {
-  return choice == null || (choice === 'cash' ? mode === 'cash' : choice === 'mobile_money' && ['momo', 'gosente', 'yo', 'gosentepay'].includes(mode));
-}
+export { mealPaymentAllowed } from '../../supabase/functions/_shared/meal-payment-rules';

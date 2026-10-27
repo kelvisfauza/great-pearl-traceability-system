@@ -9,6 +9,7 @@ import { Loader2, Banknote, Smartphone, Wallet, HandCoins } from 'lucide-react';
 import ReleaseReceiptDialog from '@/components/finance/ReleaseReceiptDialog';
 import PartPayControl from '@/components/finance/PartPayControl';
 import { waitForFunds } from '@/lib/waitForFunds';
+import { mealPaymentAllowed } from '@/lib/mealPlanRules';
 
 type PayMethod = 'momo' | 'gosente' | 'cash';
 
@@ -35,7 +36,7 @@ const FinanceProviderReleases: React.FC = () => {
   });
 
   const release = async (s: any) => {
-    const mode = method[s.id] || 'momo';
+    const mode = method[s.id] || (s.requested_payment_method === 'cash' ? 'cash' : 'momo');
     setReleasing(s.id);
     try {
       const { data, error, timedOut } = await waitForFunds(
@@ -121,7 +122,7 @@ const FinanceProviderReleases: React.FC = () => {
             {submissions.map((s: any) => {
               const amt = Number(s.admin_approved_amount ?? s.amount);
               const chg = Number(s.admin_approved_charge ?? 0);
-              const m = method[s.id] || 'momo';
+              const m = method[s.id] || (s.requested_payment_method === 'cash' ? 'cash' : 'momo');
               return (
                 <div key={s.id} className="border rounded-lg p-4 space-y-3">
                   <div className="flex items-start justify-between flex-wrap gap-2">
@@ -152,6 +153,7 @@ const FinanceProviderReleases: React.FC = () => {
                     </div>
                   </div>
                   <p className="text-sm bg-muted/50 p-2 rounded">{s.description}</p>
+                  {s.requested_payment_method && <p className="text-sm font-medium">Payment on document: {s.requested_payment_method === 'cash' ? 'Cash' : `Mobile money to ${s.phone}`}</p>}
                   {s.payout_status === 'failed' && (
                     <div className="text-xs bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded px-2 py-1.5">
                       <strong>Previous payout failed.</strong> {s.payout_message || 'The payment provider rejected it.'} Fund the account, then tap Try again.
@@ -163,11 +165,11 @@ const FinanceProviderReleases: React.FC = () => {
                         { id: 'momo', label: 'Yo Payments', icon: Smartphone },
                         { id: 'gosente', label: 'GosentePay', icon: Wallet },
                         { id: 'cash', label: 'Cash', icon: Banknote },
-                      ] as const).map((opt) => {
+                      ] as const).filter(opt => mealPaymentAllowed(s.requested_payment_method, opt.id)).map((opt) => {
                         const Icon = opt.icon;
                         const active = m === opt.id;
                         return (
-                          <button
+                          <Button
                             key={opt.id}
                             type="button"
                             onClick={() => setMethod((prev) => ({ ...prev, [s.id]: opt.id }))}
@@ -177,12 +179,13 @@ const FinanceProviderReleases: React.FC = () => {
                             }`}
                           >
                             <Icon className="w-3.5 h-3.5" /> {opt.label}
-                          </button>
+                          </Button>
                         );
                       })}
                     </div>
                     <div className="flex gap-2 items-end">
                     <PartPayControl sourceType="provider" sourceId={s.id} totalAmount={amt + chg} payeeName={s.provider_name}
+                      paymentChoice={s.requested_payment_method}
                       onChanged={() => queryClient.invalidateQueries({ queryKey: ['finance-provider-releases'] })} />
                     <Button size="sm" variant="outline" disabled={releasing === s.id} onClick={() => reject(s)}>Reject</Button>
                     <Button size="sm" onClick={() => release(s)} disabled={releasing === s.id}>
