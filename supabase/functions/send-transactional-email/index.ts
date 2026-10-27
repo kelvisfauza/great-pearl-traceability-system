@@ -214,6 +214,7 @@ Deno.serve(async (req) => {
       }
     }
     if (isErrorDigest) { allowSms = false; allowEmail = true }
+    if (skipSms) allowSms = false
     if (!allowEmail && !allowSms) {
       console.log(`🚫 Template '${templateName}' disabled by admin channel preferences`)
       return new Response(
