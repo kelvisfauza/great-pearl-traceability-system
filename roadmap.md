@@ -1,5 +1,10 @@
 # Roadmap
 
+## Clearance confirmation and printed heading repair
+- [ ] Align contract selection and confirmation so Procurement can confirm its chosen active contract despite different buyer labels.
+- [ ] Remove remaining obsolete parent-company wording from printed documents and check the affected generators.
+- [ ] Verify signed-in confirmation and printing — external Supabase session unavailable.
+
 ## Procurement figure accuracy
 - [x] Replace fabricated prices and trends, calculate weekly purchases from paginated saved deliveries, and correct metric labels and periods; saved reference prices are Drugar 14,200, Wugar 17,800 and Robusta FAQ 11,000 UGX/kg.
 - [x] Eleven calculation/quality tests passed and preview has no reported runtime errors; latest build clean.
