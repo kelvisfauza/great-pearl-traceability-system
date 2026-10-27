@@ -17,9 +17,8 @@ export async function printStoreDispatchPair(row: any) {
       doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
       doc.text(COMPANY_NAME, 105, 18, { align: 'center' });
       doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
-      doc.text('Member of HELLO YEDA COFFEE COMPANY LIMITED', 105, 24, { align: 'center' });
-      doc.text(COMPANY_ADDRESS, 105, 29, { align: 'center' });
-      doc.text(COMPANY_PHONES, 105, 34, { align: 'center' });
+      doc.text(COMPANY_ADDRESS, 105, 24, { align: 'center' });
+      doc.text(COMPANY_PHONES, 105, 29, { align: 'center' });
       doc.line(14, 39, 196, 39);
       doc.setFont('helvetica', 'bold'); doc.setFontSize(13);
       doc.text(page === 0 ? 'STORE CLEARANCE / RELEASE FORM' : 'SALES DELIVERY NOTE', 105, 48, { align: 'center' });
