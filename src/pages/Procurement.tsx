@@ -394,7 +394,7 @@ const Procurement = () => {
                         <TableHead>Weight (Bags)</TableHead>
                         <TableHead>Moisture %</TableHead>
                         <TableHead>Defects</TableHead>
-                        <TableHead>Price/Bag</TableHead>
+                        <TableHead>Price/kg (UGX)</TableHead>
                         <TableHead>GRN</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Actions</TableHead>
@@ -409,9 +409,9 @@ const Procurement = () => {
                             <Badge variant="outline">{delivery.coffeeType}</Badge>
                           </TableCell>
                           <TableCell>{delivery.weight}</TableCell>
-                          <TableCell>{delivery.moistureContent}%</TableCell>
-                          <TableCell>{delivery.defects}</TableCell>
-                          <TableCell>UGX {delivery.pricePerBag.toLocaleString()}</TableCell>
+                          <TableCell>{delivery.moistureContent == null ? '—' : `${delivery.moistureContent}%`}</TableCell>
+                          <TableCell>{delivery.defects ?? '—'}</TableCell>
+                          <TableCell>{delivery.pricePerKg == null ? '—' : delivery.pricePerKg.toLocaleString()}</TableCell>
                           <TableCell>{delivery.grn}</TableCell>
                           <TableCell>
                             <Badge variant={
