@@ -312,9 +312,13 @@ Deno.serve(async (req) => {
         // Derive a grouped idempotency key: strip recipient-specific parts
         // so that if the same template+context is sent to multiple people,
         // only ONE copy reaches operations
-        const baseKey = idempotencyKey
-          .replace(effectiveRecipient, '')
-          .replace(/[^a-zA-Z0-9-_]/g, '')
+        // Personal documents (payslips) must give operations one copy PER employee.
+        const PER_RECIPIENT_CC = new Set(['salary-credited', 'payslip', 'salary-payslip'])
+        const baseKey = PER_RECIPIENT_CC.has(templateName)
+          ? idempotencyKey.replace(/[^a-zA-Z0-9-_@.]/g, '')
+          : idempotencyKey
+              .replace(effectiveRecipient, '')
+              .replace(/[^a-zA-Z0-9-_]/g, '')
         const opsIdempotencyKey = `ops-cc-${templateName}-${baseKey}`
         const opsUnsubToken = generateToken()
 
