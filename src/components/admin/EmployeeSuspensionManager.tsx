@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { Ban, ShieldCheck, Search, Loader2, FileText, Printer } from 'lucide-react';
 import { printHtmlInFreshWindow } from '@/lib/printInterceptor';
+import { COMPANY_TAGLINE } from '@/utils/companyBrand';
 
 interface SuspensionRow {
   id: string;
@@ -182,7 +183,7 @@ const EmployeeSuspensionManager = () => {
     const html = `<!doctype html><html><head><title>${title}</title><style>
       body{font-family:Georgia,serif;padding:40px;line-height:1.6;white-space:pre-wrap;font-size:13px;color:#111}
       h1{font-size:16px;text-align:center;margin-bottom:24px;font-family:Arial,sans-serif}
-    </style></head><body><h1>Great Agro Coffee — A member of Hello YEDA COFFEE COMPANY LIMITED</h1>${
+    </style></head><body><h1>Great Agro Coffee — ${COMPANY_TAGLINE}</h1>${
       text.replace(/&/g, '&amp;').replace(/</g, '&lt;')
     }</body></html>`;
     printHtmlInFreshWindow(html, title);

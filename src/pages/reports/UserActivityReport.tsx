@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { Printer, Filter, Download, RefreshCw, Activity } from "lucide-react";
 import { format, eachDayOfInterval, parseISO } from "date-fns";
+import { COMPANY_TAGLINE } from '@/utils/companyBrand';
 
 type EventType = "LOGIN" | "SESSION" | "LOCATION" | "ACTION" | "LOGOUT" | "ACTIVITY";
 
@@ -360,7 +361,7 @@ export default function UserActivityReport() {
       </style></head><body>
       <h1>Great Agro Coffee — User Activity &amp; Login Audit Report</h1>
       <div class="meta">
-        A member of Hello YEDA COFFEE COMPANY LIMITED • P.O Box 431420, Kasese, Uganda<br/>
+        ${COMPANY_TAGLINE} • P.O Box 431420, Kasese, Uganda<br/>
         Period: ${startDate} to ${endDate} • Generated: ${format(new Date(), "yyyy-MM-dd HH:mm")}<br/>
         Employee: ${employee === "all" ? "All" : employee} • Event: ${event === "all" ? "All" : event}
       </div>
