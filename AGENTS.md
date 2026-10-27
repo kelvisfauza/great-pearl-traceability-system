@@ -1,6 +1,6 @@
 # Project architecture
 
-- Issue paper meal-plan numbers in a Procurement-only registry, submit each once through provider requests and preserve the cash/mobile-money choice and recipient number across full and partial releases; use the shared PDF verification footer so handwritten offline forms remain traceable without bypassing normal approvals.
+- Issue paper meal-plan numbers in a Procurement-only registry, submit each once through provider requests and preserve the cash/mobile-money choice and recipient number across full and partial releases; use the shared PDF verification footer so handwritten offline forms remain traceable without bypassing normal approvals. Bulk printing reserves its window before asynchronous issuance and opens a verified PDF with an automatic print action instead of downloading only.
 
 - Resolve sampling pickup notifications from authenticated saved orders and employee phone records in notify-sampling-order; use the shared SMS sender with per-order recipient references so caller-supplied names cannot redirect pickup alerts.
 

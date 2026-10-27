@@ -42,3 +42,22 @@ export async function downloadMealPlanTemplates(numbers: string[]) {
   await preparePdfPrint(doc, `Meal plan requisitions ${numbers[0]} to ${numbers[numbers.length - 1]}`);
   doc.save(`Meal-plans-${numbers[0]}-to-${numbers[numbers.length - 1]}.pdf`);
 }
+
+export async function printMealPlanTemplates(numbers: string[], preview: Window) {
+  try {
+    if (!numbers.length) throw new Error('No meal-plan forms were issued');
+    const doc = new jsPDF({ format: 'a4', unit: 'mm' });
+    numbers.forEach((number, index) => {
+      if (index > 0) doc.addPage();
+      drawMealPlanTemplate(number, doc);
+    });
+    await preparePdfPrint(doc, `Meal plan requisitions ${numbers[0]} to ${numbers[numbers.length - 1]}`);
+    doc.autoPrint();
+    const url = URL.createObjectURL(doc.output('blob'));
+    preview.location.href = url;
+    window.setTimeout(() => URL.revokeObjectURL(url), 300000);
+  } catch (error) {
+    preview.close();
+    throw error;
+  }
+}

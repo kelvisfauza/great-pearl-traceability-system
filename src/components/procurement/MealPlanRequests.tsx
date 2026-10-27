@@ -7,10 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Download, Loader2, Send } from 'lucide-react';
+import { Download, Loader2, Printer, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { mealPlanPayload, type MealPayment } from '@/lib/mealPlanRules';
-import { downloadMealPlanTemplate, downloadMealPlanTemplates } from '@/utils/mealPlanPdf';
+import { downloadMealPlanTemplate, printMealPlanTemplates } from '@/utils/mealPlanPdf';
 
 const empty = { documentNumber: '', name: '', phone: '', email: '', amount: '', description: '', payment: 'mobile_money' as MealPayment };
 export default function MealPlanRequests() {
@@ -22,14 +22,17 @@ export default function MealPlanRequests() {
   async function bulkTemplates() {
     const n = Math.floor(Number(bulkCount));
     if (!(n >= 1 && n <= 100)) { toast.error('Enter between 1 and 100 forms'); return; }
+    const preview = window.open('', '_blank');
+    if (!preview) { toast.error('Allow pop-ups to print meal-plan forms'); return; }
+    preview.document.title = 'Preparing meal-plan forms';
     setPrinting(true);
     try {
       const { data, error } = await (supabase as any).from('meal_plan_forms').insert(Array.from({ length: n }, () => ({}))).select('document_number');
       if (error) throw error;
       const numbers = (data || []).map((r: any) => r.document_number).sort();
-      await downloadMealPlanTemplates(numbers);
+      await printMealPlanTemplates(numbers, preview);
       toast.success(`${numbers.length} numbered forms issued: ${numbers[0]} to ${numbers[numbers.length - 1]}`);
-    } catch (e) { toast.error(e instanceof Error ? e.message : 'Unable to issue forms'); }
+    } catch (e) { preview.close(); toast.error(e instanceof Error ? e.message : 'Unable to issue forms'); }
     finally { setPrinting(false); }
   }
   const qc = useQueryClient();
@@ -65,7 +68,7 @@ export default function MealPlanRequests() {
       {issued && <Button variant="outline" disabled={printing} onClick={() => { setPrinting(true); downloadMealPlanTemplate(issued).catch(e => toast.error(e.message)).finally(() => setPrinting(false)); }}><Download className="h-4 w-4 mr-2" />Download {issued}</Button>}
       <Button variant="outline" disabled={printing} onClick={template}>{printing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}New A4 template</Button>
       <div className="flex items-center gap-2"><input type="number" min={1} max={100} value={bulkCount} onChange={e => setBulkCount(e.target.value)} aria-label="Number of forms" className="h-10 w-20 rounded-md border border-input bg-background px-2 text-sm" />
-      <Button variant="outline" disabled={printing} onClick={bulkTemplates}><Download className="h-4 w-4 mr-2" />Print in bulk</Button></div>
+      <Button variant="outline" disabled={printing} onClick={bulkTemplates}><Printer className="h-4 w-4 mr-2" />Print in bulk</Button></div>
     </div></div>
     <form onSubmit={submit} className="space-y-4 max-w-2xl">
       <h3 className="font-medium">Submit completed paper form</h3>
