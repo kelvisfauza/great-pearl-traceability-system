@@ -1,8 +1,8 @@
 # Roadmap
 
 ## Clearance confirmation and printed heading repair
-- [ ] Align contract selection and confirmation so Procurement can confirm its chosen active contract despite different buyer labels.
-- [ ] Remove remaining obsolete parent-company wording from printed documents and check the affected generators.
+- [x] Align contract selection and confirmation so Procurement can confirm its chosen active contract despite different buyer labels; database function verified and KCL BUGOYE/Kyagalanyi regression passed.
+- [x] Remove obsolete parent-company wording from frontend print generators; generated receipt heading checked, 21 regression tests passed and latest build clean.
 - [ ] Verify signed-in confirmation and printing — external Supabase session unavailable.
 
 ## Procurement figure accuracy
