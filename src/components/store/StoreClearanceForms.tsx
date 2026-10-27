@@ -250,12 +250,10 @@ const StoreClearanceForms = ({ salesView = false, eudrView = false }: { salesVie
         released_by: form.released_by || null,
         received_by_driver: form.received_by_driver || null,
         approved_by: form.approved_by || null,
-        dispatch_report_id: null,
-        contract_id: null,
-        attachments: [],
       };
 
       if (editingId) {
+        // Edits must not clear signed scans or Procurement's contract choice.
         const { data, error } = await (supabase as any).from("store_clearance_forms").update(payload).eq("id", editingId).select('*').single();
         if (error) throw error;
         return data;
