@@ -7635,6 +7635,7 @@ export type Database = {
           created_by: string
           document_number: string
           id: string
+          printed_at: string | null
           updated_at: string
         }
         Insert: {
@@ -7642,6 +7643,7 @@ export type Database = {
           created_by?: string
           document_number?: string
           id?: string
+          printed_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -7649,6 +7651,7 @@ export type Database = {
           created_by?: string
           document_number?: string
           id?: string
+          printed_at?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -18714,6 +18717,10 @@ export type Database = {
       }
       loyalty_award_mode: { Args: never; Returns: string }
       loyalty_awards_suspended: { Args: never; Returns: boolean }
+      mark_meal_forms_printed: {
+        Args: { p_numbers: string[] }
+        Returns: number
+      }
       mark_meeting_no_shows: { Args: { _meeting_id: string }; Returns: number }
       mark_messages_delivered: {
         Args: { p_conversation_id: string }
