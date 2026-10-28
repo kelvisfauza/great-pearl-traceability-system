@@ -1,5 +1,10 @@
 # Roadmap
 
+## Finance GRN receipt mismatch
+- [x] Compared saved lots/referrals/payments: 20260221018 has Musema's 15 October UGX 3,471,000 payment; today's Denis payment is UGX 3,471,000 on a separate lot under 20260222009, which also has an older UGX 3,738,000 paid lot. No payments changed.
+- [x] Capture the saved payment and lot for post-payment printing so queue changes cannot replace its figures; reject unmatched or unconfirmed receipt payments. Three regression checks passed and preview build clean.
+- [ ] Verify signed-in Finance payment/printing — external Supabase authentication unavailable; confirm with Finance which paper GRN Denis intended before any data correction.
+
 ## Per diem printed-form requests
 - [x] Require an issued print-prepared per diem form number on employee submissions and show saved pending requests in HR awards; duplicate submission/award blocked and award plus treasury-backed wallet credit saved atomically.
 - [x] Four reference/eligibility tests passed, database wrappers verified and latest preview build clean.

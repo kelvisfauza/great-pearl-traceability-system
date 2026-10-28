@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Loader2, CheckCircle2, CreditCard, Printer, ArrowLeft, History, FlaskConical, QrCode, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { printGrnPaymentReceipt } from '@/utils/grnPaymentReceipt';
+import { bindGrnReceipt } from '@/lib/grnReceiptBinding';
 import { getGRNPrintDocumentHTML } from '@/utils/grnPrintTemplate';
 import { enrichGRNListWithSuppliers } from '@/utils/enrichGRNSupplier';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
@@ -81,6 +82,14 @@ export default function GRNScanPay() {
   // A batch number can legitimately carry more than one finance lot (historical
   // duplicate batch numbers). Finance must see which lot is already paid and pay the rest.
   const [selectedLotId, setSelectedLotId] = useState<string | null>(null);
+  const [paidPrintEntry, setPaidPrintEntry] = useState<any>(null);
+
+  useEffect(() => {
+    setSelectedLotId(null);
+    setPaidPrintEntry(null);
+    setPrintPromptOpen(false);
+    setPayOpen(false);
+  }, [rawRef]);
 
   // Scan-only finance staff (Finance:view + Finance:create) cannot release money —
   // they submit the scanned GRN to an approver who pays and prints the receipt.
@@ -335,48 +344,60 @@ export default function GRNScanPay() {
     return items.sort((a, b) => new Date(b.at || 0).getTime() - new Date(a.at || 0).getTime());
   }, [data, entry, entryRecord, lot, quality, store]);
 
-  const receipt = () => {
-
-    if (!lot) return;
-    const lotValue = Number(lot.total_amount_ugx || 0);
-    const thisPayment = Number(entry?.payment?.amount_paid_ugx ?? lot.total_amount_ugx ?? 0);
-    const previouslyPaid = (entry?.payments || [])
+  const receipt = (source = entry) => {
+    const receiptLot = source?.lot;
+    const payment = source?.payment;
+    if (!receiptLot || !payment) {
+      toast.error('No saved payment is available for this GRN receipt.');
+      return;
+    }
+    let binding;
+    try {
+      binding = bindGrnReceipt(receiptLot, payment);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Receipt does not match the saved payment');
+      return;
+    }
+    const { lotValue, amount: thisPayment } = binding;
+    const previouslyPaid = (source?.payments || [])
       .filter((p: any) =>
-        p.id !== entry?.payment?.id &&
+        p.id !== payment.id &&
         !['failed', 'cancelled', 'rejected'].includes(String(p.status || '').toLowerCase()))
       .reduce((s: number, p: any) => s + Number(p.amount_paid_ugx || 0), 0);
-    trackActivity('report_generation', `printing supplier payment receipt for ${lot.batch_number || batch}`, {
+    trackActivity('report_generation', `printing supplier payment receipt for ${receiptLot.batch_number}`, {
       form_name: 'GRN Payment Receipt',
-      batch: lot.batch_number || batch,
+      batch: receiptLot.batch_number,
     });
     printGrnPaymentReceipt({
-      grnNumber: `GRN-${lot.batch_number || batch}`,
-      supplierName: entry?.supplierName || 'Unknown Supplier',
-      coffeeType: entryRecord?.coffee_type,
-      quantityKg: lot.quantity_kg,
-      unitPrice: lot.unit_price_ugx,
+      grnNumber: binding.grnNumber,
+      supplierName: source?.supplierName || 'Unknown Supplier',
+      coffeeType: source?.record?.coffee_type,
+      quantityKg: receiptLot.quantity_kg,
+      unitPrice: receiptLot.unit_price_ugx,
       amount: thisPayment,
       lotValue,
       previouslyPaid,
       balance: Math.max(lotValue - previouslyPaid - thisPayment, 0),
-      method: entry?.payment?.method || method,
-      paidAt: entry?.payment?.created_at || lot.updated_at || new Date().toISOString(),
-      paidBy: entry?.paidByName || entry?.payment?.requested_by || 'Finance Department',
-      inputBy: grnReferral
-        ? (grnReferral.referred_by_name || grnReferral.referred_by_email)
+      method: payment.method,
+      paidAt: payment.payment_date || payment.created_at,
+      paidBy: source?.paidByName || payment.requested_by || 'Finance Department',
+      inputBy: source?.referral
+        ? (source.referral.referred_by_name || source.referral.referred_by_email)
         : null,
       printedBy: employee?.name
         ? `${employee.name}${(employee as any)?.position ? ` · ${(employee as any).position}` : ''}`
         : (user?.email || 'Finance Department'),
-      notes: entry?.payment?.notes || lot.finance_notes,
-      approvedBy: employee?.name || entry?.paidByName || null,
+      notes: payment.notes || receiptLot.finance_notes,
+      approvedBy: payment.approved_by || source?.paidByName || null,
       approvedByEmail: employee?.email || user?.email || null,
-      receiptNo: `RCP-${String(lot.batch_number || batch).replace(/[^A-Z0-9]/gi, '').slice(-8)}`,
+      receiptNo: binding.receiptNo,
     });
   };
 
   const [printPromptOpen, setPrintPromptOpen] = useState(false);
-  const printPaymentOrder = async () => {
+  const printPaymentOrder = async (source = entry) => {
+    const lot = source?.lot;
+    const entryRecord = source?.record;
     if (!lot) return;
     const w = window.open('', '', 'width=1000,height=1200');
     if (!w) return;
@@ -384,7 +405,7 @@ export default function GRNScanPay() {
     const base: any = {
       grnNumber: `GRN-${lot.batch_number || batch}`,
       supplierId: lot.supplier_id,
-      supplierName: entry?.supplierName || 'Unknown Supplier',
+      supplierName: source?.supplierName || 'Unknown Supplier',
       coffeeType: entryRecord?.coffee_type || quality?.coffee_type || '',
       numberOfBags: Number(entryRecord?.bags || 0),
       totalKgs: Number(lot.quantity_kg || 0),
@@ -417,7 +438,7 @@ export default function GRNScanPay() {
         .eq('id', lot.id);
       if (updErr) throw updErr;
 
-      const { error: payErr } = await supabase.from('supplier_payments').insert({
+      const { data: savedPayment, error: payErr } = await supabase.from('supplier_payments').insert({
         supplier_id: lot.supplier_id,
         lot_id: lot.id,
         amount_paid_ugx: lot.total_amount_ugx,
@@ -425,8 +446,18 @@ export default function GRNScanPay() {
         method: method as any,
         notes: notes || `Paid via QR scan of ${lot.batch_number || batch}`,
         requested_by: payer,
-      });
+      }).select('*').single();
       if (payErr) throw payErr;
+      if (!savedPayment) throw new Error('The saved payment could not be read back.');
+      setPaidPrintEntry({
+        ...entry,
+        lot: { ...lot },
+        record: entryRecord ? { ...entryRecord } : null,
+        payment: savedPayment,
+        payments: [savedPayment, ...(entry?.payments || [])],
+        paidByName: payer,
+        referral: grnReferral,
+      });
 
       const { data: balance } = await supabase.from('finance_cash_balance').select('*').maybeSingle();
       if (balance) {
@@ -909,7 +940,7 @@ export default function GRNScanPay() {
                     <CheckCircle2 className="h-4 w-4" /> Paid
                     {entry?.payment?.created_at ? ` on ${new Date(entry.payment.created_at).toLocaleString('en-GB')}` : ''}
                   </div>
-                  <Button onClick={receipt} className="w-full">
+                  <Button onClick={() => receipt({ ...entry, referral: grnReferral })} className="w-full">
                     <Printer className="h-4 w-4 mr-2" /> Print payment receipt
                   </Button>
                   {nextPending(rawRef) && (
@@ -1130,8 +1161,8 @@ export default function GRNScanPay() {
             <DialogDescription>This purchase is now marked as paid. Print the Payment Order and the payment receipt.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-2">
-            <Button onClick={printPaymentOrder}><Printer className="mr-2 h-4 w-4" />Print Payment Order</Button>
-            <Button variant="secondary" onClick={receipt}><Printer className="mr-2 h-4 w-4" />Print payment receipt</Button>
+            <Button disabled={!paidPrintEntry} onClick={() => printPaymentOrder(paidPrintEntry)}><Printer className="mr-2 h-4 w-4" />Print Payment Order</Button>
+            <Button disabled={!paidPrintEntry} variant="secondary" onClick={() => receipt(paidPrintEntry)}><Printer className="mr-2 h-4 w-4" />Print payment receipt</Button>
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setPrintPromptOpen(false)}>Done</Button></DialogFooter>
         </DialogContent>
