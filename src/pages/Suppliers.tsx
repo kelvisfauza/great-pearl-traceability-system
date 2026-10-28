@@ -43,7 +43,7 @@ import PendingSupplierRequests from "@/components/suppliers/PendingSupplierReque
 import { Trophy, List } from "lucide-react";
 import { PackageX } from "lucide-react";
 import { DialogDescription } from "@/components/ui/dialog";
-import { resolveNeverDeliveredSuppliers, type NeverDeliveredSupplier } from "@/lib/neverDeliveredSuppliers";
+import { resolveNeverDeliveredSuppliers, type NeverDeliveredSupplier, type SupplierAliases } from "@/lib/neverDeliveredSuppliers";
 import { prepareHtmlPrint, reportPrintError } from "@/lib/documentPrintStamp";
 import { printHtmlInFreshWindow } from "@/lib/printInterceptor";
 

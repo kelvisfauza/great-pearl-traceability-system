@@ -38,6 +38,9 @@ export function daysSince(date?: string | null): number | null {
   return Math.floor((Date.now() - t) / DAY);
 }
 
+/** Extra normalized names a supplier is known by in legacy records. */
+export type SupplierAliases = Record<string, string[]>;
+
 export function resolveNeverDeliveredSuppliers<
   T extends {
     id: string;
@@ -47,7 +50,7 @@ export function resolveNeverDeliveredSuppliers<
     origin?: string | null;
     date_registered?: string | null;
   },
->(suppliers: T[], deliveries: DeliveryRef[]): Array<T & NeverDeliveredSupplier> {
+>(suppliers: T[], deliveries: DeliveryRef[], aliases: SupplierAliases = {}): Array<T & NeverDeliveredSupplier> {
   const deliveredIds = new Set<string>();
   const deliveredNames = new Set<string>();
   for (const d of deliveries) {
@@ -57,7 +60,11 @@ export function resolveNeverDeliveredSuppliers<
   }
 
   return suppliers
-    .filter(s => !deliveredIds.has(s.id) && !deliveredNames.has(normalizeSupplierName(s.name)))
+    .filter(s => {
+      if (deliveredIds.has(s.id)) return false;
+      const names = [normalizeSupplierName(s.name), ...(aliases[s.name] || []).map(normalizeSupplierName)];
+      return !names.some(n => n && deliveredNames.has(n));
+    })
     .map(s => ({ ...s, daysSinceRegistration: daysSince(s.date_registered) }))
     .sort((a, b) => {
       const ta = a.date_registered ? new Date(a.date_registered).getTime() : Infinity;
