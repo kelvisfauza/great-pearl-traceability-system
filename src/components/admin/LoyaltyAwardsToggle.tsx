@@ -24,13 +24,27 @@ const LoyaltyAwardsToggle = () => {
   const toggle = async (on: boolean) => {
     setSaving(true);
     const { data, error } = await (supabase as any).rpc("set_loyalty_awards_enabled", { p_enabled: on });
-    setSaving(false);
     if (error) {
+      setSaving(false);
       toast({ title: "Could not change loyalty", description: error.message, variant: "destructive" });
       return;
     }
     setStatus(data as Status);
-    toast({ title: on ? "Loyalty turned ON" : "Loyalty turned OFF", description: on ? "Staff will earn loyalty again; points are paid at the 8pm collection." : "No loyalty will be credited or paid to anyone." });
+
+    if (on) {
+      // Notify every active employee by email and SMS that loyalty is back on
+      const { data: notify, error: notifyError } = await (supabase as any).functions.invoke("loyalty-reenabled-notify");
+      setSaving(false);
+      if (notifyError || notify?.ok === false) {
+        toast({ title: "Loyalty turned ON", description: "But the confirmation emails/texts failed to send. Try switching off and on again.", variant: "destructive" });
+      } else {
+        toast({ title: "Loyalty turned ON", description: `Confirmations sent: ${notify?.emailsSent ?? 0} emails and ${notify?.smsSent ?? 0} texts to staff.` });
+      }
+      return;
+    }
+
+    setSaving(false);
+    toast({ title: "Loyalty turned OFF", description: "No loyalty will be credited or paid to anyone." });
   };
 
   return (
