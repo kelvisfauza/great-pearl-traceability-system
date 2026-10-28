@@ -43,6 +43,18 @@ Deno.serve(async (req) => {
       const ids: string[] = Array.isArray(body?.sourceIds) ? body.sourceIds.map(String) : [];
       if (!ids.length) return respond(true, { payments: [] });
       const { data } = await db.from("partial_payments").select("*, partial_payment_installments(*)").eq("source_type", sourceType).in("source_id", ids);
+      // Self-heal: a send that was cut off (timeout) can leave paid_amount ahead of the
+      // recorded installments. After 5 minutes, trust the installments only.
+      const staleBefore = Date.now() - 5 * 60 * 1000;
+      for (const p of data || []) {
+        const recorded = (p.partial_payment_installments || []).reduce((s: number, i: any) => s + Number(i.amount || 0), 0);
+        if (Number(p.paid_amount) !== recorded && new Date(p.updated_at).getTime() < staleBefore) {
+          const status = recorded >= Number(p.total_amount) ? "fully_paid" : "part_paid";
+          await db.from("partial_payments").update({ paid_amount: recorded, status }).eq("id", p.id).eq("paid_amount", p.paid_amount);
+          await db.from("audit_logs").insert({ action: "FINANCE_PART_PAYMENT_HEAL", table_name: "partial_payments", record_id: p.id, performed_by: "system", department: "Finance", reason: `Paid corrected from ${p.paid_amount} to recorded installments ${recorded} after an unfinished send` });
+          p.paid_amount = recorded; p.status = status; p.balance = Number(p.total_amount) - recorded;
+        }
+      }
       return respond(true, { payments: data || [] });
     }
 
