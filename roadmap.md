@@ -1,9 +1,10 @@
 # Roadmap
 
 ## SEO findings
-- [ ] List stored failing findings and verify stale metadata/accessibility reports against current source.
-- [ ] Correct relevant page titles, canonical links and accessible controls, then validate and update findings.
-- [ ] Complete Google Search Console setup if the required account authorization is available.
+- [x] Listed three stale failing findings and checked current source; fixed named menu, notification, vault and display controls and public headings.
+- [x] Published route-aware titles/descriptions/canonicals and same-origin public sitemap; two visibility tests passed, browser metadata verified, latest build clean; metadata finding marked fixed pending rescan.
+- [x] Linked Fauza’s Google Search Console, confirmed live verification tag and sitemap, verified ownership, added exact root property and submitted sitemap; setup finding marked fixed pending rescan.
+- [ ] Complete sitewide heading/accessibility validation — authenticated pages cannot be checked with external Supabase; signed-out login, careers and support remained blank in browser. Composite content finding left failing rather than claiming full resolution.
 
 ## Misplaced GRN prints
 - [x] Add authorized, audited revocation for chosen GRNs and restore Print/selection without changing payments; no existing GRNs reset automatically.
